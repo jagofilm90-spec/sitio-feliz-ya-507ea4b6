@@ -241,7 +241,7 @@ export const SugerirRutasAIDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden flex flex-col gap-4">
+        <div className="flex-1 min-h-0 flex flex-col gap-4">
           {/* Generate button */}
           {rutasSugeridas.length === 0 && !loading && (
             <div className="flex flex-col items-center justify-center py-12 gap-4">
@@ -268,7 +268,7 @@ export const SugerirRutasAIDialog = ({
           {/* Results */}
           {rutasSugeridas.length > 0 && (
             <>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-shrink-0">
                 <div className="text-sm text-muted-foreground">
                   {rutasSugeridas.length} rutas sugeridas • {pedidosSinAsignar.length} pedidos sin asignar
                 </div>
@@ -287,13 +287,13 @@ export const SugerirRutasAIDialog = ({
               </div>
 
               {notasAI && (
-                <Alert>
+                <Alert className="flex-shrink-0">
                   <Sparkles className="h-4 w-4" />
                   <AlertDescription>{notasAI}</AlertDescription>
                 </Alert>
               )}
 
-              <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1 min-h-0 max-h-[55vh]">
                 <div className="space-y-4 pr-4">
                   {rutasSugeridas.map((ruta, index) => (
                     <Card key={index} className="overflow-hidden">
@@ -305,11 +305,16 @@ export const SugerirRutasAIDialog = ({
                           <div className="flex items-center gap-3">
                             <Truck className="h-5 w-5 text-primary" />
                             <div>
-                              <CardTitle className="text-base">
+                              <CardTitle className="text-base flex items-center gap-2">
                                 {ruta.vehiculo.nombre}
-                                <Badge variant="outline" className="ml-2">
+                                <Badge variant="outline">
                                   {ruta.tipo_ruta === "foranea" ? "Foránea" : "Local"}
                                 </Badge>
+                                {ruta.porcentaje_carga > 100 && (
+                                  <Badge variant="destructive" className="text-xs">
+                                    ⚠️ Excede capacidad
+                                  </Badge>
+                                )}
                               </CardTitle>
                               <p className="text-xs text-muted-foreground">
                                 {ruta.zonas.slice(0, 3).join(", ")}
@@ -322,16 +327,16 @@ export const SugerirRutasAIDialog = ({
                               <p className="text-sm font-medium">
                                 {ruta.pedidos.length} pedidos
                               </p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className={`text-xs ${ruta.porcentaje_carga > 100 ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
                                 {ruta.peso_total.toLocaleString()} / {ruta.capacidad_maxima.toLocaleString()} kg
                               </p>
                             </div>
                             <div className="w-24">
                               <Progress 
                                 value={Math.min(ruta.porcentaje_carga, 100)} 
-                                className="h-2"
+                                className={`h-2 ${ruta.porcentaje_carga > 100 ? '[&>div]:bg-destructive' : ''}`}
                               />
-                              <p className="text-xs text-center mt-1">
+                              <p className={`text-xs text-center mt-1 ${ruta.porcentaje_carga > 100 ? 'text-destructive font-medium' : ''}`}>
                                 {ruta.porcentaje_carga.toFixed(0)}%
                               </p>
                             </div>
