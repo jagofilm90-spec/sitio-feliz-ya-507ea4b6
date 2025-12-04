@@ -1378,6 +1378,36 @@ export type Database = {
           },
         ]
       }
+      module_permissions: {
+        Row: {
+          created_at: string | null
+          id: string
+          module_name: string
+          module_path: string
+          role: Database["public"]["Enums"]["app_role"]
+          tiene_acceso: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          module_name: string
+          module_path: string
+          role: Database["public"]["Enums"]["app_role"]
+          tiene_acceso?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          module_name?: string
+          module_path?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          tiene_acceso?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       notificaciones: {
         Row: {
           cotizacion_id: string | null

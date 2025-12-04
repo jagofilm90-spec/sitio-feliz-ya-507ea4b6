@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useUnreadEmails } from "@/hooks/useUnreadEmails";
-import { useUserRoles, MODULE_PERMISSIONS } from "@/hooks/useUserRoles";
+import { useUserRoles, useUserModulePermissions } from "@/hooks/useUserRoles";
 import { CentroNotificaciones } from "@/components/CentroNotificaciones";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import logoAlmasa from "@/assets/logo-almasa.png";
@@ -38,6 +38,7 @@ import {
   CreditCard,
   Smartphone,
   ArrowLeft,
+  Lock,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -55,6 +56,7 @@ const Layout = ({ children }: LayoutProps) => {
   const unreadCount = useUnreadMessages();
   const { counts: emailCounts, cuentas: emailCuentas, totalUnread: totalUnreadEmails } = useUnreadEmails();
   const { roles, isLoading: rolesLoading } = useUserRoles();
+  const { allowedPaths, isLoading: permissionsLoading, checkAccess } = useUserModulePermissions();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -100,23 +102,20 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: Shield, label: "Usuarios", path: "/usuarios" },
     { icon: MessageCircle, label: "Chat", path: "/chat" },
     { icon: Smartphone, label: "App Móvil", path: "/generate-assets" },
+    { icon: Lock, label: "Permisos", path: "/permisos" },
   ];
 
-  // Filtrar menú según los roles del usuario
+  // Filtrar menú según permisos dinámicos del usuario
   const menuItems = useMemo(() => {
-    if (rolesLoading || roles.length === 0) return allMenuItems;
+    if (permissionsLoading || allowedPaths.length === 0) return allMenuItems;
     
-    return allMenuItems.filter(item => {
-      const allowedRoles = MODULE_PERMISSIONS[item.path] || [];
-      return roles.some(role => allowedRoles.includes(role));
-    });
-  }, [roles, rolesLoading]);
+    return allMenuItems.filter(item => checkAccess(item.path));
+  }, [allowedPaths, permissionsLoading, checkAccess]);
 
   // Verificar si el usuario puede ver correos
   const canViewEmails = useMemo(() => {
-    const allowedRoles = MODULE_PERMISSIONS['/correos'] || [];
-    return roles.some(role => allowedRoles.includes(role));
-  }, [roles]);
+    return checkAccess('/correos');
+  }, [checkAccess]);
 
   const handleEmailAccountClick = (email: string, isMobile: boolean) => {
     navigate(`/correos?cuenta=${encodeURIComponent(email)}`);

@@ -26,6 +26,7 @@ import Fumigaciones from "./pages/Fumigaciones";
 import CorreosCorporativos from "./pages/CorreosCorporativos";
 import GenerateAssets from "./pages/GenerateAssets";
 import DisenosCamioneta from "./pages/DisenosCamioneta";
+import Permisos from "./pages/Permisos";
 import PushNotificationSetup from "./components/PushNotificationSetup";
 import { initPushNotifications, isNativePlatform } from "./services/pushNotifications";
 import { supabase } from "./integrations/supabase/client";
@@ -92,6 +93,7 @@ const App = () => (
           <Route path="/generate-assets" element={<GenerateAssets />} />
           <Route path="/tarjeta" element={<TarjetaDigital />} />
           <Route path="/disenos-camioneta" element={<DisenosCamioneta />} />
+          <Route path="/permisos" element={<Permisos />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
