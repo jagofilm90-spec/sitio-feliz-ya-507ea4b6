@@ -56,3 +56,6 @@ verify_jwt = true
 
 [functions.generate-truck-design]
 verify_jwt = true
+
+[functions.check-vehicle-documents-expiry]
+verify_jwt = false
