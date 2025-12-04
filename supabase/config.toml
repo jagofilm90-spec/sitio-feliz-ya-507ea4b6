@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.suggest-routes]
 verify_jwt = true
+
+[functions.geocode-addresses]
+verify_jwt = true
