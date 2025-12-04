@@ -19,7 +19,8 @@ serve(async (req) => {
     }
 
     const prompts: Record<string, string> = {
-      'ultra-minimalista': `Professional vehicle wrap design mockup for a white commercial delivery truck (side view). Ultra minimalist elegant design with:
+      // === VISTA LATERAL ===
+      'minimalista-lateral': `Professional vehicle wrap design mockup for a white commercial closed-box delivery truck (side view). Ultra minimalist elegant design with:
 - Large "ALMASA" logo text in bold red (#C41E3A) centered on the truck side
 - Below the logo: "Desde 1904" in elegant black serif typography
 - At the bottom: "almasa.com.mx" in small black text
@@ -28,11 +29,11 @@ serve(async (req) => {
 - Modern, premium, sophisticated look
 - 16:9 aspect ratio, photorealistic mockup`,
 
-      'ultra-minimalista-reglamentario': `Professional vehicle wrap design mockup for a white commercial closed-box delivery truck (side view). Ultra minimalist elegant design that complies with Mexico City commercial vehicle regulations:
+      'reglamentario-lateral': `Professional vehicle wrap design mockup for a white commercial closed-box delivery truck (side view). Elegant minimalist design that complies with Mexico City commercial vehicle regulations:
 - Large "ALMASA" logo text in bold red (#C41E3A) centered on the truck side
 - Below the logo: "Desde 1904" in elegant black serif typography
 - Text "SERVICIO MERCANTIL DE TRANSPORTE DE CARGA" in formal black letters
-- Rectangular space labeled "No. DE PLACA" (45cm x 15cm) with placeholder text
+- Rectangular space labeled "No. DE PLACA" with placeholder text
 - Text "COMBUSTIBLE: DIESEL" in small formal black typography
 - Text "QUEJAS: 55-1234-5678" in small black text
 - At the bottom: "almasa.com.mx" in small black text
@@ -42,33 +43,51 @@ serve(async (req) => {
 - Modern, premium, sophisticated look while being 100% compliant with regulations
 - 16:9 aspect ratio, photorealistic mockup`,
 
-      'con-iconos': `Professional vehicle wrap design mockup for a white commercial delivery truck (side view). Minimalist elegant design with icons:
-- Large "ALMASA" logo text in bold red (#C41E3A) on the truck side
-- Four small elegant line icons in black representing: wheat/grains, bread/bakery, factory/industry, dog food bowl
-- "Desde 1904" in elegant typography
-- "almasa.com.mx" at the bottom
-- Clean layout with red and black color scheme on white
-- Modern, professional, balanced composition
+      'premium-lateral': `Professional vehicle wrap design mockup for a white commercial closed-box delivery truck (side view). Premium executive elegant design with:
+- Clean white truck body as base
+- Large "ALMASA" logo in bold red (#C41E3A) with elegant styling
+- "Desde 1904" in sophisticated gold/champagne metallic typography
+- Subtle geometric accent lines in gold creating elegant depth
+- "almasa.com.mx" in elegant black text at bottom
+- Luxurious, sophisticated, premium brand appearance on white
+- Modern elegant white aesthetic with red and gold accents
 - 16:9 aspect ratio, photorealistic mockup`,
 
-      'lateral-completo': `Professional vehicle wrap design mockup for a white commercial delivery truck (side view). Full side elegant design with:
-- Dynamic diagonal red (#C41E3A) stripe flowing from front to back
-- Large "ALMASA" logo in white on the red stripe
-- Black section with services listed elegantly: "Abarrotes y Semillas • Panaderías • Industrias • Alimento para Mascotas"
-- "121 Años de Tradición | 1904-2025" in gold/cream text
+      // === VISTA TRASERA ===
+      'minimalista-trasera': `Professional vehicle wrap design mockup for a white commercial delivery truck (rear view, back doors closed). Clean elegant minimalist design with:
+- Large "ALMASA" logo in bold red (#C41E3A) centered on the back doors
+- "Desde 1904" below the logo in elegant black serif typography
+- "almasa.com.mx" prominently displayed below
+- Clean white background, ultra minimalist
+- No additional text or elements, pure brand focus
+- Modern, premium, sophisticated look
+- 16:9 aspect ratio, photorealistic mockup showing rear of truck`,
+
+      'reglamentario-trasera': `Professional vehicle wrap design mockup for a white commercial delivery truck (rear view, back doors closed). Elegant design with regulatory compliance elements:
+- Large "ALMASA" logo in bold red (#C41E3A) centered on the back doors
+- "Desde 1904" below the logo in elegant black typography
 - "almasa.com.mx" prominently displayed
-- Bold, modern, eye-catching but elegant design
-- 16:9 aspect ratio, photorealistic mockup`,
+- "UNIDAD No. ___" in formal black text (unit number placeholder)
+- "¿Cómo manejo? Llama al: 55-1234-5678" in visible black text
+- "Velocidad máxima: 90 km/h" text clearly visible
+- Diagonal yellow and red safety stripes on rear bumper (franjas diagonales reglamentarias)
+- Space for license plate at bottom
+- Clean white background maintaining elegant aesthetic
+- All regulatory text positioned professionally
+- 16:9 aspect ratio, photorealistic mockup showing rear of truck`,
 
-      'premium-ejecutivo': `Professional vehicle wrap design mockup for a commercial delivery truck (side view). Premium executive design with:
-- Matte black truck body as base
-- "ALMASA" logo in vibrant red (#C41E3A) with subtle glow effect
-- "Desde 1904" in elegant gold/champagne metallic typography
-- Subtle geometric lines in dark gray creating depth
-- "almasa.com.mx" in silver/white at bottom
-- Luxurious, sophisticated, premium brand appearance
-- Dark elegant aesthetic with red and gold accents
-- 16:9 aspect ratio, photorealistic mockup`
+      'premium-trasera': `Professional vehicle wrap design mockup for a white commercial delivery truck (rear view, back doors closed). Premium executive elegant design with:
+- Large "ALMASA" logo in bold red (#C41E3A) with elegant styling centered on doors
+- "Desde 1904" in sophisticated gold/champagne metallic typography
+- "almasa.com.mx" in elegant gold text
+- "UNIDAD No. ___" in refined gold text
+- "¿Cómo manejo? Llama al: 55-1234-5678" in elegant black text
+- "Velocidad máxima: 90 km/h" in refined typography
+- Elegant diagonal gold and red stripes on rear bumper
+- Subtle geometric gold accent details
+- Clean white background with premium sophisticated appearance
+- Luxurious brand presentation with red and gold accents
+- 16:9 aspect ratio, photorealistic mockup showing rear of truck`
     };
 
     const prompt = prompts[designType];
