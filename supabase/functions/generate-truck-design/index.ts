@@ -18,80 +18,116 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    // Modern minimalist prompts - Tesla/FedEx/Amazon fleet aesthetic
+    // Prompts usando el logo REAL de ALMASA - tipografía serif elegante con "A" estilizada
+    // Logo ALMASA: Letras serif rojas (#C41E3A) con la "A" inicial grande y decorativa, estilo clásico/tradicional
     const prompts: Record<string, string> = {
       // === VISTA LATERAL ===
-      'minimalista-lateral': `Ultra modern minimalist white commercial box truck wrap mockup, side view. Clean contemporary fleet design.
+      'minimalista-lateral': `Photorealistic white commercial box truck wrap mockup, side view. Professional fleet design for Mexican food distributor.
+
+CRITICAL - LOGO ALMASA (must match exactly):
+- The word "ALMASA" in elegant RED SERIF typography (#C41E3A crimson red)
+- The first letter "A" is larger and decorative with classic flourishes
+- Typography style: Traditional serif font similar to Times New Roman or Garamond but with decorative capital letters
+- NOT sans-serif, NOT modern/minimalist font - it's a CLASSIC ELEGANT SERIF typeface
+- Logo centered prominently on truck box side
+
+ADDITIONAL ELEMENTS:
+- Small "almasa.com.mx" below logo in matching red
+- Small text on driver door: "PLACA: XXX-000 | DIESEL"
+
+STYLE: Clean white truck, professional appearance. Photorealistic studio mockup with soft shadows.`,
+
+      'reglamentario-lateral': `Photorealistic white commercial truck wrap mockup, side view. Mexican commercial vehicle with regulatory compliance.
+
+CRITICAL - LOGO ALMASA (must match exactly):
+- The word "ALMASA" in elegant RED SERIF typography (#C41E3A crimson red)
+- The first letter "A" is larger and decorative with classic flourishes  
+- Typography: Traditional elegant serif font (like Times/Garamond with decorative capitals)
+- NOT sans-serif - it's a CLASSIC SERIF typeface
+- Logo centered on main truck box
+
+REGULATORY INFO (driver door area, small dark gray text):
+"SERVICIO MERCANTIL DE CARGA
+PLACA: XXX-000 | DIESEL
+ABARROTES LA MANITA S.A. DE C.V.
+Melchor Campo #59, Col. Centro, CDMX
+TEL: 55-XXXX-XXXX"
+
+ADDITIONAL: "almasa.com.mx" in red below logo, thin red accent line at bottom edge.
+
+STYLE: Professional Mexican commercial truck. Photorealistic mockup.`,
+
+      'premium-lateral': `Photorealistic white commercial truck wrap mockup, side view. Premium sophisticated fleet design.
+
+CRITICAL - LOGO ALMASA (must match exactly):
+- The word "ALMASA" in elegant RED SERIF typography (#C41E3A crimson red)
+- The first letter "A" is larger and decorative with classic flourishes
+- Typography: Traditional elegant serif font with decorative capital letters
+- NOT sans-serif - CLASSIC ELEGANT SERIF typeface
+- Logo centered prominently
 
 DESIGN ELEMENTS:
-- Large "ALMASA" in flat bold red (#C41E3A), modern sans-serif font (Helvetica/Gotham style), centered on truck box
-- Small "almasa.com.mx" in light gray below
-- Driver door: tiny text "PLACA: XXX-000 | DIESEL" in dark gray
-
-STYLE: Maximum white space, no borders, no decorative elements, no patterns. Ultra clean like Tesla Semi or Apple delivery trucks. Flat colors only. Photorealistic studio mockup, soft shadows.`,
-
-      'reglamentario-lateral': `Modern clean white commercial truck wrap mockup, side view. Contemporary fleet design with regulatory compliance.
-
-DESIGN ELEMENTS:
-- Large "ALMASA" in flat bold red (#C41E3A), modern sans-serif typography, centered on main box
-- Small "almasa.com.mx" in gray below logo
-- Subtle thin red horizontal line accent at bottom edge of box
-- Driver door area - compact regulatory block in small dark gray sans-serif:
-  "SERVICIO MERCANTIL DE CARGA
-  PLACA: XXX-000 | DIESEL
-  ABARROTES LA MANITA S.A. DE C.V.
-  Melchor Campo #59, CDMX
-  TEL: 55-XXXX-XXXX"
-
-STYLE: Clean modern fleet aesthetic like FedEx or Amazon trucks. Minimal decorative elements. Photorealistic mockup.`,
-
-      'premium-lateral': `Premium contemporary white commercial truck wrap mockup, side view. Sophisticated modern fleet design.
-
-DESIGN ELEMENTS:
-- Large "ALMASA" in bold red (#C41E3A), premium sans-serif typography, centered
-- Elegant dark charcoal gray gradient band at bottom third of truck box
-- "Desde 1904" small tagline in white on the gray band
+- Elegant dark charcoal gray band at bottom third of truck box
+- "Desde 1904" tagline in white on the gray band
 - "almasa.com.mx" in white on gray band
-- Door area - regulatory text in white on charcoal background:
+- Door area regulatory text in white on charcoal:
   "SERVICIO MERCANTIL | PLACA: XXX-000 | DIESEL
   ABARROTES LA MANITA S.A. DE C.V.
-  Melchor Campo #59, CDMX | 55-XXXX-XXXX"
+  Melchor Campo #59, Col. Centro, CDMX | 55-XXXX-XXXX"
 
-STYLE: Premium contemporary fleet like luxury brand delivery. Sophisticated two-tone white and charcoal. Photorealistic mockup.`,
+STYLE: Premium two-tone white and charcoal. Photorealistic mockup.`,
 
       // === VISTA TRASERA ===
-      'minimalista-trasera': `Ultra modern minimalist white truck rear doors wrap mockup. Clean contemporary back view.
+      'minimalista-trasera': `Photorealistic white truck rear doors wrap mockup. Professional back view design.
+
+CRITICAL - LOGO ALMASA (must match exactly):
+- The word "ALMASA" in elegant RED SERIF typography (#C41E3A crimson red)
+- The first letter "A" is larger and decorative with classic flourishes
+- Typography: Traditional elegant serif font (Times/Garamond style with decorative capitals)
+- NOT sans-serif - CLASSIC SERIF typeface
+- Logo centered on doors
+
+ADDITIONAL:
+- Small "almasa.com.mx" in red below logo
+- Bottom edge: small gray text "QUEJAS: 55-XXXX-XXXX | PLACA: XXX-000"
+
+STYLE: Clean professional appearance. Photorealistic mockup.`,
+
+      'reglamentario-trasera': `Photorealistic white truck rear doors wrap mockup. Mexican commercial vehicle back view with regulatory info.
+
+CRITICAL - LOGO ALMASA (must match exactly):
+- The word "ALMASA" in elegant RED SERIF typography (#C41E3A crimson red)
+- The first letter "A" is larger and decorative with classic flourishes
+- Typography: Traditional elegant serif font with decorative capitals
+- NOT sans-serif - CLASSIC SERIF typeface
+- Logo centered on doors
+
+REGULATORY INFO (below logo, small dark gray text):
+"¿Cómo manejo? 55-XXXX-XXXX
+QUEJAS: 55-XXXX-XXXX
+PLACA: XXX-000 | VEL. MÁX: 90 km/h"
+
+- Diagonal safety stripes at bottom bumper area
+
+STYLE: Professional Mexican commercial truck. Photorealistic mockup.`,
+
+      'premium-trasera': `Photorealistic white truck rear doors wrap mockup. Premium sophisticated back view.
+
+CRITICAL - LOGO ALMASA (must match exactly):
+- The word "ALMASA" in elegant RED SERIF typography (#C41E3A crimson red)
+- The first letter "A" is larger and decorative with classic flourishes
+- Typography: Traditional elegant serif font with decorative capitals
+- NOT sans-serif - CLASSIC ELEGANT SERIF typeface
+- Logo centered on doors
 
 DESIGN ELEMENTS:
-- Large "ALMASA" in flat bold red (#C41E3A), modern sans-serif font, centered on doors
-- Small "almasa.com.mx" in light gray below
-- Bottom edge only: small gray text "QUEJAS: 55-XXXX-XXXX | PLACA: XXX-000"
-
-STYLE: Maximum white space, ultra clean, no borders or decorative elements. Tesla/Apple fleet aesthetic. Photorealistic mockup.`,
-
-      'reglamentario-trasera': `Modern clean white truck rear doors wrap mockup. Contemporary fleet design with regulatory info.
-
-DESIGN ELEMENTS:
-- Large "ALMASA" in flat bold red (#C41E3A), modern sans-serif, centered on doors
-- Below logo: compact regulatory block in small dark gray sans-serif:
-  "¿Cómo manejo? 55-XXXX-XXXX
-  QUEJAS: 55-XXXX-XXXX
-  PLACA: XXX-000 | VEL. MÁX: 90 km/h"
-- Minimal diagonal safety stripes only at very bottom bumper area
-
-STYLE: Clean modern fleet aesthetic, regulatory compliant but contemporary. Photorealistic mockup.`,
-
-      'premium-trasera': `Premium contemporary white truck rear doors wrap mockup. Sophisticated modern back view.
-
-DESIGN ELEMENTS:
-- Large "ALMASA" in bold red (#C41E3A), premium sans-serif typography, centered
-- Elegant dark charcoal gray band at bottom third of doors
-- Regulatory info in white text on charcoal band:
+- Dark charcoal gray band at bottom third of doors
+- Regulatory info in white on charcoal:
   "¿Cómo manejo? 55-XXXX-XXXX | QUEJAS: 55-XXXX-XXXX
   PLACA: XXX-000 | VEL. MÁX: 90 km/h"
-- Subtle red accent line between white and charcoal areas
+- Subtle red accent line between white and charcoal
 
-STYLE: Premium contemporary two-tone design, sophisticated and modern. Photorealistic mockup.`
+STYLE: Premium two-tone design. Photorealistic mockup.`
     };
 
     const prompt = prompts[designType];
