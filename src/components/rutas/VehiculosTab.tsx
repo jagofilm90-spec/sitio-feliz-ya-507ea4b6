@@ -54,6 +54,19 @@ interface Vehiculo {
   modelo: string | null;
   clave_vehicular: string | null;
   clase_tipo: string | null;
+  marca: string | null;
+  // Federal card fields
+  tipo_tarjeta_circulacion: string | null;
+  peso_vehicular_ton: number | null;
+  numero_ejes: number | null;
+  numero_llantas: number | null;
+  capacidad_toneladas: number | null;
+  clase_federal: string | null;
+  permiso_ruta: string | null;
+  tipo_suspension: string | null;
+  dimensiones_alto: number | null;
+  dimensiones_ancho: number | null;
+  dimensiones_largo: number | null;
 }
 
 const VehiculosTab = () => {
@@ -88,6 +101,19 @@ const VehiculosTab = () => {
     modelo: "",
     clave_vehicular: "",
     clase_tipo: "",
+    marca: "",
+    // Federal card fields
+    tipo_tarjeta_circulacion: "estatal",
+    peso_vehicular_ton: "",
+    numero_ejes: "",
+    numero_llantas: "",
+    capacidad_toneladas: "",
+    clase_federal: "",
+    permiso_ruta: "",
+    tipo_suspension: "",
+    dimensiones_alto: "",
+    dimensiones_ancho: "",
+    dimensiones_largo: "",
   });
 
   useEffect(() => {
@@ -160,19 +186,37 @@ const VehiculosTab = () => {
       
       if (result.success && result.data) {
         const data = result.data;
+        const isFederal = data.tipo_tarjeta === 'federal';
         
         setFormData(prev => ({
           ...prev,
+          // Common fields
           numero_serie: data.serie_vehicular || prev.numero_serie,
           numero_motor: data.numero_motor || prev.numero_motor,
-          cilindros: data.cilindros || prev.cilindros,
           modelo: data.modelo || prev.modelo,
-          clave_vehicular: data.clave_vehicular || prev.clave_vehicular,
           tipo_combustible: mapCombustible(data.combustible) || prev.tipo_combustible,
           clase_tipo: data.clase_tipo || prev.clase_tipo,
           placa: data.placa || prev.placa,
           tarjeta_circulacion_expedicion: data.fecha_expedicion || prev.tarjeta_circulacion_expedicion,
+          marca: data.marca || prev.marca,
+          tipo_tarjeta_circulacion: data.tipo_tarjeta || prev.tipo_tarjeta_circulacion,
+          
+          // State card fields
+          cilindros: data.cilindros || prev.cilindros,
+          clave_vehicular: data.clave_vehicular || prev.clave_vehicular,
           tarjeta_circulacion_vencimiento: data.fecha_vigencia || prev.tarjeta_circulacion_vencimiento,
+          
+          // Federal card fields
+          peso_vehicular_ton: data.peso_vehicular_ton?.toString() || prev.peso_vehicular_ton,
+          numero_ejes: data.numero_ejes?.toString() || prev.numero_ejes,
+          numero_llantas: data.numero_llantas?.toString() || prev.numero_llantas,
+          capacidad_toneladas: data.capacidad_toneladas?.toString() || prev.capacidad_toneladas,
+          clase_federal: data.clase_federal || prev.clase_federal,
+          permiso_ruta: data.permiso_ruta || prev.permiso_ruta,
+          tipo_suspension: data.tipo_suspension || prev.tipo_suspension,
+          dimensiones_alto: data.dimensiones_alto?.toString() || prev.dimensiones_alto,
+          dimensiones_ancho: data.dimensiones_ancho?.toString() || prev.dimensiones_ancho,
+          dimensiones_largo: data.dimensiones_largo?.toString() || prev.dimensiones_largo,
         }));
 
         setDataExtracted(true);
@@ -182,11 +226,15 @@ const VehiculosTab = () => {
           data.numero_motor && "Motor",
           data.placa && "Placa",
           data.modelo && "Modelo",
-          data.fecha_vigencia && "Vigencia",
+          data.marca && "Marca",
+          !isFederal && data.fecha_vigencia && "Vigencia",
+          isFederal && data.peso_vehicular_ton && "Peso",
+          isFederal && data.capacidad_toneladas && "Capacidad",
+          isFederal && data.clase_federal && "Clase Federal",
         ].filter(Boolean);
 
         toast({
-          title: "✓ Datos extraídos automáticamente",
+          title: `✓ Datos extraídos (Tarjeta ${isFederal ? 'Federal' : 'Estatal'})`,
           description: `Campos detectados: ${extractedFields.join(", ")}`,
         });
       }
@@ -263,7 +311,9 @@ const VehiculosTab = () => {
     e.preventDefault();
 
     try {
-      const vehiculoData = {
+      const isFederal = formData.tipo_tarjeta_circulacion === 'federal';
+      
+      const vehiculoData: any = {
         nombre: formData.nombre,
         tipo: formData.tipo,
         placa: formData.placa || null,
@@ -283,6 +333,19 @@ const VehiculosTab = () => {
         modelo: formData.modelo || null,
         clave_vehicular: formData.clave_vehicular || null,
         clase_tipo: formData.clase_tipo || null,
+        marca: formData.marca || null,
+        tipo_tarjeta_circulacion: formData.tipo_tarjeta_circulacion,
+        // Federal fields
+        peso_vehicular_ton: formData.peso_vehicular_ton ? parseFloat(formData.peso_vehicular_ton) : null,
+        numero_ejes: formData.numero_ejes ? parseInt(formData.numero_ejes) : null,
+        numero_llantas: formData.numero_llantas ? parseInt(formData.numero_llantas) : null,
+        capacidad_toneladas: formData.capacidad_toneladas ? parseFloat(formData.capacidad_toneladas) : null,
+        clase_federal: formData.clase_federal || null,
+        permiso_ruta: formData.permiso_ruta || null,
+        tipo_suspension: formData.tipo_suspension || null,
+        dimensiones_alto: formData.dimensiones_alto ? parseFloat(formData.dimensiones_alto) : null,
+        dimensiones_ancho: formData.dimensiones_ancho ? parseFloat(formData.dimensiones_ancho) : null,
+        dimensiones_largo: formData.dimensiones_largo ? parseFloat(formData.dimensiones_largo) : null,
       };
 
       if (editingVehiculo) {
@@ -336,6 +399,18 @@ const VehiculosTab = () => {
       modelo: vehiculo.modelo || "",
       clave_vehicular: vehiculo.clave_vehicular || "",
       clase_tipo: vehiculo.clase_tipo || "",
+      marca: vehiculo.marca || "",
+      tipo_tarjeta_circulacion: vehiculo.tipo_tarjeta_circulacion || "estatal",
+      peso_vehicular_ton: vehiculo.peso_vehicular_ton?.toString() || "",
+      numero_ejes: vehiculo.numero_ejes?.toString() || "",
+      numero_llantas: vehiculo.numero_llantas?.toString() || "",
+      capacidad_toneladas: vehiculo.capacidad_toneladas?.toString() || "",
+      clase_federal: vehiculo.clase_federal || "",
+      permiso_ruta: vehiculo.permiso_ruta || "",
+      tipo_suspension: vehiculo.tipo_suspension || "",
+      dimensiones_alto: vehiculo.dimensiones_alto?.toString() || "",
+      dimensiones_ancho: vehiculo.dimensiones_ancho?.toString() || "",
+      dimensiones_largo: vehiculo.dimensiones_largo?.toString() || "",
     });
     setDataExtracted(false);
     setDialogOpen(true);
@@ -385,6 +460,18 @@ const VehiculosTab = () => {
       modelo: "",
       clave_vehicular: "",
       clase_tipo: "",
+      marca: "",
+      tipo_tarjeta_circulacion: "estatal",
+      peso_vehicular_ton: "",
+      numero_ejes: "",
+      numero_llantas: "",
+      capacidad_toneladas: "",
+      clase_federal: "",
+      permiso_ruta: "",
+      tipo_suspension: "",
+      dimensiones_alto: "",
+      dimensiones_ancho: "",
+      dimensiones_largo: "",
     });
   };
 
@@ -402,7 +489,12 @@ const VehiculosTab = () => {
     return <Badge variant={variants[status] || "default"}>{labels[status] || status}</Badge>;
   };
 
-  const getExpirationBadge = (dateStr: string | null, label: string) => {
+  const getExpirationBadge = (dateStr: string | null, label: string, tipoTarjeta?: string | null) => {
+    // Federal cards don't have expiration dates
+    if (label === "tarjeta" && tipoTarjeta === "federal") {
+      return <Badge variant="secondary" className="text-xs">Federal (sin venc.)</Badge>;
+    }
+    
     if (!dateStr) return <span className="text-muted-foreground text-sm">Sin {label}</span>;
     
     const date = parseISO(dateStr);
@@ -426,6 +518,8 @@ const VehiculosTab = () => {
       </Badge>
     );
   };
+
+  const isFederalCard = formData.tipo_tarjeta_circulacion === 'federal';
 
   return (
     <div className="space-y-4">
@@ -461,9 +555,14 @@ const VehiculosTab = () => {
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" />
                   <Label className="font-medium">Tarjeta de Circulación (Extracción automática)</Label>
+                  {formData.tipo_tarjeta_circulacion && (
+                    <Badge variant={isFederalCard ? "default" : "secondary"} className="text-xs">
+                      {isFederalCard ? "Federal (SICT)" : "Estatal"}
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Sube la tarjeta de circulación y el sistema extraerá automáticamente: Serie, Motor, Placa, Modelo, etc.
+                  Sube la tarjeta de circulación (estatal o federal) y el sistema extraerá automáticamente los datos.
                 </p>
                 <div className="flex gap-2 items-center">
                   <Input
@@ -495,6 +594,35 @@ const VehiculosTab = () => {
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Card type selector */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Tipo de Tarjeta</Label>
+                  <Select
+                    value={formData.tipo_tarjeta_circulacion}
+                    onValueChange={(value) => setFormData({ ...formData, tipo_tarjeta_circulacion: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="estatal">Estatal</SelectItem>
+                      <SelectItem value="federal">Federal (SICT)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="marca">Marca</Label>
+                  <Input
+                    id="marca"
+                    value={formData.marca}
+                    onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
+                    placeholder="Ej: Nissan, HINO, International"
+                    autoComplete="off"
+                  />
+                </div>
               </div>
 
               {/* Basic Info */}
@@ -564,16 +692,18 @@ const VehiculosTab = () => {
                     autoComplete="off"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cilindros">Cilindros</Label>
-                  <Input
-                    id="cilindros"
-                    value={formData.cilindros}
-                    onChange={(e) => setFormData({ ...formData, cilindros: e.target.value })}
-                    placeholder="4, 6, 8..."
-                    autoComplete="off"
-                  />
-                </div>
+                {!isFederalCard && (
+                  <div className="space-y-2">
+                    <Label htmlFor="cilindros">Cilindros</Label>
+                    <Input
+                      id="cilindros"
+                      value={formData.cilindros}
+                      onChange={(e) => setFormData({ ...formData, cilindros: e.target.value })}
+                      placeholder="4, 6, 8..."
+                      autoComplete="off"
+                    />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="modelo">Modelo (Año)</Label>
                   <Input
@@ -586,28 +716,167 @@ const VehiculosTab = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="clave_vehicular">Clave Vehicular</Label>
-                  <Input
-                    id="clave_vehicular"
-                    value={formData.clave_vehicular}
-                    onChange={(e) => setFormData({ ...formData, clave_vehicular: e.target.value })}
-                    placeholder="Clave oficial"
-                    autoComplete="off"
-                  />
+              {!isFederalCard && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="clave_vehicular">Clave Vehicular</Label>
+                    <Input
+                      id="clave_vehicular"
+                      value={formData.clave_vehicular}
+                      onChange={(e) => setFormData({ ...formData, clave_vehicular: e.target.value })}
+                      placeholder="Clave oficial"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="clase_tipo">Clase y Tipo</Label>
+                    <Input
+                      id="clase_tipo"
+                      value={formData.clase_tipo}
+                      onChange={(e) => setFormData({ ...formData, clase_tipo: e.target.value })}
+                      placeholder="Ej: Camioneta Pick Up"
+                      autoComplete="off"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="clase_tipo">Clase y Tipo</Label>
-                  <Input
-                    id="clase_tipo"
-                    value={formData.clase_tipo}
-                    onChange={(e) => setFormData({ ...formData, clase_tipo: e.target.value })}
-                    placeholder="Ej: Camioneta Pick Up"
-                    autoComplete="off"
-                  />
+              )}
+
+              {/* Federal Card Specific Fields */}
+              {isFederalCard && (
+                <div className="border-t pt-4 mt-4 space-y-4">
+                  <h3 className="font-medium flex items-center gap-2">
+                    <Badge variant="default">Federal</Badge>
+                    Datos de Tarjeta Federal (SICT)
+                  </h3>
+                  
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="clase_federal">Clase Federal</Label>
+                      <Input
+                        id="clase_federal"
+                        value={formData.clase_federal}
+                        onChange={(e) => setFormData({ ...formData, clase_federal: e.target.value })}
+                        placeholder="C2, C3, T3S2..."
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="peso_vehicular_ton">Peso Vehicular (Ton)</Label>
+                      <Input
+                        id="peso_vehicular_ton"
+                        type="number"
+                        step="0.1"
+                        value={formData.peso_vehicular_ton}
+                        onChange={(e) => setFormData({ ...formData, peso_vehicular_ton: e.target.value })}
+                        placeholder="6.0"
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="capacidad_toneladas">Capacidad (Ton)</Label>
+                      <Input
+                        id="capacidad_toneladas"
+                        type="number"
+                        step="0.1"
+                        value={formData.capacidad_toneladas}
+                        onChange={(e) => setFormData({ ...formData, capacidad_toneladas: e.target.value })}
+                        placeholder="11.0"
+                        autoComplete="off"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="numero_ejes">Número de Ejes</Label>
+                      <Input
+                        id="numero_ejes"
+                        type="number"
+                        value={formData.numero_ejes}
+                        onChange={(e) => setFormData({ ...formData, numero_ejes: e.target.value })}
+                        placeholder="2, 3, 5..."
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="numero_llantas">Número de Llantas</Label>
+                      <Input
+                        id="numero_llantas"
+                        type="number"
+                        value={formData.numero_llantas}
+                        onChange={(e) => setFormData({ ...formData, numero_llantas: e.target.value })}
+                        placeholder="6, 10, 18..."
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tipo_suspension">Tipo de Suspensión</Label>
+                      <Select
+                        value={formData.tipo_suspension}
+                        onValueChange={(value) => setFormData({ ...formData, tipo_suspension: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Mecánica">Mecánica</SelectItem>
+                          <SelectItem value="Neumática">Neumática</SelectItem>
+                          <SelectItem value="Mixta">Mixta</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="dimensiones_largo">Largo (m)</Label>
+                      <Input
+                        id="dimensiones_largo"
+                        type="number"
+                        step="0.01"
+                        value={formData.dimensiones_largo}
+                        onChange={(e) => setFormData({ ...formData, dimensiones_largo: e.target.value })}
+                        placeholder="8.50"
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dimensiones_ancho">Ancho (m)</Label>
+                      <Input
+                        id="dimensiones_ancho"
+                        type="number"
+                        step="0.01"
+                        value={formData.dimensiones_ancho}
+                        onChange={(e) => setFormData({ ...formData, dimensiones_ancho: e.target.value })}
+                        placeholder="2.60"
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dimensiones_alto">Alto (m)</Label>
+                      <Input
+                        id="dimensiones_alto"
+                        type="number"
+                        step="0.01"
+                        value={formData.dimensiones_alto}
+                        onChange={(e) => setFormData({ ...formData, dimensiones_alto: e.target.value })}
+                        placeholder="4.10"
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="permiso_ruta">Permiso de Ruta</Label>
+                      <Input
+                        id="permiso_ruta"
+                        value={formData.permiso_ruta}
+                        onChange={(e) => setFormData({ ...formData, permiso_ruta: e.target.value })}
+                        placeholder="No. permiso"
+                        autoComplete="off"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -683,15 +952,25 @@ const VehiculosTab = () => {
                     onChange={(e) => setFormData({ ...formData, tarjeta_circulacion_expedicion: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tarjeta_vencimiento">Fecha Vigencia (Tarjeta)</Label>
-                  <Input
-                    id="tarjeta_vencimiento"
-                    type="date"
-                    value={formData.tarjeta_circulacion_vencimiento}
-                    onChange={(e) => setFormData({ ...formData, tarjeta_circulacion_vencimiento: e.target.value })}
-                  />
-                </div>
+                {!isFederalCard && (
+                  <div className="space-y-2">
+                    <Label htmlFor="tarjeta_vencimiento">Fecha Vigencia (Tarjeta)</Label>
+                    <Input
+                      id="tarjeta_vencimiento"
+                      type="date"
+                      value={formData.tarjeta_circulacion_vencimiento}
+                      onChange={(e) => setFormData({ ...formData, tarjeta_circulacion_vencimiento: e.target.value })}
+                    />
+                  </div>
+                )}
+                {isFederalCard && (
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">Vigencia</Label>
+                    <p className="text-sm text-muted-foreground pt-2">
+                      Las tarjetas federales no tienen fecha de vencimiento
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Póliza de Seguro */}
@@ -769,7 +1048,7 @@ const VehiculosTab = () => {
               <TableHead>Nombre</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Placa</TableHead>
-              <TableHead>Modelo</TableHead>
+              <TableHead>Marca/Modelo</TableHead>
               <TableHead>Local (kg)</TableHead>
               <TableHead>Foránea (kg)</TableHead>
               <TableHead>Tarjeta Circ.</TableHead>
@@ -803,10 +1082,14 @@ const VehiculosTab = () => {
                   <TableCell className="font-medium">{vehiculo.nombre}</TableCell>
                   <TableCell className="capitalize">{vehiculo.tipo}</TableCell>
                   <TableCell>{vehiculo.placa || "—"}</TableCell>
-                  <TableCell>{vehiculo.modelo || "—"}</TableCell>
+                  <TableCell>
+                    {vehiculo.marca || vehiculo.modelo ? (
+                      <span>{[vehiculo.marca, vehiculo.modelo].filter(Boolean).join(" ")}</span>
+                    ) : "—"}
+                  </TableCell>
                   <TableCell>{vehiculo.peso_maximo_local_kg.toLocaleString()}</TableCell>
                   <TableCell>{vehiculo.peso_maximo_foraneo_kg.toLocaleString()}</TableCell>
-                  <TableCell>{getExpirationBadge(vehiculo.tarjeta_circulacion_vencimiento, "tarjeta")}</TableCell>
+                  <TableCell>{getExpirationBadge(vehiculo.tarjeta_circulacion_vencimiento, "tarjeta", vehiculo.tipo_tarjeta_circulacion)}</TableCell>
                   <TableCell>{getExpirationBadge(vehiculo.poliza_seguro_vencimiento, "póliza")}</TableCell>
                   <TableCell>{getStatusBadge(vehiculo.status)}</TableCell>
                   <TableCell>

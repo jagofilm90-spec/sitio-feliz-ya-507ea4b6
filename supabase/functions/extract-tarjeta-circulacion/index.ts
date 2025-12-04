@@ -51,31 +51,64 @@ serve(async (req) => {
             role: 'system',
             content: `Eres un experto en extraer datos de tarjetas de circulación mexicanas. 
             
-Analiza la imagen/documento y extrae los siguientes campos EXACTAMENTE como aparecen en el documento:
+Existen DOS tipos de tarjetas:
+
+TIPO 1 - TARJETA FEDERAL (SICT/SCT):
+- Emitida por la Secretaría de Infraestructura, Comunicaciones y Transportes (SICT) o Dirección General de Autotransporte Federal
+- Dice "TARJETA DE CIRCULACIÓN" con logo del gobierno federal
+- Incluye campos especiales: peso vehicular, número de ejes, número de llantas, dimensiones, capacidad en toneladas, tipo de suspensión, permiso de ruta, clase federal (C2, C3, T3S2, etc.)
+- Generalmente NO tiene fecha de vigencia (solo fecha de expedición)
+- Las placas suelen tener formato federal (diferente al estatal)
+
+TIPO 2 - TARJETA ESTATAL:
+- Emitida por la Secretaría de Movilidad de algún estado (CDMX, Estado de México, etc.)
+- Incluye: cilindros, clave vehicular, fecha de vigencia
+- NO tiene campos de peso vehicular, ejes, llantas, dimensiones, etc.
+
+Analiza la imagen/documento y extrae los siguientes campos según el tipo de tarjeta:
+
+CAMPOS COMUNES (ambos tipos):
+- tipo_tarjeta: "federal" o "estatal" (IMPORTANTE: determina esto primero)
 - serie_vehicular: El NIV o número de serie del vehículo (17 caracteres alfanuméricos)
 - numero_motor: El número de motor
-- cilindros: Número de cilindros (ej: "4", "6", "8")
 - modelo: El año/modelo del vehículo (ej: "2020", "2021")
-- clave_vehicular: La clave vehicular oficial
 - combustible: Tipo de combustible (Gasolina, Diésel, Gas LP, etc.)
-- clase_tipo: Clase y tipo de vehículo (ej: "Camioneta Pick Up", "Automóvil Sedán")
+- clase_tipo: Clase y tipo de vehículo (ej: "Camioneta Pick Up", "Automóvil Sedán", "Camión Unitario")
 - placa: Las placas del vehículo
 - fecha_expedicion: Fecha de expedición en formato YYYY-MM-DD
-- fecha_vigencia: Fecha de vigencia/vencimiento en formato YYYY-MM-DD
-- marca: Marca del vehículo (ej: "Nissan", "Chevrolet", "Ford")
+- marca: Marca del vehículo (ej: "Nissan", "Chevrolet", "Ford", "HINO", "INTERNATIONAL")
 - nombre_propietario: Nombre del propietario si es visible
+
+CAMPOS SOLO PARA TARJETAS ESTATALES:
+- cilindros: Número de cilindros (ej: "4", "6", "8")
+- clave_vehicular: La clave vehicular oficial
+- fecha_vigencia: Fecha de vigencia/vencimiento en formato YYYY-MM-DD (null para federales)
+
+CAMPOS SOLO PARA TARJETAS FEDERALES:
+- peso_vehicular_ton: Peso vehicular en toneladas (ej: 6.0, 11.0)
+- numero_ejes: Número de ejes (ej: 2, 3, 5)
+- numero_llantas: Número de llantas (ej: 6, 10, 18)
+- capacidad_toneladas: Capacidad de carga en toneladas (ej: 11.0, 15.0, 30.0)
+- clase_federal: Clasificación federal del vehículo (ej: "C2", "C3", "T3S2", "T3S3")
+- tipo_suspension: Tipo de suspensión (ej: "Mecánica", "Neumática", "Mixta")
+- permiso_ruta: Número de permiso de ruta federal si existe
+- dimensiones_alto: Altura del vehículo en metros
+- dimensiones_ancho: Ancho del vehículo en metros
+- dimensiones_largo: Largo del vehículo en metros
 
 IMPORTANTE:
 - Si un campo no es legible o no está presente, usa null
 - Las fechas DEBEN estar en formato YYYY-MM-DD
-- Responde ÚNICAMENTE con un objeto JSON válido, sin markdown ni explicaciones`
+- Los números decimales usan punto, no coma (ej: 6.0, no 6,0)
+- Responde ÚNICAMENTE con un objeto JSON válido, sin markdown ni explicaciones
+- Es CRÍTICO determinar correctamente si es federal o estatal para extraer los campos correctos`
           },
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: 'Extrae todos los datos de esta tarjeta de circulación mexicana y devuélvelos en formato JSON.'
+                text: 'Extrae todos los datos de esta tarjeta de circulación mexicana. Primero identifica si es tarjeta FEDERAL (SICT) o ESTATAL, luego extrae los campos correspondientes. Devuelve el resultado en formato JSON.'
               },
               {
                 type: 'image_url',
@@ -86,7 +119,7 @@ IMPORTANTE:
             ]
           }
         ],
-        max_tokens: 1000,
+        max_tokens: 1500,
       }),
     });
 
@@ -142,6 +175,7 @@ IMPORTANTE:
       
       extractedData = JSON.parse(jsonString);
       console.log('Extracted data:', extractedData);
+      console.log('Card type detected:', extractedData.tipo_tarjeta);
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', content);
       return new Response(
