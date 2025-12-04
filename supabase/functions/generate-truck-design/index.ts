@@ -18,152 +18,80 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
+    // Modern minimalist prompts - Tesla/FedEx/Amazon fleet aesthetic
     const prompts: Record<string, string> = {
       // === VISTA LATERAL ===
-      'minimalista-lateral': `Professional vehicle wrap design mockup for a white commercial closed-box delivery truck (side view). Ultra minimalist elegant design with regulatory compliance:
+      'minimalista-lateral': `Ultra modern minimalist white commercial box truck wrap mockup, side view. Clean contemporary fleet design.
 
-MAIN BOX AREA:
-- "ALMASA" logo in bold red serif typography (#C41E3A) inside a rounded rectangle with thin elegant border, centered on truck side
-- Below the logo: "Desde 1904" in elegant black serif typography
-- At the bottom of the box: "almasa.com.mx" in small black text
+DESIGN ELEMENTS:
+- Large "ALMASA" in flat bold red (#C41E3A), modern sans-serif font (Helvetica/Gotham style), centered on truck box
+- Small "almasa.com.mx" in light gray below
+- Driver door: tiny text "PLACA: XXX-000 | DIESEL" in dark gray
 
-TOP OF BOX (near roof line):
-- "PLACA: XXX-000" in small formal black text
+STYLE: Maximum white space, no borders, no decorative elements, no patterns. Ultra clean like Tesla Semi or Apple delivery trucks. Flat colors only. Photorealistic studio mockup, soft shadows.`,
 
-DOOR AREA (driver's door, small formal text):
-- "COMBUSTIBLE: DIESEL"
+      'reglamentario-lateral': `Modern clean white commercial truck wrap mockup, side view. Contemporary fleet design with regulatory compliance.
 
-BUMPERS:
-- Diagonal yellow and red safety stripes (franjas diagonales reglamentarias) on front and rear bumpers
+DESIGN ELEMENTS:
+- Large "ALMASA" in flat bold red (#C41E3A), modern sans-serif typography, centered on main box
+- Small "almasa.com.mx" in gray below logo
+- Subtle thin red horizontal line accent at bottom edge of box
+- Driver door area - compact regulatory block in small dark gray sans-serif:
+  "SERVICIO MERCANTIL DE CARGA
+  PLACA: XXX-000 | DIESEL
+  ABARROTES LA MANITA S.A. DE C.V.
+  Melchor Campo #59, CDMX
+  TEL: 55-XXXX-XXXX"
 
-Clean white background with ultra minimalist aesthetic. Modern, premium, sophisticated look while including minimum required regulatory information.
-16:9 aspect ratio, photorealistic mockup`,
+STYLE: Clean modern fleet aesthetic like FedEx or Amazon trucks. Minimal decorative elements. Photorealistic mockup.`,
 
-      'reglamentario-lateral': `Professional vehicle wrap design mockup for a white commercial closed-box delivery truck (side view). Elegant design fully compliant with Mexico City commercial vehicle regulations:
+      'premium-lateral': `Premium contemporary white commercial truck wrap mockup, side view. Sophisticated modern fleet design.
 
-MAIN BOX AREA:
-- "ALMASA" logo in bold red serif typography (#C41E3A) inside a rounded rectangle with thin elegant border, centered on truck side
-- Below the logo: "Desde 1904" in elegant black serif typography
-- At the bottom of the box: "almasa.com.mx" in small black text
+DESIGN ELEMENTS:
+- Large "ALMASA" in bold red (#C41E3A), premium sans-serif typography, centered
+- Elegant dark charcoal gray gradient band at bottom third of truck box
+- "Desde 1904" small tagline in white on the gray band
+- "almasa.com.mx" in white on gray band
+- Door area - regulatory text in white on charcoal background:
+  "SERVICIO MERCANTIL | PLACA: XXX-000 | DIESEL
+  ABARROTES LA MANITA S.A. DE C.V.
+  Melchor Campo #59, CDMX | 55-XXXX-XXXX"
 
-TOP OF BOX (near roof line):
-- "PLACA: XXX-000" in formal black text, clearly visible
-
-DOOR AREA (driver's door, formal black text in organized layout):
-- Header: "SERVICIO MERCANTIL DE TRANSPORTE DE CARGA"
-- "No. PLACA: XXX-000"
-- "ABARROTES LA MANITA, S.A. DE C.V."
-- "Melchor Campo #59, Col. Centro, CDMX"
-- "TEL: 55-XXXX-XXXX"
-
-SIDE OF BOX (visible regulatory info):
-- "COMBUSTIBLE: DIESEL" in small formal black text
-
-BUMPERS:
-- Diagonal yellow and red safety stripes (franjas diagonales reglamentarias) on front and rear bumpers
-
-Clean white background maintaining elegant minimalist aesthetic while being 100% compliant with regulations. All regulatory text positioned professionally without cluttering the design.
-16:9 aspect ratio, photorealistic mockup`,
-
-      'premium-lateral': `Professional vehicle wrap design mockup for a white commercial closed-box delivery truck (side view). Premium executive elegant design with regulatory compliance:
-
-MAIN BOX AREA:
-- "ALMASA" logo in bold red (#C41E3A) inside a rounded rectangle with thin elegant border and subtle gold accent details, centered
-- "Desde 1904" in sophisticated gold/champagne metallic typography below logo
-- Subtle geometric accent lines in gold creating elegant depth
-- "almasa.com.mx" in elegant black text at bottom
-
-TOP OF BOX (near roof line):
-- "PLACA: XXX-000" in refined gold metallic text
-
-DOOR AREA (driver's door, elegant gold and black text):
-- Header: "SERVICIO MERCANTIL DE TRANSPORTE DE CARGA" in refined black
-- "No. PLACA: XXX-000" in gold
-- "ABARROTES LA MANITA, S.A. DE C.V." in elegant black
-- "Melchor Campo #59, Col. Centro, CDMX" in black
-- "TEL: 55-XXXX-XXXX" in gold
-
-SIDE OF BOX:
-- "COMBUSTIBLE: DIESEL" in small elegant gold text
-
-BUMPERS:
-- Elegant diagonal gold and red stripes on front and rear bumpers
-
-Clean white truck body with luxurious, sophisticated, premium brand appearance using red and gold accents.
-16:9 aspect ratio, photorealistic mockup`,
+STYLE: Premium contemporary fleet like luxury brand delivery. Sophisticated two-tone white and charcoal. Photorealistic mockup.`,
 
       // === VISTA TRASERA ===
-      'minimalista-trasera': `Professional vehicle wrap design mockup for a white commercial delivery truck (rear view, back doors closed). Clean elegant minimalist design with regulatory compliance:
+      'minimalista-trasera': `Ultra modern minimalist white truck rear doors wrap mockup. Clean contemporary back view.
 
-BACK DOORS (center):
-- "ALMASA" logo in bold red serif typography (#C41E3A) inside a rounded rectangle with thin elegant border, large and centered
-- "Desde 1904" below the logo in elegant black serif typography
-- "almasa.com.mx" prominently displayed below
+DESIGN ELEMENTS:
+- Large "ALMASA" in flat bold red (#C41E3A), modern sans-serif font, centered on doors
+- Small "almasa.com.mx" in light gray below
+- Bottom edge only: small gray text "QUEJAS: 55-XXXX-XXXX | PLACA: XXX-000"
 
-UPPER AREA (near top of doors):
-- "PLACA: XXX-000" in formal black text, clearly visible
+STYLE: Maximum white space, ultra clean, no borders or decorative elements. Tesla/Apple fleet aesthetic. Photorealistic mockup.`,
 
-LOWER AREA (above bumper):
-- "QUEJAS: 55-XXXX-XXXX" in visible black text
+      'reglamentario-trasera': `Modern clean white truck rear doors wrap mockup. Contemporary fleet design with regulatory info.
 
-REAR BUMPER:
-- Diagonal yellow and red safety stripes (franjas diagonales reglamentarias)
+DESIGN ELEMENTS:
+- Large "ALMASA" in flat bold red (#C41E3A), modern sans-serif, centered on doors
+- Below logo: compact regulatory block in small dark gray sans-serif:
+  "¿Cómo manejo? 55-XXXX-XXXX
+  QUEJAS: 55-XXXX-XXXX
+  PLACA: XXX-000 | VEL. MÁX: 90 km/h"
+- Minimal diagonal safety stripes only at very bottom bumper area
 
-LICENSE PLATE AREA:
-- Space for physical license plate at standard position
+STYLE: Clean modern fleet aesthetic, regulatory compliant but contemporary. Photorealistic mockup.`,
 
-Clean white background, ultra minimalist with only essential regulatory information. Modern, premium, sophisticated look.
-16:9 aspect ratio, photorealistic mockup showing rear of truck`,
+      'premium-trasera': `Premium contemporary white truck rear doors wrap mockup. Sophisticated modern back view.
 
-      'reglamentario-trasera': `Professional vehicle wrap design mockup for a white commercial delivery truck (rear view, back doors closed). Elegant design with full regulatory compliance:
+DESIGN ELEMENTS:
+- Large "ALMASA" in bold red (#C41E3A), premium sans-serif typography, centered
+- Elegant dark charcoal gray band at bottom third of doors
+- Regulatory info in white text on charcoal band:
+  "¿Cómo manejo? 55-XXXX-XXXX | QUEJAS: 55-XXXX-XXXX
+  PLACA: XXX-000 | VEL. MÁX: 90 km/h"
+- Subtle red accent line between white and charcoal areas
 
-BACK DOORS (center):
-- "ALMASA" logo in bold red serif typography (#C41E3A) inside a rounded rectangle with thin elegant border, large and centered
-- "Desde 1904" below the logo in elegant black typography
-- "almasa.com.mx" prominently displayed
-
-UPPER AREA (near top of doors):
-- "UNIDAD No. ___" in formal black text
-- "PLACA: XXX-000" clearly visible
-
-CENTER-LOWER AREA (organized regulatory block):
-- "¿Cómo manejo? Llama al: 55-XXXX-XXXX" in visible black text
-- "QUEJAS Y SUGERENCIAS: 55-XXXX-XXXX" in formal black text
-- "Velocidad máxima: 90 km/h" clearly visible
-
-REAR BUMPER:
-- Diagonal yellow and red safety stripes (franjas diagonales reglamentarias)
-
-LICENSE PLATE AREA:
-- Space for physical license plate at standard position
-
-Clean white background maintaining elegant aesthetic while being 100% compliant with all rear vehicle regulations. All text positioned professionally.
-16:9 aspect ratio, photorealistic mockup showing rear of truck`,
-
-      'premium-trasera': `Professional vehicle wrap design mockup for a white commercial delivery truck (rear view, back doors closed). Premium executive elegant design with regulatory compliance:
-
-BACK DOORS (center):
-- "ALMASA" logo in bold red (#C41E3A) inside a rounded rectangle with thin elegant border and subtle gold accents, large and centered
-- "Desde 1904" in sophisticated gold/champagne metallic typography
-- "almasa.com.mx" in elegant gold text
-
-UPPER AREA (near top of doors):
-- "UNIDAD No. ___" in refined gold text
-- "PLACA: XXX-000" in elegant gold metallic
-
-CENTER-LOWER AREA (elegant regulatory block):
-- "¿Cómo manejo? Llama al: 55-XXXX-XXXX" in elegant black text
-- "QUEJAS Y SUGERENCIAS: 55-XXXX-XXXX" in refined black text
-- "Velocidad máxima: 90 km/h" in elegant typography
-
-REAR BUMPER:
-- Elegant diagonal gold and red stripes
-
-LICENSE PLATE AREA:
-- Space for physical license plate with subtle gold frame accent
-
-Clean white background with luxurious, sophisticated premium appearance. Red and gold accents throughout.
-16:9 aspect ratio, photorealistic mockup showing rear of truck`
+STYLE: Premium contemporary two-tone design, sophisticated and modern. Photorealistic mockup.`
     };
 
     const prompt = prompts[designType];
