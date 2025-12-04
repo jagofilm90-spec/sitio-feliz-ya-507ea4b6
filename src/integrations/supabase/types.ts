@@ -2289,18 +2289,28 @@ export type Database = {
       vehiculos: {
         Row: {
           activo: boolean
+          capacidad_toneladas: number | null
           cilindros: string | null
+          clase_federal: string | null
           clase_tipo: string | null
           clave_vehicular: string | null
           created_at: string
+          dimensiones_alto: number | null
+          dimensiones_ancho: number | null
+          dimensiones_largo: number | null
           id: string
+          marca: string | null
           modelo: string | null
           nombre: string
           notas: string | null
+          numero_ejes: number | null
+          numero_llantas: number | null
           numero_motor: string | null
           numero_serie: string | null
+          permiso_ruta: string | null
           peso_maximo_foraneo_kg: number
           peso_maximo_local_kg: number
+          peso_vehicular_ton: number | null
           placa: string | null
           poliza_seguro_url: string | null
           poliza_seguro_vencimiento: string | null
@@ -2310,22 +2320,34 @@ export type Database = {
           tarjeta_circulacion_vencimiento: string | null
           tipo: string
           tipo_combustible: string | null
+          tipo_suspension: string | null
+          tipo_tarjeta_circulacion: string | null
           updated_at: string
         }
         Insert: {
           activo?: boolean
+          capacidad_toneladas?: number | null
           cilindros?: string | null
+          clase_federal?: string | null
           clase_tipo?: string | null
           clave_vehicular?: string | null
           created_at?: string
+          dimensiones_alto?: number | null
+          dimensiones_ancho?: number | null
+          dimensiones_largo?: number | null
           id?: string
+          marca?: string | null
           modelo?: string | null
           nombre: string
           notas?: string | null
+          numero_ejes?: number | null
+          numero_llantas?: number | null
           numero_motor?: string | null
           numero_serie?: string | null
+          permiso_ruta?: string | null
           peso_maximo_foraneo_kg?: number
           peso_maximo_local_kg?: number
+          peso_vehicular_ton?: number | null
           placa?: string | null
           poliza_seguro_url?: string | null
           poliza_seguro_vencimiento?: string | null
@@ -2335,22 +2357,34 @@ export type Database = {
           tarjeta_circulacion_vencimiento?: string | null
           tipo?: string
           tipo_combustible?: string | null
+          tipo_suspension?: string | null
+          tipo_tarjeta_circulacion?: string | null
           updated_at?: string
         }
         Update: {
           activo?: boolean
+          capacidad_toneladas?: number | null
           cilindros?: string | null
+          clase_federal?: string | null
           clase_tipo?: string | null
           clave_vehicular?: string | null
           created_at?: string
+          dimensiones_alto?: number | null
+          dimensiones_ancho?: number | null
+          dimensiones_largo?: number | null
           id?: string
+          marca?: string | null
           modelo?: string | null
           nombre?: string
           notas?: string | null
+          numero_ejes?: number | null
+          numero_llantas?: number | null
           numero_motor?: string | null
           numero_serie?: string | null
+          permiso_ruta?: string | null
           peso_maximo_foraneo_kg?: number
           peso_maximo_local_kg?: number
+          peso_vehicular_ton?: number | null
           placa?: string | null
           poliza_seguro_url?: string | null
           poliza_seguro_vencimiento?: string | null
@@ -2360,6 +2394,8 @@ export type Database = {
           tarjeta_circulacion_vencimiento?: string | null
           tipo?: string
           tipo_combustible?: string | null
+          tipo_suspension?: string | null
+          tipo_tarjeta_circulacion?: string | null
           updated_at?: string
         }
         Relationships: []
