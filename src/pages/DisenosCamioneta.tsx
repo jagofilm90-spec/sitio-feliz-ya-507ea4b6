@@ -10,33 +10,47 @@ interface DesignOption {
   id: string;
   name: string;
   description: string;
+  category: 'lateral' | 'trasera';
 }
 
 const designOptions: DesignOption[] = [
+  // Vista Lateral
   {
-    id: 'ultra-minimalista',
-    name: 'Ultra Minimalista',
-    description: 'Solo logo ALMASA, "Desde 1904" y website. Diseño limpio y elegante sin servicios.'
+    id: 'minimalista-lateral',
+    name: 'Minimalista (Lateral)',
+    description: 'Caja blanca, logo ALMASA en rojo, "Desde 1904" y almasa.com.mx. Diseño ultra limpio y elegante.',
+    category: 'lateral'
   },
   {
-    id: 'ultra-minimalista-reglamentario',
-    name: 'Minimalista + Reglamentario',
-    description: 'Diseño elegante con todos los elementos obligatorios: No. de Placa, Servicio Mercantil, Combustible, Quejas y franjas diagonales.'
+    id: 'reglamentario-lateral',
+    name: 'Reglamentario (Lateral)',
+    description: 'Caja blanca con todos los elementos obligatorios: No. de Placa, Servicio Mercantil, Combustible, Quejas y franjas diagonales.',
+    category: 'lateral'
   },
   {
-    id: 'con-iconos',
-    name: 'Minimalista con Íconos',
-    description: 'Logo con 4 íconos representando los servicios: Abarrotes, Panaderías, Industrias y Mascotas.'
+    id: 'premium-lateral',
+    name: 'Premium (Lateral)',
+    description: 'Caja blanca con acentos dorados elegantes. Logo rojo con detalles en oro champagne. Aspecto de lujo.',
+    category: 'lateral'
+  },
+  // Vista Trasera
+  {
+    id: 'minimalista-trasera',
+    name: 'Minimalista (Trasera)',
+    description: 'Puertas traseras con logo ALMASA centrado, "Desde 1904" y almasa.com.mx. Diseño ultra limpio.',
+    category: 'trasera'
   },
   {
-    id: 'lateral-completo',
-    name: 'Diseño Lateral Completo',
-    description: 'Franja diagonal roja con logo, servicios listados y "121 Años de Tradición".'
+    id: 'reglamentario-trasera',
+    name: 'Reglamentario (Trasera)',
+    description: 'Puertas traseras con elementos obligatorios: Unidad No., "¿Cómo manejo?", velocidad máxima, franjas diagonales.',
+    category: 'trasera'
   },
   {
-    id: 'premium-ejecutivo',
-    name: 'Premium Ejecutivo',
-    description: 'Fondo negro mate, logo rojo con detalles dorados. Aspecto de lujo y tradición.'
+    id: 'premium-trasera',
+    name: 'Premium (Trasera)',
+    description: 'Puertas traseras con diseño elegante en caja blanca, acentos dorados y franjas dorado/rojo.',
+    category: 'trasera'
   }
 ];
 
@@ -76,7 +90,6 @@ export default function DisenosCamioneta() {
   const generateAllDesigns = async () => {
     for (const option of designOptions) {
       await generateDesign(option.id);
-      // Small delay between requests to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 2000));
     }
   };
@@ -90,6 +103,80 @@ export default function DisenosCamioneta() {
     document.body.removeChild(link);
   };
 
+  const lateralDesigns = designOptions.filter(d => d.category === 'lateral');
+  const traseraDesigns = designOptions.filter(d => d.category === 'trasera');
+
+  const renderDesignCard = (option: DesignOption) => (
+    <Card key={option.id} className="overflow-hidden">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg">{option.name}</CardTitle>
+        <CardDescription>{option.description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="aspect-video bg-muted rounded-lg overflow-hidden mb-4 flex items-center justify-center">
+          {loadingDesigns[option.id] ? (
+            <div className="flex flex-col items-center gap-3 text-muted-foreground">
+              <Loader2 className="h-10 w-10 animate-spin" />
+              <span>Generando diseño...</span>
+            </div>
+          ) : generatedDesigns[option.id] ? (
+            <img 
+              src={generatedDesigns[option.id]} 
+              alt={option.name}
+              className="w-full h-full object-contain"
+            />
+          ) : errors[option.id] ? (
+            <div className="text-center p-4">
+              <p className="text-destructive text-sm mb-2">{errors[option.id]}</p>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => generateDesign(option.id)}
+              >
+                Reintentar
+              </Button>
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground">
+              <p className="mb-2">Sin imagen generada</p>
+              <p className="text-xs">Haz clic en "Generar" para crear el diseño</p>
+            </div>
+          )}
+        </div>
+        
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => generateDesign(option.id)}
+            disabled={loadingDesigns[option.id]}
+            className="flex-1"
+          >
+            {loadingDesigns[option.id] ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                {generatedDesigns[option.id] ? 'Regenerar' : 'Generar'}
+              </>
+            )}
+          </Button>
+          
+          {generatedDesigns[option.id] && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => downloadImage(generatedDesigns[option.id], option.name)}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Descargar
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
@@ -100,7 +187,7 @@ export default function DisenosCamioneta() {
           <div>
             <h1 className="text-3xl font-bold text-foreground">Propuestas de Rotulado ALMASA</h1>
             <p className="text-muted-foreground mt-1">
-              Genera diseños de rotulado para la camioneta con IA
+              Genera diseños de rotulado para camioneta con IA - Caja Blanca
             </p>
           </div>
         </div>
@@ -122,93 +209,46 @@ export default function DisenosCamioneta() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {designOptions.map((option) => (
-            <Card key={option.id} className="overflow-hidden">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">{option.name}</CardTitle>
-                <CardDescription>{option.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="aspect-video bg-muted rounded-lg overflow-hidden mb-4 flex items-center justify-center">
-                  {loadingDesigns[option.id] ? (
-                    <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                      <Loader2 className="h-10 w-10 animate-spin" />
-                      <span>Generando diseño...</span>
-                    </div>
-                  ) : generatedDesigns[option.id] ? (
-                    <img 
-                      src={generatedDesigns[option.id]} 
-                      alt={option.name}
-                      className="w-full h-full object-contain"
-                    />
-                  ) : errors[option.id] ? (
-                    <div className="text-center p-4">
-                      <p className="text-destructive text-sm mb-2">{errors[option.id]}</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => generateDesign(option.id)}
-                      >
-                        Reintentar
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="text-center text-muted-foreground">
-                      <p className="mb-2">Sin imagen generada</p>
-                      <p className="text-xs">Haz clic en "Generar" para crear el diseño</p>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => generateDesign(option.id)}
-                    disabled={loadingDesigns[option.id]}
-                    className="flex-1"
-                  >
-                    {loadingDesigns[option.id] ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        {generatedDesigns[option.id] ? 'Regenerar' : 'Generar'}
-                      </>
-                    )}
-                  </Button>
-                  
-                  {generatedDesigns[option.id] && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => downloadImage(generatedDesigns[option.id], option.name)}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Descargar
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        {/* Vista Lateral */}
+        <div className="mb-10">
+          <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+            <span className="w-3 h-3 bg-red-600 rounded-full"></span>
+            Vista Lateral
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {lateralDesigns.map(renderDesignCard)}
+          </div>
+        </div>
+
+        {/* Vista Trasera */}
+        <div className="mb-10">
+          <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+            <span className="w-3 h-3 bg-red-600 rounded-full"></span>
+            Vista Trasera
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {traseraDesigns.map(renderDesignCard)}
+          </div>
         </div>
 
         <div className="mt-8 p-4 bg-muted/50 rounded-lg">
           <h3 className="font-semibold mb-2">Colores de marca ALMASA</h3>
-          <div className="flex gap-4">
+          <div className="flex gap-4 flex-wrap">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded bg-[#C41E3A] border"></div>
               <span className="text-sm">Rojo ALMASA (#C41E3A)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded bg-black border"></div>
-              <span className="text-sm">Negro (#000000)</span>
+              <div className="w-8 h-8 rounded bg-[#D4AF37] border"></div>
+              <span className="text-sm">Dorado (#D4AF37)</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded bg-white border"></div>
               <span className="text-sm">Blanco (#FFFFFF)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded bg-black border"></div>
+              <span className="text-sm">Negro (#000000)</span>
             </div>
           </div>
         </div>
