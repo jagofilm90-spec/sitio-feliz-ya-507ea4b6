@@ -18,38 +18,38 @@ const designOptions: DesignOption[] = [
   {
     id: 'minimalista-lateral',
     name: 'Minimalista (Lateral)',
-    description: 'Caja blanca, logo ALMASA en rojo, "Desde 1904" y almasa.com.mx. Diseño ultra limpio y elegante.',
+    description: 'Estilo Tesla/Apple. Logo ALMASA rojo, sans-serif moderno, máximo espacio en blanco. Ultra limpio.',
     category: 'lateral'
   },
   {
     id: 'reglamentario-lateral',
     name: 'Reglamentario (Lateral)',
-    description: 'Caja blanca con todos los elementos obligatorios: No. de Placa, Servicio Mercantil, Combustible, Quejas y franjas diagonales.',
+    description: 'Estilo contemporáneo con datos obligatorios: placa, razón social, domicilio, teléfono, combustible.',
     category: 'lateral'
   },
   {
     id: 'premium-lateral',
     name: 'Premium (Lateral)',
-    description: 'Caja blanca con acentos dorados elegantes. Logo rojo con detalles en oro champagne. Aspecto de lujo.',
+    description: 'Diseño sofisticado bicolor blanco/gris carbón. Logo rojo con datos en banda gris elegante.',
     category: 'lateral'
   },
   // Vista Trasera
   {
     id: 'minimalista-trasera',
     name: 'Minimalista (Trasera)',
-    description: 'Puertas traseras con logo ALMASA centrado, "Desde 1904" y almasa.com.mx. Diseño ultra limpio.',
+    description: 'Estilo Tesla/Apple. Logo ALMASA centrado, datos mínimos en gris discreto. Ultra limpio.',
     category: 'trasera'
   },
   {
     id: 'reglamentario-trasera',
     name: 'Reglamentario (Trasera)',
-    description: 'Puertas traseras con elementos obligatorios: Unidad No., "¿Cómo manejo?", velocidad máxima, franjas diagonales.',
+    description: 'Diseño moderno con datos obligatorios: quejas, placa, velocidad máxima. Franjas mínimas.',
     category: 'trasera'
   },
   {
     id: 'premium-trasera',
     name: 'Premium (Trasera)',
-    description: 'Puertas traseras con diseño elegante en caja blanca, acentos dorados y franjas dorado/rojo.',
+    description: 'Diseño premium bicolor blanco/gris carbón. Datos en banda gris elegante con acento rojo.',
     category: 'trasera'
   }
 ];
@@ -239,16 +239,16 @@ export default function DisenosCamioneta() {
               <span className="text-sm">Rojo ALMASA (#C41E3A)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded bg-[#D4AF37] border"></div>
-              <span className="text-sm">Dorado (#D4AF37)</span>
+              <div className="w-8 h-8 rounded bg-[#333333] border"></div>
+              <span className="text-sm">Gris Carbón (#333333)</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded bg-white border"></div>
               <span className="text-sm">Blanco (#FFFFFF)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded bg-black border"></div>
-              <span className="text-sm">Negro (#000000)</span>
+              <div className="w-8 h-8 rounded bg-[#666666] border"></div>
+              <span className="text-sm">Gris (#666666)</span>
             </div>
           </div>
         </div>
