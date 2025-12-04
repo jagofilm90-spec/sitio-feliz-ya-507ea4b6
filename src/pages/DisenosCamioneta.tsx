@@ -19,6 +19,11 @@ const designOptions: DesignOption[] = [
     description: 'Solo logo ALMASA, "Desde 1904" y website. Diseño limpio y elegante sin servicios.'
   },
   {
+    id: 'ultra-minimalista-reglamentario',
+    name: 'Minimalista + Reglamentario',
+    description: 'Diseño elegante con todos los elementos obligatorios: No. de Placa, Servicio Mercantil, Combustible, Quejas y franjas diagonales.'
+  },
+  {
     id: 'con-iconos',
     name: 'Minimalista con Íconos',
     description: 'Logo con 4 íconos representando los servicios: Abarrotes, Panaderías, Industrias y Mascotas.'
