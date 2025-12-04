@@ -2289,10 +2289,15 @@ export type Database = {
       vehiculos: {
         Row: {
           activo: boolean
+          cilindros: string | null
+          clase_tipo: string | null
+          clave_vehicular: string | null
           created_at: string
           id: string
+          modelo: string | null
           nombre: string
           notas: string | null
+          numero_motor: string | null
           numero_serie: string | null
           peso_maximo_foraneo_kg: number
           peso_maximo_local_kg: number
@@ -2300,6 +2305,7 @@ export type Database = {
           poliza_seguro_url: string | null
           poliza_seguro_vencimiento: string | null
           status: string
+          tarjeta_circulacion_expedicion: string | null
           tarjeta_circulacion_url: string | null
           tarjeta_circulacion_vencimiento: string | null
           tipo: string
@@ -2308,10 +2314,15 @@ export type Database = {
         }
         Insert: {
           activo?: boolean
+          cilindros?: string | null
+          clase_tipo?: string | null
+          clave_vehicular?: string | null
           created_at?: string
           id?: string
+          modelo?: string | null
           nombre: string
           notas?: string | null
+          numero_motor?: string | null
           numero_serie?: string | null
           peso_maximo_foraneo_kg?: number
           peso_maximo_local_kg?: number
@@ -2319,6 +2330,7 @@ export type Database = {
           poliza_seguro_url?: string | null
           poliza_seguro_vencimiento?: string | null
           status?: string
+          tarjeta_circulacion_expedicion?: string | null
           tarjeta_circulacion_url?: string | null
           tarjeta_circulacion_vencimiento?: string | null
           tipo?: string
@@ -2327,10 +2339,15 @@ export type Database = {
         }
         Update: {
           activo?: boolean
+          cilindros?: string | null
+          clase_tipo?: string | null
+          clave_vehicular?: string | null
           created_at?: string
           id?: string
+          modelo?: string | null
           nombre?: string
           notas?: string | null
+          numero_motor?: string | null
           numero_serie?: string | null
           peso_maximo_foraneo_kg?: number
           peso_maximo_local_kg?: number
@@ -2338,6 +2355,7 @@ export type Database = {
           poliza_seguro_url?: string | null
           poliza_seguro_vencimiento?: string | null
           status?: string
+          tarjeta_circulacion_expedicion?: string | null
           tarjeta_circulacion_url?: string | null
           tarjeta_circulacion_vencimiento?: string | null
           tipo?: string

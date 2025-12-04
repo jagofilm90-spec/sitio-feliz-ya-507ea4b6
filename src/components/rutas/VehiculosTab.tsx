@@ -27,10 +27,9 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Truck, Upload, FileText, AlertCircle } from "lucide-react";
+import { Plus, Edit, Trash2, Truck, FileText, AlertCircle, Sparkles, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, differenceInDays, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
 
 interface Vehiculo {
   id: string;
@@ -46,8 +45,14 @@ interface Vehiculo {
   activo: boolean;
   tarjeta_circulacion_url: string | null;
   tarjeta_circulacion_vencimiento: string | null;
+  tarjeta_circulacion_expedicion: string | null;
   poliza_seguro_url: string | null;
   poliza_seguro_vencimiento: string | null;
+  numero_motor: string | null;
+  cilindros: string | null;
+  modelo: string | null;
+  clave_vehicular: string | null;
+  clase_tipo: string | null;
 }
 
 const VehiculosTab = () => {
@@ -57,6 +62,8 @@ const VehiculosTab = () => {
   const [editingVehiculo, setEditingVehiculo] = useState<Vehiculo | null>(null);
   const [uploadingTarjeta, setUploadingTarjeta] = useState(false);
   const [uploadingPoliza, setUploadingPoliza] = useState(false);
+  const [extractingData, setExtractingData] = useState(false);
+  const [dataExtracted, setDataExtracted] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -71,8 +78,14 @@ const VehiculosTab = () => {
     notas: "",
     tarjeta_circulacion_url: "",
     tarjeta_circulacion_vencimiento: "",
+    tarjeta_circulacion_expedicion: "",
     poliza_seguro_url: "",
     poliza_seguro_vencimiento: "",
+    numero_motor: "",
+    cilindros: "",
+    modelo: "",
+    clave_vehicular: "",
+    clase_tipo: "",
   });
 
   useEffect(() => {
@@ -100,33 +113,100 @@ const VehiculosTab = () => {
     }
   };
 
-  const extractExpirationDate = async (file: File): Promise<string | null> => {
+  const extractTarjetaCirculacionData = async (file: File) => {
+    setExtractingData(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return null;
+      if (!session) {
+        toast({ title: "Sesión expirada", variant: "destructive" });
+        return;
+      }
+
+      // Convert file to base64
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Remove data URL prefix to get pure base64
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      toast({ title: "Analizando tarjeta de circulación con IA..." });
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-license-expiry`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-tarjeta-circulacion`,
         {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
           },
-          body: formData,
+          body: JSON.stringify({ pdfBase64: base64 }),
         }
       );
 
-      if (!response.ok) return null;
-      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al procesar documento');
+      }
+
       const result = await response.json();
-      return result.expirationDate || null;
-    } catch (error) {
-      console.error('Error extracting expiration date:', error);
-      return null;
+      
+      if (result.success && result.data) {
+        const data = result.data;
+        
+        setFormData(prev => ({
+          ...prev,
+          numero_serie: data.serie_vehicular || prev.numero_serie,
+          numero_motor: data.numero_motor || prev.numero_motor,
+          cilindros: data.cilindros || prev.cilindros,
+          modelo: data.modelo || prev.modelo,
+          clave_vehicular: data.clave_vehicular || prev.clave_vehicular,
+          tipo_combustible: mapCombustible(data.combustible) || prev.tipo_combustible,
+          clase_tipo: data.clase_tipo || prev.clase_tipo,
+          placa: data.placa || prev.placa,
+          tarjeta_circulacion_expedicion: data.fecha_expedicion || prev.tarjeta_circulacion_expedicion,
+          tarjeta_circulacion_vencimiento: data.fecha_vigencia || prev.tarjeta_circulacion_vencimiento,
+        }));
+
+        setDataExtracted(true);
+        
+        const extractedFields = [
+          data.serie_vehicular && "Serie",
+          data.numero_motor && "Motor",
+          data.placa && "Placa",
+          data.modelo && "Modelo",
+          data.fecha_vigencia && "Vigencia",
+        ].filter(Boolean);
+
+        toast({
+          title: "✓ Datos extraídos automáticamente",
+          description: `Campos detectados: ${extractedFields.join(", ")}`,
+        });
+      }
+    } catch (error: any) {
+      console.error('Error extracting data:', error);
+      toast({
+        title: "Error al extraer datos",
+        description: error.message || "Ingresa los datos manualmente",
+        variant: "destructive",
+      });
+    } finally {
+      setExtractingData(false);
     }
+  };
+
+  const mapCombustible = (combustible: string | null): string => {
+    if (!combustible) return "diesel";
+    const lower = combustible.toLowerCase();
+    if (lower.includes("gasolina")) return "gasolina";
+    if (lower.includes("gas")) return "gas";
+    if (lower.includes("diesel") || lower.includes("diésel")) return "diesel";
+    return "diesel";
   };
 
   const handleFileUpload = async (
@@ -152,31 +232,19 @@ const VehiculosTab = () => {
         .from('vehiculos-documentos')
         .getPublicUrl(filePath);
 
-      // Extract expiration date using AI
-      toast({ title: "Detectando fecha de vencimiento..." });
-      const expirationDate = await extractExpirationDate(file);
-
       if (type === 'tarjeta') {
         setFormData(prev => ({
           ...prev,
           tarjeta_circulacion_url: publicUrl,
-          tarjeta_circulacion_vencimiento: expirationDate || prev.tarjeta_circulacion_vencimiento,
         }));
+        // Extract all data from tarjeta de circulación
+        await extractTarjetaCirculacionData(file);
       } else {
         setFormData(prev => ({
           ...prev,
           poliza_seguro_url: publicUrl,
-          poliza_seguro_vencimiento: expirationDate || prev.poliza_seguro_vencimiento,
         }));
-      }
-
-      if (expirationDate) {
-        toast({ title: `Fecha de vencimiento detectada: ${format(parseISO(expirationDate), "dd/MM/yyyy")}` });
-      } else {
-        toast({ 
-          title: "No se pudo detectar la fecha automáticamente",
-          description: "Por favor ingresa la fecha manualmente",
-        });
+        toast({ title: "Póliza de seguro cargada" });
       }
     } catch (error: any) {
       toast({
@@ -205,8 +273,14 @@ const VehiculosTab = () => {
         notas: formData.notas || null,
         tarjeta_circulacion_url: formData.tarjeta_circulacion_url || null,
         tarjeta_circulacion_vencimiento: formData.tarjeta_circulacion_vencimiento || null,
+        tarjeta_circulacion_expedicion: formData.tarjeta_circulacion_expedicion || null,
         poliza_seguro_url: formData.poliza_seguro_url || null,
         poliza_seguro_vencimiento: formData.poliza_seguro_vencimiento || null,
+        numero_motor: formData.numero_motor || null,
+        cilindros: formData.cilindros || null,
+        modelo: formData.modelo || null,
+        clave_vehicular: formData.clave_vehicular || null,
+        clase_tipo: formData.clase_tipo || null,
       };
 
       if (editingVehiculo) {
@@ -252,9 +326,16 @@ const VehiculosTab = () => {
       notas: vehiculo.notas || "",
       tarjeta_circulacion_url: vehiculo.tarjeta_circulacion_url || "",
       tarjeta_circulacion_vencimiento: vehiculo.tarjeta_circulacion_vencimiento || "",
+      tarjeta_circulacion_expedicion: vehiculo.tarjeta_circulacion_expedicion || "",
       poliza_seguro_url: vehiculo.poliza_seguro_url || "",
       poliza_seguro_vencimiento: vehiculo.poliza_seguro_vencimiento || "",
+      numero_motor: vehiculo.numero_motor || "",
+      cilindros: vehiculo.cilindros || "",
+      modelo: vehiculo.modelo || "",
+      clave_vehicular: vehiculo.clave_vehicular || "",
+      clase_tipo: vehiculo.clase_tipo || "",
     });
+    setDataExtracted(false);
     setDialogOpen(true);
   };
 
@@ -281,6 +362,7 @@ const VehiculosTab = () => {
 
   const resetForm = () => {
     setEditingVehiculo(null);
+    setDataExtracted(false);
     setFormData({
       nombre: "",
       tipo: "camioneta",
@@ -293,8 +375,14 @@ const VehiculosTab = () => {
       notas: "",
       tarjeta_circulacion_url: "",
       tarjeta_circulacion_vencimiento: "",
+      tarjeta_circulacion_expedicion: "",
       poliza_seguro_url: "",
       poliza_seguro_vencimiento: "",
+      numero_motor: "",
+      cilindros: "",
+      modelo: "",
+      clave_vehicular: "",
+      clase_tipo: "",
     });
   };
 
@@ -351,16 +439,57 @@ const VehiculosTab = () => {
               Nuevo Vehículo
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingVehiculo ? "Editar Vehículo" : "Nuevo Vehículo"}
               </DialogTitle>
               <DialogDescription>
-                Configura la información del vehículo
+                Configura la información del vehículo. Sube la tarjeta de circulación para auto-rellenar datos.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSave} className="space-y-4">
+              {/* Tarjeta de Circulación Upload - Prominent */}
+              <div className="bg-muted/50 border rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <Label className="font-medium">Tarjeta de Circulación (Extracción automática)</Label>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Sube la tarjeta de circulación y el sistema extraerá automáticamente: Serie, Motor, Placa, Modelo, etc.
+                </p>
+                <div className="flex gap-2 items-center">
+                  <Input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileUpload(file, 'tarjeta', editingVehiculo?.id);
+                    }}
+                    disabled={uploadingTarjeta || extractingData}
+                    className="flex-1"
+                  />
+                  {(uploadingTarjeta || extractingData) && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {extractingData ? "Analizando..." : "Subiendo..."}
+                    </div>
+                  )}
+                </div>
+                {formData.tarjeta_circulacion_url && (
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <FileText className="h-4 w-4" />
+                    <span>Documento cargado</span>
+                    {dataExtracted && (
+                      <Badge variant="secondary" className="text-xs">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        Datos extraídos con IA
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Basic Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -406,12 +535,68 @@ const VehiculosTab = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="numero_serie">Número de Serie</Label>
+                  <Label htmlFor="numero_serie">Serie Vehicular (NIV)</Label>
                   <Input
                     id="numero_serie"
                     value={formData.numero_serie}
                     onChange={(e) => setFormData({ ...formData, numero_serie: e.target.value })}
-                    placeholder="VIN / No. Serie"
+                    placeholder="17 caracteres"
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="numero_motor">Número de Motor</Label>
+                  <Input
+                    id="numero_motor"
+                    value={formData.numero_motor}
+                    onChange={(e) => setFormData({ ...formData, numero_motor: e.target.value })}
+                    placeholder="No. Motor"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cilindros">Cilindros</Label>
+                  <Input
+                    id="cilindros"
+                    value={formData.cilindros}
+                    onChange={(e) => setFormData({ ...formData, cilindros: e.target.value })}
+                    placeholder="4, 6, 8..."
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="modelo">Modelo (Año)</Label>
+                  <Input
+                    id="modelo"
+                    value={formData.modelo}
+                    onChange={(e) => setFormData({ ...formData, modelo: e.target.value })}
+                    placeholder="2024"
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="clave_vehicular">Clave Vehicular</Label>
+                  <Input
+                    id="clave_vehicular"
+                    value={formData.clave_vehicular}
+                    onChange={(e) => setFormData({ ...formData, clave_vehicular: e.target.value })}
+                    placeholder="Clave oficial"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="clase_tipo">Clase y Tipo</Label>
+                  <Input
+                    id="clase_tipo"
+                    value={formData.clase_tipo}
+                    onChange={(e) => setFormData({ ...formData, clase_tipo: e.target.value })}
+                    placeholder="Ej: Camioneta Pick Up"
                     autoComplete="off"
                   />
                 </div>
@@ -480,47 +665,32 @@ const VehiculosTab = () => {
                 </div>
               </div>
 
-              {/* Documents */}
-              <div className="border-t pt-4 mt-4">
-                <h3 className="font-medium mb-3">Documentos</h3>
-                
-                {/* Tarjeta de Circulación */}
-                <div className="space-y-3 mb-4">
-                  <Label>Tarjeta de Circulación</Label>
-                  <div className="flex gap-2 items-center">
-                    <Input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png,.webp"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFileUpload(file, 'tarjeta', editingVehiculo?.id);
-                      }}
-                      disabled={uploadingTarjeta}
-                      className="flex-1"
-                    />
-                    {uploadingTarjeta && <span className="text-sm text-muted-foreground">Subiendo...</span>}
-                  </div>
-                  {formData.tarjeta_circulacion_url && (
-                    <div className="flex items-center gap-2 text-sm text-green-600">
-                      <FileText className="h-4 w-4" />
-                      <span>Documento cargado</span>
-                    </div>
-                  )}
-                  <div className="flex gap-2 items-center">
-                    <Label htmlFor="tarjeta_vencimiento" className="text-sm whitespace-nowrap">Vencimiento:</Label>
-                    <Input
-                      id="tarjeta_vencimiento"
-                      type="date"
-                      value={formData.tarjeta_circulacion_vencimiento}
-                      onChange={(e) => setFormData({ ...formData, tarjeta_circulacion_vencimiento: e.target.value })}
-                      className="w-40"
-                    />
-                  </div>
+              {/* Dates from Tarjeta */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="tarjeta_expedicion">Fecha Expedición (Tarjeta)</Label>
+                  <Input
+                    id="tarjeta_expedicion"
+                    type="date"
+                    value={formData.tarjeta_circulacion_expedicion}
+                    onChange={(e) => setFormData({ ...formData, tarjeta_circulacion_expedicion: e.target.value })}
+                  />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tarjeta_vencimiento">Fecha Vigencia (Tarjeta)</Label>
+                  <Input
+                    id="tarjeta_vencimiento"
+                    type="date"
+                    value={formData.tarjeta_circulacion_vencimiento}
+                    onChange={(e) => setFormData({ ...formData, tarjeta_circulacion_vencimiento: e.target.value })}
+                  />
+                </div>
+              </div>
 
-                {/* Póliza de Seguro */}
+              {/* Póliza de Seguro */}
+              <div className="border-t pt-4 mt-4">
+                <h3 className="font-medium mb-3">Póliza de Seguro</h3>
                 <div className="space-y-3">
-                  <Label>Póliza de Seguro</Label>
                   <div className="flex gap-2 items-center">
                     <Input
                       type="file"
@@ -568,7 +738,16 @@ const VehiculosTab = () => {
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit">Guardar</Button>
+                <Button type="submit" disabled={extractingData}>
+                  {extractingData ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Procesando...
+                    </>
+                  ) : (
+                    "Guardar"
+                  )}
+                </Button>
               </div>
             </form>
           </DialogContent>
@@ -582,6 +761,7 @@ const VehiculosTab = () => {
               <TableHead>Nombre</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Placa</TableHead>
+              <TableHead>Modelo</TableHead>
               <TableHead>Local (kg)</TableHead>
               <TableHead>Foránea (kg)</TableHead>
               <TableHead>Tarjeta Circ.</TableHead>
@@ -593,13 +773,13 @@ const VehiculosTab = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center">
+                <TableCell colSpan={10} className="text-center">
                   Cargando...
                 </TableCell>
               </TableRow>
             ) : vehiculos.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center">
+                <TableCell colSpan={10} className="text-center">
                   <div className="py-8 flex flex-col items-center gap-2">
                     <Truck className="h-8 w-8 text-muted-foreground" />
                     <p>No hay vehículos registrados</p>
@@ -615,6 +795,7 @@ const VehiculosTab = () => {
                   <TableCell className="font-medium">{vehiculo.nombre}</TableCell>
                   <TableCell className="capitalize">{vehiculo.tipo}</TableCell>
                   <TableCell>{vehiculo.placa || "—"}</TableCell>
+                  <TableCell>{vehiculo.modelo || "—"}</TableCell>
                   <TableCell>{vehiculo.peso_maximo_local_kg.toLocaleString()}</TableCell>
                   <TableCell>{vehiculo.peso_maximo_foraneo_kg.toLocaleString()}</TableCell>
                   <TableCell>{getExpirationBadge(vehiculo.tarjeta_circulacion_vencimiento, "tarjeta")}</TableCell>
