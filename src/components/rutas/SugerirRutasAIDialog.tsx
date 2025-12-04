@@ -24,10 +24,12 @@ import {
   RefreshCw,
   Loader2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Map
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { RouteMapVisualization } from "./RouteMapVisualization";
 
 interface RutaSugerida {
   vehiculo: {
@@ -73,7 +75,18 @@ export const SugerirRutasAIDialog = ({
   const [notasAI, setNotasAI] = useState<string | null>(null);
   const [expandedRutas, setExpandedRutas] = useState<Set<number>>(new Set([0]));
   const [creandoRutas, setCreandoRutas] = useState<Set<number>>(new Set());
+  const [showMaps, setShowMaps] = useState<Set<number>>(new Set());
   const { toast } = useToast();
+
+  const toggleMap = (index: number) => {
+    const newShowMaps = new Set(showMaps);
+    if (newShowMaps.has(index)) {
+      newShowMaps.delete(index);
+    } else {
+      newShowMaps.add(index);
+    }
+    setShowMaps(newShowMaps);
+  };
 
   const generarSugerencias = async () => {
     setLoading(true);
@@ -350,7 +363,40 @@ export const SugerirRutasAIDialog = ({
                       </CardHeader>
 
                       {expandedRutas.has(index) && (
-                        <CardContent className="pt-0">
+                        <CardContent className="pt-0 space-y-3">
+                          {/* Map visualization toggle */}
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant={showMaps.has(index) ? "secondary" : "outline"} 
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleMap(index);
+                              }}
+                            >
+                              <Map className="h-4 w-4 mr-2" />
+                              {showMaps.has(index) ? "Ocultar Mapa" : "Ver en Mapa"}
+                            </Button>
+                          </div>
+
+                          {/* Map visualization */}
+                          {showMaps.has(index) && (
+                            <RouteMapVisualization
+                              puntos={ruta.pedidos.map((pedido: any, pIdx: number) => ({
+                                id: pedido.id,
+                                folio: pedido.folio,
+                                cliente: pedido.cliente?.nombre || "Sin cliente",
+                                sucursal: pedido.sucursal?.nombre,
+                                direccion: pedido.sucursal?.direccion || pedido.cliente?.direccion || "",
+                                peso_kg: pedido.peso_total_kg || 0,
+                                orden: pIdx + 1,
+                              }))}
+                              vehiculoNombre={ruta.vehiculo.nombre}
+                              optimizarOrden={true}
+                            />
+                          )}
+
+                          {/* Orders list */}
                           <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
                             {ruta.pedidos.map((pedido, pIdx) => (
                               <div key={pedido.id} className="p-2 flex items-center justify-between text-sm">
