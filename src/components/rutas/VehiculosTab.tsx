@@ -27,7 +27,8 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Truck, FileText, AlertCircle, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, Truck, FileText, AlertCircle, Sparkles, Loader2, Palette } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { format, differenceInDays, parseISO } from "date-fns";
 
@@ -65,6 +66,7 @@ const VehiculosTab = () => {
   const [extractingData, setExtractingData] = useState(false);
   const [dataExtracted, setDataExtracted] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     nombre: "",
@@ -432,13 +434,18 @@ const VehiculosTab = () => {
           <h2 className="text-xl font-semibold">Vehículos</h2>
           <p className="text-sm text-muted-foreground">Gestiona tu flota de vehículos</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo Vehículo
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate('/disenos-camioneta')}>
+            <Palette className="h-4 w-4 mr-2" />
+            Diseñar Rotulado
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Vehículo
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
@@ -752,6 +759,7 @@ const VehiculosTab = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="border rounded-lg">
