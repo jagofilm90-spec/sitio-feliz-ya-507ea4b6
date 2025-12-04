@@ -35,6 +35,7 @@ import {
   Mail,
   ChevronDown,
   ChevronRight,
+  CreditCard,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -222,6 +223,15 @@ const Layout = ({ children }: LayoutProps) => {
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <CentroNotificaciones />
+            <Link to="/tarjeta">
+              <Button variant="ghost" size="sm" className="hidden sm:flex">
+                <CreditCard className="h-4 w-4 mr-2" />
+                Mi Tarjeta
+              </Button>
+              <Button variant="ghost" size="icon" className="sm:hidden">
+                <CreditCard className="h-4 w-4" />
+              </Button>
+            </Link>
             <span className="text-sm text-muted-foreground hidden md:inline">
               {user?.email}
             </span>
