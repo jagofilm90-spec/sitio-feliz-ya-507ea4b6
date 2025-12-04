@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, MapPin, AlertTriangle, FileText, ChevronDown, ChevronUp, Search, ChevronLeft, ChevronRight, CheckSquare } from "lucide-react";
+import { Plus, Edit, Trash2, MapPin, AlertTriangle, FileText, ChevronDown, ChevronUp, Search, ChevronLeft, ChevronRight, CheckSquare, Wand2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
 
@@ -83,7 +83,93 @@ const ClienteSucursalesDialog = ({
   const [paginaActual, setPaginaActual] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkZonaId, setBulkZonaId] = useState<string>("");
+  const [autoDetectando, setAutoDetectando] = useState(false);
   const { toast } = useToast();
+
+  // Función para detectar zona desde el texto de dirección
+  const detectarZonaDesdeDireccion = (direccion: string, zonasDisponibles: Zona[]): Zona | null => {
+    if (!direccion) return null;
+    
+    const direccionNormalizada = direccion
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, ""); // Quitar acentos
+
+    // Buscar coincidencia con nombres de zonas
+    for (const zona of zonasDisponibles) {
+      const zonaNormalizada = zona.nombre
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+      
+      // Patrones de búsqueda comunes
+      const patrones = [
+        new RegExp(`\\b${zonaNormalizada}\\b`), // Palabra exacta
+        new RegExp(`${zonaNormalizada},`), // Seguido de coma
+        new RegExp(`, ${zonaNormalizada}`), // Precedido por coma
+      ];
+      
+      for (const patron of patrones) {
+        if (patron.test(direccionNormalizada)) {
+          return zona;
+        }
+      }
+    }
+    return null;
+  };
+
+  // Auto-detectar zonas para sucursales seleccionadas o sin zona
+  const handleAutoDetectarZonas = async () => {
+    setAutoDetectando(true);
+    try {
+      // Determinar qué sucursales procesar
+      const sucursalesAProcesar = selectedIds.size > 0
+        ? sucursales.filter(s => selectedIds.has(s.id))
+        : sucursales.filter(s => !s.zona_id); // Solo sin zona
+
+      if (sucursalesAProcesar.length === 0) {
+        toast({ 
+          title: "Sin sucursales", 
+          description: selectedIds.size > 0 
+            ? "No hay sucursales seleccionadas" 
+            : "Todas las sucursales ya tienen zona asignada" 
+        });
+        return;
+      }
+
+      let actualizadas = 0;
+      let sinDetectar = 0;
+
+      for (const sucursal of sucursalesAProcesar) {
+        const zonaDetectada = detectarZonaDesdeDireccion(sucursal.direccion || "", zonas);
+        
+        if (zonaDetectada) {
+          const { error } = await supabase
+            .from("cliente_sucursales")
+            .update({ zona_id: zonaDetectada.id })
+            .eq("id", sucursal.id);
+          
+          if (!error) {
+            actualizadas++;
+          }
+        } else {
+          sinDetectar++;
+        }
+      }
+
+      toast({
+        title: `Auto-detección completada`,
+        description: `${actualizadas} zonas asignadas${sinDetectar > 0 ? `, ${sinDetectar} sin detectar` : ""}`,
+      });
+
+      setSelectedIds(new Set());
+      loadSucursales();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setAutoDetectando(false);
+    }
+  };
 
   const [formData, setFormData] = useState({
     nombre: "",
@@ -783,11 +869,20 @@ const ClienteSucursalesDialog = ({
           )}
 
           {/* Barra de acciones masivas */}
-          {selectedIds.size > 0 && (
-            <div className="flex items-center gap-3 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+          {selectedIds.size > 0 ? (
+            <div className="flex items-center gap-3 p-3 bg-primary/10 border border-primary/20 rounded-lg flex-wrap">
               <CheckSquare className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">{selectedIds.size} seleccionadas</span>
-              <div className="flex items-center gap-2 ml-auto">
+              <div className="flex items-center gap-2 ml-auto flex-wrap">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleAutoDetectarZonas}
+                  disabled={autoDetectando}
+                >
+                  <Wand2 className="h-4 w-4 mr-1" />
+                  Auto-detectar Zona
+                </Button>
                 <Button
                   size="sm"
                   variant="outline"
@@ -832,6 +927,26 @@ const ClienteSucursalesDialog = ({
                 </Button>
               </div>
             </div>
+          ) : (
+            // Botón para auto-detectar todas las sucursales sin zona
+            sucursales.filter(s => !s.zona_id).length > 0 && (
+              <div className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <span className="text-sm">
+                  {sucursales.filter(s => !s.zona_id).length} sucursales sin zona asignada
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleAutoDetectarZonas}
+                  disabled={autoDetectando}
+                  className="ml-auto"
+                >
+                  <Wand2 className="h-4 w-4 mr-1" />
+                  {autoDetectando ? "Detectando..." : "Auto-detectar Zonas"}
+                </Button>
+              </div>
+            )
           )}
 
           <div className="border rounded-lg">
