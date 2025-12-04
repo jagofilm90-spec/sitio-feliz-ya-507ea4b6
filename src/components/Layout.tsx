@@ -37,6 +37,7 @@ import {
   ChevronRight,
   CreditCard,
   Smartphone,
+  ArrowLeft,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -206,7 +207,18 @@ const Layout = ({ children }: LayoutProps) => {
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            {/* Botón regresar - solo móvil y no en dashboard */}
+            {location.pathname !== '/dashboard' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                onClick={() => navigate(-1)}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
