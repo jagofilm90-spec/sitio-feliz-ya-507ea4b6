@@ -183,6 +183,32 @@ const ClienteSucursalesDialog = ({
         }
       }
 
+      // Verificar si ya existe una sucursal con el mismo codigo_sucursal
+      if (formData.codigo_sucursal?.trim()) {
+        const { data: existingCodigos, error: checkCodigoError } = await supabase
+          .from("cliente_sucursales")
+          .select("id, codigo_sucursal")
+          .eq("cliente_id", cliente.id)
+          .eq("codigo_sucursal", formData.codigo_sucursal.trim());
+
+        if (checkCodigoError) throw checkCodigoError;
+
+        if (existingCodigos && existingCodigos.length > 0) {
+          const isDuplicateCodigo = editingSucursal 
+            ? existingCodigos.some(s => s.id !== editingSucursal.id)
+            : true;
+
+          if (isDuplicateCodigo) {
+            toast({
+              title: "❌ Código duplicado",
+              description: `Ya existe una sucursal con el código "${formData.codigo_sucursal}" para este cliente`,
+              variant: "destructive",
+            });
+            return;
+          }
+        }
+      }
+
       const sucursalData = {
         cliente_id: cliente.id,
         nombre: formData.nombre.trim(),
