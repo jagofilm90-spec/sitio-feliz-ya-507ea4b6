@@ -28,6 +28,20 @@ serve(async (req) => {
 - Modern, premium, sophisticated look
 - 16:9 aspect ratio, photorealistic mockup`,
 
+      'ultra-minimalista-reglamentario': `Professional vehicle wrap design mockup for a white commercial closed-box delivery truck (side view). Ultra minimalist elegant design that complies with Mexico City commercial vehicle regulations:
+- Large "ALMASA" logo text in bold red (#C41E3A) centered on the truck side
+- Below the logo: "Desde 1904" in elegant black serif typography
+- Text "SERVICIO MERCANTIL DE TRANSPORTE DE CARGA" in formal black letters
+- Rectangular space labeled "No. DE PLACA" (45cm x 15cm) with placeholder text
+- Text "COMBUSTIBLE: DIESEL" in small formal black typography
+- Text "QUEJAS: 55-1234-5678" in small black text
+- At the bottom: "almasa.com.mx" in small black text
+- On the rear bumper and front bumper: diagonal yellow and red safety stripes (franjas diagonales reglamentarias)
+- Clean white background maintaining elegant minimalist aesthetic
+- All regulatory text positioned professionally without cluttering the design
+- Modern, premium, sophisticated look while being 100% compliant with regulations
+- 16:9 aspect ratio, photorealistic mockup`,
+
       'con-iconos': `Professional vehicle wrap design mockup for a white commercial delivery truck (side view). Minimalist elegant design with icons:
 - Large "ALMASA" logo text in bold red (#C41E3A) on the truck side
 - Four small elegant line icons in black representing: wheat/grains, bread/bakery, factory/industry, dog food bowl
