@@ -25,6 +25,77 @@ interface RutaSugerida {
   zonas: string[];
 }
 
+// Simple bin-packing algorithm as fallback
+function generarRutasSimples(
+  pedidos: any[],
+  vehiculos: Vehiculo[]
+): { rutas: any[], noAsignados: string[] } {
+  const rutas: any[] = [];
+  const noAsignados: string[] = [];
+  const vehiculosUsados = new Set<string>();
+  
+  // Sort pedidos by priority and weight
+  const prioridadOrden: Record<string, number> = {
+    vip_mismo_dia: 0,
+    deadline: 1,
+    dia_fijo_recurrente: 2,
+    fecha_sugerida: 3,
+    flexible: 4,
+  };
+  
+  const pedidosOrdenados = [...pedidos].sort((a, b) => {
+    const prioA = prioridadOrden[a.prioridad_entrega || "flexible"] || 4;
+    const prioB = prioridadOrden[b.prioridad_entrega || "flexible"] || 4;
+    if (prioA !== prioB) return prioA - prioB;
+    return (b.peso_total_kg || 0) - (a.peso_total_kg || 0);
+  });
+
+  // Assign pedidos to vehicles using first-fit decreasing
+  for (const pedido of pedidosOrdenados) {
+    const pesoPedido = pedido.peso_total_kg || 0;
+    let asignado = false;
+
+    // Try to fit in existing route
+    for (const ruta of rutas) {
+      const capacidad = ruta.capacidad_maxima;
+      if (ruta.peso_total + pesoPedido <= capacidad) {
+        ruta.pedido_ids.push(pedido.id);
+        ruta.peso_total += pesoPedido;
+        asignado = true;
+        break;
+      }
+    }
+
+    // If not assigned, try to create new route
+    if (!asignado) {
+      const vehiculoDisponible = vehiculos.find(v => {
+        if (vehiculosUsados.has(v.id)) return false;
+        const capacidad = v.peso_maximo_local_kg; // Default to local
+        return capacidad >= pesoPedido;
+      });
+
+      if (vehiculoDisponible) {
+        const capacidad = vehiculoDisponible.peso_maximo_local_kg;
+        rutas.push({
+          vehiculo_id: vehiculoDisponible.id,
+          tipo_ruta: "local",
+          pedido_ids: [pedido.id],
+          peso_total: pesoPedido,
+          capacidad_maxima: capacidad,
+        });
+        vehiculosUsados.add(vehiculoDisponible.id);
+        asignado = true;
+      }
+    }
+
+    if (!asignado) {
+      noAsignados.push(pedido.id);
+    }
+  }
+
+  return { rutas, noAsignados };
+}
+
 // Post-AI validation: Split routes that exceed capacity
 function validarYDividirRutas(
   rutasOriginales: any[], 
@@ -38,7 +109,6 @@ function validarYDividirRutas(
   for (const ruta of rutasOriginales) {
     const vehiculo = vehiculos.find(v => v.id === ruta.vehiculo_id);
     if (!vehiculo) {
-      // Vehiculo not found, mark orders as unassigned
       pedidosNoAsignados.push(...(ruta.pedido_ids || []));
       continue;
     }
@@ -48,17 +118,14 @@ function validarYDividirRutas(
       ? vehiculo.peso_maximo_foraneo_kg 
       : vehiculo.peso_maximo_local_kg;
 
-    // Get pedidos for this route with their weights
     const pedidosRuta = (ruta.pedido_ids || [])
       .map((id: string) => pedidosMap.get(id))
       .filter(Boolean);
 
-    // Calculate total weight
     const pesoTotal = pedidosRuta.reduce((sum: number, p: any) => sum + (p.peso_total_kg || 0), 0);
 
     console.log(`[suggest-routes] Validating route ${vehiculo.nombre}: ${pesoTotal}kg / ${capacidadMax}kg (${((pesoTotal/capacidadMax)*100).toFixed(0)}%)`);
 
-    // If route is within capacity, add it directly
     if (pesoTotal <= capacidadMax) {
       rutasValidadas.push({
         vehiculo_id: vehiculo.id,
@@ -69,10 +136,8 @@ function validarYDividirRutas(
       });
       vehiculosUsados.add(vehiculo.id);
     } else {
-      // Route exceeds capacity - need to split
       console.log(`[suggest-routes] Route exceeds capacity, splitting...`);
       
-      // Sort by priority (VIP first) and weight (larger first for better bin packing)
       const prioridadOrden: Record<string, number> = {
         vip_mismo_dia: 0,
         deadline: 1,
@@ -103,11 +168,9 @@ function validarYDividirRutas(
           rutaActual.pedido_ids.push(pedido.id);
           rutaActual.peso_total += pesoPedido;
         } else if (rutaActual.pedido_ids.length > 0) {
-          // Save current route and try to find another vehicle
           rutasValidadas.push({ ...rutaActual });
           vehiculosUsados.add(rutaActual.vehiculo_id);
           
-          // Find next available vehicle with sufficient capacity
           const siguienteVehiculo = vehiculos.find(v => 
             !vehiculosUsados.has(v.id) && 
             (tipoRuta === "foranea" ? v.peso_maximo_foraneo_kg : v.peso_maximo_local_kg) >= pesoPedido
@@ -126,16 +189,13 @@ function validarYDividirRutas(
               capacidad_maxima: nuevaCapacidad,
             };
           } else {
-            // No more vehicles available
             pedidosNoAsignados.push(pedido.id);
           }
         } else {
-          // Single order exceeds vehicle capacity - mark as unassigned
           pedidosNoAsignados.push(pedido.id);
         }
       }
 
-      // Add the last route if it has orders
       if (rutaActual.pedido_ids.length > 0) {
         rutasValidadas.push(rutaActual);
         vehiculosUsados.add(rutaActual.vehiculo_id);
@@ -156,10 +216,12 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { fecha } = await req.json();
+    // Accept optional vehiculos_seleccionados array for daily planning
+    const { fecha, vehiculos_seleccionados } = await req.json();
     const fechaRuta = fecha || new Date().toISOString().split("T")[0];
 
-    console.log(`[suggest-routes] Generating routes for date: ${fechaRuta}`);
+    console.log(`[suggest-routes] Generating DAILY routes for date: ${fechaRuta}`);
+    console.log(`[suggest-routes] Selected vehicles: ${vehiculos_seleccionados?.length || 'ALL'}`);
 
     // 1. Get pending orders with priority, client and branch info
     const { data: pedidos, error: pedidosError } = await supabase
@@ -170,10 +232,12 @@ serve(async (req) => {
         peso_total_kg,
         total,
         fecha_entrega_estimada,
+        fecha_pedido,
         prioridad_entrega,
         deadline_dias_habiles,
         dia_fijo_semanal,
         cliente:cliente_id (
+          id,
           nombre,
           direccion
         ),
@@ -202,45 +266,75 @@ serve(async (req) => {
 
     console.log(`[suggest-routes] Found ${pedidos?.length || 0} pending orders`);
 
-    // 2. Get available vehicles
-    const { data: vehiculos, error: vehiculosError } = await supabase
+    // 2. Get available vehicles (filtered by selection if provided)
+    let vehiculosQuery = supabase
       .from("vehiculos")
       .select("id, nombre, tipo, peso_maximo_local_kg, peso_maximo_foraneo_kg")
       .eq("activo", true)
       .eq("status", "disponible")
       .order("peso_maximo_local_kg", { ascending: false });
 
+    if (vehiculos_seleccionados?.length > 0) {
+      vehiculosQuery = vehiculosQuery.in("id", vehiculos_seleccionados);
+    }
+
+    const { data: vehiculos, error: vehiculosError } = await vehiculosQuery;
+
     if (vehiculosError) {
       console.error("[suggest-routes] Error fetching vehicles:", vehiculosError);
       throw vehiculosError;
     }
 
-    console.log(`[suggest-routes] Found ${vehiculos?.length || 0} available vehicles`);
+    console.log(`[suggest-routes] Using ${vehiculos?.length || 0} vehicles for today`);
 
-    if (!pedidos?.length || !vehiculos?.length) {
+    // Calculate max vehicle capacity for oversized detection
+    const maxCapacidadVehiculo = vehiculos?.reduce((max, v) => 
+      Math.max(max, v.peso_maximo_local_kg, v.peso_maximo_foraneo_kg), 0
+    ) || 0;
+
+    // 3. Separate oversized orders (exceed any vehicle capacity)
+    const pedidosOversized = pedidos?.filter(p => 
+      (p.peso_total_kg || 0) > maxCapacidadVehiculo
+    ) || [];
+    
+    const pedidosNormales = pedidos?.filter(p => 
+      (p.peso_total_kg || 0) <= maxCapacidadVehiculo
+    ) || [];
+
+    console.log(`[suggest-routes] Oversized orders: ${pedidosOversized.length}, Normal: ${pedidosNormales.length}`);
+
+    // Calculate today's capacity
+    const capacidadHoy = vehiculos?.reduce((sum, v) => sum + v.peso_maximo_local_kg, 0) || 0;
+    const pesoTotalPendiente = pedidosNormales.reduce((sum, p) => sum + (p.peso_total_kg || 0), 0);
+
+    if (!pedidosNormales.length || !vehiculos?.length) {
       return new Response(
         JSON.stringify({
           rutas_sugeridas: [],
-          pedidos_sin_asignar: pedidos || [],
+          pedidos_para_hoy: [],
+          pedidos_para_despues: pedidosNormales || [],
+          pedidos_oversized: pedidosOversized,
+          capacidad_hoy: capacidadHoy,
+          peso_total_pendiente: pesoTotalPendiente,
           mensaje: !vehiculos?.length 
-            ? "No hay vehículos disponibles" 
-            : "No hay pedidos pendientes",
+            ? "No hay vehículos disponibles para hoy" 
+            : "No hay pedidos pendientes que quepan en los vehículos",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Create pedidos map for quick lookup
-    const pedidosMap = new Map(pedidos.map(p => [p.id, p]));
+    const pedidosMap = new Map(pedidosNormales.map(p => [p.id, p]));
 
-    // 3. Use AI to optimize route assignment
+    // 4. Use AI to optimize route assignment for TODAY's capacity only
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
-    // Prepare data for AI
-    const pedidosSimplificados = pedidos.map((p: any) => ({
+    // Prepare data for AI - only normal-sized orders
+    const pedidosSimplificados = pedidosNormales.map((p: any) => ({
       id: p.id,
       folio: p.folio,
       peso_kg: p.peso_total_kg || 0,
@@ -248,12 +342,14 @@ serve(async (req) => {
       deadline_dias: p.deadline_dias_habiles,
       dia_fijo: p.dia_fijo_semanal,
       cliente: p.cliente?.nombre || "Sin cliente",
+      cliente_id: p.cliente?.id,
       sucursal: p.sucursal?.nombre || null,
       zona: p.sucursal?.zona?.nombre || "Sin zona",
       region: p.sucursal?.zona?.region || null,
       es_foranea: p.sucursal?.zona?.es_foranea || false,
       restricciones_vehiculo: p.sucursal?.restricciones_vehiculo || null,
       no_combinar: p.sucursal?.no_combinar_pedidos || false,
+      fecha_pedido: p.fecha_pedido,
     }));
 
     const vehiculosSimplificados = vehiculos.map((v: any) => ({
@@ -264,69 +360,86 @@ serve(async (req) => {
       capacidad_foranea_kg: v.peso_maximo_foraneo_kg,
     }));
 
-    // Calculate totals for context
-    const pesoTotalPedidos = pedidosSimplificados.reduce((sum, p) => sum + p.peso_kg, 0);
-    const capacidadTotalLocal = vehiculosSimplificados.reduce((sum, v) => sum + v.capacidad_local_kg, 0);
+    // Group pedidos by client for deadline context
+    const pedidosPorCliente = pedidosSimplificados.reduce((acc: Record<string, any[]>, p) => {
+      const clienteId = p.cliente_id || p.cliente;
+      if (!acc[clienteId]) acc[clienteId] = [];
+      acc[clienteId].push(p);
+      return acc;
+    }, {});
 
-    const systemPrompt = `Eres un experto en logística de entregas. Tu tarea es asignar pedidos a vehículos de forma ÓPTIMA.
+    const clientesConDeadline = Object.entries(pedidosPorCliente)
+      .filter(([_, pedidos]) => pedidos.some(p => p.prioridad === "deadline"))
+      .map(([clienteId, pedidos]) => ({
+        cliente: pedidos[0].cliente,
+        total_pedidos: pedidos.length,
+        peso_total: pedidos.reduce((s, p) => s + p.peso_kg, 0),
+        deadline_dias: pedidos[0].deadline_dias,
+      }));
 
-## REGLA CRÍTICA - CAPACIDAD (MUY IMPORTANTE):
-- NUNCA, BAJO NINGUNA CIRCUNSTANCIA, asignes más peso del permitido a un vehículo
+    const systemPrompt = `Eres un experto en logística de entregas. Tu tarea es asignar pedidos a vehículos para ENTREGAS DE HOY.
+
+## MODELO DE PLANIFICACIÓN DIARIA:
+- Estás planificando SOLO las entregas de HOY, no de todos los días
+- Tu objetivo es LLENAR los vehículos disponibles de forma óptima
+- Los pedidos que NO quepan hoy se entregarán en días siguientes (NO ES UN ERROR)
+- Clientes como Lecaroz tienen 15 días hábiles para entregar todos sus pedidos
+
+## REGLA CRÍTICA - CAPACIDAD:
+- NUNCA asignes más peso del permitido a un vehículo
 - Cada vehículo tiene DOS capacidades:
-  - capacidad_local_kg: para rutas locales (CDMX)
-  - capacidad_foranea_kg: para rutas foráneas (fuera de CDMX)
-- La SUMA de peso_kg de los pedidos asignados a un vehículo DEBE SER MENOR O IGUAL a su capacidad
-- Si un pedido no cabe en ningún vehículo disponible, ponlo en "sin_asignar"
-- Utilización ideal: 70-95% de la capacidad
+  - capacidad_local_kg: para rutas locales
+  - capacidad_foranea_kg: para rutas foráneas
+- Utilización ideal: 80-95% de la capacidad
 
-## EJEMPLO DE VALIDACIÓN:
-- Vehículo "Torton 22": capacidad_local_kg=20000
-- Si asignas pedidos de 15000kg + 8000kg = 23000kg → ¡INCORRECTO! Excede 20000kg
-- Correcto: Asignar 15000kg al Torton 22, y 8000kg a otro vehículo
-
-## PRIORIDADES DE ENTREGA:
+## PRIORIDADES (qué entregar PRIMERO):
 1. vip_mismo_dia: DEBE entregarse hoy sin excepción
-2. deadline: Tiene X días hábiles (ver deadline_dias)
-3. dia_fijo_recurrente: Día específico de la semana
-4. fecha_sugerida: Flexible +/- 1 día
-5. flexible: Sin urgencia, usar para llenar capacidad
+2. deadline con pocos días restantes
+3. dia_fijo_recurrente si hoy es el día
+4. fecha_sugerida
+5. flexible: usar para LLENAR capacidad restante
 
-## REGLAS DE OPTIMIZACIÓN:
-1. Agrupar pedidos de la misma zona/región
-2. es_foranea=true → usar capacidad_foranea_kg
-3. es_foranea=false → usar capacidad_local_kg
-4. Pedidos con no_combinar=true van en ruta exclusiva
-5. Tortons para cargas pesadas, Camionetas para ligeras
-6. VIP siempre tienen prioridad máxima
+## ESTRATEGIA PARA HOY:
+1. Primero asigna TODOS los pedidos VIP
+2. Luego los deadline más urgentes
+3. Agrupa por zona/región para eficiencia
+4. Llena capacidad restante con pedidos flexibles
+5. Los que NO quepan van a "para_despues" (NO es error)
 
 ## FORMATO DE RESPUESTA (JSON exacto):
 {
   "rutas": [
     {
-      "vehiculo_id": "uuid-del-vehiculo",
+      "vehiculo_id": "uuid",
       "tipo_ruta": "local",
       "pedido_ids": ["uuid1", "uuid2"],
       "peso_total_kg": 15000,
-      "razon": "Zona Norte CDMX, 75% capacidad"
+      "razon": "Zona Norte, 85% capacidad, incluye 2 VIP"
     }
   ],
-  "sin_asignar": ["uuid-pedido"],
-  "notas": "Observaciones"
+  "para_despues": ["uuid-pedidos-para-otros-dias"],
+  "notas": "Hoy se entregan X pedidos. Quedan Y para días siguientes."
 }`;
 
     const userPrompt = `Fecha: ${fechaRuta}
 
-## VEHÍCULOS DISPONIBLES (${vehiculosSimplificados.length}):
+## VEHÍCULOS DISPONIBLES HOY (${vehiculosSimplificados.length}):
 ${vehiculosSimplificados.map(v => `- ${v.nombre} (${v.tipo}): Local=${v.capacidad_local_kg}kg, Foráneo=${v.capacidad_foranea_kg}kg`).join('\n')}
 
-## PEDIDOS PENDIENTES (${pedidosSimplificados.length}, Total: ${pesoTotalPedidos.toLocaleString()}kg):
+## CAPACIDAD TOTAL HOY: ${capacidadHoy.toLocaleString()}kg
+
+## PEDIDOS PENDIENTES (${pedidosSimplificados.length}, Total: ${pesoTotalPendiente.toLocaleString()}kg):
 ${JSON.stringify(pedidosSimplificados, null, 2)}
 
-## CAPACIDAD TOTAL DISPONIBLE: ${capacidadTotalLocal.toLocaleString()}kg (local)
+${clientesConDeadline.length > 0 ? `
+## CLIENTES CON DEADLINE (tienen varios días para entregar todos):
+${clientesConDeadline.map(c => `- ${c.cliente}: ${c.total_pedidos} pedidos, ${c.peso_total.toLocaleString()}kg, ${c.deadline_dias} días de plazo`).join('\n')}
+` : ''}
 
-Genera rutas óptimas. RECUERDA: La suma de pesos en cada ruta NO debe exceder la capacidad del vehículo.`;
+Genera rutas para HOY llenando los ${vehiculosSimplificados.length} vehículos de forma óptima.
+Los pedidos que no quepan hoy van a "para_despues" - esto es NORMAL, no un error.`;
 
-    console.log("[suggest-routes] Calling Lovable AI...");
+    console.log("[suggest-routes] Calling Lovable AI for daily planning...");
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -348,25 +461,47 @@ Genera rutas óptimas. RECUERDA: La suma de pesos en cada ruta NO debe exceder l
       const errorText = await aiResponse.text();
       console.error("[suggest-routes] AI API error:", aiResponse.status, errorText);
       
-      if (aiResponse.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Límite de solicitudes excedido. Intenta en unos minutos." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos de AI insuficientes." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      throw new Error(`AI API error: ${aiResponse.status}`);
+      // Fallback to simple bin-packing algorithm
+      console.log("[suggest-routes] Using fallback bin-packing algorithm...");
+      const { rutas: rutasFallback, noAsignados } = generarRutasSimples(pedidosNormales, vehiculos);
+      
+      const rutasSugeridas: RutaSugerida[] = rutasFallback.map(ruta => {
+        const vehiculo = vehiculos.find(v => v.id === ruta.vehiculo_id)!;
+        const pedidosRuta = ruta.pedido_ids.map((id: string) => pedidosMap.get(id)).filter(Boolean);
+        return {
+          vehiculo,
+          tipo_ruta: ruta.tipo_ruta,
+          pedidos: pedidosRuta,
+          peso_total: ruta.peso_total,
+          capacidad_maxima: ruta.capacidad_maxima,
+          porcentaje_carga: (ruta.peso_total / ruta.capacidad_maxima) * 100,
+          regiones: [],
+          zonas: [],
+        };
+      });
+
+      const pedidosParaDespues = pedidosNormales.filter(p => noAsignados.includes(p.id));
+      const pedidosParaHoy = pedidosNormales.filter(p => !noAsignados.includes(p.id));
+
+      return new Response(
+        JSON.stringify({
+          rutas_sugeridas: rutasSugeridas,
+          pedidos_para_hoy: pedidosParaHoy,
+          pedidos_para_despues: pedidosParaDespues,
+          pedidos_oversized: pedidosOversized,
+          capacidad_hoy: capacidadHoy,
+          peso_total_pendiente: pesoTotalPendiente,
+          notas_ai: "Rutas generadas con algoritmo de respaldo (AI no disponible)",
+          usó_fallback: true,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const aiData = await aiResponse.json();
     const aiContent = aiData.choices?.[0]?.message?.content || "";
     
-    console.log("[suggest-routes] AI response received");
+    console.log("[suggest-routes] AI response received, parsing...");
 
     // Parse AI response
     let aiResult;
@@ -374,15 +509,23 @@ Genera rutas óptimas. RECUERDA: La suma de pesos en cada ruta NO debe exceder l
       const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         aiResult = JSON.parse(jsonMatch[0]);
+        console.log(`[suggest-routes] AI generated ${aiResult.rutas?.length || 0} routes`);
       } else {
         throw new Error("No JSON found in AI response");
       }
     } catch (parseError) {
-      console.error("[suggest-routes] Failed to parse AI response:", aiContent);
-      aiResult = { rutas: [], sin_asignar: pedidosSimplificados.map((p: any) => p.id), notas: "Error parsing AI response" };
+      console.error("[suggest-routes] Failed to parse AI response, using fallback:", aiContent.substring(0, 500));
+      
+      // Use fallback algorithm
+      const { rutas: rutasFallback, noAsignados } = generarRutasSimples(pedidosNormales, vehiculos);
+      aiResult = { 
+        rutas: rutasFallback, 
+        para_despues: noAsignados, 
+        notas: "Rutas generadas con algoritmo de respaldo" 
+      };
     }
 
-    // 4. CRITICAL: Validate and split routes that exceed capacity
+    // 5. Validate and split routes that exceed capacity
     console.log("[suggest-routes] Validating routes for capacity limits...");
     const { rutasValidadas, pedidosNoAsignados } = validarYDividirRutas(
       aiResult.rutas || [],
@@ -390,13 +533,7 @@ Genera rutas óptimas. RECUERDA: La suma de pesos en cada ruta NO debe exceder l
       pedidosMap
     );
 
-    // Combine unassigned from AI and from validation
-    const todosNoAsignados = new Set([
-      ...(aiResult.sin_asignar || []),
-      ...pedidosNoAsignados
-    ]);
-
-    // 5. Build detailed route suggestions
+    // 6. Build detailed route suggestions
     const rutasSugeridas: RutaSugerida[] = [];
     const pedidosAsignados = new Set<string>();
 
@@ -422,11 +559,8 @@ Genera rutas óptimas. RECUERDA: La suma de pesos en cada ruta NO debe exceder l
         .map((p: any) => p.sucursal?.zona?.nombre)
         .filter(Boolean))] as string[];
 
-      // Final safety check
       if (pesoTotal > capacidadMax) {
-        console.error(`[suggest-routes] ERROR: Route still exceeds capacity after validation! ${pesoTotal} > ${capacidadMax}`);
-        // Mark these as unassigned
-        pedidosRuta.forEach((p: any) => todosNoAsignados.add(p.id));
+        console.error(`[suggest-routes] ERROR: Route still exceeds capacity! ${pesoTotal} > ${capacidadMax}`);
         continue;
       }
 
@@ -444,14 +578,19 @@ Genera rutas óptimas. RECUERDA: La suma de pesos en cada ruta NO debe exceder l
       pedidosRuta.forEach((p: any) => pedidosAsignados.add(p.id));
     }
 
-    // Find unassigned orders
-    const pedidosSinAsignar = pedidos.filter((p: any) => 
+    // Separate assigned from unassigned
+    const todosNoAsignados = new Set([
+      ...(aiResult.para_despues || aiResult.sin_asignar || []),
+      ...pedidosNoAsignados
+    ]);
+
+    const pedidosParaHoy = pedidosNormales.filter(p => pedidosAsignados.has(p.id));
+    const pedidosParaDespues = pedidosNormales.filter(p => 
       !pedidosAsignados.has(p.id) || todosNoAsignados.has(p.id)
     );
 
-    console.log(`[suggest-routes] Generated ${rutasSugeridas.length} validated routes, ${pedidosSinAsignar.length} unassigned`);
+    console.log(`[suggest-routes] DAILY PLAN: ${rutasSugeridas.length} routes, ${pedidosParaHoy.length} orders today, ${pedidosParaDespues.length} for later, ${pedidosOversized.length} oversized`);
     
-    // Log route summaries
     rutasSugeridas.forEach((r, i) => {
       console.log(`[suggest-routes] Route ${i+1}: ${r.vehiculo.nombre} - ${r.peso_total}/${r.capacidad_maxima}kg (${r.porcentaje_carga.toFixed(0)}%) - ${r.pedidos.length} orders`);
     });
@@ -459,8 +598,13 @@ Genera rutas óptimas. RECUERDA: La suma de pesos en cada ruta NO debe exceder l
     return new Response(
       JSON.stringify({
         rutas_sugeridas: rutasSugeridas,
-        pedidos_sin_asignar: pedidosSinAsignar,
+        pedidos_para_hoy: pedidosParaHoy,
+        pedidos_para_despues: pedidosParaDespues,
+        pedidos_oversized: pedidosOversized,
+        capacidad_hoy: capacidadHoy,
+        peso_total_pendiente: pesoTotalPendiente,
         notas_ai: aiResult.notas || null,
+        usó_fallback: false,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
