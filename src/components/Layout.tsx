@@ -36,6 +36,7 @@ import {
   ChevronDown,
   ChevronRight,
   CreditCard,
+  Smartphone,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -97,6 +98,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: UserCog, label: "Empleados", path: "/empleados" },
     { icon: Shield, label: "Usuarios", path: "/usuarios" },
     { icon: MessageCircle, label: "Chat", path: "/chat" },
+    { icon: Smartphone, label: "App Móvil", path: "/generate-assets" },
   ];
 
   // Filtrar menú según los roles del usuario

@@ -101,6 +101,7 @@ export const MODULE_PERMISSIONS: Record<string, AppRole[]> = {
   '/usuarios': ['admin'],
   '/chat': ['admin', 'secretaria', 'vendedor', 'chofer', 'almacen', 'contadora'],
   '/correos': ['admin', 'secretaria'],
+  '/generate-assets': ['admin'],
 };
 
 // Hook para verificar acceso a un módulo específico
