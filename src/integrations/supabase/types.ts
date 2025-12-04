@@ -2610,6 +2610,14 @@ export type Database = {
       }
     }
     Functions: {
+      check_chofer_client_access: {
+        Args: { p_chofer_id: string; p_cliente_id: string }
+        Returns: boolean
+      }
+      check_client_order_access: {
+        Args: { p_pedido_cliente_id: string; p_user_id: string }
+        Returns: boolean
+      }
       es_participante_conversacion: {
         Args: { _conversacion_id: string; _user_id: string }
         Returns: boolean
