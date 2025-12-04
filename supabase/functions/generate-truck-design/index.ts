@@ -18,9 +18,37 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    // Prompts usando el logo EXACTO de ALMASA - rectángulo redondeado con borde rojo, fondo blanco, letras serif rojas
+    // Prompts para diseños de camioneta ALMASA
     const prompts: Record<string, string> = {
       // === VISTA LATERAL ===
+      'elegante-lateral': `Photorealistic white commercial box truck wrap mockup, professional side view on neutral background.
+
+LOGO ALMASA (EXACT STYLE - CRITICAL):
+- Text "ALMASA" in large elegant RED SERIF typography (#C41E3A crimson red)
+- Classic serif font with decorative serifs, similar to Times New Roman or elegant Garamond style
+- NO rectangle, NO border, NO background around the logo - JUST the red serif letters floating
+- Logo positioned centered-upper on the truck box, large and prominent
+- Below logo: "Desde 1904" in smaller elegant red serif text (same font family)
+- Below that: "almasa.com.mx" in small red text
+
+DESIGN ELEMENTS:
+- Elegant flowing red curved decorative line running along the bottom edge of the truck box
+- The curve is smooth and graceful, swooping gently
+- Clean white truck body, pristine finish
+- Modern white commercial box truck
+
+REGULATORY INFO (driver door area only, small dark gray text, grouped compactly in vertical list):
+SERVICIO MERCANTIL DE TRANSPORTE DE CARGA
+ABARROTES LA MANITA, S.A. DE C.V.
+Melchor Campo #59, Col. Centro, CDMX
+TEL: 55-XXXX-XXXX
+PLACA: XXX-000 | DIESEL
+
+The regulatory text should be small and discrete, positioned on the driver's door area, NOT interfering with the main elegant design.
+
+STYLE: Premium minimalist, sophisticated fleet branding. Photorealistic mockup with soft studio lighting and subtle shadows. White background or very light gray studio backdrop. The overall impression should be elegant, modern, and professional.
+`,
+
       'minimalista-lateral': `Photorealistic white commercial box truck wrap mockup, side view. Professional fleet design for Mexican food distributor.
 
 CRITICAL - ALMASA LOGO (EXACT DESIGN - DO NOT DEVIATE):

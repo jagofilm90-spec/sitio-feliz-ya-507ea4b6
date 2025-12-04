@@ -16,6 +16,12 @@ interface DesignOption {
 const designOptions: DesignOption[] = [
   // Vista Lateral
   {
+    id: 'elegante-lateral',
+    name: 'Elegante (Lateral)',
+    description: 'Logo ALMASA serif rojo, "Desde 1904", línea roja curva. Con datos regulatorios discretos en puerta.',
+    category: 'lateral'
+  },
+  {
     id: 'minimalista-lateral',
     name: 'Minimalista (Lateral)',
     description: 'Estilo Tesla/Apple. Logo ALMASA rojo, sans-serif moderno, máximo espacio en blanco. Ultra limpio.',
