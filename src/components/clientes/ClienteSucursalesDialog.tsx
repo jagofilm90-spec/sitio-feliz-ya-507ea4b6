@@ -53,6 +53,7 @@ interface Sucursal {
   restricciones_vehiculo: string | null;
   dias_sin_entrega: string | null;
   no_combinar_pedidos: boolean;
+  es_rosticeria: boolean;
   // Datos fiscales opcionales para facturación por sucursal
   rfc: string | null;
   razon_social: string | null;
@@ -89,6 +90,7 @@ const ClienteSucursalesDialog = ({
     restricciones_vehiculo: "",
     dias_sin_entrega: "",
     no_combinar_pedidos: false,
+    es_rosticeria: false,
     // Datos fiscales opcionales
     rfc: "",
     razon_social: "",
@@ -222,6 +224,7 @@ const ClienteSucursalesDialog = ({
         restricciones_vehiculo: formData.restricciones_vehiculo || null,
         dias_sin_entrega: formData.dias_sin_entrega || null,
         no_combinar_pedidos: formData.no_combinar_pedidos,
+        es_rosticeria: formData.es_rosticeria,
         // Datos fiscales opcionales
         rfc: formData.rfc || null,
         razon_social: formData.razon_social || null,
@@ -272,6 +275,7 @@ const ClienteSucursalesDialog = ({
       restricciones_vehiculo: sucursal.restricciones_vehiculo || "",
       dias_sin_entrega: sucursal.dias_sin_entrega || "",
       no_combinar_pedidos: sucursal.no_combinar_pedidos || false,
+      es_rosticeria: sucursal.es_rosticeria || false,
       rfc: sucursal.rfc || "",
       razon_social: sucursal.razon_social || "",
       direccion_fiscal: sucursal.direccion_fiscal || "",
@@ -316,6 +320,7 @@ const ClienteSucursalesDialog = ({
       restricciones_vehiculo: "",
       dias_sin_entrega: "",
       no_combinar_pedidos: false,
+      es_rosticeria: false,
       rfc: "",
       razon_social: "",
       direccion_fiscal: "",
@@ -542,6 +547,18 @@ const ClienteSucursalesDialog = ({
                     No combinar pedidos con otros clientes (requiere autorización)
                   </Label>
                 </div>
+                <div className="flex items-center space-x-2 mt-4">
+                  <Checkbox
+                    id="suc_es_rosticeria"
+                    checked={formData.es_rosticeria}
+                    onCheckedChange={(checked) => 
+                      setFormData({ ...formData, es_rosticeria: checked === true })
+                    }
+                  />
+                  <Label htmlFor="suc_es_rosticeria" className="text-sm font-normal">
+                    🍗 Es Rosticería
+                  </Label>
+                </div>
               </div>
               
               {/* Datos Fiscales Opcionales */}
@@ -669,6 +686,11 @@ const ClienteSucursalesDialog = ({
                               </Badge>
                             )}
                             {sucursal.nombre}
+                            {sucursal.es_rosticeria && (
+                              <Badge className="text-xs bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30">
+                                🍗
+                              </Badge>
+                            )}
                           </div>
                           {sucursal.rfc && (
                             <Badge variant="outline" className="text-xs w-fit">
