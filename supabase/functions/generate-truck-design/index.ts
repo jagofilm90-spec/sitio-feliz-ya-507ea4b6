@@ -18,33 +18,37 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    // Prompts usando el logo REAL de ALMASA - tipografía serif elegante con "A" estilizada
-    // Logo ALMASA: Letras serif rojas (#C41E3A) con la "A" inicial grande y decorativa, estilo clásico/tradicional
+    // Prompts usando el logo EXACTO de ALMASA - rectángulo redondeado con borde rojo, fondo blanco, letras serif rojas
     const prompts: Record<string, string> = {
       // === VISTA LATERAL ===
       'minimalista-lateral': `Photorealistic white commercial box truck wrap mockup, side view. Professional fleet design for Mexican food distributor.
 
-CRITICAL - LOGO ALMASA (must match exactly):
-- The word "ALMASA" in elegant RED SERIF typography (#C41E3A crimson red)
-- The first letter "A" is larger and decorative with classic flourishes
-- Typography style: Traditional serif font similar to Times New Roman or Garamond but with decorative capital letters
-- NOT sans-serif, NOT modern/minimalist font - it's a CLASSIC ELEGANT SERIF typeface
-- Logo centered prominently on truck box side
+CRITICAL - ALMASA LOGO (EXACT DESIGN - DO NOT DEVIATE):
+- Logo is inside a ROUNDED RECTANGLE (pill/capsule shape, horizontal orientation)
+- The rounded rectangle has a RED BORDER/OUTLINE (#C41E3A crimson red, 3-4px thick)
+- INSIDE the rounded rectangle: WHITE/cream background
+- Text "ALMASA" in elegant RED SERIF typography (#C41E3A) INSIDE the white rounded rectangle
+- Typography: Classic elegant serif font with decorative serifs, similar to classic logotype style
+- All letters are the same height, well-spaced, professional corporate logo appearance
+- The logo looks like a badge or seal - rectangular with rounded corners containing the brand name
+- Logo size: Large and prominent, centered on the truck box side
 
 ADDITIONAL ELEMENTS:
-- Small "almasa.com.mx" below logo in matching red
+- Small "almasa.com.mx" in red below the logo badge
 - Small text on driver door: "PLACA: XXX-000 | DIESEL"
 
 STYLE: Clean white truck, professional appearance. Photorealistic studio mockup with soft shadows.`,
 
       'reglamentario-lateral': `Photorealistic white commercial truck wrap mockup, side view. Mexican commercial vehicle with regulatory compliance.
 
-CRITICAL - LOGO ALMASA (must match exactly):
-- The word "ALMASA" in elegant RED SERIF typography (#C41E3A crimson red)
-- The first letter "A" is larger and decorative with classic flourishes  
-- Typography: Traditional elegant serif font (like Times/Garamond with decorative capitals)
-- NOT sans-serif - it's a CLASSIC SERIF typeface
-- Logo centered on main truck box
+CRITICAL - ALMASA LOGO (EXACT DESIGN - DO NOT DEVIATE):
+- Logo is inside a ROUNDED RECTANGLE (pill/capsule shape, horizontal orientation)
+- The rounded rectangle has a RED BORDER/OUTLINE (#C41E3A crimson red)
+- INSIDE the rounded rectangle: WHITE background
+- Text "ALMASA" in elegant RED SERIF typography (#C41E3A) INSIDE the white rounded rectangle
+- Typography: Classic elegant serif font with decorative serifs
+- The logo looks like a corporate badge - rounded rectangle containing the red text on white
+- Logo centered prominently on main truck box
 
 REGULATORY INFO (driver door area, small dark gray text):
 "SERVICIO MERCANTIL DE CARGA
@@ -53,18 +57,20 @@ ABARROTES LA MANITA S.A. DE C.V.
 Melchor Campo #59, Col. Centro, CDMX
 TEL: 55-XXXX-XXXX"
 
-ADDITIONAL: "almasa.com.mx" in red below logo, thin red accent line at bottom edge.
+ADDITIONAL: "almasa.com.mx" in red below logo badge, thin red accent line at bottom edge.
 
 STYLE: Professional Mexican commercial truck. Photorealistic mockup.`,
 
       'premium-lateral': `Photorealistic white commercial truck wrap mockup, side view. Premium sophisticated fleet design.
 
-CRITICAL - LOGO ALMASA (must match exactly):
-- The word "ALMASA" in elegant RED SERIF typography (#C41E3A crimson red)
-- The first letter "A" is larger and decorative with classic flourishes
-- Typography: Traditional elegant serif font with decorative capital letters
-- NOT sans-serif - CLASSIC ELEGANT SERIF typeface
-- Logo centered prominently
+CRITICAL - ALMASA LOGO (EXACT DESIGN - DO NOT DEVIATE):
+- Logo is inside a ROUNDED RECTANGLE (pill/capsule shape, horizontal orientation)
+- The rounded rectangle has a RED BORDER/OUTLINE (#C41E3A crimson red)
+- INSIDE the rounded rectangle: WHITE background
+- Text "ALMASA" in elegant RED SERIF typography (#C41E3A) INSIDE the white rounded rectangle
+- Typography: Classic elegant serif font, corporate logo style
+- The logo looks like a premium badge/seal - rounded rectangle with red border containing red text on white
+- Logo centered prominently on truck box
 
 DESIGN ELEMENTS:
 - Elegant dark charcoal gray band at bottom third of truck box
@@ -80,26 +86,30 @@ STYLE: Premium two-tone white and charcoal. Photorealistic mockup.`,
       // === VISTA TRASERA ===
       'minimalista-trasera': `Photorealistic white truck rear doors wrap mockup. Professional back view design.
 
-CRITICAL - LOGO ALMASA (must match exactly):
-- The word "ALMASA" in elegant RED SERIF typography (#C41E3A crimson red)
-- The first letter "A" is larger and decorative with classic flourishes
-- Typography: Traditional elegant serif font (Times/Garamond style with decorative capitals)
-- NOT sans-serif - CLASSIC SERIF typeface
-- Logo centered on doors
+CRITICAL - ALMASA LOGO (EXACT DESIGN - DO NOT DEVIATE):
+- Logo is inside a ROUNDED RECTANGLE (pill/capsule shape, horizontal orientation)
+- The rounded rectangle has a RED BORDER/OUTLINE (#C41E3A crimson red)
+- INSIDE the rounded rectangle: WHITE background
+- Text "ALMASA" in elegant RED SERIF typography (#C41E3A) INSIDE the white rounded rectangle
+- Typography: Classic elegant serif font with decorative serifs
+- The logo looks like a corporate badge - rounded rectangle containing red text on white
+- Logo centered on truck rear doors
 
 ADDITIONAL:
-- Small "almasa.com.mx" in red below logo
+- Small "almasa.com.mx" in red below logo badge
 - Bottom edge: small gray text "QUEJAS: 55-XXXX-XXXX | PLACA: XXX-000"
 
 STYLE: Clean professional appearance. Photorealistic mockup.`,
 
       'reglamentario-trasera': `Photorealistic white truck rear doors wrap mockup. Mexican commercial vehicle back view with regulatory info.
 
-CRITICAL - LOGO ALMASA (must match exactly):
-- The word "ALMASA" in elegant RED SERIF typography (#C41E3A crimson red)
-- The first letter "A" is larger and decorative with classic flourishes
-- Typography: Traditional elegant serif font with decorative capitals
-- NOT sans-serif - CLASSIC SERIF typeface
+CRITICAL - ALMASA LOGO (EXACT DESIGN - DO NOT DEVIATE):
+- Logo is inside a ROUNDED RECTANGLE (pill/capsule shape, horizontal orientation)
+- The rounded rectangle has a RED BORDER/OUTLINE (#C41E3A crimson red)
+- INSIDE the rounded rectangle: WHITE background
+- Text "ALMASA" in elegant RED SERIF typography (#C41E3A) INSIDE the white rounded rectangle
+- Typography: Classic elegant serif font
+- The logo looks like a badge/seal - rounded rectangle with red border, white fill, red text
 - Logo centered on doors
 
 REGULATORY INFO (below logo, small dark gray text):
@@ -113,11 +123,13 @@ STYLE: Professional Mexican commercial truck. Photorealistic mockup.`,
 
       'premium-trasera': `Photorealistic white truck rear doors wrap mockup. Premium sophisticated back view.
 
-CRITICAL - LOGO ALMASA (must match exactly):
-- The word "ALMASA" in elegant RED SERIF typography (#C41E3A crimson red)
-- The first letter "A" is larger and decorative with classic flourishes
-- Typography: Traditional elegant serif font with decorative capitals
-- NOT sans-serif - CLASSIC ELEGANT SERIF typeface
+CRITICAL - ALMASA LOGO (EXACT DESIGN - DO NOT DEVIATE):
+- Logo is inside a ROUNDED RECTANGLE (pill/capsule shape, horizontal orientation)
+- The rounded rectangle has a RED BORDER/OUTLINE (#C41E3A crimson red)
+- INSIDE the rounded rectangle: WHITE background
+- Text "ALMASA" in elegant RED SERIF typography (#C41E3A) INSIDE the white rounded rectangle
+- Typography: Classic elegant serif font, premium corporate logo style
+- The logo looks like an elegant badge - rounded rectangle containing red serif text on white
 - Logo centered on doors
 
 DESIGN ELEMENTS:
