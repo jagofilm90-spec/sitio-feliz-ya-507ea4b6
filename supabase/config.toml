@@ -59,3 +59,6 @@ verify_jwt = true
 
 [functions.check-vehicle-documents-expiry]
 verify_jwt = false
+
+[functions.suggest-routes]
+verify_jwt = true

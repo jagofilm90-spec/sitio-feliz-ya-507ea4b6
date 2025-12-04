@@ -21,7 +21,8 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Truck, Package, AlertTriangle, Check, X, MapPin, Calendar, User, Users } from "lucide-react";
+import { Plus, Truck, Package, AlertTriangle, Check, X, MapPin, Calendar, User, Users, Sparkles } from "lucide-react";
+import { SugerirRutasAIDialog } from "./SugerirRutasAIDialog";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -62,6 +63,7 @@ const PlanificadorRutas = () => {
   const [pedidosPendientes, setPedidosPendientes] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Form state
@@ -288,11 +290,24 @@ const PlanificadorRutas = () => {
             Asigna pedidos a un vehículo y optimiza la ruta
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nueva Ruta
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setAiDialogOpen(true)}>
+            <Sparkles className="h-4 w-4 mr-2" />
+            Sugerir Rutas AI
+          </Button>
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva Ruta
+          </Button>
+        </div>
       </div>
+
+      <SugerirRutasAIDialog
+        open={aiDialogOpen}
+        onOpenChange={setAiDialogOpen}
+        onRutaCreada={loadData}
+        choferes={choferes}
+      />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">

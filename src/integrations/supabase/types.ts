@@ -1724,6 +1724,8 @@ export type Database = {
           cliente_id: string
           created_at: string
           datos_fiscales_factura: Json | null
+          deadline_dias_habiles: number | null
+          dia_fijo_semanal: string | null
           factura_enviada_al_cliente: boolean
           factura_solicitada_por_cliente: boolean
           facturado: boolean
@@ -1735,6 +1737,9 @@ export type Database = {
           impuestos: number | null
           notas: string | null
           peso_total_kg: number | null
+          prioridad_entrega:
+            | Database["public"]["Enums"]["delivery_priority"]
+            | null
           requiere_factura: boolean
           status: Database["public"]["Enums"]["order_status"]
           subtotal: number | null
@@ -1747,6 +1752,8 @@ export type Database = {
           cliente_id: string
           created_at?: string
           datos_fiscales_factura?: Json | null
+          deadline_dias_habiles?: number | null
+          dia_fijo_semanal?: string | null
           factura_enviada_al_cliente?: boolean
           factura_solicitada_por_cliente?: boolean
           facturado?: boolean
@@ -1758,6 +1765,9 @@ export type Database = {
           impuestos?: number | null
           notas?: string | null
           peso_total_kg?: number | null
+          prioridad_entrega?:
+            | Database["public"]["Enums"]["delivery_priority"]
+            | null
           requiere_factura?: boolean
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number | null
@@ -1770,6 +1780,8 @@ export type Database = {
           cliente_id?: string
           created_at?: string
           datos_fiscales_factura?: Json | null
+          deadline_dias_habiles?: number | null
+          dia_fijo_semanal?: string | null
           factura_enviada_al_cliente?: boolean
           factura_solicitada_por_cliente?: boolean
           facturado?: boolean
@@ -1781,6 +1793,9 @@ export type Database = {
           impuestos?: number | null
           notas?: string | null
           peso_total_kg?: number | null
+          prioridad_entrega?:
+            | Database["public"]["Enums"]["delivery_priority"]
+            | null
           requiere_factura?: boolean
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number | null
@@ -2479,22 +2494,31 @@ export type Database = {
           activo: boolean
           created_at: string
           descripcion: string | null
+          es_foranea: boolean | null
           id: string
           nombre: string
+          region: Database["public"]["Enums"]["zona_region"] | null
+          zonas_cercanas: string[] | null
         }
         Insert: {
           activo?: boolean
           created_at?: string
           descripcion?: string | null
+          es_foranea?: boolean | null
           id?: string
           nombre: string
+          region?: Database["public"]["Enums"]["zona_region"] | null
+          zonas_cercanas?: string[] | null
         }
         Update: {
           activo?: boolean
           created_at?: string
           descripcion?: string | null
+          es_foranea?: boolean | null
           id?: string
           nombre?: string
+          region?: Database["public"]["Enums"]["zona_region"] | null
+          zonas_cercanas?: string[] | null
         }
         Relationships: []
       }
@@ -2694,6 +2718,12 @@ export type Database = {
         | "grupo_puesto"
         | "broadcast"
       credit_term: "contado" | "8_dias" | "15_dias" | "30_dias"
+      delivery_priority:
+        | "vip_mismo_dia"
+        | "deadline"
+        | "dia_fijo_recurrente"
+        | "fecha_sugerida"
+        | "flexible"
       order_status:
         | "por_autorizar"
         | "pendiente"
@@ -2714,6 +2744,20 @@ export type Database = {
         | "churla"
         | "cubeta"
         | "balón"
+      zona_region:
+        | "cdmx_norte"
+        | "cdmx_centro"
+        | "cdmx_sur"
+        | "cdmx_oriente"
+        | "cdmx_poniente"
+        | "edomex_norte"
+        | "edomex_oriente"
+        | "toluca"
+        | "morelos"
+        | "puebla"
+        | "hidalgo"
+        | "queretaro"
+        | "tlaxcala"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2857,6 +2901,13 @@ export const Constants = {
         "broadcast",
       ],
       credit_term: ["contado", "8_dias", "15_dias", "30_dias"],
+      delivery_priority: [
+        "vip_mismo_dia",
+        "deadline",
+        "dia_fijo_recurrente",
+        "fecha_sugerida",
+        "flexible",
+      ],
       order_status: [
         "por_autorizar",
         "pendiente",
@@ -2879,6 +2930,21 @@ export const Constants = {
         "churla",
         "cubeta",
         "balón",
+      ],
+      zona_region: [
+        "cdmx_norte",
+        "cdmx_centro",
+        "cdmx_sur",
+        "cdmx_oriente",
+        "cdmx_poniente",
+        "edomex_norte",
+        "edomex_oriente",
+        "toluca",
+        "morelos",
+        "puebla",
+        "hidalgo",
+        "queretaro",
+        "tlaxcala",
       ],
     },
   },
