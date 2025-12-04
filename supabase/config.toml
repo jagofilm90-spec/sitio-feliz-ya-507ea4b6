@@ -3,6 +3,9 @@ project_id = "vrcyjmfpteoccqdmdmqn"
 [functions.extract-license-expiry]
 verify_jwt = true
 
+[functions.extract-tarjeta-circulacion]
+verify_jwt = true
+
 [functions.gmail-auth]
 verify_jwt = true
 
