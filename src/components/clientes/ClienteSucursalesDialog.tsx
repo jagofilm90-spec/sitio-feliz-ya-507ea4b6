@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, MapPin, AlertTriangle, FileText, ChevronDown, ChevronUp, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Edit, Trash2, MapPin, AlertTriangle, FileText, ChevronDown, ChevronUp, Search, ChevronLeft, ChevronRight, CheckSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
 
@@ -81,6 +81,8 @@ const ClienteSucursalesDialog = ({
   const [filtroTipo, setFiltroTipo] = useState<'todas' | 'rosticeria' | 'regular'>('todas');
   const [busqueda, setBusqueda] = useState("");
   const [paginaActual, setPaginaActual] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkZonaId, setBulkZonaId] = useState<string>("");
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -135,6 +137,64 @@ const ClienteSucursalesDialog = ({
 
   const countRosticerias = sucursales.filter(s => s.es_rosticeria).length;
   const countRegulares = sucursales.filter(s => !s.es_rosticeria).length;
+
+  // Selección masiva
+  const allFilteredSelected = sucursalesFiltradas.length > 0 && 
+    sucursalesFiltradas.every(s => selectedIds.has(s.id));
+  
+  const toggleSelectAll = () => {
+    if (allFilteredSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(sucursalesFiltradas.map(s => s.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
+
+  // Edición masiva
+  const handleBulkSetRosticeria = async (esRosticeria: boolean) => {
+    if (selectedIds.size === 0) return;
+    try {
+      const { error } = await supabase
+        .from("cliente_sucursales")
+        .update({ es_rosticeria: esRosticeria })
+        .in("id", Array.from(selectedIds));
+
+      if (error) throw error;
+      toast({ title: `${selectedIds.size} sucursales actualizadas` });
+      setSelectedIds(new Set());
+      loadSucursales();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleBulkSetZona = async () => {
+    if (selectedIds.size === 0 || !bulkZonaId) return;
+    try {
+      const { error } = await supabase
+        .from("cliente_sucursales")
+        .update({ zona_id: bulkZonaId })
+        .in("id", Array.from(selectedIds));
+
+      if (error) throw error;
+      toast({ title: `Zona asignada a ${selectedIds.size} sucursales` });
+      setSelectedIds(new Set());
+      setBulkZonaId("");
+      loadSucursales();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
 
   useEffect(() => {
     if (open && cliente) {
@@ -722,10 +782,68 @@ const ClienteSucursalesDialog = ({
             </form>
           )}
 
+          {/* Barra de acciones masivas */}
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-3 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+              <CheckSquare className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">{selectedIds.size} seleccionadas</span>
+              <div className="flex items-center gap-2 ml-auto">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleBulkSetRosticeria(true)}
+                >
+                  🍗 Marcar Rosticería
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleBulkSetRosticeria(false)}
+                >
+                  Quitar Rosticería
+                </Button>
+                <div className="flex items-center gap-1">
+                  <Select value={bulkZonaId} onValueChange={setBulkZonaId}>
+                    <SelectTrigger className="w-[150px] h-8">
+                      <SelectValue placeholder="Asignar zona" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {zonas.map((zona) => (
+                        <SelectItem key={zona.id} value={zona.id}>
+                          {zona.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    onClick={handleBulkSetZona}
+                    disabled={!bulkZonaId}
+                  >
+                    Aplicar
+                  </Button>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[40px]">
+                    <Checkbox
+                      checked={allFilteredSelected}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead>Sucursal</TableHead>
                   <TableHead>Dirección</TableHead>
                   <TableHead>Zona</TableHead>
@@ -736,13 +854,13 @@ const ClienteSucursalesDialog = ({
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center">
                       Cargando...
                     </TableCell>
                   </TableRow>
                 ) : sucursalesFiltradas.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
                       {sucursales.length === 0 
                         ? "No hay sucursales registradas"
                         : `No hay sucursales ${filtroTipo === 'rosticeria' ? 'rosticerías' : 'regulares'}`
@@ -751,7 +869,13 @@ const ClienteSucursalesDialog = ({
                   </TableRow>
                 ) : (
                   sucursalesPaginadas.map((sucursal) => (
-                    <TableRow key={sucursal.id}>
+                    <TableRow key={sucursal.id} className={selectedIds.has(sucursal.id) ? "bg-primary/5" : ""}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(sucursal.id)}
+                          onCheckedChange={() => toggleSelect(sucursal.id)}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2">
