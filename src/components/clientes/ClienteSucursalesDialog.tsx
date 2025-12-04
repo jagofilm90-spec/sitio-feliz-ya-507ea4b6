@@ -76,6 +76,7 @@ const ClienteSucursalesDialog = ({
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingSucursal, setEditingSucursal] = useState<Sucursal | null>(null);
+  const [filtroTipo, setFiltroTipo] = useState<'todas' | 'rosticeria' | 'regular'>('todas');
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -98,6 +99,16 @@ const ClienteSucursalesDialog = ({
     email_facturacion: "",
   });
   const [mostrarDatosFiscales, setMostrarDatosFiscales] = useState(false);
+
+  // Filtrar sucursales según el tipo seleccionado
+  const sucursalesFiltradas = sucursales.filter(s => {
+    if (filtroTipo === 'todas') return true;
+    if (filtroTipo === 'rosticeria') return s.es_rosticeria;
+    return !s.es_rosticeria;
+  });
+
+  const countRosticerias = sucursales.filter(s => s.es_rosticeria).length;
+  const countRegulares = sucursales.filter(s => !s.es_rosticeria).length;
 
   useEffect(() => {
     if (open && cliente) {
@@ -343,7 +354,31 @@ const ClienteSucursalesDialog = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant={filtroTipo === 'todas' ? 'default' : 'outline'}
+                onClick={() => setFiltroTipo('todas')}
+              >
+                Todas ({sucursales.length})
+              </Button>
+              <Button
+                size="sm"
+                variant={filtroTipo === 'rosticeria' ? 'default' : 'outline'}
+                onClick={() => setFiltroTipo('rosticeria')}
+                className={filtroTipo === 'rosticeria' ? 'bg-amber-500 hover:bg-amber-600' : ''}
+              >
+                🍗 Rosticerías ({countRosticerias})
+              </Button>
+              <Button
+                size="sm"
+                variant={filtroTipo === 'regular' ? 'default' : 'outline'}
+                onClick={() => setFiltroTipo('regular')}
+              >
+                Regulares ({countRegulares})
+              </Button>
+            </div>
             <Button
               size="sm"
               onClick={() => {
@@ -668,14 +703,17 @@ const ClienteSucursalesDialog = ({
                       Cargando...
                     </TableCell>
                   </TableRow>
-                ) : sucursales.length === 0 ? (
+                ) : sucursalesFiltradas.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-muted-foreground">
-                      No hay sucursales registradas
+                      {sucursales.length === 0 
+                        ? "No hay sucursales registradas"
+                        : `No hay sucursales ${filtroTipo === 'rosticeria' ? 'rosticerías' : 'regulares'}`
+                      }
                     </TableCell>
                   </TableRow>
                 ) : (
-                  sucursales.map((sucursal) => (
+                  sucursalesFiltradas.map((sucursal) => (
                     <TableRow key={sucursal.id}>
                       <TableCell className="font-medium">
                         <div className="flex flex-col gap-1">
