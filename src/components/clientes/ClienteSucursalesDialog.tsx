@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, MapPin, AlertTriangle, FileText, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Edit, Trash2, MapPin, AlertTriangle, FileText, ChevronDown, ChevronUp, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
 
@@ -77,6 +77,7 @@ const ClienteSucursalesDialog = ({
   const [formOpen, setFormOpen] = useState(false);
   const [editingSucursal, setEditingSucursal] = useState<Sucursal | null>(null);
   const [filtroTipo, setFiltroTipo] = useState<'todas' | 'rosticeria' | 'regular'>('todas');
+  const [busqueda, setBusqueda] = useState("");
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -100,11 +101,21 @@ const ClienteSucursalesDialog = ({
   });
   const [mostrarDatosFiscales, setMostrarDatosFiscales] = useState(false);
 
-  // Filtrar sucursales según el tipo seleccionado
+  // Filtrar sucursales según el tipo y búsqueda
   const sucursalesFiltradas = sucursales.filter(s => {
-    if (filtroTipo === 'todas') return true;
-    if (filtroTipo === 'rosticeria') return s.es_rosticeria;
-    return !s.es_rosticeria;
+    // Filtro por tipo
+    if (filtroTipo === 'rosticeria' && !s.es_rosticeria) return false;
+    if (filtroTipo === 'regular' && s.es_rosticeria) return false;
+    
+    // Filtro por búsqueda
+    if (busqueda.trim()) {
+      const term = busqueda.toLowerCase();
+      return (
+        s.nombre.toLowerCase().includes(term) ||
+        (s.codigo_sucursal && s.codigo_sucursal.toLowerCase().includes(term))
+      );
+    }
+    return true;
   });
 
   const countRosticerias = sucursales.filter(s => s.es_rosticeria).length;
@@ -354,41 +365,52 @@ const ClienteSucursalesDialog = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant={filtroTipo === 'todas' ? 'default' : 'outline'}
+                  onClick={() => setFiltroTipo('todas')}
+                >
+                  Todas ({sucursales.length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={filtroTipo === 'rosticeria' ? 'default' : 'outline'}
+                  onClick={() => setFiltroTipo('rosticeria')}
+                  className={filtroTipo === 'rosticeria' ? 'bg-amber-500 hover:bg-amber-600' : ''}
+                >
+                  🍗 Rosticerías ({countRosticerias})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={filtroTipo === 'regular' ? 'default' : 'outline'}
+                  onClick={() => setFiltroTipo('regular')}
+                >
+                  Regulares ({countRegulares})
+                </Button>
+              </div>
               <Button
                 size="sm"
-                variant={filtroTipo === 'todas' ? 'default' : 'outline'}
-                onClick={() => setFiltroTipo('todas')}
+                onClick={() => {
+                  resetForm();
+                  setFormOpen(true);
+                }}
               >
-                Todas ({sucursales.length})
-              </Button>
-              <Button
-                size="sm"
-                variant={filtroTipo === 'rosticeria' ? 'default' : 'outline'}
-                onClick={() => setFiltroTipo('rosticeria')}
-                className={filtroTipo === 'rosticeria' ? 'bg-amber-500 hover:bg-amber-600' : ''}
-              >
-                🍗 Rosticerías ({countRosticerias})
-              </Button>
-              <Button
-                size="sm"
-                variant={filtroTipo === 'regular' ? 'default' : 'outline'}
-                onClick={() => setFiltroTipo('regular')}
-              >
-                Regulares ({countRegulares})
+                <Plus className="h-4 w-4 mr-2" />
+                Nueva Sucursal
               </Button>
             </div>
-            <Button
-              size="sm"
-              onClick={() => {
-                resetForm();
-                setFormOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Nueva Sucursal
-            </Button>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nombre o código..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="pl-9"
+              />
+            </div>
           </div>
 
           {formOpen && (
