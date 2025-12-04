@@ -150,6 +150,7 @@ export type Database = {
           direccion: string | null
           direccion_fiscal: string | null
           email_facturacion: string | null
+          es_rosticeria: boolean | null
           horario_entrega: string | null
           id: string
           no_combinar_pedidos: boolean | null
@@ -172,6 +173,7 @@ export type Database = {
           direccion?: string | null
           direccion_fiscal?: string | null
           email_facturacion?: string | null
+          es_rosticeria?: boolean | null
           horario_entrega?: string | null
           id?: string
           no_combinar_pedidos?: boolean | null
@@ -194,6 +196,7 @@ export type Database = {
           direccion?: string | null
           direccion_fiscal?: string | null
           email_facturacion?: string | null
+          es_rosticeria?: boolean | null
           horario_entrega?: string | null
           id?: string
           no_combinar_pedidos?: boolean | null
