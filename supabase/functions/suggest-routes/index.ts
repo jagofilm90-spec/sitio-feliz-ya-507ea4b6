@@ -25,6 +25,127 @@ interface RutaSugerida {
   zonas: string[];
 }
 
+// Post-AI validation: Split routes that exceed capacity
+function validarYDividirRutas(
+  rutasOriginales: any[], 
+  vehiculos: Vehiculo[], 
+  pedidosMap: Map<string, any>
+): { rutasValidadas: any[], pedidosNoAsignados: string[] } {
+  const rutasValidadas: any[] = [];
+  const vehiculosUsados = new Set<string>();
+  const pedidosNoAsignados: string[] = [];
+
+  for (const ruta of rutasOriginales) {
+    const vehiculo = vehiculos.find(v => v.id === ruta.vehiculo_id);
+    if (!vehiculo) {
+      // Vehiculo not found, mark orders as unassigned
+      pedidosNoAsignados.push(...(ruta.pedido_ids || []));
+      continue;
+    }
+
+    const tipoRuta = ruta.tipo_ruta === "foranea" ? "foranea" : "local";
+    const capacidadMax = tipoRuta === "foranea" 
+      ? vehiculo.peso_maximo_foraneo_kg 
+      : vehiculo.peso_maximo_local_kg;
+
+    // Get pedidos for this route with their weights
+    const pedidosRuta = (ruta.pedido_ids || [])
+      .map((id: string) => pedidosMap.get(id))
+      .filter(Boolean);
+
+    // Calculate total weight
+    const pesoTotal = pedidosRuta.reduce((sum: number, p: any) => sum + (p.peso_total_kg || 0), 0);
+
+    console.log(`[suggest-routes] Validating route ${vehiculo.nombre}: ${pesoTotal}kg / ${capacidadMax}kg (${((pesoTotal/capacidadMax)*100).toFixed(0)}%)`);
+
+    // If route is within capacity, add it directly
+    if (pesoTotal <= capacidadMax) {
+      rutasValidadas.push({
+        vehiculo_id: vehiculo.id,
+        tipo_ruta: tipoRuta,
+        pedido_ids: pedidosRuta.map((p: any) => p.id),
+        peso_total: pesoTotal,
+        capacidad_maxima: capacidadMax,
+      });
+      vehiculosUsados.add(vehiculo.id);
+    } else {
+      // Route exceeds capacity - need to split
+      console.log(`[suggest-routes] Route exceeds capacity, splitting...`);
+      
+      // Sort by priority (VIP first) and weight (larger first for better bin packing)
+      const prioridadOrden: Record<string, number> = {
+        vip_mismo_dia: 0,
+        deadline: 1,
+        dia_fijo_recurrente: 2,
+        fecha_sugerida: 3,
+        flexible: 4,
+      };
+      
+      pedidosRuta.sort((a: any, b: any) => {
+        const prioA = prioridadOrden[a.prioridad_entrega || "flexible"] || 4;
+        const prioB = prioridadOrden[b.prioridad_entrega || "flexible"] || 4;
+        if (prioA !== prioB) return prioA - prioB;
+        return (b.peso_total_kg || 0) - (a.peso_total_kg || 0);
+      });
+
+      let rutaActual = {
+        vehiculo_id: vehiculo.id,
+        tipo_ruta: tipoRuta,
+        pedido_ids: [] as string[],
+        peso_total: 0,
+        capacidad_maxima: capacidadMax,
+      };
+
+      for (const pedido of pedidosRuta) {
+        const pesoPedido = pedido.peso_total_kg || 0;
+        
+        if (rutaActual.peso_total + pesoPedido <= capacidadMax) {
+          rutaActual.pedido_ids.push(pedido.id);
+          rutaActual.peso_total += pesoPedido;
+        } else if (rutaActual.pedido_ids.length > 0) {
+          // Save current route and try to find another vehicle
+          rutasValidadas.push({ ...rutaActual });
+          vehiculosUsados.add(rutaActual.vehiculo_id);
+          
+          // Find next available vehicle with sufficient capacity
+          const siguienteVehiculo = vehiculos.find(v => 
+            !vehiculosUsados.has(v.id) && 
+            (tipoRuta === "foranea" ? v.peso_maximo_foraneo_kg : v.peso_maximo_local_kg) >= pesoPedido
+          );
+          
+          if (siguienteVehiculo) {
+            const nuevaCapacidad = tipoRuta === "foranea" 
+              ? siguienteVehiculo.peso_maximo_foraneo_kg 
+              : siguienteVehiculo.peso_maximo_local_kg;
+            
+            rutaActual = {
+              vehiculo_id: siguienteVehiculo.id,
+              tipo_ruta: tipoRuta,
+              pedido_ids: [pedido.id],
+              peso_total: pesoPedido,
+              capacidad_maxima: nuevaCapacidad,
+            };
+          } else {
+            // No more vehicles available
+            pedidosNoAsignados.push(pedido.id);
+          }
+        } else {
+          // Single order exceeds vehicle capacity - mark as unassigned
+          pedidosNoAsignados.push(pedido.id);
+        }
+      }
+
+      // Add the last route if it has orders
+      if (rutaActual.pedido_ids.length > 0) {
+        rutasValidadas.push(rutaActual);
+        vehiculosUsados.add(rutaActual.vehiculo_id);
+      }
+    }
+  }
+
+  return { rutasValidadas, pedidosNoAsignados };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -109,6 +230,9 @@ serve(async (req) => {
       );
     }
 
+    // Create pedidos map for quick lookup
+    const pedidosMap = new Map(pedidos.map(p => [p.id, p]));
+
     // 3. Use AI to optimize route assignment
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -136,53 +260,71 @@ serve(async (req) => {
       id: v.id,
       nombre: v.nombre,
       tipo: v.tipo,
-      capacidad_local: v.peso_maximo_local_kg,
-      capacidad_foranea: v.peso_maximo_foraneo_kg,
+      capacidad_local_kg: v.peso_maximo_local_kg,
+      capacidad_foranea_kg: v.peso_maximo_foraneo_kg,
     }));
 
-    const systemPrompt = `Eres un experto en logística de entregas para una distribuidora de abarrotes en México. 
-Tu tarea es optimizar la asignación de pedidos a vehículos considerando:
+    // Calculate totals for context
+    const pesoTotalPedidos = pedidosSimplificados.reduce((sum, p) => sum + p.peso_kg, 0);
+    const capacidadTotalLocal = vehiculosSimplificados.reduce((sum, v) => sum + v.capacidad_local_kg, 0);
 
-PRIORIDADES DE ENTREGA (de mayor a menor urgencia):
+    const systemPrompt = `Eres un experto en logística de entregas. Tu tarea es asignar pedidos a vehículos de forma ÓPTIMA.
+
+## REGLA CRÍTICA - CAPACIDAD (MUY IMPORTANTE):
+- NUNCA, BAJO NINGUNA CIRCUNSTANCIA, asignes más peso del permitido a un vehículo
+- Cada vehículo tiene DOS capacidades:
+  - capacidad_local_kg: para rutas locales (CDMX)
+  - capacidad_foranea_kg: para rutas foráneas (fuera de CDMX)
+- La SUMA de peso_kg de los pedidos asignados a un vehículo DEBE SER MENOR O IGUAL a su capacidad
+- Si un pedido no cabe en ningún vehículo disponible, ponlo en "sin_asignar"
+- Utilización ideal: 70-95% de la capacidad
+
+## EJEMPLO DE VALIDACIÓN:
+- Vehículo "Torton 22": capacidad_local_kg=20000
+- Si asignas pedidos de 15000kg + 8000kg = 23000kg → ¡INCORRECTO! Excede 20000kg
+- Correcto: Asignar 15000kg al Torton 22, y 8000kg a otro vehículo
+
+## PRIORIDADES DE ENTREGA:
 1. vip_mismo_dia: DEBE entregarse hoy sin excepción
-2. deadline: Tiene X días hábiles para entregar (ver deadline_dias)
-3. dia_fijo_recurrente: Entregar en día específico de la semana (ver dia_fijo)
+2. deadline: Tiene X días hábiles (ver deadline_dias)
+3. dia_fijo_recurrente: Día específico de la semana
 4. fecha_sugerida: Flexible +/- 1 día
 5. flexible: Sin urgencia, usar para llenar capacidad
 
-REGLAS DE OPTIMIZACIÓN:
-1. Agrupar pedidos de la misma región geográfica
-2. Rutas foráneas (es_foranea=true) usan capacidad_foranea del vehículo
-3. Rutas locales usan capacidad_local del vehículo
-4. Respetar restricciones_vehiculo de sucursales
-5. Pedidos con no_combinar=true van en ruta exclusiva
-6. Maximizar utilización de vehículos (80-95% ideal)
-7. Tortons para cargas pesadas, Camionetas para ligeras
-8. Los pedidos VIP siempre van primero
+## REGLAS DE OPTIMIZACIÓN:
+1. Agrupar pedidos de la misma zona/región
+2. es_foranea=true → usar capacidad_foranea_kg
+3. es_foranea=false → usar capacidad_local_kg
+4. Pedidos con no_combinar=true van en ruta exclusiva
+5. Tortons para cargas pesadas, Camionetas para ligeras
+6. VIP siempre tienen prioridad máxima
 
-RESPONDE EN JSON con este formato exacto:
+## FORMATO DE RESPUESTA (JSON exacto):
 {
   "rutas": [
     {
-      "vehiculo_id": "uuid",
-      "tipo_ruta": "local" o "foranea",
+      "vehiculo_id": "uuid-del-vehiculo",
+      "tipo_ruta": "local",
       "pedido_ids": ["uuid1", "uuid2"],
-      "razon": "breve explicación"
+      "peso_total_kg": 15000,
+      "razon": "Zona Norte CDMX, 75% capacidad"
     }
   ],
-  "sin_asignar": ["uuid de pedidos que no caben"],
-  "notas": "observaciones importantes"
+  "sin_asignar": ["uuid-pedido"],
+  "notas": "Observaciones"
 }`;
 
-    const userPrompt = `Fecha de entrega: ${fechaRuta}
+    const userPrompt = `Fecha: ${fechaRuta}
 
-VEHÍCULOS DISPONIBLES:
-${JSON.stringify(vehiculosSimplificados, null, 2)}
+## VEHÍCULOS DISPONIBLES (${vehiculosSimplificados.length}):
+${vehiculosSimplificados.map(v => `- ${v.nombre} (${v.tipo}): Local=${v.capacidad_local_kg}kg, Foráneo=${v.capacidad_foranea_kg}kg`).join('\n')}
 
-PEDIDOS PENDIENTES:
+## PEDIDOS PENDIENTES (${pedidosSimplificados.length}, Total: ${pesoTotalPedidos.toLocaleString()}kg):
 ${JSON.stringify(pedidosSimplificados, null, 2)}
 
-Genera las rutas óptimas para hoy.`;
+## CAPACIDAD TOTAL DISPONIBLE: ${capacidadTotalLocal.toLocaleString()}kg (local)
+
+Genera rutas óptimas. RECUERDA: La suma de pesos en cada ruta NO debe exceder la capacidad del vehículo.`;
 
     console.log("[suggest-routes] Calling Lovable AI...");
 
@@ -198,7 +340,7 @@ Genera las rutas óptimas para hoy.`;
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.3,
+        temperature: 0.2,
       }),
     });
 
@@ -229,7 +371,6 @@ Genera las rutas óptimas para hoy.`;
     // Parse AI response
     let aiResult;
     try {
-      // Extract JSON from response (may be wrapped in markdown code blocks)
       const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         aiResult = JSON.parse(jsonMatch[0]);
@@ -238,27 +379,40 @@ Genera las rutas óptimas para hoy.`;
       }
     } catch (parseError) {
       console.error("[suggest-routes] Failed to parse AI response:", aiContent);
-      // Fallback: simple assignment
       aiResult = { rutas: [], sin_asignar: pedidosSimplificados.map((p: any) => p.id), notas: "Error parsing AI response" };
     }
 
-    // 4. Build detailed route suggestions
+    // 4. CRITICAL: Validate and split routes that exceed capacity
+    console.log("[suggest-routes] Validating routes for capacity limits...");
+    const { rutasValidadas, pedidosNoAsignados } = validarYDividirRutas(
+      aiResult.rutas || [],
+      vehiculos,
+      pedidosMap
+    );
+
+    // Combine unassigned from AI and from validation
+    const todosNoAsignados = new Set([
+      ...(aiResult.sin_asignar || []),
+      ...pedidosNoAsignados
+    ]);
+
+    // 5. Build detailed route suggestions
     const rutasSugeridas: RutaSugerida[] = [];
     const pedidosAsignados = new Set<string>();
 
-    for (const ruta of aiResult.rutas || []) {
+    for (const ruta of rutasValidadas) {
       const vehiculo = vehiculos.find((v: any) => v.id === ruta.vehiculo_id);
       if (!vehiculo) continue;
 
-      const pedidosRuta = pedidos.filter((p: any) => ruta.pedido_ids?.includes(p.id));
+      const pedidosRuta = ruta.pedido_ids
+        .map((id: string) => pedidosMap.get(id))
+        .filter(Boolean);
+      
       if (!pedidosRuta.length) continue;
 
       const tipoRuta = ruta.tipo_ruta === "foranea" ? "foranea" : "local";
-      const capacidadMax = tipoRuta === "foranea" 
-        ? vehiculo.peso_maximo_foraneo_kg 
-        : vehiculo.peso_maximo_local_kg;
-
-      const pesoTotal = pedidosRuta.reduce((sum: number, p: any) => sum + (p.peso_total_kg || 0), 0);
+      const capacidadMax = ruta.capacidad_maxima;
+      const pesoTotal = ruta.peso_total;
       
       const regiones = [...new Set(pedidosRuta
         .map((p: any) => p.sucursal?.zona?.region)
@@ -267,6 +421,14 @@ Genera las rutas óptimas para hoy.`;
       const zonas = [...new Set(pedidosRuta
         .map((p: any) => p.sucursal?.zona?.nombre)
         .filter(Boolean))] as string[];
+
+      // Final safety check
+      if (pesoTotal > capacidadMax) {
+        console.error(`[suggest-routes] ERROR: Route still exceeds capacity after validation! ${pesoTotal} > ${capacidadMax}`);
+        // Mark these as unassigned
+        pedidosRuta.forEach((p: any) => todosNoAsignados.add(p.id));
+        continue;
+      }
 
       rutasSugeridas.push({
         vehiculo,
@@ -283,9 +445,16 @@ Genera las rutas óptimas para hoy.`;
     }
 
     // Find unassigned orders
-    const pedidosSinAsignar = pedidos.filter((p: any) => !pedidosAsignados.has(p.id));
+    const pedidosSinAsignar = pedidos.filter((p: any) => 
+      !pedidosAsignados.has(p.id) || todosNoAsignados.has(p.id)
+    );
 
-    console.log(`[suggest-routes] Generated ${rutasSugeridas.length} routes, ${pedidosSinAsignar.length} unassigned`);
+    console.log(`[suggest-routes] Generated ${rutasSugeridas.length} validated routes, ${pedidosSinAsignar.length} unassigned`);
+    
+    // Log route summaries
+    rutasSugeridas.forEach((r, i) => {
+      console.log(`[suggest-routes] Route ${i+1}: ${r.vehiculo.nombre} - ${r.peso_total}/${r.capacidad_maxima}kg (${r.porcentaje_carga.toFixed(0)}%) - ${r.pedidos.length} orders`);
+    });
 
     return new Response(
       JSON.stringify({
