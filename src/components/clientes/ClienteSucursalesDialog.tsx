@@ -115,10 +115,17 @@ const ClienteSucursalesDialog = ({
           zona:zona_id (nombre)
         `)
         .eq("cliente_id", cliente.id)
-        .order("nombre");
+        .order("codigo_sucursal");
 
       if (error) throw error;
-      setSucursales(data || []);
+      
+      // Ordenar numéricamente por codigo_sucursal (1, 2, 3... 100, 200, 300)
+      const sortedData = (data || []).sort((a, b) => {
+        const codeA = parseInt(a.codigo_sucursal || '0', 10);
+        const codeB = parseInt(b.codigo_sucursal || '0', 10);
+        return codeA - codeB;
+      });
+      setSucursales(sortedData);
     } catch (error: any) {
       toast({
         title: "Error",
