@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, MapPin, AlertTriangle, FileText, ChevronDown, ChevronUp, Search } from "lucide-react";
+import { Plus, Edit, Trash2, MapPin, AlertTriangle, FileText, ChevronDown, ChevronUp, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
 
@@ -66,6 +66,8 @@ interface Zona {
   nombre: string;
 }
 
+const ITEMS_POR_PAGINA = 20;
+
 const ClienteSucursalesDialog = ({
   open,
   onOpenChange,
@@ -78,6 +80,7 @@ const ClienteSucursalesDialog = ({
   const [editingSucursal, setEditingSucursal] = useState<Sucursal | null>(null);
   const [filtroTipo, setFiltroTipo] = useState<'todas' | 'rosticeria' | 'regular'>('todas');
   const [busqueda, setBusqueda] = useState("");
+  const [paginaActual, setPaginaActual] = useState(1);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -117,6 +120,18 @@ const ClienteSucursalesDialog = ({
     }
     return true;
   });
+
+  // Paginación
+  const totalPaginas = Math.ceil(sucursalesFiltradas.length / ITEMS_POR_PAGINA);
+  const sucursalesPaginadas = sucursalesFiltradas.slice(
+    (paginaActual - 1) * ITEMS_POR_PAGINA,
+    paginaActual * ITEMS_POR_PAGINA
+  );
+
+  // Reset página cuando cambian filtros
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [filtroTipo, busqueda]);
 
   const countRosticerias = sucursales.filter(s => s.es_rosticeria).length;
   const countRegulares = sucursales.filter(s => !s.es_rosticeria).length;
@@ -735,7 +750,7 @@ const ClienteSucursalesDialog = ({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  sucursalesFiltradas.map((sucursal) => (
+                  sucursalesPaginadas.map((sucursal) => (
                     <TableRow key={sucursal.id}>
                       <TableCell className="font-medium">
                         <div className="flex flex-col gap-1">
@@ -805,6 +820,36 @@ const ClienteSucursalesDialog = ({
               </TableBody>
             </Table>
           </div>
+
+          {/* Paginación */}
+          {totalPaginas > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-sm text-muted-foreground">
+                Mostrando {((paginaActual - 1) * ITEMS_POR_PAGINA) + 1}-{Math.min(paginaActual * ITEMS_POR_PAGINA, sucursalesFiltradas.length)} de {sucursalesFiltradas.length}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPaginaActual(p => Math.max(1, p - 1))}
+                  disabled={paginaActual === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm font-medium">
+                  {paginaActual} / {totalPaginas}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPaginaActual(p => Math.min(totalPaginas, p + 1))}
+                  disabled={paginaActual === totalPaginas}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
