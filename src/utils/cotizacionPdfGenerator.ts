@@ -95,8 +95,8 @@ export const generarCotizacionPDF = async (datos: DatosCotizacion): Promise<stri
   const lightBg: [number, number, number] = [248, 248, 248];
 
   // === HEADER SECTION ===
-  // Load and add ALMASA Logo (left)
-  const logoWidth = 40;
+  // Load and add ALMASA Logo (left) - High quality rectangular logo
+  const logoWidth = 45;
   const logoHeight = 12;
   try {
     const logoBase64 = await loadImageAsBase64('/logo-almasa-pdf.png');
