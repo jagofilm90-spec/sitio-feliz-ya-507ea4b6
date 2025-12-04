@@ -41,7 +41,7 @@ const ROLES = [
   { value: "vendedor", label: "Vendedor", color: "secondary" },
   { value: "almacen", label: "Almacén", color: "outline" },
   { value: "chofer", label: "Chofer", color: "outline" },
-  { value: "contadora", label: "Contadora", color: "default" },
+  { value: "contadora", label: "Contadores", color: "default" },
 ];
 
 export default function Usuarios() {
@@ -708,9 +708,10 @@ export default function Usuarios() {
             <TabsTrigger value="vendedor">Vendedores ({getUsersByRole('vendedor').length})</TabsTrigger>
             <TabsTrigger value="almacen">Almacén ({getUsersByRole('almacen').length})</TabsTrigger>
             <TabsTrigger value="chofer">Choferes ({getUsersByRole('chofer').length})</TabsTrigger>
+            <TabsTrigger value="contadora">Contadores ({getUsersByRole('contadora').length})</TabsTrigger>
           </TabsList>
 
-          {["todos", "admin", "secretaria", "vendedor", "almacen", "chofer"].map((roleFilter) => {
+          {["todos", "admin", "secretaria", "vendedor", "almacen", "chofer", "contadora"].map((roleFilter) => {
             const displayUsers = roleFilter === "todos" ? filteredUsers : getUsersByRole(roleFilter);
             
             return (
