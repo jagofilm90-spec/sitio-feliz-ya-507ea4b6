@@ -97,7 +97,7 @@ export const MODULE_PERMISSIONS: Record<string, AppRole[]> = {
   '/rentabilidad': ['admin', 'contadora'],
   '/rutas': ['admin', 'secretaria', 'chofer'],
   '/facturas': ['admin', 'secretaria', 'contadora'],
-  '/empleados': ['admin', 'secretaria'],
+  '/empleados': ['admin', 'secretaria', 'contadora'],
   '/usuarios': ['admin'],
   '/chat': ['admin', 'secretaria', 'vendedor', 'chofer', 'almacen', 'contadora'],
   '/correos': ['admin', 'secretaria'],
