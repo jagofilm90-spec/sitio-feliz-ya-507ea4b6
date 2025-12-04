@@ -57,9 +57,9 @@ export const CotizacionPrintTemplate = ({ datos }: CotizacionPrintTemplateProps)
       <div className="flex justify-between items-start border-b-2 border-primary pb-4 mb-4">
         <div className="flex items-center gap-4">
           <img 
-            src="/logo-almasa-favicon.png" 
+            src="/logo-almasa-header.png" 
             alt="ALMASA" 
-            className="h-16 w-16 object-contain"
+            className="h-14 w-auto object-contain"
           />
           <div>
             <h1 className="text-2xl font-bold text-primary">ABARROTES LA MANITA</h1>
