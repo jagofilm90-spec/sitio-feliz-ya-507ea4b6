@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -20,12 +21,14 @@ import {
   Package, 
   AlertTriangle, 
   Check, 
-  MapPin, 
   RefreshCw,
   Loader2,
   ChevronDown,
   ChevronUp,
-  Map
+  Map,
+  Calendar,
+  Clock,
+  Info
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -46,6 +49,15 @@ interface RutaSugerida {
   porcentaje_carga: number;
   regiones: string[];
   zonas: string[];
+}
+
+interface VehiculoDisponible {
+  id: string;
+  nombre: string;
+  tipo: string;
+  peso_maximo_local_kg: number;
+  peso_maximo_foraneo_kg: number;
+  status: string;
 }
 
 interface SugerirRutasAIDialogProps {
@@ -70,13 +82,67 @@ export const SugerirRutasAIDialog = ({
   choferes,
 }: SugerirRutasAIDialogProps) => {
   const [loading, setLoading] = useState(false);
+  const [loadingVehiculos, setLoadingVehiculos] = useState(false);
   const [rutasSugeridas, setRutasSugeridas] = useState<RutaSugerida[]>([]);
-  const [pedidosSinAsignar, setPedidosSinAsignar] = useState<any[]>([]);
+  const [pedidosParaDespues, setPedidosParaDespues] = useState<any[]>([]);
+  const [pedidosOversized, setPedidosOversized] = useState<any[]>([]);
   const [notasAI, setNotasAI] = useState<string | null>(null);
+  const [capacidadHoy, setCapacidadHoy] = useState(0);
+  const [pesoTotalPendiente, setPesoTotalPendiente] = useState(0);
   const [expandedRutas, setExpandedRutas] = useState<Set<number>>(new Set([0]));
   const [creandoRutas, setCreandoRutas] = useState<Set<number>>(new Set());
   const [showMaps, setShowMaps] = useState<Set<number>>(new Set());
+  
+  // Vehicle selection state
+  const [vehiculosDisponibles, setVehiculosDisponibles] = useState<VehiculoDisponible[]>([]);
+  const [vehiculosSeleccionados, setVehiculosSeleccionados] = useState<Set<string>>(new Set());
+  
   const { toast } = useToast();
+
+  // Load available vehicles when dialog opens
+  useEffect(() => {
+    if (open) {
+      loadVehiculos();
+    }
+  }, [open]);
+
+  const loadVehiculos = async () => {
+    setLoadingVehiculos(true);
+    try {
+      const { data, error } = await supabase
+        .from("vehiculos")
+        .select("id, nombre, tipo, peso_maximo_local_kg, peso_maximo_foraneo_kg, status")
+        .eq("activo", true)
+        .order("peso_maximo_local_kg", { ascending: false });
+
+      if (error) throw error;
+
+      const disponibles = data?.filter(v => v.status === "disponible") || [];
+      setVehiculosDisponibles(data || []);
+      // Select all available by default
+      setVehiculosSeleccionados(new Set(disponibles.map(v => v.id)));
+    } catch (error) {
+      console.error("Error loading vehicles:", error);
+    } finally {
+      setLoadingVehiculos(false);
+    }
+  };
+
+  const toggleVehiculo = (vehiculoId: string) => {
+    setVehiculosSeleccionados(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(vehiculoId)) {
+        newSet.delete(vehiculoId);
+      } else {
+        newSet.add(vehiculoId);
+      }
+      return newSet;
+    });
+  };
+
+  const capacidadSeleccionada = vehiculosDisponibles
+    .filter(v => vehiculosSeleccionados.has(v.id))
+    .reduce((sum, v) => sum + v.peso_maximo_local_kg, 0);
 
   const toggleMap = (index: number) => {
     const newShowMaps = new Set(showMaps);
@@ -89,32 +155,39 @@ export const SugerirRutasAIDialog = ({
   };
 
   const generarSugerencias = async () => {
+    if (vehiculosSeleccionados.size === 0) {
+      toast({
+        title: "Sin vehículos",
+        description: "Selecciona al menos un vehículo para generar rutas",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("suggest-routes", {
-        body: { fecha: format(new Date(), "yyyy-MM-dd") },
+        body: { 
+          fecha: format(new Date(), "yyyy-MM-dd"),
+          vehiculos_seleccionados: Array.from(vehiculosSeleccionados),
+        },
       });
 
       if (error) throw error;
 
       setRutasSugeridas(data.rutas_sugeridas || []);
-      setPedidosSinAsignar(data.pedidos_sin_asignar || []);
+      setPedidosParaDespues(data.pedidos_para_despues || []);
+      setPedidosOversized(data.pedidos_oversized || []);
+      setCapacidadHoy(data.capacidad_hoy || 0);
+      setPesoTotalPendiente(data.peso_total_pendiente || 0);
       setNotasAI(data.notas_ai);
 
-      if (data.rutas_sugeridas?.length > 0) {
-        toast({
-          title: `${data.rutas_sugeridas.length} rutas sugeridas`,
-          description: data.pedidos_sin_asignar?.length > 0 
-            ? `${data.pedidos_sin_asignar.length} pedidos sin asignar`
-            : "Todos los pedidos asignados",
-        });
-      } else {
-        toast({
-          title: "Sin rutas",
-          description: data.mensaje || "No se pudieron generar rutas",
-          variant: "destructive",
-        });
-      }
+      const pedidosHoy = data.rutas_sugeridas?.reduce((sum: number, r: any) => sum + r.pedidos.length, 0) || 0;
+
+      toast({
+        title: `Plan del día generado`,
+        description: `${data.rutas_sugeridas?.length || 0} rutas con ${pedidosHoy} pedidos para hoy`,
+      });
     } catch (error: any) {
       console.error("Error generating routes:", error);
       toast({
@@ -150,7 +223,6 @@ export const SugerirRutasAIDialog = ({
     setCreandoRutas(prev => new Set(prev).add(index));
 
     try {
-      // Generate folio
       const { data: lastRuta } = await supabase
         .from("rutas")
         .select("folio")
@@ -162,7 +234,6 @@ export const SugerirRutasAIDialog = ({
         : 0;
       const newFolio = `RUT-${String(lastNumber + 1).padStart(4, "0")}`;
 
-      // Create route (assign first available driver - user can change later)
       const { data: rutaData, error: rutaError } = await supabase
         .from("rutas")
         .insert([{
@@ -180,7 +251,6 @@ export const SugerirRutasAIDialog = ({
 
       if (rutaError) throw rutaError;
 
-      // Create entregas
       const entregasData = ruta.pedidos.map((pedido, idx) => ({
         ruta_id: rutaData.id,
         pedido_id: pedido.id,
@@ -194,14 +264,12 @@ export const SugerirRutasAIDialog = ({
 
       if (entregasError) throw entregasError;
 
-      // Update pedidos status
       const pedidoIds = ruta.pedidos.map(p => p.id);
       await supabase
         .from("pedidos")
         .update({ status: "en_ruta" })
         .in("id", pedidoIds);
 
-      // Update vehicle status
       await supabase
         .from("vehiculos")
         .update({ status: "en_ruta" })
@@ -209,7 +277,6 @@ export const SugerirRutasAIDialog = ({
 
       toast({ title: `Ruta ${newFolio} creada` });
 
-      // Remove from suggestions
       setRutasSugeridas(prev => prev.filter((_, i) => i !== index));
       onRutaCreada();
 
@@ -234,12 +301,8 @@ export const SugerirRutasAIDialog = ({
     }
   };
 
-  const getProgressColor = (porcentaje: number) => {
-    if (porcentaje > 100) return "bg-destructive";
-    if (porcentaje > 90) return "bg-green-500";
-    if (porcentaje > 70) return "bg-yellow-500";
-    return "bg-blue-500";
-  };
+  const pedidosHoyTotal = rutasSugeridas.reduce((sum, r) => sum + r.pedidos.length, 0);
+  const pesoHoyTotal = rutasSugeridas.reduce((sum, r) => sum + r.peso_total, 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -247,26 +310,89 @@ export const SugerirRutasAIDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            Sugerencias de Rutas con AI
+            Planificación Diaria con AI
           </DialogTitle>
           <DialogDescription>
-            El sistema analiza pedidos pendientes y genera rutas óptimas
+            Genera rutas óptimas para HOY con los vehículos disponibles
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 min-h-0 flex flex-col gap-4">
+          {/* Vehicle Selection */}
+          {rutasSugeridas.length === 0 && !loading && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Truck className="h-4 w-4" />
+                  Vehículos para hoy
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingVehiculos ? (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Cargando vehículos...
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
+                      {vehiculosDisponibles.map(v => (
+                        <label
+                          key={v.id}
+                          className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer transition-colors ${
+                            vehiculosSeleccionados.has(v.id) 
+                              ? "bg-primary/10 border-primary" 
+                              : "hover:bg-muted"
+                          } ${v.status !== "disponible" ? "opacity-50" : ""}`}
+                        >
+                          <Checkbox
+                            checked={vehiculosSeleccionados.has(v.id)}
+                            onCheckedChange={() => toggleVehiculo(v.id)}
+                            disabled={v.status !== "disponible"}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{v.nombre}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {v.peso_maximo_local_kg.toLocaleString()} kg
+                              {v.status !== "disponible" && (
+                                <Badge variant="secondary" className="ml-1 text-xs">
+                                  {v.status === "en_ruta" ? "En ruta" : v.status}
+                                </Badge>
+                              )}
+                            </p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between text-sm border-t pt-3">
+                      <span className="text-muted-foreground">
+                        {vehiculosSeleccionados.size} vehículos seleccionados
+                      </span>
+                      <span className="font-medium">
+                        Capacidad: {capacidadSeleccionada.toLocaleString()} kg
+                      </span>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Generate button */}
           {rutasSugeridas.length === 0 && !loading && (
-            <div className="flex flex-col items-center justify-center py-12 gap-4">
-              <Sparkles className="h-12 w-12 text-muted-foreground" />
-              <p className="text-muted-foreground text-center">
-                Presiona el botón para generar sugerencias de rutas<br />
-                basadas en pedidos pendientes y vehículos disponibles
-              </p>
-              <Button onClick={generarSugerencias} size="lg">
+            <div className="flex flex-col items-center justify-center py-6 gap-4">
+              <Button 
+                onClick={generarSugerencias} 
+                size="lg"
+                disabled={vehiculosSeleccionados.size === 0}
+              >
                 <Sparkles className="h-4 w-4 mr-2" />
-                Generar Sugerencias
+                Generar Rutas para Hoy
               </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                El sistema asignará pedidos pendientes a los vehículos seleccionados,<br />
+                priorizando VIP y deadlines. Los pedidos que no quepan quedan para mañana.
+              </p>
             </div>
           )}
 
@@ -274,16 +400,47 @@ export const SugerirRutasAIDialog = ({
           {loading && (
             <div className="flex flex-col items-center justify-center py-12 gap-4">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="text-muted-foreground">Analizando pedidos y optimizando rutas...</p>
+              <p className="text-muted-foreground">Optimizando rutas del día...</p>
             </div>
           )}
 
           {/* Results */}
           {rutasSugeridas.length > 0 && (
             <>
+              {/* Summary Stats */}
+              <div className="grid grid-cols-3 gap-3">
+                <Card className="bg-green-500/10 border-green-500/20">
+                  <CardContent className="p-3 text-center">
+                    <p className="text-2xl font-bold text-green-600">{pedidosHoyTotal}</p>
+                    <p className="text-xs text-muted-foreground">Pedidos HOY</p>
+                    <p className="text-xs font-medium">{pesoHoyTotal.toLocaleString()} kg</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-blue-500/10 border-blue-500/20">
+                  <CardContent className="p-3 text-center">
+                    <p className="text-2xl font-bold text-blue-600">{pedidosParaDespues.length}</p>
+                    <p className="text-xs text-muted-foreground">Para después</p>
+                    <p className="text-xs font-medium">
+                      {pedidosParaDespues.reduce((s, p) => s + (p.peso_total_kg || 0), 0).toLocaleString()} kg
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className={`${pedidosOversized.length > 0 ? "bg-red-500/10 border-red-500/20" : "bg-muted"}`}>
+                  <CardContent className="p-3 text-center">
+                    <p className={`text-2xl font-bold ${pedidosOversized.length > 0 ? "text-red-600" : "text-muted-foreground"}`}>
+                      {pedidosOversized.length}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Oversized</p>
+                    <p className="text-xs font-medium">
+                      {pedidosOversized.length > 0 ? "Requieren múltiples viajes" : "Todo OK"}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
               <div className="flex items-center justify-between flex-shrink-0">
                 <div className="text-sm text-muted-foreground">
-                  {rutasSugeridas.length} rutas sugeridas • {pedidosSinAsignar.length} pedidos sin asignar
+                  {rutasSugeridas.length} rutas para hoy
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={generarSugerencias}>
@@ -306,28 +463,24 @@ export const SugerirRutasAIDialog = ({
                 </Alert>
               )}
 
-              <ScrollArea className="flex-1 min-h-0 max-h-[55vh]">
+              <ScrollArea className="flex-1 min-h-0 max-h-[45vh]">
                 <div className="space-y-4 pr-4">
+                  {/* Today's Routes */}
                   {rutasSugeridas.map((ruta, index) => (
-                    <Card key={index} className="overflow-hidden">
+                    <Card key={index} className="overflow-hidden border-green-500/30">
                       <CardHeader 
                         className="pb-2 cursor-pointer hover:bg-muted/50 transition-colors"
                         onClick={() => toggleExpanded(index)}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <Truck className="h-5 w-5 text-primary" />
+                            <Truck className="h-5 w-5 text-green-600" />
                             <div>
                               <CardTitle className="text-base flex items-center gap-2">
                                 {ruta.vehiculo.nombre}
                                 <Badge variant="outline">
                                   {ruta.tipo_ruta === "foranea" ? "Foránea" : "Local"}
                                 </Badge>
-                                {ruta.porcentaje_carga > 100 && (
-                                  <Badge variant="destructive" className="text-xs">
-                                    ⚠️ Excede capacidad
-                                  </Badge>
-                                )}
                               </CardTitle>
                               <p className="text-xs text-muted-foreground">
                                 {ruta.zonas.slice(0, 3).join(", ")}
@@ -340,16 +493,16 @@ export const SugerirRutasAIDialog = ({
                               <p className="text-sm font-medium">
                                 {ruta.pedidos.length} pedidos
                               </p>
-                              <p className={`text-xs ${ruta.porcentaje_carga > 100 ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                              <p className="text-xs text-muted-foreground">
                                 {ruta.peso_total.toLocaleString()} / {ruta.capacidad_maxima.toLocaleString()} kg
                               </p>
                             </div>
                             <div className="w-24">
                               <Progress 
                                 value={Math.min(ruta.porcentaje_carga, 100)} 
-                                className={`h-2 ${ruta.porcentaje_carga > 100 ? '[&>div]:bg-destructive' : ''}`}
+                                className="h-2"
                               />
-                              <p className={`text-xs text-center mt-1 ${ruta.porcentaje_carga > 100 ? 'text-destructive font-medium' : ''}`}>
+                              <p className="text-xs text-center mt-1">
                                 {ruta.porcentaje_carga.toFixed(0)}%
                               </p>
                             </div>
@@ -364,7 +517,6 @@ export const SugerirRutasAIDialog = ({
 
                       {expandedRutas.has(index) && (
                         <CardContent className="pt-0 space-y-3">
-                          {/* Map visualization toggle */}
                           <div className="flex items-center gap-2">
                             <Button 
                               variant={showMaps.has(index) ? "secondary" : "outline"} 
@@ -379,7 +531,6 @@ export const SugerirRutasAIDialog = ({
                             </Button>
                           </div>
 
-                          {/* Map visualization */}
                           {showMaps.has(index) && (
                             <RouteMapVisualization
                               puntos={ruta.pedidos.map((pedido: any, pIdx: number) => ({
@@ -396,7 +547,6 @@ export const SugerirRutasAIDialog = ({
                             />
                           )}
 
-                          {/* Orders list */}
                           <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
                             {ruta.pedidos.map((pedido, pIdx) => (
                               <div key={pedido.id} className="p-2 flex items-center justify-between text-sm">
@@ -444,38 +594,93 @@ export const SugerirRutasAIDialog = ({
                     </Card>
                   ))}
 
-                  {/* Unassigned orders */}
-                  {pedidosSinAsignar.length > 0 && (
-                    <Card className="border-orange-500">
+                  {/* Orders for Later */}
+                  {pedidosParaDespues.length > 0 && (
+                    <Card className="border-blue-500/30">
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-base flex items-center gap-2 text-orange-600">
-                          <AlertTriangle className="h-5 w-5" />
-                          {pedidosSinAsignar.length} Pedidos Sin Asignar
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-blue-600" />
+                          Para días siguientes ({pedidosParaDespues.length} pedidos)
                         </CardTitle>
-                        <p className="text-xs text-muted-foreground">
-                          Requieren vehículos adicionales o reprogramación
-                        </p>
                       </CardHeader>
                       <CardContent>
-                        <div className="border rounded-lg divide-y max-h-32 overflow-y-auto">
-                          {pedidosSinAsignar.slice(0, 10).map((pedido: any) => (
+                        <Alert className="mb-3">
+                          <Info className="h-4 w-4" />
+                          <AlertDescription>
+                            Estos pedidos no caben hoy pero se entregarán en los próximos días.
+                            Clientes con deadline tienen tiempo suficiente.
+                          </AlertDescription>
+                        </Alert>
+                        <div className="border rounded-lg divide-y max-h-40 overflow-y-auto">
+                          {pedidosParaDespues.slice(0, 10).map((pedido) => (
                             <div key={pedido.id} className="p-2 flex items-center justify-between text-sm">
                               <div>
                                 <p className="font-medium">{pedido.folio}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  {pedido.cliente?.nombre || "Sin cliente"}
+                                  {pedido.cliente?.nombre}
+                                  {pedido.sucursal?.nombre && ` - ${pedido.sucursal.nombre}`}
                                 </p>
                               </div>
-                              <span className="text-xs text-muted-foreground">
-                                {(pedido.peso_total_kg || 0).toLocaleString()} kg
-                              </span>
+                              <div className="flex items-center gap-2">
+                                {pedido.prioridad_entrega && PRIORIDAD_LABELS[pedido.prioridad_entrega] && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {PRIORIDAD_LABELS[pedido.prioridad_entrega].label}
+                                    {pedido.deadline_dias_habiles && ` (${pedido.deadline_dias_habiles}d)`}
+                                  </Badge>
+                                )}
+                                <span className="text-xs text-muted-foreground">
+                                  {(pedido.peso_total_kg || 0).toLocaleString()} kg
+                                </span>
+                              </div>
                             </div>
                           ))}
-                          {pedidosSinAsignar.length > 10 && (
+                          {pedidosParaDespues.length > 10 && (
                             <div className="p-2 text-center text-xs text-muted-foreground">
-                              +{pedidosSinAsignar.length - 10} más
+                              +{pedidosParaDespues.length - 10} más...
                             </div>
                           )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Oversized Orders */}
+                  {pedidosOversized.length > 0 && (
+                    <Card className="border-red-500/30">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 text-red-600" />
+                          Pedidos oversized ({pedidosOversized.length})
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Alert variant="destructive" className="mb-3">
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertTitle>Requieren múltiples viajes</AlertTitle>
+                          <AlertDescription>
+                            Estos pedidos exceden la capacidad máxima de cualquier vehículo.
+                            Necesitan dividirse o programar varios viajes.
+                          </AlertDescription>
+                        </Alert>
+                        <div className="border rounded-lg divide-y">
+                          {pedidosOversized.map((pedido) => (
+                            <div key={pedido.id} className="p-2 flex items-center justify-between text-sm">
+                              <div>
+                                <p className="font-medium">{pedido.folio}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {pedido.cliente?.nombre}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-medium text-red-600">
+                                  {(pedido.peso_total_kg || 0).toLocaleString()} kg
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  ~{Math.ceil((pedido.peso_total_kg || 0) / 18000)} viajes
+                                </p>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </CardContent>
                     </Card>
@@ -484,12 +689,6 @@ export const SugerirRutasAIDialog = ({
               </ScrollArea>
             </>
           )}
-        </div>
-
-        <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cerrar
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
