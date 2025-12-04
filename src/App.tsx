@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import TarjetaDigital from "./pages/TarjetaDigital";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -88,6 +89,7 @@ const App = () => (
           <Route path="/fumigaciones" element={<Fumigaciones />} />
           <Route path="/correos" element={<CorreosCorporativos />} />
           <Route path="/generate-assets" element={<GenerateAssets />} />
+          <Route path="/tarjeta" element={<TarjetaDigital />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
