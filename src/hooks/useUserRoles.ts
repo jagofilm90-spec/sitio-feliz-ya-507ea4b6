@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 
@@ -85,7 +85,7 @@ export const useUserRoles = (): UseUserRolesReturn => {
   };
 };
 
-// Configuración de permisos por módulo
+// Configuración de permisos por módulo (fallback si la BD no está disponible)
 export const MODULE_PERMISSIONS: Record<string, AppRole[]> = {
   '/dashboard': ['admin', 'secretaria', 'vendedor', 'chofer', 'almacen', 'contadora'],
   '/productos': ['admin', 'secretaria', 'almacen'],
@@ -102,14 +102,112 @@ export const MODULE_PERMISSIONS: Record<string, AppRole[]> = {
   '/chat': ['admin', 'secretaria', 'vendedor', 'chofer', 'almacen', 'contadora'],
   '/correos': ['admin', 'secretaria'],
   '/generate-assets': ['admin'],
+  '/permisos': ['admin'],
 };
 
-// Hook para verificar acceso a un módulo específico
+// Hook para verificar acceso a un módulo específico (usa permisos de BD con fallback)
 export const useModuleAccess = (path: string): { hasAccess: boolean; isLoading: boolean } => {
-  const { roles, isLoading } = useUserRoles();
-  
-  const allowedRoles = MODULE_PERMISSIONS[path] || [];
-  const hasAccess = roles.some(role => allowedRoles.includes(role));
-  
+  const { roles, isLoading: rolesLoading } = useUserRoles();
+  const [hasAccess, setHasAccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAccess = async () => {
+      if (rolesLoading) return;
+      
+      if (roles.length === 0) {
+        setHasAccess(false);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Intentar obtener permisos de la BD
+        const { data: permissionsData, error } = await supabase
+          .from('module_permissions')
+          .select('tiene_acceso')
+          .eq('module_path', path)
+          .in('role', roles)
+          .eq('tiene_acceso', true);
+
+        if (error) {
+          // Si hay error en BD, usar fallback estático
+          const allowedRoles = MODULE_PERMISSIONS[path] || [];
+          setHasAccess(roles.some(role => allowedRoles.includes(role)));
+        } else {
+          // Usar permisos de BD
+          setHasAccess((permissionsData?.length || 0) > 0);
+        }
+      } catch (err) {
+        // Fallback a permisos estáticos
+        const allowedRoles = MODULE_PERMISSIONS[path] || [];
+        setHasAccess(roles.some(role => allowedRoles.includes(role)));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAccess();
+  }, [path, roles, rolesLoading]);
+
   return { hasAccess, isLoading };
+};
+
+// Hook para obtener todos los permisos de módulos para los roles del usuario
+export const useUserModulePermissions = (): { 
+  allowedPaths: string[]; 
+  isLoading: boolean;
+  checkAccess: (path: string) => boolean;
+} => {
+  const { roles, isLoading: rolesLoading } = useUserRoles();
+  const [allowedPaths, setAllowedPaths] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPermissions = async () => {
+      if (rolesLoading) return;
+      
+      if (roles.length === 0) {
+        setAllowedPaths([]);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('module_permissions')
+          .select('module_path')
+          .in('role', roles)
+          .eq('tiene_acceso', true);
+
+        if (error) {
+          // Fallback to static permissions
+          const paths = Object.entries(MODULE_PERMISSIONS)
+            .filter(([_, allowedRoles]) => roles.some(r => allowedRoles.includes(r)))
+            .map(([path]) => path);
+          setAllowedPaths(paths);
+        } else {
+          // Use unique paths from DB
+          const uniquePaths = [...new Set(data?.map(p => p.module_path) || [])];
+          setAllowedPaths(uniquePaths);
+        }
+      } catch (err) {
+        // Fallback to static permissions
+        const paths = Object.entries(MODULE_PERMISSIONS)
+          .filter(([_, allowedRoles]) => roles.some(r => allowedRoles.includes(r)))
+          .map(([path]) => path);
+        setAllowedPaths(paths);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPermissions();
+  }, [roles, rolesLoading]);
+
+  const checkAccess = useMemo(() => {
+    return (path: string) => allowedPaths.includes(path);
+  }, [allowedPaths]);
+
+  return { allowedPaths, isLoading, checkAccess };
 };
