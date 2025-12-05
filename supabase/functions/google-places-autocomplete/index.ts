@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
         input: input,
         includedRegionCodes: ['mx'],
         languageCode: 'es',
-        includedPrimaryTypes: ['street_address', 'route', 'locality', 'sublocality', 'neighborhood', 'premise'],
+        includedPrimaryTypes: ['street_address', 'route', 'sublocality', 'neighborhood', 'premise'],
       }),
     });
 
