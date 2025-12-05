@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, MapPin, Search, ChevronLeft, ChevronRight, CheckSquare, Wand2, AlertTriangle, FileText } from "lucide-react";
+import { Plus, Edit, Trash2, MapPin, Search, ChevronLeft, ChevronRight, CheckSquare, Wand2, AlertTriangle, FileText, Loader2, Navigation } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 
@@ -59,6 +59,9 @@ interface Sucursal {
   razon_social: string | null;
   direccion_fiscal: string | null;
   email_facturacion: string | null;
+  // Coordenadas exactas para rutas
+  latitud: number | null;
+  longitud: number | null;
 }
 
 interface Zona {
@@ -84,20 +87,83 @@ const ClienteSucursalesDialog = ({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkZonaId, setBulkZonaId] = useState<string>("");
   const [autoDetectando, setAutoDetectando] = useState(false);
+  const [geocodificandoTodas, setGeocodificandoTodas] = useState(false);
   const { toast } = useToast();
 
-  // Función para abrir Google Maps con la dirección
-  const openGoogleMaps = (direccion: string | null) => {
-    if (!direccion) {
+  // Función para abrir Google Maps con la dirección o coordenadas
+  const openGoogleMaps = (sucursal: Sucursal) => {
+    if (sucursal.latitud && sucursal.longitud) {
+      // Si tiene coordenadas, abrir con pin exacto
+      window.open(`https://www.google.com/maps?q=${sucursal.latitud},${sucursal.longitud}`, '_blank');
+    } else if (sucursal.direccion) {
+      // Fallback a búsqueda por texto
+      const encodedAddress = encodeURIComponent(sucursal.direccion);
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
+    } else {
       toast({
         title: "Sin dirección",
         description: "Esta sucursal no tiene dirección registrada",
         variant: "destructive"
       });
+    }
+  };
+
+  // Función para geocodificar todas las sucursales sin coordenadas
+  const geocodificarTodas = async () => {
+    const sinCoordenadas = sucursales.filter(s => s.direccion && (!s.latitud || !s.longitud));
+    
+    if (sinCoordenadas.length === 0) {
+      toast({
+        title: "Sin sucursales pendientes",
+        description: "Todas las sucursales con dirección ya tienen coordenadas"
+      });
       return;
     }
-    const encodedAddress = encodeURIComponent(direccion);
-    window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
+
+    setGeocodificandoTodas(true);
+    try {
+      const addresses = sinCoordenadas.map(s => ({
+        id: s.id,
+        address: s.direccion!
+      }));
+
+      const { data, error } = await supabase.functions.invoke('geocode-addresses', {
+        body: { addresses }
+      });
+
+      if (error) throw error;
+
+      const results = data?.results || [];
+      let actualizadas = 0;
+
+      for (const result of results) {
+        if (result.lat && result.lng) {
+          const { error: updateError } = await supabase
+            .from('cliente_sucursales')
+            .update({ latitud: result.lat, longitud: result.lng })
+            .eq('id', result.id);
+          
+          if (!updateError) actualizadas++;
+        }
+      }
+
+      toast({
+        title: "Geocodificación completada",
+        description: `Se geocodificaron ${actualizadas} de ${sinCoordenadas.length} sucursales`
+      });
+
+      // Recargar sucursales
+      loadSucursales();
+    } catch (error) {
+      console.error('Error geocodificando:', error);
+      toast({
+        title: "Error",
+        description: "No se pudieron geocodificar las sucursales",
+        variant: "destructive"
+      });
+    } finally {
+      setGeocodificandoTodas(false);
+    }
   };
 
   // Función para detectar zona desde el texto de dirección
@@ -203,6 +269,8 @@ const ClienteSucursalesDialog = ({
     razon_social: "",
     direccion_fiscal: "",
     email_facturacion: "",
+    latitud: null as number | null,
+    longitud: null as number | null,
   });
 
   // Filtrar sucursales según el tipo y búsqueda
@@ -236,6 +304,8 @@ const ClienteSucursalesDialog = ({
 
   const countRosticerias = sucursales.filter(s => s.es_rosticeria).length;
   const countRegulares = sucursales.filter(s => !s.es_rosticeria).length;
+  const countConCoordenadas = sucursales.filter(s => s.latitud && s.longitud).length;
+  const countSinCoordenadas = sucursales.filter(s => s.direccion && (!s.latitud || !s.longitud)).length;
 
   // Selección masiva
   const allFilteredSelected = sucursalesFiltradas.length > 0 && 
@@ -427,6 +497,9 @@ const ClienteSucursalesDialog = ({
         razon_social: formData.razon_social || null,
         direccion_fiscal: formData.direccion_fiscal || null,
         email_facturacion: formData.email_facturacion || null,
+        // Coordenadas exactas
+        latitud: formData.latitud,
+        longitud: formData.longitud,
       };
 
       if (editingSucursal) {
@@ -478,6 +551,8 @@ const ClienteSucursalesDialog = ({
       razon_social: sucursal.razon_social || "",
       direccion_fiscal: sucursal.direccion_fiscal || "",
       email_facturacion: sucursal.email_facturacion || "",
+      latitud: sucursal.latitud,
+      longitud: sucursal.longitud,
     });
     setFormOpen(true);
   };
@@ -523,6 +598,8 @@ const ClienteSucursalesDialog = ({
       razon_social: "",
       direccion_fiscal: "",
       email_facturacion: "",
+      latitud: null,
+      longitud: null,
     });
   };
 
@@ -586,6 +663,31 @@ const ClienteSucursalesDialog = ({
                 className="pl-9"
               />
             </div>
+            {/* Indicador de estado de geocodificación */}
+            {sucursales.length > 0 && (
+              <div className="flex items-center gap-2 text-xs">
+                <Badge variant={countSinCoordenadas === 0 ? "default" : "outline"} className={countSinCoordenadas === 0 ? "bg-green-500" : "bg-amber-100 text-amber-700 border-amber-300"}>
+                  <MapPin className="h-3 w-3 mr-1" />
+                  {countConCoordenadas}/{sucursales.length} geocodificadas
+                </Badge>
+                {countSinCoordenadas > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={geocodificarTodas}
+                    disabled={geocodificandoTodas}
+                    className="h-6 text-xs"
+                  >
+                    {geocodificandoTodas ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Navigation className="h-3 w-3 mr-1" />
+                    )}
+                    Geocodificar {countSinCoordenadas} pendientes
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           <SucursalFormSheet
@@ -613,6 +715,19 @@ const ClienteSucursalesDialog = ({
                 >
                   <Wand2 className="h-4 w-4 mr-1" />
                   Auto-detectar Zona
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={geocodificarTodas}
+                  disabled={geocodificandoTodas}
+                >
+                  {geocodificandoTodas ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Navigation className="h-4 w-4 mr-1" />
+                  )}
+                  Geocodificar
                 </Button>
                 <Button
                   size="sm"
@@ -771,8 +886,9 @@ const ClienteSucursalesDialog = ({
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => openGoogleMaps(sucursal.direccion)}
-                            title="Ver en Google Maps"
+                            onClick={() => openGoogleMaps(sucursal)}
+                            title={sucursal.latitud ? "Ver ubicación exacta" : "Buscar en Google Maps"}
+                            className={sucursal.latitud ? "text-green-600" : "text-amber-500"}
                           >
                             <MapPin className="h-4 w-4" />
                           </Button>
