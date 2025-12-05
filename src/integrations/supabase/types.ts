@@ -142,6 +142,7 @@ export type Database = {
       cliente_sucursales: {
         Row: {
           activo: boolean
+          cl: string | null
           cliente_id: string
           codigo_sucursal: string | null
           contacto: string | null
@@ -165,6 +166,7 @@ export type Database = {
         }
         Insert: {
           activo?: boolean
+          cl?: string | null
           cliente_id: string
           codigo_sucursal?: string | null
           contacto?: string | null
@@ -188,6 +190,7 @@ export type Database = {
         }
         Update: {
           activo?: boolean
+          cl?: string | null
           cliente_id?: string
           codigo_sucursal?: string | null
           contacto?: string | null
