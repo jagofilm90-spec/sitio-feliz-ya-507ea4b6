@@ -18,9 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertTriangle, FileText, ChevronDown, ChevronUp } from "lucide-react";
+import { AlertTriangle, FileText, ChevronDown, ChevronUp, MapPin, Pencil } from "lucide-react";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Zona {
   id: string;
@@ -70,6 +70,13 @@ export const SucursalFormSheet = ({
   const [mostrarDatosFiscales, setMostrarDatosFiscales] = useState(
     !!(formData.rfc || formData.razon_social)
   );
+  const [editandoDireccion, setEditandoDireccion] = useState(!formData.direccion);
+
+  // Reset editing mode when sheet opens with new data
+  useEffect(() => {
+    setEditandoDireccion(!formData.direccion);
+    setMostrarDatosFiscales(!!(formData.rfc || formData.razon_social));
+  }, [open, formData.direccion, formData.rfc, formData.razon_social]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,14 +150,48 @@ export const SucursalFormSheet = ({
 
           <div className="space-y-2">
             <Label htmlFor="suc_direccion">Dirección de Entrega</Label>
-            <GoogleMapsAddressAutocomplete
-              id="suc_direccion"
-              value={formData.direccion}
-              onChange={(value) =>
-                setFormData({ ...formData, direccion: value })
-              }
-              placeholder="Buscar dirección..."
-            />
+            {formData.direccion && !editandoDireccion ? (
+              <div className="space-y-2">
+                <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-md border">
+                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <p className="text-sm leading-relaxed break-words">
+                    {formData.direccion}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditandoDireccion(true)}
+                  className="gap-1.5"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Cambiar dirección
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <GoogleMapsAddressAutocomplete
+                  id="suc_direccion"
+                  value={formData.direccion}
+                  onChange={(value) => {
+                    setFormData({ ...formData, direccion: value });
+                    if (value) setEditandoDireccion(false);
+                  }}
+                  placeholder="Buscar dirección..."
+                />
+                {formData.direccion && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditandoDireccion(false)}
+                  >
+                    Cancelar
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
