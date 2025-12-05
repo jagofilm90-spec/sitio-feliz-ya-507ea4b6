@@ -77,13 +77,57 @@ export const SucursalFormSheet = ({
   );
   const [editandoDireccion, setEditandoDireccion] = useState(!formData.direccion);
   const [geocodificando, setGeocodificando] = useState(false);
+  const [editandoCoordenadas, setEditandoCoordenadas] = useState(false);
+  const [coordenadasInput, setCoordenadasInput] = useState("");
   const { toast } = useToast();
 
   // Reset editing mode when sheet opens with new data
   useEffect(() => {
     setEditandoDireccion(!formData.direccion);
     setMostrarDatosFiscales(!!(formData.rfc || formData.razon_social));
+    setEditandoCoordenadas(false);
+    setCoordenadasInput("");
   }, [open, formData.direccion, formData.rfc, formData.razon_social]);
+
+  const parsearCoordenadas = (input: string): { lat: number; lng: number } | null => {
+    // Clean input and try to parse "lat, lng" format
+    const cleanInput = input.trim().replace(/\s+/g, ' ');
+    const parts = cleanInput.split(/[,\s]+/).filter(p => p);
+    
+    if (parts.length >= 2) {
+      const lat = parseFloat(parts[0]);
+      const lng = parseFloat(parts[1]);
+      
+      // Validate ranges
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        return { lat, lng };
+      }
+    }
+    return null;
+  };
+
+  const guardarCoordenadasManuales = () => {
+    const coords = parsearCoordenadas(coordenadasInput);
+    if (coords) {
+      setFormData({
+        ...formData,
+        latitud: coords.lat,
+        longitud: coords.lng
+      });
+      setEditandoCoordenadas(false);
+      setCoordenadasInput("");
+      toast({
+        title: "Coordenadas actualizadas",
+        description: `Lat: ${coords.lat.toFixed(6)}, Lng: ${coords.lng.toFixed(6)}`
+      });
+    } else {
+      toast({
+        title: "Formato inválido",
+        description: "Usa formato: 19.478451, -99.051683",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -268,10 +312,51 @@ export const SucursalFormSheet = ({
                     <p className="text-sm leading-relaxed break-words">
                       {formData.direccion}
                     </p>
-                    {formData.latitud && formData.longitud && (
+                    {formData.latitud && formData.longitud && !editandoCoordenadas && (
                       <p className="text-xs text-muted-foreground mt-1">
                         📍 {formData.latitud.toFixed(6)}, {formData.longitud.toFixed(6)}
                       </p>
+                    )}
+                    {editandoCoordenadas && (
+                      <div className="mt-2 space-y-2">
+                        <Input
+                          placeholder="Pega coordenadas: 19.478451, -99.051683"
+                          value={coordenadasInput}
+                          onChange={(e) => setCoordenadasInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              guardarCoordenadasManuales();
+                            }
+                          }}
+                          className="text-xs"
+                          autoFocus
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Tip: Click derecho en Google Maps → Copiar coordenadas
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={guardarCoordenadasManuales}
+                            disabled={!coordenadasInput.trim()}
+                          >
+                            Guardar
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setEditandoCoordenadas(false);
+                              setCoordenadasInput("");
+                            }}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -301,16 +386,43 @@ export const SucursalFormSheet = ({
                     )}
                     {formData.latitud ? "Re-geocodificar" : "Geocodificar"}
                   </Button>
-                  {formData.latitud && formData.longitud && (
+                  {formData.latitud && formData.longitud && !editandoCoordenadas && (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditandoCoordenadas(true);
+                          setCoordenadasInput(`${formData.latitud}, ${formData.longitud}`);
+                        }}
+                        className="gap-1.5"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        Editar coords
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={abrirEnMapa}
+                        className="gap-1.5"
+                      >
+                        <MapPin className="h-3.5 w-3.5" />
+                        Ver en mapa
+                      </Button>
+                    </>
+                  )}
+                  {!formData.latitud && !editandoCoordenadas && (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={abrirEnMapa}
+                      onClick={() => setEditandoCoordenadas(true)}
                       className="gap-1.5"
                     >
-                      <MapPin className="h-3.5 w-3.5" />
-                      Ver en mapa
+                      <Pencil className="h-3.5 w-3.5" />
+                      Agregar coords
                     </Button>
                   )}
                 </div>
