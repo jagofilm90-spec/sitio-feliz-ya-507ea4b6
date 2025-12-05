@@ -17,6 +17,7 @@ interface GeocodeResult {
   lat: number | null;
   lng: number | null;
   formatted_address?: string;
+  error?: string;
 }
 
 serve(async (req) => {
@@ -42,10 +43,11 @@ serve(async (req) => {
     console.log(`[geocode-addresses] Geocoding ${addresses.length} addresses`);
 
     const results: GeocodeResult[] = [];
+    let apiErrors: string[] = [];
 
     for (const item of addresses) {
       if (!item.address) {
-        results.push({ id: item.id, lat: null, lng: null });
+        results.push({ id: item.id, lat: null, lng: null, error: "Sin dirección" });
         continue;
       }
 
@@ -56,6 +58,8 @@ serve(async (req) => {
         const response = await fetch(url);
         const data = await response.json();
 
+        console.log(`[geocode-addresses] Google response for "${item.address.substring(0, 50)}...": status=${data.status}`);
+
         if (data.status === "OK" && data.results?.[0]?.geometry?.location) {
           const location = data.results[0].geometry.location;
           results.push({
@@ -65,22 +69,53 @@ serve(async (req) => {
             formatted_address: data.results[0].formatted_address,
           });
         } else {
-          console.warn(`[geocode-addresses] No results for: ${item.address}`);
-          results.push({ id: item.id, lat: null, lng: null });
+          // Log detailed error info
+          let errorMessage = "Ubicación no encontrada";
+          
+          switch (data.status) {
+            case "ZERO_RESULTS":
+              errorMessage = "Dirección no reconocida por Google";
+              break;
+            case "OVER_QUERY_LIMIT":
+              errorMessage = "Límite de consultas excedido";
+              break;
+            case "REQUEST_DENIED":
+              errorMessage = data.error_message || "API Key sin permisos de Geocoding";
+              console.error(`[geocode-addresses] REQUEST_DENIED: ${data.error_message}`);
+              break;
+            case "INVALID_REQUEST":
+              errorMessage = "Solicitud inválida";
+              break;
+            case "UNKNOWN_ERROR":
+              errorMessage = "Error del servidor de Google";
+              break;
+          }
+          
+          if (data.error_message) {
+            console.error(`[geocode-addresses] Google error: ${data.error_message}`);
+            apiErrors.push(data.error_message);
+          }
+          
+          console.warn(`[geocode-addresses] No results for: ${item.address} - ${errorMessage}`);
+          results.push({ id: item.id, lat: null, lng: null, error: errorMessage });
         }
       } catch (err) {
         console.error(`[geocode-addresses] Error geocoding ${item.address}:`, err);
-        results.push({ id: item.id, lat: null, lng: null });
+        results.push({ id: item.id, lat: null, lng: null, error: "Error de conexión" });
       }
 
       // Small delay to avoid rate limiting
       await new Promise((r) => setTimeout(r, 50));
     }
 
-    console.log(`[geocode-addresses] Successfully geocoded ${results.filter(r => r.lat).length}/${addresses.length}`);
+    const successCount = results.filter(r => r.lat).length;
+    console.log(`[geocode-addresses] Successfully geocoded ${successCount}/${addresses.length}`);
 
     return new Response(
-      JSON.stringify({ results }),
+      JSON.stringify({ 
+        results,
+        apiError: apiErrors.length > 0 ? apiErrors[0] : null 
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 

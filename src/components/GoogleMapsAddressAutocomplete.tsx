@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface GoogleMapsAddressAutocompleteProps {
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: string, placeId?: string) => void;
   placeholder?: string;
   id?: string;
   required?: boolean;
@@ -104,7 +104,7 @@ const GoogleMapsAddressAutocomplete = ({
 
   const handleSelectPrediction = (prediction: Prediction) => {
     setInputValue(prediction.description);
-    onChange(prediction.description);
+    onChange(prediction.description, prediction.place_id);
     setPredictions([]);
     setShowDropdown(false);
   };

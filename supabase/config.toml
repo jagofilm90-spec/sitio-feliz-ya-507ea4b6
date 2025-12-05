@@ -65,3 +65,6 @@ verify_jwt = true
 
 [functions.geocode-addresses]
 verify_jwt = true
+
+[functions.get-place-details]
+verify_jwt = true
