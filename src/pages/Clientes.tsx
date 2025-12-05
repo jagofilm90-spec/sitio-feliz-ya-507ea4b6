@@ -30,7 +30,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, MapPin, X, Mail, BarChart3, Loader2, Sparkles, User, Package } from "lucide-react";
+import { Plus, Search, Edit, Trash2, MapPin, X, Mail, BarChart3, Loader2, Sparkles, User, Package, Map } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ClienteSucursalesDialog from "@/components/clientes/ClienteSucursalesDialog";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
@@ -46,6 +46,7 @@ import {
   DialogHeader as HistorialDialogHeader,
   DialogTitle as HistorialDialogTitle,
 } from "@/components/ui/dialog";
+import { ClienteSucursalesMapDialog } from "@/components/clientes/ClienteSucursalesMapDialog";
 
 interface Zona {
   id: string;
@@ -83,6 +84,7 @@ const Clientes = () => {
   const [selectedClienteForHistorial, setSelectedClienteForHistorial] = useState<{ id: string; nombre: string } | null>(null);
   const [productosDialogOpen, setProductosDialogOpen] = useState(false);
   const [selectedClienteForProductos, setSelectedClienteForProductos] = useState<{ id: string; nombre: string } | null>(null);
+  const [mapDialogOpen, setMapDialogOpen] = useState(false);
   const { toast } = useToast();
   const { isAdmin } = useUserRoles();
 
@@ -685,13 +687,18 @@ const Clientes = () => {
             <h1 className="text-3xl font-bold">Clientes</h1>
             <p className="text-muted-foreground">Gestión de clientes y créditos</p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={resetForm}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Cliente
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setMapDialogOpen(true)}>
+              <Map className="h-4 w-4 mr-2" />
+              Mapa Sucursales
+            </Button>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={resetForm}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Cliente
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
@@ -811,6 +818,7 @@ const Clientes = () => {
               )}
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <div className="flex gap-4">
@@ -976,6 +984,11 @@ const Clientes = () => {
         open={productosDialogOpen}
         onOpenChange={setProductosDialogOpen}
         cliente={selectedClienteForProductos}
+      />
+
+      <ClienteSucursalesMapDialog
+        open={mapDialogOpen}
+        onOpenChange={setMapDialogOpen}
       />
     </Layout>
   );
