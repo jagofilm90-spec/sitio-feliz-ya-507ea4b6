@@ -541,6 +541,9 @@ export const SugerirRutasAIDialog = ({
                                 direccion: pedido.sucursal?.direccion || pedido.cliente?.direccion || "",
                                 peso_kg: pedido.peso_total_kg || 0,
                                 orden: pIdx + 1,
+                                // Pass GPS coordinates from sucursal if available
+                                lat: pedido.sucursal?.latitud || undefined,
+                                lng: pedido.sucursal?.longitud || undefined,
                               }))}
                               vehiculoNombre={ruta.vehiculo.nombre}
                               optimizarOrden={true}
