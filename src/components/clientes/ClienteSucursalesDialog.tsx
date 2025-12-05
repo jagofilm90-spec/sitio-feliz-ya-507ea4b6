@@ -90,15 +90,26 @@ const ClienteSucursalesDialog = ({
   const [geocodificandoTodas, setGeocodificandoTodas] = useState(false);
   const { toast } = useToast();
 
+  // Helper para abrir URLs externas (compatible con Chrome COOP)
+  const openExternalUrl = (url: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Función para abrir Google Maps con la dirección o coordenadas
   const openGoogleMaps = (sucursal: Sucursal) => {
     if (sucursal.latitud && sucursal.longitud) {
       // Si tiene coordenadas, abrir con pin exacto usando Maps URL API
-      window.open(`https://www.google.com/maps/search/?api=1&query=${sucursal.latitud},${sucursal.longitud}`, '_blank');
+      openExternalUrl(`https://www.google.com/maps/search/?api=1&query=${sucursal.latitud},${sucursal.longitud}`);
     } else if (sucursal.direccion) {
       // Fallback a búsqueda por texto
       const encodedAddress = encodeURIComponent(sucursal.direccion);
-      window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
+      openExternalUrl(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`);
     } else {
       toast({
         title: "Sin dirección",
