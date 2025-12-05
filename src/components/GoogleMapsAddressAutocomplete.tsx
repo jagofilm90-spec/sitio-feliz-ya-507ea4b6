@@ -27,16 +27,16 @@ const GoogleMapsAddressAutocomplete = ({
   required,
   className,
 }: GoogleMapsAddressAutocompleteProps) => {
-  const [inputValue, setInputValue] = useState(value);
+  const [inputValue, setInputValue] = useState(value || "");
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Sync external value changes
+  // Sync external value changes only when value is different
   useEffect(() => {
-    setInputValue(value);
+    setInputValue(value || "");
   }, [value]);
 
   // Close dropdown when clicking outside

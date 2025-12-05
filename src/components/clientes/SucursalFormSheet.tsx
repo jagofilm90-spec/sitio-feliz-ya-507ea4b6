@@ -83,11 +83,15 @@ export const SucursalFormSheet = ({
 
   // Reset editing mode when sheet opens with new data
   useEffect(() => {
-    setEditandoDireccion(!formData.direccion);
-    setMostrarDatosFiscales(!!(formData.rfc || formData.razon_social));
-    setEditandoCoordenadas(false);
-    setCoordenadasInput("");
-  }, [open, formData.direccion, formData.rfc, formData.razon_social]);
+    if (open) {
+      setEditandoDireccion(!formData.direccion);
+      setMostrarDatosFiscales(!!(formData.rfc || formData.razon_social));
+      setEditandoCoordenadas(false);
+      setCoordenadasInput("");
+    }
+    // Only run when sheet opens, not when formData changes during typing
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const parsearCoordenadas = (input: string): { lat: number; lng: number } | null => {
     // Clean input and try to parse "lat, lng" format
