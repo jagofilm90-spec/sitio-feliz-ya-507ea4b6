@@ -25,6 +25,66 @@ interface RutaSugerida {
   zonas: string[];
 }
 
+// Haversine formula to calculate distance between two GPS coordinates in km
+function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// Nearest-neighbor algorithm to optimize delivery order using GPS coordinates
+function optimizarOrdenEntrega(pedidos: any[]): any[] {
+  if (pedidos.length <= 2) return pedidos;
+  
+  // Filter pedidos with valid coordinates
+  const conCoords = pedidos.filter(p => p.sucursal?.latitud && p.sucursal?.longitud);
+  const sinCoords = pedidos.filter(p => !p.sucursal?.latitud || !p.sucursal?.longitud);
+  
+  if (conCoords.length <= 1) {
+    // Not enough coordinates to optimize, return original order
+    return pedidos;
+  }
+  
+  // Start from warehouse (CDMX center as default origin)
+  const origen = { lat: 19.4326, lng: -99.1332 };
+  const ordenados: any[] = [];
+  const restantes = [...conCoords];
+  
+  let currentLat = origen.lat;
+  let currentLng = origen.lng;
+  
+  // Greedy nearest-neighbor
+  while (restantes.length > 0) {
+    let nearestIdx = 0;
+    let nearestDist = Infinity;
+    
+    for (let i = 0; i < restantes.length; i++) {
+      const p = restantes[i];
+      const dist = haversineDistance(
+        currentLat, currentLng,
+        p.sucursal.latitud, p.sucursal.longitud
+      );
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearestIdx = i;
+      }
+    }
+    
+    const nearest = restantes.splice(nearestIdx, 1)[0];
+    ordenados.push(nearest);
+    currentLat = nearest.sucursal.latitud;
+    currentLng = nearest.sucursal.longitud;
+  }
+  
+  // Append pedidos without coordinates at the end
+  return [...ordenados, ...sinCoords];
+}
+
 // Simple bin-packing algorithm as fallback
 function generarRutasSimples(
   pedidos: any[],
@@ -223,7 +283,7 @@ serve(async (req) => {
     console.log(`[suggest-routes] Generating DAILY routes for date: ${fechaRuta}`);
     console.log(`[suggest-routes] Selected vehicles: ${vehiculos_seleccionados?.length || 'ALL'}`);
 
-    // 1. Get pending orders with priority, client and branch info
+    // 1. Get pending orders with priority, client and branch info INCLUDING COORDINATES
     const { data: pedidos, error: pedidosError } = await supabase
       .from("pedidos")
       .select(`
@@ -244,6 +304,8 @@ serve(async (req) => {
         sucursal:sucursal_id (
           nombre,
           direccion,
+          latitud,
+          longitud,
           horario_entrega,
           restricciones_vehiculo,
           dias_sin_entrega,
@@ -333,7 +395,7 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
-    // Prepare data for AI - only normal-sized orders
+    // Prepare data for AI - only normal-sized orders, NOW WITH COORDINATES
     const pedidosSimplificados = pedidosNormales.map((p: any) => ({
       id: p.id,
       folio: p.folio,
@@ -344,6 +406,9 @@ serve(async (req) => {
       cliente: p.cliente?.nombre || "Sin cliente",
       cliente_id: p.cliente?.id,
       sucursal: p.sucursal?.nombre || null,
+      direccion: p.sucursal?.direccion || p.cliente?.direccion || null,
+      lat: p.sucursal?.latitud || null,
+      lng: p.sucursal?.longitud || null,
       zona: p.sucursal?.zona?.nombre || "Sin zona",
       region: p.sucursal?.zona?.region || null,
       es_foranea: p.sucursal?.zona?.es_foranea || false,
@@ -377,6 +442,10 @@ serve(async (req) => {
         deadline_dias: pedidos[0].deadline_dias,
       }));
 
+    // Count pedidos with GPS coordinates
+    const pedidosConCoords = pedidosSimplificados.filter(p => p.lat && p.lng).length;
+    console.log(`[suggest-routes] Pedidos with GPS coordinates: ${pedidosConCoords}/${pedidosSimplificados.length}`);
+
     const systemPrompt = `Eres un experto en logística de entregas. Tu tarea es asignar pedidos a vehículos para ENTREGAS DE HOY.
 
 ## MODELO DE PLANIFICACIÓN DIARIA:
@@ -399,11 +468,17 @@ serve(async (req) => {
 4. fecha_sugerida
 5. flexible: usar para LLENAR capacidad restante
 
+## OPTIMIZACIÓN GEOGRÁFICA:
+- Los pedidos tienen coordenadas GPS (lat, lng) cuando están disponibles
+- Agrupa pedidos CERCANOS geográficamente en la misma ruta
+- Considera la zona y región para agrupar pedidos de la misma área
+- El sistema optimizará el orden de entrega automáticamente después
+
 ## ESTRATEGIA PARA HOY:
 1. Primero asigna TODOS los pedidos VIP
 2. Luego los deadline más urgentes
-3. Agrupa por zona/región para eficiencia
-4. Llena capacidad restante con pedidos flexibles
+3. Agrupa por PROXIMIDAD GEOGRÁFICA (usa lat/lng) y zona/región
+4. Llena capacidad restante con pedidos flexibles cercanos
 5. Los que NO quepan van a "para_despues" (NO es error)
 
 ## FORMATO DE RESPUESTA (JSON exacto):
@@ -541,11 +616,15 @@ Los pedidos que no quepan hoy van a "para_despues" - esto es NORMAL, no un error
       const vehiculo = vehiculos.find((v: any) => v.id === ruta.vehiculo_id);
       if (!vehiculo) continue;
 
-      const pedidosRuta = ruta.pedido_ids
+      let pedidosRuta = ruta.pedido_ids
         .map((id: string) => pedidosMap.get(id))
         .filter(Boolean);
       
       if (!pedidosRuta.length) continue;
+
+      // OPTIMIZE delivery order using GPS coordinates (nearest-neighbor algorithm)
+      pedidosRuta = optimizarOrdenEntrega(pedidosRuta);
+      console.log(`[suggest-routes] Optimized delivery order for ${vehiculo.nombre} using GPS coordinates`);
 
       const tipoRuta = ruta.tipo_ruta === "foranea" ? "foranea" : "local";
       const capacidadMax = ruta.capacidad_maxima;
