@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SucursalFormSheet } from "./SucursalFormSheet";
 import {
   Table,
   TableBody,
@@ -28,9 +27,9 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, MapPin, AlertTriangle, FileText, ChevronDown, ChevronUp, Search, ChevronLeft, ChevronRight, CheckSquare, Wand2 } from "lucide-react";
+import { Plus, Edit, Trash2, MapPin, Search, ChevronLeft, ChevronRight, CheckSquare, Wand2, AlertTriangle, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
+
 
 interface ClienteSucursalesDialogProps {
   open: boolean;
@@ -184,13 +183,11 @@ const ClienteSucursalesDialog = ({
     dias_sin_entrega: "",
     no_combinar_pedidos: false,
     es_rosticeria: false,
-    // Datos fiscales opcionales
     rfc: "",
     razon_social: "",
     direccion_fiscal: "",
     email_facturacion: "",
   });
-  const [mostrarDatosFiscales, setMostrarDatosFiscales] = useState(false);
 
   // Filtrar sucursales según el tipo y búsqueda
   const sucursalesFiltradas = sucursales.filter(s => {
@@ -464,7 +461,6 @@ const ClienteSucursalesDialog = ({
       direccion_fiscal: sucursal.direccion_fiscal || "",
       email_facturacion: sucursal.email_facturacion || "",
     });
-    setMostrarDatosFiscales(!!(sucursal.rfc || sucursal.razon_social));
     setFormOpen(true);
   };
 
@@ -509,7 +505,6 @@ const ClienteSucursalesDialog = ({
       direccion_fiscal: "",
       email_facturacion: "",
     });
-    setMostrarDatosFiscales(false);
   };
 
   return (
@@ -574,299 +569,16 @@ const ClienteSucursalesDialog = ({
             </div>
           </div>
 
-          {formOpen && (
-            <form onSubmit={handleSave} className="border rounded-lg p-4 space-y-4 bg-muted/30">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="suc_codigo">Código</Label>
-                  <Input
-                    id="suc_codigo"
-                    value={formData.codigo_sucursal}
-                    onChange={(e) => setFormData({ ...formData, codigo_sucursal: e.target.value })}
-                    placeholder="Ej: 41"
-                    autoComplete="off"
-                  />
-                  <p className="text-xs text-muted-foreground">ID interno del cliente</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="suc_nombre">Nombre *</Label>
-                  <Input
-                    id="suc_nombre"
-                    value={formData.nombre}
-                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                    placeholder="Ej: La Joya"
-                    autoComplete="off"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="suc_zona">Zona de Entrega</Label>
-                  <Select
-                    value={formData.zona_id}
-                    onValueChange={(value) => setFormData({ ...formData, zona_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona zona" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {zonas.map((zona) => (
-                        <SelectItem key={zona.id} value={zona.id}>
-                          {zona.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="suc_direccion">Dirección de Entrega</Label>
-                <GoogleMapsAddressAutocomplete
-                  id="suc_direccion"
-                  value={formData.direccion}
-                  onChange={(value) => setFormData({ ...formData, direccion: value })}
-                  placeholder="Buscar dirección de entrega..."
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="suc_contacto">Contacto</Label>
-                  <Input
-                    id="suc_contacto"
-                    value={formData.contacto}
-                    onChange={(e) => setFormData({ ...formData, contacto: e.target.value })}
-                    placeholder="Nombre del contacto"
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="suc_telefono">Teléfono</Label>
-                  <Input
-                    id="suc_telefono"
-                    value={formData.telefono}
-                    onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-                    placeholder="Teléfono de contacto"
-                    autoComplete="off"
-                  />
-                </div>
-              </div>
-              <div className="border-t pt-4 mt-4">
-                <h4 className="font-medium mb-3 flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  Restricciones de Entrega
-                </h4>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Horario de Entrega</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="time"
-                        value={formData.horario_entrega?.split(' - ')[0] || ''}
-                        onChange={(e) => {
-                          const horaFin = formData.horario_entrega?.split(' - ')[1] || '';
-                          const nuevoHorario = horaFin ? `${e.target.value} - ${horaFin}` : e.target.value;
-                          setFormData({ ...formData, horario_entrega: nuevoHorario });
-                        }}
-                        className="w-32"
-                      />
-                      <span className="text-muted-foreground">a</span>
-                      <Input
-                        type="time"
-                        value={formData.horario_entrega?.split(' - ')[1] || ''}
-                        onChange={(e) => {
-                          const horaInicio = formData.horario_entrega?.split(' - ')[0] || '';
-                          const nuevoHorario = horaInicio ? `${horaInicio} - ${e.target.value}` : `- ${e.target.value}`;
-                          setFormData({ ...formData, horario_entrega: nuevoHorario });
-                        }}
-                        className="w-32"
-                      />
-                      {formData.horario_entrega && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setFormData({ ...formData, horario_entrega: '' })}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          Limpiar
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Días sin Entrega</Label>
-                    <div className="flex flex-wrap gap-3">
-                      {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'].map((dia) => {
-                        const diasSeleccionados = formData.dias_sin_entrega?.split(',').filter(d => d.trim()) || [];
-                        const isChecked = diasSeleccionados.includes(dia);
-                        return (
-                          <div key={dia} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`dia_${dia}`}
-                              checked={isChecked}
-                              onCheckedChange={(checked) => {
-                                let nuevosDias: string[];
-                                if (checked) {
-                                  nuevosDias = [...diasSeleccionados, dia];
-                                } else {
-                                  nuevosDias = diasSeleccionados.filter(d => d !== dia);
-                                }
-                                setFormData({ ...formData, dias_sin_entrega: nuevosDias.join(',') });
-                              }}
-                            />
-                            <Label htmlFor={`dia_${dia}`} className="text-sm font-normal cursor-pointer">
-                              {dia}
-                            </Label>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <p className="text-xs text-muted-foreground">Selecciona los días que NO se puede entregar</p>
-                  </div>
-                </div>
-                <div className="space-y-2 mt-4">
-                  <Label>Vehículos Permitidos</Label>
-                  <div className="flex flex-wrap gap-3">
-                    {['Camioneta', 'Urvan', 'Rabón', 'Tortón', 'Tráiler'].map((vehiculo) => {
-                      const vehiculosPermitidos = formData.restricciones_vehiculo?.split(',').filter(v => v.trim()) || [];
-                      const isChecked = vehiculosPermitidos.includes(vehiculo);
-                      return (
-                        <div key={vehiculo} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`vehiculo_${vehiculo}`}
-                            checked={isChecked}
-                            onCheckedChange={(checked) => {
-                              let nuevosVehiculos: string[];
-                              if (checked) {
-                                nuevosVehiculos = [...vehiculosPermitidos, vehiculo];
-                              } else {
-                                nuevosVehiculos = vehiculosPermitidos.filter(v => v !== vehiculo);
-                              }
-                              setFormData({ ...formData, restricciones_vehiculo: nuevosVehiculos.join(',') });
-                            }}
-                          />
-                          <Label htmlFor={`vehiculo_${vehiculo}`} className="text-sm font-normal cursor-pointer">
-                            {vehiculo}
-                          </Label>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Selecciona los vehículos que PUEDEN entregar en esta sucursal (si no seleccionas ninguno, se permiten todos)</p>
-                </div>
-                <div className="flex items-center space-x-2 mt-4">
-                  <Checkbox
-                    id="suc_no_combinar"
-                    checked={formData.no_combinar_pedidos}
-                    onCheckedChange={(checked) => 
-                      setFormData({ ...formData, no_combinar_pedidos: checked === true })
-                    }
-                  />
-                  <Label htmlFor="suc_no_combinar" className="text-sm font-normal">
-                    No combinar pedidos con otros clientes (requiere autorización)
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2 mt-4">
-                  <Checkbox
-                    id="suc_es_rosticeria"
-                    checked={formData.es_rosticeria}
-                    onCheckedChange={(checked) => 
-                      setFormData({ ...formData, es_rosticeria: checked === true })
-                    }
-                  />
-                  <Label htmlFor="suc_es_rosticeria" className="text-sm font-normal">
-                    🍗 Es Rosticería
-                  </Label>
-                </div>
-              </div>
-              
-              {/* Datos Fiscales Opcionales */}
-              <div className="border-t pt-4 mt-4">
-                <button
-                  type="button"
-                  onClick={() => setMostrarDatosFiscales(!mostrarDatosFiscales)}
-                  className="flex items-center gap-2 font-medium text-sm hover:text-primary transition-colors"
-                >
-                  <FileText className="h-4 w-4" />
-                  Datos Fiscales de la Sucursal (opcional)
-                  {mostrarDatosFiscales ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </button>
-                <p className="text-xs text-muted-foreground mt-1 mb-3">
-                  Solo si esta sucursal se factura por separado del grupo
-                </p>
-                
-                {mostrarDatosFiscales && (
-                  <div className="space-y-4 pl-2 border-l-2 border-primary/20">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="suc_rfc">RFC</Label>
-                        <Input
-                          id="suc_rfc"
-                          value={formData.rfc}
-                          onChange={(e) => setFormData({ ...formData, rfc: e.target.value.toUpperCase() })}
-                          placeholder="RFC de la sucursal"
-                          autoComplete="off"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="suc_razon_social">Razón Social</Label>
-                        <Input
-                          id="suc_razon_social"
-                          value={formData.razon_social}
-                          onChange={(e) => setFormData({ ...formData, razon_social: e.target.value })}
-                          placeholder="Razón social para facturación"
-                          autoComplete="off"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="suc_direccion_fiscal">Dirección Fiscal</Label>
-                      <Input
-                        id="suc_direccion_fiscal"
-                        value={formData.direccion_fiscal}
-                        onChange={(e) => setFormData({ ...formData, direccion_fiscal: e.target.value })}
-                        placeholder="Dirección fiscal para facturación"
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="suc_email_facturacion">Email de Facturación</Label>
-                      <Input
-                        id="suc_email_facturacion"
-                        type="email"
-                        value={formData.email_facturacion}
-                        onChange={(e) => setFormData({ ...formData, email_facturacion: e.target.value })}
-                        placeholder="Email para envío de facturas"
-                        autoComplete="off"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="suc_notas">Notas Adicionales</Label>
-                <Textarea
-                  id="suc_notas"
-                  value={formData.notas}
-                  onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
-                  placeholder="Otras observaciones importantes..."
-                  rows={2}
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit">
-                  {editingSucursal ? "Actualizar" : "Crear"}
-                </Button>
-              </div>
-            </form>
-          )}
+          <SucursalFormSheet
+            open={formOpen}
+            onOpenChange={setFormOpen}
+            formData={formData}
+            setFormData={setFormData}
+            zonas={zonas}
+            isEditing={!!editingSucursal}
+            onSave={handleSave}
+            onCancel={() => setFormOpen(false)}
+          />
 
           {/* Barra de acciones masivas */}
           {selectedIds.size > 0 ? (
