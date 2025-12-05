@@ -86,6 +86,20 @@ const ClienteSucursalesDialog = ({
   const [autoDetectando, setAutoDetectando] = useState(false);
   const { toast } = useToast();
 
+  // Función para abrir Google Maps con la dirección
+  const openGoogleMaps = (direccion: string | null) => {
+    if (!direccion) {
+      toast({
+        title: "Sin dirección",
+        description: "Esta sucursal no tiene dirección registrada",
+        variant: "destructive"
+      });
+      return;
+    }
+    const encodedAddress = encodeURIComponent(direccion);
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
+  };
+
   // Función para detectar zona desde el texto de dirección
   const detectarZonaDesdeDireccion = (direccion: string, zonasDisponibles: Zona[]): Zona | null => {
     if (!direccion) return null;
@@ -754,6 +768,14 @@ const ClienteSucursalesDialog = ({
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openGoogleMaps(sucursal.direccion)}
+                            title="Ver en Google Maps"
+                          >
+                            <MapPin className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
