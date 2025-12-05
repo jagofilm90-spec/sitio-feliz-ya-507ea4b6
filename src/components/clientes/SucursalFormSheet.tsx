@@ -30,6 +30,7 @@ interface Zona {
 interface SucursalFormData {
   nombre: string;
   codigo_sucursal: string;
+  cl: string;
   direccion: string;
   zona_id: string;
   telefono: string;
@@ -99,7 +100,7 @@ export const SucursalFormSheet = ({
 
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           {/* Información básica */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-2">
               <Label htmlFor="suc_codigo">Código</Label>
               <Input
@@ -123,6 +124,18 @@ export const SucursalFormSheet = ({
                 placeholder="Ej: La Joya"
                 autoComplete="off"
                 required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="suc_cl">CL</Label>
+              <Input
+                id="suc_cl"
+                value={formData.cl || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, cl: e.target.value })
+                }
+                placeholder="Ej: 1931"
+                autoComplete="off"
               />
             </div>
           </div>

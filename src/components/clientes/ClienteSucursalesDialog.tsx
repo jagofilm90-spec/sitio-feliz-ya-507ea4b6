@@ -41,6 +41,7 @@ interface Sucursal {
   id: string;
   nombre: string;
   codigo_sucursal: string | null;
+  cl: string | null;
   direccion: string;
   zona_id: string | null;
   telefono: string | null;
@@ -173,6 +174,7 @@ const ClienteSucursalesDialog = ({
   const [formData, setFormData] = useState({
     nombre: "",
     codigo_sucursal: "",
+    cl: "",
     direccion: "",
     zona_id: "",
     telefono: "",
@@ -395,6 +397,7 @@ const ClienteSucursalesDialog = ({
         cliente_id: cliente.id,
         nombre: formData.nombre.trim(),
         codigo_sucursal: formData.codigo_sucursal?.trim() || null,
+        cl: formData.cl?.trim() || null,
         direccion: formData.direccion || null,
         zona_id: formData.zona_id || null,
         telefono: formData.telefono || null,
@@ -446,6 +449,7 @@ const ClienteSucursalesDialog = ({
     setFormData({
       nombre: sucursal.nombre,
       codigo_sucursal: sucursal.codigo_sucursal || "",
+      cl: sucursal.cl || "",
       direccion: sucursal.direccion,
       zona_id: sucursal.zona_id || "",
       telefono: sucursal.telefono || "",
@@ -490,6 +494,7 @@ const ClienteSucursalesDialog = ({
     setFormData({
       nombre: "",
       codigo_sucursal: "",
+      cl: "",
       direccion: "",
       zona_id: "",
       telefono: "",
