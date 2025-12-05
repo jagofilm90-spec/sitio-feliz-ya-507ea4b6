@@ -122,9 +122,11 @@ export const SucursalFormSheet = ({
           description: `Lat: ${result.lat.toFixed(6)}, Lng: ${result.lng.toFixed(6)}`
         });
       } else {
+        // Show specific error message
+        const errorMsg = result?.error || data?.apiError || "No se pudieron obtener las coordenadas";
         toast({
           title: "No se encontró ubicación",
-          description: "No se pudieron obtener las coordenadas para esta dirección",
+          description: errorMsg,
           variant: "destructive"
         });
       }
@@ -135,6 +137,39 @@ export const SucursalFormSheet = ({
         description: "No se pudo geocodificar la dirección",
         variant: "destructive"
       });
+    } finally {
+      setGeocodificando(false);
+    }
+  };
+
+  const geocodificarPorPlaceId = async (placeId: string) => {
+    setGeocodificando(true);
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-place-details?place_id=${encodeURIComponent(placeId)}`;
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+      });
+      
+      const data = await response.json();
+      
+      if (data.lat && data.lng) {
+        setFormData({
+          ...formData,
+          latitud: data.lat,
+          longitud: data.lng
+        });
+        toast({
+          title: "Coordenadas obtenidas",
+          description: `Lat: ${data.lat.toFixed(6)}, Lng: ${data.lng.toFixed(6)}`
+        });
+      } else if (data.error) {
+        console.warn('Place details error:', data.error);
+        // Don't show error toast for place details - user can manually geocode later
+      }
+    } catch (error) {
+      console.error('Error getting place details:', error);
     } finally {
       setGeocodificando(false);
     }
@@ -285,9 +320,15 @@ export const SucursalFormSheet = ({
                 <GoogleMapsAddressAutocomplete
                   id="suc_direccion"
                   value={formData.direccion}
-                  onChange={(value) => {
+                  onChange={(value, placeId) => {
                     setFormData({ ...formData, direccion: value, latitud: null, longitud: null });
-                    if (value) setEditandoDireccion(false);
+                    if (value) {
+                      setEditandoDireccion(false);
+                      // Auto-geocode when selecting from autocomplete
+                      if (placeId) {
+                        geocodificarPorPlaceId(placeId);
+                      }
+                    }
                   }}
                   placeholder="Buscar dirección..."
                 />
