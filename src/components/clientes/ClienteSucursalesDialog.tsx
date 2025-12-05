@@ -48,7 +48,7 @@ interface Sucursal {
   contacto: string | null;
   notas: string | null;
   activo: boolean;
-  zona?: { nombre: string } | null;
+  zona?: { nombre: string; es_foranea?: boolean } | null;
   horario_entrega: string | null;
   restricciones_vehiculo: string | null;
   dias_sin_entrega: string | null;
@@ -67,6 +67,7 @@ interface Sucursal {
 interface Zona {
   id: string;
   nombre: string;
+  es_foranea?: boolean;
 }
 
 const ITEMS_POR_PAGINA = 20;
@@ -391,7 +392,7 @@ const ClienteSucursalesDialog = ({
         .from("cliente_sucursales")
         .select(`
           *,
-          zona:zona_id (nombre)
+          zona:zona_id (nombre, es_foranea)
         `)
         .eq("cliente_id", cliente.id)
         .order("codigo_sucursal");
@@ -420,7 +421,7 @@ const ClienteSucursalesDialog = ({
     try {
       const { data, error } = await supabase
         .from("zonas")
-        .select("id, nombre")
+        .select("id, nombre, es_foranea")
         .eq("activo", true)
         .order("nombre");
 
@@ -876,7 +877,14 @@ const ClienteSucursalesDialog = ({
                       </TableCell>
                       <TableCell>
                         {sucursal.zona ? (
-                          <Badge variant="outline">{sucursal.zona.nombre}</Badge>
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <Badge variant="outline">{sucursal.zona.nombre}</Badge>
+                            {sucursal.zona.es_foranea && (
+                              <Badge className="text-xs bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30">
+                                🚛 Foránea
+                              </Badge>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
