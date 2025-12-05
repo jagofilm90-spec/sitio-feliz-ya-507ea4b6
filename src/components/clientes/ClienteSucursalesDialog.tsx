@@ -93,8 +93,8 @@ const ClienteSucursalesDialog = ({
   // Función para abrir Google Maps con la dirección o coordenadas
   const openGoogleMaps = (sucursal: Sucursal) => {
     if (sucursal.latitud && sucursal.longitud) {
-      // Si tiene coordenadas, abrir con pin exacto
-      window.open(`https://www.google.com/maps?q=${sucursal.latitud},${sucursal.longitud}`, '_blank');
+      // Si tiene coordenadas, abrir con pin exacto usando Maps URL API
+      window.open(`https://www.google.com/maps/search/?api=1&query=${sucursal.latitud},${sucursal.longitud}`, '_blank');
     } else if (sucursal.direccion) {
       // Fallback a búsqueda por texto
       const encodedAddress = encodeURIComponent(sucursal.direccion);

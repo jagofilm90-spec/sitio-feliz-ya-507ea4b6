@@ -221,7 +221,7 @@ export const SucursalFormSheet = ({
 
   const abrirEnMapa = () => {
     if (formData.latitud && formData.longitud) {
-      window.open(`https://www.google.com/maps?q=${formData.latitud},${formData.longitud}`, '_blank');
+      window.open(`https://www.google.com/maps/search/?api=1&query=${formData.latitud},${formData.longitud}`, '_blank');
     }
   };
 
