@@ -18,9 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertTriangle, FileText, ChevronDown, ChevronUp, MapPin, Pencil } from "lucide-react";
+import { AlertTriangle, FileText, ChevronDown, ChevronUp, MapPin, Pencil, Loader2, Navigation } from "lucide-react";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Zona {
   id: string;
@@ -45,6 +47,8 @@ interface SucursalFormData {
   razon_social: string;
   direccion_fiscal: string;
   email_facturacion: string;
+  latitud: number | null;
+  longitud: number | null;
 }
 
 interface SucursalFormSheetProps {
@@ -72,6 +76,8 @@ export const SucursalFormSheet = ({
     !!(formData.rfc || formData.razon_social)
   );
   const [editandoDireccion, setEditandoDireccion] = useState(!formData.direccion);
+  const [geocodificando, setGeocodificando] = useState(false);
+  const { toast } = useToast();
 
   // Reset editing mode when sheet opens with new data
   useEffect(() => {
@@ -82,6 +88,62 @@ export const SucursalFormSheet = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave(e);
+  };
+
+  const geocodificarDireccion = async () => {
+    if (!formData.direccion) {
+      toast({
+        title: "Sin dirección",
+        description: "Primero ingresa una dirección para geocodificar",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setGeocodificando(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('geocode-addresses', {
+        body: {
+          addresses: [{ id: 'sucursal', address: formData.direccion }]
+        }
+      });
+
+      if (error) throw error;
+
+      const result = data?.results?.[0];
+      if (result && result.lat && result.lng) {
+        setFormData({
+          ...formData,
+          latitud: result.lat,
+          longitud: result.lng
+        });
+        toast({
+          title: "Coordenadas obtenidas",
+          description: `Lat: ${result.lat.toFixed(6)}, Lng: ${result.lng.toFixed(6)}`
+        });
+      } else {
+        toast({
+          title: "No se encontró ubicación",
+          description: "No se pudieron obtener las coordenadas para esta dirección",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error geocodificando:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo geocodificar la dirección",
+        variant: "destructive"
+      });
+    } finally {
+      setGeocodificando(false);
+    }
+  };
+
+  const abrirEnMapa = () => {
+    if (formData.latitud && formData.longitud) {
+      window.open(`https://www.google.com/maps?q=${formData.latitud},${formData.longitud}`, '_blank');
+    }
   };
 
   return (
@@ -167,20 +229,56 @@ export const SucursalFormSheet = ({
               <div className="space-y-2">
                 <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-md border">
                   <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                  <p className="text-sm leading-relaxed break-words">
-                    {formData.direccion}
-                  </p>
+                  <div className="flex-1">
+                    <p className="text-sm leading-relaxed break-words">
+                      {formData.direccion}
+                    </p>
+                    {formData.latitud && formData.longitud && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        📍 {formData.latitud.toFixed(6)}, {formData.longitud.toFixed(6)}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setEditandoDireccion(true)}
-                  className="gap-1.5"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Cambiar dirección
-                </Button>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditandoDireccion(true)}
+                    className="gap-1.5"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Cambiar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={geocodificarDireccion}
+                    disabled={geocodificando}
+                    className="gap-1.5"
+                  >
+                    {geocodificando ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Navigation className="h-3.5 w-3.5" />
+                    )}
+                    {formData.latitud ? "Re-geocodificar" : "Geocodificar"}
+                  </Button>
+                  {formData.latitud && formData.longitud && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={abrirEnMapa}
+                      className="gap-1.5"
+                    >
+                      <MapPin className="h-3.5 w-3.5" />
+                      Ver en mapa
+                    </Button>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="space-y-2">
@@ -188,7 +286,7 @@ export const SucursalFormSheet = ({
                   id="suc_direccion"
                   value={formData.direccion}
                   onChange={(value) => {
-                    setFormData({ ...formData, direccion: value });
+                    setFormData({ ...formData, direccion: value, latitud: null, longitud: null });
                     if (value) setEditandoDireccion(false);
                   }}
                   placeholder="Buscar dirección..."

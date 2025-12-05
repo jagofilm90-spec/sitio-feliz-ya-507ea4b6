@@ -154,6 +154,8 @@ export type Database = {
           es_rosticeria: boolean | null
           horario_entrega: string | null
           id: string
+          latitud: number | null
+          longitud: number | null
           no_combinar_pedidos: boolean | null
           nombre: string
           notas: string | null
@@ -178,6 +180,8 @@ export type Database = {
           es_rosticeria?: boolean | null
           horario_entrega?: string | null
           id?: string
+          latitud?: number | null
+          longitud?: number | null
           no_combinar_pedidos?: boolean | null
           nombre: string
           notas?: string | null
@@ -202,6 +206,8 @@ export type Database = {
           es_rosticeria?: boolean | null
           horario_entrega?: string | null
           id?: string
+          latitud?: number | null
+          longitud?: number | null
           no_combinar_pedidos?: boolean | null
           nombre?: string
           notas?: string | null
