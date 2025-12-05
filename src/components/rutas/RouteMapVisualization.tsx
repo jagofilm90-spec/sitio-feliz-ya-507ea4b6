@@ -124,7 +124,7 @@ export const RouteMapVisualization = ({
     if (validPoints.length === 0) return null;
     
     if (validPoints.length === 1) {
-      return `https://www.google.com/maps?q=${validPoints[0].lat},${validPoints[0].lng}`;
+      return `https://www.google.com/maps/search/?api=1&query=${validPoints[0].lat},${validPoints[0].lng}`;
     }
 
     const origin = `${validPoints[0].lat},${validPoints[0].lng}`;
