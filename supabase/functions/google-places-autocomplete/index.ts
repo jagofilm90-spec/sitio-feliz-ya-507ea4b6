@@ -26,32 +26,47 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Call Google Places Autocomplete API
-    const googleUrl = new URL('https://maps.googleapis.com/maps/api/place/autocomplete/json');
-    googleUrl.searchParams.set('input', input);
-    googleUrl.searchParams.set('key', apiKey);
-    googleUrl.searchParams.set('types', 'address');
-    googleUrl.searchParams.set('components', 'country:mx');
-    googleUrl.searchParams.set('language', 'es');
+    console.log('Autocomplete request for:', input);
 
-    const response = await fetch(googleUrl.toString());
+    // Call NEW Google Places Autocomplete API
+    const response = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+      },
+      body: JSON.stringify({
+        input: input,
+        includedRegionCodes: ['mx'],
+        languageCode: 'es',
+        includedPrimaryTypes: ['street_address', 'route', 'locality', 'sublocality', 'neighborhood', 'premise'],
+      }),
+    });
+
     const data = await response.json();
 
-    if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-      console.error('Google Places API error:', data.status, data.error_message);
+    if (!response.ok) {
+      console.error('Google Places API error:', JSON.stringify(data));
       return new Response(
-        JSON.stringify({ error: data.error_message || 'Google API error', predictions: [] }),
+        JSON.stringify({ error: data.error?.message || 'Google API error', predictions: [] }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Return simplified predictions
-    const predictions = (data.predictions || []).map((p: any) => ({
-      place_id: p.place_id,
-      description: p.description,
-      main_text: p.structured_formatting?.main_text,
-      secondary_text: p.structured_formatting?.secondary_text,
-    }));
+    // Transform new API response to match our expected format
+    const predictions = (data.suggestions || []).map((s: any) => {
+      const place = s.placePrediction;
+      if (!place) return null;
+      
+      return {
+        place_id: place.placeId,
+        description: place.text?.text || '',
+        main_text: place.structuredFormat?.mainText?.text || '',
+        secondary_text: place.structuredFormat?.secondaryText?.text || '',
+      };
+    }).filter(Boolean);
+
+    console.log(`Returning ${predictions.length} predictions`);
 
     return new Response(
       JSON.stringify({ predictions }),
