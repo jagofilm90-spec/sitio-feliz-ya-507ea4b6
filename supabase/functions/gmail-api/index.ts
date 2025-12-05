@@ -129,6 +129,8 @@ serve(async (req) => {
 
     const { action, email, to, cc, bcc, subject, body: emailBody, maxResults, messageId, searchQuery, attachmentId, filename, attachments: emailAttachments, pageToken, fileContent, fileName, mimeType: fileMimeType } = await req.json();
 
+    console.log("Gmail API request:", { action, email, hasTo: !!to, hasSubject: !!subject });
+
     // Get account credentials
     const { data: cuenta, error: cuentaError } = await supabase
       .from("gmail_cuentas")
@@ -137,7 +139,17 @@ serve(async (req) => {
       .eq("activo", true)
       .single();
 
+    console.log("Query result:", { found: !!cuenta, error: cuentaError?.message, emailSearched: email });
+
     if (cuentaError || !cuenta) {
+      // Also try without activo filter to diagnose
+      const { data: anyAccount } = await supabase
+        .from("gmail_cuentas")
+        .select("email, activo")
+        .eq("email", email)
+        .single();
+      
+      console.log("Debug - Account without activo filter:", anyAccount);
       throw new Error(`Cuenta ${email} no encontrada o no activa`);
     }
 
