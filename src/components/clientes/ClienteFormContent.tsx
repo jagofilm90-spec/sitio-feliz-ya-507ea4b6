@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
-import { Plus, X, Mail, MapPin, Truck, Loader2, Sparkles } from "lucide-react";
+import { Plus, X, Mail, MapPin, Truck, Loader2, Sparkles, Clock } from "lucide-react";
 
 interface Zona {
   id: string;
@@ -62,6 +62,8 @@ interface ClienteFormContentProps {
     entre_calle: string;
     y_calle: string;
     csf_archivo_url: string;
+    prioridad_entrega_default: "vip_mismo_dia" | "deadline" | "dia_fijo_recurrente" | "fecha_sugerida" | "flexible";
+    deadline_dias_habiles_default: string;
   };
   setFormData: (data: any) => void;
   zonas: Zona[];
@@ -340,6 +342,53 @@ export function ClienteFormContent({
           <p className="text-xs text-muted-foreground">
             Define si este cliente normalmente requiere factura o remisión
           </p>
+        </div>
+      </div>
+
+      {/* Configuración de Entregas */}
+      <div className="space-y-4">
+        <h4 className="font-medium text-lg border-b pb-2 flex items-center gap-2">
+          <Clock className="h-5 w-5" />
+          Configuración de Entregas
+        </h4>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="prioridad_entrega_default">Prioridad de Entrega</Label>
+            <Select
+              value={formData.prioridad_entrega_default}
+              onValueChange={(value: "vip_mismo_dia" | "deadline" | "dia_fijo_recurrente" | "fecha_sugerida" | "flexible") => setFormData({ ...formData, prioridad_entrega_default: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="vip_mismo_dia">VIP - Mismo día (entrega obligatoria el día del pedido)</SelectItem>
+                <SelectItem value="deadline">Con plazo (X días hábiles para entregar)</SelectItem>
+                <SelectItem value="dia_fijo_recurrente">Día fijo recurrente (ej: cada jueves)</SelectItem>
+                <SelectItem value="fecha_sugerida">Fecha sugerida (flexible 1-2 días)</SelectItem>
+                <SelectItem value="flexible">Flexible (cuando haya disponibilidad)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Determina cómo se priorizan las entregas de este cliente
+            </p>
+          </div>
+          {formData.prioridad_entrega_default === "deadline" && (
+            <div className="space-y-2">
+              <Label htmlFor="deadline_dias_habiles_default">Días hábiles de plazo</Label>
+              <Input
+                id="deadline_dias_habiles_default"
+                type="number"
+                min="1"
+                placeholder="Ej: 15"
+                value={formData.deadline_dias_habiles_default}
+                onChange={(e) => setFormData({ ...formData, deadline_dias_habiles_default: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Ej: Lecaroz tiene 15 días hábiles para completar entregas
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

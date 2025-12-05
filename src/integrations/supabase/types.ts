@@ -233,6 +233,7 @@ export type Database = {
           codigo_postal: string | null
           created_at: string
           csf_archivo_url: string | null
+          deadline_dias_habiles_default: number | null
           direccion: string | null
           email: string | null
           entre_calle: string | null
@@ -248,6 +249,9 @@ export type Database = {
           numero_exterior: string | null
           numero_interior: string | null
           preferencia_facturacion: Database["public"]["Enums"]["preferencia_facturacion"]
+          prioridad_entrega_default:
+            | Database["public"]["Enums"]["delivery_priority"]
+            | null
           razon_social: string | null
           regimen_capital: string | null
           rfc: string | null
@@ -267,6 +271,7 @@ export type Database = {
           codigo_postal?: string | null
           created_at?: string
           csf_archivo_url?: string | null
+          deadline_dias_habiles_default?: number | null
           direccion?: string | null
           email?: string | null
           entre_calle?: string | null
@@ -282,6 +287,9 @@ export type Database = {
           numero_exterior?: string | null
           numero_interior?: string | null
           preferencia_facturacion?: Database["public"]["Enums"]["preferencia_facturacion"]
+          prioridad_entrega_default?:
+            | Database["public"]["Enums"]["delivery_priority"]
+            | null
           razon_social?: string | null
           regimen_capital?: string | null
           rfc?: string | null
@@ -301,6 +309,7 @@ export type Database = {
           codigo_postal?: string | null
           created_at?: string
           csf_archivo_url?: string | null
+          deadline_dias_habiles_default?: number | null
           direccion?: string | null
           email?: string | null
           entre_calle?: string | null
@@ -316,6 +325,9 @@ export type Database = {
           numero_exterior?: string | null
           numero_interior?: string | null
           preferencia_facturacion?: Database["public"]["Enums"]["preferencia_facturacion"]
+          prioridad_entrega_default?:
+            | Database["public"]["Enums"]["delivery_priority"]
+            | null
           razon_social?: string | null
           regimen_capital?: string | null
           rfc?: string | null
