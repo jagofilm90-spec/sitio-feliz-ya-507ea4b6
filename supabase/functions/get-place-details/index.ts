@@ -28,45 +28,31 @@ Deno.serve(async (req) => {
 
     console.log(`[get-place-details] Fetching details for place_id: ${placeId}`);
 
-    // Call Google Place Details API
-    const googleUrl = new URL('https://maps.googleapis.com/maps/api/place/details/json');
-    googleUrl.searchParams.set('place_id', placeId);
-    googleUrl.searchParams.set('key', apiKey);
-    googleUrl.searchParams.set('fields', 'geometry,formatted_address');
-    googleUrl.searchParams.set('language', 'es');
+    // Call NEW Google Places API (Place Details)
+    const response = await fetch(
+      `https://places.googleapis.com/v1/places/${placeId}?languageCode=es`,
+      {
+        method: 'GET',
+        headers: {
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask': 'location,formattedAddress',
+        },
+      }
+    );
 
-    const response = await fetch(googleUrl.toString());
     const data = await response.json();
 
-    console.log(`[get-place-details] Google response status: ${data.status}`);
+    console.log(`[get-place-details] Response status: ${response.status}`);
 
-    if (data.status !== 'OK') {
-      let errorMessage = 'Error obteniendo detalles';
-      
-      switch (data.status) {
-        case 'INVALID_REQUEST':
-          errorMessage = 'place_id inválido';
-          break;
-        case 'NOT_FOUND':
-          errorMessage = 'Lugar no encontrado';
-          break;
-        case 'REQUEST_DENIED':
-          errorMessage = data.error_message || 'API Key sin permisos de Places';
-          console.error(`[get-place-details] REQUEST_DENIED: ${data.error_message}`);
-          break;
-        case 'OVER_QUERY_LIMIT':
-          errorMessage = 'Límite de consultas excedido';
-          break;
-      }
-      
+    if (!response.ok) {
+      console.error(`[get-place-details] Error: ${JSON.stringify(data)}`);
       return new Response(
-        JSON.stringify({ error: errorMessage }),
+        JSON.stringify({ error: data.error?.message || 'Error obteniendo detalles' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const result = data.result;
-    const location = result?.geometry?.location;
+    const location = data.location;
 
     if (!location) {
       return new Response(
@@ -75,13 +61,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[get-place-details] Success: lat=${location.lat}, lng=${location.lng}`);
+    console.log(`[get-place-details] Success: lat=${location.latitude}, lng=${location.longitude}`);
 
     return new Response(
       JSON.stringify({
-        lat: location.lat,
-        lng: location.lng,
-        formatted_address: result.formatted_address,
+        lat: location.latitude,
+        lng: location.longitude,
+        formatted_address: data.formattedAddress,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
