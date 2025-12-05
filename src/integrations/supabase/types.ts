@@ -367,6 +367,33 @@ export type Database = {
           },
         ]
       }
+      configuracion_empresa: {
+        Row: {
+          clave: string
+          created_at: string | null
+          descripcion: string | null
+          id: string
+          updated_at: string | null
+          valor: Json
+        }
+        Insert: {
+          clave: string
+          created_at?: string | null
+          descripcion?: string | null
+          id?: string
+          updated_at?: string | null
+          valor: Json
+        }
+        Update: {
+          clave?: string
+          created_at?: string | null
+          descripcion?: string | null
+          id?: string
+          updated_at?: string | null
+          valor?: Json
+        }
+        Relationships: []
+      }
       conversacion_participantes: {
         Row: {
           conversacion_id: string

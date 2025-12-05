@@ -38,7 +38,8 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 }
 
 // Nearest-neighbor algorithm to optimize delivery order using GPS coordinates
-function optimizarOrdenEntrega(pedidos: any[]): any[] {
+// Now accepts warehouse origin coordinates as parameter
+function optimizarOrdenEntrega(pedidos: any[], puntoOrigen: { lat: number; lng: number }): any[] {
   if (pedidos.length <= 2) return pedidos;
   
   // Filter pedidos with valid coordinates
@@ -50,13 +51,11 @@ function optimizarOrdenEntrega(pedidos: any[]): any[] {
     return pedidos;
   }
   
-  // Start from warehouse (CDMX center as default origin)
-  const origen = { lat: 19.4326, lng: -99.1332 };
   const ordenados: any[] = [];
   const restantes = [...conCoords];
   
-  let currentLat = origen.lat;
-  let currentLng = origen.lng;
+  let currentLat = puntoOrigen.lat;
+  let currentLng = puntoOrigen.lng;
   
   // Greedy nearest-neighbor
   while (restantes.length > 0) {
@@ -282,6 +281,26 @@ serve(async (req) => {
 
     console.log(`[suggest-routes] Generating DAILY routes for date: ${fechaRuta}`);
     console.log(`[suggest-routes] Selected vehicles: ${vehiculos_seleccionados?.length || 'ALL'}`);
+
+    // Get warehouse origin coordinates from database config
+    const DEFAULT_BODEGA = { lat: 19.408680132961802, lng: -99.12108443546356 };
+    let puntoBodega = { ...DEFAULT_BODEGA };
+    
+    const { data: configBodega } = await supabase
+      .from("configuracion_empresa")
+      .select("valor")
+      .eq("clave", "bodega_principal")
+      .single();
+    
+    if (configBodega?.valor) {
+      const bodegaData = configBodega.valor as { latitud?: number; longitud?: number };
+      if (bodegaData.latitud && bodegaData.longitud) {
+        puntoBodega = { lat: bodegaData.latitud, lng: bodegaData.longitud };
+        console.log(`[suggest-routes] Using warehouse location: ${puntoBodega.lat}, ${puntoBodega.lng}`);
+      }
+    } else {
+      console.log(`[suggest-routes] Using default warehouse location: ${DEFAULT_BODEGA.lat}, ${DEFAULT_BODEGA.lng}`);
+    }
 
     // 1. Get pending orders with priority, client and branch info INCLUDING COORDINATES
     const { data: pedidos, error: pedidosError } = await supabase
@@ -623,8 +642,9 @@ Los pedidos que no quepan hoy van a "para_despues" - esto es NORMAL, no un error
       if (!pedidosRuta.length) continue;
 
       // OPTIMIZE delivery order using GPS coordinates (nearest-neighbor algorithm)
-      pedidosRuta = optimizarOrdenEntrega(pedidosRuta);
-      console.log(`[suggest-routes] Optimized delivery order for ${vehiculo.nombre} using GPS coordinates`);
+      // Starting from the warehouse location (Bodega 1 - Melchor Campo)
+      pedidosRuta = optimizarOrdenEntrega(pedidosRuta, puntoBodega);
+      console.log(`[suggest-routes] Optimized delivery order for ${vehiculo.nombre} using GPS coordinates from warehouse`);
 
       const tipoRuta = ruta.tipo_ruta === "foranea" ? "foranea" : "local";
       const capacidadMax = ruta.capacidad_maxima;
