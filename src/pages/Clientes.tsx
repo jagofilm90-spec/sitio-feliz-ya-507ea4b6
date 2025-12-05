@@ -687,10 +687,14 @@ const Clientes = () => {
             <h1 className="text-3xl font-bold">Clientes</h1>
             <p className="text-muted-foreground">Gestión de clientes y créditos</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setMapDialogOpen(true)}>
-              <Map className="h-4 w-4 mr-2" />
-              Mapa Sucursales
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setMapDialogOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Map className="h-4 w-4" />
+              <span>Mapa Sucursales</span>
             </Button>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
