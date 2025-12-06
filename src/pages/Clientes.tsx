@@ -48,7 +48,7 @@ import {
 } from "@/components/ui/dialog";
 
 // Lazy load del componente de mapa para evitar cargar Google Maps en la importación inicial
-const MapaSucursalesGlobal = lazy(() => import("@/components/clientes/MapaSucursalesGlobal").then(m => ({ default: m.MapaSucursalesGlobal })));
+const MapaSucursalesGlobal = lazy(() => import("@/components/clientes/MapaSucursalesGlobal"));
 
 interface Zona {
   id: string;
