@@ -137,6 +137,13 @@ export type Database = {
             referencedRelation: "productos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cliente_productos_frecuentes_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cliente_sucursales: {
@@ -640,6 +647,13 @@ export type Database = {
             columns: ["producto_id"]
             isOneToOne: false
             referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_detalles_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
             referencedColumns: ["id"]
           },
         ]
@@ -1296,6 +1310,13 @@ export type Database = {
             referencedRelation: "productos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "inventario_lotes_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
         ]
       }
       inventario_movimientos: {
@@ -1377,6 +1398,13 @@ export type Database = {
             columns: ["producto_id"]
             isOneToOne: false
             referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventario_movimientos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
             referencedColumns: ["id"]
           },
           {
@@ -1718,6 +1746,13 @@ export type Database = {
             referencedRelation: "productos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ordenes_compra_detalles_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
         ]
       }
       ordenes_compra_entregas: {
@@ -1985,6 +2020,13 @@ export type Database = {
             referencedRelation: "productos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pedidos_acumulativos_detalles_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
         ]
       }
       pedidos_detalles: {
@@ -2031,6 +2073,13 @@ export type Database = {
             columns: ["producto_id"]
             isOneToOne: false
             referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_detalles_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
             referencedColumns: ["id"]
           },
         ]
@@ -2182,6 +2231,13 @@ export type Database = {
             columns: ["producto_id"]
             isOneToOne: false
             referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedor_productos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
             referencedColumns: ["id"]
           },
           {
@@ -2710,6 +2766,30 @@ export type Database = {
           refresh_token?: never
           token_expires_at?: never
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      productos_stock_bajo: {
+        Row: {
+          codigo: string | null
+          id: string | null
+          nombre: string | null
+          stock_actual: number | null
+          stock_minimo: number | null
+        }
+        Insert: {
+          codigo?: string | null
+          id?: string | null
+          nombre?: string | null
+          stock_actual?: number | null
+          stock_minimo?: number | null
+        }
+        Update: {
+          codigo?: string | null
+          id?: string | null
+          nombre?: string | null
+          stock_actual?: number | null
+          stock_minimo?: number | null
         }
         Relationships: []
       }
