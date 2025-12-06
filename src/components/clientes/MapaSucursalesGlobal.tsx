@@ -121,9 +121,37 @@ function MapaSucursalesGlobal({
   
   const mapRef = useRef<google.maps.Map | null>(null);
 
+  // Check API key before loading
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+  
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+    googleMapsApiKey: apiKey,
   });
+
+  // If no API key, show warning dialog
+  if (!apiKey) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-yellow-500" />
+              Mapa no disponible
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-6">
+            <Globe className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+            <p className="text-muted-foreground">
+              La API de Google Maps no está configurada.
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Contacte al administrador para habilitar esta funcionalidad.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   useEffect(() => {
     if (open) {
