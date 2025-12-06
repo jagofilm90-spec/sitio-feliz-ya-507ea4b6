@@ -44,7 +44,7 @@ const Dashboard = () => {
         supabase.from("productos").select("id", { count: "exact", head: true }),
         supabase.from("clientes").select("id", { count: "exact", head: true }),
         supabase.from("pedidos").select("id", { count: "exact", head: true }).eq("status", "pendiente"),
-        supabase.from("productos").select("id", { count: "exact", head: true }).filter("stock_actual", "lte", "stock_minimo"),
+        supabase.from("productos_stock_bajo").select("id", { count: "exact", head: true }),
       ]);
 
       setStats({
