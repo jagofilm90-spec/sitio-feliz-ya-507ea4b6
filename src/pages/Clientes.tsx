@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,8 +47,7 @@ import {
   DialogTitle as HistorialDialogTitle,
 } from "@/components/ui/dialog";
 
-// Lazy load del componente de mapa para evitar cargar Google Maps en la importación inicial
-const MapaSucursalesGlobal = lazy(() => import("@/components/clientes/MapaSucursalesGlobal"));
+import MapaSucursalesGlobal from "@/components/clientes/MapaSucursalesGlobal";
 
 interface Zona {
   id: string;
@@ -988,12 +987,12 @@ const Clientes = () => {
         cliente={selectedClienteForProductos}
       />
 
-      <Suspense fallback={null}>
+      {mapGlobalDialogOpen && (
         <MapaSucursalesGlobal
           open={mapGlobalDialogOpen}
           onOpenChange={setMapGlobalDialogOpen}
         />
-      </Suspense>
+      )}
     </Layout>
   );
 };
