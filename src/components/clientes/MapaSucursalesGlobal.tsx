@@ -102,20 +102,7 @@ const REGION_LABELS: Record<string, string> = {
   tlaxcala: "Tlaxcala",
 };
 
-// Create SVG marker with custom color
-const createMarkerIcon = (color: string): google.maps.Icon => {
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="36" viewBox="0 0 24 36">
-      <path fill="${color}" stroke="#FFFFFF" stroke-width="1.5" d="M12 0C5.4 0 0 5.4 0 12c0 7.2 12 24 12 24s12-16.8 12-24c0-6.6-5.4-12-12-12z"/>
-      <circle fill="#FFFFFF" cx="12" cy="12" r="5"/>
-    </svg>
-  `;
-  return {
-    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-    scaledSize: new google.maps.Size(28, 42),
-    anchor: new google.maps.Point(14, 42),
-  };
-};
+// createMarkerIcon se define dentro del componente para evitar ReferenceError cuando google no está cargado
 
 export function MapaSucursalesGlobal({
   open,
@@ -242,9 +229,25 @@ export function MapaSucursalesGlobal({
     return clientes.find(c => c.id === clienteId)?.color || MARKER_COLORS[0];
   }, [clientes]);
 
+  // Crear icono de marcador - solo cuando google está disponible
+  const createMarkerIcon = useCallback((color: string) => {
+    if (!isLoaded || typeof google === 'undefined') return undefined;
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="36" viewBox="0 0 24 36">
+        <path fill="${color}" stroke="#FFFFFF" stroke-width="1.5" d="M12 0C5.4 0 0 5.4 0 12c0 7.2 12 24 12 24s12-16.8 12-24c0-6.6-5.4-12-12-12z"/>
+        <circle fill="#FFFFFF" cx="12" cy="12" r="5"/>
+      </svg>
+    `;
+    return {
+      url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+      scaledSize: new google.maps.Size(28, 42),
+      anchor: new google.maps.Point(14, 42),
+    };
+  }, [isLoaded]);
+
   // Fit bounds when filtered sucursales change
   useEffect(() => {
-    if (mapRef.current && filteredSucursales.length > 0 && isLoaded) {
+    if (mapRef.current && filteredSucursales.length > 0 && isLoaded && typeof google !== 'undefined') {
       const bounds = new google.maps.LatLngBounds();
       filteredSucursales.forEach((s) => {
         if (s.latitud && s.longitud) {

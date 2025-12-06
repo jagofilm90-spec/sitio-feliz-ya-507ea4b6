@@ -116,8 +116,8 @@ export function ClienteSucursalesMapDialog({
       if (error) throw error;
       setSucursales(data || []);
 
-      // Fit bounds to show all markers
-      if (data && data.length > 0 && mapRef.current) {
+      // Fit bounds to show all markers - solo si google está disponible
+      if (data && data.length > 0 && mapRef.current && typeof google !== 'undefined') {
         const bounds = new google.maps.LatLngBounds();
         let hasValidCoords = false;
 
