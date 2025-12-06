@@ -30,7 +30,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, MapPin, X, Mail, BarChart3, Loader2, Sparkles, User, Package, Map } from "lucide-react";
+import { Plus, Search, Edit, Trash2, MapPin, X, Mail, BarChart3, Loader2, Sparkles, User, Package, Globe } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ClienteSucursalesDialog from "@/components/clientes/ClienteSucursalesDialog";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
@@ -46,7 +46,7 @@ import {
   DialogHeader as HistorialDialogHeader,
   DialogTitle as HistorialDialogTitle,
 } from "@/components/ui/dialog";
-// import { ClienteSucursalesMapDialog } from "@/components/clientes/ClienteSucursalesMapDialog";
+import { MapaSucursalesGlobal } from "@/components/clientes/MapaSucursalesGlobal";
 
 interface Zona {
   id: string;
@@ -84,7 +84,7 @@ const Clientes = () => {
   const [selectedClienteForHistorial, setSelectedClienteForHistorial] = useState<{ id: string; nombre: string } | null>(null);
   const [productosDialogOpen, setProductosDialogOpen] = useState(false);
   const [selectedClienteForProductos, setSelectedClienteForProductos] = useState<{ id: string; nombre: string } | null>(null);
-  // const [mapDialogOpen, setMapDialogOpen] = useState(false);
+  const [mapGlobalDialogOpen, setMapGlobalDialogOpen] = useState(false);
   const { toast } = useToast();
   const { isAdmin } = useUserRoles();
 
@@ -688,12 +688,10 @@ const Clientes = () => {
             <p className="text-muted-foreground">Gestión de clientes y créditos</p>
           </div>
           <div className="flex gap-2">
-            {/* TODO: Reimplementar mapa con edge function para API key segura
-            <Button variant="outline" onClick={() => setMapDialogOpen(true)}>
-              <Map className="h-4 w-4 mr-2" />
-              Mapa Sucursales
+            <Button variant="outline" onClick={() => setMapGlobalDialogOpen(true)}>
+              <Globe className="h-4 w-4 mr-2" />
+              Mapa Global
             </Button>
-            */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button onClick={resetForm}>
@@ -988,10 +986,10 @@ const Clientes = () => {
         cliente={selectedClienteForProductos}
       />
 
-      {/* <ClienteSucursalesMapDialog
-        open={mapDialogOpen}
-        onOpenChange={setMapDialogOpen}
-      /> */}
+      <MapaSucursalesGlobal
+        open={mapGlobalDialogOpen}
+        onOpenChange={setMapGlobalDialogOpen}
+      />
     </Layout>
   );
 };
