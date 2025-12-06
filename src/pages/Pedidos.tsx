@@ -33,6 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Eye, ShoppingCart, FileText, Link2, Printer, Receipt, Send, CheckCircle2, Clock, BarChart3, Trash2, AlertCircle, DollarSign } from "lucide-react";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { AjustePreciosDialog } from "@/components/pedidos/AjustePreciosDialog";
+import { AjusteMasivoPreciosDialog } from "@/components/pedidos/AjusteMasivoPreciosDialog";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import CotizacionesTab from "@/components/cotizaciones/CotizacionesTab";
@@ -82,9 +83,10 @@ const Pedidos = () => {
   const [deleting, setDeleting] = useState(false);
   const [ajustePreciosDialogOpen, setAjustePreciosDialogOpen] = useState(false);
   const [selectedPedidoForAjuste, setSelectedPedidoForAjuste] = useState<string | null>(null);
+  const [ajusteMasivoDialogOpen, setAjusteMasivoDialogOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { canEditPrices } = useUserRoles();
+  const { canEditPrices, hasAnyRole } = useUserRoles();
 
   useEffect(() => {
     loadPedidos();
@@ -664,10 +666,22 @@ const Pedidos = () => {
                   </Button>
                 )}
               </div>
-              <Button onClick={() => setNuevoPedidoDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Pedido
-              </Button>
+              <div className="flex items-center gap-2">
+                {hasAnyRole(['admin', 'secretaria', 'contadora']) && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => setAjusteMasivoDialogOpen(true)}
+                    className="gap-2"
+                  >
+                    <DollarSign className="h-4 w-4" />
+                    Ajuste Masivo
+                  </Button>
+                )}
+                <Button onClick={() => setNuevoPedidoDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Pedido
+                </Button>
+              </div>
             </div>
 
             <div className="border rounded-lg">
@@ -929,6 +943,13 @@ const Pedidos = () => {
         onOpenChange={setAjustePreciosDialogOpen}
         pedidoId={selectedPedidoForAjuste}
         onPreciosAjustados={loadPedidos}
+      />
+
+      {/* Dialog para ajuste masivo de precios */}
+      <AjusteMasivoPreciosDialog
+        open={ajusteMasivoDialogOpen}
+        onOpenChange={setAjusteMasivoDialogOpen}
+        onComplete={loadPedidos}
       />
 
       {/* Alert Dialog para confirmar eliminación */}
