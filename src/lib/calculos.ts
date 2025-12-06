@@ -249,6 +249,15 @@ export function calcularSubtotal(params: CalculoSubtotalParams): ResultadoSubtot
   return resultado;
 }
 
+/**
+ * Función simplificada para calcular subtotal de línea
+ * Solo multiplica cantidad × precio sin auditoría
+ */
+export function calcularSubtotalLinea(cantidad: number, precio_unitario: number): number {
+  if (cantidad <= 0 || precio_unitario < 0) return 0;
+  return redondear(cantidad * precio_unitario);
+}
+
 // ==================== CÁLCULO DE IMPUESTOS ====================
 
 export interface CalculoImpuestosParams {
