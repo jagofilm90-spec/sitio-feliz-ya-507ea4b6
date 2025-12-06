@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { MapPin, Navigation, Loader2, AlertCircle } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
+import { GOOGLE_MAPS_API_KEY } from "@/config/googleMaps";
 
 interface Cliente {
   id: string;
@@ -65,7 +66,7 @@ export function ClienteSucursalesMapDialog({
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
   });
 
   useEffect(() => {
