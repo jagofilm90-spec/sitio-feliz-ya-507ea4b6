@@ -16,8 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { MapPin, Navigation, Loader2, AlertCircle, Globe, Building2 } from "lucide-react";
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
-import { GOOGLE_MAPS_API_KEY } from "@/config/googleMaps";
+import { GoogleMap, Marker, InfoWindow } from "@react-google-maps/api";
+import { useGoogleMapsLoader } from "@/hooks/useGoogleMapsLoader";
 
 interface Cliente {
   id: string;
@@ -65,26 +65,10 @@ const defaultCenter = {
 
 // Paleta de colores para distinguir clientes
 const MARKER_COLORS = [
-  "#EF4444", // red
-  "#3B82F6", // blue
-  "#10B981", // green
-  "#F59E0B", // amber
-  "#8B5CF6", // violet
-  "#EC4899", // pink
-  "#06B6D4", // cyan
-  "#F97316", // orange
-  "#84CC16", // lime
-  "#6366F1", // indigo
-  "#14B8A6", // teal
-  "#A855F7", // purple
-  "#E11D48", // rose
-  "#0EA5E9", // sky
-  "#22C55E", // emerald
-  "#FACC15", // yellow
-  "#DC2626", // red-dark
-  "#2563EB", // blue-dark
-  "#059669", // emerald-dark
-  "#D97706", // amber-dark
+  "#EF4444", "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6",
+  "#EC4899", "#06B6D4", "#F97316", "#84CC16", "#6366F1",
+  "#14B8A6", "#A855F7", "#E11D48", "#0EA5E9", "#22C55E",
+  "#FACC15", "#DC2626", "#2563EB", "#059669", "#D97706",
 ];
 
 const REGION_LABELS: Record<string, string> = {
@@ -103,60 +87,9 @@ const REGION_LABELS: Record<string, string> = {
   tlaxcala: "Tlaxcala",
 };
 
-// Componente principal que verifica API key antes de cargar Google Maps
-function MapaSucursalesGlobal({
-  open,
-  onOpenChange,
-}: MapaSucursalesGlobalProps) {
-  const apiKey = GOOGLE_MAPS_API_KEY;
-
-  // Si no hay API key, mostrar diálogo de advertencia sin cargar Google Maps
-  if (!apiKey) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-yellow-500" />
-              Mapa no disponible
-            </DialogTitle>
-          </DialogHeader>
-          <div className="text-center py-6">
-            <Globe className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
-            <p className="text-muted-foreground">
-              La API de Google Maps no está configurada.
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Contacte al administrador para habilitar esta funcionalidad.
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
-  // Si hay API key, renderizar el contenido del mapa
-  return (
-    <MapaContenido 
-      open={open} 
-      onOpenChange={onOpenChange} 
-      apiKey={apiKey} 
-    />
-  );
-}
-
-// Componente interno que usa los hooks de Google Maps
-interface MapaContenidoProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  apiKey: string;
-}
-
-function MapaContenido({
-  open,
-  onOpenChange,
-  apiKey,
-}: MapaContenidoProps) {
+function MapaSucursalesGlobal({ open, onOpenChange }: MapaSucursalesGlobalProps) {
+  const { isLoaded, loadError, hasApiKey } = useGoogleMapsLoader();
+  
   const [sucursales, setSucursales] = useState<SucursalGlobal[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [zonas, setZonas] = useState<Zona[]>([]);
@@ -170,11 +103,6 @@ function MapaContenido({
   
   const mapRef = useRef<google.maps.Map | null>(null);
 
-  // Ahora es seguro usar el hook porque ya verificamos que apiKey existe
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: apiKey,
-  });
-
   useEffect(() => {
     if (open) {
       loadData();
@@ -184,7 +112,6 @@ function MapaContenido({
   const loadData = async () => {
     setLoading(true);
     try {
-      // Load all active branches with coordinates
       const { data: sucursalesData, error: sucursalesError } = await supabase
         .from("cliente_sucursales")
         .select(`
@@ -199,7 +126,6 @@ function MapaContenido({
 
       if (sucursalesError) throw sucursalesError;
 
-      // Get unique clients and assign colors
       const clientesMap = new Map<string, Cliente>();
       let colorIndex = 0;
       
@@ -219,7 +145,6 @@ function MapaContenido({
       );
       setClientes(clientesList);
 
-      // Transform sucursales data
       const transformedSucursales: SucursalGlobal[] = (sucursalesData || []).map((s: any) => ({
         id: s.id,
         nombre: s.nombre,
@@ -239,7 +164,6 @@ function MapaContenido({
 
       setSucursales(transformedSucursales);
 
-      // Load zones for filter
       const { data: zonasData } = await supabase
         .from("zonas")
         .select("id, nombre, region")
@@ -247,7 +171,6 @@ function MapaContenido({
         .order("nombre");
 
       setZonas(zonasData || []);
-
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -255,7 +178,6 @@ function MapaContenido({
     }
   };
 
-  // Get unique regions from zones
   const regions = useMemo(() => {
     const uniqueRegions = new Set<string>();
     zonas.forEach(z => {
@@ -264,7 +186,6 @@ function MapaContenido({
     return Array.from(uniqueRegions).sort();
   }, [zonas]);
 
-  // Apply filters
   const filteredSucursales = useMemo(() => {
     return sucursales.filter(s => {
       if (filterCliente !== "all" && s.cliente_id !== filterCliente) return false;
@@ -274,12 +195,10 @@ function MapaContenido({
     });
   }, [sucursales, filterCliente, filterZona, filterRegion]);
 
-  // Get client color
   const getClienteColor = useCallback((clienteId: string) => {
     return clientes.find(c => c.id === clienteId)?.color || MARKER_COLORS[0];
   }, [clientes]);
 
-  // Crear icono de marcador - solo cuando google está disponible
   const createMarkerIcon = useCallback((color: string) => {
     if (!isLoaded || typeof google === 'undefined') return undefined;
     const svg = `
@@ -295,7 +214,6 @@ function MapaContenido({
     };
   }, [isLoaded]);
 
-  // Fit bounds when filtered sucursales change
   useEffect(() => {
     if (mapRef.current && filteredSucursales.length > 0 && isLoaded && typeof google !== 'undefined') {
       const bounds = new google.maps.LatLngBounds();
@@ -306,7 +224,6 @@ function MapaContenido({
       });
       mapRef.current.fitBounds(bounds);
       
-      // Don't zoom too much for single point
       const listener = google.maps.event.addListener(mapRef.current, "idle", () => {
         if (mapRef.current && mapRef.current.getZoom()! > 15) {
           mapRef.current.setZoom(15);
@@ -329,7 +246,6 @@ function MapaContenido({
     }
   };
 
-  // Stats by client
   const statsByCliente = useMemo(() => {
     const stats: Record<string, number> = {};
     filteredSucursales.forEach(s => {
@@ -338,6 +254,29 @@ function MapaContenido({
     return stats;
   }, [filteredSucursales]);
 
+  // No API key
+  if (!hasApiKey) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-yellow-500" />
+              Mapa no disponible
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-6">
+            <Globe className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+            <p className="text-muted-foreground">
+              La API de Google Maps no está configurada.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Load error
   if (loadError) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -500,13 +439,10 @@ function MapaContenido({
                         <p className="text-xs text-gray-500">Zona: {selectedMarker.zona_nombre}</p>
                       )}
                       {selectedMarker.direccion && (
-                        <p className="text-xs text-gray-500 mt-1">{selectedMarker.direccion}</p>
+                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">{selectedMarker.direccion}</p>
                       )}
                       {selectedMarker.telefono && (
                         <p className="text-xs text-gray-500">Tel: {selectedMarker.telefono}</p>
-                      )}
-                      {selectedMarker.contacto && (
-                        <p className="text-xs text-gray-500">Contacto: {selectedMarker.contacto}</p>
                       )}
                       <Button
                         size="sm"
@@ -525,36 +461,34 @@ function MapaContenido({
           </div>
 
           {/* Legend sidebar */}
-          <div className="w-64 border-l bg-card overflow-y-auto p-4">
-            <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
-              Clientes ({Object.keys(statsByCliente).length})
-            </h3>
-            <div className="space-y-2">
-              {clientes
-                .filter(c => statsByCliente[c.id])
-                .map((cliente) => (
-                  <button
-                    key={cliente.id}
-                    onClick={() => setFilterCliente(
-                      filterCliente === cliente.id ? "all" : cliente.id
-                    )}
-                    className={`w-full flex items-center gap-2 p-2 rounded-md text-left text-sm transition-colors ${
-                      filterCliente === cliente.id 
-                        ? "bg-primary/10 ring-1 ring-primary" 
-                        : "hover:bg-muted"
-                    }`}
-                  >
-                    <div 
-                      className="w-4 h-4 rounded-full shrink-0" 
-                      style={{ backgroundColor: cliente.color }}
-                    />
-                    <span className="flex-1 truncate">{cliente.nombre}</span>
-                    <Badge variant="secondary" className="text-xs">
-                      {statsByCliente[cliente.id] || 0}
-                    </Badge>
-                  </button>
-                ))}
+          <div className="w-[280px] border-l bg-background overflow-y-auto shrink-0">
+            <div className="p-4">
+              <h3 className="font-semibold text-sm mb-3">Clientes en el mapa</h3>
+              <div className="space-y-2">
+                {clientes
+                  .filter(c => statsByCliente[c.id])
+                  .sort((a, b) => (statsByCliente[b.id] || 0) - (statsByCliente[a.id] || 0))
+                  .map((cliente) => (
+                    <button
+                      key={cliente.id}
+                      className={`w-full flex items-center gap-2 p-2 rounded-md text-left text-sm hover:bg-muted transition-colors ${
+                        filterCliente === cliente.id ? "bg-muted ring-1 ring-primary" : ""
+                      }`}
+                      onClick={() => setFilterCliente(
+                        filterCliente === cliente.id ? "all" : cliente.id
+                      )}
+                    >
+                      <div 
+                        className="w-3 h-3 rounded-full shrink-0" 
+                        style={{ backgroundColor: cliente.color }}
+                      />
+                      <span className="flex-1 truncate">{cliente.nombre}</span>
+                      <Badge variant="secondary" className="text-xs">
+                        {statsByCliente[cliente.id] || 0}
+                      </Badge>
+                    </button>
+                  ))}
+              </div>
             </div>
           </div>
         </div>
