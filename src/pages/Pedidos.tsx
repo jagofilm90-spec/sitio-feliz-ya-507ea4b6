@@ -30,10 +30,11 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Eye, ShoppingCart, FileText, Link2, Printer, Receipt, Send, CheckCircle2, Clock, BarChart3, Trash2, AlertCircle, DollarSign } from "lucide-react";
+import { Plus, Search, Eye, ShoppingCart, FileText, Link2, Printer, Receipt, Send, CheckCircle2, Clock, BarChart3, Trash2, AlertCircle, DollarSign, Users } from "lucide-react";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { AjustePreciosDialog } from "@/components/pedidos/AjustePreciosDialog";
 import { AjusteMasivoPreciosDialog } from "@/components/pedidos/AjusteMasivoPreciosDialog";
+import { AjustePreciosClienteDialog } from "@/components/pedidos/AjustePreciosClienteDialog";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import CotizacionesTab from "@/components/cotizaciones/CotizacionesTab";
@@ -84,6 +85,7 @@ const Pedidos = () => {
   const [ajustePreciosDialogOpen, setAjustePreciosDialogOpen] = useState(false);
   const [selectedPedidoForAjuste, setSelectedPedidoForAjuste] = useState<string | null>(null);
   const [ajusteMasivoDialogOpen, setAjusteMasivoDialogOpen] = useState(false);
+  const [ajusteClienteDialogOpen, setAjusteClienteDialogOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { canEditPrices, hasAnyRole } = useUserRoles();
@@ -668,14 +670,24 @@ const Pedidos = () => {
               </div>
               <div className="flex items-center gap-2">
                 {hasAnyRole(['admin', 'secretaria', 'contadora']) && (
-                  <Button 
-                    variant="outline"
-                    onClick={() => setAjusteMasivoDialogOpen(true)}
-                    className="gap-2"
-                  >
-                    <DollarSign className="h-4 w-4" />
-                    Ajuste Masivo
-                  </Button>
+                  <>
+                    <Button 
+                      variant="outline"
+                      onClick={() => setAjusteClienteDialogOpen(true)}
+                      className="gap-2"
+                    >
+                      <Users className="h-4 w-4" />
+                      Ajuste por Cliente
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => setAjusteMasivoDialogOpen(true)}
+                      className="gap-2"
+                    >
+                      <DollarSign className="h-4 w-4" />
+                      Ajuste Masivo
+                    </Button>
+                  </>
                 )}
                 <Button onClick={() => setNuevoPedidoDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -949,6 +961,13 @@ const Pedidos = () => {
       <AjusteMasivoPreciosDialog
         open={ajusteMasivoDialogOpen}
         onOpenChange={setAjusteMasivoDialogOpen}
+        onComplete={loadPedidos}
+      />
+
+      {/* Dialog para ajuste de precios por cliente */}
+      <AjustePreciosClienteDialog
+        open={ajusteClienteDialogOpen}
+        onOpenChange={setAjusteClienteDialogOpen}
         onComplete={loadPedidos}
       />
 
