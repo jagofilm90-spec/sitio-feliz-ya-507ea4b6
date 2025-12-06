@@ -31,10 +31,13 @@ import PushNotificationSetup from "./components/PushNotificationSetup";
 import { initPushNotifications, isNativePlatform } from "./services/pushNotifications";
 import { supabase } from "./integrations/supabase/client";
 
+console.log("📱 [APP] Creando QueryClient...");
 const queryClient = new QueryClient();
+console.log("📱 [APP] QueryClient creado");
 
 // Componente interno para manejar la inicialización de push notifications
 const PushNotificationInitializer = () => {
+  console.log("📱 [APP] PushNotificationInitializer montado");
   useEffect(() => {
     const initPush = async () => {
       // Solo inicializar si estamos en plataforma nativa
@@ -64,7 +67,9 @@ const PushNotificationInitializer = () => {
   return <PushNotificationSetup />;
 };
 
-const App = () => (
+const App = () => {
+  console.log("📱 [APP] Componente App renderizando...");
+  return (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <TooltipProvider>
@@ -101,6 +106,7 @@ const App = () => (
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

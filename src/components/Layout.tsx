@@ -46,6 +46,8 @@ interface LayoutProps {
 }
 
 const Layout = ({ children }: LayoutProps) => {
+  console.log("🏗️ [LAYOUT] Componente Layout montando...");
+  
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -53,22 +55,41 @@ const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  
+  console.log("🏗️ [LAYOUT] Llamando hooks...");
   const unreadCount = useUnreadMessages();
+  console.log("🏗️ [LAYOUT] useUnreadMessages completado:", unreadCount);
+  
   const { counts: emailCounts, cuentas: emailCuentas, totalUnread: totalUnreadEmails } = useUnreadEmails();
+  console.log("🏗️ [LAYOUT] useUnreadEmails completado, cuentas:", emailCuentas?.length);
+  
   const { roles, isLoading: rolesLoading } = useUserRoles();
+  console.log("🏗️ [LAYOUT] useUserRoles completado, roles:", roles, "loading:", rolesLoading);
+  
   const { allowedPaths, isLoading: permissionsLoading, checkAccess } = useUserModulePermissions();
+  console.log("🏗️ [LAYOUT] useUserModulePermissions completado, paths:", allowedPaths?.length, "loading:", permissionsLoading);
 
   useEffect(() => {
+    console.log("🔐 [LAYOUT] useEffect auth iniciando...");
+    
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("🔐 [LAYOUT] getSession completado, sesión:", !!session);
       if (!session) {
+        console.log("🔐 [LAYOUT] Sin sesión, redirigiendo a /auth");
         navigate("/auth");
       } else {
+        console.log("🔐 [LAYOUT] Usuario encontrado:", session.user?.email);
         setUser(session.user);
       }
+      setLoading(false);
+      console.log("🔐 [LAYOUT] Loading set to false");
+    }).catch((error) => {
+      console.error("❌ [LAYOUT] Error en getSession:", error);
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("🔐 [LAYOUT] onAuthStateChange:", event);
       if (event === "SIGNED_OUT" || !session) {
         navigate("/auth");
       } else {
@@ -191,6 +212,7 @@ const Layout = ({ children }: LayoutProps) => {
   };
 
   if (loading) {
+    console.log("⏳ [LAYOUT] Mostrando estado de carga...");
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -200,6 +222,8 @@ const Layout = ({ children }: LayoutProps) => {
       </div>
     );
   }
+
+  console.log("✅ [LAYOUT] Loading completo, renderizando contenido principal");
 
   return (
     <div className="min-h-screen bg-background">
