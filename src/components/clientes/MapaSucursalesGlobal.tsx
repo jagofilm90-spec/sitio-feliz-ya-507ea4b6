@@ -102,33 +102,14 @@ const REGION_LABELS: Record<string, string> = {
   tlaxcala: "Tlaxcala",
 };
 
-// createMarkerIcon se define dentro del componente para evitar ReferenceError cuando google no está cargado
-
+// Componente principal que verifica API key antes de cargar Google Maps
 function MapaSucursalesGlobal({
   open,
   onOpenChange,
 }: MapaSucursalesGlobalProps) {
-  const [sucursales, setSucursales] = useState<SucursalGlobal[]>([]);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [zonas, setZonas] = useState<Zona[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedMarker, setSelectedMarker] = useState<SucursalGlobal | null>(null);
-  
-  // Filters
-  const [filterCliente, setFilterCliente] = useState<string>("all");
-  const [filterZona, setFilterZona] = useState<string>("all");
-  const [filterRegion, setFilterRegion] = useState<string>("all");
-  
-  const mapRef = useRef<google.maps.Map | null>(null);
-
-  // Check API key before loading
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
-  
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: apiKey,
-  });
 
-  // If no API key, show warning dialog
+  // Si no hay API key, mostrar diálogo de advertencia sin cargar Google Maps
   if (!apiKey) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -152,6 +133,46 @@ function MapaSucursalesGlobal({
       </Dialog>
     );
   }
+
+  // Si hay API key, renderizar el contenido del mapa
+  return (
+    <MapaContenido 
+      open={open} 
+      onOpenChange={onOpenChange} 
+      apiKey={apiKey} 
+    />
+  );
+}
+
+// Componente interno que usa los hooks de Google Maps
+interface MapaContenidoProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  apiKey: string;
+}
+
+function MapaContenido({
+  open,
+  onOpenChange,
+  apiKey,
+}: MapaContenidoProps) {
+  const [sucursales, setSucursales] = useState<SucursalGlobal[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [zonas, setZonas] = useState<Zona[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedMarker, setSelectedMarker] = useState<SucursalGlobal | null>(null);
+  
+  // Filters
+  const [filterCliente, setFilterCliente] = useState<string>("all");
+  const [filterZona, setFilterZona] = useState<string>("all");
+  const [filterRegion, setFilterRegion] = useState<string>("all");
+  
+  const mapRef = useRef<google.maps.Map | null>(null);
+
+  // Ahora es seguro usar el hook porque ya verificamos que apiKey existe
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: apiKey,
+  });
 
   useEffect(() => {
     if (open) {
@@ -503,26 +524,24 @@ function MapaSucursalesGlobal({
           </div>
 
           {/* Legend sidebar */}
-          <div className="w-64 border-l bg-background overflow-y-auto p-4 shrink-0">
-            <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Leyenda de Clientes
-            </h4>
+          <div className="w-64 border-l bg-card overflow-y-auto p-4">
+            <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Clientes ({Object.keys(statsByCliente).length})
+            </h3>
             <div className="space-y-2">
-              {clientes.map((cliente) => {
-                const count = statsByCliente[cliente.id] || 0;
-                const isFiltered = filterCliente !== "all" && filterCliente !== cliente.id;
-                
-                return (
+              {clientes
+                .filter(c => statsByCliente[c.id])
+                .map((cliente) => (
                   <button
                     key={cliente.id}
-                    onClick={() => setFilterCliente(filterCliente === cliente.id ? "all" : cliente.id)}
+                    onClick={() => setFilterCliente(
+                      filterCliente === cliente.id ? "all" : cliente.id
+                    )}
                     className={`w-full flex items-center gap-2 p-2 rounded-md text-left text-sm transition-colors ${
                       filterCliente === cliente.id 
                         ? "bg-primary/10 ring-1 ring-primary" 
-                        : isFiltered 
-                          ? "opacity-40 hover:opacity-70" 
-                          : "hover:bg-muted"
+                        : "hover:bg-muted"
                     }`}
                   >
                     <div 
@@ -531,19 +550,11 @@ function MapaSucursalesGlobal({
                     />
                     <span className="flex-1 truncate">{cliente.nombre}</span>
                     <Badge variant="secondary" className="text-xs">
-                      {count}
+                      {statsByCliente[cliente.id] || 0}
                     </Badge>
                   </button>
-                );
-              })}
+                ))}
             </div>
-
-            {filteredSucursales.length === 0 && !loading && (
-              <div className="text-center py-8 text-muted-foreground">
-                <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No hay sucursales que coincidan con los filtros</p>
-              </div>
-            )}
           </div>
         </div>
       </DialogContent>
