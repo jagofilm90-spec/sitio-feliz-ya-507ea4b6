@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { MapPin, Navigation, Loader2, AlertCircle, Globe, Building2 } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
+import { GOOGLE_MAPS_API_KEY } from "@/config/googleMaps";
 
 interface Cliente {
   id: string;
@@ -107,7 +108,7 @@ function MapaSucursalesGlobal({
   open,
   onOpenChange,
 }: MapaSucursalesGlobalProps) {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+  const apiKey = GOOGLE_MAPS_API_KEY;
 
   // Si no hay API key, mostrar diálogo de advertencia sin cargar Google Maps
   if (!apiKey) {
