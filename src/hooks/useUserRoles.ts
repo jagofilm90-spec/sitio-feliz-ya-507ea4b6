@@ -16,6 +16,8 @@ interface UseUserRolesReturn {
   isCliente: boolean;
   hasRole: (role: AppRole) => boolean;
   hasAnyRole: (roles: AppRole[]) => boolean;
+  canEditPrices: () => boolean;
+  canViewPrices: () => boolean;
 }
 
 export const useUserRoles = (): UseUserRolesReturn => {
@@ -77,6 +79,16 @@ export const useUserRoles = (): UseUserRolesReturn => {
   const hasAnyRole = (checkRoles: AppRole[]): boolean => 
     checkRoles.some(role => roles.includes(role));
 
+  // Helper para verificar si el usuario puede editar precios
+  const canEditPrices = (): boolean => {
+    return hasAnyRole(['admin', 'secretaria']);
+  };
+
+  // Helper para verificar si el usuario puede ver precios
+  const canViewPrices = (): boolean => {
+    return hasAnyRole(['admin', 'secretaria', 'contadora', 'vendedor']);
+  };
+
   return {
     roles,
     isLoading,
@@ -89,6 +101,8 @@ export const useUserRoles = (): UseUserRolesReturn => {
     isCliente: hasRole('cliente'),
     hasRole,
     hasAnyRole,
+    canEditPrices,
+    canViewPrices,
   };
 };
 

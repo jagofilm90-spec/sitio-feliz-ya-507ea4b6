@@ -2172,8 +2172,13 @@ export type Database = {
         Row: {
           cantidad: number
           created_at: string
+          fecha_ajuste_precio: string | null
           id: string
+          linea_dividida_de: string | null
+          notas_ajuste: string | null
           pedido_id: string
+          precio_ajustado_por: string | null
+          precio_original: number | null
           precio_unitario: number
           producto_id: string
           subtotal: number
@@ -2182,8 +2187,13 @@ export type Database = {
         Insert: {
           cantidad: number
           created_at?: string
+          fecha_ajuste_precio?: string | null
           id?: string
+          linea_dividida_de?: string | null
+          notas_ajuste?: string | null
           pedido_id: string
+          precio_ajustado_por?: string | null
+          precio_original?: number | null
           precio_unitario: number
           producto_id: string
           subtotal: number
@@ -2192,8 +2202,13 @@ export type Database = {
         Update: {
           cantidad?: number
           created_at?: string
+          fecha_ajuste_precio?: string | null
           id?: string
+          linea_dividida_de?: string | null
+          notas_ajuste?: string | null
           pedido_id?: string
+          precio_ajustado_por?: string | null
+          precio_original?: number | null
           precio_unitario?: number
           producto_id?: string
           subtotal?: number
@@ -2201,10 +2216,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "pedidos_detalles_linea_dividida_de_fkey"
+            columns: ["linea_dividida_de"]
+            isOneToOne: false
+            referencedRelation: "pedidos_detalles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pedidos_detalles_pedido_id_fkey"
             columns: ["pedido_id"]
             isOneToOne: false
             referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_detalles_precio_ajustado_por_fkey"
+            columns: ["precio_ajustado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
