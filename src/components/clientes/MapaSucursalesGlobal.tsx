@@ -104,7 +104,7 @@ const REGION_LABELS: Record<string, string> = {
 
 // createMarkerIcon se define dentro del componente para evitar ReferenceError cuando google no está cargado
 
-export function MapaSucursalesGlobal({
+function MapaSucursalesGlobal({
   open,
   onOpenChange,
 }: MapaSucursalesGlobalProps) {
@@ -522,3 +522,5 @@ export function MapaSucursalesGlobal({
     </Dialog>
   );
 }
+
+export default MapaSucursalesGlobal;
