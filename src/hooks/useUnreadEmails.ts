@@ -33,9 +33,14 @@ export const useUnreadEmails = (): UnreadEmailsData => {
 
   // Load connected email accounts
   const loadCuentas = useCallback(async () => {
+    console.log("📧 [EMAILS] loadCuentas iniciando...");
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      console.log("📧 [EMAILS] Usuario para emails:", user?.email);
+      if (!user) {
+        console.log("📧 [EMAILS] Sin usuario, abortando");
+        return;
+      }
 
       // Check if user is admin
       const { data: roles } = await supabase
@@ -76,15 +81,18 @@ export const useUnreadEmails = (): UnreadEmailsData => {
         }
       }
 
+      console.log("📧 [EMAILS] Cuentas conectadas:", connectedCuentas?.length);
       setCuentas(connectedCuentas);
     } catch (error) {
-      console.error("Error loading email accounts:", error);
+      console.error("❌ [EMAILS] Error loading email accounts:", error);
     }
   }, []);
 
   // Fetch unread counts for all accounts
   const loadUnreadCounts = useCallback(async () => {
+    console.log("📧 [EMAILS] loadUnreadCounts iniciando, cuentas:", cuentas.length);
     if (cuentas.length === 0) {
+      console.log("📧 [EMAILS] Sin cuentas, saltando conteo");
       setIsLoading(false);
       return;
     }

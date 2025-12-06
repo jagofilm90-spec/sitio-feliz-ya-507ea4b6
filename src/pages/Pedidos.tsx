@@ -61,6 +61,8 @@ interface PedidoConCotizacion {
 }
 
 const Pedidos = () => {
+  console.log("📦 [PEDIDOS] Componente Pedidos montando...");
+  
   const [pedidos, setPedidos] = useState<PedidoConCotizacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -84,8 +86,10 @@ const Pedidos = () => {
   }, []);
 
   const loadPedidos = async () => {
+    console.log("📦 [PEDIDOS] loadPedidos iniciando...");
     try {
       // First get pedidos
+      console.log("📦 [PEDIDOS] Consultando pedidos en Supabase...");
       const { data: pedidosData, error: pedidosError } = await supabase
         .from("pedidos")
         .select(`
@@ -105,7 +109,11 @@ const Pedidos = () => {
         `)
         .order("fecha_pedido", { ascending: false });
 
-      if (pedidosError) throw pedidosError;
+      if (pedidosError) {
+        console.error("❌ [PEDIDOS] Error en query pedidos:", pedidosError);
+        throw pedidosError;
+      }
+      console.log("📦 [PEDIDOS] Pedidos obtenidos:", pedidosData?.length);
 
       // Get cotizaciones that have pedido_id (created from cotizacion)
       const { data: cotizacionesData, error: cotizacionesError } = await supabase
@@ -143,7 +151,9 @@ const Pedidos = () => {
       });
 
       setPedidos(pedidosConCotizacion);
+      console.log("📦 [PEDIDOS] Estado actualizado con", pedidosConCotizacion.length, "pedidos");
     } catch (error: any) {
+      console.error("❌ [PEDIDOS] Error cargando pedidos:", error);
       toast({
         title: "Error",
         description: "No se pudieron cargar los pedidos",
@@ -151,6 +161,7 @@ const Pedidos = () => {
       });
     } finally {
       setLoading(false);
+      console.log("📦 [PEDIDOS] loadPedidos completado, loading=false");
     }
   };
 
