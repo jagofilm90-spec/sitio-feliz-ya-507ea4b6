@@ -48,19 +48,32 @@ export const NotificacionesSistema = () => {
   }, []);
 
   const cargarNotificaciones = async () => {
-    // Primero generar notificaciones de fumigación
     try {
-      await supabase.rpc('generar_notificaciones_fumigacion');
+      // Primero generar notificaciones de fumigación (con timeout para no bloquear)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 5000)
+      );
+      
+      try {
+        await Promise.race([
+          supabase.rpc('generar_notificaciones_fumigacion'),
+          timeoutPromise
+        ]);
+      } catch (error) {
+        console.warn("⚠️ [NOTIFICACIONES] RPC fumigación falló o timeout:", error);
+        // Continuar sin bloquear
+      }
+      
+      await Promise.all([
+        cargarAlertasCaducidad(),
+        cargarNotificacionesStock(),
+        cargarNotificacionesFumigacion()
+      ]);
     } catch (error) {
-      console.error("Error generando notificaciones de fumigación:", error);
+      console.error("❌ [NOTIFICACIONES] Error general cargando notificaciones:", error);
+    } finally {
+      setLoading(false);
     }
-    
-    await Promise.all([
-      cargarAlertasCaducidad(),
-      cargarNotificacionesStock(),
-      cargarNotificacionesFumigacion()
-    ]);
-    setLoading(false);
   };
 
   const cargarAlertasCaducidad = async () => {

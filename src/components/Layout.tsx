@@ -69,6 +69,17 @@ const Layout = ({ children }: LayoutProps) => {
   const { allowedPaths, isLoading: permissionsLoading, checkAccess } = useUserModulePermissions();
   console.log("🏗️ [LAYOUT] useUserModulePermissions completado, paths:", allowedPaths?.length, "loading:", permissionsLoading);
 
+  // Timeout de seguridad para evitar pantalla en blanco infinita
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.error("⚠️ [LAYOUT] Timeout - forzando salida del estado de carga después de 5 segundos");
+        setLoading(false);
+      }
+    }, 5000);
+    return () => clearTimeout(timeout);
+  }, [loading]);
+
   useEffect(() => {
     console.log("🔐 [LAYOUT] useEffect auth iniciando...");
     
