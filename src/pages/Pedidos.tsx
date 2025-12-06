@@ -30,7 +30,9 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Eye, ShoppingCart, FileText, Link2, Printer, Receipt, Send, CheckCircle2, Clock, BarChart3, Trash2, AlertCircle } from "lucide-react";
+import { Plus, Search, Eye, ShoppingCart, FileText, Link2, Printer, Receipt, Send, CheckCircle2, Clock, BarChart3, Trash2, AlertCircle, DollarSign } from "lucide-react";
+import { useUserRoles } from "@/hooks/useUserRoles";
+import { AjustePreciosDialog } from "@/components/pedidos/AjustePreciosDialog";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import CotizacionesTab from "@/components/cotizaciones/CotizacionesTab";
@@ -78,8 +80,11 @@ const Pedidos = () => {
   const [selectedPedidos, setSelectedPedidos] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [ajustePreciosDialogOpen, setAjustePreciosDialogOpen] = useState(false);
+  const [selectedPedidoForAjuste, setSelectedPedidoForAjuste] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { canEditPrices } = useUserRoles();
 
   useEffect(() => {
     loadPedidos();
@@ -789,6 +794,28 @@ const Pedidos = () => {
                               </Tooltip>
                             </TooltipProvider>
                             
+                            {/* Ajustar Precios - Only for users with price edit permission */}
+                            {canEditPrices() && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon"
+                                      onClick={() => {
+                                        setSelectedPedidoForAjuste(pedido.id);
+                                        setAjustePreciosDialogOpen(true);
+                                      }}
+                                    >
+                                      <DollarSign className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Ajustar Precios</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            
+                            
                             {/* Facturar Pedido - Only show if not facturado */}
                             {!pedido.facturado && (
                               <TooltipProvider>
@@ -894,6 +921,14 @@ const Pedidos = () => {
         onNavigatePrevious={handleNavigatePreviousPedido}
         canNavigateNext={canNavigateNext}
         canNavigatePrevious={canNavigatePrevious}
+      />
+
+      {/* Dialog para ajustar precios */}
+      <AjustePreciosDialog
+        open={ajustePreciosDialogOpen}
+        onOpenChange={setAjustePreciosDialogOpen}
+        pedidoId={selectedPedidoForAjuste}
+        onPreciosAjustados={loadPedidos}
       />
 
       {/* Alert Dialog para confirmar eliminación */}

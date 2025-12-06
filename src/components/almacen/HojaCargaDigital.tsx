@@ -98,7 +98,7 @@ export const HojaCargaDigital = ({ ruta, onBack, onComplete }: HojaCargaDigitalP
         return;
       }
 
-      // Get pedido details
+      // Get pedido details (without price fields - protected from warehouse users)
       const { data: detalles, error: detallesError } = await supabase
         .from("pedidos_detalles")
         .select(`
@@ -106,7 +106,7 @@ export const HojaCargaDigital = ({ ruta, onBack, onComplete }: HojaCargaDigitalP
           pedido_id,
           producto_id,
           cantidad,
-          producto:productos(id, codigo, nombre)
+          producto:productos(id, codigo, nombre, unidad, kg_por_unidad)
         `)
         .in("pedido_id", pedidoIds);
 

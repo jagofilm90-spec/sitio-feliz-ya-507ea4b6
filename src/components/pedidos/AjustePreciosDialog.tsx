@@ -27,8 +27,8 @@ interface DetalleLinea {
 interface AjustePreciosDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  pedidoId: string;
-  pedidoFolio: string;
+  pedidoId: string | null;
+  pedidoFolio?: string;
   onPreciosAjustados: () => void;
 }
 
@@ -36,9 +36,10 @@ export const AjustePreciosDialog = ({
   open,
   onOpenChange,
   pedidoId,
-  pedidoFolio,
+  pedidoFolio: initialFolio,
   onPreciosAjustados
 }: AjustePreciosDialogProps) => {
+  const [pedidoFolio, setPedidoFolio] = useState(initialFolio || "");
   const [lineas, setLineas] = useState<DetalleLinea[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -53,8 +54,20 @@ export const AjustePreciosDialog = ({
   }, [open, pedidoId]);
 
   const loadLineas = async () => {
+    if (!pedidoId) return;
+    
     setLoading(true);
     try {
+      // Load pedido folio if not provided
+      if (!initialFolio) {
+        const { data: pedido } = await supabase
+          .from("pedidos")
+          .select("folio")
+          .eq("id", pedidoId)
+          .single();
+        if (pedido) setPedidoFolio(pedido.folio);
+      }
+
       const { data, error } = await supabase
         .from("pedidos_detalles")
         .select(`
