@@ -1,9 +1,29 @@
-import { PushNotifications, Token, PushNotificationSchema, ActionPerformed } from '@capacitor/push-notifications';
-import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 
-// Verificar si estamos en plataforma nativa
-export const isNativePlatform = () => Capacitor.isNativePlatform();
+// Verificar si estamos en plataforma nativa - check safely
+export const isNativePlatform = (): boolean => {
+  try {
+    // Check if Capacitor global exists
+    if (typeof window !== 'undefined' && (window as any).Capacitor) {
+      return (window as any).Capacitor.isNativePlatform?.() || false;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+};
+
+// Get Capacitor instance safely
+const getCapacitor = () => {
+  try {
+    if (typeof window !== 'undefined' && (window as any).Capacitor) {
+      return (window as any).Capacitor;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
 
 // Inicializar sistema de notificaciones push
 export const initPushNotifications = async (): Promise<boolean> => {
@@ -13,6 +33,9 @@ export const initPushNotifications = async (): Promise<boolean> => {
   }
 
   try {
+    // Dynamic import for Capacitor modules
+    const { PushNotifications } = await import('@capacitor/push-notifications');
+    
     // Solicitar permisos
     const permissionStatus = await PushNotifications.requestPermissions();
     
@@ -25,7 +48,7 @@ export const initPushNotifications = async (): Promise<boolean> => {
     await PushNotifications.register();
 
     // Configurar listeners
-    setupPushListeners();
+    await setupPushListeners();
 
     console.log('Sistema de notificaciones push inicializado');
     return true;
@@ -36,32 +59,38 @@ export const initPushNotifications = async (): Promise<boolean> => {
 };
 
 // Configurar listeners para eventos de push
-const setupPushListeners = () => {
-  // Cuando se recibe el token de registro
-  PushNotifications.addListener('registration', async (token: Token) => {
-    console.log('Token de push recibido:', token.value);
-    await saveDeviceToken(token.value);
-  });
+const setupPushListeners = async () => {
+  try {
+    const { PushNotifications } = await import('@capacitor/push-notifications');
 
-  // Error en registro
-  PushNotifications.addListener('registrationError', (error) => {
-    console.error('Error en registro de push:', error);
-  });
+    // Cuando se recibe el token de registro
+    PushNotifications.addListener('registration', async (token: any) => {
+      console.log('Token de push recibido:', token.value);
+      await saveDeviceToken(token.value);
+    });
 
-  // Notificación recibida con app en primer plano
-  PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
-    console.log('Notificación recibida:', notification);
-    handleForegroundNotification(notification);
-  });
+    // Error en registro
+    PushNotifications.addListener('registrationError', (error: any) => {
+      console.error('Error en registro de push:', error);
+    });
 
-  // Usuario tocó la notificación
-  PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
-    console.log('Acción de notificación:', action);
-    handleNotificationTap(action);
-  });
+    // Notificación recibida con app en primer plano
+    PushNotifications.addListener('pushNotificationReceived', (notification: any) => {
+      console.log('Notificación recibida:', notification);
+      handleForegroundNotification(notification);
+    });
+
+    // Usuario tocó la notificación
+    PushNotifications.addListener('pushNotificationActionPerformed', (action: any) => {
+      console.log('Acción de notificación:', action);
+      handleNotificationTap(action);
+    });
+  } catch (error) {
+    console.error('Error setting up push listeners:', error);
+  }
 };
 
-// Guardar token del dispositivo en la base de datos usando SQL directo
+// Guardar token del dispositivo en la base de datos
 const saveDeviceToken = async (token: string): Promise<void> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -71,11 +100,10 @@ const saveDeviceToken = async (token: string): Promise<void> => {
       return;
     }
 
-    const platform = Capacitor.getPlatform();
+    const capacitor = getCapacitor();
+    const platform = capacitor?.getPlatform?.() || 'unknown';
     const deviceName = `${platform}-${Date.now()}`;
 
-    // Usar inserción directa con la tabla device_tokens
-    // La tabla existe pero los tipos no están regenerados aún
     const client = supabase as any;
     const { error } = await client
       .from('device_tokens')
@@ -100,7 +128,7 @@ const saveDeviceToken = async (token: string): Promise<void> => {
 };
 
 // Manejar notificación recibida en primer plano
-const handleForegroundNotification = (notification: PushNotificationSchema) => {
+const handleForegroundNotification = (notification: any) => {
   import('@/hooks/use-toast').then(({ toast }) => {
     toast({
       title: notification.title || 'Nueva notificación',
@@ -110,8 +138,8 @@ const handleForegroundNotification = (notification: PushNotificationSchema) => {
 };
 
 // Manejar tap en notificación
-const handleNotificationTap = (action: ActionPerformed) => {
-  const data = action.notification.data as Record<string, string> | undefined;
+const handleNotificationTap = (action: any) => {
+  const data = action.notification?.data as Record<string, string> | undefined;
   
   if (!data?.type) return;
 
@@ -148,7 +176,8 @@ export const removeDeviceToken = async (): Promise<void> => {
     
     if (!user) return;
 
-    const platform = Capacitor.getPlatform();
+    const capacitor = getCapacitor();
+    const platform = capacitor?.getPlatform?.() || 'unknown';
     const client = supabase as any;
 
     await client
@@ -168,6 +197,7 @@ export const checkNotificationPermissions = async (): Promise<boolean> => {
   if (!isNativePlatform()) return false;
 
   try {
+    const { PushNotifications } = await import('@capacitor/push-notifications');
     const status = await PushNotifications.checkPermissions();
     return status.receive === 'granted';
   } catch {
