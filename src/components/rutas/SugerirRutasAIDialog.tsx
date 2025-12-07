@@ -28,12 +28,14 @@ import {
   Map,
   Calendar,
   Clock,
-  Info
+  Info,
+  Route
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { RouteMapVisualization } from "./RouteMapVisualization";
 import { InteractiveRouteMap, RouteData } from "./InteractiveRouteMap";
+import { RealRouteVisualization, RealRoutePoint } from "./RealRouteVisualization";
 
 interface RutaSugerida {
   vehiculo: {
@@ -94,6 +96,13 @@ export const SugerirRutasAIDialog = ({
   const [creandoRutas, setCreandoRutas] = useState<Set<number>>(new Set());
   const [showMaps, setShowMaps] = useState<Set<number>>(new Set());
   const [showGlobalMap, setShowGlobalMap] = useState(false);
+  const [realRouteDialog, setRealRouteDialog] = useState<{
+    open: boolean;
+    index: number;
+    puntos: RealRoutePoint[];
+    vehiculoNombre: string;
+    color: string;
+  }>({ open: false, index: -1, puntos: [], vehiculoNombre: "", color: "" });
   
   // Vehicle selection state
   const [vehiculosDisponibles, setVehiculosDisponibles] = useState<VehiculoDisponible[]>([]);
@@ -154,6 +163,28 @@ export const SugerirRutasAIDialog = ({
       newShowMaps.add(index);
     }
     setShowMaps(newShowMaps);
+  };
+
+  const openRealRoute = (ruta: RutaSugerida, index: number) => {
+    const puntos: RealRoutePoint[] = ruta.pedidos.map((pedido: any, pIdx: number) => ({
+      id: pedido.id,
+      folio: pedido.folio,
+      cliente: pedido.cliente?.nombre || "Sin cliente",
+      sucursal: pedido.sucursal?.nombre,
+      direccion: pedido.sucursal?.direccion || pedido.cliente?.direccion || "",
+      peso_kg: pedido.peso_total_kg || 0,
+      orden: pIdx + 1,
+      lat: pedido.sucursal?.latitud || undefined,
+      lng: pedido.sucursal?.longitud || undefined,
+    }));
+
+    setRealRouteDialog({
+      open: true,
+      index,
+      puntos,
+      vehiculoNombre: ruta.vehiculo.nombre,
+      color: ROUTE_COLORS[index % ROUTE_COLORS.length],
+    });
   };
 
   const generarSugerencias = async () => {
@@ -575,6 +606,17 @@ export const SugerirRutasAIDialog = ({
                               <Map className="h-4 w-4 mr-2" />
                               {showMaps.has(index) ? "Ocultar Mapa" : "Ver en Mapa"}
                             </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openRealRoute(ruta, index);
+                              }}
+                            >
+                              <Route className="h-4 w-4 mr-2" />
+                              Ver Ruta Real
+                            </Button>
                           </div>
 
                           {showMaps.has(index) && (
@@ -739,6 +781,14 @@ export const SugerirRutasAIDialog = ({
           )}
         </div>
       </DialogContent>
+      {/* Real Route Visualization Dialog */}
+      <RealRouteVisualization
+        open={realRouteDialog.open}
+        onOpenChange={(open) => setRealRouteDialog(prev => ({ ...prev, open }))}
+        puntos={realRouteDialog.puntos}
+        vehiculoNombre={realRouteDialog.vehiculoNombre}
+        color={realRouteDialog.color}
+      />
     </Dialog>
   );
 };
