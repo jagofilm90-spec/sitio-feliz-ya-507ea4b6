@@ -65,7 +65,7 @@ export function ClienteSucursalesMapDialog({
   const [loading, setLoading] = useState(false);
   const [loadingClientes, setLoadingClientes] = useState(true);
   const [selectedMarker, setSelectedMarker] = useState<Sucursal | null>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
+  const mapRef = useRef<any>(null);
 
   useEffect(() => {
     if (open) {
@@ -143,7 +143,7 @@ export function ClienteSucursalesMapDialog({
     }
   };
 
-  const onMapLoad = useCallback((map: google.maps.Map) => {
+  const onMapLoad = useCallback((map: any) => {
     mapRef.current = map;
   }, []);
 
