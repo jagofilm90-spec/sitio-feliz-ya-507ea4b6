@@ -654,8 +654,9 @@ EJEMPLO INCORRECTO:
 1. Identifica clusters de pedidos cercanos por región
 2. SUMA los pesos del cluster
 3. Asigna el cluster completo al vehículo que mejor se ajuste
-4. Objetivo: 80-95% de capacidad utilizada
-5. Los pedidos que no quepan hoy van a "para_despues" (NO es error)
+4. Objetivo: 90-100% de capacidad utilizada (mínimo 90%)
+5. NUNCA envíes un camión medio vacío si hay más pedidos de la misma zona
+6. Los pedidos que no quepan hoy van a "para_despues" (NO es error)
 
 ## PRIORIDADES:
 1. vip_mismo_dia: DEBE entregarse hoy sin excepción
