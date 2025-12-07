@@ -25,7 +25,7 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
-  Map,
+  Map as MapIcon,
   Calendar,
   Clock,
   Info,
@@ -105,7 +105,7 @@ export const SugerirRutasAIDialog = ({
   }>({ open: false, index: -1, puntos: [], vehiculoNombre: "", color: "" });
   
   // State for storing Google-optimized orders per route
-  const [optimizedOrders, setOptimizedOrders] = useState<globalThis.Map<number, RealRoutePoint[]>>(new globalThis.Map());
+  const [optimizedOrders, setOptimizedOrders] = useState<Record<number, RealRoutePoint[]>>({});
   
   // Vehicle selection state
   const [vehiculosDisponibles, setVehiculosDisponibles] = useState<VehiculoDisponible[]>([]);
@@ -288,7 +288,7 @@ export const SugerirRutasAIDialog = ({
       if (rutaError) throw rutaError;
 
       // Use Google-optimized order if user selected it, otherwise use AI order
-      const optimizedOrder = optimizedOrders.get(index);
+      const optimizedOrder = optimizedOrders[index];
       const ordenFinal = optimizedOrder || ruta.pedidos;
       
       const entregasData = ordenFinal.map((punto: any, idx: number) => ({
@@ -518,7 +518,7 @@ export const SugerirRutasAIDialog = ({
                       size="sm" 
                       onClick={() => setShowGlobalMap(!showGlobalMap)}
                     >
-                      <Map className="h-4 w-4 mr-2" />
+                      <MapIcon className="h-4 w-4 mr-2" />
                       {showGlobalMap ? "Ocultar Mapa" : "Ver Mapa"}
                     </Button>
                     <Button variant="outline" size="sm" onClick={generarSugerencias}>
@@ -610,7 +610,7 @@ export const SugerirRutasAIDialog = ({
                                 toggleMap(index);
                               }}
                             >
-                              <Map className="h-4 w-4 mr-2" />
+                              <MapIcon className="h-4 w-4 mr-2" />
                               {showMaps.has(index) ? "Ocultar Mapa" : "Ver en Mapa"}
                             </Button>
                             <Button
@@ -798,17 +798,15 @@ export const SugerirRutasAIDialog = ({
         onOrderSelected={(orderType, points) => {
           if (orderType === 'google' && realRouteDialog.index >= 0) {
             // Store the Google-optimized order for this route
-            setOptimizedOrders(prev => {
-              const newMap = new globalThis.Map(prev);
-              newMap.set(realRouteDialog.index, points);
-              return newMap;
-            });
+            setOptimizedOrders(prev => ({
+              ...prev,
+              [realRouteDialog.index]: points
+            }));
           } else if (realRouteDialog.index >= 0) {
             // User chose AI order, remove any optimized order
             setOptimizedOrders(prev => {
-              const newMap = new globalThis.Map(prev);
-              newMap.delete(realRouteDialog.index);
-              return newMap;
+              const { [realRouteDialog.index]: _, ...rest } = prev;
+              return rest;
             });
           }
         }}
