@@ -783,7 +783,7 @@ function MapaSucursalesGlobal({ open, onOpenChange }: MapaSucursalesGlobalProps)
                     position={{ lat: hoveredMarker.latitud!, lng: hoveredMarker.longitud! }}
                     options={{ 
                       disableAutoPan: true,
-                      pixelOffset: new google.maps.Size(0, -35)
+                      pixelOffset: typeof google !== 'undefined' ? new google.maps.Size(0, -35) : undefined
                     }}
                   >
                     <div className="p-1 min-w-[150px]">
