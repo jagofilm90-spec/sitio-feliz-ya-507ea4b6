@@ -69,14 +69,14 @@ export const RealRouteVisualization = ({
   color = "#3b82f6",
 }: RealRouteVisualizationProps) => {
   const { isLoaded, loadError, hasApiKey } = useGoogleMapsLoader();
-  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
+  const [directions, setDirections] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [routeStats, setRouteStats] = useState<{
     distanceKm: number;
     durationMinutes: number;
   } | null>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
+  const mapRef = useRef<any>(null);
 
   // Filter points with valid coordinates
   const validPoints = puntos.filter(p => p.lat && p.lng);
