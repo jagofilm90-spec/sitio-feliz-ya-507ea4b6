@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import TarjetaDigital from "./pages/TarjetaDigital";
@@ -28,8 +28,6 @@ import CorreosCorporativos from "./pages/CorreosCorporativos";
 import GenerateAssets from "./pages/GenerateAssets";
 import DisenosCamioneta from "./pages/DisenosCamioneta";
 import Permisos from "./pages/Permisos";
-import PushNotificationSetup from "./components/PushNotificationSetup";
-import { initPushNotifications, isNativePlatform } from "./services/pushNotifications";
 import { supabase } from "./integrations/supabase/client";
 
 const queryClient = new QueryClient({
@@ -41,43 +39,57 @@ const queryClient = new QueryClient({
   },
 });
 
-// Componente interno para manejar la inicialización de push notifications
+// Componente seguro para inicializar push notifications - usa imports dinámicos
 const PushNotificationInitializer = () => {
+  const [initialized, setInitialized] = useState(false);
+
   useEffect(() => {
+    if (initialized) return;
+
     const initPush = async () => {
       try {
+        // Importar dinámicamente para evitar errores en navegador web
+        const pushService = await import('./services/pushNotifications');
+        
         // Solo inicializar si estamos en plataforma nativa
-        if (!isNativePlatform()) return;
+        if (!pushService.isNativePlatform()) {
+          setInitialized(true);
+          return;
+        }
 
         // Esperar a que haya una sesión activa
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          await initPushNotifications();
+          await pushService.initPushNotifications();
         }
+
+        // Escuchar cambios de autenticación
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+          if (event === 'SIGNED_IN') {
+            try {
+              await pushService.initPushNotifications();
+            } catch (error) {
+              console.log("Push notifications not available:", error);
+            }
+          }
+        });
+
+        setInitialized(true);
+
+        return () => {
+          subscription.unsubscribe();
+        };
       } catch (error) {
-        console.error("Error initializing push notifications:", error);
+        // Silently fail - push notifications not critical for web
+        console.log("Push notifications not available:", error);
+        setInitialized(true);
       }
     };
 
     initPush();
+  }, [initialized]);
 
-    // Escuchar cambios de autenticación
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        try {
-          await initPushNotifications();
-        } catch (error) {
-          console.error("Error initializing push notifications on sign in:", error);
-        }
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  return <PushNotificationSetup />;
+  return null;
 };
 
 const App = () => (
