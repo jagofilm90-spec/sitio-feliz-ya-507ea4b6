@@ -10,10 +10,8 @@ import {
   Clock, 
   Navigation2, 
   AlertCircle,
-  AlertTriangle,
   Route,
-  X,
-  Home
+  X
 } from "lucide-react";
 import {
   Dialog,
@@ -82,9 +80,6 @@ export const RealRouteVisualization = ({
 
   // Filter points with valid coordinates
   const validPoints = puntos.filter(p => p.lat && p.lng);
-  
-  // Identify points missing coordinates
-  const missingCoords = puntos.filter(p => !p.lat || !p.lng);
 
   // Calculate route when dialog opens
   useEffect(() => {
@@ -116,15 +111,17 @@ export const RealRouteVisualization = ({
       const MAX_WAYPOINTS = 23;
       
       if (validPoints.length <= MAX_WAYPOINTS) {
-        // All deliveries are waypoints, route returns to warehouse (complete circuit)
-        const waypoints = validPoints.map(p => ({
+        // Single request for routes within limit
+        const waypoints = validPoints.slice(0, -1).map(p => ({
           location: { lat: p.lat!, lng: p.lng! },
           stopover: true,
         }));
 
+        const lastPoint = validPoints[validPoints.length - 1];
+
         const result = await directionsService.route({
           origin: BODEGA_PRINCIPAL,
-          destination: BODEGA_PRINCIPAL, // Returns to warehouse (complete circuit)
+          destination: { lat: lastPoint.lat!, lng: lastPoint.lng! },
           waypoints,
           travelMode: google.maps.TravelMode.DRIVING,
           optimizeWaypoints: false, // Keep AI-defined order
@@ -133,7 +130,7 @@ export const RealRouteVisualization = ({
 
         setDirections(result);
 
-        // Calculate total distance and duration (includes return leg to warehouse)
+        // Calculate total distance and duration
         const legs = result.routes[0].legs;
         const totalDistance = legs.reduce((sum, leg) => sum + (leg.distance?.value || 0), 0);
         const totalDuration = legs.reduce((sum, leg) => sum + (leg.duration?.value || 0), 0);
@@ -146,14 +143,16 @@ export const RealRouteVisualization = ({
         // For routes with more than 23 waypoints, we need to segment
         // For now, just use the first 23 waypoints and show a warning
         const limitedPoints = validPoints.slice(0, MAX_WAYPOINTS);
-        const waypoints = limitedPoints.map(p => ({
+        const waypoints = limitedPoints.slice(0, -1).map(p => ({
           location: { lat: p.lat!, lng: p.lng! },
           stopover: true,
         }));
 
+        const lastPoint = limitedPoints[limitedPoints.length - 1];
+
         const result = await directionsService.route({
           origin: BODEGA_PRINCIPAL,
-          destination: BODEGA_PRINCIPAL, // Returns to warehouse (complete circuit)
+          destination: { lat: lastPoint.lat!, lng: lastPoint.lng! },
           waypoints,
           travelMode: google.maps.TravelMode.DRIVING,
           optimizeWaypoints: false,
@@ -243,69 +242,33 @@ export const RealRouteVisualization = ({
                 <CardContent className="p-3 text-center">
                   <Navigation2 className="h-5 w-5 mx-auto mb-1 text-primary" />
                   <p className="text-xl font-bold">{routeStats.distanceKm.toFixed(1)} km</p>
-                  <p className="text-xs text-muted-foreground">Distancia total (ida y vuelta)</p>
+                  <p className="text-xs text-muted-foreground">Distancia real</p>
                 </CardContent>
               </Card>
               <Card className="bg-orange-500/10 border-orange-500/20">
                 <CardContent className="p-3 text-center">
                   <Clock className="h-5 w-5 mx-auto mb-1 text-orange-600" />
                   <p className="text-xl font-bold">{formatDuration(routeStats.durationMinutes)}</p>
-                  <p className="text-xs text-muted-foreground">Tiempo de manejo (ida y vuelta)</p>
+                  <p className="text-xs text-muted-foreground">Tiempo de manejo</p>
                 </CardContent>
               </Card>
-              <Card className={`${missingCoords.length > 0 ? 'bg-amber-500/10 border-amber-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
+              <Card className="bg-green-500/10 border-green-500/20">
                 <CardContent className="p-3 text-center">
-                  <MapPin className={`h-5 w-5 mx-auto mb-1 ${missingCoords.length > 0 ? 'text-amber-600' : 'text-green-600'}`} />
-                  <p className="text-xl font-bold">
-                    {validPoints.length} {missingCoords.length > 0 && <span className="text-muted-foreground font-normal">de {puntos.length}</span>}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {missingCoords.length > 0 ? 'Entregas con ubicación' : 'Entregas'}
-                  </p>
+                  <MapPin className="h-5 w-5 mx-auto mb-1 text-green-600" />
+                  <p className="text-xl font-bold">{validPoints.length}</p>
+                  <p className="text-xs text-muted-foreground">Entregas</p>
                 </CardContent>
               </Card>
-            </div>
-          )}
-
-          {/* Circuit info banner */}
-          {routeStats && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg text-sm">
-              <Home className="h-4 w-4 text-primary flex-shrink-0" />
-              <span className="text-muted-foreground">
-                Ruta completa: <span className="font-medium text-foreground">Bodega → {validPoints.length} entregas → Bodega</span>
-              </span>
             </div>
           )}
 
           {/* Time estimate including deliveries */}
           {routeStats && (
             <div className="flex items-center justify-between px-3 py-2 bg-muted rounded-lg text-sm">
-              <span className="text-muted-foreground">Tiempo total estimado (con entregas de ~25 min c/u):</span>
+              <span className="text-muted-foreground">Tiempo total estimado (con entregas):</span>
               <span className="font-semibold">
                 {formatDuration(routeStats.durationMinutes + (validPoints.length * 25))}
               </span>
-            </div>
-          )}
-
-          {/* Warning for missing coordinates */}
-          {missingCoords.length > 0 && (
-            <div className="flex items-start gap-3 px-4 py-3 bg-amber-500/15 border border-amber-500/30 rounded-lg">
-              <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-amber-700 dark:text-amber-400">
-                  {missingCoords.length} pedido(s) sin coordenadas GPS
-                </p>
-                <p className="text-sm text-amber-600 dark:text-amber-500">
-                  Estos pedidos no aparecen en el mapa. Necesitan geocodificación:
-                </p>
-                <ul className="text-sm text-amber-600 dark:text-amber-500 mt-1 list-disc list-inside max-h-20 overflow-y-auto">
-                  {missingCoords.map(p => (
-                    <li key={p.id} className="truncate">
-                      {p.cliente} - {p.sucursal || p.direccion || 'Sin dirección'}
-                    </li>
-                  ))}
-                </ul>
-              </div>
             </div>
           )}
 
@@ -407,11 +370,11 @@ export const RealRouteVisualization = ({
             {directions && (
               <Button
                 onClick={() => {
-                  // Open Google Maps with the full circuit route (returns to warehouse)
+                  // Open Google Maps with the full route
                   const waypointsParam = validPoints
                     .map(p => `${p.lat},${p.lng}`)
                     .join("|");
-                  const url = `https://www.google.com/maps/dir/?api=1&origin=${BODEGA_PRINCIPAL.lat},${BODEGA_PRINCIPAL.lng}&destination=${BODEGA_PRINCIPAL.lat},${BODEGA_PRINCIPAL.lng}&waypoints=${waypointsParam}&travelmode=driving`;
+                  const url = `https://www.google.com/maps/dir/?api=1&origin=${BODEGA_PRINCIPAL.lat},${BODEGA_PRINCIPAL.lng}&destination=${validPoints[validPoints.length - 1].lat},${validPoints[validPoints.length - 1].lng}&waypoints=${waypointsParam}&travelmode=driving`;
                   window.open(url, "_blank");
                 }}
               >
