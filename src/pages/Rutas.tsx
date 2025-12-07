@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,16 +13,18 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Eye, Truck, MapPin, Route, Play, Square, Gauge, Pencil } from "lucide-react";
+import { Search, Eye, Truck, MapPin, Route, Play, Square, Gauge, Pencil, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import VehiculosTab from "@/components/rutas/VehiculosTab";
 import ZonasTab from "@/components/rutas/ZonasTab";
-import PlanificadorRutas from "@/components/rutas/PlanificadorRutas";
 import RutaKilometrajeDialog from "@/components/rutas/RutaKilometrajeDialog";
 import EditarRutaDialog from "@/components/rutas/EditarRutaDialog";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+
+// Lazy load PlanificadorRutas to isolate Google Maps dependencies
+const PlanificadorRutas = lazy(() => import("@/components/rutas/PlanificadorRutas"));
 
 const Rutas = () => {
   const [rutas, setRutas] = useState<any[]>([]);
@@ -138,7 +140,9 @@ const Rutas = () => {
           </TabsList>
 
           <TabsContent value="planificar">
-            <PlanificadorRutas />
+            <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+              <PlanificadorRutas />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="rutas" className="space-y-4">

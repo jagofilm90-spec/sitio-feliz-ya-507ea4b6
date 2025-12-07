@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,8 +34,11 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { RouteMapVisualization } from "./RouteMapVisualization";
-import { InteractiveRouteMap, RouteData } from "./InteractiveRouteMap";
-import { RealRouteVisualization, RealRoutePoint } from "./RealRouteVisualization";
+import type { RouteData, RealRoutePoint } from "@/types/rutas";
+
+// Lazy load map components to avoid google.maps reference errors
+const InteractiveRouteMap = lazy(() => import("./InteractiveRouteMap").then(m => ({ default: m.InteractiveRouteMap })));
+const RealRouteVisualization = lazy(() => import("./RealRouteVisualization").then(m => ({ default: m.RealRouteVisualization })));
 
 interface RutaSugerida {
   vehiculo: {
@@ -529,11 +532,13 @@ export const SugerirRutasAIDialog = ({
 
                 {/* Interactive Global Map */}
                 {showGlobalMap && rutasParaMapa.length > 0 && (
-                  <InteractiveRouteMap
-                    rutas={rutasParaMapa}
-                    height="350px"
-                    showLegend={true}
-                  />
+                  <Suspense fallback={<div className="h-[350px] flex items-center justify-center bg-muted rounded-lg"><Loader2 className="h-6 w-6 animate-spin" /></div>}>
+                    <InteractiveRouteMap
+                      rutas={rutasParaMapa}
+                      height="350px"
+                      showLegend={true}
+                    />
+                  </Suspense>
                 )}
 
                 {notasAI && (
@@ -782,13 +787,15 @@ export const SugerirRutasAIDialog = ({
         </div>
       </DialogContent>
       {/* Real Route Visualization Dialog */}
-      <RealRouteVisualization
-        open={realRouteDialog.open}
-        onOpenChange={(open) => setRealRouteDialog(prev => ({ ...prev, open }))}
-        puntos={realRouteDialog.puntos}
-        vehiculoNombre={realRouteDialog.vehiculoNombre}
-        color={realRouteDialog.color}
-      />
+      <Suspense fallback={null}>
+        <RealRouteVisualization
+          open={realRouteDialog.open}
+          onOpenChange={(open) => setRealRouteDialog(prev => ({ ...prev, open }))}
+          puntos={realRouteDialog.puntos}
+          vehiculoNombre={realRouteDialog.vehiculoNombre}
+          color={realRouteDialog.color}
+        />
+      </Suspense>
     </Dialog>
   );
 };

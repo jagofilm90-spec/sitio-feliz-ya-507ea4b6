@@ -20,17 +20,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-export interface RealRoutePoint {
-  id: string;
-  folio: string;
-  cliente: string;
-  sucursal?: string;
-  direccion: string;
-  peso_kg: number;
-  orden: number;
-  lat?: number;
-  lng?: number;
-}
+// Re-export type from centralized location
+export type { RealRoutePoint } from "@/types/rutas";
+import type { RealRoutePoint } from "@/types/rutas";
 
 interface RealRouteVisualizationProps {
   open: boolean;

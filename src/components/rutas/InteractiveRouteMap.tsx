@@ -5,28 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, MapPin, Navigation, Truck, Package, Clock, AlertCircle } from "lucide-react";
 
-export interface RoutePoint {
-  id: string;
-  folio: string;
-  cliente: string;
-  sucursal?: string;
-  direccion: string;
-  peso_kg: number;
-  orden: number;
-  lat?: number;
-  lng?: number;
-  prioridad?: string;
-}
-
-export interface RouteData {
-  id: string;
-  vehiculoNombre: string;
-  vehiculoTipo: string;
-  color: string;
-  puntos: RoutePoint[];
-  pesoTotal: number;
-  capacidadMaxima: number;
-}
+// Re-export types from centralized location
+export type { RoutePoint, RouteData } from "@/types/rutas";
+import type { RoutePoint, RouteData } from "@/types/rutas";
 
 interface InteractiveRouteMapProps {
   rutas: RouteData[];
@@ -296,7 +277,7 @@ export const InteractiveRouteMap = ({
                       strokeColor: ruta.color,
                       strokeOpacity: 0.8,
                       strokeWeight: 4,
-                      icons: [
+                      icons: typeof google !== 'undefined' ? [
                         {
                           icon: {
                             path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
@@ -308,7 +289,7 @@ export const InteractiveRouteMap = ({
                           offset: "50%",
                           repeat: "100px",
                         },
-                      ],
+                      ] : [],
                     }}
                   />
                 )}
