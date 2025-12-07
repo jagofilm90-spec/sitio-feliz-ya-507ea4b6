@@ -14,8 +14,10 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, Navigation, Loader2, AlertCircle, Globe, Building2 } from "lucide-react";
+import { MapPin, Navigation, Loader2, AlertCircle, Globe, Building2, Search, X, ChevronDown, ChevronRight } from "lucide-react";
 import { GoogleMap, Marker, InfoWindow } from "@react-google-maps/api";
 import { useGoogleMapsLoader } from "@/hooks/useGoogleMapsLoader";
 
@@ -95,11 +97,16 @@ function MapaSucursalesGlobal({ open, onOpenChange }: MapaSucursalesGlobalProps)
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMarker, setSelectedMarker] = useState<SucursalGlobal | null>(null);
+  const [hoveredMarker, setHoveredMarker] = useState<SucursalGlobal | null>(null);
   
   // Filters
   const [filterCliente, setFilterCliente] = useState<string>("all");
   const [filterZona, setFilterZona] = useState<string>("all");
   const [filterRegion, setFilterRegion] = useState<string>("all");
+  
+  // Search
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSucursalesList, setShowSucursalesList] = useState(true);
   
   const mapRef = useRef<google.maps.Map | null>(null);
 
@@ -245,6 +252,29 @@ function MapaSucursalesGlobal({ open, onOpenChange }: MapaSucursalesGlobalProps)
       );
     }
   };
+
+  // Navigate to sucursal on map
+  const navigateToSucursal = useCallback((sucursal: SucursalGlobal) => {
+    if (mapRef.current && sucursal.latitud && sucursal.longitud) {
+      mapRef.current.panTo({ lat: sucursal.latitud, lng: sucursal.longitud });
+      mapRef.current.setZoom(16);
+      setSelectedMarker(sucursal);
+    }
+  }, []);
+
+  // Filtered sucursales for search list
+  const searchFilteredSucursales = useMemo(() => {
+    if (!searchQuery.trim()) return filteredSucursales;
+    const query = searchQuery.toLowerCase().trim();
+    return filteredSucursales.filter(s => 
+      s.nombre.toLowerCase().includes(query) ||
+      s.cliente_nombre.toLowerCase().includes(query) ||
+      s.codigo_sucursal?.toLowerCase().includes(query) ||
+      s.cl?.toLowerCase().includes(query) ||
+      s.zona_nombre?.toLowerCase().includes(query) ||
+      s.direccion?.toLowerCase().includes(query)
+    );
+  }, [filteredSucursales, searchQuery]);
 
   const statsByCliente = useMemo(() => {
     const stats: Record<string, number> = {};
@@ -410,23 +440,56 @@ function MapaSucursalesGlobal({ open, onOpenChange }: MapaSucursalesGlobalProps)
                     key={sucursal.id}
                     position={{ lat: sucursal.latitud!, lng: sucursal.longitud! }}
                     onClick={() => setSelectedMarker(sucursal)}
+                    onMouseOver={() => setHoveredMarker(sucursal)}
+                    onMouseOut={() => setHoveredMarker(null)}
                     title={`${sucursal.cliente_nombre} - ${sucursal.nombre}`}
                     icon={createMarkerIcon(getClienteColor(sucursal.cliente_id))}
                   />
                 ))}
 
+                {/* Hover tooltip - shows on mouse over when no marker is selected */}
+                {hoveredMarker && !selectedMarker && (
+                  <InfoWindow
+                    position={{ lat: hoveredMarker.latitud!, lng: hoveredMarker.longitud! }}
+                    options={{ 
+                      disableAutoPan: true,
+                      pixelOffset: new google.maps.Size(0, -35)
+                    }}
+                  >
+                    <div className="p-1 min-w-[150px]">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-2 h-2 rounded-full shrink-0" 
+                          style={{ backgroundColor: getClienteColor(hoveredMarker.cliente_id) }}
+                        />
+                        <span className="font-medium text-xs">{hoveredMarker.cliente_nombre}</span>
+                      </div>
+                      <p className="text-xs text-gray-700 mt-0.5">{hoveredMarker.nombre}</p>
+                    </div>
+                  </InfoWindow>
+                )}
+
+                {/* Selected marker InfoWindow with close button */}
                 {selectedMarker && (
                   <InfoWindow
                     position={{ lat: selectedMarker.latitud!, lng: selectedMarker.longitud! }}
                     onCloseClick={() => setSelectedMarker(null)}
                   >
                     <div className="p-2 min-w-[220px]">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div 
-                          className="w-3 h-3 rounded-full shrink-0" 
-                          style={{ backgroundColor: getClienteColor(selectedMarker.cliente_id) }}
-                        />
-                        <span className="font-semibold text-sm">{selectedMarker.cliente_nombre}</span>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full shrink-0" 
+                            style={{ backgroundColor: getClienteColor(selectedMarker.cliente_id) }}
+                          />
+                          <span className="font-semibold text-sm">{selectedMarker.cliente_nombre}</span>
+                        </div>
+                        <button 
+                          onClick={() => setSelectedMarker(null)}
+                          className="text-gray-400 hover:text-gray-600 text-lg font-bold leading-none p-0.5 -mt-1 -mr-1"
+                        >
+                          ✕
+                        </button>
                       </div>
                       <h3 className="font-medium text-sm">{selectedMarker.nombre}</h3>
                       {selectedMarker.codigo_sucursal && (
@@ -460,36 +523,106 @@ function MapaSucursalesGlobal({ open, onOpenChange }: MapaSucursalesGlobalProps)
             )}
           </div>
 
-          {/* Legend sidebar */}
-          <div className="w-[280px] border-l bg-background overflow-y-auto shrink-0">
-            <div className="p-4">
-              <h3 className="font-semibold text-sm mb-3">Clientes en el mapa</h3>
-              <div className="space-y-2">
-                {clientes
-                  .filter(c => statsByCliente[c.id])
-                  .sort((a, b) => (statsByCliente[b.id] || 0) - (statsByCliente[a.id] || 0))
-                  .map((cliente) => (
-                    <button
-                      key={cliente.id}
-                      className={`w-full flex items-center gap-2 p-2 rounded-md text-left text-sm hover:bg-muted transition-colors ${
-                        filterCliente === cliente.id ? "bg-muted ring-1 ring-primary" : ""
-                      }`}
-                      onClick={() => setFilterCliente(
-                        filterCliente === cliente.id ? "all" : cliente.id
-                      )}
-                    >
-                      <div 
-                        className="w-3 h-3 rounded-full shrink-0" 
-                        style={{ backgroundColor: cliente.color }}
-                      />
-                      <span className="flex-1 truncate">{cliente.nombre}</span>
-                      <Badge variant="secondary" className="text-xs">
-                        {statsByCliente[cliente.id] || 0}
-                      </Badge>
-                    </button>
-                  ))}
+          {/* Sidebar with search and list */}
+          <div className="w-[300px] border-l bg-background flex flex-col shrink-0">
+            {/* Search input */}
+            <div className="p-3 border-b">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar sucursal..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8 pr-8 h-9"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             </div>
+
+            <ScrollArea className="flex-1">
+              {/* Sucursales list */}
+              <div className="p-3 border-b">
+                <button
+                  onClick={() => setShowSucursalesList(!showSucursalesList)}
+                  className="flex items-center gap-2 w-full text-left font-semibold text-sm mb-2"
+                >
+                  {showSucursalesList ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  <span>Sucursales</span>
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {searchFilteredSucursales.length}
+                  </Badge>
+                </button>
+                
+                {showSucursalesList && (
+                  <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                    {searchFilteredSucursales.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-4">
+                        No se encontraron sucursales
+                      </p>
+                    ) : (
+                      searchFilteredSucursales.map((sucursal) => (
+                        <button
+                          key={sucursal.id}
+                          onClick={() => navigateToSucursal(sucursal)}
+                          className={`w-full flex items-start gap-2 p-2 rounded-md text-left text-xs hover:bg-muted transition-colors ${
+                            selectedMarker?.id === sucursal.id ? "bg-muted ring-1 ring-primary" : ""
+                          }`}
+                        >
+                          <div 
+                            className="w-2.5 h-2.5 rounded-full shrink-0 mt-0.5" 
+                            style={{ backgroundColor: getClienteColor(sucursal.cliente_id) }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{sucursal.nombre}</p>
+                            <p className="text-muted-foreground truncate">{sucursal.cliente_nombre}</p>
+                            {sucursal.zona_nombre && (
+                              <p className="text-muted-foreground/70 truncate text-[10px]">{sucursal.zona_nombre}</p>
+                            )}
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Clientes legend */}
+              <div className="p-3">
+                <h3 className="font-semibold text-sm mb-2">Clientes en el mapa</h3>
+                <div className="space-y-1">
+                  {clientes
+                    .filter(c => statsByCliente[c.id])
+                    .sort((a, b) => (statsByCliente[b.id] || 0) - (statsByCliente[a.id] || 0))
+                    .map((cliente) => (
+                      <button
+                        key={cliente.id}
+                        className={`w-full flex items-center gap-2 p-2 rounded-md text-left text-xs hover:bg-muted transition-colors ${
+                          filterCliente === cliente.id ? "bg-muted ring-1 ring-primary" : ""
+                        }`}
+                        onClick={() => setFilterCliente(
+                          filterCliente === cliente.id ? "all" : cliente.id
+                        )}
+                      >
+                        <div 
+                          className="w-2.5 h-2.5 rounded-full shrink-0" 
+                          style={{ backgroundColor: cliente.color }}
+                        />
+                        <span className="flex-1 truncate">{cliente.nombre}</span>
+                        <Badge variant="secondary" className="text-[10px]">
+                          {statsByCliente[cliente.id] || 0}
+                        </Badge>
+                      </button>
+                    ))}
+                </div>
+              </div>
+            </ScrollArea>
           </div>
         </div>
       </DialogContent>
