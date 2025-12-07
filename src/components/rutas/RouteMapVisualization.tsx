@@ -48,7 +48,7 @@ export const RouteMapVisualization = ({
   const [geocodedPoints, setGeocodedPoints] = useState<DeliveryPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
+  const [directions, setDirections] = useState<any>(null);
   const [selectedPoint, setSelectedPoint] = useState<DeliveryPoint | null>(null);
   const [routeInfo, setRouteInfo] = useState<{
     distance: number;

@@ -62,7 +62,7 @@ export function ClienteSucursalesMapDialog({
   const [loading, setLoading] = useState(false);
   const [loadingClientes, setLoadingClientes] = useState(true);
   const [selectedMarker, setSelectedMarker] = useState<Sucursal | null>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
+  const mapRef = useRef<any>(null);
 
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
@@ -117,8 +117,8 @@ export function ClienteSucursalesMapDialog({
       setSucursales(data || []);
 
       // Fit bounds to show all markers
-      if (data && data.length > 0 && mapRef.current) {
-        const bounds = new google.maps.LatLngBounds();
+      if (data && data.length > 0 && mapRef.current && window.google && window.google.maps) {
+        const bounds = new window.google.maps.LatLngBounds();
         let hasValidCoords = false;
 
         data.forEach((sucursal) => {
@@ -131,11 +131,11 @@ export function ClienteSucursalesMapDialog({
         if (hasValidCoords) {
           mapRef.current.fitBounds(bounds);
           // Don't zoom too much for single point
-          const listener = google.maps.event.addListener(mapRef.current, "idle", () => {
+          const listener = window.google.maps.event.addListener(mapRef.current, "idle", () => {
             if (mapRef.current && mapRef.current.getZoom()! > 15) {
               mapRef.current.setZoom(15);
             }
-            google.maps.event.removeListener(listener);
+            window.google.maps.event.removeListener(listener);
           });
         }
       }
@@ -146,7 +146,7 @@ export function ClienteSucursalesMapDialog({
     }
   };
 
-  const onMapLoad = useCallback((map: google.maps.Map) => {
+  const onMapLoad = useCallback((map: any) => {
     mapRef.current = map;
   }, []);
 
