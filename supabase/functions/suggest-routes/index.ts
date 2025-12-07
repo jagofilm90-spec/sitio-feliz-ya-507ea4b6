@@ -277,6 +277,7 @@ function validarRutaLogica(ruta: RutaSugerida): { valid: boolean; warning?: stri
 }
 
 // Post-AI validation: Split routes that exceed capacity
+// CRITICAL: Each vehicle can only be used ONCE per day
 function validarYDividirRutas(
   rutasOriginales: any[], 
   vehiculos: Vehiculo[], 
@@ -285,24 +286,49 @@ function validarYDividirRutas(
   const rutasValidadas: any[] = [];
   const vehiculosUsados = new Set<string>();
   const pedidosNoAsignados: string[] = [];
+  const pedidosYaAsignados = new Set<string>();
 
   console.log(`[suggest-routes] Validating ${rutasOriginales.length} routes from AI`);
   console.log(`[suggest-routes] Available vehicles: ${vehiculos.map(v => `${v.nombre}(${v.id.substring(0,8)})`).join(', ')}`);
 
-  for (const ruta of rutasOriginales) {
+  // Sort routes by weight to process heaviest first (they need bigger vehicles)
+  const rutasOrdenadas = [...rutasOriginales].sort((a, b) => {
+    const pesoA = (a.pedido_ids || []).reduce((s: number, id: string) => {
+      const p = pedidosMap.get(id);
+      return s + (p?.peso_total_kg || 0);
+    }, 0);
+    const pesoB = (b.pedido_ids || []).reduce((s: number, id: string) => {
+      const p = pedidosMap.get(id);
+      return s + (p?.peso_total_kg || 0);
+    }, 0);
+    return pesoB - pesoA;
+  });
+
+  for (const ruta of rutasOrdenadas) {
     console.log(`[suggest-routes] Processing route with vehiculo_id: "${ruta.vehiculo_id}"`);
     
-    // Robust vehicle search: by ID, by nombre, or by string match
-    const vehiculo = vehiculos.find(v => 
-      v.id === ruta.vehiculo_id || 
-      v.nombre === ruta.vehiculo_id || 
-      v.nombre === String(ruta.vehiculo_id) ||
-      v.id.startsWith(String(ruta.vehiculo_id))
+    // Find best available vehicle (not already used)
+    let vehiculo = vehiculos.find(v => 
+      !vehiculosUsados.has(v.id) && (
+        v.id === ruta.vehiculo_id || 
+        v.nombre === ruta.vehiculo_id || 
+        v.nombre === String(ruta.vehiculo_id) ||
+        v.id.startsWith(String(ruta.vehiculo_id))
+      )
     );
     
+    // If requested vehicle is already used, find next best available
     if (!vehiculo) {
-      console.warn(`[suggest-routes] ⚠️ Vehicle NOT FOUND for vehiculo_id: "${ruta.vehiculo_id}"`);
-      pedidosNoAsignados.push(...(ruta.pedido_ids || []));
+      vehiculo = vehiculos.find(v => !vehiculosUsados.has(v.id));
+      if (vehiculo) {
+        console.log(`[suggest-routes] ⚠️ Vehicle "${ruta.vehiculo_id}" already used, using ${vehiculo.nombre} instead`);
+      }
+    }
+    
+    if (!vehiculo) {
+      console.warn(`[suggest-routes] ⚠️ No available vehicles left, skipping route`);
+      const unusedPedidos = (ruta.pedido_ids || []).filter((id: string) => !pedidosYaAsignados.has(id));
+      pedidosNoAsignados.push(...unusedPedidos);
       continue;
     }
     
@@ -313,21 +339,24 @@ function validarYDividirRutas(
       ? vehiculo.peso_maximo_foraneo_kg 
       : vehiculo.peso_maximo_local_kg;
 
-    const pedidoIdsProvided = ruta.pedido_ids || [];
-    const pedidosNotFound = pedidoIdsProvided.filter((id: string) => !pedidosMap.has(id));
-    if (pedidosNotFound.length > 0) {
-      console.warn(`[suggest-routes] ⚠️ ${pedidosNotFound.length} pedido_ids not found in map: ${pedidosNotFound.slice(0,3).join(', ')}...`);
-    }
+    // Filter out already assigned pedidos
+    const pedidoIdsProvided = (ruta.pedido_ids || []).filter((id: string) => !pedidosYaAsignados.has(id));
     
     const pedidosRuta = pedidoIdsProvided
       .map((id: string) => pedidosMap.get(id))
       .filter(Boolean);
+
+    if (pedidosRuta.length === 0) {
+      console.log(`[suggest-routes] No pedidos left for this route, skipping`);
+      continue;
+    }
 
     const pesoTotal = pedidosRuta.reduce((sum: number, p: any) => sum + (p.peso_total_kg || 0), 0);
 
     console.log(`[suggest-routes] Validating route ${vehiculo.nombre}: ${pedidosRuta.length} entregas, ${pesoTotal}kg / ${capacidadMax}kg (${((pesoTotal/capacidadMax)*100).toFixed(0)}%)`);
 
     if (pesoTotal <= capacidadMax) {
+      // Route fits, use this vehicle
       rutasValidadas.push({
         vehiculo_id: vehiculo.id,
         tipo_ruta: tipoRuta,
@@ -336,8 +365,9 @@ function validarYDividirRutas(
         capacidad_maxima: capacidadMax,
       });
       vehiculosUsados.add(vehiculo.id);
+      pedidosRuta.forEach((p: any) => pedidosYaAsignados.add(p.id));
     } else {
-      console.log(`[suggest-routes] Route exceeds capacity, splitting...`);
+      console.log(`[suggest-routes] Route exceeds capacity, filling this vehicle first...`);
       
       const prioridadOrden: Record<string, number> = {
         vip_mismo_dia: 0,
@@ -347,6 +377,7 @@ function validarYDividirRutas(
         flexible: 4,
       };
       
+      // Sort by priority then weight (largest first to fill efficiently)
       pedidosRuta.sort((a: any, b: any) => {
         const prioA = prioridadOrden[a.prioridad_entrega || "flexible"] || 4;
         const prioB = prioridadOrden[b.prioridad_entrega || "flexible"] || 4;
@@ -354,56 +385,47 @@ function validarYDividirRutas(
         return (b.peso_total_kg || 0) - (a.peso_total_kg || 0);
       });
 
-      let rutaActual = {
-        vehiculo_id: vehiculo.id,
-        tipo_ruta: tipoRuta,
-        pedido_ids: [] as string[],
-        peso_total: 0,
-        capacidad_maxima: capacidadMax,
-      };
+      // Fill current vehicle as much as possible
+      const pedidosParaEsteVehiculo: string[] = [];
+      let pesoEsteVehiculo = 0;
+      const pedidosSobrantes: any[] = [];
 
       for (const pedido of pedidosRuta) {
         const pesoPedido = pedido.peso_total_kg || 0;
         
-        if (rutaActual.peso_total + pesoPedido <= capacidadMax) {
-          rutaActual.pedido_ids.push(pedido.id);
-          rutaActual.peso_total += pesoPedido;
-        } else if (rutaActual.pedido_ids.length > 0) {
-          rutasValidadas.push({ ...rutaActual });
-          vehiculosUsados.add(rutaActual.vehiculo_id);
-          
-          const siguienteVehiculo = vehiculos.find(v => 
-            !vehiculosUsados.has(v.id) && 
-            (tipoRuta === "foranea" ? v.peso_maximo_foraneo_kg : v.peso_maximo_local_kg) >= pesoPedido
-          );
-          
-          if (siguienteVehiculo) {
-            const nuevaCapacidad = tipoRuta === "foranea" 
-              ? siguienteVehiculo.peso_maximo_foraneo_kg 
-              : siguienteVehiculo.peso_maximo_local_kg;
-            
-            rutaActual = {
-              vehiculo_id: siguienteVehiculo.id,
-              tipo_ruta: tipoRuta,
-              pedido_ids: [pedido.id],
-              peso_total: pesoPedido,
-              capacidad_maxima: nuevaCapacidad,
-            };
-          } else {
-            pedidosNoAsignados.push(pedido.id);
-          }
+        if (pesoEsteVehiculo + pesoPedido <= capacidadMax) {
+          pedidosParaEsteVehiculo.push(pedido.id);
+          pesoEsteVehiculo += pesoPedido;
+          pedidosYaAsignados.add(pedido.id);
         } else {
-          pedidosNoAsignados.push(pedido.id);
+          pedidosSobrantes.push(pedido);
         }
       }
 
-      if (rutaActual.pedido_ids.length > 0) {
-        rutasValidadas.push(rutaActual);
-        vehiculosUsados.add(rutaActual.vehiculo_id);
+      // Create route for this vehicle
+      if (pedidosParaEsteVehiculo.length > 0) {
+        rutasValidadas.push({
+          vehiculo_id: vehiculo.id,
+          tipo_ruta: tipoRuta,
+          pedido_ids: pedidosParaEsteVehiculo,
+          peso_total: pesoEsteVehiculo,
+          capacidad_maxima: capacidadMax,
+        });
+        vehiculosUsados.add(vehiculo.id);
+        console.log(`[suggest-routes] Created route for ${vehiculo.nombre}: ${pedidosParaEsteVehiculo.length} pedidos, ${pesoEsteVehiculo}kg`);
+      }
+
+      // Remaining pedidos go to "for later" - don't try to split across multiple vehicles
+      // This ensures each vehicle only appears once
+      for (const pedido of pedidosSobrantes) {
+        if (!pedidosYaAsignados.has(pedido.id)) {
+          pedidosNoAsignados.push(pedido.id);
+        }
       }
     }
   }
 
+  console.log(`[suggest-routes] Validation complete: ${rutasValidadas.length} routes, ${pedidosNoAsignados.length} unassigned`);
   return { rutasValidadas, pedidosNoAsignados };
 }
 
