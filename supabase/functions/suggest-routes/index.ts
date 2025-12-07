@@ -165,19 +165,41 @@ function validarYDividirRutas(
   const vehiculosUsados = new Set<string>();
   const pedidosNoAsignados: string[] = [];
 
+  console.log(`[suggest-routes] Validating ${rutasOriginales.length} routes from AI`);
+  console.log(`[suggest-routes] Available vehicles: ${vehiculos.map(v => `${v.nombre}(${v.id.substring(0,8)})`).join(', ')}`);
+
   for (const ruta of rutasOriginales) {
-    const vehiculo = vehiculos.find(v => v.id === ruta.vehiculo_id);
+    console.log(`[suggest-routes] Processing route with vehiculo_id: "${ruta.vehiculo_id}"`);
+    
+    // Robust vehicle search: by ID, by nombre, or by string match
+    const vehiculo = vehiculos.find(v => 
+      v.id === ruta.vehiculo_id || 
+      v.nombre === ruta.vehiculo_id || 
+      v.nombre === String(ruta.vehiculo_id) ||
+      v.id.startsWith(String(ruta.vehiculo_id))
+    );
+    
     if (!vehiculo) {
+      console.warn(`[suggest-routes] ⚠️ Vehicle NOT FOUND for vehiculo_id: "${ruta.vehiculo_id}"`);
       pedidosNoAsignados.push(...(ruta.pedido_ids || []));
       continue;
     }
+    
+    console.log(`[suggest-routes] ✓ Matched vehicle: ${vehiculo.nombre} (${vehiculo.id.substring(0,8)})`);
 
     const tipoRuta = ruta.tipo_ruta === "foranea" ? "foranea" : "local";
     const capacidadMax = tipoRuta === "foranea" 
       ? vehiculo.peso_maximo_foraneo_kg 
       : vehiculo.peso_maximo_local_kg;
 
-    const pedidosRuta = (ruta.pedido_ids || [])
+    // Log which pedido_ids are missing from the map
+    const pedidoIdsProvided = ruta.pedido_ids || [];
+    const pedidosNotFound = pedidoIdsProvided.filter((id: string) => !pedidosMap.has(id));
+    if (pedidosNotFound.length > 0) {
+      console.warn(`[suggest-routes] ⚠️ ${pedidosNotFound.length} pedido_ids not found in map: ${pedidosNotFound.slice(0,3).join(', ')}...`);
+    }
+    
+    const pedidosRuta = pedidoIdsProvided
       .map((id: string) => pedidosMap.get(id))
       .filter(Boolean);
 
@@ -600,10 +622,18 @@ Los pedidos que no quepan hoy van a "para_despues" - esto es NORMAL, no un error
     // Parse AI response
     let aiResult;
     try {
-      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+    const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         aiResult = JSON.parse(jsonMatch[0]);
         console.log(`[suggest-routes] AI generated ${aiResult.rutas?.length || 0} routes`);
+        
+        // Log AI route details for debugging
+        if (aiResult.rutas && aiResult.rutas.length > 0) {
+          console.log(`[suggest-routes] AI routes detail:`);
+          aiResult.rutas.forEach((r: any, i: number) => {
+            console.log(`  Route ${i+1}: vehiculo_id="${r.vehiculo_id}", pedidos=${r.pedido_ids?.length || 0}, tipo=${r.tipo_ruta}`);
+          });
+        }
       } else {
         throw new Error("No JSON found in AI response");
       }
