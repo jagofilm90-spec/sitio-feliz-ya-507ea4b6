@@ -1,46 +1,9 @@
-// Push Notifications Service - Safe for web browsers
-// Uses dynamic imports to avoid crashing on non-native platforms
-
+import { PushNotifications, Token, PushNotificationSchema, ActionPerformed } from '@capacitor/push-notifications';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 
-// Variables para módulos cargados dinámicamente
-let CapacitorCore: any = null;
-let PushNotificationsModule: any = null;
-let modulesLoaded = false;
-
-// Verificar si estamos en plataforma nativa de forma segura
-export const isNativePlatform = (): boolean => {
-  try {
-    // Verificar si Capacitor está disponible en window
-    if (typeof window !== 'undefined' && (window as any).Capacitor) {
-      return (window as any).Capacitor.isNativePlatform?.() ?? false;
-    }
-    return false;
-  } catch {
-    return false;
-  }
-};
-
-// Cargar módulos de Capacitor dinámicamente (solo en plataforma nativa)
-const loadCapacitorModules = async (): Promise<boolean> => {
-  if (modulesLoaded) return true;
-  if (!isNativePlatform()) return false;
-  
-  try {
-    const [coreModule, pushModule] = await Promise.all([
-      import('@capacitor/core'),
-      import('@capacitor/push-notifications')
-    ]);
-    
-    CapacitorCore = coreModule.Capacitor;
-    PushNotificationsModule = pushModule.PushNotifications;
-    modulesLoaded = true;
-    return true;
-  } catch (error) {
-    console.log('Capacitor modules not available (running in web browser)');
-    return false;
-  }
-};
+// Verificar si estamos en plataforma nativa
+export const isNativePlatform = () => Capacitor.isNativePlatform();
 
 // Inicializar sistema de notificaciones push
 export const initPushNotifications = async (): Promise<boolean> => {
@@ -50,13 +13,8 @@ export const initPushNotifications = async (): Promise<boolean> => {
   }
 
   try {
-    const loaded = await loadCapacitorModules();
-    if (!loaded || !PushNotificationsModule) {
-      return false;
-    }
-
     // Solicitar permisos
-    const permissionStatus = await PushNotificationsModule.requestPermissions();
+    const permissionStatus = await PushNotifications.requestPermissions();
     
     if (permissionStatus.receive !== 'granted') {
       console.log('Permisos de notificaciones no otorgados');
@@ -64,7 +22,7 @@ export const initPushNotifications = async (): Promise<boolean> => {
     }
 
     // Registrar para recibir notificaciones
-    await PushNotificationsModule.register();
+    await PushNotifications.register();
 
     // Configurar listeners
     setupPushListeners();
@@ -79,37 +37,31 @@ export const initPushNotifications = async (): Promise<boolean> => {
 
 // Configurar listeners para eventos de push
 const setupPushListeners = () => {
-  if (!PushNotificationsModule) return;
+  // Cuando se recibe el token de registro
+  PushNotifications.addListener('registration', async (token: Token) => {
+    console.log('Token de push recibido:', token.value);
+    await saveDeviceToken(token.value);
+  });
 
-  try {
-    // Cuando se recibe el token de registro
-    PushNotificationsModule.addListener('registration', async (token: { value: string }) => {
-      console.log('Token de push recibido:', token.value);
-      await saveDeviceToken(token.value);
-    });
+  // Error en registro
+  PushNotifications.addListener('registrationError', (error) => {
+    console.error('Error en registro de push:', error);
+  });
 
-    // Error en registro
-    PushNotificationsModule.addListener('registrationError', (error: any) => {
-      console.error('Error en registro de push:', error);
-    });
+  // Notificación recibida con app en primer plano
+  PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
+    console.log('Notificación recibida:', notification);
+    handleForegroundNotification(notification);
+  });
 
-    // Notificación recibida con app en primer plano
-    PushNotificationsModule.addListener('pushNotificationReceived', (notification: any) => {
-      console.log('Notificación recibida:', notification);
-      handleForegroundNotification(notification);
-    });
-
-    // Usuario tocó la notificación
-    PushNotificationsModule.addListener('pushNotificationActionPerformed', (action: any) => {
-      console.log('Acción de notificación:', action);
-      handleNotificationTap(action);
-    });
-  } catch (error) {
-    console.error('Error configurando push listeners:', error);
-  }
+  // Usuario tocó la notificación
+  PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
+    console.log('Acción de notificación:', action);
+    handleNotificationTap(action);
+  });
 };
 
-// Guardar token del dispositivo en la base de datos
+// Guardar token del dispositivo en la base de datos usando SQL directo
 const saveDeviceToken = async (token: string): Promise<void> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -119,9 +71,11 @@ const saveDeviceToken = async (token: string): Promise<void> => {
       return;
     }
 
-    const platform = CapacitorCore?.getPlatform?.() ?? 'unknown';
+    const platform = Capacitor.getPlatform();
     const deviceName = `${platform}-${Date.now()}`;
 
+    // Usar inserción directa con la tabla device_tokens
+    // La tabla existe pero los tipos no están regenerados aún
     const client = supabase as any;
     const { error } = await client
       .from('device_tokens')
@@ -146,52 +100,42 @@ const saveDeviceToken = async (token: string): Promise<void> => {
 };
 
 // Manejar notificación recibida en primer plano
-const handleForegroundNotification = (notification: any) => {
-  try {
-    import('@/hooks/use-toast').then(({ toast }) => {
-      toast({
-        title: notification.title || 'Nueva notificación',
-        description: notification.body || '',
-      });
-    }).catch(() => {
-      // Silently fail if toast is not available
+const handleForegroundNotification = (notification: PushNotificationSchema) => {
+  import('@/hooks/use-toast').then(({ toast }) => {
+    toast({
+      title: notification.title || 'Nueva notificación',
+      description: notification.body || '',
     });
-  } catch {
-    // Silently fail
-  }
+  });
 };
 
 // Manejar tap en notificación
-const handleNotificationTap = (action: any) => {
-  try {
-    const data = action.notification?.data as Record<string, string> | undefined;
-    
-    if (!data?.type) return;
+const handleNotificationTap = (action: ActionPerformed) => {
+  const data = action.notification.data as Record<string, string> | undefined;
+  
+  if (!data?.type) return;
 
-    switch (data.type) {
-      case 'nuevo_pedido':
-        window.location.href = '/pedidos?tab=por-autorizar';
-        break;
-      case 'pedido_autorizado':
-        window.location.href = '/portal-cliente?tab=pedidos';
-        break;
-      case 'entrega_programada':
-        window.location.href = '/portal-cliente?tab=entregas';
-        break;
-      case 'stock_bajo':
-        window.location.href = '/inventario';
-        break;
-      case 'oc_pendiente':
-        window.location.href = '/compras';
-        break;
-      case 'cotizacion_pendiente':
-        window.location.href = '/pedidos?tab=cotizaciones';
-        break;
-      default:
-        console.log('Tipo de notificación no manejado:', data.type);
-    }
-  } catch (error) {
-    console.error('Error handling notification tap:', error);
+  switch (data.type) {
+    case 'nuevo_pedido':
+      window.location.href = '/pedidos?tab=por-autorizar';
+      break;
+    case 'pedido_autorizado':
+      window.location.href = '/portal-cliente?tab=pedidos';
+      break;
+    case 'entrega_programada':
+      window.location.href = '/portal-cliente?tab=entregas';
+      break;
+    case 'stock_bajo':
+      window.location.href = '/inventario';
+      break;
+    case 'oc_pendiente':
+      window.location.href = '/compras';
+      break;
+    case 'cotizacion_pendiente':
+      window.location.href = '/pedidos?tab=cotizaciones';
+      break;
+    default:
+      console.log('Tipo de notificación no manejado:', data.type);
   }
 };
 
@@ -204,7 +148,7 @@ export const removeDeviceToken = async (): Promise<void> => {
     
     if (!user) return;
 
-    const platform = CapacitorCore?.getPlatform?.() ?? 'unknown';
+    const platform = Capacitor.getPlatform();
     const client = supabase as any;
 
     await client
@@ -224,12 +168,7 @@ export const checkNotificationPermissions = async (): Promise<boolean> => {
   if (!isNativePlatform()) return false;
 
   try {
-    const loaded = await loadCapacitorModules();
-    if (!loaded || !PushNotificationsModule) {
-      return false;
-    }
-
-    const status = await PushNotificationsModule.checkPermissions();
+    const status = await PushNotifications.checkPermissions();
     return status.receive === 'granted';
   } catch {
     return false;

@@ -10,6 +10,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  initPushNotifications, 
+  isNativePlatform, 
+  checkNotificationPermissions 
+} from '@/services/pushNotifications';
 
 interface PushNotificationSetupProps {
   onComplete?: () => void;
@@ -18,47 +23,39 @@ interface PushNotificationSetupProps {
 export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps) => {
   const [showDialog, setShowDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isNative, setIsNative] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    const checkPlatformAndPermissions = async () => {
-      try {
-        // Importar dinámicamente para evitar errores en web
-        const { isNativePlatform, checkNotificationPermissions } = await import('@/services/pushNotifications');
-        
-        const native = isNativePlatform();
-        setIsNative(native);
-        
-        if (!native) {
-          return;
-        }
+    const checkPermissions = async () => {
+      if (!isNativePlatform()) {
+        setHasPermission(null);
+        return;
+      }
 
-        const permitted = await checkNotificationPermissions();
+      const permitted = await checkNotificationPermissions();
+      setHasPermission(permitted);
 
-        // Si no tiene permisos, mostrar diálogo después de un breve delay
-        if (!permitted) {
-          const hasSeenPrompt = localStorage.getItem('push_notification_prompt_seen');
-          if (!hasSeenPrompt) {
-            setTimeout(() => setShowDialog(true), 2000);
-          }
+      // Si no tiene permisos, mostrar diálogo después de un breve delay
+      if (!permitted) {
+        const hasSeenPrompt = localStorage.getItem('push_notification_prompt_seen');
+        if (!hasSeenPrompt) {
+          setTimeout(() => setShowDialog(true), 2000);
         }
-      } catch (error) {
-        console.log('Push notification setup not available:', error);
       }
     };
 
-    checkPlatformAndPermissions();
+    checkPermissions();
   }, []);
 
   const handleEnableNotifications = async () => {
     setIsLoading(true);
     
     try {
-      const { initPushNotifications } = await import('@/services/pushNotifications');
       const success = await initPushNotifications();
       
       if (success) {
+        setHasPermission(true);
         toast({
           title: 'Notificaciones activadas',
           description: 'Recibirás alertas de nuevos pedidos y actualizaciones importantes.',
@@ -92,7 +89,7 @@ export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps
   };
 
   // No mostrar nada si no es plataforma nativa
-  if (!isNative) {
+  if (!isNativePlatform()) {
     return null;
   }
 
