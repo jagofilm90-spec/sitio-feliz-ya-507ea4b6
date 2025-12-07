@@ -71,8 +71,8 @@ const defaultCenter = {
   lng: -99.121084,
 };
 
-// Map options - defined without google.maps types to avoid runtime errors
-const mapOptions = {
+// Map options
+const mapOptions: google.maps.MapOptions = {
   disableDefaultUI: false,
   zoomControl: true,
   mapTypeControl: false,
@@ -102,14 +102,14 @@ export const InteractiveRouteMap = ({
     color: string;
   } | null>(null);
   const [visibleRutas, setVisibleRutas] = useState<Set<string>>(new Set());
-  const mapRef = useRef<any>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
 
   // Initialize visible routes
   useEffect(() => {
     setVisibleRutas(new Set(rutas.map(r => r.id)));
   }, [rutas]);
 
-  const onMapLoad = useCallback((map: any) => {
+  const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
     
     // Fit bounds to show all points
@@ -153,7 +153,7 @@ export const InteractiveRouteMap = ({
   };
 
   // Create numbered marker icon
-  const createMarkerIcon = (number: number, color: string, isWarehouse: boolean = false): any => {
+  const createMarkerIcon = (number: number, color: string, isWarehouse: boolean = false): google.maps.Symbol | google.maps.Icon => {
     if (isWarehouse) {
       return {
         path: google.maps.SymbolPath.CIRCLE,
