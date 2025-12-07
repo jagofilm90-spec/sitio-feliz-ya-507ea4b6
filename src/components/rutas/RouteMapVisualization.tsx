@@ -1,6 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, InfoWindow } from "@react-google-maps/api";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, MapPin, Navigation } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, MapPin, Navigation, Clock, Route, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface DeliveryPoint {
@@ -27,6 +31,14 @@ const COLORS = [
   "#3b82f6", "#8b5cf6", "#ec4899", "#6b7280"
 ];
 
+// Warehouse location
+const WAREHOUSE = { lat: 19.408680132961802, lng: -99.12108443546356 };
+
+const mapContainerStyle = {
+  width: "100%",
+  height: "350px",
+};
+
 export const RouteMapVisualization = ({
   puntos,
   vehiculoNombre,
@@ -36,10 +48,19 @@ export const RouteMapVisualization = ({
   const [geocodedPoints, setGeocodedPoints] = useState<DeliveryPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [totalDistance, setTotalDistance] = useState<number | null>(null);
-  const [totalDuration, setTotalDuration] = useState<number | null>(null);
+  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
+  const [selectedPoint, setSelectedPoint] = useState<DeliveryPoint | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{
+    distance: number;
+    duration: number;
+    formattedDuration: string;
+  } | null>(null);
 
-  // Geocode addresses using edge function
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+  });
+
+  // Geocode addresses
   const geocodeAddresses = useCallback(async () => {
     if (!puntos.length) {
       setLoading(false);
@@ -50,15 +71,16 @@ export const RouteMapVisualization = ({
     setError(null);
 
     try {
-      const addressesToGeocode = puntos
-        .filter(p => p.direccion && !p.lat && !p.lng)
-        .map(p => ({ id: p.id, address: p.direccion }));
+      // First check if points already have coordinates
+      const pointsWithCoords = puntos.filter(p => p.lat && p.lng);
+      const pointsNeedingGeocode = puntos.filter(p => p.direccion && !p.lat && !p.lng);
 
-      if (addressesToGeocode.length === 0) {
+      if (pointsNeedingGeocode.length === 0) {
         setGeocodedPoints(puntos);
-        setLoading(false);
         return;
       }
+
+      const addressesToGeocode = pointsNeedingGeocode.map(p => ({ id: p.id, address: p.direccion }));
 
       const { data, error: fnError } = await supabase.functions.invoke("geocode-addresses", {
         body: { addresses: addressesToGeocode },
@@ -67,8 +89,9 @@ export const RouteMapVisualization = ({
       if (fnError) throw fnError;
 
       const geocodeMap = new Map((data.results || []).map((r: { id: string; lat: number | null; lng: number | null }) => [r.id, r]));
-      
+
       const updatedPoints = puntos.map(p => {
+        if (p.lat && p.lng) return p;
         const geocoded = geocodeMap.get(p.id) as { lat: number | null; lng: number | null } | undefined;
         if (geocoded && geocoded.lat && geocoded.lng) {
           return { ...p, lat: geocoded.lat, lng: geocoded.lng };
@@ -77,23 +100,6 @@ export const RouteMapVisualization = ({
       });
 
       setGeocodedPoints(updatedPoints);
-
-      // Calculate simple distance estimate between consecutive points
-      const validPoints = updatedPoints.filter(p => p.lat && p.lng);
-      if (validPoints.length >= 2) {
-        let distance = 0;
-        for (let i = 1; i < validPoints.length; i++) {
-          const d = haversineDistance(
-            validPoints[i - 1].lat!, validPoints[i - 1].lng!,
-            validPoints[i].lat!, validPoints[i].lng!
-          );
-          distance += d;
-        }
-        setTotalDistance(Math.round(distance));
-        // Estimate duration: avg 30 km/h in city traffic + 10 min per stop
-        setTotalDuration(Math.round((distance / 30) * 60 + validPoints.length * 10));
-      }
-
     } catch (err) {
       console.error("Geocoding error:", err);
       setError("Error obteniendo ubicaciones");
@@ -102,13 +108,96 @@ export const RouteMapVisualization = ({
     }
   }, [puntos]);
 
-  useEffect(() => {
-    geocodeAddresses();
-  }, [geocodeAddresses]);
+  // Fetch directions from edge function
+  const fetchDirections = useCallback(async () => {
+    const validPoints = geocodedPoints.filter(p => p.lat && p.lng);
+    if (validPoints.length < 1 || !isLoaded) return;
 
-  // Haversine formula for distance between two points
+    try {
+      // Use Google Maps DirectionsService directly for visual rendering
+      const directionsService = new google.maps.DirectionsService();
+
+      const origin = WAREHOUSE;
+      const destination = WAREHOUSE; // Round trip back to warehouse
+      const waypoints = validPoints.map(p => ({
+        location: new google.maps.LatLng(p.lat!, p.lng!),
+        stopover: true,
+      }));
+
+      const result = await directionsService.route({
+        origin,
+        destination,
+        waypoints,
+        optimizeWaypoints: optimizarOrden,
+        travelMode: google.maps.TravelMode.DRIVING,
+      });
+
+      setDirections(result);
+
+      // Calculate totals
+      const route = result.routes[0];
+      if (route) {
+        let totalDistance = 0;
+        let totalDuration = 0;
+        route.legs.forEach(leg => {
+          totalDistance += leg.distance?.value || 0;
+          totalDuration += leg.duration?.value || 0;
+        });
+
+        const hours = Math.floor(totalDuration / 3600);
+        const minutes = Math.floor((totalDuration % 3600) / 60);
+        const formattedDuration = hours > 0 ? `${hours}h ${minutes}min` : `${minutes} min`;
+
+        setRouteInfo({
+          distance: Math.round(totalDistance / 100) / 10,
+          duration: totalDuration,
+          formattedDuration,
+        });
+
+        // If optimizing, notify parent of new order
+        if (optimizarOrden && route.waypoint_order && onOrderOptimized) {
+          const newOrder = route.waypoint_order.map(i => validPoints[i].id);
+          onOrderOptimized(newOrder);
+        }
+      }
+    } catch (err) {
+      console.error("Directions error:", err);
+      // Fallback to simple distance calculation
+      calculateSimpleDistance(validPoints);
+    }
+  }, [geocodedPoints, isLoaded, optimizarOrden, onOrderOptimized]);
+
+  // Fallback distance calculation
+  const calculateSimpleDistance = (points: DeliveryPoint[]) => {
+    if (points.length < 1) return;
+
+    let totalDistance = 0;
+    let prevPoint = WAREHOUSE;
+
+    points.forEach(p => {
+      if (p.lat && p.lng) {
+        totalDistance += haversineDistance(prevPoint.lat, prevPoint.lng, p.lat, p.lng);
+        prevPoint = { lat: p.lat, lng: p.lng };
+      }
+    });
+
+    // Return to warehouse
+    totalDistance += haversineDistance(prevPoint.lat, prevPoint.lng, WAREHOUSE.lat, WAREHOUSE.lng);
+
+    const estimatedDuration = (totalDistance / 25) * 60 + points.length * 15; // 25 km/h + 15 min per stop
+    const hours = Math.floor(estimatedDuration / 60);
+    const minutes = Math.round(estimatedDuration % 60);
+
+    setRouteInfo({
+      distance: Math.round(totalDistance * 10) / 10,
+      duration: estimatedDuration * 60,
+      formattedDuration: hours > 0 ? `${hours}h ${minutes}min` : `${minutes} min`,
+    });
+  };
+
+  // Haversine formula
   const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371; // Earth's radius in km
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -118,134 +207,250 @@ export const RouteMapVisualization = ({
     return R * c;
   };
 
-  // Generate Google Maps URL for navigation
-  const generateMapsUrl = () => {
+  useEffect(() => {
+    geocodeAddresses();
+  }, [geocodeAddresses]);
+
+  useEffect(() => {
+    if (geocodedPoints.length > 0 && isLoaded) {
+      fetchDirections();
+    }
+  }, [geocodedPoints, isLoaded, fetchDirections]);
+
+  // Generate navigation URL for a specific point
+  const getNavigationUrl = (point: DeliveryPoint) => {
+    if (point.lat && point.lng) {
+      return `https://www.google.com/maps/dir/?api=1&destination=${point.lat},${point.lng}`;
+    }
+    return null;
+  };
+
+  // Generate full route URL
+  const getFullRouteUrl = () => {
     const validPoints = geocodedPoints.filter(p => p.lat && p.lng);
     if (validPoints.length === 0) return null;
-    
-    if (validPoints.length === 1) {
-      return `https://www.google.com/maps/search/?api=1&query=${validPoints[0].lat},${validPoints[0].lng}`;
-    }
 
-    const origin = `${validPoints[0].lat},${validPoints[0].lng}`;
-    const destination = `${validPoints[validPoints.length - 1].lat},${validPoints[validPoints.length - 1].lng}`;
-    const waypoints = validPoints.slice(1, -1).map(p => `${p.lat},${p.lng}`).join('|');
-    
-    return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints ? `&waypoints=${waypoints}` : ''}`;
+    const origin = `${WAREHOUSE.lat},${WAREHOUSE.lng}`;
+    const destination = origin; // Round trip
+    const waypoints = validPoints.map(p => `${p.lat},${p.lng}`).join('|');
+
+    return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}&travelmode=driving`;
   };
 
   if (loading) {
     return (
-      <div className="h-[250px] flex items-center justify-center bg-muted rounded-lg">
+      <div className="h-[350px] flex items-center justify-center bg-muted rounded-lg">
         <Loader2 className="h-6 w-6 animate-spin mr-2" />
         <span className="text-sm text-muted-foreground">Obteniendo ubicaciones...</span>
       </div>
     );
   }
 
-  if (error) {
+  if (error || loadError) {
     return (
-      <div className="h-[250px] flex items-center justify-center bg-muted rounded-lg">
-        <p className="text-sm text-destructive">{error}</p>
+      <div className="h-[350px] flex items-center justify-center bg-muted rounded-lg">
+        <p className="text-sm text-destructive">{error || "Error cargando mapa"}</p>
       </div>
     );
   }
 
-  const validPoints = geocodedPoints.filter((p) => p.lat && p.lng);
-  const invalidCount = geocodedPoints.filter((p) => !p.lat || !p.lng).length;
-  const mapsUrl = generateMapsUrl();
+  const validPoints = geocodedPoints.filter(p => p.lat && p.lng);
+  const invalidCount = geocodedPoints.filter(p => !p.lat || !p.lng).length;
+  const fullRouteUrl = getFullRouteUrl();
 
   return (
     <div className="space-y-3">
+      {/* Header */}
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>{vehiculoNombre} • {validPoints.length} puntos ubicados</span>
+        <span>{vehiculoNombre} • {validPoints.length} entregas</span>
         {invalidCount > 0 && (
           <Badge variant="outline" className="text-orange-600">
-            {invalidCount} sin dirección
+            {invalidCount} sin coordenadas
           </Badge>
         )}
       </div>
 
-      {/* Static map preview */}
-      <div className="border rounded-lg overflow-hidden bg-muted">
-        {validPoints.length > 0 ? (
-          <div className="relative">
-            {/* Simple visual representation */}
-            <div className="p-4 space-y-2 max-h-[200px] overflow-y-auto">
-              {geocodedPoints.map((punto, index) => (
-                <div 
+      {/* Map */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <Card className="lg:col-span-2 overflow-hidden">
+          {!isLoaded ? (
+            <div className="h-[350px] flex items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : (
+            <GoogleMap
+              mapContainerStyle={mapContainerStyle}
+              center={validPoints.length > 0 ? { lat: validPoints[0].lat!, lng: validPoints[0].lng! } : WAREHOUSE}
+              zoom={12}
+              options={{
+                streetViewControl: false,
+                mapTypeControl: false,
+              }}
+            >
+              {/* Warehouse marker */}
+              <Marker
+                position={WAREHOUSE}
+                icon={{
+                  path: google.maps.SymbolPath.CIRCLE,
+                  scale: 10,
+                  fillColor: "#000000",
+                  fillOpacity: 1,
+                  strokeColor: "#ffffff",
+                  strokeWeight: 2,
+                }}
+                title="Bodega Principal"
+              />
+
+              {/* Directions renderer */}
+              {directions && (
+                <DirectionsRenderer
+                  directions={directions}
+                  options={{
+                    suppressMarkers: true,
+                    polylineOptions: {
+                      strokeColor: "#3b82f6",
+                      strokeWeight: 4,
+                      strokeOpacity: 0.8,
+                    },
+                  }}
+                />
+              )}
+
+              {/* Delivery point markers */}
+              {validPoints.map((punto, index) => (
+                <Marker
                   key={punto.id}
-                  className={`flex items-center gap-3 p-2 rounded ${punto.lat && punto.lng ? 'bg-background' : 'bg-orange-50 dark:bg-orange-950/20'}`}
+                  position={{ lat: punto.lat!, lng: punto.lng! }}
+                  label={{
+                    text: String(index + 1),
+                    color: "#ffffff",
+                    fontWeight: "bold",
+                  }}
+                  icon={{
+                    path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
+                    fillColor: COLORS[index % COLORS.length],
+                    fillOpacity: 1,
+                    strokeColor: "#ffffff",
+                    strokeWeight: 2,
+                    scale: 1.5,
+                    labelOrigin: new google.maps.Point(12, 10),
+                    anchor: new google.maps.Point(12, 24),
+                  }}
+                  onClick={() => setSelectedPoint(punto)}
+                />
+              ))}
+
+              {/* InfoWindow */}
+              {selectedPoint && selectedPoint.lat && selectedPoint.lng && (
+                <InfoWindow
+                  position={{ lat: selectedPoint.lat, lng: selectedPoint.lng }}
+                  onCloseClick={() => setSelectedPoint(null)}
                 >
-                  <div 
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                  <div className="p-2 min-w-[180px]">
+                    <h3 className="font-semibold text-sm">{selectedPoint.cliente}</h3>
+                    {selectedPoint.sucursal && (
+                      <p className="text-xs text-gray-600">{selectedPoint.sucursal}</p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">{selectedPoint.direccion}</p>
+                    <p className="text-xs text-gray-500 mt-1">{selectedPoint.peso_kg.toLocaleString()} kg</p>
+                    <Button
+                      size="sm"
+                      className="mt-2 w-full"
+                      onClick={() => {
+                        const url = getNavigationUrl(selectedPoint);
+                        if (url) window.open(url, "_blank");
+                      }}
+                    >
+                      <Navigation className="h-3 w-3 mr-1" />
+                      Navegar
+                    </Button>
+                  </div>
+                </InfoWindow>
+              )}
+            </GoogleMap>
+          )}
+        </Card>
+
+        {/* Delivery list */}
+        <Card className="p-3">
+          <div className="flex items-center gap-2 mb-3">
+            <Route className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Entregas</span>
+          </div>
+          <ScrollArea className="h-[280px]">
+            <div className="space-y-2">
+              {geocodedPoints.map((punto, index) => (
+                <div
+                  key={punto.id}
+                  className={`flex items-start gap-2 p-2 rounded text-sm ${
+                    punto.lat && punto.lng ? "bg-muted/50" : "bg-orange-50 dark:bg-orange-950/20"
+                  }`}
+                >
+                  <div
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 mt-0.5"
                     style={{ backgroundColor: COLORS[index % COLORS.length] }}
                   >
                     {index + 1}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{punto.cliente}</p>
+                    <p className="font-medium truncate">{punto.cliente}</p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {punto.sucursal || punto.folio} • {punto.peso_kg.toLocaleString()} kg
+                      {punto.sucursal || punto.folio}
                     </p>
-                    {punto.direccion && (
-                      <p className="text-xs text-muted-foreground truncate">{punto.direccion}</p>
-                    )}
+                    <p className="text-xs text-muted-foreground">{punto.peso_kg.toLocaleString()} kg</p>
                   </div>
-                  {punto.lat && punto.lng ? (
-                    <MapPin className="h-4 w-4 text-green-600 flex-shrink-0" />
-                  ) : (
-                    <MapPin className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                  {punto.lat && punto.lng && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 flex-shrink-0"
+                      onClick={() => {
+                        const url = getNavigationUrl(punto);
+                        if (url) window.open(url, "_blank");
+                      }}
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                    </Button>
                   )}
                 </div>
               ))}
             </div>
-
-            {/* Connection lines indicator */}
-            {validPoints.length >= 2 && (
-              <div className="absolute top-2 right-2">
-                <Badge variant="secondary" className="text-xs">
-                  {validPoints.length} paradas
-                </Badge>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="h-[150px] flex items-center justify-center">
-            <p className="text-sm text-muted-foreground">Sin direcciones para mostrar</p>
-          </div>
-        )}
+          </ScrollArea>
+        </Card>
       </div>
 
       {/* Stats and actions */}
-      <div className="flex items-center justify-between">
-        <div className="flex gap-4 text-xs text-muted-foreground">
-          {totalDistance && (
-            <span>
-              Distancia aprox:{" "}
-              <span className="font-medium text-foreground">{totalDistance} km</span>
-            </span>
-          )}
-          {totalDuration && (
-            <span>
-              Tiempo estimado:{" "}
-              <span className="font-medium text-foreground">
-                {Math.floor(totalDuration / 60)}h {totalDuration % 60}min
-              </span>
-            </span>
+      <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+        <div className="flex gap-6 text-sm">
+          {routeInfo && (
+            <>
+              <div className="flex items-center gap-2">
+                <Route className="h-4 w-4 text-muted-foreground" />
+                <span>
+                  <span className="font-medium">{routeInfo.distance} km</span>
+                  <span className="text-muted-foreground ml-1">distancia</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span>
+                  <span className="font-medium">{routeInfo.formattedDuration}</span>
+                  <span className="text-muted-foreground ml-1">estimado</span>
+                </span>
+              </div>
+            </>
           )}
         </div>
 
-        {mapsUrl && (
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+        {fullRouteUrl && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(fullRouteUrl, "_blank")}
           >
-            <Navigation className="h-3 w-3" />
-            Abrir en Google Maps
-          </a>
+            <Navigation className="h-4 w-4 mr-2" />
+            Abrir ruta completa
+          </Button>
         )}
       </div>
     </div>

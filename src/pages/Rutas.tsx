@@ -13,7 +13,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Eye, Truck, MapPin, Route, Play, Square, Gauge, Pencil } from "lucide-react";
+import { Search, Eye, Truck, MapPin, Route, Play, Square, Gauge, Pencil, Globe } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import VehiculosTab from "@/components/rutas/VehiculosTab";
@@ -21,6 +21,7 @@ import ZonasTab from "@/components/rutas/ZonasTab";
 import PlanificadorRutas from "@/components/rutas/PlanificadorRutas";
 import RutaKilometrajeDialog from "@/components/rutas/RutaKilometrajeDialog";
 import EditarRutaDialog from "@/components/rutas/EditarRutaDialog";
+import { MapaGlobalSucursales } from "@/components/rutas/MapaGlobalSucursales";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -123,6 +124,10 @@ const Rutas = () => {
               <Route className="h-4 w-4" />
               Planificar
             </TabsTrigger>
+            <TabsTrigger value="mapa" className="flex items-center gap-2">
+              <Globe className="h-4 w-4" />
+              Mapa Global
+            </TabsTrigger>
             <TabsTrigger value="rutas" className="flex items-center gap-2">
               <Truck className="h-4 w-4" />
               Rutas
@@ -139,6 +144,10 @@ const Rutas = () => {
 
           <TabsContent value="planificar">
             <PlanificadorRutas />
+          </TabsContent>
+
+          <TabsContent value="mapa">
+            <MapaGlobalSucursales />
           </TabsContent>
 
           <TabsContent value="rutas" className="space-y-4">
