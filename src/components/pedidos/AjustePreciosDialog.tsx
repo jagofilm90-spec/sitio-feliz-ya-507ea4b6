@@ -8,7 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Split, Save, DollarSign, AlertTriangle } from "lucide-react";
+import { Loader2, Split, Save, DollarSign, AlertTriangle, RotateCcw, History } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { calcularSubtotalLinea } from "@/lib/calculos";
 
 interface DetalleLinea {
@@ -22,6 +25,8 @@ interface DetalleLinea {
   subtotal: number;
   notas_ajuste: string | null;
   linea_dividida_de: string | null;
+  fecha_ajuste_precio: string | null;
+  precio_ajustado_por: string | null;
 }
 
 interface AjustePreciosDialogProps {
@@ -46,6 +51,7 @@ export const AjustePreciosDialog = ({
   const [dividirLineaId, setDividirLineaId] = useState<string | null>(null);
   const [dividirCantidad, setDividirCantidad] = useState<number>(0);
   const [dividirPrecioNuevo, setDividirPrecioNuevo] = useState<number>(0);
+  const [reverting, setReverting] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && pedidoId) {
@@ -79,6 +85,8 @@ export const AjustePreciosDialog = ({
           subtotal,
           notas_ajuste,
           linea_dividida_de,
+          fecha_ajuste_precio,
+          precio_ajustado_por,
           producto:productos(id, nombre, codigo)
         `)
         .eq("pedido_id", pedidoId);
@@ -95,7 +103,9 @@ export const AjustePreciosDialog = ({
         precio_original: d.precio_original,
         subtotal: d.subtotal,
         notas_ajuste: d.notas_ajuste,
-        linea_dividida_de: d.linea_dividida_de
+        linea_dividida_de: d.linea_dividida_de,
+        fecha_ajuste_precio: d.fecha_ajuste_precio,
+        precio_ajustado_por: d.precio_ajustado_por
       }));
 
       setLineas(lineasFormateadas);
@@ -132,6 +142,89 @@ export const AjustePreciosDialog = ({
     setDividirLineaId(linea.id);
     setDividirCantidad(Math.floor(linea.cantidad / 2));
     setDividirPrecioNuevo(linea.precio_unitario);
+  };
+
+  // Revert a single line to its original price
+  const handleRevertirLinea = async (linea: DetalleLinea) => {
+    if (!linea.precio_original) return;
+    
+    setReverting(linea.id);
+    try {
+      // If this line was split from another, merge it back
+      if (linea.linea_dividida_de) {
+        // Find the parent line
+        const lineaPadre = lineas.find(l => l.id === linea.linea_dividida_de);
+        
+        if (lineaPadre) {
+          // Merge: add quantity back to parent, delete this line
+          const nuevaCantidadPadre = lineaPadre.cantidad + linea.cantidad;
+          const nuevoSubtotalPadre = calcularSubtotalLinea(nuevaCantidadPadre, lineaPadre.precio_unitario);
+          
+          // Update parent line
+          await supabase
+            .from("pedidos_detalles")
+            .update({
+              cantidad: nuevaCantidadPadre,
+              subtotal: nuevoSubtotalPadre,
+              notas_ajuste: `Línea fusionada: cantidad restaurada de ${lineaPadre.cantidad} a ${nuevaCantidadPadre}`
+            })
+            .eq("id", lineaPadre.id);
+          
+          // Delete the split line
+          await supabase
+            .from("pedidos_detalles")
+            .delete()
+            .eq("id", linea.id);
+          
+          toast.success("Línea fusionada con la original");
+        } else {
+          // Parent not found, just restore price
+          const nuevoSubtotal = calcularSubtotalLinea(linea.cantidad, linea.precio_original);
+          await supabase
+            .from("pedidos_detalles")
+            .update({
+              precio_unitario: linea.precio_original,
+              subtotal: nuevoSubtotal,
+              precio_original: null,
+              precio_ajustado_por: null,
+              fecha_ajuste_precio: null,
+              notas_ajuste: `Precio revertido: $${linea.precio_unitario} → $${linea.precio_original}`
+            })
+            .eq("id", linea.id);
+          
+          toast.success("Precio revertido al original");
+        }
+      } else {
+        // Regular line (not split), just restore original price
+        const nuevoSubtotal = calcularSubtotalLinea(linea.cantidad, linea.precio_original);
+        await supabase
+          .from("pedidos_detalles")
+          .update({
+            precio_unitario: linea.precio_original,
+            subtotal: nuevoSubtotal,
+            precio_original: null,
+            precio_ajustado_por: null,
+            fecha_ajuste_precio: null,
+            notas_ajuste: `Precio revertido: $${linea.precio_unitario} → $${linea.precio_original}`
+          })
+          .eq("id", linea.id);
+        
+        toast.success("Precio revertido al original");
+      }
+      
+      await recalcularTotalesPedido();
+      loadLineas();
+    } catch (error) {
+      console.error("Error reverting line:", error);
+      toast.error("Error al revertir el precio");
+    } finally {
+      setReverting(null);
+    }
+  };
+
+  // Check if line has been modified
+  const lineaModificada = (linea: DetalleLinea) => {
+    return linea.precio_original !== null && linea.precio_original !== linea.precio_unitario;
   };
 
   const ejecutarDivision = async () => {
@@ -289,9 +382,9 @@ export const AjustePreciosDialog = ({
                     <th className="p-2 text-left">Producto</th>
                     <th className="p-2 text-center w-20">Cant.</th>
                     <th className="p-2 text-right w-28">P. Original</th>
-                    <th className="p-2 text-right w-32">P. Nuevo</th>
+                    <th className="p-2 text-right w-32">P. Actual</th>
                     <th className="p-2 text-right w-28">Subtotal</th>
-                    <th className="p-2 w-20"></th>
+                    <th className="p-2 w-28">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -329,14 +422,70 @@ export const AjustePreciosDialog = ({
                         ${linea.subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="p-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => iniciarDivision(linea)}
-                          title="Dividir línea"
-                        >
-                          <Split className="h-4 w-4" />
-                        </Button>
+                        <TooltipProvider>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => iniciarDivision(linea)}
+                              title="Dividir línea"
+                            >
+                              <Split className="h-4 w-4" />
+                            </Button>
+                            
+                            {lineaModificada(linea) && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleRevertirLinea(linea)}
+                                    disabled={reverting === linea.id}
+                                    className="text-amber-600 hover:text-amber-700"
+                                  >
+                                    {reverting === linea.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <RotateCcw className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="left" className="max-w-xs">
+                                  <p className="font-medium">Revertir al precio original</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    ${linea.precio_unitario} → ${linea.precio_original}
+                                  </p>
+                                  {linea.linea_dividida_de && (
+                                    <p className="text-xs text-amber-600 mt-1">
+                                      Esta línea se fusionará con la original
+                                    </p>
+                                  )}
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            
+                            {linea.fecha_ajuste_precio && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="cursor-help">
+                                    <History className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="left" className="max-w-xs">
+                                  <p className="font-medium">Historial de cambios</p>
+                                  <p className="text-xs">
+                                    Ajustado: {format(new Date(linea.fecha_ajuste_precio), "dd/MM/yyyy HH:mm", { locale: es })}
+                                  </p>
+                                  {linea.precio_original && (
+                                    <p className="text-xs">
+                                      Precio original: ${linea.precio_original.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                    </p>
+                                  )}
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                        </TooltipProvider>
                       </td>
                     </tr>
                   ))}
