@@ -71,8 +71,8 @@ const defaultCenter = {
   lng: -99.121084,
 };
 
-// Map options
-const mapOptions: google.maps.MapOptions = {
+// Map options - defined without google.maps types to avoid runtime errors
+const mapOptions = {
   disableDefaultUI: false,
   zoomControl: true,
   mapTypeControl: false,
