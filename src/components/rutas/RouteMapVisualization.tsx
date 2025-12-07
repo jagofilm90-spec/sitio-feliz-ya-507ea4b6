@@ -1,3 +1,31 @@
+/**
+ * ==========================================================
+ * ⚠️ COMPONENTE SENSIBLE - REGLAS DE GOOGLE MAPS
+ * ==========================================================
+ * 
+ * 🔒 REGLA 1: NUNCA usar google.maps.* como tipo en:
+ *    - useState<google.maps.X>
+ *    - useRef<google.maps.X>
+ *    - Parámetros de callbacks (map: google.maps.Map)
+ *    USAR: any o tipos de @react-google-maps/api
+ * 
+ * 🔒 REGLA 2: SIEMPRE verificar antes de usar google.maps:
+ *    if (!window.google || !window.google.maps) return;
+ * 
+ * 🔒 REGLA 3: Si el mapa falla, mostrar fallback visual,
+ *    NUNCA dejar pantalla blanca.
+ * 
+ * 🔒 REGLA 4: Validar preview antes de hacer cambios.
+ * 
+ * ¿Por qué? Los tipos google.maps.* se evalúan en runtime
+ * ANTES de que cargue la API, causando:
+ * ReferenceError: google is not defined
+ * que rompe TODA la aplicación.
+ * 
+ * Última actualización: 2025-12-07
+ * ==========================================================
+ */
+
 import { useState, useEffect, useCallback } from "react";
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, InfoWindow } from "@react-google-maps/api";
 import { Badge } from "@/components/ui/badge";
@@ -111,16 +139,17 @@ export const RouteMapVisualization = ({
   // Fetch directions from edge function
   const fetchDirections = useCallback(async () => {
     const validPoints = geocodedPoints.filter(p => p.lat && p.lng);
-    if (validPoints.length < 1 || !isLoaded) return;
+    // 🔒 Guard: verificar que Google Maps API esté cargada
+    if (validPoints.length < 1 || !isLoaded || !window.google || !window.google.maps) return;
 
     try {
       // Use Google Maps DirectionsService directly for visual rendering
-      const directionsService = new google.maps.DirectionsService();
+      const directionsService = new window.google.maps.DirectionsService();
 
       const origin = WAREHOUSE;
       const destination = WAREHOUSE; // Round trip back to warehouse
       const waypoints = validPoints.map(p => ({
-        location: new google.maps.LatLng(p.lat!, p.lng!),
+        location: new window.google.maps.LatLng(p.lat!, p.lng!),
         stopover: true,
       }));
 
@@ -129,7 +158,7 @@ export const RouteMapVisualization = ({
         destination,
         waypoints,
         optimizeWaypoints: optimizarOrden,
-        travelMode: google.maps.TravelMode.DRIVING,
+        travelMode: window.google.maps.TravelMode.DRIVING,
       });
 
       setDirections(result);
