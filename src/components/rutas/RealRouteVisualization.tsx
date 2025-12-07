@@ -111,12 +111,102 @@ export const RealRouteVisualization = ({
       : validPoints;
   }, [useGoogleOptimization, googleOptimizedPoints, validPoints]);
 
+  // Calculate routes function wrapped in useCallback
+  const calculateBothRoutes = useCallback(async () => {
+    if (!isLoaded || validPoints.length === 0) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const directionsService = new google.maps.DirectionsService();
+      
+      // Build waypoints (max 23 for Google Directions API)
+      const waypoints = validPoints.slice(0, 23).map(point => ({
+        location: new google.maps.LatLng(point.lat!, point.lng!),
+        stopover: true,
+      }));
+
+      const origin = new google.maps.LatLng(BODEGA_PRINCIPAL.lat, BODEGA_PRINCIPAL.lng);
+      const destination = origin; // Round trip back to warehouse
+
+      // 1. Calculate AI order route (no optimization)
+      const aiResult = await directionsService.route({
+        origin,
+        destination,
+        waypoints,
+        optimizeWaypoints: false, // Keep AI order
+        travelMode: google.maps.TravelMode.DRIVING,
+        region: "mx",
+      });
+
+      const aiRoute = aiResult.routes[0];
+      let aiDistanceM = 0;
+      let aiDurationS = 0;
+      
+      aiRoute.legs.forEach(leg => {
+        aiDistanceM += leg.distance?.value || 0;
+        aiDurationS += leg.duration?.value || 0;
+      });
+
+      setAiRouteStats({
+        distanceKm: aiDistanceM / 1000,
+        durationMinutes: aiDurationS / 60,
+      });
+      setAiDirections(aiResult);
+
+      // 2. Calculate Google optimized route
+      const googleResult = await directionsService.route({
+        origin,
+        destination,
+        waypoints,
+        optimizeWaypoints: true, // Let Google optimize
+        travelMode: google.maps.TravelMode.DRIVING,
+        region: "mx",
+      });
+
+      const googleRoute = googleResult.routes[0];
+      let googleDistanceM = 0;
+      let googleDurationS = 0;
+      
+      googleRoute.legs.forEach(leg => {
+        googleDistanceM += leg.distance?.value || 0;
+        googleDurationS += leg.duration?.value || 0;
+      });
+
+      const waypointOrder = googleRoute.waypoint_order || [];
+      
+      // Reorder points according to Google's optimization
+      const reorderedPoints = waypointOrder.map((originalIndex, newOrder) => ({
+        ...validPoints[originalIndex],
+        orden: newOrder + 1,
+      }));
+
+      setGoogleRouteStats({
+        distanceKm: googleDistanceM / 1000,
+        durationMinutes: googleDurationS / 60,
+        waypointOrder,
+      });
+      setGoogleDirections(googleResult);
+      setGoogleOptimizedPoints(reorderedPoints);
+      
+      // Default to showing Google optimized route
+      setDirections(googleResult);
+      setUseGoogleOptimization(true);
+    } catch (err: any) {
+      console.error("Error calculating routes:", err);
+      setError(err.message || "Error al calcular la ruta");
+    } finally {
+      setLoading(false);
+    }
+  }, [isLoaded, validPoints]);
+
   // Calculate route when dialog opens
   useEffect(() => {
     if (open && isLoaded && validPoints.length > 0 && !aiRouteStats) {
       calculateBothRoutes();
     }
-  }, [open, isLoaded, validPoints.length]);
+  }, [open, isLoaded, validPoints, aiRouteStats, calculateBothRoutes]);
 
   // Reset when dialog closes
   useEffect(() => {
@@ -140,90 +230,6 @@ export const RealRouteVisualization = ({
       setDirections(aiDirections);
     }
   }, [useGoogleOptimization, aiDirections, googleDirections]);
-
-  const calculateBothRoutes = async () => {
-    if (!isLoaded || validPoints.length === 0) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const directionsService = new google.maps.DirectionsService();
-      const MAX_WAYPOINTS = 23;
-      
-      const pointsToUse = validPoints.length <= MAX_WAYPOINTS 
-        ? validPoints 
-        : validPoints.slice(0, MAX_WAYPOINTS);
-
-      if (validPoints.length > MAX_WAYPOINTS) {
-        setError(`Mostrando primeros ${MAX_WAYPOINTS} puntos. La ruta tiene ${validPoints.length} entregas en total.`);
-      }
-
-      const waypoints = pointsToUse.map(p => ({
-        location: { lat: p.lat!, lng: p.lng! },
-        stopover: true,
-      }));
-
-      // 1. Calculate AI order route (optimizeWaypoints: false)
-      const aiResult = await directionsService.route({
-        origin: BODEGA_PRINCIPAL,
-        destination: BODEGA_PRINCIPAL,
-        waypoints,
-        travelMode: google.maps.TravelMode.DRIVING,
-        optimizeWaypoints: false,
-        region: "mx",
-      });
-
-      const aiLegs = aiResult.routes[0].legs;
-      const aiDistance = aiLegs.reduce((sum, leg) => sum + (leg.distance?.value || 0), 0);
-      const aiDuration = aiLegs.reduce((sum, leg) => sum + (leg.duration?.value || 0), 0);
-
-      setAiDirections(aiResult);
-      setAiRouteStats({
-        distanceKm: aiDistance / 1000,
-        durationMinutes: aiDuration / 60,
-      });
-
-      // 2. Calculate Google optimized route (optimizeWaypoints: true)
-      const googleResult = await directionsService.route({
-        origin: BODEGA_PRINCIPAL,
-        destination: BODEGA_PRINCIPAL,
-        waypoints,
-        travelMode: google.maps.TravelMode.DRIVING,
-        optimizeWaypoints: true,
-        region: "mx",
-      });
-
-      const googleLegs = googleResult.routes[0].legs;
-      const googleDistance = googleLegs.reduce((sum, leg) => sum + (leg.distance?.value || 0), 0);
-      const googleDuration = googleLegs.reduce((sum, leg) => sum + (leg.duration?.value || 0), 0);
-
-      // Capture optimized order
-      const waypointOrder = googleResult.routes[0].waypoint_order || [];
-      const reorderedPoints = waypointOrder.map((i, newIdx) => ({
-        ...pointsToUse[i],
-        orden: newIdx + 1,
-      }));
-
-      setGoogleDirections(googleResult);
-      setGoogleOptimizedPoints(reorderedPoints);
-      setGoogleRouteStats({
-        distanceKm: googleDistance / 1000,
-        durationMinutes: googleDuration / 60,
-        waypointOrder,
-      });
-
-      // Default to Google optimized (better)
-      setDirections(googleResult);
-      setUseGoogleOptimization(true);
-
-    } catch (err: any) {
-      console.error("Error calculating routes:", err);
-      setError(err.message || "Error al calcular la ruta");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
