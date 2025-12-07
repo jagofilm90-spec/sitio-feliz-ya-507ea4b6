@@ -102,14 +102,14 @@ export const InteractiveRouteMap = ({
     color: string;
   } | null>(null);
   const [visibleRutas, setVisibleRutas] = useState<Set<string>>(new Set());
-  const mapRef = useRef<google.maps.Map | null>(null);
+  const mapRef = useRef<any>(null);
 
   // Initialize visible routes
   useEffect(() => {
     setVisibleRutas(new Set(rutas.map(r => r.id)));
   }, [rutas]);
 
-  const onMapLoad = useCallback((map: google.maps.Map) => {
+  const onMapLoad = useCallback((map: any) => {
     mapRef.current = map;
     
     // Fit bounds to show all points
@@ -153,7 +153,7 @@ export const InteractiveRouteMap = ({
   };
 
   // Create numbered marker icon
-  const createMarkerIcon = (number: number, color: string, isWarehouse: boolean = false): google.maps.Symbol | google.maps.Icon => {
+  const createMarkerIcon = (number: number, color: string, isWarehouse: boolean = false): any => {
     if (isWarehouse) {
       return {
         path: google.maps.SymbolPath.CIRCLE,
