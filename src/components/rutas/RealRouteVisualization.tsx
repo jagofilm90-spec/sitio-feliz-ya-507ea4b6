@@ -13,9 +13,7 @@ import {
   AlertTriangle,
   Route,
   X,
-  Home,
-  Sparkles,
-  Check
+  Home
 } from "lucide-react";
 import {
   Dialog,
@@ -36,22 +34,12 @@ export interface RealRoutePoint {
   lng?: number;
 }
 
-interface RouteStats {
-  distanceKm: number;
-  durationMinutes: number;
-}
-
-interface GoogleOptimizedStats extends RouteStats {
-  waypointOrder: number[];
-}
-
 interface RealRouteVisualizationProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   puntos: RealRoutePoint[];
   vehiculoNombre: string;
   color?: string;
-  onOrderSelected?: (orderType: 'ai' | 'google', points: RealRoutePoint[]) => void;
 }
 
 // Map container style
@@ -81,40 +69,27 @@ export const RealRouteVisualization = ({
   puntos,
   vehiculoNombre,
   color = "#3b82f6",
-  onOrderSelected,
 }: RealRouteVisualizationProps) => {
   const { isLoaded, loadError, hasApiKey } = useGoogleMapsLoader();
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // State for AI vs Google comparison
-  const [useGoogleOptimization, setUseGoogleOptimization] = useState(true);
-  const [aiRouteStats, setAiRouteStats] = useState<RouteStats | null>(null);
-  const [googleRouteStats, setGoogleRouteStats] = useState<GoogleOptimizedStats | null>(null);
-  const [aiDirections, setAiDirections] = useState<google.maps.DirectionsResult | null>(null);
-  const [googleDirections, setGoogleDirections] = useState<google.maps.DirectionsResult | null>(null);
-  const [googleOptimizedPoints, setGoogleOptimizedPoints] = useState<RealRoutePoint[]>([]);
-  
+  const [routeStats, setRouteStats] = useState<{
+    distanceKm: number;
+    durationMinutes: number;
+  } | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
 
   // Filter points with valid coordinates
-  const validPoints = useMemo(() => puntos.filter(p => p.lat && p.lng), [puntos]);
+  const validPoints = puntos.filter(p => p.lat && p.lng);
   
   // Identify points missing coordinates
-  const missingCoords = useMemo(() => puntos.filter(p => !p.lat || !p.lng), [puntos]);
-
-  // Current displayed points based on selected mode
-  const displayedPoints = useMemo(() => {
-    return useGoogleOptimization && googleOptimizedPoints.length > 0 
-      ? googleOptimizedPoints 
-      : validPoints;
-  }, [useGoogleOptimization, googleOptimizedPoints, validPoints]);
+  const missingCoords = puntos.filter(p => !p.lat || !p.lng);
 
   // Calculate route when dialog opens
   useEffect(() => {
-    if (open && isLoaded && validPoints.length > 0 && !aiRouteStats) {
-      calculateBothRoutes();
+    if (open && isLoaded && validPoints.length > 0 && !directions) {
+      calculateRoute();
     }
   }, [open, isLoaded, validPoints.length]);
 
@@ -122,26 +97,12 @@ export const RealRouteVisualization = ({
   useEffect(() => {
     if (!open) {
       setDirections(null);
-      setAiRouteStats(null);
-      setGoogleRouteStats(null);
-      setAiDirections(null);
-      setGoogleDirections(null);
-      setGoogleOptimizedPoints([]);
+      setRouteStats(null);
       setError(null);
-      setUseGoogleOptimization(true);
     }
   }, [open]);
 
-  // Update displayed directions when mode changes
-  useEffect(() => {
-    if (useGoogleOptimization && googleDirections) {
-      setDirections(googleDirections);
-    } else if (!useGoogleOptimization && aiDirections) {
-      setDirections(aiDirections);
-    }
-  }, [useGoogleOptimization, aiDirections, googleDirections]);
-
-  const calculateBothRoutes = async () => {
+  const calculateRoute = async () => {
     if (!isLoaded || validPoints.length === 0) return;
 
     setLoading(true);
@@ -149,76 +110,71 @@ export const RealRouteVisualization = ({
 
     try {
       const directionsService = new google.maps.DirectionsService();
+
+      // Google Directions API has a limit of 25 waypoints (23 intermediate + origin + destination)
+      // For routes with more points, we need to make multiple calls
       const MAX_WAYPOINTS = 23;
       
-      const pointsToUse = validPoints.length <= MAX_WAYPOINTS 
-        ? validPoints 
-        : validPoints.slice(0, MAX_WAYPOINTS);
+      if (validPoints.length <= MAX_WAYPOINTS) {
+        // All deliveries are waypoints, route returns to warehouse (complete circuit)
+        const waypoints = validPoints.map(p => ({
+          location: { lat: p.lat!, lng: p.lng! },
+          stopover: true,
+        }));
 
-      if (validPoints.length > MAX_WAYPOINTS) {
+        const result = await directionsService.route({
+          origin: BODEGA_PRINCIPAL,
+          destination: BODEGA_PRINCIPAL, // Returns to warehouse (complete circuit)
+          waypoints,
+          travelMode: google.maps.TravelMode.DRIVING,
+          optimizeWaypoints: false, // Keep AI-defined order
+          region: "mx",
+        });
+
+        setDirections(result);
+
+        // Calculate total distance and duration (includes return leg to warehouse)
+        const legs = result.routes[0].legs;
+        const totalDistance = legs.reduce((sum, leg) => sum + (leg.distance?.value || 0), 0);
+        const totalDuration = legs.reduce((sum, leg) => sum + (leg.duration?.value || 0), 0);
+
+        setRouteStats({
+          distanceKm: totalDistance / 1000,
+          durationMinutes: totalDuration / 60,
+        });
+      } else {
+        // For routes with more than 23 waypoints, we need to segment
+        // For now, just use the first 23 waypoints and show a warning
+        const limitedPoints = validPoints.slice(0, MAX_WAYPOINTS);
+        const waypoints = limitedPoints.map(p => ({
+          location: { lat: p.lat!, lng: p.lng! },
+          stopover: true,
+        }));
+
+        const result = await directionsService.route({
+          origin: BODEGA_PRINCIPAL,
+          destination: BODEGA_PRINCIPAL, // Returns to warehouse (complete circuit)
+          waypoints,
+          travelMode: google.maps.TravelMode.DRIVING,
+          optimizeWaypoints: false,
+          region: "mx",
+        });
+
+        setDirections(result);
+
+        const legs = result.routes[0].legs;
+        const totalDistance = legs.reduce((sum, leg) => sum + (leg.distance?.value || 0), 0);
+        const totalDuration = legs.reduce((sum, leg) => sum + (leg.duration?.value || 0), 0);
+
+        setRouteStats({
+          distanceKm: totalDistance / 1000,
+          durationMinutes: totalDuration / 60,
+        });
+
         setError(`Mostrando primeros ${MAX_WAYPOINTS} puntos. La ruta tiene ${validPoints.length} entregas en total.`);
       }
-
-      const waypoints = pointsToUse.map(p => ({
-        location: { lat: p.lat!, lng: p.lng! },
-        stopover: true,
-      }));
-
-      // 1. Calculate AI order route (optimizeWaypoints: false)
-      const aiResult = await directionsService.route({
-        origin: BODEGA_PRINCIPAL,
-        destination: BODEGA_PRINCIPAL,
-        waypoints,
-        travelMode: google.maps.TravelMode.DRIVING,
-        optimizeWaypoints: false,
-        region: "mx",
-      });
-
-      const aiLegs = aiResult.routes[0].legs;
-      const aiDistance = aiLegs.reduce((sum, leg) => sum + (leg.distance?.value || 0), 0);
-      const aiDuration = aiLegs.reduce((sum, leg) => sum + (leg.duration?.value || 0), 0);
-
-      setAiDirections(aiResult);
-      setAiRouteStats({
-        distanceKm: aiDistance / 1000,
-        durationMinutes: aiDuration / 60,
-      });
-
-      // 2. Calculate Google optimized route (optimizeWaypoints: true)
-      const googleResult = await directionsService.route({
-        origin: BODEGA_PRINCIPAL,
-        destination: BODEGA_PRINCIPAL,
-        waypoints,
-        travelMode: google.maps.TravelMode.DRIVING,
-        optimizeWaypoints: true,
-        region: "mx",
-      });
-
-      const googleLegs = googleResult.routes[0].legs;
-      const googleDistance = googleLegs.reduce((sum, leg) => sum + (leg.distance?.value || 0), 0);
-      const googleDuration = googleLegs.reduce((sum, leg) => sum + (leg.duration?.value || 0), 0);
-
-      // Capture optimized order
-      const waypointOrder = googleResult.routes[0].waypoint_order || [];
-      const reorderedPoints = waypointOrder.map((i, newIdx) => ({
-        ...pointsToUse[i],
-        orden: newIdx + 1,
-      }));
-
-      setGoogleDirections(googleResult);
-      setGoogleOptimizedPoints(reorderedPoints);
-      setGoogleRouteStats({
-        distanceKm: googleDistance / 1000,
-        durationMinutes: googleDuration / 60,
-        waypointOrder,
-      });
-
-      // Default to Google optimized (better)
-      setDirections(googleResult);
-      setUseGoogleOptimization(true);
-
     } catch (err: any) {
-      console.error("Error calculating routes:", err);
+      console.error("Error calculating route:", err);
       setError(err.message || "Error al calcular la ruta");
     } finally {
       setLoading(false);
@@ -236,32 +192,6 @@ export const RealRouteVisualization = ({
     return `${hours}h ${mins}min`;
   };
 
-  // Calculate savings
-  const savingsKm = useMemo(() => {
-    if (!aiRouteStats || !googleRouteStats) return 0;
-    return aiRouteStats.distanceKm - googleRouteStats.distanceKm;
-  }, [aiRouteStats, googleRouteStats]);
-
-  const savingsPercent = useMemo(() => {
-    if (!aiRouteStats || !googleRouteStats || aiRouteStats.distanceKm === 0) return 0;
-    return ((aiRouteStats.distanceKm - googleRouteStats.distanceKm) / aiRouteStats.distanceKm) * 100;
-  }, [aiRouteStats, googleRouteStats]);
-
-  const savingsMinutes = useMemo(() => {
-    if (!aiRouteStats || !googleRouteStats) return 0;
-    return aiRouteStats.durationMinutes - googleRouteStats.durationMinutes;
-  }, [aiRouteStats, googleRouteStats]);
-
-  const handleModeChange = (mode: 'ai' | 'google') => {
-    setUseGoogleOptimization(mode === 'google');
-  };
-
-  const handleConfirmOrder = () => {
-    const selectedPoints = useGoogleOptimization ? googleOptimizedPoints : validPoints;
-    onOrderSelected?.(useGoogleOptimization ? 'google' : 'ai', selectedPoints);
-    onOpenChange(false);
-  };
-
   // Create warehouse marker icon - only when Google Maps is loaded
   const warehouseIcon = useMemo(() => {
     if (!isLoaded) return undefined;
@@ -274,9 +204,6 @@ export const RealRouteVisualization = ({
       strokeWeight: 3,
     };
   }, [isLoaded]);
-
-  // Current stats based on mode
-  const currentStats = useGoogleOptimization ? googleRouteStats : aiRouteStats;
 
   if (!hasApiKey) {
     return (
@@ -309,97 +236,20 @@ export const RealRouteVisualization = ({
         </DialogHeader>
 
         <div className="flex-1 min-h-0 flex flex-col gap-4">
-          {/* AI vs Google Comparison Cards */}
-          {aiRouteStats && googleRouteStats && (
-            <div className="grid grid-cols-2 gap-3">
-              {/* AI Order Card */}
-              <Card 
-                className={`cursor-pointer transition-all ${
-                  !useGoogleOptimization 
-                    ? 'ring-2 ring-primary bg-primary/5' 
-                    : 'hover:bg-muted/50'
-                }`}
-                onClick={() => handleModeChange('ai')}
-              >
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-blue-500" />
-                      <span className="text-sm font-medium">Orden AI</span>
-                    </div>
-                    {!useGoogleOptimization && (
-                      <Check className="h-4 w-4 text-primary" />
-                    )}
-                  </div>
-                  <p className="text-xl font-bold">{aiRouteStats.distanceKm.toFixed(1)} km</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDuration(aiRouteStats.durationMinutes)} de manejo
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* Google Optimized Card */}
-              <Card 
-                className={`cursor-pointer transition-all ${
-                  useGoogleOptimization 
-                    ? 'ring-2 ring-green-500 bg-green-500/5' 
-                    : 'hover:bg-muted/50'
-                }`}
-                onClick={() => handleModeChange('google')}
-              >
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Navigation2 className="h-4 w-4 text-green-500" />
-                      <span className="text-sm font-medium">Google Optimizado</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Badge className="bg-green-500 text-white text-xs">Recomendado</Badge>
-                      {useGoogleOptimization && (
-                        <Check className="h-4 w-4 text-green-600" />
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-xl font-bold text-green-600">
-                    {googleRouteStats.distanceKm.toFixed(1)} km
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDuration(googleRouteStats.durationMinutes)} de manejo
-                  </p>
-                  {savingsKm > 0 && (
-                    <div className="flex gap-1 mt-2">
-                      <Badge variant="outline" className="text-green-600 border-green-500 text-xs">
-                        -{savingsKm.toFixed(1)} km
-                      </Badge>
-                      <Badge variant="outline" className="text-green-600 border-green-500 text-xs">
-                        -{savingsPercent.toFixed(0)}%
-                      </Badge>
-                      {savingsMinutes > 0 && (
-                        <Badge variant="outline" className="text-green-600 border-green-500 text-xs">
-                          -{Math.round(savingsMinutes)} min
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Current Route Stats */}
-          {currentStats && (
+          {/* Route Stats */}
+          {routeStats && (
             <div className="grid grid-cols-3 gap-3">
               <Card className="bg-primary/10 border-primary/20">
                 <CardContent className="p-3 text-center">
                   <Navigation2 className="h-5 w-5 mx-auto mb-1 text-primary" />
-                  <p className="text-xl font-bold">{currentStats.distanceKm.toFixed(1)} km</p>
+                  <p className="text-xl font-bold">{routeStats.distanceKm.toFixed(1)} km</p>
                   <p className="text-xs text-muted-foreground">Distancia total (ida y vuelta)</p>
                 </CardContent>
               </Card>
               <Card className="bg-orange-500/10 border-orange-500/20">
                 <CardContent className="p-3 text-center">
                   <Clock className="h-5 w-5 mx-auto mb-1 text-orange-600" />
-                  <p className="text-xl font-bold">{formatDuration(currentStats.durationMinutes)}</p>
+                  <p className="text-xl font-bold">{formatDuration(routeStats.durationMinutes)}</p>
                   <p className="text-xs text-muted-foreground">Tiempo de manejo (ida y vuelta)</p>
                 </CardContent>
               </Card>
@@ -418,7 +268,7 @@ export const RealRouteVisualization = ({
           )}
 
           {/* Circuit info banner */}
-          {currentStats && (
+          {routeStats && (
             <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg text-sm">
               <Home className="h-4 w-4 text-primary flex-shrink-0" />
               <span className="text-muted-foreground">
@@ -428,11 +278,11 @@ export const RealRouteVisualization = ({
           )}
 
           {/* Time estimate including deliveries */}
-          {currentStats && (
+          {routeStats && (
             <div className="flex items-center justify-between px-3 py-2 bg-muted rounded-lg text-sm">
               <span className="text-muted-foreground">Tiempo total estimado (con entregas de ~25 min c/u):</span>
               <span className="font-semibold">
-                {formatDuration(currentStats.durationMinutes + (validPoints.length * 25))}
+                {formatDuration(routeStats.durationMinutes + (validPoints.length * 25))}
               </span>
             </div>
           )}
@@ -483,7 +333,7 @@ export const RealRouteVisualization = ({
             ) : loading ? (
               <div className="flex items-center justify-center h-full bg-muted">
                 <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                <span className="text-sm text-muted-foreground">Calculando ambas rutas...</span>
+                <span className="text-sm text-muted-foreground">Calculando ruta real...</span>
               </div>
             ) : (
               <GoogleMap
@@ -508,7 +358,7 @@ export const RealRouteVisualization = ({
                     options={{
                       suppressMarkers: false,
                       polylineOptions: {
-                        strokeColor: useGoogleOptimization ? "#22c55e" : color,
+                        strokeColor: color,
                         strokeOpacity: 0.8,
                         strokeWeight: 5,
                       },
@@ -524,16 +374,13 @@ export const RealRouteVisualization = ({
 
           {/* Delivery list */}
           <div className="flex-shrink-0 max-h-32 overflow-y-auto border rounded-lg divide-y">
-            {displayedPoints.map((punto, idx) => (
+            {validPoints.map((punto, idx) => (
               <div key={punto.id} className="p-2 flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
                   <Badge 
                     variant="secondary" 
                     className="w-6 h-6 flex items-center justify-center p-0"
-                    style={{ 
-                      backgroundColor: useGoogleOptimization ? "#22c55e" : color, 
-                      color: "white" 
-                    }}
+                    style={{ backgroundColor: color, color: "white" }}
                   >
                     {idx + 1}
                   </Badge>
@@ -552,36 +399,26 @@ export const RealRouteVisualization = ({
           </div>
 
           {/* Actions */}
-          <div className="flex justify-between gap-2 flex-shrink-0">
+          <div className="flex justify-end gap-2 flex-shrink-0">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               <X className="h-4 w-4 mr-2" />
               Cerrar
             </Button>
-            <div className="flex gap-2">
-              {directions && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    // Open Google Maps with the current order
-                    const currentPoints = useGoogleOptimization ? googleOptimizedPoints : validPoints;
-                    const waypointsParam = currentPoints
-                      .map(p => `${p.lat},${p.lng}`)
-                      .join("|");
-                    const url = `https://www.google.com/maps/dir/?api=1&origin=${BODEGA_PRINCIPAL.lat},${BODEGA_PRINCIPAL.lng}&destination=${BODEGA_PRINCIPAL.lat},${BODEGA_PRINCIPAL.lng}&waypoints=${waypointsParam}&travelmode=driving`;
-                    window.open(url, "_blank");
-                  }}
-                >
-                  <Navigation2 className="h-4 w-4 mr-2" />
-                  Abrir en Google Maps
-                </Button>
-              )}
-              {onOrderSelected && directions && (
-                <Button onClick={handleConfirmOrder} className="bg-green-600 hover:bg-green-700">
-                  <Check className="h-4 w-4 mr-2" />
-                  Usar este orden
-                </Button>
-              )}
-            </div>
+            {directions && (
+              <Button
+                onClick={() => {
+                  // Open Google Maps with the full circuit route (returns to warehouse)
+                  const waypointsParam = validPoints
+                    .map(p => `${p.lat},${p.lng}`)
+                    .join("|");
+                  const url = `https://www.google.com/maps/dir/?api=1&origin=${BODEGA_PRINCIPAL.lat},${BODEGA_PRINCIPAL.lng}&destination=${BODEGA_PRINCIPAL.lat},${BODEGA_PRINCIPAL.lng}&waypoints=${waypointsParam}&travelmode=driving`;
+                  window.open(url, "_blank");
+                }}
+              >
+                <Navigation2 className="h-4 w-4 mr-2" />
+                Abrir en Google Maps
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

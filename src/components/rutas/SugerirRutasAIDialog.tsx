@@ -104,9 +104,6 @@ export const SugerirRutasAIDialog = ({
     color: string;
   }>({ open: false, index: -1, puntos: [], vehiculoNombre: "", color: "" });
   
-  // State for storing Google-optimized orders per route
-  const [optimizedOrders, setOptimizedOrders] = useState<globalThis.Map<number, RealRoutePoint[]>>(new globalThis.Map());
-  
   // Vehicle selection state
   const [vehiculosDisponibles, setVehiculosDisponibles] = useState<VehiculoDisponible[]>([]);
   const [vehiculosSeleccionados, setVehiculosSeleccionados] = useState<Set<string>>(new Set());
@@ -287,13 +284,9 @@ export const SugerirRutasAIDialog = ({
 
       if (rutaError) throw rutaError;
 
-      // Use Google-optimized order if user selected it, otherwise use AI order
-      const optimizedOrder = optimizedOrders.get(index);
-      const ordenFinal = optimizedOrder || ruta.pedidos;
-      
-      const entregasData = ordenFinal.map((punto: any, idx: number) => ({
+      const entregasData = ruta.pedidos.map((pedido, idx) => ({
         ruta_id: rutaData.id,
-        pedido_id: punto.id || punto.pedido_id,
+        pedido_id: pedido.id,
         orden_entrega: idx + 1,
         entregado: false,
       }));
@@ -795,23 +788,6 @@ export const SugerirRutasAIDialog = ({
         puntos={realRouteDialog.puntos}
         vehiculoNombre={realRouteDialog.vehiculoNombre}
         color={realRouteDialog.color}
-        onOrderSelected={(orderType, points) => {
-          if (orderType === 'google' && realRouteDialog.index >= 0) {
-            // Store the Google-optimized order for this route
-            setOptimizedOrders(prev => {
-              const newMap = new globalThis.Map(prev);
-              newMap.set(realRouteDialog.index, points);
-              return newMap;
-            });
-          } else if (realRouteDialog.index >= 0) {
-            // User chose AI order, remove any optimized order
-            setOptimizedOrders(prev => {
-              const newMap = new globalThis.Map(prev);
-              newMap.delete(realRouteDialog.index);
-              return newMap;
-            });
-          }
-        }}
       />
     </Dialog>
   );
