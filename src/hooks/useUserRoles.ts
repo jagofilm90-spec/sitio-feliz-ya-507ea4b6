@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 
@@ -18,46 +18,18 @@ interface UseUserRolesReturn {
   hasAnyRole: (roles: AppRole[]) => boolean;
 }
 
-const DEFAULT_RETURN: UseUserRolesReturn = {
-  roles: [],
-  isLoading: false,
-  isAdmin: false,
-  isSecretaria: false,
-  isVendedor: false,
-  isChofer: false,
-  isAlmacen: false,
-  isContadora: false,
-  isCliente: false,
-  hasRole: () => false,
-  hasAnyRole: () => false,
-};
-
 export const useUserRoles = (): UseUserRolesReturn => {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    isMountedRef.current = true;
-    
     const fetchRoles = async () => {
       try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (userError) {
-          console.error('Error getting user:', userError);
-          if (isMountedRef.current) {
-            setRoles([]);
-            setIsLoading(false);
-          }
-          return;
-        }
+        const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
-          if (isMountedRef.current) {
-            setRoles([]);
-            setIsLoading(false);
-          }
+          setRoles([]);
+          setIsLoading(false);
           return;
         }
 
@@ -68,23 +40,15 @@ export const useUserRoles = (): UseUserRolesReturn => {
 
         if (error) {
           console.error('Error fetching user roles:', error);
-          if (isMountedRef.current) {
-            setRoles([]);
-          }
+          setRoles([]);
         } else {
-          if (isMountedRef.current) {
-            setRoles(data?.map(r => r.role) || []);
-          }
+          setRoles(data?.map(r => r.role) || []);
         }
       } catch (error) {
         console.error('Error in fetchRoles:', error);
-        if (isMountedRef.current) {
-          setRoles([]);
-        }
+        setRoles([]);
       } finally {
-        if (isMountedRef.current) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       }
     };
 
@@ -95,16 +59,11 @@ export const useUserRoles = (): UseUserRolesReturn => {
       if (event === 'SIGNED_IN') {
         fetchRoles();
       } else if (event === 'SIGNED_OUT') {
-        if (isMountedRef.current) {
-          setRoles([]);
-        }
+        setRoles([]);
       }
     });
 
-    return () => {
-      isMountedRef.current = false;
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const hasRole = (role: AppRole): boolean => roles.includes(role);
@@ -151,19 +110,14 @@ export const useModuleAccess = (path: string): { hasAccess: boolean; isLoading: 
   const { roles, isLoading: rolesLoading } = useUserRoles();
   const [hasAccess, setHasAccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    isMountedRef.current = true;
-    
     const checkAccess = async () => {
       if (rolesLoading) return;
       
       if (roles.length === 0) {
-        if (isMountedRef.current) {
-          setHasAccess(false);
-          setIsLoading(false);
-        }
+        setHasAccess(false);
+        setIsLoading(false);
         return;
       }
 
@@ -176,11 +130,8 @@ export const useModuleAccess = (path: string): { hasAccess: boolean; isLoading: 
           .in('role', roles)
           .eq('tiene_acceso', true);
 
-        if (!isMountedRef.current) return;
-
         if (error) {
           // Si hay error en BD, usar fallback estático
-          console.error('Error fetching module permissions:', error);
           const allowedRoles = MODULE_PERMISSIONS[path] || [];
           setHasAccess(roles.some(role => allowedRoles.includes(role)));
         } else {
@@ -188,24 +139,15 @@ export const useModuleAccess = (path: string): { hasAccess: boolean; isLoading: 
           setHasAccess((permissionsData?.length || 0) > 0);
         }
       } catch (err) {
-        console.error('Error in checkAccess:', err);
         // Fallback a permisos estáticos
-        if (isMountedRef.current) {
-          const allowedRoles = MODULE_PERMISSIONS[path] || [];
-          setHasAccess(roles.some(role => allowedRoles.includes(role)));
-        }
+        const allowedRoles = MODULE_PERMISSIONS[path] || [];
+        setHasAccess(roles.some(role => allowedRoles.includes(role)));
       } finally {
-        if (isMountedRef.current) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       }
     };
 
     checkAccess();
-    
-    return () => {
-      isMountedRef.current = false;
-    };
   }, [path, roles, rolesLoading]);
 
   return { hasAccess, isLoading };
@@ -220,19 +162,14 @@ export const useUserModulePermissions = (): {
   const { roles, isLoading: rolesLoading } = useUserRoles();
   const [allowedPaths, setAllowedPaths] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    isMountedRef.current = true;
-    
     const fetchPermissions = async () => {
       if (rolesLoading) return;
       
       if (roles.length === 0) {
-        if (isMountedRef.current) {
-          setAllowedPaths([]);
-          setIsLoading(false);
-        }
+        setAllowedPaths([]);
+        setIsLoading(false);
         return;
       }
 
@@ -243,10 +180,7 @@ export const useUserModulePermissions = (): {
           .in('role', roles)
           .eq('tiene_acceso', true);
 
-        if (!isMountedRef.current) return;
-
         if (error) {
-          console.error('Error fetching module permissions:', error);
           // Fallback to static permissions
           const paths = Object.entries(MODULE_PERMISSIONS)
             .filter(([_, allowedRoles]) => roles.some(r => allowedRoles.includes(r)))
@@ -258,26 +192,17 @@ export const useUserModulePermissions = (): {
           setAllowedPaths(uniquePaths);
         }
       } catch (err) {
-        console.error('Error in fetchPermissions:', err);
         // Fallback to static permissions
-        if (isMountedRef.current) {
-          const paths = Object.entries(MODULE_PERMISSIONS)
-            .filter(([_, allowedRoles]) => roles.some(r => allowedRoles.includes(r)))
-            .map(([path]) => path);
-          setAllowedPaths(paths);
-        }
+        const paths = Object.entries(MODULE_PERMISSIONS)
+          .filter(([_, allowedRoles]) => roles.some(r => allowedRoles.includes(r)))
+          .map(([path]) => path);
+        setAllowedPaths(paths);
       } finally {
-        if (isMountedRef.current) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       }
     };
 
     fetchPermissions();
-    
-    return () => {
-      isMountedRef.current = false;
-    };
   }, [roles, rolesLoading]);
 
   const checkAccess = useMemo(() => {

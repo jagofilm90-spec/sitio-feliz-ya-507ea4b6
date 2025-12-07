@@ -68,6 +68,3 @@ verify_jwt = true
 
 [functions.get-place-details]
 verify_jwt = true
-
-[functions.get-route-directions]
-verify_jwt = true

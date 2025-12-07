@@ -17,7 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { MapPin, Navigation, Loader2, AlertCircle } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
-import { MapErrorBoundary } from "@/components/ErrorBoundary";
 
 interface Cliente {
   id: string;
@@ -52,12 +51,6 @@ const defaultCenter = {
   lng: -99.1332,
 };
 
-// Verificar si la API key está configurada
-const hasValidApiKey = () => {
-  const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  return key && key.length > 10 && key !== "undefined";
-};
-
 export function ClienteSucursalesMapDialog({
   open,
   onOpenChange,
@@ -72,7 +65,7 @@ export function ClienteSucursalesMapDialog({
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: hasValidApiKey() ? import.meta.env.VITE_GOOGLE_MAPS_API_KEY : "",
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
   });
 
   useEffect(() => {
@@ -171,48 +164,17 @@ export function ClienteSucursalesMapDialog({
     }
   };
 
-  // Mostrar error si no hay API key
-  if (!hasValidApiKey()) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-500" />
-              Mapa no disponible
-            </DialogTitle>
-          </DialogHeader>
-          <div className="text-center py-4">
-            <p className="text-muted-foreground">
-              La API key de Google Maps no está configurada. El mapa no está disponible en este momento.
-            </p>
-          </div>
-          <Button onClick={() => onOpenChange(false)} variant="outline" className="w-full">
-            Cerrar
-          </Button>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
   if (loadError) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-destructive" />
-              Error al cargar el mapa
-            </DialogTitle>
+            <DialogTitle>Error al cargar el mapa</DialogTitle>
           </DialogHeader>
-          <div className="text-center py-4">
-            <p className="text-muted-foreground">
-              No se pudo cargar Google Maps. Verifica tu conexión a internet.
-            </p>
+          <div className="flex items-center gap-2 text-destructive">
+            <AlertCircle className="h-5 w-5" />
+            <span>No se pudo cargar Google Maps. Verifica tu conexión o API key.</span>
           </div>
-          <Button onClick={() => onOpenChange(false)} variant="outline" className="w-full">
-            Cerrar
-          </Button>
         </DialogContent>
       </Dialog>
     );
@@ -270,44 +232,43 @@ export function ClienteSucursalesMapDialog({
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <MapErrorBoundary>
-                <GoogleMap
-                  mapContainerStyle={mapContainerStyle}
-                  center={defaultCenter}
-                  zoom={10}
-                  onLoad={onMapLoad}
-                  options={{
-                    streetViewControl: false,
-                    mapTypeControl: true,
-                    fullscreenControl: true,
-                  }}
-                >
-                  {sucursalesWithCoords.map((sucursal) => (
-                    <Marker
-                      key={sucursal.id}
-                      position={{ lat: sucursal.latitud!, lng: sucursal.longitud! }}
-                      onClick={() => setSelectedMarker(sucursal)}
-                      title={sucursal.nombre}
-                    />
-                  ))}
+              <GoogleMap
+                mapContainerStyle={mapContainerStyle}
+                center={defaultCenter}
+                zoom={10}
+                onLoad={onMapLoad}
+                options={{
+                  streetViewControl: false,
+                  mapTypeControl: true,
+                  fullscreenControl: true,
+                }}
+              >
+                {sucursalesWithCoords.map((sucursal) => (
+                  <Marker
+                    key={sucursal.id}
+                    position={{ lat: sucursal.latitud!, lng: sucursal.longitud! }}
+                    onClick={() => setSelectedMarker(sucursal)}
+                    title={sucursal.nombre}
+                  />
+                ))}
 
-                  {selectedMarker && (
-                    <InfoWindow
-                      position={{ lat: selectedMarker.latitud!, lng: selectedMarker.longitud! }}
-                      onCloseClick={() => setSelectedMarker(null)}
-                    >
-                      <div className="p-2 min-w-[200px]">
-                        <h3 className="font-semibold text-sm mb-1">{selectedMarker.nombre}</h3>
-                        {selectedMarker.codigo_sucursal && (
-                          <p className="text-xs text-gray-600">Suc. {selectedMarker.codigo_sucursal}</p>
-                        )}
-                        {selectedMarker.cl && (
-                          <p className="text-xs text-gray-600">CL: {selectedMarker.cl}</p>
-                        )}
-                        {selectedMarker.direccion && (
-                          <p className="text-xs text-gray-500 mt-1">{selectedMarker.direccion}</p>
-                        )}
-                        {selectedMarker.telefono && (
+                {selectedMarker && (
+                  <InfoWindow
+                    position={{ lat: selectedMarker.latitud!, lng: selectedMarker.longitud! }}
+                    onCloseClick={() => setSelectedMarker(null)}
+                  >
+                    <div className="p-2 min-w-[200px]">
+                      <h3 className="font-semibold text-sm mb-1">{selectedMarker.nombre}</h3>
+                      {selectedMarker.codigo_sucursal && (
+                        <p className="text-xs text-gray-600">Suc. {selectedMarker.codigo_sucursal}</p>
+                      )}
+                      {selectedMarker.cl && (
+                        <p className="text-xs text-gray-600">CL: {selectedMarker.cl}</p>
+                      )}
+                      {selectedMarker.direccion && (
+                        <p className="text-xs text-gray-500 mt-1">{selectedMarker.direccion}</p>
+                      )}
+                      {selectedMarker.telefono && (
                         <p className="text-xs text-gray-500">Tel: {selectedMarker.telefono}</p>
                       )}
                       <Button
@@ -323,9 +284,8 @@ export function ClienteSucursalesMapDialog({
                   </InfoWindow>
                 )}
               </GoogleMap>
-            </MapErrorBoundary>
-          )}
-        </div>
+            )}
+          </div>
 
           {/* Loading indicator */}
           {loading && (

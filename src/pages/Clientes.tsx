@@ -46,7 +46,7 @@ import {
   DialogHeader as HistorialDialogHeader,
   DialogTitle as HistorialDialogTitle,
 } from "@/components/ui/dialog";
-import { MapaGlobalSucursales } from "@/components/clientes/MapaGlobalSucursales";
+// import { ClienteSucursalesMapDialog } from "@/components/clientes/ClienteSucursalesMapDialog";
 
 interface Zona {
   id: string;
@@ -84,7 +84,7 @@ const Clientes = () => {
   const [selectedClienteForHistorial, setSelectedClienteForHistorial] = useState<{ id: string; nombre: string } | null>(null);
   const [productosDialogOpen, setProductosDialogOpen] = useState(false);
   const [selectedClienteForProductos, setSelectedClienteForProductos] = useState<{ id: string; nombre: string } | null>(null);
-  const [mapDialogOpen, setMapDialogOpen] = useState(false);
+  // const [mapDialogOpen, setMapDialogOpen] = useState(false);
   const { toast } = useToast();
   const { isAdmin } = useUserRoles();
 
@@ -688,10 +688,12 @@ const Clientes = () => {
             <p className="text-muted-foreground">Gestión de clientes y créditos</p>
           </div>
           <div className="flex gap-2">
+            {/* TODO: Reimplementar mapa con edge function para API key segura
             <Button variant="outline" onClick={() => setMapDialogOpen(true)}>
               <Map className="h-4 w-4 mr-2" />
-              Mapa Global
+              Mapa Sucursales
             </Button>
+            */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button onClick={resetForm}>
@@ -986,10 +988,10 @@ const Clientes = () => {
         cliente={selectedClienteForProductos}
       />
 
-      <MapaGlobalSucursales
+      {/* <ClienteSucursalesMapDialog
         open={mapDialogOpen}
         onOpenChange={setMapDialogOpen}
-      />
+      /> */}
     </Layout>
   );
 };

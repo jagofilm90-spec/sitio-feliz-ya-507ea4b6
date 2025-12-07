@@ -17,13 +17,6 @@ interface UnreadEmailsData {
   isLoading: boolean;
 }
 
-const DEFAULT_RETURN: UnreadEmailsData = {
-  counts: {},
-  cuentas: [],
-  totalUnread: 0,
-  isLoading: false,
-};
-
 export const useUnreadEmails = (): UnreadEmailsData => {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [cuentas, setCuentas] = useState<Array<{
@@ -37,32 +30,18 @@ export const useUnreadEmails = (): UnreadEmailsData => {
   const previousCountsRef = useRef<Record<string, number>>({});
   const isInitialLoadRef = useRef(true);
   const suppressNotificationsRef = useRef(false);
-  const isMountedRef = useRef(true);
 
   // Load connected email accounts
   const loadCuentas = useCallback(async () => {
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        if (isMountedRef.current) {
-          setIsLoading(false);
-        }
-        return;
-      }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
       // Check if user is admin
-      const { data: roles, error: rolesError } = await supabase
+      const { data: roles } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id);
-
-      if (rolesError) {
-        console.error("Error fetching user roles for emails:", rolesError);
-        if (isMountedRef.current) {
-          setIsLoading(false);
-        }
-        return;
-      }
 
       const isAdmin = roles?.some(r => r.role === "admin");
 
@@ -70,61 +49,43 @@ export const useUnreadEmails = (): UnreadEmailsData => {
 
       if (isAdmin) {
         // Admin sees all connected accounts
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from("gmail_cuentas")
           .select("id, email, nombre, proposito")
           .eq("activo", true)
           .not("access_token", "is", null);
         
-        if (error) {
-          console.error("Error loading gmail accounts:", error);
-        } else {
-          connectedCuentas = data || [];
-        }
+        connectedCuentas = data || [];
       } else {
         // Non-admin sees only permitted accounts
-        const { data: permisos, error: permisosError } = await supabase
+        const { data: permisos } = await supabase
           .from("gmail_cuenta_permisos")
           .select("gmail_cuenta_id")
           .eq("user_id", user.id);
 
-        if (permisosError) {
-          console.error("Error loading gmail permisos:", permisosError);
-        } else if (permisos && permisos.length > 0) {
+        if (permisos && permisos.length > 0) {
           const cuentaIds = permisos.map(p => p.gmail_cuenta_id);
-          const { data, error } = await supabase
+          const { data } = await supabase
             .from("gmail_cuentas")
             .select("id, email, nombre, proposito")
             .in("id", cuentaIds)
             .eq("activo", true)
             .not("access_token", "is", null);
           
-          if (error) {
-            console.error("Error loading permitted gmail accounts:", error);
-          } else {
-            connectedCuentas = data || [];
-          }
+          connectedCuentas = data || [];
         }
       }
 
-      if (isMountedRef.current) {
-        setCuentas(connectedCuentas);
-      }
+      setCuentas(connectedCuentas);
     } catch (error) {
       console.error("Error loading email accounts:", error);
-      if (isMountedRef.current) {
-        setCuentas([]);
-        setIsLoading(false);
-      }
     }
   }, []);
 
   // Fetch unread counts for all accounts
   const loadUnreadCounts = useCallback(async () => {
     if (cuentas.length === 0) {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
       return;
     }
 
@@ -136,14 +97,9 @@ export const useUnreadEmails = (): UnreadEmailsData => {
           }).then(response => ({
             email: cuenta.email,
             count: response.data?.unreadCount ?? 0,
-          })).catch(() => ({
-            email: cuenta.email,
-            count: 0,
           }))
         )
       );
-
-      if (!isMountedRef.current) return;
 
       const newCounts: Record<string, number> = {};
       results.forEach((result, index) => {
@@ -163,33 +119,29 @@ export const useUnreadEmails = (): UnreadEmailsData => {
           if (currentCount > previousCount) {
             const newEmailsCount = currentCount - previousCount;
 
-            try {
-              // Play notification sound
-              playNotificationSound();
+            // Play notification sound
+            playNotificationSound();
 
-              // Show toast notification
-              toast.info(
-                `${newEmailsCount} nuevo${newEmailsCount > 1 ? 's' : ''} correo${newEmailsCount > 1 ? 's' : ''} en ${cuenta.nombre}`,
-                {
-                  description: cuenta.email,
-                  icon: React.createElement(Bell, { className: "h-4 w-4" }),
-                  duration: 8000,
-                }
-              );
-
-              // Request browser notification
-              if (typeof Notification !== 'undefined') {
-                if (Notification.permission === "granted") {
-                  new Notification(`Nuevo correo en ${cuenta.nombre}`, {
-                    body: `${newEmailsCount} correo${newEmailsCount > 1 ? 's' : ''} sin leer`,
-                    icon: "/favicon.ico",
-                  });
-                } else if (Notification.permission !== "denied") {
-                  Notification.requestPermission();
-                }
+            // Show toast notification
+            toast.info(
+              `${newEmailsCount} nuevo${newEmailsCount > 1 ? 's' : ''} correo${newEmailsCount > 1 ? 's' : ''} en ${cuenta.nombre}`,
+              {
+                description: cuenta.email,
+                icon: React.createElement(Bell, { className: "h-4 w-4" }),
+                duration: 8000,
               }
-            } catch (notifError) {
-              console.error("Error showing notification:", notifError);
+            );
+
+            // Request browser notification
+            if (typeof Notification !== 'undefined') {
+              if (Notification.permission === "granted") {
+                new Notification(`Nuevo correo en ${cuenta.nombre}`, {
+                  body: `${newEmailsCount} correo${newEmailsCount > 1 ? 's' : ''} sin leer`,
+                  icon: "/favicon.ico",
+                });
+              } else if (Notification.permission !== "denied") {
+                Notification.requestPermission();
+              }
             }
           }
         }
@@ -197,27 +149,17 @@ export const useUnreadEmails = (): UnreadEmailsData => {
 
       previousCountsRef.current = { ...newCounts };
       isInitialLoadRef.current = false;
-      
-      if (isMountedRef.current) {
-        setCounts(newCounts);
-      }
+      setCounts(newCounts);
     } catch (error) {
       console.error("Error loading unread counts:", error);
     } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   }, [cuentas]);
 
   // Load accounts on mount
   useEffect(() => {
-    isMountedRef.current = true;
     loadCuentas();
-    
-    return () => {
-      isMountedRef.current = false;
-    };
   }, [loadCuentas]);
 
   // Load unread counts when accounts are loaded
@@ -226,12 +168,7 @@ export const useUnreadEmails = (): UnreadEmailsData => {
       loadUnreadCounts();
 
       // Poll every 30 seconds
-      const interval = setInterval(() => {
-        if (isMountedRef.current) {
-          loadUnreadCounts();
-        }
-      }, 30000);
-      
+      const interval = setInterval(loadUnreadCounts, 30000);
       return () => clearInterval(interval);
     }
   }, [cuentas, loadUnreadCounts]);

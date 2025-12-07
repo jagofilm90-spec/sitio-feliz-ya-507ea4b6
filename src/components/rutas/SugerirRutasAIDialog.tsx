@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { RouteMapWithDirections } from "./RouteMapWithDirections";
+import { RouteMapVisualization } from "./RouteMapVisualization";
 
 interface RutaSugerida {
   vehiculo: {
@@ -532,7 +532,7 @@ export const SugerirRutasAIDialog = ({
                           </div>
 
                           {showMaps.has(index) && (
-                            <RouteMapWithDirections
+                            <RouteMapVisualization
                               puntos={ruta.pedidos.map((pedido: any, pIdx: number) => ({
                                 id: pedido.id,
                                 folio: pedido.folio,
@@ -541,10 +541,12 @@ export const SugerirRutasAIDialog = ({
                                 direccion: pedido.sucursal?.direccion || pedido.cliente?.direccion || "",
                                 peso_kg: pedido.peso_total_kg || 0,
                                 orden: pIdx + 1,
+                                // Pass GPS coordinates from sucursal if available
                                 lat: pedido.sucursal?.latitud || undefined,
                                 lng: pedido.sucursal?.longitud || undefined,
                               }))}
                               vehiculoNombre={ruta.vehiculo.nombre}
+                              optimizarOrden={true}
                             />
                           )}
 
