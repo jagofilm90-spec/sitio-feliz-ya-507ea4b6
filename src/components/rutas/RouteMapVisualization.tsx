@@ -291,12 +291,13 @@ export const RouteMapVisualization = ({
               <Marker
                 position={WAREHOUSE}
                 icon={{
-                  path: google.maps.SymbolPath.CIRCLE,
-                  scale: 10,
-                  fillColor: "#000000",
-                  fillOpacity: 1,
-                  strokeColor: "#ffffff",
-                  strokeWeight: 2,
+                  url: "data:image/svg+xml," + encodeURIComponent(`
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" fill="#000000" stroke="#ffffff" stroke-width="2"/>
+                    </svg>
+                  `),
+                  scaledSize: new window.google.maps.Size(24, 24),
+                  anchor: new window.google.maps.Point(12, 12),
                 }}
                 title="Bodega Principal"
               />
@@ -327,14 +328,14 @@ export const RouteMapVisualization = ({
                     fontWeight: "bold",
                   }}
                   icon={{
-                    path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
-                    fillColor: COLORS[index % COLORS.length],
-                    fillOpacity: 1,
-                    strokeColor: "#ffffff",
-                    strokeWeight: 2,
-                    scale: 1.5,
-                    labelOrigin: new google.maps.Point(12, 10),
-                    anchor: new google.maps.Point(12, 24),
+                    url: "data:image/svg+xml," + encodeURIComponent(`
+                      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="48" viewBox="0 0 24 32">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="${COLORS[index % COLORS.length]}" stroke="#ffffff" stroke-width="1.5"/>
+                      </svg>
+                    `),
+                    scaledSize: new window.google.maps.Size(36, 48),
+                    anchor: new window.google.maps.Point(18, 48),
+                    labelOrigin: new window.google.maps.Point(18, 14),
                   }}
                   onClick={() => setSelectedPoint(punto)}
                 />
