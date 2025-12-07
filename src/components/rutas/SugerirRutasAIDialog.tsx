@@ -33,6 +33,7 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { RouteMapVisualization } from "./RouteMapVisualization";
+import { InteractiveRouteMap, RouteData } from "./InteractiveRouteMap";
 
 interface RutaSugerida {
   vehiculo: {
@@ -92,6 +93,7 @@ export const SugerirRutasAIDialog = ({
   const [expandedRutas, setExpandedRutas] = useState<Set<number>>(new Set([0]));
   const [creandoRutas, setCreandoRutas] = useState<Set<number>>(new Set());
   const [showMaps, setShowMaps] = useState<Set<number>>(new Set());
+  const [showGlobalMap, setShowGlobalMap] = useState(false);
   
   // Vehicle selection state
   const [vehiculosDisponibles, setVehiculosDisponibles] = useState<VehiculoDisponible[]>([]);
@@ -304,6 +306,34 @@ export const SugerirRutasAIDialog = ({
   const pedidosHoyTotal = rutasSugeridas.reduce((sum, r) => sum + r.pedidos.length, 0);
   const pesoHoyTotal = rutasSugeridas.reduce((sum, r) => sum + r.peso_total, 0);
 
+  // Color palette for routes
+  const ROUTE_COLORS = [
+    "#ef4444", "#3b82f6", "#22c55e", "#f97316", "#8b5cf6",
+    "#ec4899", "#14b8a6", "#eab308", "#6366f1",
+  ];
+
+  // Transform routes for interactive map
+  const rutasParaMapa: RouteData[] = rutasSugeridas.map((ruta, index) => ({
+    id: `ruta-${index}`,
+    vehiculoNombre: ruta.vehiculo.nombre,
+    vehiculoTipo: ruta.vehiculo.tipo,
+    color: ROUTE_COLORS[index % ROUTE_COLORS.length],
+    puntos: ruta.pedidos.map((pedido: any, pIdx: number) => ({
+      id: pedido.id,
+      folio: pedido.folio,
+      cliente: pedido.cliente?.nombre || "Sin cliente",
+      sucursal: pedido.sucursal?.nombre,
+      direccion: pedido.sucursal?.direccion || pedido.cliente?.direccion || "",
+      peso_kg: pedido.peso_total_kg || 0,
+      orden: pIdx + 1,
+      lat: pedido.sucursal?.latitud || undefined,
+      lng: pedido.sucursal?.longitud || undefined,
+      prioridad: pedido.prioridad_entrega,
+    })),
+    pesoTotal: ruta.peso_total,
+    capacidadMaxima: ruta.capacidad_maxima,
+  }));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -443,6 +473,14 @@ export const SugerirRutasAIDialog = ({
                   {rutasSugeridas.length} rutas para hoy
                 </div>
                 <div className="flex gap-2">
+                  <Button 
+                    variant={showGlobalMap ? "secondary" : "outline"} 
+                    size="sm" 
+                    onClick={() => setShowGlobalMap(!showGlobalMap)}
+                  >
+                    <Map className="h-4 w-4 mr-2" />
+                    {showGlobalMap ? "Ocultar Mapa" : "Ver Mapa"}
+                  </Button>
                   <Button variant="outline" size="sm" onClick={generarSugerencias}>
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Regenerar
@@ -455,6 +493,17 @@ export const SugerirRutasAIDialog = ({
                   )}
                 </div>
               </div>
+
+              {/* Interactive Global Map */}
+              {showGlobalMap && rutasParaMapa.length > 0 && (
+                <div className="flex-shrink-0">
+                  <InteractiveRouteMap
+                    rutas={rutasParaMapa}
+                    height="350px"
+                    showLegend={true}
+                  />
+                </div>
+              )}
 
               {notasAI && (
                 <Alert className="flex-shrink-0">
