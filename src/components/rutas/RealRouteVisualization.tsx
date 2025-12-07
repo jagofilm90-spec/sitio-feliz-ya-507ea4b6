@@ -180,7 +180,7 @@ export const RealRouteVisualization = ({
     }
   };
 
-  const onMapLoad = useCallback((map: google.maps.Map) => {
+  const onMapLoad = useCallback((map: any) => {
     mapRef.current = map;
   }, []);
 
