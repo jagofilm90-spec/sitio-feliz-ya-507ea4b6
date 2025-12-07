@@ -10,6 +10,7 @@ import {
   Clock, 
   Navigation2, 
   AlertCircle,
+  AlertTriangle,
   Route,
   X
 } from "lucide-react";
@@ -80,6 +81,9 @@ export const RealRouteVisualization = ({
 
   // Filter points with valid coordinates
   const validPoints = puntos.filter(p => p.lat && p.lng);
+  
+  // Identify points missing coordinates
+  const missingCoords = puntos.filter(p => !p.lat || !p.lng);
 
   // Calculate route when dialog opens
   useEffect(() => {
@@ -252,11 +256,15 @@ export const RealRouteVisualization = ({
                   <p className="text-xs text-muted-foreground">Tiempo de manejo</p>
                 </CardContent>
               </Card>
-              <Card className="bg-green-500/10 border-green-500/20">
+              <Card className={`${missingCoords.length > 0 ? 'bg-amber-500/10 border-amber-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
                 <CardContent className="p-3 text-center">
-                  <MapPin className="h-5 w-5 mx-auto mb-1 text-green-600" />
-                  <p className="text-xl font-bold">{validPoints.length}</p>
-                  <p className="text-xs text-muted-foreground">Entregas</p>
+                  <MapPin className={`h-5 w-5 mx-auto mb-1 ${missingCoords.length > 0 ? 'text-amber-600' : 'text-green-600'}`} />
+                  <p className="text-xl font-bold">
+                    {validPoints.length} {missingCoords.length > 0 && <span className="text-muted-foreground font-normal">de {puntos.length}</span>}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {missingCoords.length > 0 ? 'Entregas con ubicación' : 'Entregas'}
+                  </p>
                 </CardContent>
               </Card>
             </div>
@@ -269,6 +277,28 @@ export const RealRouteVisualization = ({
               <span className="font-semibold">
                 {formatDuration(routeStats.durationMinutes + (validPoints.length * 25))}
               </span>
+            </div>
+          )}
+
+          {/* Warning for missing coordinates */}
+          {missingCoords.length > 0 && (
+            <div className="flex items-start gap-3 px-4 py-3 bg-amber-500/15 border border-amber-500/30 rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-amber-700 dark:text-amber-400">
+                  {missingCoords.length} pedido(s) sin coordenadas GPS
+                </p>
+                <p className="text-sm text-amber-600 dark:text-amber-500">
+                  Estos pedidos no aparecen en el mapa. Necesitan geocodificación:
+                </p>
+                <ul className="text-sm text-amber-600 dark:text-amber-500 mt-1 list-disc list-inside max-h-20 overflow-y-auto">
+                  {missingCoords.map(p => (
+                    <li key={p.id} className="truncate">
+                      {p.cliente} - {p.sucursal || p.direccion || 'Sin dirección'}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           )}
 
