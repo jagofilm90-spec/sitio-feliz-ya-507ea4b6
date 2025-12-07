@@ -336,7 +336,7 @@ export const SugerirRutasAIDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
@@ -436,84 +436,81 @@ export const SugerirRutasAIDialog = ({
 
           {/* Results */}
           {rutasSugeridas.length > 0 && (
-            <>
-              {/* Summary Stats */}
-              <div className="grid grid-cols-3 gap-3">
-                <Card className="bg-green-500/10 border-green-500/20">
-                  <CardContent className="p-3 text-center">
-                    <p className="text-2xl font-bold text-green-600">{pedidosHoyTotal}</p>
-                    <p className="text-xs text-muted-foreground">Pedidos HOY</p>
-                    <p className="text-xs font-medium">{pesoHoyTotal.toLocaleString()} kg</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-blue-500/10 border-blue-500/20">
-                  <CardContent className="p-3 text-center">
-                    <p className="text-2xl font-bold text-blue-600">{pedidosParaDespues.length}</p>
-                    <p className="text-xs text-muted-foreground">Para después</p>
-                    <p className="text-xs font-medium">
-                      {pedidosParaDespues.reduce((s, p) => s + (p.peso_total_kg || 0), 0).toLocaleString()} kg
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className={`${pedidosOversized.length > 0 ? "bg-red-500/10 border-red-500/20" : "bg-muted"}`}>
-                  <CardContent className="p-3 text-center">
-                    <p className={`text-2xl font-bold ${pedidosOversized.length > 0 ? "text-red-600" : "text-muted-foreground"}`}>
-                      {pedidosOversized.length}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Oversized</p>
-                    <p className="text-xs font-medium">
-                      {pedidosOversized.length > 0 ? "Requieren múltiples viajes" : "Todo OK"}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="flex items-center justify-between flex-shrink-0">
-                <div className="text-sm text-muted-foreground">
-                  {rutasSugeridas.length} rutas para hoy
+            <ScrollArea className="flex-1 min-h-0">
+              <div className="space-y-4 pr-4">
+                {/* Summary Stats */}
+                <div className="grid grid-cols-3 gap-3">
+                  <Card className="bg-green-500/10 border-green-500/20">
+                    <CardContent className="p-3 text-center">
+                      <p className="text-2xl font-bold text-green-600">{pedidosHoyTotal}</p>
+                      <p className="text-xs text-muted-foreground">Pedidos HOY</p>
+                      <p className="text-xs font-medium">{pesoHoyTotal.toLocaleString()} kg</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-blue-500/10 border-blue-500/20">
+                    <CardContent className="p-3 text-center">
+                      <p className="text-2xl font-bold text-blue-600">{pedidosParaDespues.length}</p>
+                      <p className="text-xs text-muted-foreground">Para después</p>
+                      <p className="text-xs font-medium">
+                        {pedidosParaDespues.reduce((s, p) => s + (p.peso_total_kg || 0), 0).toLocaleString()} kg
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className={`${pedidosOversized.length > 0 ? "bg-red-500/10 border-red-500/20" : "bg-muted"}`}>
+                    <CardContent className="p-3 text-center">
+                      <p className={`text-2xl font-bold ${pedidosOversized.length > 0 ? "text-red-600" : "text-muted-foreground"}`}>
+                        {pedidosOversized.length}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Oversized</p>
+                      <p className="text-xs font-medium">
+                        {pedidosOversized.length > 0 ? "Requieren múltiples viajes" : "Todo OK"}
+                      </p>
+                    </CardContent>
+                  </Card>
                 </div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant={showGlobalMap ? "secondary" : "outline"} 
-                    size="sm" 
-                    onClick={() => setShowGlobalMap(!showGlobalMap)}
-                  >
-                    <Map className="h-4 w-4 mr-2" />
-                    {showGlobalMap ? "Ocultar Mapa" : "Ver Mapa"}
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={generarSugerencias}>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Regenerar
-                  </Button>
-                  {rutasSugeridas.length > 1 && (
-                    <Button size="sm" onClick={crearTodasLasRutas}>
-                      <Check className="h-4 w-4 mr-2" />
-                      Crear Todas ({rutasSugeridas.length})
+
+                {/* Action buttons - sticky */}
+                <div className="flex items-center justify-between sticky top-0 bg-background z-10 py-2 -mx-1 px-1">
+                  <div className="text-sm text-muted-foreground">
+                    {rutasSugeridas.length} rutas para hoy
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant={showGlobalMap ? "secondary" : "outline"} 
+                      size="sm" 
+                      onClick={() => setShowGlobalMap(!showGlobalMap)}
+                    >
+                      <Map className="h-4 w-4 mr-2" />
+                      {showGlobalMap ? "Ocultar Mapa" : "Ver Mapa"}
                     </Button>
-                  )}
+                    <Button variant="outline" size="sm" onClick={generarSugerencias}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Regenerar
+                    </Button>
+                    {rutasSugeridas.length > 1 && (
+                      <Button size="sm" onClick={crearTodasLasRutas}>
+                        <Check className="h-4 w-4 mr-2" />
+                        Crear Todas ({rutasSugeridas.length})
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              {/* Interactive Global Map */}
-              {showGlobalMap && rutasParaMapa.length > 0 && (
-                <div className="flex-shrink-0">
+                {/* Interactive Global Map */}
+                {showGlobalMap && rutasParaMapa.length > 0 && (
                   <InteractiveRouteMap
                     rutas={rutasParaMapa}
                     height="350px"
                     showLegend={true}
                   />
-                </div>
-              )}
+                )}
 
-              {notasAI && (
-                <Alert className="flex-shrink-0">
-                  <Sparkles className="h-4 w-4" />
-                  <AlertDescription>{notasAI}</AlertDescription>
-                </Alert>
-              )}
-
-              <ScrollArea className="flex-1 min-h-0 max-h-[45vh]">
-                <div className="space-y-4 pr-4">
+                {notasAI && (
+                  <Alert>
+                    <Sparkles className="h-4 w-4" />
+                    <AlertDescription>{notasAI}</AlertDescription>
+                  </Alert>
+                )}
                   {/* Today's Routes */}
                   {rutasSugeridas.map((ruta, index) => (
                     <Card key={index} className="overflow-hidden border-green-500/30">
@@ -737,9 +734,8 @@ export const SugerirRutasAIDialog = ({
                       </CardContent>
                     </Card>
                   )}
-                </div>
-              </ScrollArea>
-            </>
+              </div>
+            </ScrollArea>
           )}
         </div>
       </DialogContent>
