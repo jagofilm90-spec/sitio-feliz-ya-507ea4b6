@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Loader2, MapPin, Navigation, RefreshCw, Search, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
+import { MapErrorBoundary } from "@/components/ErrorBoundary";
 
 interface Sucursal {
   id: string;
@@ -48,6 +49,12 @@ const COLORS = [
   "#3b82f6", "#8b5cf6", "#ec4899", "#6366f1", "#06b6d4"
 ];
 
+// Verificar si la API key está configurada
+const hasValidApiKey = () => {
+  const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  return key && key.length > 10 && key !== "undefined";
+};
+
 export const MapaGlobalSucursales = ({ open, onOpenChange }: MapaGlobalSucursalesProps) => {
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -57,10 +64,11 @@ export const MapaGlobalSucursales = ({ open, onOpenChange }: MapaGlobalSucursale
   const [searchTerm, setSearchTerm] = useState("");
   const [mapRef, setMapRef] = useState<google.maps.Map | null>(null);
   const [geocodingProgress, setGeocodingProgress] = useState<{ current: number; total: number } | null>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+    googleMapsApiKey: hasValidApiKey() ? import.meta.env.VITE_GOOGLE_MAPS_API_KEY : "",
     libraries: ["places"],
   });
 
@@ -237,16 +245,48 @@ export const MapaGlobalSucursales = ({ open, onOpenChange }: MapaGlobalSucursale
     }
   };
 
+  // Mostrar error si no hay API key o hay error de carga
+  if (!hasValidApiKey()) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Mapa no disponible
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-4">
+            <p className="text-muted-foreground">
+              La API key de Google Maps no está configurada. El mapa no está disponible en este momento.
+            </p>
+          </div>
+          <Button onClick={() => onOpenChange(false)} variant="outline" className="w-full">
+            Cerrar
+          </Button>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   if (loadError) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-6xl h-[85vh]">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Error cargando Google Maps</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Error cargando Google Maps
+            </DialogTitle>
           </DialogHeader>
-          <div className="flex items-center justify-center h-full">
-            <p className="text-destructive">No se pudo cargar Google Maps. Verifica la API key.</p>
+          <div className="text-center py-4">
+            <p className="text-muted-foreground">
+              No se pudo cargar Google Maps. Verifica tu conexión a internet.
+            </p>
           </div>
+          <Button onClick={() => onOpenChange(false)} variant="outline" className="w-full">
+            Cerrar
+          </Button>
         </DialogContent>
       </Dialog>
     );
@@ -340,23 +380,24 @@ export const MapaGlobalSucursales = ({ open, onOpenChange }: MapaGlobalSucursale
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : (
-              <GoogleMap
-                mapContainerStyle={mapContainerStyle}
-                center={defaultCenter}
-                zoom={11}
-                onLoad={setMapRef}
-                options={{
-                  streetViewControl: false,
-                  mapTypeControl: true,
-                  fullscreenControl: true,
-                }}
-              >
-                {mappableSucursales.map((sucursal) => (
-                  <Marker
-                    key={sucursal.id}
-                    position={{ lat: sucursal.latitud!, lng: sucursal.longitud! }}
-                    onClick={() => setSelectedSucursal(sucursal)}
-                    icon={{
+              <MapErrorBoundary>
+                <GoogleMap
+                  mapContainerStyle={mapContainerStyle}
+                  center={defaultCenter}
+                  zoom={11}
+                  onLoad={setMapRef}
+                  options={{
+                    streetViewControl: false,
+                    mapTypeControl: true,
+                    fullscreenControl: true,
+                  }}
+                >
+                  {mappableSucursales.map((sucursal) => (
+                    <Marker
+                      key={sucursal.id}
+                      position={{ lat: sucursal.latitud!, lng: sucursal.longitud! }}
+                      onClick={() => setSelectedSucursal(sucursal)}
+                      icon={{
                       path: google.maps.SymbolPath.CIRCLE,
                       scale: 10,
                       fillColor: clientColorMap.get(sucursal.cliente_id) || "#3b82f6",
@@ -398,8 +439,9 @@ export const MapaGlobalSucursales = ({ open, onOpenChange }: MapaGlobalSucursale
                       </Button>
                     </div>
                   </InfoWindow>
-                )}
-              </GoogleMap>
+                  )}
+                </GoogleMap>
+              </MapErrorBoundary>
             )}
           </div>
 

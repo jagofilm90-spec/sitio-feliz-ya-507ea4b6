@@ -9,6 +9,7 @@ import { useUnreadEmails } from "@/hooks/useUnreadEmails";
 import { useUserRoles, useUserModulePermissions } from "@/hooks/useUserRoles";
 import { CentroNotificaciones } from "@/components/CentroNotificaciones";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SectionErrorBoundary } from "@/components/ErrorBoundary";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import {
   Collapsible,
@@ -53,20 +54,36 @@ const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  
+  // Hooks con manejo defensivo de errores
   const unreadCount = useUnreadMessages();
   const { counts: emailCounts, cuentas: emailCuentas, totalUnread: totalUnreadEmails } = useUnreadEmails();
   const { roles, isLoading: rolesLoading } = useUserRoles();
   const { allowedPaths, isLoading: permissionsLoading, checkAccess } = useUserModulePermissions();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
+    const initSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error("Error getting session:", error);
+          navigate("/auth");
+          return;
+        }
+        if (!session) {
+          navigate("/auth");
+        } else {
+          setUser(session.user);
+        }
+      } catch (error) {
+        console.error("Error in session initialization:", error);
         navigate("/auth");
-      } else {
-        setUser(session.user);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    };
+
+    initSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT" || !session) {
@@ -328,7 +345,11 @@ const Layout = ({ children }: LayoutProps) => {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 p-6 overflow-auto">{children}</main>
+        <main className="flex-1 p-6 overflow-auto">
+          <SectionErrorBoundary sectionName="contenido de la página">
+            {children}
+          </SectionErrorBoundary>
+        </main>
       </div>
     </div>
   );

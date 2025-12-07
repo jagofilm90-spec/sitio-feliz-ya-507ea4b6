@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
@@ -31,19 +32,30 @@ import PushNotificationSetup from "./components/PushNotificationSetup";
 import { initPushNotifications, isNativePlatform } from "./services/pushNotifications";
 import { supabase } from "./integrations/supabase/client";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      staleTime: 5 * 60 * 1000,
+    },
+  },
+});
 
 // Componente interno para manejar la inicialización de push notifications
 const PushNotificationInitializer = () => {
   useEffect(() => {
     const initPush = async () => {
-      // Solo inicializar si estamos en plataforma nativa
-      if (!isNativePlatform()) return;
+      try {
+        // Solo inicializar si estamos en plataforma nativa
+        if (!isNativePlatform()) return;
 
-      // Esperar a que haya una sesión activa
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        await initPushNotifications();
+        // Esperar a que haya una sesión activa
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          await initPushNotifications();
+        }
+      } catch (error) {
+        console.error("Error initializing push notifications:", error);
       }
     };
 
@@ -52,7 +64,11 @@ const PushNotificationInitializer = () => {
     // Escuchar cambios de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        await initPushNotifications();
+        try {
+          await initPushNotifications();
+        } catch (error) {
+          console.error("Error initializing push notifications on sign in:", error);
+        }
       }
     });
 
@@ -65,42 +81,44 @@ const PushNotificationInitializer = () => {
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <PushNotificationInitializer />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Navigate to="/auth" replace />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/productos" element={<Productos />} />
-          <Route path="/clientes" element={<Clientes />} />
-          <Route path="/pedidos" element={<Pedidos />} />
-          <Route path="/inventario" element={<Inventario />} />
-          <Route path="/rutas" element={<Rutas />} />
-          <Route path="/facturas" element={<Facturas />} />
-          <Route path="/portal-cliente" element={<PortalCliente />} />
-          <Route path="/empleados" element={<Empleados />} />
-          <Route path="/usuarios" element={<Usuarios />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/compras" element={<Compras />} />
-          <Route path="/rentabilidad" element={<Rentabilidad />} />
-          <Route path="/fumigaciones" element={<Fumigaciones />} />
-          <Route path="/correos" element={<CorreosCorporativos />} />
-          <Route path="/generate-assets" element={<GenerateAssets />} />
-          <Route path="/tarjeta" element={<TarjetaDigital />} />
-          <Route path="/disenos-camioneta" element={<DisenosCamioneta />} />
-          <Route path="/permisos" element={<Permisos />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <PushNotificationInitializer />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Navigate to="/auth" replace />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/productos" element={<Productos />} />
+              <Route path="/clientes" element={<Clientes />} />
+              <Route path="/pedidos" element={<Pedidos />} />
+              <Route path="/inventario" element={<Inventario />} />
+              <Route path="/rutas" element={<Rutas />} />
+              <Route path="/facturas" element={<Facturas />} />
+              <Route path="/portal-cliente" element={<PortalCliente />} />
+              <Route path="/empleados" element={<Empleados />} />
+              <Route path="/usuarios" element={<Usuarios />} />
+              <Route path="/chat" element={<Chat />} />
+              <Route path="/compras" element={<Compras />} />
+              <Route path="/rentabilidad" element={<Rentabilidad />} />
+              <Route path="/fumigaciones" element={<Fumigaciones />} />
+              <Route path="/correos" element={<CorreosCorporativos />} />
+              <Route path="/generate-assets" element={<GenerateAssets />} />
+              <Route path="/tarjeta" element={<TarjetaDigital />} />
+              <Route path="/disenos-camioneta" element={<DisenosCamioneta />} />
+              <Route path="/permisos" element={<Permisos />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
