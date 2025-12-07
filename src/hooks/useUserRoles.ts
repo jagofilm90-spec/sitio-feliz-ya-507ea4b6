@@ -16,8 +16,6 @@ interface UseUserRolesReturn {
   isCliente: boolean;
   hasRole: (role: AppRole) => boolean;
   hasAnyRole: (roles: AppRole[]) => boolean;
-  canEditPrices: () => boolean;
-  canViewPrices: () => boolean;
 }
 
 export const useUserRoles = (): UseUserRolesReturn => {
@@ -26,38 +24,31 @@ export const useUserRoles = (): UseUserRolesReturn => {
 
   useEffect(() => {
     const fetchRoles = async () => {
-      console.log("👤 [ROLES] fetchRoles iniciando...");
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        console.log("👤 [ROLES] Usuario obtenido:", user?.email);
         
         if (!user) {
-          console.log("👤 [ROLES] Sin usuario, roles vacíos");
           setRoles([]);
           setIsLoading(false);
           return;
         }
 
-        console.log("👤 [ROLES] Consultando roles para user_id:", user.id);
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id);
 
         if (error) {
-          console.error('❌ [ROLES] Error fetching user roles:', error);
+          console.error('Error fetching user roles:', error);
           setRoles([]);
         } else {
-          const userRoles = data?.map(r => r.role) || [];
-          console.log("👤 [ROLES] Roles obtenidos:", userRoles);
-          setRoles(userRoles);
+          setRoles(data?.map(r => r.role) || []);
         }
       } catch (error) {
-        console.error('❌ [ROLES] Error in fetchRoles:', error);
+        console.error('Error in fetchRoles:', error);
         setRoles([]);
       } finally {
         setIsLoading(false);
-        console.log("👤 [ROLES] fetchRoles completado, isLoading=false");
       }
     };
 
@@ -79,16 +70,6 @@ export const useUserRoles = (): UseUserRolesReturn => {
   const hasAnyRole = (checkRoles: AppRole[]): boolean => 
     checkRoles.some(role => roles.includes(role));
 
-  // Helper para verificar si el usuario puede editar precios
-  const canEditPrices = (): boolean => {
-    return hasAnyRole(['admin', 'secretaria']);
-  };
-
-  // Helper para verificar si el usuario puede ver precios
-  const canViewPrices = (): boolean => {
-    return hasAnyRole(['admin', 'secretaria', 'contadora', 'vendedor']);
-  };
-
   return {
     roles,
     isLoading,
@@ -101,8 +82,6 @@ export const useUserRoles = (): UseUserRolesReturn => {
     isCliente: hasRole('cliente'),
     hasRole,
     hasAnyRole,
-    canEditPrices,
-    canViewPrices,
   };
 };
 

@@ -3,19 +3,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Printer, Download, Loader2 } from "lucide-react";
 import { RemisionPrintTemplate } from "./RemisionPrintTemplate";
-import { RemisionPrintTemplateSinPrecios } from "./RemisionPrintTemplateSinPrecios";
-import { useUserRoles } from "@/hooks/useUserRoles";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
 interface ProductoRemision {
   cantidad: number;
-  unidad: string;
+  unidad: string; // Presentación calculada para bodegueros
   descripcion: string;
   precio_unitario: number;
   total: number;
-  cantidadDisplay?: string;
+  cantidadDisplay?: string; // Cantidad con unidad original (ej: "45 kg")
 }
 
 interface DatosRemision {
@@ -50,10 +48,6 @@ interface ImprimirRemisionDialogProps {
 export const ImprimirRemisionDialog = ({ open, onOpenChange, datos }: ImprimirRemisionDialogProps) => {
   const printRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
-  const { canViewPrices } = useUserRoles();
-  
-  // Determinar si mostrar precios basado en el rol
-  const mostrarPrecios = canViewPrices();
 
   const handleDownloadPdf = async () => {
     const printContent = printRef.current;
@@ -198,25 +192,7 @@ export const ImprimirRemisionDialog = ({ open, onOpenChange, datos }: ImprimirRe
         </DialogHeader>
         
         <div ref={printRef} className="bg-white border rounded-lg overflow-hidden">
-          {mostrarPrecios ? (
-            <RemisionPrintTemplate datos={datos} />
-          ) : (
-            <RemisionPrintTemplateSinPrecios datos={{
-              folio: datos.folio,
-              fecha: datos.fecha,
-              cliente: datos.cliente,
-              sucursal: datos.sucursal,
-              productos: datos.productos.map(p => ({
-                cantidad: p.cantidad,
-                unidad: p.unidad,
-                descripcion: p.descripcion,
-                cantidadDisplay: p.cantidadDisplay
-              })),
-              condiciones_credito: datos.condiciones_credito,
-              vendedor: datos.vendedor,
-              notas: datos.notas
-            }} />
-          )}
+          <RemisionPrintTemplate datos={datos} />
         </div>
       </DialogContent>
     </Dialog>

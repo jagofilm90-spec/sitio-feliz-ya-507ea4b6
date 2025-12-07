@@ -47,80 +47,6 @@ export type Database = {
         }
         Relationships: []
       }
-      carga_productos: {
-        Row: {
-          cantidad_cargada: number | null
-          cantidad_solicitada: number
-          cargado: boolean | null
-          cargado_en: string | null
-          cargado_por: string | null
-          created_at: string | null
-          entrega_id: string
-          id: string
-          lote_id: string | null
-          notas: string | null
-          pedido_detalle_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          cantidad_cargada?: number | null
-          cantidad_solicitada: number
-          cargado?: boolean | null
-          cargado_en?: string | null
-          cargado_por?: string | null
-          created_at?: string | null
-          entrega_id: string
-          id?: string
-          lote_id?: string | null
-          notas?: string | null
-          pedido_detalle_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          cantidad_cargada?: number | null
-          cantidad_solicitada?: number
-          cargado?: boolean | null
-          cargado_en?: string | null
-          cargado_por?: string | null
-          created_at?: string | null
-          entrega_id?: string
-          id?: string
-          lote_id?: string | null
-          notas?: string | null
-          pedido_detalle_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "carga_productos_cargado_por_fkey"
-            columns: ["cargado_por"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "carga_productos_entrega_id_fkey"
-            columns: ["entrega_id"]
-            isOneToOne: false
-            referencedRelation: "entregas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "carga_productos_lote_id_fkey"
-            columns: ["lote_id"]
-            isOneToOne: false
-            referencedRelation: "inventario_lotes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "carga_productos_pedido_detalle_id_fkey"
-            columns: ["pedido_detalle_id"]
-            isOneToOne: false
-            referencedRelation: "pedidos_detalles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       cliente_correos: {
         Row: {
           activo: boolean | null
@@ -817,71 +743,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      devoluciones: {
-        Row: {
-          cantidad_devuelta: number
-          created_at: string | null
-          entrega_id: string
-          id: string
-          lote_id: string | null
-          motivo: string
-          pedido_detalle_id: string
-          registrado_por: string
-          reingresado_a_inventario: boolean | null
-        }
-        Insert: {
-          cantidad_devuelta: number
-          created_at?: string | null
-          entrega_id: string
-          id?: string
-          lote_id?: string | null
-          motivo: string
-          pedido_detalle_id: string
-          registrado_por: string
-          reingresado_a_inventario?: boolean | null
-        }
-        Update: {
-          cantidad_devuelta?: number
-          created_at?: string | null
-          entrega_id?: string
-          id?: string
-          lote_id?: string | null
-          motivo?: string
-          pedido_detalle_id?: string
-          registrado_por?: string
-          reingresado_a_inventario?: boolean | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "devoluciones_entrega_id_fkey"
-            columns: ["entrega_id"]
-            isOneToOne: false
-            referencedRelation: "entregas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "devoluciones_lote_id_fkey"
-            columns: ["lote_id"]
-            isOneToOne: false
-            referencedRelation: "inventario_lotes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "devoluciones_pedido_detalle_id_fkey"
-            columns: ["pedido_detalle_id"]
-            isOneToOne: false
-            referencedRelation: "pedidos_detalles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "devoluciones_registrado_por_fkey"
-            columns: ["registrado_por"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       empleados: {
         Row: {
@@ -2172,13 +2033,8 @@ export type Database = {
         Row: {
           cantidad: number
           created_at: string
-          fecha_ajuste_precio: string | null
           id: string
-          linea_dividida_de: string | null
-          notas_ajuste: string | null
           pedido_id: string
-          precio_ajustado_por: string | null
-          precio_original: number | null
           precio_unitario: number
           producto_id: string
           subtotal: number
@@ -2187,13 +2043,8 @@ export type Database = {
         Insert: {
           cantidad: number
           created_at?: string
-          fecha_ajuste_precio?: string | null
           id?: string
-          linea_dividida_de?: string | null
-          notas_ajuste?: string | null
           pedido_id: string
-          precio_ajustado_por?: string | null
-          precio_original?: number | null
           precio_unitario: number
           producto_id: string
           subtotal: number
@@ -2202,13 +2053,8 @@ export type Database = {
         Update: {
           cantidad?: number
           created_at?: string
-          fecha_ajuste_precio?: string | null
           id?: string
-          linea_dividida_de?: string | null
-          notas_ajuste?: string | null
           pedido_id?: string
-          precio_ajustado_por?: string | null
-          precio_original?: number | null
           precio_unitario?: number
           producto_id?: string
           subtotal?: number
@@ -2216,24 +2062,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "pedidos_detalles_linea_dividida_de_fkey"
-            columns: ["linea_dividida_de"]
-            isOneToOne: false
-            referencedRelation: "pedidos_detalles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "pedidos_detalles_pedido_id_fkey"
             columns: ["pedido_id"]
             isOneToOne: false
             referencedRelation: "pedidos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pedidos_detalles_precio_ajustado_por_fkey"
-            columns: ["precio_ajustado_por"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -2465,9 +2297,6 @@ export type Database = {
       rutas: {
         Row: {
           ayudante_id: string | null
-          carga_completada: boolean | null
-          carga_completada_en: string | null
-          carga_completada_por: string | null
           chofer_id: string
           created_at: string
           fecha_hora_fin: string | null
@@ -2487,9 +2316,6 @@ export type Database = {
         }
         Insert: {
           ayudante_id?: string | null
-          carga_completada?: boolean | null
-          carga_completada_en?: string | null
-          carga_completada_por?: string | null
           chofer_id: string
           created_at?: string
           fecha_hora_fin?: string | null
@@ -2509,9 +2335,6 @@ export type Database = {
         }
         Update: {
           ayudante_id?: string | null
-          carga_completada?: boolean | null
-          carga_completada_en?: string | null
-          carga_completada_por?: string | null
           chofer_id?: string
           created_at?: string
           fecha_hora_fin?: string | null
@@ -2533,13 +2356,6 @@ export type Database = {
           {
             foreignKeyName: "rutas_ayudante_id_fkey"
             columns: ["ayudante_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "rutas_carga_completada_por_fkey"
-            columns: ["carga_completada_por"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

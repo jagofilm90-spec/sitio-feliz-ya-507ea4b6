@@ -46,8 +46,7 @@ import {
   DialogHeader as HistorialDialogHeader,
   DialogTitle as HistorialDialogTitle,
 } from "@/components/ui/dialog";
-
-import { MapaSucursalesGlobalWrapper } from "@/components/clientes/MapaSucursalesGlobalWrapper";
+import { MapaSucursalesGlobal } from "@/components/clientes/MapaSucursalesGlobal";
 
 interface Zona {
   id: string;
@@ -987,7 +986,7 @@ const Clientes = () => {
         cliente={selectedClienteForProductos}
       />
 
-      <MapaSucursalesGlobalWrapper
+      <MapaSucursalesGlobal
         open={mapGlobalDialogOpen}
         onOpenChange={setMapGlobalDialogOpen}
       />

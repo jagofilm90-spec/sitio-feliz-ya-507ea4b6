@@ -16,8 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { MapPin, Navigation, Loader2, AlertCircle } from "lucide-react";
-import { GoogleMap, Marker, InfoWindow } from "@react-google-maps/api";
-import { useGoogleMapsLoader } from "@/hooks/useGoogleMapsLoader";
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
 
 interface Cliente {
   id: string;
@@ -57,15 +56,17 @@ export function ClienteSucursalesMapDialog({
   onOpenChange,
   initialClienteId,
 }: ClienteSucursalesMapDialogProps) {
-  const { isLoaded, loadError, hasApiKey } = useGoogleMapsLoader();
-  
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [selectedClienteId, setSelectedClienteId] = useState<string>(initialClienteId || "");
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingClientes, setLoadingClientes] = useState(true);
   const [selectedMarker, setSelectedMarker] = useState<Sucursal | null>(null);
-  const mapRef = useRef<any>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+  });
 
   useEffect(() => {
     if (open) {
@@ -115,7 +116,8 @@ export function ClienteSucursalesMapDialog({
       if (error) throw error;
       setSucursales(data || []);
 
-      if (data && data.length > 0 && mapRef.current && isLoaded && typeof google !== 'undefined') {
+      // Fit bounds to show all markers
+      if (data && data.length > 0 && mapRef.current) {
         const bounds = new google.maps.LatLngBounds();
         let hasValidCoords = false;
 
@@ -128,6 +130,7 @@ export function ClienteSucursalesMapDialog({
 
         if (hasValidCoords) {
           mapRef.current.fitBounds(bounds);
+          // Don't zoom too much for single point
           const listener = google.maps.event.addListener(mapRef.current, "idle", () => {
             if (mapRef.current && mapRef.current.getZoom()! > 15) {
               mapRef.current.setZoom(15);
@@ -143,7 +146,7 @@ export function ClienteSucursalesMapDialog({
     }
   };
 
-  const onMapLoad = useCallback((map: any) => {
+  const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
   }, []);
 
@@ -160,22 +163,6 @@ export function ClienteSucursalesMapDialog({
       );
     }
   };
-
-  if (!hasApiKey) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Mapa no disponible</DialogTitle>
-          </DialogHeader>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <AlertCircle className="h-5 w-5" />
-            <span>La API de Google Maps no está configurada.</span>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
 
   if (loadError) {
     return (

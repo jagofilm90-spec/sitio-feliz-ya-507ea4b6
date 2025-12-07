@@ -30,11 +30,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Eye, ShoppingCart, FileText, Link2, Printer, Receipt, Send, CheckCircle2, Clock, BarChart3, Trash2, AlertCircle, DollarSign, Users } from "lucide-react";
-import { useUserRoles } from "@/hooks/useUserRoles";
-import { AjustePreciosDialog } from "@/components/pedidos/AjustePreciosDialog";
-import { AjusteMasivoPreciosDialog } from "@/components/pedidos/AjusteMasivoPreciosDialog";
-import { AjustePreciosClienteDialog } from "@/components/pedidos/AjustePreciosClienteDialog";
+import { Plus, Search, Eye, ShoppingCart, FileText, Link2, Printer, Receipt, Send, CheckCircle2, Clock, BarChart3, Trash2, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import CotizacionesTab from "@/components/cotizaciones/CotizacionesTab";
@@ -65,8 +61,6 @@ interface PedidoConCotizacion {
 }
 
 const Pedidos = () => {
-  console.log("📦 [PEDIDOS] Componente Pedidos montando...");
-  
   const [pedidos, setPedidos] = useState<PedidoConCotizacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -82,23 +76,16 @@ const Pedidos = () => {
   const [selectedPedidos, setSelectedPedidos] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [ajustePreciosDialogOpen, setAjustePreciosDialogOpen] = useState(false);
-  const [selectedPedidoForAjuste, setSelectedPedidoForAjuste] = useState<string | null>(null);
-  const [ajusteMasivoDialogOpen, setAjusteMasivoDialogOpen] = useState(false);
-  const [ajusteClienteDialogOpen, setAjusteClienteDialogOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { canEditPrices, hasAnyRole } = useUserRoles();
 
   useEffect(() => {
     loadPedidos();
   }, []);
 
   const loadPedidos = async () => {
-    console.log("📦 [PEDIDOS] loadPedidos iniciando...");
     try {
       // First get pedidos
-      console.log("📦 [PEDIDOS] Consultando pedidos en Supabase...");
       const { data: pedidosData, error: pedidosError } = await supabase
         .from("pedidos")
         .select(`
@@ -118,11 +105,7 @@ const Pedidos = () => {
         `)
         .order("fecha_pedido", { ascending: false });
 
-      if (pedidosError) {
-        console.error("❌ [PEDIDOS] Error en query pedidos:", pedidosError);
-        throw pedidosError;
-      }
-      console.log("📦 [PEDIDOS] Pedidos obtenidos:", pedidosData?.length);
+      if (pedidosError) throw pedidosError;
 
       // Get cotizaciones that have pedido_id (created from cotizacion)
       const { data: cotizacionesData, error: cotizacionesError } = await supabase
@@ -160,9 +143,7 @@ const Pedidos = () => {
       });
 
       setPedidos(pedidosConCotizacion);
-      console.log("📦 [PEDIDOS] Estado actualizado con", pedidosConCotizacion.length, "pedidos");
     } catch (error: any) {
-      console.error("❌ [PEDIDOS] Error cargando pedidos:", error);
       toast({
         title: "Error",
         description: "No se pudieron cargar los pedidos",
@@ -170,7 +151,6 @@ const Pedidos = () => {
       });
     } finally {
       setLoading(false);
-      console.log("📦 [PEDIDOS] loadPedidos completado, loading=false");
     }
   };
 
@@ -668,32 +648,10 @@ const Pedidos = () => {
                   </Button>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                {hasAnyRole(['admin', 'secretaria', 'contadora']) && (
-                  <>
-                    <Button 
-                      variant="outline"
-                      onClick={() => setAjusteClienteDialogOpen(true)}
-                      className="gap-2"
-                    >
-                      <Users className="h-4 w-4" />
-                      Ajuste por Cliente
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => setAjusteMasivoDialogOpen(true)}
-                      className="gap-2"
-                    >
-                      <DollarSign className="h-4 w-4" />
-                      Ajuste Masivo
-                    </Button>
-                  </>
-                )}
-                <Button onClick={() => setNuevoPedidoDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nuevo Pedido
-                </Button>
-              </div>
+              <Button onClick={() => setNuevoPedidoDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Pedido
+              </Button>
             </div>
 
             <div className="border rounded-lg">
@@ -820,28 +778,6 @@ const Pedidos = () => {
                               </Tooltip>
                             </TooltipProvider>
                             
-                            {/* Ajustar Precios - Only for users with price edit permission */}
-                            {canEditPrices() && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon"
-                                      onClick={() => {
-                                        setSelectedPedidoForAjuste(pedido.id);
-                                        setAjustePreciosDialogOpen(true);
-                                      }}
-                                    >
-                                      <DollarSign className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Ajustar Precios</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                            
-                            
                             {/* Facturar Pedido - Only show if not facturado */}
                             {!pedido.facturado && (
                               <TooltipProvider>
@@ -947,28 +883,6 @@ const Pedidos = () => {
         onNavigatePrevious={handleNavigatePreviousPedido}
         canNavigateNext={canNavigateNext}
         canNavigatePrevious={canNavigatePrevious}
-      />
-
-      {/* Dialog para ajustar precios */}
-      <AjustePreciosDialog
-        open={ajustePreciosDialogOpen}
-        onOpenChange={setAjustePreciosDialogOpen}
-        pedidoId={selectedPedidoForAjuste}
-        onPreciosAjustados={loadPedidos}
-      />
-
-      {/* Dialog para ajuste masivo de precios */}
-      <AjusteMasivoPreciosDialog
-        open={ajusteMasivoDialogOpen}
-        onOpenChange={setAjusteMasivoDialogOpen}
-        onComplete={loadPedidos}
-      />
-
-      {/* Dialog para ajuste de precios por cliente */}
-      <AjustePreciosClienteDialog
-        open={ajusteClienteDialogOpen}
-        onOpenChange={setAjusteClienteDialogOpen}
-        onComplete={loadPedidos}
       />
 
       {/* Alert Dialog para confirmar eliminación */}

@@ -81,7 +81,7 @@ const Inventario = () => {
           .from("productos")
           .select("id, codigo, nombre, stock_actual, maneja_caducidad, requiere_fumigacion, fecha_ultima_fumigacion")
           .eq("activo", true)
-          .order("codigo"),
+          .order("nombre"),
       ]);
 
       if (movimientosData.error) throw movimientosData.error;

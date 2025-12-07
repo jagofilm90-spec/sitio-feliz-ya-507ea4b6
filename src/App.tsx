@@ -6,7 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
-import ErrorBoundary from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
@@ -28,18 +27,14 @@ import CorreosCorporativos from "./pages/CorreosCorporativos";
 import GenerateAssets from "./pages/GenerateAssets";
 import DisenosCamioneta from "./pages/DisenosCamioneta";
 import Permisos from "./pages/Permisos";
-import Almacen from "./pages/Almacen";
 import PushNotificationSetup from "./components/PushNotificationSetup";
 import { initPushNotifications, isNativePlatform } from "./services/pushNotifications";
 import { supabase } from "./integrations/supabase/client";
 
-console.log("📱 [APP] Creando QueryClient...");
 const queryClient = new QueryClient();
-console.log("📱 [APP] QueryClient creado");
 
 // Componente interno para manejar la inicialización de push notifications
 const PushNotificationInitializer = () => {
-  console.log("📱 [APP] PushNotificationInitializer montado");
   useEffect(() => {
     const initPush = async () => {
       // Solo inicializar si estamos en plataforma nativa
@@ -69,49 +64,43 @@ const PushNotificationInitializer = () => {
   return <PushNotificationSetup />;
 };
 
-const App = () => {
-  console.log("📱 [APP] Componente App renderizando...");
-  return (
-  <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <PushNotificationInitializer />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Navigate to="/auth" replace />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/productos" element={<Productos />} />
-            <Route path="/clientes" element={<Clientes />} />
-            <Route path="/pedidos" element={<Pedidos />} />
-            <Route path="/inventario" element={<Inventario />} />
-            <Route path="/rutas" element={<Rutas />} />
-            <Route path="/facturas" element={<Facturas />} />
-            <Route path="/portal-cliente" element={<PortalCliente />} />
-            <Route path="/empleados" element={<Empleados />} />
-            <Route path="/usuarios" element={<Usuarios />} />
-            <Route path="/chat" element={<Chat />} />
-            <Route path="/compras" element={<Compras />} />
-            <Route path="/rentabilidad" element={<Rentabilidad />} />
-            <Route path="/fumigaciones" element={<Fumigaciones />} />
-            <Route path="/correos" element={<CorreosCorporativos />} />
-            <Route path="/generate-assets" element={<GenerateAssets />} />
-            <Route path="/tarjeta" element={<TarjetaDigital />} />
-            <Route path="/disenos-camioneta" element={<DisenosCamioneta />} />
-            <Route path="/permisos" element={<Permisos />} />
-            <Route path="/almacen" element={<Almacen />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
-  </ErrorBoundary>
-  );
-};
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <PushNotificationInitializer />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Navigate to="/auth" replace />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/productos" element={<Productos />} />
+          <Route path="/clientes" element={<Clientes />} />
+          <Route path="/pedidos" element={<Pedidos />} />
+          <Route path="/inventario" element={<Inventario />} />
+          <Route path="/rutas" element={<Rutas />} />
+          <Route path="/facturas" element={<Facturas />} />
+          <Route path="/portal-cliente" element={<PortalCliente />} />
+          <Route path="/empleados" element={<Empleados />} />
+          <Route path="/usuarios" element={<Usuarios />} />
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/compras" element={<Compras />} />
+          <Route path="/rentabilidad" element={<Rentabilidad />} />
+          <Route path="/fumigaciones" element={<Fumigaciones />} />
+          <Route path="/correos" element={<CorreosCorporativos />} />
+          <Route path="/generate-assets" element={<GenerateAssets />} />
+          <Route path="/tarjeta" element={<TarjetaDigital />} />
+          <Route path="/disenos-camioneta" element={<DisenosCamioneta />} />
+          <Route path="/permisos" element={<Permisos />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
+  </QueryClientProvider>
+);
 
 export default App;

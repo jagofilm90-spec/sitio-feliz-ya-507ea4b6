@@ -23,8 +23,6 @@ interface RutaSugerida {
   porcentaje_carga: number;
   regiones: string[];
   zonas: string[];
-  tiempo_estimado_minutos?: number;
-  entregas_count?: number;
 }
 
 // Haversine formula to calculate distance between two GPS coordinates in km
@@ -39,47 +37,17 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-// Calculate estimated route time in minutes
-function calcularTiempoRuta(pedidos: any[], puntoBodega: { lat: number; lng: number }): number {
-  const TIEMPO_ENTREGA_MINUTOS = 25; // Time per delivery (unload + signature)
-  const VELOCIDAD_PROMEDIO_KMH = 25; // Average speed in CDMX traffic
-  
-  const conCoords = pedidos.filter(p => p.sucursal?.latitud && p.sucursal?.longitud);
-  
-  // Base time for deliveries
-  let tiempoTotal = pedidos.length * TIEMPO_ENTREGA_MINUTOS;
-  
-  if (conCoords.length >= 2) {
-    // Calculate travel time between stops
-    let lastLat = puntoBodega.lat;
-    let lastLng = puntoBodega.lng;
-    
-    for (const p of conCoords) {
-      const distKm = haversineDistance(lastLat, lastLng, p.sucursal.latitud, p.sucursal.longitud);
-      tiempoTotal += (distKm / VELOCIDAD_PROMEDIO_KMH) * 60;
-      lastLat = p.sucursal.latitud;
-      lastLng = p.sucursal.longitud;
-    }
-    
-    // Return trip to warehouse
-    const distRegreso = haversineDistance(lastLat, lastLng, puntoBodega.lat, puntoBodega.lng);
-    tiempoTotal += (distRegreso / VELOCIDAD_PROMEDIO_KMH) * 60;
-  } else {
-    // Estimate based on number of deliveries (45 min avg per delivery including travel)
-    tiempoTotal = pedidos.length * 45;
-  }
-  
-  return Math.round(tiempoTotal);
-}
-
 // Nearest-neighbor algorithm to optimize delivery order using GPS coordinates
+// Now accepts warehouse origin coordinates as parameter
 function optimizarOrdenEntrega(pedidos: any[], puntoOrigen: { lat: number; lng: number }): any[] {
   if (pedidos.length <= 2) return pedidos;
   
+  // Filter pedidos with valid coordinates
   const conCoords = pedidos.filter(p => p.sucursal?.latitud && p.sucursal?.longitud);
   const sinCoords = pedidos.filter(p => !p.sucursal?.latitud || !p.sucursal?.longitud);
   
   if (conCoords.length <= 1) {
+    // Not enough coordinates to optimize, return original order
     return pedidos;
   }
   
@@ -89,6 +57,7 @@ function optimizarOrdenEntrega(pedidos: any[], puntoOrigen: { lat: number; lng: 
   let currentLat = puntoOrigen.lat;
   let currentLng = puntoOrigen.lng;
   
+  // Greedy nearest-neighbor
   while (restantes.length > 0) {
     let nearestIdx = 0;
     let nearestDist = Infinity;
@@ -111,10 +80,11 @@ function optimizarOrdenEntrega(pedidos: any[], puntoOrigen: { lat: number; lng: 
     currentLng = nearest.sucursal.longitud;
   }
   
+  // Append pedidos without coordinates at the end
   return [...ordenados, ...sinCoords];
 }
 
-// IMPROVED: Bin-packing with geographical clustering
+// Simple bin-packing algorithm as fallback
 function generarRutasSimples(
   pedidos: any[],
   vehiculos: Vehiculo[]
@@ -123,24 +93,7 @@ function generarRutasSimples(
   const noAsignados: string[] = [];
   const vehiculosUsados = new Set<string>();
   
-  // STEP 1: Group pedidos by region for geographical clustering
-  const pedidosPorRegion = new Map<string, any[]>();
-  
-  for (const pedido of pedidos) {
-    const region = pedido.sucursal?.zona?.region || 'sin_region';
-    if (!pedidosPorRegion.has(region)) {
-      pedidosPorRegion.set(region, []);
-    }
-    pedidosPorRegion.get(region)!.push(pedido);
-  }
-  
-  console.log(`[suggest-routes] Fallback: Clustering by region:`);
-  for (const [region, regionPedidos] of pedidosPorRegion) {
-    const pesoTotal = regionPedidos.reduce((s, p) => s + (p.peso_total_kg || 0), 0);
-    console.log(`  - ${region}: ${regionPedidos.length} pedidos, ${pesoTotal.toLocaleString()}kg`);
-  }
-  
-  // Sort regions by priority (VIP first, then by total weight)
+  // Sort pedidos by priority and weight
   const prioridadOrden: Record<string, number> = {
     vip_mismo_dia: 0,
     deadline: 1,
@@ -149,135 +102,60 @@ function generarRutasSimples(
     flexible: 4,
   };
   
-  const regionesOrdenadas = [...pedidosPorRegion.entries()].sort((a, b) => {
-    const prioA = Math.min(...a[1].map(p => prioridadOrden[p.prioridad_entrega || 'flexible'] || 4));
-    const prioB = Math.min(...b[1].map(p => prioridadOrden[p.prioridad_entrega || 'flexible'] || 4));
+  const pedidosOrdenados = [...pedidos].sort((a, b) => {
+    const prioA = prioridadOrden[a.prioridad_entrega || "flexible"] || 4;
+    const prioB = prioridadOrden[b.prioridad_entrega || "flexible"] || 4;
     if (prioA !== prioB) return prioA - prioB;
-    const pesoA = a[1].reduce((s, p) => s + (p.peso_total_kg || 0), 0);
-    const pesoB = b[1].reduce((s, p) => s + (p.peso_total_kg || 0), 0);
-    return pesoB - pesoA;
+    return (b.peso_total_kg || 0) - (a.peso_total_kg || 0);
   });
-  
-  // Sort vehicles by capacity (largest first)
-  const vehiculosOrdenados = [...vehiculos].sort((a, b) => 
-    b.peso_maximo_local_kg - a.peso_maximo_local_kg
-  );
-  
-  // STEP 2: For each region, fill vehicles with MULTIPLE orders
-  for (const [region, pedidosRegion] of regionesOrdenadas) {
-    // Sort orders within region by priority, then by weight (largest first)
-    const ordenados = [...pedidosRegion].sort((a, b) => {
-      const prioA = prioridadOrden[a.prioridad_entrega || 'flexible'] || 4;
-      const prioB = prioridadOrden[b.prioridad_entrega || 'flexible'] || 4;
-      if (prioA !== prioB) return prioA - prioB;
-      return (b.peso_total_kg || 0) - (a.peso_total_kg || 0);
-    });
-    
-    // Determine route type based on region
-    const esForanea = region.includes('morelos') || region.includes('queretaro') || 
-                      region.includes('hidalgo') || region.includes('puebla') ||
-                      region.includes('tlaxcala') || region.includes('toluca');
-    
-    while (ordenados.length > 0) {
-      // Find available vehicle
-      const vehiculo = vehiculosOrdenados.find(v => !vehiculosUsados.has(v.id));
-      
-      if (!vehiculo) {
-        // No more vehicles, mark remaining as unassigned
-        noAsignados.push(...ordenados.map(p => p.id));
+
+  // Assign pedidos to vehicles using first-fit decreasing
+  for (const pedido of pedidosOrdenados) {
+    const pesoPedido = pedido.peso_total_kg || 0;
+    let asignado = false;
+
+    // Try to fit in existing route
+    for (const ruta of rutas) {
+      const capacidad = ruta.capacidad_maxima;
+      if (ruta.peso_total + pesoPedido <= capacidad) {
+        ruta.pedido_ids.push(pedido.id);
+        ruta.peso_total += pesoPedido;
+        asignado = true;
         break;
       }
-      
-      const capacidad = esForanea ? vehiculo.peso_maximo_foraneo_kg : vehiculo.peso_maximo_local_kg;
-      const pedidosRuta: string[] = [];
-      let pesoRuta = 0;
-      
-      // FILL the vehicle with MULTIPLE orders from this region cluster
-      // First-fit decreasing but keeping orders together by region
-      for (let i = ordenados.length - 1; i >= 0; i--) {
-        const pedido = ordenados[i];
-        const peso = pedido.peso_total_kg || 0;
-        
-        if (pesoRuta + peso <= capacidad) {
-          pedidosRuta.push(pedido.id);
-          pesoRuta += peso;
-          ordenados.splice(i, 1);
-        }
-      }
-      
-      // Also try larger orders that might fit
-      for (let i = 0; i < ordenados.length; i++) {
-        const pedido = ordenados[i];
-        const peso = pedido.peso_total_kg || 0;
-        
-        if (pesoRuta + peso <= capacidad) {
-          pedidosRuta.push(pedido.id);
-          pesoRuta += peso;
-          ordenados.splice(i, 1);
-          i--; // Adjust index after splice
-        }
-      }
-      
-      if (pedidosRuta.length > 0) {
+    }
+
+    // If not assigned, try to create new route
+    if (!asignado) {
+      const vehiculoDisponible = vehiculos.find(v => {
+        if (vehiculosUsados.has(v.id)) return false;
+        const capacidad = v.peso_maximo_local_kg; // Default to local
+        return capacidad >= pesoPedido;
+      });
+
+      if (vehiculoDisponible) {
+        const capacidad = vehiculoDisponible.peso_maximo_local_kg;
         rutas.push({
-          vehiculo_id: vehiculo.id,
-          tipo_ruta: esForanea ? 'foranea' : 'local',
-          pedido_ids: pedidosRuta,
-          peso_total: pesoRuta,
+          vehiculo_id: vehiculoDisponible.id,
+          tipo_ruta: "local",
+          pedido_ids: [pedido.id],
+          peso_total: pesoPedido,
           capacidad_maxima: capacidad,
-          region: region,
         });
-        vehiculosUsados.add(vehiculo.id);
-        
-        console.log(`[suggest-routes] Fallback route: ${vehiculo.nombre} - ${region} - ${pedidosRuta.length} entregas, ${pesoRuta.toLocaleString()}kg (${((pesoRuta/capacidad)*100).toFixed(0)}%)`);
+        vehiculosUsados.add(vehiculoDisponible.id);
+        asignado = true;
       }
     }
+
+    if (!asignado) {
+      noAsignados.push(pedido.id);
+    }
   }
-  
+
   return { rutas, noAsignados };
 }
 
-// Validate route logic - warn about suboptimal routes
-function validarRutaLogica(ruta: RutaSugerida): { valid: boolean; warning?: string } {
-  // Warn if only 1 delivery with lots of spare capacity
-  if (ruta.pedidos.length === 1 && ruta.porcentaje_carga < 70) {
-    return { 
-      valid: true, 
-      warning: `⚠️ Solo 1 entrega al ${ruta.porcentaje_carga.toFixed(0)}% - considerar agregar pedidos cercanos`
-    };
-  }
-  
-  // Warn if too many deliveries for time
-  if (ruta.tiempo_estimado_minutos && ruta.tiempo_estimado_minutos > 600) {
-    return { 
-      valid: true, 
-      warning: `⚠️ Ruta larga: ${ruta.pedidos.length} entregas = ${(ruta.tiempo_estimado_minutos/60).toFixed(1)} horas`
-    };
-  }
-  
-  // Check for incompatible region mixing
-  const regiones = ruta.regiones;
-  const incompatibles = [
-    ['morelos', 'cdmx_norte'],
-    ['morelos', 'edomex_norte'],
-    ['queretaro', 'cdmx_sur'],
-    ['puebla', 'cdmx_poniente'],
-  ];
-  
-  for (const [r1, r2] of incompatibles) {
-    if (regiones.some(r => r.includes(r1)) && regiones.some(r => r.includes(r2))) {
-      return { 
-        valid: true, 
-        warning: `⚠️ Mezcla regiones lejanas: ${r1} + ${r2}`
-      };
-    }
-  }
-  
-  return { valid: true };
-}
-
 // Post-AI validation: Split routes that exceed capacity
-// CRITICAL: Each vehicle can only be used ONCE per day
 function validarYDividirRutas(
   rutasOriginales: any[], 
   vehiculos: Vehiculo[], 
@@ -286,77 +164,28 @@ function validarYDividirRutas(
   const rutasValidadas: any[] = [];
   const vehiculosUsados = new Set<string>();
   const pedidosNoAsignados: string[] = [];
-  const pedidosYaAsignados = new Set<string>();
 
-  console.log(`[suggest-routes] Validating ${rutasOriginales.length} routes from AI`);
-  console.log(`[suggest-routes] Available vehicles: ${vehiculos.map(v => `${v.nombre}(${v.id.substring(0,8)})`).join(', ')}`);
-
-  // Sort routes by weight to process heaviest first (they need bigger vehicles)
-  const rutasOrdenadas = [...rutasOriginales].sort((a, b) => {
-    const pesoA = (a.pedido_ids || []).reduce((s: number, id: string) => {
-      const p = pedidosMap.get(id);
-      return s + (p?.peso_total_kg || 0);
-    }, 0);
-    const pesoB = (b.pedido_ids || []).reduce((s: number, id: string) => {
-      const p = pedidosMap.get(id);
-      return s + (p?.peso_total_kg || 0);
-    }, 0);
-    return pesoB - pesoA;
-  });
-
-  for (const ruta of rutasOrdenadas) {
-    console.log(`[suggest-routes] Processing route with vehiculo_id: "${ruta.vehiculo_id}"`);
-    
-    // Find best available vehicle (not already used)
-    let vehiculo = vehiculos.find(v => 
-      !vehiculosUsados.has(v.id) && (
-        v.id === ruta.vehiculo_id || 
-        v.nombre === ruta.vehiculo_id || 
-        v.nombre === String(ruta.vehiculo_id) ||
-        v.id.startsWith(String(ruta.vehiculo_id))
-      )
-    );
-    
-    // If requested vehicle is already used, find next best available
+  for (const ruta of rutasOriginales) {
+    const vehiculo = vehiculos.find(v => v.id === ruta.vehiculo_id);
     if (!vehiculo) {
-      vehiculo = vehiculos.find(v => !vehiculosUsados.has(v.id));
-      if (vehiculo) {
-        console.log(`[suggest-routes] ⚠️ Vehicle "${ruta.vehiculo_id}" already used, using ${vehiculo.nombre} instead`);
-      }
-    }
-    
-    if (!vehiculo) {
-      console.warn(`[suggest-routes] ⚠️ No available vehicles left, skipping route`);
-      const unusedPedidos = (ruta.pedido_ids || []).filter((id: string) => !pedidosYaAsignados.has(id));
-      pedidosNoAsignados.push(...unusedPedidos);
+      pedidosNoAsignados.push(...(ruta.pedido_ids || []));
       continue;
     }
-    
-    console.log(`[suggest-routes] ✓ Matched vehicle: ${vehiculo.nombre} (${vehiculo.id.substring(0,8)})`);
 
     const tipoRuta = ruta.tipo_ruta === "foranea" ? "foranea" : "local";
     const capacidadMax = tipoRuta === "foranea" 
       ? vehiculo.peso_maximo_foraneo_kg 
       : vehiculo.peso_maximo_local_kg;
 
-    // Filter out already assigned pedidos
-    const pedidoIdsProvided = (ruta.pedido_ids || []).filter((id: string) => !pedidosYaAsignados.has(id));
-    
-    const pedidosRuta = pedidoIdsProvided
+    const pedidosRuta = (ruta.pedido_ids || [])
       .map((id: string) => pedidosMap.get(id))
       .filter(Boolean);
 
-    if (pedidosRuta.length === 0) {
-      console.log(`[suggest-routes] No pedidos left for this route, skipping`);
-      continue;
-    }
-
     const pesoTotal = pedidosRuta.reduce((sum: number, p: any) => sum + (p.peso_total_kg || 0), 0);
 
-    console.log(`[suggest-routes] Validating route ${vehiculo.nombre}: ${pedidosRuta.length} entregas, ${pesoTotal}kg / ${capacidadMax}kg (${((pesoTotal/capacidadMax)*100).toFixed(0)}%)`);
+    console.log(`[suggest-routes] Validating route ${vehiculo.nombre}: ${pesoTotal}kg / ${capacidadMax}kg (${((pesoTotal/capacidadMax)*100).toFixed(0)}%)`);
 
     if (pesoTotal <= capacidadMax) {
-      // Route fits, use this vehicle
       rutasValidadas.push({
         vehiculo_id: vehiculo.id,
         tipo_ruta: tipoRuta,
@@ -365,9 +194,8 @@ function validarYDividirRutas(
         capacidad_maxima: capacidadMax,
       });
       vehiculosUsados.add(vehiculo.id);
-      pedidosRuta.forEach((p: any) => pedidosYaAsignados.add(p.id));
     } else {
-      console.log(`[suggest-routes] Route exceeds capacity, filling this vehicle first...`);
+      console.log(`[suggest-routes] Route exceeds capacity, splitting...`);
       
       const prioridadOrden: Record<string, number> = {
         vip_mismo_dia: 0,
@@ -377,7 +205,6 @@ function validarYDividirRutas(
         flexible: 4,
       };
       
-      // Sort by priority then weight (largest first to fill efficiently)
       pedidosRuta.sort((a: any, b: any) => {
         const prioA = prioridadOrden[a.prioridad_entrega || "flexible"] || 4;
         const prioB = prioridadOrden[b.prioridad_entrega || "flexible"] || 4;
@@ -385,47 +212,56 @@ function validarYDividirRutas(
         return (b.peso_total_kg || 0) - (a.peso_total_kg || 0);
       });
 
-      // Fill current vehicle as much as possible
-      const pedidosParaEsteVehiculo: string[] = [];
-      let pesoEsteVehiculo = 0;
-      const pedidosSobrantes: any[] = [];
+      let rutaActual = {
+        vehiculo_id: vehiculo.id,
+        tipo_ruta: tipoRuta,
+        pedido_ids: [] as string[],
+        peso_total: 0,
+        capacidad_maxima: capacidadMax,
+      };
 
       for (const pedido of pedidosRuta) {
         const pesoPedido = pedido.peso_total_kg || 0;
         
-        if (pesoEsteVehiculo + pesoPedido <= capacidadMax) {
-          pedidosParaEsteVehiculo.push(pedido.id);
-          pesoEsteVehiculo += pesoPedido;
-          pedidosYaAsignados.add(pedido.id);
+        if (rutaActual.peso_total + pesoPedido <= capacidadMax) {
+          rutaActual.pedido_ids.push(pedido.id);
+          rutaActual.peso_total += pesoPedido;
+        } else if (rutaActual.pedido_ids.length > 0) {
+          rutasValidadas.push({ ...rutaActual });
+          vehiculosUsados.add(rutaActual.vehiculo_id);
+          
+          const siguienteVehiculo = vehiculos.find(v => 
+            !vehiculosUsados.has(v.id) && 
+            (tipoRuta === "foranea" ? v.peso_maximo_foraneo_kg : v.peso_maximo_local_kg) >= pesoPedido
+          );
+          
+          if (siguienteVehiculo) {
+            const nuevaCapacidad = tipoRuta === "foranea" 
+              ? siguienteVehiculo.peso_maximo_foraneo_kg 
+              : siguienteVehiculo.peso_maximo_local_kg;
+            
+            rutaActual = {
+              vehiculo_id: siguienteVehiculo.id,
+              tipo_ruta: tipoRuta,
+              pedido_ids: [pedido.id],
+              peso_total: pesoPedido,
+              capacidad_maxima: nuevaCapacidad,
+            };
+          } else {
+            pedidosNoAsignados.push(pedido.id);
+          }
         } else {
-          pedidosSobrantes.push(pedido);
-        }
-      }
-
-      // Create route for this vehicle
-      if (pedidosParaEsteVehiculo.length > 0) {
-        rutasValidadas.push({
-          vehiculo_id: vehiculo.id,
-          tipo_ruta: tipoRuta,
-          pedido_ids: pedidosParaEsteVehiculo,
-          peso_total: pesoEsteVehiculo,
-          capacidad_maxima: capacidadMax,
-        });
-        vehiculosUsados.add(vehiculo.id);
-        console.log(`[suggest-routes] Created route for ${vehiculo.nombre}: ${pedidosParaEsteVehiculo.length} pedidos, ${pesoEsteVehiculo}kg`);
-      }
-
-      // Remaining pedidos go to "for later" - don't try to split across multiple vehicles
-      // This ensures each vehicle only appears once
-      for (const pedido of pedidosSobrantes) {
-        if (!pedidosYaAsignados.has(pedido.id)) {
           pedidosNoAsignados.push(pedido.id);
         }
+      }
+
+      if (rutaActual.pedido_ids.length > 0) {
+        rutasValidadas.push(rutaActual);
+        vehiculosUsados.add(rutaActual.vehiculo_id);
       }
     }
   }
 
-  console.log(`[suggest-routes] Validation complete: ${rutasValidadas.length} routes, ${pedidosNoAsignados.length} unassigned`);
   return { rutasValidadas, pedidosNoAsignados };
 }
 
@@ -439,13 +275,14 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Accept optional vehiculos_seleccionados array for daily planning
     const { fecha, vehiculos_seleccionados } = await req.json();
     const fechaRuta = fecha || new Date().toISOString().split("T")[0];
 
     console.log(`[suggest-routes] Generating DAILY routes for date: ${fechaRuta}`);
     console.log(`[suggest-routes] Selected vehicles: ${vehiculos_seleccionados?.length || 'ALL'}`);
 
-    // Get warehouse origin coordinates
+    // Get warehouse origin coordinates from database config
     const DEFAULT_BODEGA = { lat: 19.408680132961802, lng: -99.12108443546356 };
     let puntoBodega = { ...DEFAULT_BODEGA };
     
@@ -461,9 +298,11 @@ serve(async (req) => {
         puntoBodega = { lat: bodegaData.latitud, lng: bodegaData.longitud };
         console.log(`[suggest-routes] Using warehouse location: ${puntoBodega.lat}, ${puntoBodega.lng}`);
       }
+    } else {
+      console.log(`[suggest-routes] Using default warehouse location: ${DEFAULT_BODEGA.lat}, ${DEFAULT_BODEGA.lng}`);
     }
 
-    // Get pending orders with full details
+    // 1. Get pending orders with priority, client and branch info INCLUDING COORDINATES
     const { data: pedidos, error: pedidosError } = await supabase
       .from("pedidos")
       .select(`
@@ -508,7 +347,7 @@ serve(async (req) => {
 
     console.log(`[suggest-routes] Found ${pedidos?.length || 0} pending orders`);
 
-    // Get available vehicles
+    // 2. Get available vehicles (filtered by selection if provided)
     let vehiculosQuery = supabase
       .from("vehiculos")
       .select("id, nombre, tipo, peso_maximo_local_kg, peso_maximo_foraneo_kg")
@@ -529,12 +368,12 @@ serve(async (req) => {
 
     console.log(`[suggest-routes] Using ${vehiculos?.length || 0} vehicles for today`);
 
-    // Calculate max vehicle capacity
+    // Calculate max vehicle capacity for oversized detection
     const maxCapacidadVehiculo = vehiculos?.reduce((max, v) => 
       Math.max(max, v.peso_maximo_local_kg, v.peso_maximo_foraneo_kg), 0
     ) || 0;
 
-    // Separate oversized orders
+    // 3. Separate oversized orders (exceed any vehicle capacity)
     const pedidosOversized = pedidos?.filter(p => 
       (p.peso_total_kg || 0) > maxCapacidadVehiculo
     ) || [];
@@ -566,15 +405,16 @@ serve(async (req) => {
       );
     }
 
-    // Create pedidos map
+    // Create pedidos map for quick lookup
     const pedidosMap = new Map(pedidosNormales.map(p => [p.id, p]));
 
-    // Prepare data for AI
+    // 4. Use AI to optimize route assignment for TODAY's capacity only
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
+    // Prepare data for AI - only normal-sized orders, NOW WITH COORDINATES
     const pedidosSimplificados = pedidosNormales.map((p: any) => ({
       id: p.id,
       folio: p.folio,
@@ -604,28 +444,6 @@ serve(async (req) => {
       capacidad_foranea_kg: v.peso_maximo_foraneo_kg,
     }));
 
-    // Analyze clusters by region for logging
-    const clustersPorRegion = new Map<string, { pedidos: number; peso: number; nombres: string[] }>();
-    for (const p of pedidosSimplificados) {
-      const region = p.region || 'sin_region';
-      if (!clustersPorRegion.has(region)) {
-        clustersPorRegion.set(region, { pedidos: 0, peso: 0, nombres: [] });
-      }
-      const cluster = clustersPorRegion.get(region)!;
-      cluster.pedidos++;
-      cluster.peso += p.peso_kg;
-      if (cluster.nombres.length < 3) cluster.nombres.push(p.sucursal || p.cliente);
-    }
-    
-    console.log(`[suggest-routes] Geographic clusters for AI:`);
-    for (const [region, data] of clustersPorRegion) {
-      console.log(`  - ${region}: ${data.pedidos} pedidos, ${data.peso.toLocaleString()}kg (ej: ${data.nombres.join(', ')})`);
-    }
-
-    // Count pedidos with GPS
-    const pedidosConCoords = pedidosSimplificados.filter(p => p.lat && p.lng).length;
-    console.log(`[suggest-routes] Pedidos with GPS: ${pedidosConCoords}/${pedidosSimplificados.length}`);
-
     // Group pedidos by client for deadline context
     const pedidosPorCliente = pedidosSimplificados.reduce((acc: Record<string, any[]>, p) => {
       const clienteId = p.cliente_id || p.cliente;
@@ -643,90 +461,79 @@ serve(async (req) => {
         deadline_dias: pedidos[0].deadline_dias,
       }));
 
-    // IMPROVED AI PROMPT with explicit multi-delivery rules
-    const systemPrompt = `Eres un experto en logística de entregas para CDMX y área metropolitana.
+    // Count pedidos with GPS coordinates
+    const pedidosConCoords = pedidosSimplificados.filter(p => p.lat && p.lng).length;
+    console.log(`[suggest-routes] Pedidos with GPS coordinates: ${pedidosConCoords}/${pedidosSimplificados.length}`);
 
-## REGLA CRÍTICA - MÚLTIPLES ENTREGAS POR RUTA:
-Cada ruta DEBE tener MÚLTIPLES pedidos, no solo 1-2 grandes. Los vehículos hacen varias paradas:
-- Tortón (18,000-20,000kg): 3-15 entregas típicas
-- Rabón (9,000-10,000kg): 4-12 entregas típicas  
-- Camioneta (7,000-7,800kg): 5-10 entregas típicas
+    const systemPrompt = `Eres un experto en logística de entregas. Tu tarea es asignar pedidos a vehículos para ENTREGAS DE HOY.
 
-EJEMPLO CORRECTO (Tortón en EdoMex Norte):
-- Pedidos: VICKY (155kg), CALPULALPAN (175kg), EXP NEZA (200kg), MONTERREY (1,008kg), PRADO (625kg), LECAROZ (15,838kg)
-- Total: ~18,000kg con 6 entregas en cluster geográfico cercano ✅
+## MODELO DE PLANIFICACIÓN DIARIA:
+- Estás planificando SOLO las entregas de HOY, no de todos los días
+- Tu objetivo es LLENAR los vehículos disponibles de forma óptima
+- Los pedidos que NO quepan hoy se entregarán en días siguientes (NO ES UN ERROR)
+- Clientes como Lecaroz tienen 15 días hábiles para entregar todos sus pedidos
 
-EJEMPLO INCORRECTO:
-- Solo 1 pedido de 15,000kg cuando hay 5 pedidos cercanos de 500-2000kg que cabrían ❌
+## REGLA CRÍTICA - CAPACIDAD:
+- NUNCA asignes más peso del permitido a un vehículo
+- Cada vehículo tiene DOS capacidades:
+  - capacidad_local_kg: para rutas locales
+  - capacidad_foranea_kg: para rutas foráneas
+- Utilización ideal: 80-95% de la capacidad
 
-## RESTRICCIÓN DE TIEMPO (jornada 9am-8pm = 11 horas):
-- Rutas CDMX/EdoMex cercano: máximo 15-20 entregas (25 min por entrega)
-- Rutas foráneas (Morelos, Querétaro, Hidalgo): máximo 3-5 entregas
-
-## CLUSTERS GEOGRÁFICOS (OBLIGATORIO):
-1. AGRUPA pedidos de la MISMA REGIÓN primero (usa el campo "region")
-2. Dentro de la región, agrupa por ZONA cercana
-3. Usa las coordenadas GPS (lat, lng) para identificar clusters cercanos
-4. NUNCA mezcles regiones incompatibles en la misma ruta:
-   - ❌ Morelos + CDMX Norte
-   - ❌ Querétaro + CDMX Sur
-   - ✅ EdoMex Norte + CDMX Norte (cercanos)
-
-## ESTRATEGIA DE LLENADO:
-1. Identifica clusters de pedidos cercanos por región
-2. SUMA los pesos del cluster
-3. Asigna el cluster completo al vehículo que mejor se ajuste
-4. Objetivo: 90-100% de capacidad utilizada (mínimo 90%)
-5. NUNCA envíes un camión medio vacío si hay más pedidos de la misma zona
-6. Los pedidos que no quepan hoy van a "para_despues" (NO es error)
-
-## PRIORIDADES:
+## PRIORIDADES (qué entregar PRIMERO):
 1. vip_mismo_dia: DEBE entregarse hoy sin excepción
 2. deadline con pocos días restantes
 3. dia_fijo_recurrente si hoy es el día
 4. fecha_sugerida
 5. flexible: usar para LLENAR capacidad restante
 
-## FORMATO DE RESPUESTA JSON:
+## OPTIMIZACIÓN GEOGRÁFICA:
+- Los pedidos tienen coordenadas GPS (lat, lng) cuando están disponibles
+- Agrupa pedidos CERCANOS geográficamente en la misma ruta
+- Considera la zona y región para agrupar pedidos de la misma área
+- El sistema optimizará el orden de entrega automáticamente después
+
+## ESTRATEGIA PARA HOY:
+1. Primero asigna TODOS los pedidos VIP
+2. Luego los deadline más urgentes
+3. Agrupa por PROXIMIDAD GEOGRÁFICA (usa lat/lng) y zona/región
+4. Llena capacidad restante con pedidos flexibles cercanos
+5. Los que NO quepan van a "para_despues" (NO es error)
+
+## FORMATO DE RESPUESTA (JSON exacto):
 {
   "rutas": [
     {
-      "vehiculo_id": "uuid-del-vehiculo",
+      "vehiculo_id": "uuid",
       "tipo_ruta": "local",
-      "pedido_ids": ["uuid1", "uuid2", "uuid3", "uuid4", "uuid5"],
-      "peso_total_kg": 17500,
-      "razon": "Cluster EdoMex Norte: 5 panaderías, 87% capacidad"
+      "pedido_ids": ["uuid1", "uuid2"],
+      "peso_total_kg": 15000,
+      "razon": "Zona Norte, 85% capacidad, incluye 2 VIP"
     }
   ],
-  "para_despues": ["uuids-de-pedidos-para-otros-dias"],
-  "notas": "Hoy: X pedidos en Y rutas. Para después: Z pedidos."
-}
-
-IMPORTANTE: Cada ruta debe tener MÚLTIPLES entregas (3-15 según vehículo), no solo 1-2.`;
+  "para_despues": ["uuid-pedidos-para-otros-dias"],
+  "notas": "Hoy se entregan X pedidos. Quedan Y para días siguientes."
+}`;
 
     const userPrompt = `Fecha: ${fechaRuta}
 
 ## VEHÍCULOS DISPONIBLES HOY (${vehiculosSimplificados.length}):
-${vehiculosSimplificados.map(v => `- ${v.nombre} (${v.tipo}): Local=${v.capacidad_local_kg.toLocaleString()}kg, Foráneo=${v.capacidad_foranea_kg.toLocaleString()}kg`).join('\n')}
+${vehiculosSimplificados.map(v => `- ${v.nombre} (${v.tipo}): Local=${v.capacidad_local_kg}kg, Foráneo=${v.capacidad_foranea_kg}kg`).join('\n')}
 
 ## CAPACIDAD TOTAL HOY: ${capacidadHoy.toLocaleString()}kg
-
-## CLUSTERS GEOGRÁFICOS DETECTADOS:
-${[...clustersPorRegion.entries()].map(([region, data]) => 
-  `- ${region}: ${data.pedidos} pedidos, ${data.peso.toLocaleString()}kg`
-).join('\n')}
 
 ## PEDIDOS PENDIENTES (${pedidosSimplificados.length}, Total: ${pesoTotalPendiente.toLocaleString()}kg):
 ${JSON.stringify(pedidosSimplificados, null, 2)}
 
 ${clientesConDeadline.length > 0 ? `
-## CLIENTES CON DEADLINE (distribuir a lo largo de los días):
+## CLIENTES CON DEADLINE (tienen varios días para entregar todos):
 ${clientesConDeadline.map(c => `- ${c.cliente}: ${c.total_pedidos} pedidos, ${c.peso_total.toLocaleString()}kg, ${c.deadline_dias} días de plazo`).join('\n')}
 ` : ''}
 
-RECUERDA: Agrupa MÚLTIPLES pedidos por ruta (3-15 entregas), no pongas 1 solo pedido por vehículo si hay espacio para más.`;
+Genera rutas para HOY llenando los ${vehiculosSimplificados.length} vehículos de forma óptima.
+Los pedidos que no quepan hoy van a "para_despues" - esto es NORMAL, no un error.`;
 
-    console.log("[suggest-routes] Calling Lovable AI for daily planning with multi-delivery rules...");
+    console.log("[suggest-routes] Calling Lovable AI for daily planning...");
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -748,15 +555,13 @@ RECUERDA: Agrupa MÚLTIPLES pedidos por ruta (3-15 entregas), no pongas 1 solo p
       const errorText = await aiResponse.text();
       console.error("[suggest-routes] AI API error:", aiResponse.status, errorText);
       
-      // Fallback with improved geographic clustering
-      console.log("[suggest-routes] Using fallback with geographic clustering...");
+      // Fallback to simple bin-packing algorithm
+      console.log("[suggest-routes] Using fallback bin-packing algorithm...");
       const { rutas: rutasFallback, noAsignados } = generarRutasSimples(pedidosNormales, vehiculos);
       
       const rutasSugeridas: RutaSugerida[] = rutasFallback.map(ruta => {
         const vehiculo = vehiculos.find(v => v.id === ruta.vehiculo_id)!;
         const pedidosRuta = ruta.pedido_ids.map((id: string) => pedidosMap.get(id)).filter(Boolean);
-        const tiempoEstimado = calcularTiempoRuta(pedidosRuta, puntoBodega);
-        
         return {
           vehiculo,
           tipo_ruta: ruta.tipo_ruta,
@@ -764,10 +569,8 @@ RECUERDA: Agrupa MÚLTIPLES pedidos por ruta (3-15 entregas), no pongas 1 solo p
           peso_total: ruta.peso_total,
           capacidad_maxima: ruta.capacidad_maxima,
           porcentaje_carga: (ruta.peso_total / ruta.capacidad_maxima) * 100,
-          regiones: [ruta.region],
+          regiones: [],
           zonas: [],
-          tiempo_estimado_minutos: tiempoEstimado,
-          entregas_count: pedidosRuta.length,
         };
       });
 
@@ -782,7 +585,7 @@ RECUERDA: Agrupa MÚLTIPLES pedidos por ruta (3-15 entregas), no pongas 1 solo p
           pedidos_oversized: pedidosOversized,
           capacidad_hoy: capacidadHoy,
           peso_total_pendiente: pesoTotalPendiente,
-          notas_ai: "Rutas generadas con algoritmo de respaldo (clusters geográficos)",
+          notas_ai: "Rutas generadas con algoritmo de respaldo (AI no disponible)",
           usó_fallback: true,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -801,29 +604,22 @@ RECUERDA: Agrupa MÚLTIPLES pedidos por ruta (3-15 entregas), no pongas 1 solo p
       if (jsonMatch) {
         aiResult = JSON.parse(jsonMatch[0]);
         console.log(`[suggest-routes] AI generated ${aiResult.rutas?.length || 0} routes`);
-        
-        // Log AI route details
-        if (aiResult.rutas && aiResult.rutas.length > 0) {
-          console.log(`[suggest-routes] AI routes detail:`);
-          aiResult.rutas.forEach((r: any, i: number) => {
-            console.log(`  Route ${i+1}: vehiculo="${r.vehiculo_id}", entregas=${r.pedido_ids?.length || 0}, peso=${r.peso_total_kg || 'N/A'}kg, tipo=${r.tipo_ruta}`);
-          });
-        }
       } else {
         throw new Error("No JSON found in AI response");
       }
     } catch (parseError) {
       console.error("[suggest-routes] Failed to parse AI response, using fallback:", aiContent.substring(0, 500));
       
+      // Use fallback algorithm
       const { rutas: rutasFallback, noAsignados } = generarRutasSimples(pedidosNormales, vehiculos);
       aiResult = { 
         rutas: rutasFallback, 
         para_despues: noAsignados, 
-        notas: "Rutas generadas con algoritmo de respaldo (error parsing AI)" 
+        notas: "Rutas generadas con algoritmo de respaldo" 
       };
     }
 
-    // Validate and split routes
+    // 5. Validate and split routes that exceed capacity
     console.log("[suggest-routes] Validating routes for capacity limits...");
     const { rutasValidadas, pedidosNoAsignados } = validarYDividirRutas(
       aiResult.rutas || [],
@@ -831,7 +627,7 @@ RECUERDA: Agrupa MÚLTIPLES pedidos por ruta (3-15 entregas), no pongas 1 solo p
       pedidosMap
     );
 
-    // Build detailed route suggestions
+    // 6. Build detailed route suggestions
     const rutasSugeridas: RutaSugerida[] = [];
     const pedidosAsignados = new Set<string>();
 
@@ -845,14 +641,14 @@ RECUERDA: Agrupa MÚLTIPLES pedidos por ruta (3-15 entregas), no pongas 1 solo p
       
       if (!pedidosRuta.length) continue;
 
-      // Optimize delivery order using GPS
+      // OPTIMIZE delivery order using GPS coordinates (nearest-neighbor algorithm)
+      // Starting from the warehouse location (Bodega 1 - Melchor Campo)
       pedidosRuta = optimizarOrdenEntrega(pedidosRuta, puntoBodega);
-      console.log(`[suggest-routes] Optimized delivery order for ${vehiculo.nombre}: ${pedidosRuta.length} entregas`);
+      console.log(`[suggest-routes] Optimized delivery order for ${vehiculo.nombre} using GPS coordinates from warehouse`);
 
       const tipoRuta = ruta.tipo_ruta === "foranea" ? "foranea" : "local";
       const capacidadMax = ruta.capacidad_maxima;
       const pesoTotal = ruta.peso_total;
-      const tiempoEstimado = calcularTiempoRuta(pedidosRuta, puntoBodega);
       
       const regiones = [...new Set(pedidosRuta
         .map((p: any) => p.sucursal?.zona?.region)
@@ -867,7 +663,7 @@ RECUERDA: Agrupa MÚLTIPLES pedidos por ruta (3-15 entregas), no pongas 1 solo p
         continue;
       }
 
-      const rutaSugerida: RutaSugerida = {
+      rutasSugeridas.push({
         vehiculo,
         tipo_ruta: tipoRuta,
         pedidos: pedidosRuta,
@@ -876,17 +672,8 @@ RECUERDA: Agrupa MÚLTIPLES pedidos por ruta (3-15 entregas), no pongas 1 solo p
         porcentaje_carga: capacidadMax > 0 ? (pesoTotal / capacidadMax) * 100 : 0,
         regiones,
         zonas,
-        tiempo_estimado_minutos: tiempoEstimado,
-        entregas_count: pedidosRuta.length,
-      };
+      });
 
-      // Validate route logic and log warnings
-      const validacion = validarRutaLogica(rutaSugerida);
-      if (validacion.warning) {
-        console.log(`[suggest-routes] ${validacion.warning}`);
-      }
-
-      rutasSugeridas.push(rutaSugerida);
       pedidosRuta.forEach((p: any) => pedidosAsignados.add(p.id));
     }
 
@@ -901,10 +688,10 @@ RECUERDA: Agrupa MÚLTIPLES pedidos por ruta (3-15 entregas), no pongas 1 solo p
       !pedidosAsignados.has(p.id) || todosNoAsignados.has(p.id)
     );
 
-    console.log(`[suggest-routes] DAILY PLAN: ${rutasSugeridas.length} routes, ${pedidosParaHoy.length} orders today, ${pedidosParaDespues.length} for later`);
+    console.log(`[suggest-routes] DAILY PLAN: ${rutasSugeridas.length} routes, ${pedidosParaHoy.length} orders today, ${pedidosParaDespues.length} for later, ${pedidosOversized.length} oversized`);
     
     rutasSugeridas.forEach((r, i) => {
-      console.log(`[suggest-routes] Route ${i+1}: ${r.vehiculo.nombre} - ${r.entregas_count} entregas, ${r.peso_total.toLocaleString()}/${r.capacidad_maxima.toLocaleString()}kg (${r.porcentaje_carga.toFixed(0)}%), ~${Math.round((r.tiempo_estimado_minutos || 0)/60)}h`);
+      console.log(`[suggest-routes] Route ${i+1}: ${r.vehiculo.nombre} - ${r.peso_total}/${r.capacidad_maxima}kg (${r.porcentaje_carga.toFixed(0)}%) - ${r.pedidos.length} orders`);
     });
 
     return new Response(
