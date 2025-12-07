@@ -84,7 +84,7 @@ export const RealRouteVisualization = ({
   onOrderSelected,
 }: RealRouteVisualizationProps) => {
   const { isLoaded, loadError, hasApiKey } = useGoogleMapsLoader();
-  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
+  const [directions, setDirections] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -92,11 +92,11 @@ export const RealRouteVisualization = ({
   const [useGoogleOptimization, setUseGoogleOptimization] = useState(true);
   const [aiRouteStats, setAiRouteStats] = useState<RouteStats | null>(null);
   const [googleRouteStats, setGoogleRouteStats] = useState<GoogleOptimizedStats | null>(null);
-  const [aiDirections, setAiDirections] = useState<google.maps.DirectionsResult | null>(null);
-  const [googleDirections, setGoogleDirections] = useState<google.maps.DirectionsResult | null>(null);
+  const [aiDirections, setAiDirections] = useState<any>(null);
+  const [googleDirections, setGoogleDirections] = useState<any>(null);
   const [googleOptimizedPoints, setGoogleOptimizedPoints] = useState<RealRoutePoint[]>([]);
   
-  const mapRef = useRef<google.maps.Map | null>(null);
+  const mapRef = useRef<any>(null);
 
   // Filter points with valid coordinates
   const validPoints = useMemo(() => puntos.filter(p => p.lat && p.lng), [puntos]);
@@ -231,7 +231,7 @@ export const RealRouteVisualization = ({
     }
   }, [useGoogleOptimization, aiDirections, googleDirections]);
 
-  const onMapLoad = useCallback((map: google.maps.Map) => {
+  const onMapLoad = useCallback((map: any) => {
     mapRef.current = map;
   }, []);
 

@@ -162,7 +162,7 @@ function MapaSucursalesGlobal({ open, onOpenChange }: MapaSucursalesGlobalProps)
   // Export
   const [exporting, setExporting] = useState(false);
   
-  const mapRef = useRef<google.maps.Map | null>(null);
+  const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -332,7 +332,7 @@ function MapaSucursalesGlobal({ open, onOpenChange }: MapaSucursalesGlobalProps)
     }
   }, [filteredSucursales, isLoaded]);
 
-  const onMapLoad = useCallback((map: google.maps.Map) => {
+  const onMapLoad = useCallback((map: any) => {
     mapRef.current = map;
   }, []);
 
