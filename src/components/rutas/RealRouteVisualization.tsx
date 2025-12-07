@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { GoogleMap, DirectionsRenderer, Marker } from "@react-google-maps/api";
 import { useGoogleMapsLoader } from "@/hooks/useGoogleMapsLoader";
 import { Button } from "@/components/ui/button";
@@ -52,8 +52,8 @@ const BODEGA_PRINCIPAL = {
   lng: -99.121084,
 };
 
-// Map options
-const mapOptions: google.maps.MapOptions = {
+// Map options - defined without google.maps types
+const mapOptions = {
   disableDefaultUI: false,
   zoomControl: true,
   mapTypeControl: false,
@@ -191,15 +191,18 @@ export const RealRouteVisualization = ({
     return `${hours}h ${mins}min`;
   };
 
-  // Create warehouse marker icon
-  const warehouseIcon: google.maps.Symbol = {
-    path: google.maps.SymbolPath.CIRCLE,
-    scale: 12,
-    fillColor: "#000000",
-    fillOpacity: 1,
-    strokeColor: "#ffffff",
-    strokeWeight: 3,
-  };
+  // Create warehouse marker icon - only when Google Maps is loaded
+  const warehouseIcon = useMemo(() => {
+    if (!isLoaded) return undefined;
+    return {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 12,
+      fillColor: "#000000",
+      fillOpacity: 1,
+      strokeColor: "#ffffff",
+      strokeWeight: 3,
+    };
+  }, [isLoaded]);
 
   if (!hasApiKey) {
     return (
