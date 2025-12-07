@@ -1,3 +1,31 @@
+/**
+ * ==========================================================
+ * ⚠️ COMPONENTE SENSIBLE - REGLAS DE GOOGLE MAPS
+ * ==========================================================
+ * 
+ * 🔒 REGLA 1: NUNCA usar google.maps.* como tipo en:
+ *    - useState<google.maps.X>
+ *    - useRef<google.maps.X>
+ *    - Parámetros de callbacks (map: google.maps.Map)
+ *    USAR: any o tipos de @react-google-maps/api
+ * 
+ * 🔒 REGLA 2: SIEMPRE verificar antes de usar google.maps:
+ *    if (!window.google || !window.google.maps) return;
+ * 
+ * 🔒 REGLA 3: Si el mapa falla, mostrar fallback visual,
+ *    NUNCA dejar pantalla blanca.
+ * 
+ * 🔒 REGLA 4: Validar preview antes de hacer cambios.
+ * 
+ * ¿Por qué? Los tipos google.maps.* se evalúan en runtime
+ * ANTES de que cargue la API, causando:
+ * ReferenceError: google is not defined
+ * que rompe TODA la aplicación.
+ * 
+ * Última actualización: 2025-12-07
+ * ==========================================================
+ */
+
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
