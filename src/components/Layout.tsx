@@ -40,7 +40,7 @@ import {
   ArrowLeft,
   Lock,
   Database,
-  FileCheck,
+  
 } from "lucide-react";
 
 interface LayoutProps {
@@ -106,7 +106,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: Smartphone, label: "App Móvil", path: "/generate-assets" },
     { icon: Lock, label: "Permisos", path: "/permisos" },
     { icon: Database, label: "Respaldos", path: "/respaldos" },
-    { icon: FileCheck, label: "Auditoría Fiscal", path: "/auditoria-fiscal" },
+    
   ];
 
   // Filtrar menú según permisos dinámicos del usuario
