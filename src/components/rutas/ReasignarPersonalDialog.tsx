@@ -18,9 +18,10 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Truck, User, Users, RefreshCw, Bell, Loader2 } from "lucide-react";
+import { Truck, User, Users, RefreshCw, Bell, Loader2, DollarSign, UserPlus } from "lucide-react";
 
 interface Vehiculo {
   id: string;
@@ -33,15 +34,24 @@ interface Chofer {
   full_name: string;
 }
 
+interface AyudanteExterno {
+  id: string;
+  nombre_completo: string;
+  tarifa_por_viaje: number;
+}
+
 interface Ruta {
   id: string;
   folio: string;
   chofer_id: string;
   ayudante_id: string | null;
   vehiculo_id: string | null;
+  ayudante_externo_id?: string | null;
+  costo_ayudante_externo?: number | null;
   chofer?: { full_name: string };
   ayudante?: { full_name: string };
   vehiculo?: { nombre: string };
+  ayudante_externo?: { nombre_completo: string; tarifa_por_viaje: number };
 }
 
 interface ReasignarPersonalDialogProps {
@@ -59,12 +69,15 @@ const ReasignarPersonalDialog = ({
 }: ReasignarPersonalDialogProps) => {
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
   const [choferes, setChoferes] = useState<Chofer[]>([]);
+  const [ayudantesExternos, setAyudantesExternos] = useState<AyudanteExterno[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   const [selectedChofer, setSelectedChofer] = useState<string>("");
   const [selectedAyudante, setSelectedAyudante] = useState<string>("");
+  const [selectedAyudanteExterno, setSelectedAyudanteExterno] = useState<string>("");
+  const [usarExterno, setUsarExterno] = useState(false);
   const [selectedVehiculo, setSelectedVehiculo] = useState<string>("");
   const [notificarChofer, setNotificarChofer] = useState(true);
 
@@ -74,6 +87,8 @@ const ReasignarPersonalDialog = ({
       setSelectedChofer(ruta.chofer_id);
       setSelectedAyudante(ruta.ayudante_id || "");
       setSelectedVehiculo(ruta.vehiculo_id || "");
+      setSelectedAyudanteExterno(ruta.ayudante_externo_id || "");
+      setUsarExterno(!!ruta.ayudante_externo_id);
     }
   }, [open, ruta]);
 
@@ -109,6 +124,16 @@ const ReasignarPersonalDialog = ({
           full_name: c.profiles.full_name,
         }));
       setChoferes(transformedChoferes);
+
+      // Load external helpers
+      const { data: externosData, error: externosError } = await supabase
+        .from("ayudantes_externos")
+        .select("id, nombre_completo, tarifa_por_viaje")
+        .eq("activo", true)
+        .order("nombre_completo");
+
+      if (externosError) throw externosError;
+      setAyudantesExternos(externosData || []);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -147,13 +172,18 @@ const ReasignarPersonalDialog = ({
         }
       }
 
+      // Get external helper tariff if selected
+      const externoSeleccionado = ayudantesExternos.find(e => e.id === selectedAyudanteExterno);
+
       // Update route
       const { error } = await supabase
         .from("rutas")
         .update({
           chofer_id: selectedChofer,
-          ayudante_id: selectedAyudante || null,
+          ayudante_id: usarExterno ? null : (selectedAyudante || null),
           vehiculo_id: selectedVehiculo || null,
+          ayudante_externo_id: usarExterno ? (selectedAyudanteExterno || null) : null,
+          costo_ayudante_externo: usarExterno && externoSeleccionado ? externoSeleccionado.tarifa_por_viaje : null,
         })
         .eq("id", ruta.id);
 
@@ -209,9 +239,14 @@ const ReasignarPersonalDialog = ({
 
   const ayudantesDisponibles = choferes.filter(c => c.id !== selectedChofer);
   const choferCambiado = ruta?.chofer_id !== selectedChofer;
-  const ayudanteCambiado = ruta?.ayudante_id !== selectedAyudante;
+  const ayudanteCambiado = usarExterno 
+    ? ruta?.ayudante_externo_id !== selectedAyudanteExterno
+    : ruta?.ayudante_id !== selectedAyudante;
   const vehiculoCambiado = ruta?.vehiculo_id !== selectedVehiculo;
-  const hayCambios = choferCambiado || ayudanteCambiado || vehiculoCambiado;
+  const modoAyudanteCambiado = !!ruta?.ayudante_externo_id !== usarExterno;
+  const hayCambios = choferCambiado || ayudanteCambiado || vehiculoCambiado || modoAyudanteCambiado;
+  
+  const externoSeleccionado = ayudantesExternos.find(e => e.id === selectedAyudanteExterno);
 
   if (!ruta) return null;
 
@@ -308,21 +343,76 @@ const ReasignarPersonalDialog = ({
                   <Users className="h-4 w-4" />
                   Ayudante
                 </Label>
-                <Select value={selectedAyudante} onValueChange={setSelectedAyudante}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sin ayudante" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Sin ayudante</SelectItem>
-                    {ayudantesDisponibles.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.full_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                
+                {/* Toggle for internal vs external */}
+                <div className="flex gap-2 mb-2">
+                  <Button
+                    type="button"
+                    variant={!usarExterno ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setUsarExterno(false)}
+                    className="flex-1"
+                  >
+                    <User className="h-3 w-3 mr-1" />
+                    Interno
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={usarExterno ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setUsarExterno(true)}
+                    className="flex-1"
+                  >
+                    <UserPlus className="h-3 w-3 mr-1" />
+                    Externo
+                  </Button>
+                </div>
+
+                {!usarExterno ? (
+                  <Select value={selectedAyudante} onValueChange={setSelectedAyudante}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sin ayudante" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Sin ayudante</SelectItem>
+                      {ayudantesDisponibles.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Select value={selectedAyudanteExterno} onValueChange={setSelectedAyudanteExterno}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar externo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Sin ayudante externo</SelectItem>
+                      {ayudantesExternos.map((e) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          <div className="flex items-center gap-2">
+                            {e.nombre_completo}
+                            <Badge variant="outline" className="text-xs">
+                              ${e.tarifa_por_viaje}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
+
+            {usarExterno && externoSeleccionado && (
+              <Alert className="bg-amber-500/10 border-amber-500/20">
+                <DollarSign className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-sm">
+                  Costo del ayudante externo: <strong>${externoSeleccionado.tarifa_por_viaje.toLocaleString()}</strong> por viaje
+                </AlertDescription>
+              </Alert>
+            )}
 
             {hayCambios && (
               <Alert className="bg-blue-500/10 border-blue-500/20">

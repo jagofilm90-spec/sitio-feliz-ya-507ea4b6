@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      ayudantes_externos: {
+        Row: {
+          activo: boolean | null
+          created_at: string | null
+          id: string
+          nombre_completo: string
+          notas: string | null
+          tarifa_por_viaje: number | null
+          telefono: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nombre_completo: string
+          notas?: string | null
+          tarifa_por_viaje?: number | null
+          telefono?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nombre_completo?: string
+          notas?: string | null
+          tarifa_por_viaje?: number | null
+          telefono?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       bodegas: {
         Row: {
           activo: boolean
@@ -2556,11 +2589,13 @@ export type Database = {
       }
       rutas: {
         Row: {
+          ayudante_externo_id: string | null
           ayudante_id: string | null
           carga_completada: boolean | null
           carga_completada_en: string | null
           carga_completada_por: string | null
           chofer_id: string
+          costo_ayudante_externo: number | null
           created_at: string
           distancia_total_km: number | null
           fecha_hora_fin: string | null
@@ -2581,11 +2616,13 @@ export type Database = {
           vehiculo_id: string | null
         }
         Insert: {
+          ayudante_externo_id?: string | null
           ayudante_id?: string | null
           carga_completada?: boolean | null
           carga_completada_en?: string | null
           carga_completada_por?: string | null
           chofer_id: string
+          costo_ayudante_externo?: number | null
           created_at?: string
           distancia_total_km?: number | null
           fecha_hora_fin?: string | null
@@ -2606,11 +2643,13 @@ export type Database = {
           vehiculo_id?: string | null
         }
         Update: {
+          ayudante_externo_id?: string | null
           ayudante_id?: string | null
           carga_completada?: boolean | null
           carga_completada_en?: string | null
           carga_completada_por?: string | null
           chofer_id?: string
+          costo_ayudante_externo?: number | null
           created_at?: string
           distancia_total_km?: number | null
           fecha_hora_fin?: string | null
@@ -2631,6 +2670,13 @@ export type Database = {
           vehiculo_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "rutas_ayudante_externo_id_fkey"
+            columns: ["ayudante_externo_id"]
+            isOneToOne: false
+            referencedRelation: "ayudantes_externos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "rutas_ayudante_id_fkey"
             columns: ["ayudante_id"]
