@@ -168,13 +168,39 @@ export function ClienteFormContent({
           </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="regimen_capital">Régimen de Capital</Label>
-          <Input
-            id="regimen_capital"
+          <Label htmlFor="regimen_capital">Régimen Fiscal</Label>
+          <Select
             value={formData.regimen_capital}
-            onChange={(e) => setFormData({ ...formData, regimen_capital: e.target.value })}
-            placeholder="Ej: S.A. de C.V., S.C., etc."
-          />
+            onValueChange={(value) => setFormData({ ...formData, regimen_capital: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecciona régimen fiscal" />
+            </SelectTrigger>
+            <SelectContent>
+              {/* Personas Morales */}
+              <SelectItem value="601">601 - General de Ley Personas Morales</SelectItem>
+              <SelectItem value="603">603 - Personas Morales con Fines no Lucrativos</SelectItem>
+              <SelectItem value="607">607 - Régimen de Enajenación o Adquisición de Bienes</SelectItem>
+              <SelectItem value="609">609 - Consolidación</SelectItem>
+              <SelectItem value="620">620 - Sociedades Cooperativas de Producción</SelectItem>
+              <SelectItem value="622">622 - Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras</SelectItem>
+              <SelectItem value="623">623 - Opcional para Grupos de Sociedades</SelectItem>
+              <SelectItem value="624">624 - Coordinados</SelectItem>
+              {/* Personas Físicas */}
+              <SelectItem value="605">605 - Sueldos y Salarios e Ingresos Asimilados</SelectItem>
+              <SelectItem value="606">606 - Arrendamiento</SelectItem>
+              <SelectItem value="608">608 - Demás ingresos</SelectItem>
+              <SelectItem value="610">610 - Residentes en el Extranjero sin Establecimiento</SelectItem>
+              <SelectItem value="611">611 - Ingresos por Dividendos</SelectItem>
+              <SelectItem value="612">612 - Personas Físicas con Actividades Empresariales</SelectItem>
+              <SelectItem value="614">614 - Ingresos por intereses</SelectItem>
+              <SelectItem value="615">615 - Régimen de obtención de premios</SelectItem>
+              <SelectItem value="616">616 - Sin obligaciones fiscales</SelectItem>
+              <SelectItem value="621">621 - Incorporación Fiscal</SelectItem>
+              <SelectItem value="625">625 - Actividades Empresariales con ingreso a través de Plataformas Tecnológicas</SelectItem>
+              <SelectItem value="626">626 - Régimen Simplificado de Confianza (RESICO)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label htmlFor="direccion">Dirección Fiscal</Label>
