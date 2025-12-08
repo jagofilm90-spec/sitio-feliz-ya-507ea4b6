@@ -39,7 +39,9 @@ import { ClienteUsuarioTab } from "@/components/clientes/ClienteUsuarioTab";
 import { ClienteFormContent } from "@/components/clientes/ClienteFormContent";
 import { ClienteProductosTab } from "@/components/clientes/ClienteProductosTab";
 import { ClienteProductosDialog } from "@/components/clientes/ClienteProductosDialog";
+import { ClienteCreditosExcepcionesTab } from "@/components/clientes/ClienteCreditosExcepcionesTab";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { CreditCard } from "lucide-react";
 import {
   Dialog as HistorialDialog,
   DialogContent as HistorialDialogContent,
@@ -715,16 +717,20 @@ const Clientes = () => {
               
               {editingClient ? (
                 <Tabs defaultValue="datos" className="w-full">
-                  <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                    <TabsTrigger value="datos">Datos del Cliente</TabsTrigger>
-                    <TabsTrigger value="productos" className="flex items-center gap-2">
+                  <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                    <TabsTrigger value="datos">Datos</TabsTrigger>
+                    <TabsTrigger value="productos" className="flex items-center gap-1">
                       <Package className="h-4 w-4" />
                       Productos
                     </TabsTrigger>
+                    <TabsTrigger value="creditos" className="flex items-center gap-1">
+                      <CreditCard className="h-4 w-4" />
+                      Plazos
+                    </TabsTrigger>
                     {isAdmin && (
-                      <TabsTrigger value="usuario" className="flex items-center gap-2">
+                      <TabsTrigger value="usuario" className="flex items-center gap-1">
                         <User className="h-4 w-4" />
-                        Acceso Portal
+                        Portal
                         {editingClient.user_id && (
                           <Badge variant="default" className="ml-1 h-5 bg-green-500">✓</Badge>
                         )}
@@ -733,6 +739,13 @@ const Clientes = () => {
                   </TabsList>
                   <TabsContent value="productos" className="mt-4">
                     <ClienteProductosTab clienteId={editingClient.id} />
+                  </TabsContent>
+                  <TabsContent value="creditos" className="mt-4">
+                    <ClienteCreditosExcepcionesTab 
+                      clienteId={editingClient.id}
+                      clienteNombre={editingClient.nombre}
+                      terminoDefault={editingClient.termino_credito}
+                    />
                   </TabsContent>
                   {isAdmin && (
                     <TabsContent value="usuario" className="mt-4">
