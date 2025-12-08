@@ -31,9 +31,19 @@ import {
   Loader2,
   Truck,
   Lock,
-  CalendarClock
+  CalendarClock,
+  Camera
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { EvidenciaCapture, EvidenciasPreviewGrid } from "./EvidenciaCapture";
+
+type TipoEvidencia = 'sello' | 'identificacion' | 'documento' | 'vehiculo' | 'otro';
+
+interface EvidenciaPreview {
+  tipo: TipoEvidencia;
+  file: File;
+  preview: string;
+}
 
 interface RecepcionProducto {
   detalle_id: string;
@@ -72,9 +82,25 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
   const [fechaNuevaEntrega, setFechaNuevaEntrega] = useState("");
   const [notasRecepcion, setNotasRecepcion] = useState("");
   
-  // New security/control fields
+  // Security/control fields
   const [numeroSellos, setNumeroSellos] = useState("");
   const [nombreEntregador, setNombreEntregador] = useState("");
+  
+  // Photo evidence state
+  const [evidencias, setEvidencias] = useState<EvidenciaPreview[]>([]);
+  const [subiendoEvidencias, setSubiendoEvidencias] = useState(false);
+
+  const handleAddEvidencia = (tipo: TipoEvidencia, file: File, preview: string) => {
+    setEvidencias(prev => [...prev, { tipo, file, preview }]);
+  };
+
+  const handleRemoveEvidencia = (index: number) => {
+    setEvidencias(prev => {
+      // Revoke object URL to prevent memory leaks
+      URL.revokeObjectURL(prev[index].preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
 
   // Fetch product details to check maneja_caducidad
   const { data: productosInfo } = useQuery({
@@ -119,6 +145,9 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
       setNotasRecepcion("");
       setNumeroSellos("");
       setNombreEntregador(orden.proveedores?.nombre || "");
+      // Clear evidences
+      evidencias.forEach(e => URL.revokeObjectURL(e.preview));
+      setEvidencias([]);
     }
   }, [open, orden, productosInfo]);
 
@@ -351,9 +380,48 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
         }
       }
 
+      // Upload photo evidences
+      if (evidencias.length > 0) {
+        setSubiendoEvidencias(true);
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData?.user?.id;
+
+        for (const evidencia of evidencias) {
+          try {
+            const timestamp = Date.now();
+            const fileName = `${orden.id}/${evidencia.tipo}_${timestamp}.jpg`;
+            
+            const { error: uploadError } = await supabase.storage
+              .from("recepciones-evidencias")
+              .upload(fileName, evidencia.file, {
+                contentType: "image/jpeg",
+              });
+
+            if (uploadError) {
+              console.error("Error uploading evidence:", uploadError);
+              continue;
+            }
+
+            // Record in database
+            await supabase.from("recepciones_evidencias").insert({
+              orden_compra_id: orden.id,
+              tipo_evidencia: evidencia.tipo,
+              ruta_storage: fileName,
+              nombre_archivo: evidencia.file.name,
+              capturado_por: userId,
+            });
+          } catch (err) {
+            console.error("Error processing evidence:", err);
+          }
+        }
+        setSubiendoEvidencias(false);
+      }
+
       queryClient.invalidateQueries({ queryKey: ["ordenes_compra"] });
       queryClient.invalidateQueries({ queryKey: ["ordenes_calendario"] });
       queryClient.invalidateQueries({ queryKey: ["entregas-oc", orden?.id] });
+      queryClient.invalidateQueries({ queryKey: ["recepciones-evidencias", orden?.id] });
+      queryClient.invalidateQueries({ queryKey: ["recepciones-evidencias-count", orden?.id] });
 
       // Parse date for toast message without timezone conversion
       let fechaToast = fechaNuevaEntrega;
@@ -366,7 +434,7 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
       toast({
         title: todoRecibido ? "Orden completada" : "Recepción parcial registrada",
         description: todoRecibido 
-          ? "Toda la mercancía ha sido recibida" 
+          ? `Toda la mercancía ha sido recibida${evidencias.length > 0 ? ` (${evidencias.length} evidencias guardadas)` : ""}` 
           : `Queda mercancía pendiente para el ${fechaToast}`,
       });
 
@@ -379,6 +447,7 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
       });
     } finally {
       setGuardando(false);
+      setSubiendoEvidencias(false);
     }
   };
 
@@ -435,6 +504,42 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Photo Evidence Section */}
+          <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200 mb-4">
+            <h4 className="font-medium mb-3 flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+              <Camera className="h-4 w-4" />
+              Evidencias Fotográficas
+              <Badge variant="outline" className="ml-auto text-xs">
+                {evidencias.length} {evidencias.length === 1 ? "foto" : "fotos"}
+              </Badge>
+            </h4>
+            <p className="text-xs text-muted-foreground mb-3">
+              Captura fotografías de los sellos, identificación del chofer, documentos de entrega y vehículo.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <EvidenciaCapture
+                tipo="sello"
+                onCapture={(file, preview) => handleAddEvidencia("sello", file, preview)}
+              />
+              <EvidenciaCapture
+                tipo="identificacion"
+                onCapture={(file, preview) => handleAddEvidencia("identificacion", file, preview)}
+              />
+              <EvidenciaCapture
+                tipo="documento"
+                onCapture={(file, preview) => handleAddEvidencia("documento", file, preview)}
+              />
+              <EvidenciaCapture
+                tipo="vehiculo"
+                onCapture={(file, preview) => handleAddEvidencia("vehiculo", file, preview)}
+              />
+            </div>
+            <EvidenciasPreviewGrid
+              evidencias={evidencias}
+              onRemove={handleRemoveEvidencia}
+            />
           </div>
 
           {/* Order Info */}
@@ -661,17 +766,23 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
           <Button 
             className="flex-1"
             onClick={handleGuardar}
-            disabled={guardando || totalRecibidoAhora === 0}
+            disabled={guardando || subiendoEvidencias || totalRecibidoAhora === 0}
           >
-            {guardando ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            {guardando || subiendoEvidencias ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                {subiendoEvidencias ? "Subiendo fotos..." : "Guardando..."}
+              </>
             ) : (
-              <CheckCircle className="h-4 w-4 mr-2" />
+              <>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                {quedaPendiente && totalRecibidoAhora > 0 
+                  ? "Registrar Parcial" 
+                  : "Registrar Recepción"
+                }
+                {evidencias.length > 0 && ` (${evidencias.length} fotos)`}
+              </>
             )}
-            {quedaPendiente && totalRecibidoAhora > 0 
-              ? "Registrar Parcial" 
-              : "Registrar Recepción"
-            }
           </Button>
         </div>
       </DialogContent>
