@@ -198,6 +198,58 @@ export type Database = {
           },
         ]
       }
+      cliente_creditos_excepciones: {
+        Row: {
+          cliente_id: string
+          created_at: string | null
+          id: string
+          notas: string | null
+          producto_id: string
+          termino_credito: Database["public"]["Enums"]["credit_term"]
+          updated_at: string | null
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string | null
+          id?: string
+          notas?: string | null
+          producto_id: string
+          termino_credito: Database["public"]["Enums"]["credit_term"]
+          updated_at?: string | null
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string | null
+          id?: string
+          notas?: string | null
+          producto_id?: string
+          termino_credito?: Database["public"]["Enums"]["credit_term"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_creditos_excepciones_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_creditos_excepciones_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_creditos_excepciones_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cliente_productos_frecuentes: {
         Row: {
           activo: boolean | null
@@ -3178,6 +3230,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      obtener_termino_credito: {
+        Args: { p_cliente_id: string; p_producto_id: string }
+        Returns: Database["public"]["Enums"]["credit_term"]
       }
     }
     Enums: {
