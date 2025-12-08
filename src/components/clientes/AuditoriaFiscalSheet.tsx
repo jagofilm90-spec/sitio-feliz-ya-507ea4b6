@@ -13,6 +13,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 interface SucursalFiscal {
   id: string;
   nombre: string;
+  codigo_sucursal: string | null;
   rfc: string | null;
   razon_social: string | null;
   direccion_fiscal: string | null;
@@ -53,6 +54,7 @@ export function AuditoriaFiscalSheet({ open, onOpenChange }: Props) {
         .select(`
           id,
           nombre,
+          codigo_sucursal,
           rfc,
           razon_social,
           direccion_fiscal,
@@ -71,6 +73,7 @@ export function AuditoriaFiscalSheet({ open, onOpenChange }: Props) {
       const mapped = (data || []).map((s: any) => ({
         id: s.id,
         nombre: s.nombre,
+        codigo_sucursal: s.codigo_sucursal,
         rfc: s.rfc,
         razon_social: s.razon_social,
         direccion_fiscal: s.direccion_fiscal,
@@ -205,6 +208,7 @@ export function AuditoriaFiscalSheet({ open, onOpenChange }: Props) {
       const term = searchTerm.toLowerCase();
       return (
         s.nombre.toLowerCase().includes(term) ||
+        s.codigo_sucursal?.toLowerCase().includes(term) ||
         s.cliente_nombre?.toLowerCase().includes(term) ||
         s.rfc?.toLowerCase().includes(term) ||
         s.razon_social?.toLowerCase().includes(term)
@@ -354,6 +358,11 @@ export function AuditoriaFiscalSheet({ open, onOpenChange }: Props) {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span>{statusIcon}</span>
+                              {sucursal.codigo_sucursal && (
+                                <Badge variant="secondary" className="text-xs font-mono">
+                                  Sucursal: {sucursal.codigo_sucursal}
+                                </Badge>
+                              )}
                               <span className="font-medium">{sucursal.nombre}</span>
                             </div>
                             <Badge variant="outline" className="font-mono text-xs">
