@@ -70,7 +70,8 @@ const DisponibilidadPersonalTab = () => {
       if (empleadosError) throw empleadosError;
 
       const choferesData = empleadosData?.filter(e => 
-        e.puesto.toLowerCase().includes("chofer")
+        e.puesto.toLowerCase().includes("chofer") &&
+        !e.puesto.toLowerCase().includes("ayudante")
       ) || [];
       const ayudantesData = empleadosData?.filter(e => 
         e.puesto.toLowerCase().includes("ayudante")
