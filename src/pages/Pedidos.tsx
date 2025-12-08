@@ -74,7 +74,7 @@ interface PedidoConCotizacion {
   sucursal?: { nombre: string; email_facturacion: string | null; codigo_sucursal: string | null } | null;
 }
 
-const Pedidos = () => {
+const PedidosContent = () => {
   const [pedidos, setPedidos] = useState<PedidoConCotizacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -924,5 +924,12 @@ const Pedidos = () => {
     </Layout>
   );
 };
+
+// Componente principal con ErrorBoundary
+const Pedidos = () => (
+  <ErrorBoundaryModule moduleName="Pedidos">
+    <PedidosContent />
+  </ErrorBoundaryModule>
+);
 
 export default Pedidos;
