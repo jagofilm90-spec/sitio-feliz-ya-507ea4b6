@@ -660,16 +660,57 @@ Los pedidos que no quepan hoy van a "para_despues" - esto es NORMAL, no un error
     // 6. Build detailed route suggestions
     const rutasSugeridas: RutaSugerida[] = [];
     const pedidosAsignados = new Set<string>();
+    
+    // Create alternative lookup maps for flexible ID matching
+    const folioToId = new Map(pedidosNormales.map(p => [p.folio, p.id]));
+    const folioToPedido = new Map(pedidosNormales.map(p => [p.folio, p]));
+    
+    console.log(`[suggest-routes] pedidosMap has ${pedidosMap.size} entries`);
+    console.log(`[suggest-routes] Sample pedidosMap keys: ${Array.from(pedidosMap.keys()).slice(0, 3).join(', ')}`);
 
     for (const ruta of rutasValidadas) {
       const vehiculo = vehiculos.find((v: any) => v.id === ruta.vehiculo_id);
-      if (!vehiculo) continue;
+      if (!vehiculo) {
+        console.warn(`[suggest-routes] Vehicle not found: ${ruta.vehiculo_id}`);
+        continue;
+      }
 
-      let pedidosRuta = ruta.pedido_ids
-        .map((id: string) => pedidosMap.get(id))
+      console.log(`[suggest-routes] Processing route for ${vehiculo.nombre}, AI returned pedido_ids: ${JSON.stringify(ruta.pedido_ids?.slice(0, 5))}`);
+
+      // Flexible ID matching: try UUID first, then folio
+      let pedidosRuta = (ruta.pedido_ids || [])
+        .map((id: string) => {
+          // First try direct UUID lookup
+          let pedido = pedidosMap.get(id);
+          if (pedido) return pedido;
+          
+          // Try by folio (in case AI returned folio instead of UUID)
+          pedido = folioToPedido.get(id);
+          if (pedido) {
+            console.log(`[suggest-routes] Matched by folio: ${id} -> ${pedido.id}`);
+            return pedido;
+          }
+          
+          // Try partial UUID match (first 8 chars)
+          const shortId = id.substring(0, 8);
+          for (const [key, value] of pedidosMap.entries()) {
+            if (key.startsWith(shortId)) {
+              console.log(`[suggest-routes] Matched by partial UUID: ${id} -> ${key}`);
+              return value;
+            }
+          }
+          
+          console.warn(`[suggest-routes] Could not match pedido_id: ${id}`);
+          return null;
+        })
         .filter(Boolean);
       
-      if (!pedidosRuta.length) continue;
+      console.log(`[suggest-routes] Route ${vehiculo.nombre}: matched ${pedidosRuta.length} of ${ruta.pedido_ids?.length || 0} orders`);
+      
+      if (!pedidosRuta.length) {
+        console.warn(`[suggest-routes] Skipping route ${vehiculo.nombre} - no matching orders found`);
+        continue;
+      }
 
       // OPTIMIZE delivery order using GPS coordinates (nearest-neighbor algorithm)
       // Starting from the warehouse location (Bodega 1 - Melchor Campo)
@@ -750,6 +791,92 @@ Los pedidos que no quepan hoy van a "para_despues" - esto es NORMAL, no un error
       pedidosRuta.forEach((p: any) => pedidosAsignados.add(p.id));
     }
 
+    // AUTOMATIC FALLBACK: If AI returned routes but 0 were valid, use bin-packing
+    if (rutasSugeridas.length === 0 && pedidosNormales.length > 0) {
+      console.log(`[suggest-routes] AI validation failed - using automatic fallback algorithm`);
+      
+      const fallbackResult = generarRutasSimples(pedidosNormales, vehiculos);
+      const rutasFallback = fallbackResult.rutas || [];
+      
+      for (const ruta of rutasFallback) {
+        const vehiculo = vehiculos.find((v: any) => v.id === ruta.vehiculo_id);
+        if (!vehiculo) continue;
+        
+        let pedidosRuta = ruta.pedido_ids
+          .map((id: string) => pedidosMap.get(id))
+          .filter(Boolean);
+        
+        if (!pedidosRuta.length) continue;
+        
+        // Optimize delivery order
+        pedidosRuta = optimizarOrdenEntrega(pedidosRuta, puntoBodega);
+        
+        const tipoRuta = ruta.tipo_ruta === "foranea" ? "foranea" : "local";
+        const capacidadMax = ruta.capacidad_maxima;
+        const pesoTotal = ruta.peso_total;
+        
+        const regiones = [...new Set(pedidosRuta
+          .map((p: any) => p.sucursal?.zona?.region)
+          .filter(Boolean))] as string[];
+        
+        const zonas = [...new Set(pedidosRuta
+          .map((p: any) => p.sucursal?.zona?.nombre)
+          .filter(Boolean))] as string[];
+        
+        // Calculate time
+        const tiempoEntregas = pedidosRuta.length * 25;
+        let tiempoViaje = 0;
+        let lastLat = puntoBodega.lat;
+        let lastLng = puntoBodega.lng;
+        for (const p of pedidosRuta) {
+          if (p.sucursal?.latitud && p.sucursal?.longitud) {
+            const dist = haversineDistance(lastLat, lastLng, p.sucursal.latitud, p.sucursal.longitud);
+            tiempoViaje += (dist / 30) * 60;
+            lastLat = p.sucursal.latitud;
+            lastLng = p.sucursal.longitud;
+          }
+        }
+        const distReturn = haversineDistance(lastLat, lastLng, puntoBodega.lat, puntoBodega.lng);
+        tiempoViaje += (distReturn / 30) * 60;
+        const tiempoEstimadoMinutos = Math.round(tiempoEntregas + tiempoViaje);
+        
+        const horaSalidaSugerida = tipoRuta === "foranea" ? "07:00" : "09:00";
+        
+        const choferIndex = choferesDisponibles.length > 0 ? rutasSugeridas.length % choferesDisponibles.length : -1;
+        const ayudanteIndex = ayudantesDisponibles.length > 0 ? rutasSugeridas.length % ayudantesDisponibles.length : -1;
+        
+        const choferData = choferIndex >= 0 ? choferesDisponibles[choferIndex] : null;
+        const ayudanteData = ayudanteIndex >= 0 ? ayudantesDisponibles[ayudanteIndex] : null;
+        
+        const choferSugerido = choferData?.empleado 
+          ? { id: (choferData.empleado as any).id, nombre: (choferData.empleado as any).nombre_completo }
+          : undefined;
+        
+        const ayudanteSugerido = ayudanteData?.empleado
+          ? { id: (ayudanteData.empleado as any).id, nombre: (ayudanteData.empleado as any).nombre_completo }
+          : undefined;
+        
+        rutasSugeridas.push({
+          vehiculo,
+          tipo_ruta: tipoRuta,
+          pedidos: pedidosRuta,
+          peso_total: pesoTotal,
+          capacidad_maxima: capacidadMax,
+          porcentaje_carga: capacidadMax > 0 ? (pesoTotal / capacidadMax) * 100 : 0,
+          regiones,
+          zonas,
+          hora_salida_sugerida: horaSalidaSugerida,
+          tiempo_estimado_minutos: tiempoEstimadoMinutos,
+          chofer_sugerido: choferSugerido,
+          ayudante_sugerido: ayudanteSugerido,
+        });
+        
+        pedidosRuta.forEach((p: any) => pedidosAsignados.add(p.id));
+      }
+      
+      console.log(`[suggest-routes] Fallback generated ${rutasSugeridas.length} routes`);
+    }
+
     // Separate assigned from unassigned
     const todosNoAsignados = new Set([
       ...(aiResult.para_despues || aiResult.sin_asignar || []),
@@ -761,7 +888,9 @@ Los pedidos que no quepan hoy van a "para_despues" - esto es NORMAL, no un error
       !pedidosAsignados.has(p.id) || todosNoAsignados.has(p.id)
     );
 
-    console.log(`[suggest-routes] DAILY PLAN: ${rutasSugeridas.length} routes, ${pedidosParaHoy.length} orders today, ${pedidosParaDespues.length} for later, ${pedidosOversized.length} oversized`);
+    const usedFallback = rutasSugeridas.length > 0 && rutasValidadas.length === 0;
+    
+    console.log(`[suggest-routes] DAILY PLAN: ${rutasSugeridas.length} routes, ${pedidosParaHoy.length} orders today, ${pedidosParaDespues.length} for later, ${pedidosOversized.length} oversized${usedFallback ? ' (FALLBACK USED)' : ''}`);
     
     rutasSugeridas.forEach((r, i) => {
       console.log(`[suggest-routes] Route ${i+1}: ${r.vehiculo.nombre} - ${r.peso_total}/${r.capacidad_maxima}kg (${r.porcentaje_carga.toFixed(0)}%) - ${r.pedidos.length} orders`);
@@ -784,7 +913,7 @@ Los pedidos que no quepan hoy van a "para_despues" - esto es NORMAL, no un error
         capacidad_hoy: capacidadHoy,
         peso_total_pendiente: pesoTotalPendiente,
         notas_ai: aiResult.notas || null,
-        usó_fallback: false,
+        usó_fallback: usedFallback,
         personal_disponible: {
           choferes: choferesDisponibles.length,
           ayudantes: ayudantesDisponibles.length,
