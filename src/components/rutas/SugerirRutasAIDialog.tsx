@@ -10,7 +10,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
@@ -418,7 +418,7 @@ export const SugerirRutasAIDialog = ({
           {rutasSugeridas.length > 0 && (
             <>
               {/* Summary Stats */}
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-4 gap-3 flex-shrink-0">
                 <Card className="bg-green-500/10 border-green-500/20">
                   <CardContent className="p-3 text-center">
                     <p className="text-2xl font-bold text-green-600">{pedidosHoyTotal}</p>
@@ -484,8 +484,8 @@ export const SugerirRutasAIDialog = ({
                 </Alert>
               )}
 
-              <ScrollArea className="flex-1 min-h-0" style={{ maxHeight: 'calc(90vh - 320px)' }}>
-                <div className="space-y-4 pr-4">
+              <div className="flex-1 min-h-0 overflow-y-auto max-h-[350px] pr-2">
+                <div className="space-y-4">
                   {/* Today's Routes */}
                   {rutasSugeridas.map((ruta, index) => (
                     <Card key={index} className="overflow-hidden border-green-500/30">
@@ -765,7 +765,7 @@ export const SugerirRutasAIDialog = ({
                     </Card>
                   )}
                 </div>
-              </ScrollArea>
+              </div>
             </>
           )}
         </div>
