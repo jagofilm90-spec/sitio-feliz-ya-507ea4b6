@@ -37,10 +37,10 @@ import PlanificadorRutas from "@/components/rutas/PlanificadorRutas";
 import RutaKilometrajeDialog from "@/components/rutas/RutaKilometrajeDialog";
 import EditarRutaDialog from "@/components/rutas/EditarRutaDialog";
 import { MapaGlobalSucursales } from "@/components/rutas/MapaGlobalSucursales";
-import DisponibilidadPersonalTab from "@/components/rutas/DisponibilidadPersonalTab";
+import AsignacionesDelDiaTab from "@/components/rutas/AsignacionesDelDiaTab";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Users } from "lucide-react";
+import { Users, CalendarCheck } from "lucide-react";
 
 const RutasContent = () => {
   const [rutas, setRutas] = useState<any[]>([]);
@@ -141,9 +141,9 @@ const RutasContent = () => {
               <Route className="h-4 w-4" />
               Planificar
             </TabsTrigger>
-            <TabsTrigger value="disponibilidad" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Disponibilidad
+            <TabsTrigger value="asignaciones" className="flex items-center gap-2">
+              <CalendarCheck className="h-4 w-4" />
+              Asignaciones
             </TabsTrigger>
             <TabsTrigger value="mapa" className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
@@ -167,8 +167,8 @@ const RutasContent = () => {
             <PlanificadorRutas />
           </TabsContent>
 
-          <TabsContent value="disponibilidad">
-            <DisponibilidadPersonalTab />
+          <TabsContent value="asignaciones">
+            <AsignacionesDelDiaTab />
           </TabsContent>
 
           <TabsContent value="mapa">
