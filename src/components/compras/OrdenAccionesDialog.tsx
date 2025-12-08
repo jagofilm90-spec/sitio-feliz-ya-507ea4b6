@@ -13,11 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package } from "lucide-react";
+import { Calendar, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ProgramarEntregasDialog from "./ProgramarEntregasDialog";
 import RegistrarRecepcionDialog from "./RegistrarRecepcionDialog";
 import ConvertirEntregasMultiplesDialog from "./ConvertirEntregasMultiplesDialog";
+import { EvidenciasGallery, EvidenciasBadge } from "./EvidenciasGallery";
 import logoAlmasa from "@/assets/logo-almasa.png";
 
 // Helper function to convert image to base64
@@ -59,6 +60,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   const [programarEntregasOpen, setProgramarEntregasOpen] = useState(false);
   const [registrarRecepcionOpen, setRegistrarRecepcionOpen] = useState(false);
   const [convertirEntregasOpen, setConvertirEntregasOpen] = useState(false);
+  const [evidenciasGalleryOpen, setEvidenciasGalleryOpen] = useState(false);
   
   // Email CC functionality
   const [emailTo, setEmailTo] = useState("");
@@ -1482,6 +1484,22 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                 </Badge>
               )}
             </Button>
+            
+            {/* View photo evidences button */}
+            {(orden?.status === "recibida" || orden?.status === "parcial") && (
+              <Button
+                variant="outline"
+                className="w-full justify-start text-emerald-600 hover:text-emerald-700 border-emerald-200"
+                onClick={() => setEvidenciasGalleryOpen(true)}
+              >
+                <Camera className="mr-2 h-4 w-4" />
+                Ver Evidencias Fotográficas
+                <EvidenciasBadge 
+                  ordenCompraId={orden?.id} 
+                  onClick={() => setEvidenciasGalleryOpen(true)} 
+                />
+              </Button>
+            )}
             <Button
               variant="outline"
               className="w-full justify-start"
@@ -1790,6 +1808,12 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       open={convertirEntregasOpen}
       onOpenChange={setConvertirEntregasOpen}
       orden={orden}
+    />
+
+    <EvidenciasGallery
+      ordenCompraId={orden?.id || ""}
+      open={evidenciasGalleryOpen}
+      onOpenChange={setEvidenciasGalleryOpen}
     />
     </>
   );

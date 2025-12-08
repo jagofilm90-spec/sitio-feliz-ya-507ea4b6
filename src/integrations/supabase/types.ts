@@ -2513,6 +2513,47 @@ export type Database = {
         }
         Relationships: []
       }
+      recepciones_evidencias: {
+        Row: {
+          capturado_por: string
+          created_at: string
+          id: string
+          nombre_archivo: string
+          notas: string | null
+          orden_compra_id: string
+          ruta_storage: string
+          tipo_evidencia: string
+        }
+        Insert: {
+          capturado_por: string
+          created_at?: string
+          id?: string
+          nombre_archivo: string
+          notas?: string | null
+          orden_compra_id: string
+          ruta_storage: string
+          tipo_evidencia: string
+        }
+        Update: {
+          capturado_por?: string
+          created_at?: string
+          id?: string
+          nombre_archivo?: string
+          notas?: string | null
+          orden_compra_id?: string
+          ruta_storage?: string
+          tipo_evidencia?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recepciones_evidencias_orden_compra_id_fkey"
+            columns: ["orden_compra_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_compra"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rutas: {
         Row: {
           ayudante_id: string | null
