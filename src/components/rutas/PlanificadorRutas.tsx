@@ -23,7 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Truck, Package, AlertTriangle, Check, X, MapPin, Calendar, User, Users, Sparkles } from "lucide-react";
 import { SugerirRutasAIDialog } from "./SugerirRutasAIDialog";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 
 interface Chofer {
@@ -70,7 +70,8 @@ const PlanificadorRutas = () => {
   const [selectedVehiculo, setSelectedVehiculo] = useState<string>("");
   const [selectedChofer, setSelectedChofer] = useState<string>("");
   const [selectedAyudante, setSelectedAyudante] = useState<string>("");
-  const [fechaRuta, setFechaRuta] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+  // Default to TOMORROW for anticipated planning
+  const [fechaRuta, setFechaRuta] = useState<string>(format(addDays(new Date(), 1), "yyyy-MM-dd"));
   const [tipoRuta, setTipoRuta] = useState<"local" | "foranea">("local");
   const [pedidosSeleccionados, setPedidosSeleccionados] = useState<PedidoSeleccionado[]>([]);
   const [notas, setNotas] = useState("");
@@ -268,7 +269,7 @@ const PlanificadorRutas = () => {
     setSelectedVehiculo("");
     setSelectedChofer("");
     setSelectedAyudante("");
-    setFechaRuta(format(new Date(), "yyyy-MM-dd"));
+    setFechaRuta(format(addDays(new Date(), 1), "yyyy-MM-dd"));
     setTipoRuta("local");
     setPedidosSeleccionados([]);
     setNotas("");

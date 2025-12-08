@@ -38,9 +38,11 @@ import RutaKilometrajeDialog from "@/components/rutas/RutaKilometrajeDialog";
 import EditarRutaDialog from "@/components/rutas/EditarRutaDialog";
 import { MapaGlobalSucursales } from "@/components/rutas/MapaGlobalSucursales";
 import AsignacionesDelDiaTab from "@/components/rutas/AsignacionesDelDiaTab";
+import AyudantesExternosTab from "@/components/rutas/AyudantesExternosTab";
+import DisponibilidadPersonalTab from "@/components/rutas/DisponibilidadPersonalTab";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Users, CalendarCheck } from "lucide-react";
+import { Users, CalendarCheck, UserPlus, ClipboardList } from "lucide-react";
 
 const RutasContent = () => {
   const [rutas, setRutas] = useState<any[]>([]);
@@ -160,6 +162,14 @@ const RutasContent = () => {
             <TabsTrigger value="zonas" className="flex items-center gap-2">
               <MapPin className="h-4 w-4" />
               Zonas
+            </TabsTrigger>
+            <TabsTrigger value="disponibilidad" className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4" />
+              Disponibilidad
+            </TabsTrigger>
+            <TabsTrigger value="externos" className="flex items-center gap-2">
+              <UserPlus className="h-4 w-4" />
+              Externos
             </TabsTrigger>
           </TabsList>
 
@@ -346,6 +356,14 @@ const RutasContent = () => {
 
           <TabsContent value="zonas">
             <ZonasTab />
+          </TabsContent>
+
+          <TabsContent value="disponibilidad">
+            <DisponibilidadPersonalTab />
+          </TabsContent>
+
+          <TabsContent value="externos">
+            <AyudantesExternosTab />
           </TabsContent>
         </Tabs>
 

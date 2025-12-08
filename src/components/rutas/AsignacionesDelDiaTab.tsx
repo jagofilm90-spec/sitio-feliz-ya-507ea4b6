@@ -20,7 +20,9 @@ import {
   RefreshCw,
   CalendarPlus,
   X,
-  Bell
+  Bell,
+  DollarSign,
+  UserPlus
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ReasignarPersonalDialog from "./ReasignarPersonalDialog";
@@ -42,10 +44,13 @@ interface Ruta {
   chofer_id: string;
   ayudante_id: string | null;
   vehiculo_id: string | null;
+  ayudante_externo_id: string | null;
+  costo_ayudante_externo: number | null;
   notas: string | null;
   chofer?: { full_name: string };
   ayudante?: { full_name: string };
   vehiculo?: { nombre: string; tipo: string };
+  ayudante_externo?: { nombre_completo: string; tarifa_por_viaje: number };
   entregas?: { id: string; pedido_id: string }[];
 }
 
@@ -86,6 +91,7 @@ const AsignacionesDelDiaTab = () => {
           chofer:profiles!rutas_chofer_id_fkey (full_name),
           ayudante:profiles!rutas_ayudante_id_fkey (full_name),
           vehiculo:vehiculo_id (nombre, tipo),
+          ayudante_externo:ayudante_externo_id (nombre_completo, tarifa_por_viaje),
           entregas (id, pedido_id)
         `)
         .eq("fecha_ruta", fechaStr)
@@ -355,7 +361,17 @@ const AsignacionesDelDiaTab = () => {
                             </div>
                             <div>
                               <p className="text-muted-foreground">Ayudante</p>
-                              <p className="font-medium">{ruta.ayudante?.full_name || "Sin ayudante"}</p>
+                              <p className="font-medium flex items-center gap-1">
+                                {ruta.ayudante_externo ? (
+                                  <>
+                                    <UserPlus className="h-3 w-3 text-amber-600" />
+                                    {ruta.ayudante_externo.nombre_completo}
+                                    <Badge variant="outline" className="ml-1 text-xs">
+                                      ${ruta.costo_ayudante_externo?.toLocaleString()}
+                                    </Badge>
+                                  </>
+                                ) : ruta.ayudante?.full_name || "Sin ayudante"}
+                              </p>
                             </div>
                             <div>
                               <p className="text-muted-foreground">Carga</p>
