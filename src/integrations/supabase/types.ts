@@ -883,6 +883,57 @@ export type Database = {
           },
         ]
       }
+      disponibilidad_personal: {
+        Row: {
+          created_at: string
+          disponible: boolean
+          empleado_id: string
+          fecha: string
+          hora_entrada: string | null
+          hora_salida: string | null
+          id: string
+          notas: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          disponible?: boolean
+          empleado_id: string
+          fecha: string
+          hora_entrada?: string | null
+          hora_salida?: string | null
+          id?: string
+          notas?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          disponible?: boolean
+          empleado_id?: string
+          fecha?: string
+          hora_entrada?: string | null
+          hora_salida?: string | null
+          id?: string
+          notas?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disponibilidad_personal_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disponibilidad_personal_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       empleados: {
         Row: {
           activo: boolean | null
@@ -2470,10 +2521,12 @@ export type Database = {
           carga_completada_por: string | null
           chofer_id: string
           created_at: string
+          distancia_total_km: number | null
           fecha_hora_fin: string | null
           fecha_hora_inicio: string | null
           fecha_ruta: string
           folio: string
+          hora_salida_sugerida: string | null
           id: string
           kilometraje_final: number | null
           kilometraje_inicial: number | null
@@ -2481,6 +2534,7 @@ export type Database = {
           notas: string | null
           peso_total_kg: number | null
           status: string | null
+          tiempo_estimado_minutos: number | null
           tipo_ruta: string
           updated_at: string
           vehiculo_id: string | null
@@ -2492,10 +2546,12 @@ export type Database = {
           carga_completada_por?: string | null
           chofer_id: string
           created_at?: string
+          distancia_total_km?: number | null
           fecha_hora_fin?: string | null
           fecha_hora_inicio?: string | null
           fecha_ruta: string
           folio: string
+          hora_salida_sugerida?: string | null
           id?: string
           kilometraje_final?: number | null
           kilometraje_inicial?: number | null
@@ -2503,6 +2559,7 @@ export type Database = {
           notas?: string | null
           peso_total_kg?: number | null
           status?: string | null
+          tiempo_estimado_minutos?: number | null
           tipo_ruta?: string
           updated_at?: string
           vehiculo_id?: string | null
@@ -2514,10 +2571,12 @@ export type Database = {
           carga_completada_por?: string | null
           chofer_id?: string
           created_at?: string
+          distancia_total_km?: number | null
           fecha_hora_fin?: string | null
           fecha_hora_inicio?: string | null
           fecha_ruta?: string
           folio?: string
+          hora_salida_sugerida?: string | null
           id?: string
           kilometraje_final?: number | null
           kilometraje_inicial?: number | null
@@ -2525,6 +2584,7 @@ export type Database = {
           notas?: string | null
           peso_total_kg?: number | null
           status?: string | null
+          tiempo_estimado_minutos?: number | null
           tipo_ruta?: string
           updated_at?: string
           vehiculo_id?: string | null
