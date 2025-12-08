@@ -28,7 +28,9 @@ import {
   Map,
   Calendar,
   Clock,
-  Info
+  Info,
+  Navigation,
+  ExternalLink
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -482,7 +484,7 @@ export const SugerirRutasAIDialog = ({
                 </Alert>
               )}
 
-              <ScrollArea className="flex-1 min-h-0 max-h-[45vh]">
+              <ScrollArea className="flex-1 min-h-0" style={{ maxHeight: 'calc(90vh - 320px)' }}>
                 <div className="space-y-4 pr-4">
                   {/* Today's Routes */}
                   {rutasSugeridas.map((ruta, index) => (
@@ -524,7 +526,28 @@ export const SugerirRutasAIDialog = ({
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-3">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 shrink-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const warehouseLat = 19.408680132961802;
+                                const warehouseLng = -99.12108443546356;
+                                const waypoints = ruta.pedidos
+                                  .filter((p: any) => p.sucursal?.latitud && p.sucursal?.longitud)
+                                  .map((p: any) => `${p.sucursal.latitud},${p.sucursal.longitud}`)
+                                  .join('|');
+                                const url = waypoints 
+                                  ? `https://www.google.com/maps/dir/?api=1&origin=${warehouseLat},${warehouseLng}&destination=${warehouseLat},${warehouseLng}&waypoints=${waypoints}&travelmode=driving`
+                                  : `https://www.google.com/maps/dir/?api=1&origin=${warehouseLat},${warehouseLng}&destination=${warehouseLat},${warehouseLng}&travelmode=driving`;
+                                window.open(url, '_blank');
+                              }}
+                              title="Abrir ruta en Google Maps"
+                            >
+                              <Navigation className="h-4 w-4" />
+                            </Button>
                             <div className="text-right">
                               <p className="text-sm font-medium">
                                 {ruta.pedidos.length} pedidos
@@ -533,7 +556,7 @@ export const SugerirRutasAIDialog = ({
                                 {ruta.peso_total.toLocaleString()} / {ruta.capacidad_maxima.toLocaleString()} kg
                               </p>
                             </div>
-                            <div className="w-24">
+                            <div className="w-20">
                               <Progress 
                                 value={Math.min(ruta.porcentaje_carga, 100)} 
                                 className="h-2"
@@ -543,9 +566,9 @@ export const SugerirRutasAIDialog = ({
                               </p>
                             </div>
                             {expandedRutas.has(index) ? (
-                              <ChevronUp className="h-4 w-4" />
+                              <ChevronUp className="h-4 w-4 shrink-0" />
                             ) : (
-                              <ChevronDown className="h-4 w-4" />
+                              <ChevronDown className="h-4 w-4 shrink-0" />
                             )}
                           </div>
                         </div>
@@ -602,6 +625,23 @@ export const SugerirRutasAIDialog = ({
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
+                                  {pedido.sucursal?.latitud && pedido.sucursal?.longitud && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        window.open(
+                                          `https://www.google.com/maps/dir/?api=1&destination=${pedido.sucursal.latitud},${pedido.sucursal.longitud}&travelmode=driving`,
+                                          '_blank'
+                                        );
+                                      }}
+                                      title="Navegar a esta entrega"
+                                    >
+                                      <ExternalLink className="h-3 w-3" />
+                                    </Button>
+                                  )}
                                   {pedido.prioridad_entrega && PRIORIDAD_LABELS[pedido.prioridad_entrega] && (
                                     <Badge className={`${PRIORIDAD_LABELS[pedido.prioridad_entrega].color} text-white text-xs`}>
                                       {PRIORIDAD_LABELS[pedido.prioridad_entrega].label}
