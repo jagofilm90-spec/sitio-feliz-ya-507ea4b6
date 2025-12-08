@@ -23,6 +23,10 @@ interface RutaSugerida {
   porcentaje_carga: number;
   regiones: string[];
   zonas: string[];
+  hora_salida_sugerida?: string;
+  tiempo_estimado_minutos?: number;
+  chofer_sugerido?: { id: string; nombre: string };
+  ayudante_sugerido?: { id: string; nombre: string };
 }
 
 // Haversine formula to calculate distance between two GPS coordinates in km
@@ -281,6 +285,32 @@ serve(async (req) => {
 
     console.log(`[suggest-routes] Generating DAILY routes for date: ${fechaRuta}`);
     console.log(`[suggest-routes] Selected vehicles: ${vehiculos_seleccionados?.length || 'ALL'}`);
+
+    // Get available staff for the day
+    const { data: disponibilidadData } = await supabase
+      .from("disponibilidad_personal")
+      .select(`
+        empleado_id,
+        disponible,
+        hora_entrada,
+        hora_salida,
+        empleado:empleado_id (
+          id,
+          nombre_completo,
+          puesto
+        )
+      `)
+      .eq("fecha", fechaRuta)
+      .eq("disponible", true);
+
+    const choferesDisponibles = disponibilidadData?.filter((d: any) => 
+      d.empleado?.puesto?.toLowerCase().includes("chofer")
+    ) || [];
+    const ayudantesDisponibles = disponibilidadData?.filter((d: any) => 
+      d.empleado?.puesto?.toLowerCase().includes("ayudante")
+    ) || [];
+
+    console.log(`[suggest-routes] Available staff: ${choferesDisponibles.length} drivers, ${ayudantesDisponibles.length} helpers`);
 
     // Get warehouse origin coordinates from database config
     const DEFAULT_BODEGA = { lat: 19.408680132961802, lng: -99.12108443546356 };
@@ -663,6 +693,45 @@ Los pedidos que no quepan hoy van a "para_despues" - esto es NORMAL, no un error
         continue;
       }
 
+      // Calculate estimated time: 25 min per delivery + travel time
+      const tiempoEntregas = pedidosRuta.length * 25; // 25 min per delivery
+      let tiempoViaje = 0;
+      
+      // Calculate travel time using Haversine (approximate)
+      let lastLat = puntoBodega.lat;
+      let lastLng = puntoBodega.lng;
+      for (const p of pedidosRuta) {
+        if (p.sucursal?.latitud && p.sucursal?.longitud) {
+          const dist = haversineDistance(lastLat, lastLng, p.sucursal.latitud, p.sucursal.longitud);
+          tiempoViaje += (dist / 30) * 60; // Assume 30 km/h average, convert to minutes
+          lastLat = p.sucursal.latitud;
+          lastLng = p.sucursal.longitud;
+        }
+      }
+      // Add return trip
+      const distReturn = haversineDistance(lastLat, lastLng, puntoBodega.lat, puntoBodega.lng);
+      tiempoViaje += (distReturn / 30) * 60;
+
+      const tiempoEstimadoMinutos = Math.round(tiempoEntregas + tiempoViaje);
+
+      // Assign suggested departure time: foráneas 7:00 AM, locales 9:00 AM
+      const horaSalidaSugerida = tipoRuta === "foranea" ? "07:00" : "09:00";
+
+      // Assign driver and helper if available
+      const choferIndex = choferesDisponibles.length > 0 ? rutasSugeridas.length % choferesDisponibles.length : -1;
+      const ayudanteIndex = ayudantesDisponibles.length > 0 ? rutasSugeridas.length % ayudantesDisponibles.length : -1;
+      
+      const choferData = choferIndex >= 0 ? choferesDisponibles[choferIndex] : null;
+      const ayudanteData = ayudanteIndex >= 0 ? ayudantesDisponibles[ayudanteIndex] : null;
+      
+      const choferSugerido = choferData?.empleado 
+        ? { id: (choferData.empleado as any).id, nombre: (choferData.empleado as any).nombre_completo }
+        : undefined;
+      
+      const ayudanteSugerido = ayudanteData?.empleado
+        ? { id: (ayudanteData.empleado as any).id, nombre: (ayudanteData.empleado as any).nombre_completo }
+        : undefined;
+
       rutasSugeridas.push({
         vehiculo,
         tipo_ruta: tipoRuta,
@@ -672,6 +741,10 @@ Los pedidos que no quepan hoy van a "para_despues" - esto es NORMAL, no un error
         porcentaje_carga: capacidadMax > 0 ? (pesoTotal / capacidadMax) * 100 : 0,
         regiones,
         zonas,
+        hora_salida_sugerida: horaSalidaSugerida,
+        tiempo_estimado_minutos: tiempoEstimadoMinutos,
+        chofer_sugerido: choferSugerido,
+        ayudante_sugerido: ayudanteSugerido,
       });
 
       pedidosRuta.forEach((p: any) => pedidosAsignados.add(p.id));
@@ -694,6 +767,14 @@ Los pedidos que no quepan hoy van a "para_despues" - esto es NORMAL, no un error
       console.log(`[suggest-routes] Route ${i+1}: ${r.vehiculo.nombre} - ${r.peso_total}/${r.capacidad_maxima}kg (${r.porcentaje_carga.toFixed(0)}%) - ${r.pedidos.length} orders`);
     });
 
+    // Sort routes by departure time (foráneas first)
+    rutasSugeridas.sort((a, b) => {
+      if (a.hora_salida_sugerida && b.hora_salida_sugerida) {
+        return a.hora_salida_sugerida.localeCompare(b.hora_salida_sugerida);
+      }
+      return 0;
+    });
+
     return new Response(
       JSON.stringify({
         rutas_sugeridas: rutasSugeridas,
@@ -704,6 +785,10 @@ Los pedidos que no quepan hoy van a "para_despues" - esto es NORMAL, no un error
         peso_total_pendiente: pesoTotalPendiente,
         notas_ai: aiResult.notas || null,
         usó_fallback: false,
+        personal_disponible: {
+          choferes: choferesDisponibles.length,
+          ayudantes: ayudantesDisponibles.length,
+        },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

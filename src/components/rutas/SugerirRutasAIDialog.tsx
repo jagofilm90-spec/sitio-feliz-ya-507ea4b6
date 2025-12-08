@@ -49,6 +49,10 @@ interface RutaSugerida {
   porcentaje_carga: number;
   regiones: string[];
   zonas: string[];
+  hora_salida_sugerida?: string;
+  tiempo_estimado_minutos?: number;
+  chofer_sugerido?: { id: string; nombre: string };
+  ayudante_sugerido?: { id: string; nombre: string };
 }
 
 interface VehiculoDisponible {
@@ -92,6 +96,7 @@ export const SugerirRutasAIDialog = ({
   const [expandedRutas, setExpandedRutas] = useState<Set<number>>(new Set([0]));
   const [creandoRutas, setCreandoRutas] = useState<Set<number>>(new Set());
   const [showMaps, setShowMaps] = useState<Set<number>>(new Set());
+  const [personalDisponible, setPersonalDisponible] = useState<{ choferes: number; ayudantes: number } | null>(null);
   
   // Vehicle selection state
   const [vehiculosDisponibles, setVehiculosDisponibles] = useState<VehiculoDisponible[]>([]);
@@ -181,6 +186,7 @@ export const SugerirRutasAIDialog = ({
       setCapacidadHoy(data.capacidad_hoy || 0);
       setPesoTotalPendiente(data.peso_total_pendiente || 0);
       setNotasAI(data.notas_ai);
+      setPersonalDisponible(data.personal_disponible || null);
 
       const pedidosHoy = data.rutas_sugeridas?.reduce((sum: number, r: any) => sum + r.pedidos.length, 0) || 0;
 
@@ -244,6 +250,8 @@ export const SugerirRutasAIDialog = ({
           peso_total_kg: ruta.peso_total,
           tipo_ruta: ruta.tipo_ruta,
           status: "programada",
+          hora_salida_sugerida: ruta.hora_salida_sugerida || null,
+          tiempo_estimado_minutos: ruta.tiempo_estimado_minutos || null,
           notas: `Ruta generada por AI. Regiones: ${ruta.regiones.join(", ") || "N/A"}`,
         }])
         .select()
@@ -408,7 +416,7 @@ export const SugerirRutasAIDialog = ({
           {rutasSugeridas.length > 0 && (
             <>
               {/* Summary Stats */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 <Card className="bg-green-500/10 border-green-500/20">
                   <CardContent className="p-3 text-center">
                     <p className="text-2xl font-bold text-green-600">{pedidosHoyTotal}</p>
@@ -436,6 +444,17 @@ export const SugerirRutasAIDialog = ({
                     </p>
                   </CardContent>
                 </Card>
+                {personalDisponible && (
+                  <Card className="bg-purple-500/10 border-purple-500/20">
+                    <CardContent className="p-3 text-center">
+                      <p className="text-2xl font-bold text-purple-600">
+                        {personalDisponible.choferes}/{personalDisponible.ayudantes}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Choferes / Ayudantes</p>
+                      <p className="text-xs font-medium">Disponibles hoy</p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
 
               <div className="flex items-center justify-between flex-shrink-0">
@@ -481,11 +500,28 @@ export const SugerirRutasAIDialog = ({
                                 <Badge variant="outline">
                                   {ruta.tipo_ruta === "foranea" ? "Foránea" : "Local"}
                                 </Badge>
+                                {ruta.hora_salida_sugerida && (
+                                  <Badge variant="secondary" className="gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    {ruta.hora_salida_sugerida}
+                                  </Badge>
+                                )}
                               </CardTitle>
                               <p className="text-xs text-muted-foreground">
                                 {ruta.zonas.slice(0, 3).join(", ")}
                                 {ruta.zonas.length > 3 && ` +${ruta.zonas.length - 3}`}
+                                {ruta.tiempo_estimado_minutos && (
+                                  <span className="ml-2">
+                                    • ~{Math.round(ruta.tiempo_estimado_minutos / 60)}h {ruta.tiempo_estimado_minutos % 60}min
+                                  </span>
+                                )}
                               </p>
+                              {(ruta.chofer_sugerido || ruta.ayudante_sugerido) && (
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  👷 {ruta.chofer_sugerido?.nombre || "Sin asignar"}
+                                  {ruta.ayudante_sugerido && ` + ${ruta.ayudante_sugerido.nombre}`}
+                                </p>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
