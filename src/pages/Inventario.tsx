@@ -49,7 +49,7 @@ import { NotificacionesSistema } from "@/components/NotificacionesSistema";
 import { InventarioPorCategoria } from "@/components/inventario/InventarioPorCategoria";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-const Inventario = () => {
+const InventarioContent = () => {
   const [movimientos, setMovimientos] = useState<any[]>([]);
   const [productos, setProductos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -703,5 +703,12 @@ const Inventario = () => {
     </Layout>
   );
 };
+
+// Componente principal con ErrorBoundary
+const Inventario = () => (
+  <ErrorBoundaryModule moduleName="Inventario">
+    <InventarioContent />
+  </ErrorBoundaryModule>
+);
 
 export default Inventario;
