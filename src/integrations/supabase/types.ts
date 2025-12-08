@@ -2686,6 +2686,7 @@ export type Database = {
         Row: {
           activo: boolean
           capacidad_toneladas: number | null
+          chofer_asignado_id: string | null
           cilindros: string | null
           clase_federal: string | null
           clase_tipo: string | null
@@ -2723,6 +2724,7 @@ export type Database = {
         Insert: {
           activo?: boolean
           capacidad_toneladas?: number | null
+          chofer_asignado_id?: string | null
           cilindros?: string | null
           clase_federal?: string | null
           clase_tipo?: string | null
@@ -2760,6 +2762,7 @@ export type Database = {
         Update: {
           activo?: boolean
           capacidad_toneladas?: number | null
+          chofer_asignado_id?: string | null
           cilindros?: string | null
           clase_federal?: string | null
           clase_tipo?: string | null
@@ -2794,7 +2797,22 @@ export type Database = {
           tipo_tarjeta_circulacion?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vehiculos_chofer_asignado_id_fkey"
+            columns: ["chofer_asignado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehiculos_chofer_asignado_id_fkey"
+            columns: ["chofer_asignado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vehiculos_mantenimientos: {
         Row: {

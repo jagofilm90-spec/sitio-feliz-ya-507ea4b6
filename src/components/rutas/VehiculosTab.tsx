@@ -27,10 +27,16 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Truck, FileText, AlertCircle, Sparkles, Loader2, Palette } from "lucide-react";
+import { Plus, Edit, Trash2, Truck, FileText, AlertCircle, Sparkles, Loader2, Palette, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { format, differenceInDays, parseISO } from "date-fns";
+
+interface Empleado {
+  id: string;
+  nombre_completo: string;
+  puesto: string;
+}
 
 interface Vehiculo {
   id: string;
@@ -55,6 +61,7 @@ interface Vehiculo {
   clave_vehicular: string | null;
   clase_tipo: string | null;
   marca: string | null;
+  chofer_asignado_id: string | null;
   // Federal card fields
   tipo_tarjeta_circulacion: string | null;
   peso_vehicular_ton: number | null;
@@ -71,6 +78,7 @@ interface Vehiculo {
 
 const VehiculosTab = () => {
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
+  const [choferes, setChoferes] = useState<Empleado[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVehiculo, setEditingVehiculo] = useState<Vehiculo | null>(null);
@@ -114,11 +122,29 @@ const VehiculosTab = () => {
     dimensiones_alto: "",
     dimensiones_ancho: "",
     dimensiones_largo: "",
+    chofer_asignado_id: "",
   });
 
   useEffect(() => {
     loadVehiculos();
+    loadChoferes();
   }, []);
+
+  const loadChoferes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("empleados")
+        .select("id, nombre_completo, puesto")
+        .eq("activo", true)
+        .eq("puesto", "Chofer")
+        .order("nombre_completo");
+
+      if (error) throw error;
+      setChoferes(data || []);
+    } catch (error: any) {
+      console.error("Error loading choferes:", error);
+    }
+  };
 
   const loadVehiculos = async () => {
     try {
@@ -346,6 +372,7 @@ const VehiculosTab = () => {
         dimensiones_alto: formData.dimensiones_alto ? parseFloat(formData.dimensiones_alto) : null,
         dimensiones_ancho: formData.dimensiones_ancho ? parseFloat(formData.dimensiones_ancho) : null,
         dimensiones_largo: formData.dimensiones_largo ? parseFloat(formData.dimensiones_largo) : null,
+        chofer_asignado_id: formData.chofer_asignado_id || null,
       };
 
       if (editingVehiculo) {
@@ -411,6 +438,7 @@ const VehiculosTab = () => {
       dimensiones_alto: vehiculo.dimensiones_alto?.toString() || "",
       dimensiones_ancho: vehiculo.dimensiones_ancho?.toString() || "",
       dimensiones_largo: vehiculo.dimensiones_largo?.toString() || "",
+      chofer_asignado_id: vehiculo.chofer_asignado_id || "",
     });
     setDataExtracted(false);
     setDialogOpen(true);
@@ -472,7 +500,14 @@ const VehiculosTab = () => {
       dimensiones_alto: "",
       dimensiones_ancho: "",
       dimensiones_largo: "",
+      chofer_asignado_id: "",
     });
+  };
+
+  const getChoferName = (choferId: string | null) => {
+    if (!choferId) return null;
+    const chofer = choferes.find(c => c.id === choferId);
+    return chofer?.nombre_completo || null;
   };
 
   const getStatusBadge = (status: string) => {
@@ -913,6 +948,33 @@ const VehiculosTab = () => {
                 </div>
               </div>
 
+              {/* Chofer Asignado */}
+              <div className="space-y-2">
+                <Label htmlFor="chofer_asignado_id" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Chofer Asignado al Vehículo
+                </Label>
+                <Select
+                  value={formData.chofer_asignado_id}
+                  onValueChange={(value) => setFormData({ ...formData, chofer_asignado_id: value === "none" ? "" : value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar chofer..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin asignar</SelectItem>
+                    {choferes.map((chofer) => (
+                      <SelectItem key={chofer.id} value={chofer.id}>
+                        {chofer.nombre_completo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  El chofer que normalmente opera este vehículo
+                </p>
+              </div>
+
               {/* Capacity */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -1048,6 +1110,7 @@ const VehiculosTab = () => {
               <TableHead>Nombre</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Placa</TableHead>
+              <TableHead>Chofer Asignado</TableHead>
               <TableHead>Marca/Modelo</TableHead>
               <TableHead>Local (kg)</TableHead>
               <TableHead>Foránea (kg)</TableHead>
@@ -1060,13 +1123,13 @@ const VehiculosTab = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center">
+                <TableCell colSpan={11} className="text-center">
                   Cargando...
                 </TableCell>
               </TableRow>
             ) : vehiculos.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center">
+                <TableCell colSpan={11} className="text-center">
                   <div className="py-8 flex flex-col items-center gap-2">
                     <Truck className="h-8 w-8 text-muted-foreground" />
                     <p>No hay vehículos registrados</p>
@@ -1082,6 +1145,16 @@ const VehiculosTab = () => {
                   <TableCell className="font-medium">{vehiculo.nombre}</TableCell>
                   <TableCell className="capitalize">{vehiculo.tipo}</TableCell>
                   <TableCell>{vehiculo.placa || "—"}</TableCell>
+                  <TableCell>
+                    {getChoferName(vehiculo.chofer_asignado_id) ? (
+                      <div className="flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span>{getChoferName(vehiculo.chofer_asignado_id)}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">Sin asignar</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {vehiculo.marca || vehiculo.modelo ? (
                       <span>{[vehiculo.marca, vehiculo.modelo].filter(Boolean).join(" ")}</span>
