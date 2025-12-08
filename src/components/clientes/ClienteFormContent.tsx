@@ -254,6 +254,40 @@ export function ClienteFormContent({
             </SelectContent>
           </Select>
         </div>
+
+        {/* Ubicación de Entrega - Pregunta destacada SOLO para nuevos clientes */}
+        {!editingClient && (
+          <div className="p-4 rounded-lg border-2 border-primary/30 bg-primary/5">
+            <div className="flex items-start gap-3">
+              <Truck className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+              <div className="flex-1 space-y-3">
+                <div>
+                  <h5 className="font-medium text-primary">¿Dónde se entregan los pedidos?</h5>
+                  <p className="text-sm text-muted-foreground">
+                    Define si la entrega es en la misma dirección fiscal o si el cliente tiene múltiples sucursales
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="entregarMismaDireccion"
+                    checked={entregarMismaDireccion}
+                    onCheckedChange={(checked) => {
+                      setEntregarMismaDireccion(checked === true);
+                    }}
+                  />
+                  <Label htmlFor="entregarMismaDireccion" className="text-sm font-medium cursor-pointer">
+                    Sí, entregar en la misma dirección fiscal
+                  </Label>
+                </div>
+                {!entregarMismaDireccion && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    ⚠️ Deberás agregar las sucursales de entrega más abajo
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* CSF Upload */}
         <div className="space-y-2">
@@ -507,124 +541,107 @@ export function ClienteFormContent({
         </div>
       </div>
 
-      {/* Sección de Sucursales de Entrega - Solo para nuevos clientes */}
-      {!editingClient && (
+      {/* Sección de Sucursales de Entrega - Solo para nuevos clientes cuando NO entregan en misma dirección */}
+      {!editingClient && !entregarMismaDireccion && (
         <div className="space-y-4">
           <h4 className="font-medium text-lg border-b pb-2 flex items-center gap-2">
-            <Truck className="h-5 w-5" />
+            <MapPin className="h-5 w-5" />
             Sucursales de Entrega
           </h4>
           
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="entregarMismaDireccion"
-              checked={entregarMismaDireccion}
-              onCheckedChange={(checked) => {
-                setEntregarMismaDireccion(checked === true);
-              }}
-            />
-            <Label htmlFor="entregarMismaDireccion" className="text-sm font-normal cursor-pointer">
-              Entregar en la misma dirección fiscal (cliente simple como Pan Rol)
-            </Label>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Agrega las sucursales de entrega para grupos como Universal o Lecaroz
+          </p>
 
-          {!entregarMismaDireccion && (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Agrega las sucursales de entrega para grupos como Universal o Lecaroz
-              </p>
-
-              {sucursales.length === 0 ? (
-                <div className="text-center p-6 border-2 border-dashed rounded-lg">
-                  <MapPin className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-muted-foreground mb-3">No hay sucursales agregadas</p>
-                  <Button type="button" variant="outline" onClick={addSucursal}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Agregar Sucursal
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  {sucursales.map((sucursal, index) => (
-                    <div 
-                      key={sucursal.id} 
-                      className="p-4 bg-muted/30 rounded-lg border space-y-4"
-                    >
-                      <div className="flex justify-between items-center">
-                        <h5 className="font-medium">Sucursal {index + 1}</h5>
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => removeSucursal(sucursal.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Nombre de Sucursal *</Label>
-                          <Input
-                            value={sucursal.nombre}
-                            onChange={(e) => updateSucursal(sucursal.id, "nombre", e.target.value)}
-                            placeholder="Ej: Dallas, Kansas, Centro"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Zona de Entrega</Label>
-                          <Select
-                            value={sucursal.zona_id}
-                            onValueChange={(value) => updateSucursal(sucursal.id, "zona_id", value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecciona zona" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {zonas.map((zona) => (
-                                <SelectItem key={zona.id} value={zona.id}>
-                                  {zona.nombre}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Dirección de Entrega *</Label>
-                        <GoogleMapsAddressAutocomplete
-                          value={sucursal.direccion}
-                          onChange={(value) => updateSucursal(sucursal.id, "direccion", value)}
-                          placeholder="Buscar dirección de entrega..."
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Contacto</Label>
-                          <Input
-                            value={sucursal.contacto}
-                            onChange={(e) => updateSucursal(sucursal.id, "contacto", e.target.value)}
-                            placeholder="Nombre del contacto"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Teléfono</Label>
-                          <Input
-                            value={sucursal.telefono}
-                            onChange={(e) => updateSucursal(sucursal.id, "telefono", e.target.value)}
-                            placeholder="Teléfono de la sucursal"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  <Button type="button" variant="outline" onClick={addSucursal}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Agregar Otra Sucursal
-                  </Button>
-                </>
-              )}
+          {sucursales.length === 0 ? (
+            <div className="text-center p-6 border-2 border-dashed rounded-lg">
+              <MapPin className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+              <p className="text-muted-foreground mb-3">No hay sucursales agregadas</p>
+              <Button type="button" variant="outline" onClick={addSucursal}>
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Sucursal
+              </Button>
             </div>
+          ) : (
+            <>
+              {sucursales.map((sucursal, index) => (
+                <div 
+                  key={sucursal.id} 
+                  className="p-4 bg-muted/30 rounded-lg border space-y-4"
+                >
+                  <div className="flex justify-between items-center">
+                    <h5 className="font-medium">Sucursal {index + 1}</h5>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => removeSucursal(sucursal.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Nombre de Sucursal *</Label>
+                      <Input
+                        value={sucursal.nombre}
+                        onChange={(e) => updateSucursal(sucursal.id, "nombre", e.target.value)}
+                        placeholder="Ej: Dallas, Kansas, Centro"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Zona de Entrega</Label>
+                      <Select
+                        value={sucursal.zona_id}
+                        onValueChange={(value) => updateSucursal(sucursal.id, "zona_id", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona zona" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {zonas.map((zona) => (
+                            <SelectItem key={zona.id} value={zona.id}>
+                              {zona.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Dirección de Entrega *</Label>
+                    <GoogleMapsAddressAutocomplete
+                      value={sucursal.direccion}
+                      onChange={(value) => updateSucursal(sucursal.id, "direccion", value)}
+                      placeholder="Buscar dirección de entrega..."
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Contacto</Label>
+                      <Input
+                        value={sucursal.contacto}
+                        onChange={(e) => updateSucursal(sucursal.id, "contacto", e.target.value)}
+                        placeholder="Nombre del contacto"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Teléfono</Label>
+                      <Input
+                        value={sucursal.telefono}
+                        onChange={(e) => updateSucursal(sucursal.id, "telefono", e.target.value)}
+                        placeholder="Teléfono de la sucursal"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              <Button type="button" variant="outline" onClick={addSucursal}>
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Otra Sucursal
+              </Button>
+            </>
           )}
         </div>
       )}
