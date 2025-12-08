@@ -30,8 +30,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, MapPin, X, Mail, BarChart3, Loader2, Sparkles, User, Package, Map } from "lucide-react";
+import { Plus, Search, Edit, Trash2, MapPin, X, Mail, BarChart3, Loader2, Sparkles, User, Package, Map, ClipboardList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { AuditoriaFiscalSheet } from "@/components/clientes/AuditoriaFiscalSheet";
 import ClienteSucursalesDialog from "@/components/clientes/ClienteSucursalesDialog";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
 import ClienteHistorialAnalytics from "@/components/analytics/ClienteHistorialAnalytics";
@@ -86,7 +87,8 @@ const Clientes = () => {
   const [selectedClienteForHistorial, setSelectedClienteForHistorial] = useState<{ id: string; nombre: string } | null>(null);
   const [productosDialogOpen, setProductosDialogOpen] = useState(false);
   const [selectedClienteForProductos, setSelectedClienteForProductos] = useState<{ id: string; nombre: string } | null>(null);
-  // const [mapDialogOpen, setMapDialogOpen] = useState(false);
+  const [auditoriaSheetOpen, setAuditoriaSheetOpen] = useState(false);
+  const [sucursalesConRfcCount, setSucursalesConRfcCount] = useState(0);
   const { toast } = useToast();
   const { isAdmin } = useUserRoles();
 
@@ -164,7 +166,26 @@ const Clientes = () => {
   useEffect(() => {
     loadClientes();
     loadZonas();
+    loadSucursalesConRfcCount();
   }, []);
+
+  const loadSucursalesConRfcCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from("cliente_sucursales")
+        .select("*", { count: "exact", head: true })
+        .not("rfc", "is", null)
+        .neq("rfc", "")
+        .eq("activo", true)
+        .or("razon_social.is.null,razon_social.eq.,direccion_fiscal.is.null,direccion_fiscal.eq.,email_facturacion.is.null,email_facturacion.eq.");
+
+      if (!error) {
+        setSucursalesConRfcCount(count || 0);
+      }
+    } catch (error) {
+      console.error("Error counting sucursales:", error);
+    }
+  };
 
   const loadClientes = async () => {
     try {
@@ -697,6 +718,18 @@ const Clientes = () => {
             </Button>
             */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <Button
+                variant="outline"
+                onClick={() => setAuditoriaSheetOpen(true)}
+              >
+                <ClipboardList className="h-4 w-4 mr-2" />
+                Auditoría Fiscal
+                {sucursalesConRfcCount > 0 && (
+                  <Badge variant="destructive" className="ml-2">
+                    {sucursalesConRfcCount}
+                  </Badge>
+                )}
+              </Button>
               <DialogTrigger asChild>
                 <Button onClick={resetForm}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -1001,10 +1034,13 @@ const Clientes = () => {
         cliente={selectedClienteForProductos}
       />
 
-      {/* <ClienteSucursalesMapDialog
-        open={mapDialogOpen}
-        onOpenChange={setMapDialogOpen}
-      /> */}
+      <AuditoriaFiscalSheet
+        open={auditoriaSheetOpen}
+        onOpenChange={(open) => {
+          setAuditoriaSheetOpen(open);
+          if (!open) loadSucursalesConRfcCount(); // Actualizar contador al cerrar
+        }}
+      />
     </Layout>
   );
 };
