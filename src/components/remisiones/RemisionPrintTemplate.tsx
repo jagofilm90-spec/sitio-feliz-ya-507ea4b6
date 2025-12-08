@@ -16,6 +16,7 @@ interface DatosRemision {
   fecha: string;
   cliente: {
     nombre: string;
+    razon_social?: string;
     rfc?: string;
     direccion_fiscal?: string;
     telefono?: string;
@@ -23,6 +24,12 @@ interface DatosRemision {
   sucursal?: {
     nombre: string;
     direccion?: string;
+    contacto?: string;
+    telefono?: string;
+    // Datos fiscales propios de sucursal (cuando factura por separado)
+    razon_social?: string;
+    rfc?: string;
+    direccion_fiscal?: string;
   };
   productos: ProductoRemision[];
   subtotal: number;
@@ -82,27 +89,57 @@ export const RemisionPrintTemplate = ({ datos }: RemisionPrintTemplateProps) => 
         </div>
       </div>
 
-      {/* Client Info */}
+      {/* Client Info - Datos Fiscales y de Entrega */}
       <div className="bg-gray-100 p-3 rounded mb-4">
         <div className="grid grid-cols-2 gap-4 text-xs">
-          <div>
+          {/* Columna izquierda: Datos Fiscales */}
+          <div className="border-r pr-3">
+            <p className="font-bold text-primary mb-1 uppercase text-[10px]">Datos Fiscales</p>
             <p><span className="font-semibold">Cliente:</span> {datos.cliente.nombre}</p>
-            {datos.cliente.rfc && <p><span className="font-semibold">RFC:</span> {datos.cliente.rfc}</p>}
-            {datos.cliente.direccion_fiscal && (
-              <p><span className="font-semibold">Dirección:</span> {datos.cliente.direccion_fiscal}</p>
-            )}
-          </div>
-          <div>
-            {datos.sucursal && (
+            {/* Prioridad: Si sucursal tiene RFC propio, usar datos fiscales de sucursal */}
+            {datos.sucursal?.rfc ? (
               <>
-                <p><span className="font-semibold">Sucursal:</span> {datos.sucursal.nombre}</p>
-                {datos.sucursal.direccion && (
-                  <p><span className="font-semibold">Entrega:</span> {datos.sucursal.direccion}</p>
+                {datos.sucursal.razon_social && (
+                  <p><span className="font-semibold">Razón Social:</span> {datos.sucursal.razon_social}</p>
+                )}
+                <p><span className="font-semibold">RFC:</span> {datos.sucursal.rfc}</p>
+                {datos.sucursal.direccion_fiscal && (
+                  <p><span className="font-semibold">Dir. Fiscal:</span> {datos.sucursal.direccion_fiscal}</p>
+                )}
+              </>
+            ) : (
+              <>
+                {datos.cliente.razon_social && (
+                  <p><span className="font-semibold">Razón Social:</span> {datos.cliente.razon_social}</p>
+                )}
+                {datos.cliente.rfc && <p><span className="font-semibold">RFC:</span> {datos.cliente.rfc}</p>}
+                {datos.cliente.direccion_fiscal && (
+                  <p><span className="font-semibold">Dir. Fiscal:</span> {datos.cliente.direccion_fiscal}</p>
                 )}
               </>
             )}
             {datos.cliente.telefono && (
               <p><span className="font-semibold">Tel:</span> {datos.cliente.telefono}</p>
+            )}
+          </div>
+          {/* Columna derecha: Datos de Entrega */}
+          <div className="pl-3">
+            <p className="font-bold text-primary mb-1 uppercase text-[10px]">Datos de Entrega</p>
+            {datos.sucursal ? (
+              <>
+                <p><span className="font-semibold">Sucursal:</span> {datos.sucursal.nombre}</p>
+                {datos.sucursal.direccion && (
+                  <p><span className="font-semibold">Dirección:</span> {datos.sucursal.direccion}</p>
+                )}
+                {datos.sucursal.contacto && (
+                  <p><span className="font-semibold">Contacto:</span> {datos.sucursal.contacto}</p>
+                )}
+                {datos.sucursal.telefono && (
+                  <p><span className="font-semibold">Tel:</span> {datos.sucursal.telefono}</p>
+                )}
+              </>
+            ) : (
+              <p className="text-gray-500 italic">Entrega en dirección fiscal</p>
             )}
           </div>
         </div>

@@ -21,6 +21,7 @@ interface DatosRemision {
   fecha: string;
   cliente: {
     nombre: string;
+    razon_social?: string;
     rfc?: string;
     direccion_fiscal?: string;
     telefono?: string;
@@ -28,6 +29,11 @@ interface DatosRemision {
   sucursal?: {
     nombre: string;
     direccion?: string;
+    contacto?: string;
+    telefono?: string;
+    razon_social?: string;
+    rfc?: string;
+    direccion_fiscal?: string;
   };
   productos: ProductoRemision[];
   subtotal: number;

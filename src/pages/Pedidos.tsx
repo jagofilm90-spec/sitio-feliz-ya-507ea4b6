@@ -396,16 +396,21 @@ const PedidosContent = () => {
 
   const handlePrintRemision = async (pedidoId: string) => {
     try {
-      // Fetch full pedido data
+      // Fetch full pedido data with complete fiscal and delivery address fields
       const { data: pedido, error } = await supabase
         .from("pedidos")
         .select(`
           *,
           clientes (
-            id, nombre, codigo, rfc, direccion, telefono, termino_credito
+            id, nombre, codigo, rfc, direccion, telefono, termino_credito,
+            razon_social,
+            nombre_vialidad, numero_exterior, numero_interior,
+            nombre_colonia, nombre_municipio, codigo_postal,
+            nombre_localidad, nombre_entidad_federativa
           ),
           cliente_sucursales (
-            id, nombre, direccion
+            id, nombre, direccion, contacto, telefono,
+            razon_social, rfc, direccion_fiscal
           ),
           profiles:vendedor_id (
             full_name
@@ -576,18 +581,43 @@ const PedidosContent = () => {
       const subtotalReal = baseConIvaYIeps + baseConIva + subtotalSinImpuestos;
       const ivaTotal = ivaSolo + ivaDeIeps;
 
+      // Construir dirección fiscal formateada del cliente
+      const formatearDireccionFiscal = (cliente: any): string => {
+        if (!cliente) return '';
+        const partes = [];
+        if (cliente.nombre_vialidad) {
+          let linea = cliente.nombre_vialidad;
+          if (cliente.numero_exterior) linea += ` No. ${cliente.numero_exterior}`;
+          if (cliente.numero_interior) linea += ` Int. ${cliente.numero_interior}`;
+          partes.push(linea);
+        }
+        if (cliente.nombre_colonia) partes.push(`Col. ${cliente.nombre_colonia}`);
+        if (cliente.nombre_municipio || cliente.codigo_postal) {
+          partes.push(`${cliente.nombre_municipio || ''} C.P. ${cliente.codigo_postal || ''}`);
+        }
+        if (cliente.nombre_entidad_federativa) partes.push(cliente.nombre_entidad_federativa);
+        return partes.join(', ') || cliente.direccion || '';
+      };
+
       const datosRemision = {
         folio: `REM-${pedido.folio}`,
         fecha: pedido.fecha_pedido,
         cliente: {
           nombre: pedido.clientes?.nombre || 'Sin nombre',
+          razon_social: pedido.clientes?.razon_social,
           rfc: pedido.clientes?.rfc,
-          direccion_fiscal: pedido.clientes?.direccion,
+          direccion_fiscal: formatearDireccionFiscal(pedido.clientes),
           telefono: pedido.clientes?.telefono,
         },
         sucursal: pedido.cliente_sucursales ? {
           nombre: pedido.cliente_sucursales.nombre,
           direccion: pedido.cliente_sucursales.direccion,
+          contacto: pedido.cliente_sucursales.contacto,
+          telefono: pedido.cliente_sucursales.telefono,
+          // Datos fiscales propios de sucursal (si tiene RFC propio)
+          razon_social: pedido.cliente_sucursales.razon_social,
+          rfc: pedido.cliente_sucursales.rfc,
+          direccion_fiscal: pedido.cliente_sucursales.direccion_fiscal,
         } : undefined,
         productos: ordenarProductosAzucarPrimero(productos, (p) => p.descripcion),
         subtotal: subtotalReal,
