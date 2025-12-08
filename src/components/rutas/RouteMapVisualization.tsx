@@ -22,7 +22,7 @@
  * ReferenceError: google is not defined
  * que rompe TODA la aplicación.
  * 
- * Última actualización: 2025-12-07
+ * Última actualización: 2025-12-08
  * ==========================================================
  */
 
@@ -32,8 +32,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, MapPin, Navigation, Clock, Route, ExternalLink } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2, MapPin, Navigation, Clock, Route, ExternalLink, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { ErrorBoundaryModule } from "@/components/ErrorBoundaryModule";
 
 interface DeliveryPoint {
   id: string;
@@ -67,7 +69,150 @@ const mapContainerStyle = {
   height: "350px",
 };
 
-export const RouteMapVisualization = ({
+/**
+ * Fallback cuando Google Maps no puede cargar
+ */
+const RouteFallback = ({ 
+  puntos, 
+  vehiculoNombre,
+  errorMessage 
+}: { 
+  puntos: DeliveryPoint[];
+  vehiculoNombre: string;
+  errorMessage?: string;
+}) => {
+  const getNavigationUrl = (punto: DeliveryPoint) => {
+    if (punto.lat && punto.lng) {
+      return `https://www.google.com/maps/dir/?api=1&destination=${punto.lat},${punto.lng}`;
+    }
+    if (punto.direccion) {
+      return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(punto.direccion)}`;
+    }
+    return null;
+  };
+
+  const getViewUrl = (punto: DeliveryPoint) => {
+    if (punto.lat && punto.lng) {
+      return `https://www.google.com/maps/search/?api=1&query=${punto.lat},${punto.lng}`;
+    }
+    if (punto.direccion) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(punto.direccion)}`;
+    }
+    return null;
+  };
+
+  // Generate full route URL
+  const getFullRouteUrl = () => {
+    const validPoints = puntos.filter(p => p.lat && p.lng);
+    if (validPoints.length === 0) return null;
+
+    const origin = `${WAREHOUSE.lat},${WAREHOUSE.lng}`;
+    const destination = origin; // Round trip
+    const waypoints = validPoints.map(p => `${p.lat},${p.lng}`).join('|');
+
+    return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}&travelmode=driving`;
+  };
+
+  const fullRouteUrl = getFullRouteUrl();
+  const totalPeso = puntos.reduce((sum, p) => sum + p.peso_kg, 0);
+
+  return (
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>{vehiculoNombre} • {puntos.length} entregas • {totalPeso.toLocaleString()} kg</span>
+      </div>
+
+      <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>No se pudo cargar el mapa</AlertTitle>
+        <AlertDescription className="text-sm">
+          {errorMessage || "Verifica la API key o la conexión."}{" "}
+          Puedes usar los links para navegar con Google Maps.
+        </AlertDescription>
+      </Alert>
+
+      {/* Delivery list */}
+      <Card className="p-3">
+        <div className="flex items-center gap-2 mb-3">
+          <Route className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium">Entregas en orden</span>
+        </div>
+        <ScrollArea className="h-[300px]">
+          <div className="space-y-2">
+            {puntos.map((punto, index) => {
+              const navUrl = getNavigationUrl(punto);
+              const viewUrl = getViewUrl(punto);
+              
+              return (
+                <div
+                  key={punto.id}
+                  className="flex items-start gap-2 p-2 rounded bg-muted/50"
+                >
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                  >
+                    {index + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{punto.cliente}</p>
+                    {punto.sucursal && (
+                      <p className="text-xs text-muted-foreground truncate">{punto.sucursal}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground truncate">{punto.direccion}</p>
+                    <p className="text-xs text-muted-foreground">{punto.peso_kg.toLocaleString()} kg</p>
+                  </div>
+                  <div className="flex gap-1 flex-shrink-0">
+                    {viewUrl && (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => window.open(viewUrl, "_blank")}
+                        title="Ver en mapa"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </Button>
+                    )}
+                    {navUrl && (
+                      <Button
+                        variant="default"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => window.open(navUrl, "_blank")}
+                        title="Navegar"
+                      >
+                        <Navigation className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      </Card>
+
+      {/* Full route button */}
+      {fullRouteUrl && (
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => window.open(fullRouteUrl, "_blank")}
+        >
+          <ExternalLink className="h-4 w-4 mr-2" />
+          Abrir ruta completa en Google Maps
+        </Button>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Contenido principal del mapa
+ */
+const RouteMapContent = ({
   puntos,
   vehiculoNombre,
   optimizarOrden = false,
@@ -99,7 +244,6 @@ export const RouteMapVisualization = ({
     setError(null);
 
     try {
-      // First check if points already have coordinates
       const pointsWithCoords = puntos.filter(p => p.lat && p.lng);
       const pointsNeedingGeocode = puntos.filter(p => p.direccion && !p.lat && !p.lng);
 
@@ -136,18 +280,17 @@ export const RouteMapVisualization = ({
     }
   }, [puntos]);
 
-  // Fetch directions from edge function
+  // Fetch directions
   const fetchDirections = useCallback(async () => {
     const validPoints = geocodedPoints.filter(p => p.lat && p.lng);
     // 🔒 Guard: verificar que Google Maps API esté cargada
     if (validPoints.length < 1 || !isLoaded || !window.google || !window.google.maps) return;
 
     try {
-      // Use Google Maps DirectionsService directly for visual rendering
       const directionsService = new window.google.maps.DirectionsService();
 
       const origin = WAREHOUSE;
-      const destination = WAREHOUSE; // Round trip back to warehouse
+      const destination = WAREHOUSE;
       const waypoints = validPoints.map(p => ({
         location: new window.google.maps.LatLng(p.lat!, p.lng!),
         stopover: true,
@@ -163,12 +306,11 @@ export const RouteMapVisualization = ({
 
       setDirections(result);
 
-      // Calculate totals
       const route = result.routes[0];
       if (route) {
         let totalDistance = 0;
         let totalDuration = 0;
-        route.legs.forEach(leg => {
+        route.legs.forEach((leg: any) => {
           totalDistance += leg.distance?.value || 0;
           totalDuration += leg.duration?.value || 0;
         });
@@ -183,15 +325,13 @@ export const RouteMapVisualization = ({
           formattedDuration,
         });
 
-        // If optimizing, notify parent of new order
         if (optimizarOrden && route.waypoint_order && onOrderOptimized) {
-          const newOrder = route.waypoint_order.map(i => validPoints[i].id);
+          const newOrder = route.waypoint_order.map((i: number) => validPoints[i].id);
           onOrderOptimized(newOrder);
         }
       }
     } catch (err) {
       console.error("Directions error:", err);
-      // Fallback to simple distance calculation
       calculateSimpleDistance(validPoints);
     }
   }, [geocodedPoints, isLoaded, optimizarOrden, onOrderOptimized]);
@@ -210,10 +350,9 @@ export const RouteMapVisualization = ({
       }
     });
 
-    // Return to warehouse
     totalDistance += haversineDistance(prevPoint.lat, prevPoint.lng, WAREHOUSE.lat, WAREHOUSE.lng);
 
-    const estimatedDuration = (totalDistance / 25) * 60 + points.length * 15; // 25 km/h + 15 min per stop
+    const estimatedDuration = (totalDistance / 25) * 60 + points.length * 15;
     const hours = Math.floor(estimatedDuration / 60);
     const minutes = Math.round(estimatedDuration % 60);
 
@@ -224,7 +363,6 @@ export const RouteMapVisualization = ({
     });
   };
 
-  // Haversine formula
   const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -246,7 +384,6 @@ export const RouteMapVisualization = ({
     }
   }, [geocodedPoints, isLoaded, fetchDirections]);
 
-  // Generate navigation URL for a specific point
   const getNavigationUrl = (point: DeliveryPoint) => {
     if (point.lat && point.lng) {
       return `https://www.google.com/maps/dir/?api=1&destination=${point.lat},${point.lng}`;
@@ -254,13 +391,12 @@ export const RouteMapVisualization = ({
     return null;
   };
 
-  // Generate full route URL
   const getFullRouteUrl = () => {
     const validPoints = geocodedPoints.filter(p => p.lat && p.lng);
     if (validPoints.length === 0) return null;
 
     const origin = `${WAREHOUSE.lat},${WAREHOUSE.lng}`;
-    const destination = origin; // Round trip
+    const destination = origin;
     const waypoints = validPoints.map(p => `${p.lat},${p.lng}`).join('|');
 
     return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}&travelmode=driving`;
@@ -275,11 +411,14 @@ export const RouteMapVisualization = ({
     );
   }
 
+  // 🔒 FALLBACK: Si hay error de carga, mostrar lista con links
   if (error || loadError) {
     return (
-      <div className="h-[350px] flex items-center justify-center bg-muted rounded-lg">
-        <p className="text-sm text-destructive">{error || "Error cargando mapa"}</p>
-      </div>
+      <RouteFallback
+        puntos={geocodedPoints.length > 0 ? geocodedPoints : puntos}
+        vehiculoNombre={vehiculoNombre}
+        errorMessage={error || loadError?.message}
+      />
     );
   }
 
@@ -317,19 +456,21 @@ export const RouteMapVisualization = ({
               }}
             >
               {/* Warehouse marker */}
-              <Marker
-                position={WAREHOUSE}
-                icon={{
-                  url: "data:image/svg+xml," + encodeURIComponent(`
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-                      <circle cx="12" cy="12" r="10" fill="#000000" stroke="#ffffff" stroke-width="2"/>
-                    </svg>
-                  `),
-                  scaledSize: new window.google.maps.Size(24, 24),
-                  anchor: new window.google.maps.Point(12, 12),
-                }}
-                title="Bodega Principal"
-              />
+              {window.google && window.google.maps && (
+                <Marker
+                  position={WAREHOUSE}
+                  icon={{
+                    url: "data:image/svg+xml," + encodeURIComponent(`
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" fill="#000000" stroke="#ffffff" stroke-width="2"/>
+                      </svg>
+                    `),
+                    scaledSize: new window.google.maps.Size(24, 24),
+                    anchor: new window.google.maps.Point(12, 12),
+                  }}
+                  title="Bodega Principal"
+                />
+              )}
 
               {/* Directions renderer */}
               {directions && (
@@ -348,26 +489,28 @@ export const RouteMapVisualization = ({
 
               {/* Delivery point markers */}
               {validPoints.map((punto, index) => (
-                <Marker
-                  key={punto.id}
-                  position={{ lat: punto.lat!, lng: punto.lng! }}
-                  label={{
-                    text: String(index + 1),
-                    color: "#ffffff",
-                    fontWeight: "bold",
-                  }}
-                  icon={{
-                    url: "data:image/svg+xml," + encodeURIComponent(`
-                      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="48" viewBox="0 0 24 32">
-                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="${COLORS[index % COLORS.length]}" stroke="#ffffff" stroke-width="1.5"/>
-                      </svg>
-                    `),
-                    scaledSize: new window.google.maps.Size(36, 48),
-                    anchor: new window.google.maps.Point(18, 48),
-                    labelOrigin: new window.google.maps.Point(18, 14),
-                  }}
-                  onClick={() => setSelectedPoint(punto)}
-                />
+                window.google && window.google.maps && (
+                  <Marker
+                    key={punto.id}
+                    position={{ lat: punto.lat!, lng: punto.lng! }}
+                    label={{
+                      text: String(index + 1),
+                      color: "#ffffff",
+                      fontWeight: "bold",
+                    }}
+                    icon={{
+                      url: "data:image/svg+xml," + encodeURIComponent(`
+                        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="48" viewBox="0 0 24 32">
+                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="${COLORS[index % COLORS.length]}" stroke="#ffffff" stroke-width="1.5"/>
+                        </svg>
+                      `),
+                      scaledSize: new window.google.maps.Size(36, 48),
+                      anchor: new window.google.maps.Point(18, 48),
+                      labelOrigin: new window.google.maps.Point(18, 14),
+                    }}
+                    onClick={() => setSelectedPoint(punto)}
+                  />
+                )
               ))}
 
               {/* InfoWindow */}
@@ -478,11 +621,31 @@ export const RouteMapVisualization = ({
             size="sm"
             onClick={() => window.open(fullRouteUrl, "_blank")}
           >
-            <Navigation className="h-4 w-4 mr-2" />
-            Abrir ruta completa
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Abrir en Google Maps
           </Button>
         )}
       </div>
     </div>
+  );
+};
+
+/**
+ * Componente principal envuelto en ErrorBoundary
+ */
+export const RouteMapVisualization = (props: RouteMapVisualizationProps) => {
+  return (
+    <ErrorBoundaryModule 
+      moduleName="Mapa de Ruta"
+      fallback={
+        <RouteFallback
+          puntos={props.puntos}
+          vehiculoNombre={props.vehiculoNombre}
+          errorMessage="Error inesperado al cargar el componente de mapa."
+        />
+      }
+    >
+      <RouteMapContent {...props} />
+    </ErrorBoundaryModule>
   );
 };

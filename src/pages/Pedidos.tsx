@@ -1,8 +1,22 @@
+/**
+ * ==========================================================
+ * 🚨 MÓDULO CRÍTICO: PEDIDOS
+ * ==========================================================
+ * 
+ * Este módulo maneja operaciones comerciales críticas.
+ * 
+ * ⚠️ NO MODIFICAR sin validar en preview primero.
+ * 
+ * Última actualización: 2025-12-08
+ * ==========================================================
+ */
+
 import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ErrorBoundaryModule } from "@/components/ErrorBoundaryModule";
 import {
   Table,
   TableBody,

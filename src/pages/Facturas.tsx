@@ -1,7 +1,22 @@
+/**
+ * ==========================================================
+ * 🚨 MÓDULO CRÍTICO: FACTURACIÓN
+ * ==========================================================
+ * 
+ * Este módulo maneja operaciones fiscales y legales.
+ * 
+ * ⚠️ NO MODIFICAR sin validar en preview primero.
+ * ⚠️ Cualquier error aquí tiene implicaciones legales/fiscales.
+ * 
+ * Última actualización: 2025-12-08
+ * ==========================================================
+ */
+
 import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ErrorBoundaryModule } from "@/components/ErrorBoundaryModule";
 import {
   Table,
   TableBody,
@@ -15,7 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-const Facturas = () => {
+const FacturasContent = () => {
   const [facturas, setFacturas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -141,6 +156,17 @@ const Facturas = () => {
         </div>
       </div>
     </Layout>
+  );
+};
+
+/**
+ * Componente principal envuelto en ErrorBoundary
+ */
+const Facturas = () => {
+  return (
+    <ErrorBoundaryModule moduleName="Facturación">
+      <FacturasContent />
+    </ErrorBoundaryModule>
   );
 };
 
