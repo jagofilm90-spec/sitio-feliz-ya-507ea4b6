@@ -1,7 +1,22 @@
+/**
+ * ==========================================================
+ * 🚨 MÓDULO CRÍTICO: RUTAS Y ENTREGAS
+ * ==========================================================
+ * 
+ * Este módulo maneja operaciones críticas de entregas.
+ * 
+ * ⚠️ NO MODIFICAR sin validar en preview primero.
+ * ⚠️ Contiene componentes de Google Maps - ver ARQUITECTURA.md
+ * 
+ * Última actualización: 2025-12-08
+ * ==========================================================
+ */
+
 import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ErrorBoundaryModule } from "@/components/ErrorBoundaryModule";
 import {
   Table,
   TableBody,
@@ -25,7 +40,7 @@ import { MapaGlobalSucursales } from "@/components/rutas/MapaGlobalSucursales";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-const Rutas = () => {
+const RutasContent = () => {
   const [rutas, setRutas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -340,6 +355,17 @@ const Rutas = () => {
         />
       </div>
     </Layout>
+  );
+};
+
+/**
+ * Componente principal envuelto en ErrorBoundary
+ */
+const Rutas = () => {
+  return (
+    <ErrorBoundaryModule moduleName="Rutas y Entregas">
+      <RutasContent />
+    </ErrorBoundaryModule>
   );
 };
 

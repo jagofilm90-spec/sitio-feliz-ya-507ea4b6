@@ -22,7 +22,7 @@
  * ReferenceError: google is not defined
  * que rompe TODA la aplicación.
  * 
- * Última actualización: 2025-12-07
+ * Última actualización: 2025-12-08
  * ==========================================================
  */
 
@@ -33,9 +33,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Search, MapPin, Navigation, Building2, Loader2, RefreshCw } from "lucide-react";
+import { Search, MapPin, Navigation, Building2, Loader2, RefreshCw, AlertTriangle, ExternalLink } from "lucide-react";
+import { ErrorBoundaryModule } from "@/components/ErrorBoundaryModule";
 
 interface Sucursal {
   id: string;
@@ -65,7 +67,155 @@ const MARKER_COLORS = [
   "#3b82f6", "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16"
 ];
 
-export const MapaGlobalSucursales = () => {
+/**
+ * Componente de fallback cuando el mapa no puede cargar.
+ * Muestra lista de sucursales con links a Google Maps externo.
+ */
+const MapaFallback = ({ 
+  sucursales, 
+  loading, 
+  searchTerm, 
+  onSearchChange,
+  onRefresh,
+  errorMessage 
+}: { 
+  sucursales: Sucursal[];
+  loading: boolean;
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
+  onRefresh: () => void;
+  errorMessage?: string;
+}) => {
+  const getGoogleMapsUrl = (sucursal: Sucursal) => {
+    if (sucursal.latitud && sucursal.longitud) {
+      return `https://www.google.com/maps/search/?api=1&query=${sucursal.latitud},${sucursal.longitud}`;
+    }
+    if (sucursal.direccion) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(sucursal.direccion)}`;
+    }
+    return null;
+  };
+
+  const getNavigationUrl = (sucursal: Sucursal) => {
+    if (sucursal.latitud && sucursal.longitud) {
+      return `https://www.google.com/maps/dir/?api=1&destination=${sucursal.latitud},${sucursal.longitud}`;
+    }
+    if (sucursal.direccion) {
+      return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(sucursal.direccion)}`;
+    }
+    return null;
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Sucursales ({sucursales.length})
+          </CardTitle>
+          <Button variant="outline" size="sm" onClick={onRefresh}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Actualizar
+          </Button>
+        </div>
+        
+        <Alert variant="destructive" className="mt-3">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>No se pudo cargar Google Maps</AlertTitle>
+          <AlertDescription className="text-sm">
+            {errorMessage || "Verifica la API key o la conexión a internet."}{" "}
+            Mientras tanto, puedes ver la lista de sucursales y abrir cada una en Google Maps.
+          </AlertDescription>
+        </Alert>
+
+        <div className="relative mt-3">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar sucursal, cliente, zona..."
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        <ScrollArea className="h-[500px]">
+          {loading ? (
+            <div className="flex items-center justify-center p-6">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : sucursales.length === 0 ? (
+            <div className="p-6 text-center text-muted-foreground">
+              <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No se encontraron sucursales</p>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {sucursales.map((sucursal) => {
+                const mapsUrl = getGoogleMapsUrl(sucursal);
+                const navUrl = getNavigationUrl(sucursal);
+                
+                return (
+                  <div key={sucursal.id} className="p-3 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">{sucursal.nombre}</p>
+                        <p className="text-xs text-muted-foreground">{sucursal.cliente_nombre}</p>
+                        {sucursal.direccion && (
+                          <p className="text-xs text-muted-foreground mt-1">{sucursal.direccion}</p>
+                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                          {sucursal.zona_nombre && (
+                            <Badge variant="outline" className="text-xs">{sucursal.zona_nombre}</Badge>
+                          )}
+                          {sucursal.latitud && sucursal.longitud && (
+                            <Badge variant="secondary" className="text-xs">
+                              {sucursal.latitud.toFixed(4)}, {sucursal.longitud.toFixed(4)}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        {mapsUrl && (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => window.open(mapsUrl, "_blank")}
+                            title="Ver en Google Maps"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {navUrl && (
+                          <Button
+                            variant="default"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => window.open(navUrl, "_blank")}
+                            title="Navegar"
+                          >
+                            <Navigation className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </ScrollArea>
+      </CardContent>
+    </Card>
+  );
+};
+
+/**
+ * Contenido principal del mapa (cuando Google Maps carga correctamente)
+ */
+const MapaContent = () => {
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -95,9 +245,7 @@ export const MapaGlobalSucursales = () => {
           clientes!inner (nombre),
           zonas (nombre)
         `)
-        .eq("activo", true)
-        .not("latitud", "is", null)
-        .not("longitud", "is", null);
+        .eq("activo", true);
 
       if (error) throw error;
 
@@ -116,10 +264,11 @@ export const MapaGlobalSucursales = () => {
 
       setSucursales(formattedData);
 
-      // Center map on first sucursal or default
-      if (formattedData.length > 0) {
-        const avgLat = formattedData.reduce((sum, s) => sum + (s.latitud || 0), 0) / formattedData.length;
-        const avgLng = formattedData.reduce((sum, s) => sum + (s.longitud || 0), 0) / formattedData.length;
+      // Center map on sucursales with coordinates
+      const withCoords = formattedData.filter(s => s.latitud && s.longitud);
+      if (withCoords.length > 0) {
+        const avgLat = withCoords.reduce((sum, s) => sum + (s.latitud || 0), 0) / withCoords.length;
+        const avgLng = withCoords.reduce((sum, s) => sum + (s.longitud || 0), 0) / withCoords.length;
         setMapCenter({ lat: avgLat, lng: avgLng });
       }
     } catch (error: any) {
@@ -149,6 +298,11 @@ export const MapaGlobalSucursales = () => {
     );
   }, [sucursales, searchTerm]);
 
+  const sucursalesConCoordenadas = useMemo(() => 
+    filteredSucursales.filter(s => s.latitud && s.longitud),
+    [filteredSucursales]
+  );
+
   const handleSucursalClick = (sucursal: Sucursal) => {
     setSelectedSucursal(sucursal);
     if (sucursal.latitud && sucursal.longitud) {
@@ -172,7 +326,8 @@ export const MapaGlobalSucursales = () => {
   };
 
   const createMarkerIcon = useCallback((color: string) => {
-    if (!isLoaded || !window.google) return undefined;
+    // 🔒 Guard: verificar que Google Maps API esté cargada
+    if (!isLoaded || !window.google || !window.google.maps) return undefined;
     return {
       url: "data:image/svg+xml," + encodeURIComponent(`
         <svg xmlns="http://www.w3.org/2000/svg" width="36" height="48" viewBox="0 0 24 32">
@@ -184,13 +339,17 @@ export const MapaGlobalSucursales = () => {
     };
   }, [isLoaded]);
 
+  // 🔒 FALLBACK: Si hay error de carga, mostrar lista con links
   if (loadError) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <p className="text-destructive">Error cargando Google Maps</p>
-        </CardContent>
-      </Card>
+      <MapaFallback
+        sucursales={filteredSucursales}
+        loading={loading}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onRefresh={loadSucursales}
+        errorMessage={loadError.message}
+      />
     );
   }
 
@@ -222,7 +381,7 @@ export const MapaGlobalSucursales = () => {
             ) : filteredSucursales.length === 0 ? (
               <div className="p-6 text-center text-muted-foreground">
                 <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No se encontraron sucursales con coordenadas</p>
+                <p className="text-sm">No se encontraron sucursales</p>
               </div>
             ) : (
               <div className="divide-y">
@@ -255,10 +414,10 @@ export const MapaGlobalSucursales = () => {
                               {sucursal.zona_nombre}
                             </Badge>
                           )}
-                          {sucursal.horario_entrega && (
-                            <span className="text-xs text-muted-foreground">
-                              {sucursal.horario_entrega}
-                            </span>
+                          {!sucursal.latitud && (
+                            <Badge variant="secondary" className="text-xs text-orange-600">
+                              Sin coordenadas
+                            </Badge>
                           )}
                         </div>
                       </div>
@@ -270,6 +429,7 @@ export const MapaGlobalSucursales = () => {
                           e.stopPropagation();
                           handleNavigate(sucursal);
                         }}
+                        disabled={!sucursal.latitud}
                       >
                         <Navigation className="h-4 w-4" />
                       </Button>
@@ -289,6 +449,11 @@ export const MapaGlobalSucursales = () => {
             <CardTitle className="text-lg flex items-center gap-2">
               <MapPin className="h-5 w-5" />
               Mapa de Ubicaciones
+              {sucursalesConCoordenadas.length < filteredSucursales.length && (
+                <Badge variant="secondary" className="text-xs">
+                  {sucursalesConCoordenadas.length} de {filteredSucursales.length} con coordenadas
+                </Badge>
+              )}
             </CardTitle>
             <Button variant="outline" size="sm" onClick={loadSucursales}>
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -312,7 +477,7 @@ export const MapaGlobalSucursales = () => {
                 fullscreenControl: true,
               }}
             >
-              {filteredSucursales.map((sucursal) => (
+              {sucursalesConCoordenadas.map((sucursal) => (
                 <Marker
                   key={sucursal.id}
                   position={{
@@ -362,5 +527,28 @@ export const MapaGlobalSucursales = () => {
         </CardContent>
       </Card>
     </div>
+  );
+};
+
+/**
+ * Componente principal envuelto en ErrorBoundary
+ */
+export const MapaGlobalSucursales = () => {
+  return (
+    <ErrorBoundaryModule 
+      moduleName="Mapa Global"
+      fallback={
+        <MapaFallback
+          sucursales={[]}
+          loading={false}
+          searchTerm=""
+          onSearchChange={() => {}}
+          onRefresh={() => window.location.reload()}
+          errorMessage="Error inesperado al cargar el componente de mapa."
+        />
+      }
+    >
+      <MapaContent />
+    </ErrorBoundaryModule>
   );
 };

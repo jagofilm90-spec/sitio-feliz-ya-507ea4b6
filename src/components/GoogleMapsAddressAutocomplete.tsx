@@ -1,6 +1,23 @@
+/**
+ * ==========================================================
+ * ⚠️ COMPONENTE SENSIBLE - REGLAS DE GOOGLE MAPS
+ * ==========================================================
+ * 
+ * Este componente usa la API de Google Places via Edge Function,
+ * NO usa directamente la API de JavaScript de Google Maps.
+ * Por lo tanto, NO aplican las reglas de google.maps.* types.
+ * 
+ * Sin embargo, si en el futuro se integra Google Maps JS API,
+ * aplicar las reglas de seguridad documentadas en:
+ * src/docs/ARQUITECTURA.md
+ * 
+ * Última actualización: 2025-12-08
+ * ==========================================================
+ */
+
 import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { MapPin, Loader2 } from "lucide-react";
+import { MapPin, Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface GoogleMapsAddressAutocompleteProps {
@@ -30,6 +47,7 @@ const GoogleMapsAddressAutocomplete = ({
   const [inputValue, setInputValue] = useState(value || "");
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -53,17 +71,14 @@ const GoogleMapsAddressAutocomplete = ({
   const searchAddresses = async (input: string) => {
     if (input.length < 3) {
       setPredictions([]);
+      setError(null);
       return;
     }
 
     setIsLoading(true);
+    setError(null);
+    
     try {
-      const { data, error } = await supabase.functions.invoke('google-places-autocomplete', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        body: null,
-      });
-
       // Use fetch directly since supabase.functions.invoke doesn't support query params well for GET
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-places-autocomplete?input=${encodeURIComponent(input)}`;
       const response = await fetch(url, {
@@ -72,7 +87,15 @@ const GoogleMapsAddressAutocomplete = ({
         },
       });
       
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
       const result = await response.json();
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
       
       if (result.predictions) {
         setPredictions(result.predictions);
@@ -80,8 +103,9 @@ const GoogleMapsAddressAutocomplete = ({
       } else {
         setPredictions([]);
       }
-    } catch (error) {
-      console.error('Error searching addresses:', error);
+    } catch (err: any) {
+      console.error('Error searching addresses:', err);
+      setError("No se pudo buscar direcciones");
       setPredictions([]);
     } finally {
       setIsLoading(false);
@@ -92,6 +116,7 @@ const GoogleMapsAddressAutocomplete = ({
     const newValue = e.target.value;
     setInputValue(newValue);
     onChange(newValue);
+    setError(null);
 
     // Debounce the search
     if (debounceRef.current) {
@@ -107,6 +132,7 @@ const GoogleMapsAddressAutocomplete = ({
     onChange(prediction.description, prediction.place_id);
     setPredictions([]);
     setShowDropdown(false);
+    setError(null);
   };
 
   return (
@@ -114,6 +140,8 @@ const GoogleMapsAddressAutocomplete = ({
       <div className="relative">
         {isLoading ? (
           <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+        ) : error ? (
+          <AlertCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-destructive" />
         ) : (
           <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         )}
@@ -124,10 +152,14 @@ const GoogleMapsAddressAutocomplete = ({
           onFocus={() => predictions.length > 0 && setShowDropdown(true)}
           placeholder={placeholder}
           required={required}
-          className={`pl-10 ${className || ""}`}
+          className={`pl-10 ${error ? "border-destructive" : ""} ${className || ""}`}
           autoComplete="off"
         />
       </div>
+      
+      {error && (
+        <p className="text-xs text-destructive mt-1">{error}</p>
+      )}
       
       {showDropdown && predictions.length > 0 && (
         <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-auto">

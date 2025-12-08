@@ -1,7 +1,21 @@
+/**
+ * ==========================================================
+ * 🚨 MÓDULO CRÍTICO: INVENTARIO
+ * ==========================================================
+ * 
+ * Este módulo maneja control de stock y movimientos.
+ * 
+ * ⚠️ NO MODIFICAR sin validar en preview primero.
+ * 
+ * Última actualización: 2025-12-08
+ * ==========================================================
+ */
+
 import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ErrorBoundaryModule } from "@/components/ErrorBoundaryModule";
 import { Label } from "@/components/ui/label";
 import {
   Table,
