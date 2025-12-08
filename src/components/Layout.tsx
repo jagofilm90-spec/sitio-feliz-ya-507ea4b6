@@ -39,6 +39,7 @@ import {
   Smartphone,
   ArrowLeft,
   Lock,
+  Database,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -103,6 +104,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: MessageCircle, label: "Chat", path: "/chat" },
     { icon: Smartphone, label: "App Móvil", path: "/generate-assets" },
     { icon: Lock, label: "Permisos", path: "/permisos" },
+    { icon: Database, label: "Respaldos", path: "/respaldos" },
   ];
 
   // Filtrar menú según permisos dinámicos del usuario
