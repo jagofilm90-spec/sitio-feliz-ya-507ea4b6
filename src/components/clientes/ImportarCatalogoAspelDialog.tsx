@@ -27,6 +27,12 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -38,7 +44,8 @@ import {
   Users,
   Filter,
   Loader2,
-  Download,
+  Building2,
+  MapPin,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import {
@@ -104,21 +111,28 @@ export function ImportarCatalogoAspelDialog({
       const resultado = parseAspelExcel(workbook);
       setErroresParseo(resultado.errores);
 
-      // Obtener clientes existentes para detectar duplicados
+      // Obtener clientes existentes CON conteo de sucursales para detectar grupos
       const { data: existentes } = await supabase
         .from("clientes")
-        .select("id, codigo, nombre, rfc");
+        .select(`
+          id, 
+          codigo, 
+          nombre, 
+          rfc,
+          cliente_sucursales(count)
+        `);
 
       const clientesExistentes: ClienteExistente[] = (existentes || []).map(
-        (c) => ({
+        (c: any) => ({
           id: c.id,
           codigo: c.codigo,
           nombre: c.nombre,
           rfc: c.rfc,
+          cantidadSucursales: c.cliente_sucursales?.[0]?.count || 0,
         })
       );
 
-      // Detectar duplicados
+      // Detectar duplicados (ahora incluye grupos con sucursales)
       const clientesConDuplicados = detectarDuplicados(
         resultado.clientes,
         clientesExistentes
@@ -184,8 +198,8 @@ export function ImportarCatalogoAspelDialog({
   });
 
   const duplicados = clientesParsed.filter((c) => c.esDuplicado);
+  const gruposConSucursales = duplicados.filter((c) => c.esGrupoConSucursales);
   const inactivos = clientesParsed.filter((c) => !c.activo);
-  const sinActividad = clientesParsed.filter((c) => !c.tieneActividadReciente);
 
   const handleImport = async () => {
     if (clientesFiltrados.length === 0) {
@@ -219,8 +233,12 @@ export function ImportarCatalogoAspelDialog({
         razon_social: c.razon_social || null,
         rfc: c.rfc,
         direccion: c.direccion,
-        codigo_postal: c.codigo_postal,
+        tipo_vialidad: c.tipo_vialidad,
+        nombre_vialidad: c.nombre_vialidad,
+        numero_exterior: c.numero_exterior,
+        numero_interior: c.numero_interior,
         nombre_colonia: c.nombre_colonia,
+        codigo_postal: c.codigo_postal,
         telefono: c.telefono,
         termino_credito: c.termino_credito,
         limite_credito: c.limite_credito,
@@ -280,9 +298,20 @@ export function ImportarCatalogoAspelDialog({
     return labels[term] || term;
   };
 
+  const formatDireccionPreview = (c: ClienteImportado) => {
+    const parts: string[] = [];
+    if (c.tipo_vialidad) parts.push(c.tipo_vialidad);
+    if (c.nombre_vialidad) parts.push(c.nombre_vialidad);
+    if (c.numero_exterior) parts.push(`#${c.numero_exterior}`);
+    if (c.numero_interior) parts.push(`Int. ${c.numero_interior}`);
+    if (c.nombre_colonia) parts.push(`Col. ${c.nombre_colonia}`);
+    if (c.codigo_postal) parts.push(`C.P. ${c.codigo_postal}`);
+    return parts.join(' ') || c.direccion || '-';
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
@@ -342,7 +371,7 @@ export function ImportarCatalogoAspelDialog({
         {step === "preview" && (
           <>
             {/* Estadísticas */}
-            <div className="grid grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-5 gap-3 mb-4">
               <div className="bg-muted/50 rounded-lg p-3 text-center">
                 <div className="text-2xl font-bold">{clientesParsed.length}</div>
                 <div className="text-xs text-muted-foreground">Total detectados</div>
@@ -358,6 +387,12 @@ export function ImportarCatalogoAspelDialog({
                   {duplicados.length}
                 </div>
                 <div className="text-xs text-muted-foreground">Duplicados</div>
+              </div>
+              <div className="bg-blue-500/10 rounded-lg p-3 text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {gruposConSucursales.length}
+                </div>
+                <div className="text-xs text-muted-foreground">Grupos</div>
               </div>
               <div className="bg-muted/50 rounded-lg p-3 text-center">
                 <div className="text-2xl font-bold text-muted-foreground">
@@ -431,10 +466,10 @@ export function ImportarCatalogoAspelDialog({
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-20">Código</TableHead>
-                        <TableHead>Nombre</TableHead>
+                        <TableHead className="w-[200px]">Nombre</TableHead>
                         <TableHead className="w-32">RFC</TableHead>
+                        <TableHead>Dirección Parseada</TableHead>
                         <TableHead className="w-24">Crédito</TableHead>
-                        <TableHead className="w-28">Últ. Venta</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -443,19 +478,41 @@ export function ImportarCatalogoAspelDialog({
                           <TableCell className="font-mono text-xs">
                             {cliente.codigo}
                           </TableCell>
-                          <TableCell className="font-medium">
+                          <TableCell className="font-medium text-sm">
                             {cliente.nombre}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
                             {cliente.rfc || "-"}
                           </TableCell>
                           <TableCell>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground max-w-[300px] truncate">
+                                    <MapPin className="h-3 w-3 flex-shrink-0" />
+                                    {formatDireccionPreview(cliente)}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="max-w-sm">
+                                  <div className="text-xs space-y-1">
+                                    <p><strong>Original:</strong> {cliente.direccion || '-'}</p>
+                                    <div className="border-t pt-1 mt-1">
+                                      {cliente.tipo_vialidad && <p><strong>Tipo:</strong> {cliente.tipo_vialidad}</p>}
+                                      {cliente.nombre_vialidad && <p><strong>Vialidad:</strong> {cliente.nombre_vialidad}</p>}
+                                      {cliente.numero_exterior && <p><strong>No. Ext:</strong> {cliente.numero_exterior}</p>}
+                                      {cliente.numero_interior && <p><strong>No. Int:</strong> {cliente.numero_interior}</p>}
+                                      {cliente.nombre_colonia && <p><strong>Colonia:</strong> {cliente.nombre_colonia}</p>}
+                                      {cliente.codigo_postal && <p><strong>C.P.:</strong> {cliente.codigo_postal}</p>}
+                                    </div>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell>
                             <Badge variant="outline" className="text-xs">
                               {getCreditLabel(cliente.termino_credito)}
                             </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {cliente.ultimaVenta || "-"}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -482,6 +539,7 @@ export function ImportarCatalogoAspelDialog({
                         <TableHead className="w-20">Código</TableHead>
                         <TableHead>Nombre ASPEL</TableHead>
                         <TableHead>Coincide con</TableHead>
+                        <TableHead className="w-40">Estado</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -494,15 +552,27 @@ export function ImportarCatalogoAspelDialog({
                           <TableCell className="text-sm text-muted-foreground">
                             {cliente.duplicadoCon}
                           </TableCell>
+                          <TableCell>
+                            {cliente.esGrupoConSucursales ? (
+                              <Badge variant="secondary" className="gap-1 bg-blue-500/10 text-blue-600">
+                                <Building2 className="h-3 w-3" />
+                                Grupo ({cliente.cantidadSucursales} suc.)
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-yellow-600">
+                                Duplicado simple
+                              </Badge>
+                            )}
+                          </TableCell>
                         </TableRow>
                       ))}
                       {duplicados.length === 0 && (
                         <TableRow>
                           <TableCell
-                            colSpan={3}
+                            colSpan={4}
                             className="text-center text-muted-foreground py-8"
                           >
-                            No hay duplicados detectados
+                            No se detectaron duplicados
                           </TableCell>
                         </TableRow>
                       )}
@@ -512,17 +582,28 @@ export function ImportarCatalogoAspelDialog({
               </TabsContent>
             </Tabs>
 
-            {/* Botones */}
-            <div className="flex justify-between pt-4 border-t">
-              <Button variant="outline" onClick={() => setStep("upload")}>
-                Cargar otro archivo
+            {/* Advertencia de grupos */}
+            {gruposConSucursales.length > 0 && (
+              <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <Building2 className="h-4 w-4 text-blue-600 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-blue-700">
+                      {gruposConSucursales.length} cliente(s) ya existen como grupos con sucursales
+                    </p>
+                    <p className="text-muted-foreground text-xs mt-1">
+                      Estos clientes no se importarán para evitar duplicar la estructura de sucursales existente.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={handleClose}>
+                Cancelar
               </Button>
-              <Button
-                onClick={handleImport}
-                disabled={clientesFiltrados.length === 0}
-                className="gap-2"
-              >
-                <Download className="h-4 w-4" />
+              <Button onClick={handleImport} disabled={clientesFiltrados.length === 0}>
                 Importar {clientesFiltrados.length} clientes
               </Button>
             </div>
@@ -530,58 +611,68 @@ export function ImportarCatalogoAspelDialog({
         )}
 
         {step === "importing" && (
-          <div className="py-12 text-center">
-            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-lg font-medium mb-4">
-              Importando clientes...
-            </p>
-            <Progress value={importProgress} className="w-full max-w-md mx-auto" />
-            <p className="text-sm text-muted-foreground mt-2">
+          <div className="py-8 space-y-4">
+            <div className="flex items-center justify-center gap-3">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <span className="text-lg">Importando clientes...</span>
+            </div>
+            <Progress value={importProgress} className="w-full" />
+            <p className="text-center text-muted-foreground">
               {importProgress}% completado
             </p>
           </div>
         )}
 
         {step === "complete" && (
-          <div className="py-8 text-center">
-            <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <p className="text-xl font-medium mb-6">Importación completada</p>
+          <div className="py-8 space-y-6">
+            <div className="flex justify-center">
+              <CheckCircle2 className="h-16 w-16 text-green-500" />
+            </div>
 
-            <div className="grid grid-cols-3 gap-4 max-w-md mx-auto mb-8">
+            <div className="grid grid-cols-3 gap-4 text-center">
               <div className="bg-green-500/10 rounded-lg p-4">
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-3xl font-bold text-green-600">
                   {importResults.importados}
                 </div>
-                <div className="text-xs text-muted-foreground">Importados</div>
+                <div className="text-sm text-muted-foreground">Importados</div>
               </div>
               <div className="bg-yellow-500/10 rounded-lg p-4">
-                <div className="text-2xl font-bold text-yellow-600">
+                <div className="text-3xl font-bold text-yellow-600">
                   {importResults.omitidos}
                 </div>
-                <div className="text-xs text-muted-foreground">Omitidos</div>
+                <div className="text-sm text-muted-foreground">Omitidos</div>
               </div>
               <div className="bg-red-500/10 rounded-lg p-4">
-                <div className="text-2xl font-bold text-red-600">
+                <div className="text-3xl font-bold text-red-600">
                   {importResults.errores}
                 </div>
-                <div className="text-xs text-muted-foreground">Errores</div>
+                <div className="text-sm text-muted-foreground">Errores</div>
               </div>
             </div>
 
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 max-w-md mx-auto mb-6">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                <div className="text-left text-sm">
-                  <p className="font-medium text-amber-700">Datos fiscales pendientes</p>
-                  <p className="text-muted-foreground">
-                    Los clientes importados necesitan completar Régimen Fiscal y
-                    Email de facturación para poder timbrar CFDI.
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+                <div>
+                  <p className="font-medium text-amber-700">
+                    Datos fiscales pendientes
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Los siguientes campos no están en ASPEL y deberán capturarse 
+                    manualmente para CFDI 4.0: <strong>Régimen Fiscal</strong>, 
+                    <strong> Email de facturación</strong>, <strong>Uso de CFDI</strong>.
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Usa la herramienta de <strong>Auditoría Fiscal</strong> en el 
+                    módulo de Clientes para completar esta información.
                   </p>
                 </div>
               </div>
             </div>
 
-            <Button onClick={handleClose}>Cerrar</Button>
+            <div className="flex justify-center">
+              <Button onClick={handleClose}>Cerrar</Button>
+            </div>
           </div>
         )}
       </DialogContent>

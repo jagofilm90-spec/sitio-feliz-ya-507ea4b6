@@ -14,14 +14,29 @@ export interface AspelCliente {
   estatus: string;
 }
 
+export interface DireccionParseada {
+  tipo_vialidad: string | null;
+  nombre_vialidad: string | null;
+  numero_exterior: string | null;
+  numero_interior: string | null;
+  nombre_colonia: string | null;
+  codigo_postal: string | null;
+  direccion_completa: string;
+}
+
 export interface ClienteImportado {
   codigo: string;
   nombre: string;
   razon_social: string;
   rfc: string | null;
   direccion: string | null;
-  codigo_postal: string | null;
+  // Campos estructurados de dirección
+  tipo_vialidad: string | null;
+  nombre_vialidad: string | null;
+  numero_exterior: string | null;
+  numero_interior: string | null;
   nombre_colonia: string | null;
+  codigo_postal: string | null;
   telefono: string | null;
   termino_credito: 'contado' | '8_dias' | '15_dias' | '30_dias';
   limite_credito: number;
@@ -32,12 +47,106 @@ export interface ClienteImportado {
   esDuplicado?: boolean;
   duplicadoCon?: string;
   tieneActividadReciente?: boolean;
+  // Nuevo: para grupos con sucursales
+  esGrupoConSucursales?: boolean;
+  cantidadSucursales?: number;
 }
 
 export interface ResultadoParseo {
   clientes: ClienteImportado[];
   totalDetectados: number;
   errores: string[];
+}
+
+/**
+ * Parsea una dirección ASPEL en componentes estructurados
+ * Formato típico: "Calle NOMBRE # NUM Colonia COLONIA" o variantes
+ */
+export function parsearDireccionAspel(direccionCompleta: string): DireccionParseada {
+  const resultado: DireccionParseada = {
+    tipo_vialidad: null,
+    nombre_vialidad: null,
+    numero_exterior: null,
+    numero_interior: null,
+    nombre_colonia: null,
+    codigo_postal: null,
+    direccion_completa: direccionCompleta
+  };
+
+  if (!direccionCompleta) return resultado;
+
+  const texto = direccionCompleta.trim();
+
+  // Extraer código postal (5 dígitos)
+  const cpMatch = texto.match(/\b(\d{5})\b/);
+  if (cpMatch) {
+    resultado.codigo_postal = cpMatch[1];
+  }
+
+  // Detectar tipo de vialidad al inicio
+  const tiposVialidad = ['Calle', 'Avenida', 'Av\\.?', 'Boulevard', 'Blvd\\.?', 'Calzada', 'Calz\\.?', 'Privada', 'Priv\\.?', 'Cerrada', 'Circuito', 'Prolongación', 'Prol\\.?', 'Andador', 'Carretera', 'Carr\\.?'];
+  const tipoRegex = new RegExp(`^(${tiposVialidad.join('|')})\\s+`, 'i');
+  const tipoMatch = texto.match(tipoRegex);
+  
+  if (tipoMatch) {
+    // Normalizar tipo de vialidad
+    const tipoRaw = tipoMatch[1].toLowerCase();
+    if (tipoRaw.startsWith('av')) resultado.tipo_vialidad = 'Avenida';
+    else if (tipoRaw.startsWith('blvd') || tipoRaw.startsWith('boulevard')) resultado.tipo_vialidad = 'Boulevard';
+    else if (tipoRaw.startsWith('calz')) resultado.tipo_vialidad = 'Calzada';
+    else if (tipoRaw.startsWith('priv')) resultado.tipo_vialidad = 'Privada';
+    else if (tipoRaw.startsWith('prol')) resultado.tipo_vialidad = 'Prolongación';
+    else if (tipoRaw.startsWith('carr')) resultado.tipo_vialidad = 'Carretera';
+    else resultado.tipo_vialidad = tipoMatch[1].charAt(0).toUpperCase() + tipoMatch[1].slice(1).toLowerCase();
+  }
+
+  // Extraer colonia - buscar después de "Colonia", "Col.", "Col"
+  const coloniaMatch = texto.match(/(?:Colonia|Col\.?)\s+(.+?)(?:\s+C\.?P\.?|\s+\d{5}|$)/i);
+  if (coloniaMatch) {
+    resultado.nombre_colonia = coloniaMatch[1].trim()
+      .replace(/^COL\.?\s*/i, '')
+      .replace(/\s+\d{5}$/, '')
+      .trim();
+  }
+
+  // Extraer número exterior - buscar "#", "No.", "Número", "N°", "Nº" seguido de número
+  const numExtMatch = texto.match(/(?:#|No\.?|Número|N[°º])\s*(\d+[A-Z]?(?:\s*-\s*\d+)?)/i);
+  if (numExtMatch) {
+    resultado.numero_exterior = numExtMatch[1].trim();
+  }
+
+  // Extraer número interior - buscar "Int.", "Interior", "Depto", "Local", etc.
+  const numIntMatch = texto.match(/(?:Int\.?|Interior|Depto\.?|Departamento|Local|Oficina|Of\.?|Piso)\s*([A-Z0-9\-]+(?:\s+[A-Z0-9\-]+)?)/i);
+  if (numIntMatch) {
+    resultado.numero_interior = numIntMatch[1].trim();
+  }
+
+  // Extraer nombre de vialidad - lo que está entre el tipo de vialidad y el número/colonia
+  if (resultado.tipo_vialidad) {
+    // Quitar el tipo de vialidad del inicio
+    let textoSinTipo = texto.replace(tipoRegex, '').trim();
+    
+    // Buscar hasta donde empieza el número o colonia
+    const finVialidadMatch = textoSinTipo.match(/^(.+?)(?:\s+(?:#|No\.?|Número|N[°º]|Colonia|Col\.?)|\s+\d{5}|$)/i);
+    if (finVialidadMatch) {
+      resultado.nombre_vialidad = finVialidadMatch[1].trim();
+    }
+  } else {
+    // Si no hay tipo de vialidad, intentar extraer el nombre hasta el número o colonia
+    const vialidadMatch = texto.match(/^(.+?)(?:\s+(?:#|No\.?|Número|N[°º]|Colonia|Col\.?)|\s+\d{5}|$)/i);
+    if (vialidadMatch && vialidadMatch[1].length > 3) {
+      resultado.nombre_vialidad = vialidadMatch[1].trim();
+    }
+  }
+
+  // Limpiar nombre de vialidad de prefijos comunes si quedaron
+  if (resultado.nombre_vialidad) {
+    resultado.nombre_vialidad = resultado.nombre_vialidad
+      .replace(/^(?:Calle|Av\.?|Avenida)\s*/i, '')
+      .trim();
+  }
+
+  return resultado;
 }
 
 /**
@@ -255,15 +364,23 @@ function convertToClienteImportado(aspel: AspelCliente): ClienteImportado | null
   if (rfc && !rfc.match(/^[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}$/i)) {
     rfc = null; // RFC inválido, dejarlo vacío
   }
+
+  // Parsear dirección estructurada
+  const direccionParseada = parsearDireccionAspel(aspel.direccion || '');
   
   return {
     codigo: aspel.clave.padStart(4, '0'),
     nombre: aspel.nombre || `Cliente ${aspel.clave}`,
     razon_social: aspel.nombre || '',
     rfc,
-    direccion: aspel.direccion || null,
-    codigo_postal: aspel.codigoPostal || null,
-    nombre_colonia: aspel.colonia || null,
+    direccion: direccionParseada.direccion_completa || null,
+    // Campos estructurados
+    tipo_vialidad: direccionParseada.tipo_vialidad,
+    nombre_vialidad: direccionParseada.nombre_vialidad,
+    numero_exterior: direccionParseada.numero_exterior,
+    numero_interior: direccionParseada.numero_interior,
+    nombre_colonia: direccionParseada.nombre_colonia || aspel.colonia || null,
+    codigo_postal: direccionParseada.codigo_postal || aspel.codigoPostal || null,
     telefono: aspel.telefonos || null,
     termino_credito: terminoCredito,
     limite_credito: 0,
@@ -302,10 +419,12 @@ export interface ClienteExistente {
   codigo: string;
   nombre: string;
   rfc: string | null;
+  cantidadSucursales?: number;
 }
 
 /**
  * Detecta duplicados entre clientes a importar y existentes en el ERP
+ * Ahora también detecta grupos con sucursales
  */
 export function detectarDuplicados(
   clientesImportar: ClienteImportado[],
@@ -317,10 +436,11 @@ export function detectarDuplicados(
       e => e.codigo.toLowerCase() === cliente.codigo.toLowerCase()
     );
     
-    // Si no, buscar por RFC
+    // Si no, buscar por RFC (normalizado)
     if (!duplicado && cliente.rfc) {
+      const rfcNormalizado = normalizarRfc(cliente.rfc);
       duplicado = clientesExistentes.find(
-        e => e.rfc && e.rfc.toLowerCase() === cliente.rfc.toLowerCase()
+        e => e.rfc && normalizarRfc(e.rfc) === rfcNormalizado
       );
     }
     
@@ -333,10 +453,13 @@ export function detectarDuplicados(
     }
     
     if (duplicado) {
+      const esGrupo = (duplicado.cantidadSucursales || 0) > 0;
       return {
         ...cliente,
         esDuplicado: true,
-        duplicadoCon: `${duplicado.codigo} - ${duplicado.nombre}`
+        duplicadoCon: `${duplicado.codigo} - ${duplicado.nombre}`,
+        esGrupoConSucursales: esGrupo,
+        cantidadSucursales: duplicado.cantidadSucursales || 0
       };
     }
     
@@ -350,5 +473,12 @@ function normalizarNombre(nombre: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // Quitar acentos
     .replace(/[^a-z0-9]/g, '') // Solo alfanuméricos
+    .trim();
+}
+
+function normalizarRfc(rfc: string): string {
+  return rfc
+    .toUpperCase()
+    .replace(/[^A-Z0-9&Ñ]/g, '')
     .trim();
 }
