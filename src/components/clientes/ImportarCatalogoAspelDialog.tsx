@@ -93,7 +93,7 @@ export function ImportarCatalogoAspelDialog({
 
   // Validación pre-importación
   const [reporteCalidad, setReporteCalidad] = useState<ReporteCalidad | null>(null);
-  const [muestraAleatoria, setMuestraAleatoria] = useState<ClienteConAnomalias[]>([]);
+  const [muestraAleatoria, setMuestraAleatoria] = useState<ClienteImportado[]>([]);
   const [validacionRevisada, setValidacionRevisada] = useState(false);
 
   // Progreso de importación
@@ -207,6 +207,15 @@ export function ImportarCatalogoAspelDialog({
     if (files && files[0]) {
       processFile(files[0]);
     }
+  };
+
+  // Calcular calidad de parseo para un cliente
+  const calcularCalidad = (c: ClienteImportado): 'completo' | 'parcial' | 'incompleto' => {
+    const campos = [c.nombre, c.rfc, c.direccion, c.codigo_postal, c.telefono];
+    const conDatos = campos.filter(f => f && String(f).trim().length > 0).length;
+    if (conDatos === campos.length) return 'completo';
+    if (conDatos >= 3) return 'parcial';
+    return 'incompleto';
   };
 
   // Aplicar filtros
@@ -519,7 +528,7 @@ export function ImportarCatalogoAspelDialog({
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>{getCalidadBadge(c.calidadParseo)}</TableCell>
+                        <TableCell>{getCalidadBadge(calcularCalidad(c))}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
