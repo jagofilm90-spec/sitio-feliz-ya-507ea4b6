@@ -61,7 +61,6 @@ import {
   generarReporteCalidad,
   obtenerMuestraAleatoria,
   ReporteCalidad,
-  ClienteConAnomalias,
 } from "@/utils/aspelImporter";
 
 interface ImportarCatalogoAspelDialogProps {
@@ -435,20 +434,20 @@ export function ImportarCatalogoAspelDialog({
                     <div className="text-xs text-muted-foreground">RFC válido</div>
                   </div>
                   <div className="text-center p-2 bg-muted/30 rounded">
-                    <div className={`text-lg font-bold ${getPorcentajeColor(reporteCalidad.porcentajes.cp)}`}>
-                      {reporteCalidad.porcentajes.cp}%
+                    <div className={`text-lg font-bold ${getPorcentajeColor(reporteCalidad.porcentajes.codigoPostal)}`}>
+                      {reporteCalidad.porcentajes.codigoPostal}%
                     </div>
                     <div className="text-xs text-muted-foreground">C.P.</div>
                   </div>
                   <div className="text-center p-2 bg-muted/30 rounded">
-                    <div className={`text-lg font-bold ${getPorcentajeColor(reporteCalidad.porcentajes.vialidad)}`}>
-                      {reporteCalidad.porcentajes.vialidad}%
+                    <div className={`text-lg font-bold ${getPorcentajeColor(reporteCalidad.porcentajes.nombreVialidad)}`}>
+                      {reporteCalidad.porcentajes.nombreVialidad}%
                     </div>
                     <div className="text-xs text-muted-foreground">Vialidad</div>
                   </div>
                   <div className="text-center p-2 bg-muted/30 rounded">
-                    <div className={`text-lg font-bold ${getPorcentajeColor(reporteCalidad.porcentajes.numExt)}`}>
-                      {reporteCalidad.porcentajes.numExt}%
+                    <div className={`text-lg font-bold ${getPorcentajeColor(reporteCalidad.porcentajes.numeroExterior)}`}>
+                      {reporteCalidad.porcentajes.numeroExterior}%
                     </div>
                     <div className="text-xs text-muted-foreground">No. Ext</div>
                   </div>
@@ -545,7 +544,7 @@ export function ImportarCatalogoAspelDialog({
                           <span className="font-mono">{c.codigo}</span>
                           <span className="truncate flex-1">{c.nombre}</span>
                           <div className="flex gap-1">
-                            {c.anomalias.map((a, i) => (
+                            {c.problemas.map((a, i) => (
                               <Badge key={i} variant="outline" className="text-[10px] bg-yellow-500/10 text-yellow-700">
                                 {a}
                               </Badge>

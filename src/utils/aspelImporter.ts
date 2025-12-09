@@ -1,5 +1,9 @@
 import * as XLSX from 'xlsx';
 
+// ============================================
+// INTERFACES
+// ============================================
+
 export interface AspelCliente {
   clave: string;
   nombre: string;
@@ -7,11 +11,12 @@ export interface AspelCliente {
   direccion: string;
   colonia: string;
   codigoPostal: string;
+  poblacion: string;
   telefonos: string;
   diasCredito: number;
-  ultimaVenta: string;
-  ultimoPago: string;
   estatus: string;
+  ultimaVenta: string | null;
+  ultimoPago: string | null;
 }
 
 export interface DireccionParseada {
@@ -30,24 +35,22 @@ export interface ClienteImportado {
   razon_social: string;
   rfc: string | null;
   direccion: string | null;
-  // Campos estructurados de dirección
   tipo_vialidad: string | null;
   nombre_vialidad: string | null;
   numero_exterior: string | null;
   numero_interior: string | null;
   nombre_colonia: string | null;
+  nombre_localidad: string | null;
   codigo_postal: string | null;
   telefono: string | null;
   termino_credito: 'contado' | '8_dias' | '15_dias' | '30_dias';
   limite_credito: number;
   activo: boolean;
-  // Metadata para UI
-  ultimaVenta: string;
-  ultimoPago: string;
+  ultimaVenta: string | null;
+  ultimoPago: string | null;
+  tieneActividadReciente?: boolean;
   esDuplicado?: boolean;
   duplicadoCon?: string;
-  tieneActividadReciente?: boolean;
-  // Nuevo: para grupos con sucursales
   esGrupoConSucursales?: boolean;
   cantidadSucursales?: number;
 }
@@ -56,11 +59,173 @@ export interface ResultadoParseo {
   clientes: ClienteImportado[];
   totalDetectados: number;
   errores: string[];
+  advertencias: string[];
+}
+
+export interface ClienteExistente {
+  id: string;
+  codigo: string;
+  nombre: string;
+  rfc: string | null;
+  cantidadSucursales?: number;
+}
+
+export interface ReporteCalidad {
+  totalClientes: number;
+  conRfcValido: number;
+  conCodigoPostal: number;
+  conTelefono: number;
+  conNombreVialidad: number;
+  conNumeroExterior: number;
+  conColonia: number;
+  direccionesNoParseables: number;
+  porcentajes: {
+    rfc: number;
+    codigoPostal: number;
+    telefono: number;
+    nombreVialidad: number;
+    numeroExterior: number;
+    colonia: number;
+  };
+  muestraAleatoria: ClienteImportado[];
+  anomalias: AnomaliaCliente[];
+}
+
+export interface AnomaliaCliente {
+  codigo: string;
+  nombre: string;
+  problemas: string[];
+}
+
+// ============================================
+// CONSTANTES Y UTILIDADES
+// ============================================
+
+// Mapeo de meses en español a número
+const MESES_ES: Record<string, string> = {
+  'ene': '01', 'feb': '02', 'mar': '03', 'abr': '04',
+  'may': '05', 'jun': '06', 'jul': '07', 'ago': '08',
+  'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12'
+};
+
+/**
+ * Parsea una fecha en formato ASPEL (DD/Mes/AAAA) a ISO
+ */
+function parsearFechaAspel(fechaStr: string): string | null {
+  if (!fechaStr || typeof fechaStr !== 'string') return null;
+  
+  // Formato: "19/Nov/2025" o "08/Dic/2025"
+  const match = fechaStr.match(/(\d{1,2})\/([A-Za-z]{3})\/(\d{4})/);
+  if (match) {
+    const [, dia, mesStr, anio] = match;
+    const mes = MESES_ES[mesStr.toLowerCase()];
+    if (mes) {
+      return `${anio}-${mes}-${dia.padStart(2, '0')}`;
+    }
+  }
+  
+  // Formato alternativo: DD/MM/YYYY
+  const matchNumerico = fechaStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (matchNumerico) {
+    const [, dia, mes, anio] = matchNumerico;
+    return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+  }
+  
+  return null;
 }
 
 /**
- * Parsea una dirección ASPEL en componentes estructurados
- * Formato típico: "Calle NOMBRE # NUM Colonia COLONIA" o variantes
+ * Verifica si una fila es encabezado, pie de página o separador
+ */
+function esFilaIgnorable(valores: any[]): boolean {
+  if (!valores || valores.length === 0) return true;
+  
+  const primerValor = String(valores[0] || '').trim().toLowerCase();
+  const segundoValor = String(valores[1] || '').trim().toLowerCase();
+  
+  // Patrones a ignorar
+  const patronesIgnorar = [
+    'clave', 'usuario:', 'dirección', 'teléfonos', 'atención ventas',
+    'abarrotes la manita', 'catálogo de clientes', 'pág.', 'página',
+    'almasa', 's.a. de c.v.', 'reporte', 'fecha:', 'hora:',
+    'cliente', 'rfc', 'estatus', 'población', 'colonia', 'c.p.',
+    'vendedor', 'clasificación', 'días crédito', 'saldo'
+  ];
+  
+  for (const patron of patronesIgnorar) {
+    if (primerValor.includes(patron) || segundoValor.includes(patron)) {
+      return true;
+    }
+  }
+  
+  // Fila vacía o solo espacios
+  const tieneContenido = valores.some(v => 
+    v !== null && v !== undefined && String(v).trim() !== ''
+  );
+  if (!tieneContenido) return true;
+  
+  return false;
+}
+
+/**
+ * Verifica si un valor es una clave de cliente válida (número de 1-6 dígitos)
+ */
+function esClaveCliente(valor: any): boolean {
+  if (valor === null || valor === undefined) return false;
+  const str = String(valor).trim();
+  // Debe ser número puro de 1-6 dígitos, no puede ser 0 o 00
+  return /^[1-9]\d{0,5}$/.test(str) || /^0[1-9]\d{0,4}$/.test(str);
+}
+
+/**
+ * Normaliza teléfonos eliminando guiones y espacios extra
+ */
+function normalizarTelefono(telefono: string): string {
+  if (!telefono) return '';
+  
+  // Separar por múltiples delimitadores
+  const partes = telefono.split(/[,|\/]+/).map(t => {
+    // Eliminar guiones y espacios, mantener solo dígitos
+    return t.replace(/[-\s()]+/g, '').replace(/[^\d]/g, '').trim();
+  });
+  
+  // Filtrar números válidos (7-10 dígitos)
+  const telefonosValidos = partes.filter(t => t.length >= 7 && t.length <= 10);
+  
+  return telefonosValidos.join(', ');
+}
+
+/**
+ * Convierte días de crédito numérico a enum del sistema
+ */
+function convertirTerminoCredito(dias: number): 'contado' | '8_dias' | '15_dias' | '30_dias' {
+  if (dias <= 0) return 'contado';
+  if (dias <= 8) return '8_dias';
+  if (dias <= 15) return '15_dias';
+  return '30_dias';
+}
+
+/**
+ * Extrae el código postal de un texto
+ */
+function extraerCodigoPostal(texto: string): string | null {
+  if (!texto) return null;
+  const match = String(texto).match(/\b(\d{5})\b/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Valida formato de RFC mexicano
+ */
+function validarRFC(rfc: string): boolean {
+  if (!rfc) return false;
+  const rfcLimpio = rfc.trim().toUpperCase();
+  // RFC persona moral (12 chars) o física (13 chars)
+  return /^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/.test(rfcLimpio);
+}
+
+/**
+ * Parsea la dirección completa de ASPEL en componentes
  */
 export function parsearDireccionAspel(direccionCompleta: string): DireccionParseada {
   const resultado: DireccionParseada = {
@@ -83,327 +248,316 @@ export function parsearDireccionAspel(direccionCompleta: string): DireccionParse
     resultado.codigo_postal = cpMatch[1];
   }
 
-  // Detectar tipo de vialidad al inicio
-  const tiposVialidad = ['Calle', 'Avenida', 'Av\\.?', 'Boulevard', 'Blvd\\.?', 'Calzada', 'Calz\\.?', 'Privada', 'Priv\\.?', 'Cerrada', 'Circuito', 'Prolongación', 'Prol\\.?', 'Andador', 'Carretera', 'Carr\\.?'];
+  // Extraer colonia (después de "COL." o "COLONIA")
+  const coloniaMatch = texto.match(/(?:COL\.?|COLONIA)\s+([^,\d]+)/i);
+  if (coloniaMatch) {
+    resultado.nombre_colonia = coloniaMatch[1].trim();
+  }
+
+  // Tipos de vialidad comunes
+  const tiposVialidad = [
+    'CALLE', 'AVENIDA', 'AV\\.?', 'CALZADA', 'CALZ\\.?',
+    'BOULEVARD', 'BLVD\\.?', 'PRIVADA', 'PRIV\\.?',
+    'CERRADA', 'CERR\\.?', 'ANDADOR', 'AND\\.?',
+    'PROLONGACIÓN', 'PROL\\.?', 'CIRCUITO', 'CTO\\.?',
+    'RETORNO', 'RET\\.?', 'CAMINO', 'CAM\\.?', 'CARRETERA', 'CARR\\.?'
+  ];
+
   const tipoRegex = new RegExp(`^(${tiposVialidad.join('|')})\\s+`, 'i');
   const tipoMatch = texto.match(tipoRegex);
   
   if (tipoMatch) {
-    // Normalizar tipo de vialidad
-    const tipoRaw = tipoMatch[1].toLowerCase();
-    if (tipoRaw.startsWith('av')) resultado.tipo_vialidad = 'Avenida';
-    else if (tipoRaw.startsWith('blvd') || tipoRaw.startsWith('boulevard')) resultado.tipo_vialidad = 'Boulevard';
-    else if (tipoRaw.startsWith('calz')) resultado.tipo_vialidad = 'Calzada';
-    else if (tipoRaw.startsWith('priv')) resultado.tipo_vialidad = 'Privada';
-    else if (tipoRaw.startsWith('prol')) resultado.tipo_vialidad = 'Prolongación';
-    else if (tipoRaw.startsWith('carr')) resultado.tipo_vialidad = 'Carretera';
-    else resultado.tipo_vialidad = tipoMatch[1].charAt(0).toUpperCase() + tipoMatch[1].slice(1).toLowerCase();
+    const tipoRaw = tipoMatch[1].toUpperCase().replace(/\.$/, '');
+    // Normalizar abreviaciones
+    if (tipoRaw.startsWith('AV')) resultado.tipo_vialidad = 'AVENIDA';
+    else if (tipoRaw.startsWith('BLVD')) resultado.tipo_vialidad = 'BOULEVARD';
+    else if (tipoRaw.startsWith('CALZ')) resultado.tipo_vialidad = 'CALZADA';
+    else if (tipoRaw.startsWith('PRIV')) resultado.tipo_vialidad = 'PRIVADA';
+    else if (tipoRaw.startsWith('PROL')) resultado.tipo_vialidad = 'PROLONGACIÓN';
+    else if (tipoRaw.startsWith('CERR')) resultado.tipo_vialidad = 'CERRADA';
+    else if (tipoRaw.startsWith('AND')) resultado.tipo_vialidad = 'ANDADOR';
+    else if (tipoRaw.startsWith('CTO')) resultado.tipo_vialidad = 'CIRCUITO';
+    else if (tipoRaw.startsWith('RET')) resultado.tipo_vialidad = 'RETORNO';
+    else if (tipoRaw.startsWith('CAM') || tipoRaw.startsWith('CARR')) resultado.tipo_vialidad = 'CARRETERA';
+    else resultado.tipo_vialidad = tipoRaw;
   }
 
-  // Extraer colonia - buscar después de "Colonia", "Col.", "Col"
-  const coloniaMatch = texto.match(/(?:Colonia|Col\.?)\s+(.+?)(?:\s+C\.?P\.?|\s+\d{5}|$)/i);
-  if (coloniaMatch) {
-    resultado.nombre_colonia = coloniaMatch[1].trim()
-      .replace(/^COL\.?\s*/i, '')
-      .replace(/\s+\d{5}$/, '')
-      .trim();
-  }
-
-  // Extraer número exterior - buscar "#", "No.", "Número", "N°", "Nº" seguido de número
-  const numExtMatch = texto.match(/(?:#|No\.?|Número|N[°º])\s*(\d+[A-Z]?(?:\s*-\s*\d+)?)/i);
+  // Extraer número exterior
+  const numExtMatch = texto.match(/(?:#|No\.?|Número|N[°º]|NUM\.?)\s*(\d+[A-Z]?(?:\s*-\s*\d+)?)/i);
   if (numExtMatch) {
     resultado.numero_exterior = numExtMatch[1].trim();
   }
 
-  // Extraer número interior - buscar "Int.", "Interior", "Depto", "Local", etc.
-  const numIntMatch = texto.match(/(?:Int\.?|Interior|Depto\.?|Departamento|Local|Oficina|Of\.?|Piso)\s*([A-Z0-9\-]+(?:\s+[A-Z0-9\-]+)?)/i);
+  // Extraer número interior
+  const numIntMatch = texto.match(/(?:Int\.?|Interior|Depto\.?|Departamento|Local|Oficina|Of\.?|Piso)\s*([A-Z0-9\-]+)/i);
   if (numIntMatch) {
     resultado.numero_interior = numIntMatch[1].trim();
   }
 
-  // Extraer nombre de vialidad - lo que está entre el tipo de vialidad y el número/colonia
+  // Extraer nombre de vialidad
   if (resultado.tipo_vialidad) {
-    // Quitar el tipo de vialidad del inicio
     let textoSinTipo = texto.replace(tipoRegex, '').trim();
-    
-    // Buscar hasta donde empieza el número o colonia
-    const finVialidadMatch = textoSinTipo.match(/^(.+?)(?:\s+(?:#|No\.?|Número|N[°º]|Colonia|Col\.?)|\s+\d{5}|$)/i);
+    const finVialidadMatch = textoSinTipo.match(/^(.+?)(?:\s+(?:#|No\.?|Número|N[°º]|NUM\.?|Colonia|Col\.?)|\s+\d{5}|$)/i);
     if (finVialidadMatch) {
       resultado.nombre_vialidad = finVialidadMatch[1].trim();
     }
-  } else {
-    // Si no hay tipo de vialidad, intentar extraer el nombre hasta el número o colonia
-    const vialidadMatch = texto.match(/^(.+?)(?:\s+(?:#|No\.?|Número|N[°º]|Colonia|Col\.?)|\s+\d{5}|$)/i);
-    if (vialidadMatch && vialidadMatch[1].length > 3) {
-      resultado.nombre_vialidad = vialidadMatch[1].trim();
-    }
   }
 
-  // Limpiar nombre de vialidad de prefijos comunes si quedaron
-  if (resultado.nombre_vialidad) {
-    resultado.nombre_vialidad = resultado.nombre_vialidad
-      .replace(/^(?:Calle|Av\.?|Avenida)\s*/i, '')
-      .trim();
+  return resultado;
+}
+
+// ============================================
+// PARSER PRINCIPAL - FORMATO VERTICAL ASPEL
+// ============================================
+
+/**
+ * Parsea el archivo Excel de ASPEL con formato vertical (4 filas por cliente)
+ * 
+ * Estructura detectada del archivo:
+ * - Fila 1: Clave (A) | Nombre (B) | ... | Estatus (G) | RFC (H) | ...
+ * - Fila 2: Dirección (A) | ... | Población (J) | Colonia (K-L) | C.P. (M-N)
+ * - Fila 3: Teléfonos (A) | ... 
+ * - Fila 4: ... | Días crédito (I-K) | ... | Últ.Venta | Últ.Pago
+ */
+export function parseAspelExcel(workbook: XLSX.WorkBook): ResultadoParseo {
+  const resultado: ResultadoParseo = {
+    clientes: [],
+    totalDetectados: 0,
+    errores: [],
+    advertencias: []
+  };
+
+  try {
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) {
+      resultado.errores.push('El archivo no contiene hojas de cálculo');
+      return resultado;
+    }
+
+    const sheet = workbook.Sheets[sheetName];
+    const data: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    
+    if (data.length === 0) {
+      resultado.errores.push('El archivo está vacío');
+      return resultado;
+    }
+
+    let i = 0;
+    
+    while (i < data.length) {
+      const fila1 = data[i];
+      
+      // Saltar filas ignorables
+      if (esFilaIgnorable(fila1)) {
+        i++;
+        continue;
+      }
+      
+      // Detectar inicio de cliente: columna A debe ser clave numérica
+      const posibleClave = fila1[0];
+      
+      if (!esClaveCliente(posibleClave)) {
+        i++;
+        continue;
+      }
+      
+      // Encontramos un cliente - procesar bloque de 4 filas
+      resultado.totalDetectados++;
+      
+      const fila2 = data[i + 1] || [];
+      const fila3 = data[i + 2] || [];
+      const fila4 = data[i + 3] || [];
+      
+      try {
+        const clienteImportado = procesarBloqueCliente(fila1, fila2, fila3, fila4, resultado);
+        if (clienteImportado) {
+          resultado.clientes.push(clienteImportado);
+        }
+      } catch (error) {
+        resultado.errores.push(`Error procesando cliente en fila ${i + 1}: ${error}`);
+      }
+      
+      // Avanzar al siguiente bloque (mínimo 4 filas)
+      i += 4;
+      
+      // Saltar filas vacías entre bloques
+      while (i < data.length && esFilaIgnorable(data[i])) {
+        i++;
+      }
+    }
+    
+  } catch (error: any) {
+    resultado.errores.push(`Error general al parsear: ${error.message}`);
   }
 
   return resultado;
 }
 
 /**
- * Parsea el Excel de catálogo ASPEL SAE
- * El formato de ASPEL tiene múltiples líneas por cliente en formato reporte
+ * Procesa un bloque de 4 filas correspondiente a un cliente
  */
-export function parseAspelExcel(workbook: XLSX.WorkBook): ResultadoParseo {
-  const errores: string[] = [];
-  const clientes: ClienteImportado[] = [];
+function procesarBloqueCliente(
+  fila1: any[],
+  fila2: any[],
+  fila3: any[],
+  fila4: any[],
+  resultado: ResultadoParseo
+): ClienteImportado | null {
+  // Fila 1: Clave, Nombre, Estatus, RFC
+  const clave = String(fila1[0]).trim();
+  const nombre = String(fila1[1] || '').trim();
   
-  try {
-    // Obtener primera hoja
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    
-    // Convertir a array de arrays para procesar línea por línea
-    const data: any[][] = XLSX.utils.sheet_to_json(worksheet, { 
-      header: 1,
-      defval: '' 
-    });
-    
-    let currentCliente: Partial<AspelCliente> | null = null;
-    let lineCount = 0;
-    
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
-      if (!row || row.length === 0) continue;
-      
-      const firstCell = String(row[0] || '').trim();
-      
-      // Detectar línea de encabezado/pie de página
-      if (isHeaderOrFooter(firstCell, row)) {
-        continue;
-      }
-      
-      // Detectar inicio de nuevo cliente (línea con Clave)
-      if (firstCell.match(/^\d+$/) && firstCell.length <= 6) {
-        // Guardar cliente anterior si existe
-        if (currentCliente && currentCliente.clave) {
-          const clienteImportado = convertToClienteImportado(currentCliente as AspelCliente);
-          if (clienteImportado) {
-            clientes.push(clienteImportado);
-          }
-        }
-        
-        // Iniciar nuevo cliente
-        currentCliente = {
-          clave: firstCell,
-          nombre: extractValue(row, 1),
-          rfc: '',
-          direccion: '',
-          colonia: '',
-          codigoPostal: '',
-          telefonos: '',
-          diasCredito: 0,
-          ultimaVenta: '',
-          ultimoPago: '',
-          estatus: 'Activo'
-        };
-        lineCount = 1;
-        
-        // Extraer RFC si está en la misma línea
-        const rfcMatch = row.find((cell: any) => String(cell).match(/^[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}$/i));
-        if (rfcMatch) {
-          currentCliente.rfc = String(rfcMatch).toUpperCase();
-        }
-        
-        // Buscar días de crédito en la línea
-        for (let j = 0; j < row.length; j++) {
-          const cellValue = String(row[j] || '');
-          if (cellValue.match(/^\d+$/) && j > 1) {
-            const num = parseInt(cellValue);
-            if (num <= 90 && num >= 0) {
-              currentCliente.diasCredito = num;
-            }
-          }
-        }
-        
-      } else if (currentCliente && lineCount > 0) {
-        // Líneas adicionales del cliente actual
-        lineCount++;
-        
-        // Segunda línea típicamente tiene dirección
-        if (lineCount === 2) {
-          const direccionParts: string[] = [];
-          for (let j = 0; j < Math.min(row.length, 5); j++) {
-            const val = String(row[j] || '').trim();
-            if (val && !isLabelField(val)) {
-              direccionParts.push(val);
-            }
-          }
-          if (direccionParts.length > 0) {
-            currentCliente.direccion = direccionParts.join(' ');
-          }
-          
-          // Buscar código postal
-          for (const cell of row) {
-            const cpMatch = String(cell).match(/\b\d{5}\b/);
-            if (cpMatch) {
-              currentCliente.codigoPostal = cpMatch[0];
-            }
-          }
-        }
-        
-        // Buscar teléfonos en cualquier línea
-        for (const cell of row) {
-          const cellStr = String(cell);
-          const telMatch = cellStr.match(/\b\d{7,10}\b/);
-          if (telMatch && !currentCliente.telefonos) {
-            currentCliente.telefonos = telMatch[0];
-          }
-        }
-        
-        // Buscar fechas (última venta, último pago)
-        for (const cell of row) {
-          const cellStr = String(cell);
-          const fechaMatch = cellStr.match(/\d{2}\/\d{2}\/\d{4}/);
-          if (fechaMatch) {
-            if (!currentCliente.ultimaVenta) {
-              currentCliente.ultimaVenta = fechaMatch[0];
-            } else if (!currentCliente.ultimoPago) {
-              currentCliente.ultimoPago = fechaMatch[0];
-            }
-          }
-        }
-        
-        // Detectar estatus
-        for (const cell of row) {
-          const cellStr = String(cell).toLowerCase();
-          if (cellStr.includes('suspendido') || cellStr.includes('inactivo')) {
-            currentCliente.estatus = 'Inactivo';
-          }
-        }
-      }
-    }
-    
-    // No olvidar el último cliente
-    if (currentCliente && currentCliente.clave) {
-      const clienteImportado = convertToClienteImportado(currentCliente as AspelCliente);
-      if (clienteImportado) {
-        clientes.push(clienteImportado);
-      }
-    }
-    
-  } catch (error: any) {
-    errores.push(`Error al parsear Excel: ${error.message}`);
-  }
-  
-  return {
-    clientes,
-    totalDetectados: clientes.length,
-    errores
-  };
-}
-
-function isHeaderOrFooter(firstCell: string, row: any[]): boolean {
-  const headerPatterns = [
-    /^clave$/i,
-    /^cliente$/i,
-    /^catálogo/i,
-    /^catalogo/i,
-    /^reporte/i,
-    /^página/i,
-    /^pagina/i,
-    /^fecha:/i,
-    /^hora:/i,
-    /^total/i,
-    /^aspel/i,
-    /^sistema/i,
-  ];
-  
-  if (headerPatterns.some(p => p.test(firstCell))) {
-    return true;
-  }
-  
-  // Detectar líneas en blanco o con solo separadores
-  const nonEmptyCells = row.filter((c: any) => String(c).trim() !== '');
-  if (nonEmptyCells.length === 0) {
-    return true;
-  }
-  
-  return false;
-}
-
-function isLabelField(value: string): boolean {
-  const labels = ['Calle', 'Colonia', 'C.P.', 'Tel.', 'RFC', 'Teléfono', 'Teléfonos'];
-  return labels.some(l => value.toLowerCase().startsWith(l.toLowerCase()));
-}
-
-function extractValue(row: any[], index: number): string {
-  if (index < row.length) {
-    return String(row[index] || '').trim();
-  }
-  return '';
-}
-
-function convertToClienteImportado(aspel: AspelCliente): ClienteImportado | null {
-  // Omitir códigos especiales como "00" (Venta Mostrador)
-  if (aspel.clave === '00' || aspel.clave === '0') {
+  // Omitir códigos especiales
+  if (clave === '0' || clave === '00') {
     return null;
   }
   
-  // Mapear días de crédito a enum
-  let terminoCredito: 'contado' | '8_dias' | '15_dias' | '30_dias' = 'contado';
-  if (aspel.diasCredito >= 25) {
-    terminoCredito = '30_dias';
-  } else if (aspel.diasCredito >= 12) {
-    terminoCredito = '15_dias';
-  } else if (aspel.diasCredito >= 5) {
-    terminoCredito = '8_dias';
+  // Buscar estatus (columna ~G, índice ~6)
+  let estatus = 'Activo';
+  for (let col = 5; col <= 8; col++) {
+    const valor = String(fila1[col] || '').trim().toUpperCase();
+    if (valor === 'SUSPENDIDO' || valor === 'INACTIVO' || valor === 'BAJA') {
+      estatus = valor;
+      break;
+    } else if (valor === 'ACTIVO' || valor === 'ALTA') {
+      estatus = 'Activo';
+      break;
+    }
   }
   
-  // Validar RFC
-  let rfc = aspel.rfc?.trim().toUpperCase() || null;
-  if (rfc && !rfc.match(/^[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}$/i)) {
-    rfc = null; // RFC inválido, dejarlo vacío
+  // Buscar RFC (columna ~H, índice ~7, pero puede variar)
+  let rfc: string | null = null;
+  for (let col = 6; col <= 12; col++) {
+    const valor = String(fila1[col] || '').trim().toUpperCase();
+    if (validarRFC(valor)) {
+      rfc = valor;
+      break;
+    }
   }
-
-  // Parsear dirección estructurada
-  const direccionParseada = parsearDireccionAspel(aspel.direccion || '');
   
+  if (!rfc) {
+    resultado.advertencias.push(`Cliente ${clave}: RFC no encontrado o inválido`);
+  }
+  
+  // Fila 2: Dirección, Población, Colonia, C.P.
+  const direccionCompleta = String(fila2[0] || '').trim();
+  
+  // Buscar población (columnas ~J-K, índices ~9-10)
+  let poblacion = '';
+  for (let col = 8; col <= 11; col++) {
+    const valor = String(fila2[col] || '').trim();
+    if (valor && valor.length > 2 && !valor.match(/^\d+$/)) {
+      poblacion = valor;
+      break;
+    }
+  }
+  
+  // Buscar colonia (columnas ~K-L, índices ~10-11)
+  let colonia = '';
+  for (let col = 10; col <= 13; col++) {
+    const valor = String(fila2[col] || '').trim();
+    if (valor && valor.length > 2 && !valor.match(/^\d{5}$/) && valor !== poblacion) {
+      colonia = valor;
+      break;
+    }
+  }
+  
+  // Buscar código postal (columnas ~M-N, índices ~12-13)
+  let codigoPostal: string | null = null;
+  for (let col = 11; col <= 15; col++) {
+    const cp = extraerCodigoPostal(String(fila2[col] || ''));
+    if (cp) {
+      codigoPostal = cp;
+      break;
+    }
+  }
+  
+  // Si no se encontró en columnas específicas, buscar en la dirección
+  if (!codigoPostal) {
+    codigoPostal = extraerCodigoPostal(direccionCompleta);
+  }
+  
+  // Parsear dirección para componentes estructurados
+  const direccionParseada = parsearDireccionAspel(direccionCompleta);
+  
+  // Si no se encontró colonia en columnas, intentar de la dirección
+  if (!colonia && direccionParseada.nombre_colonia) {
+    colonia = direccionParseada.nombre_colonia;
+  }
+  
+  // Fila 3: Teléfonos
+  const telefonosRaw = String(fila3[0] || '').trim();
+  const telefonos = normalizarTelefono(telefonosRaw);
+  
+  // Fila 4: Días de crédito, fechas
+  let diasCredito = 30; // Default
+  for (let col = 7; col <= 14; col++) {
+    const valor = fila4[col];
+    if (valor !== null && valor !== undefined && valor !== '') {
+      const num = parseInt(String(valor), 10);
+      if (!isNaN(num) && num >= 0 && num <= 90) {
+        diasCredito = num;
+        break;
+      }
+    }
+  }
+  
+  // Buscar fechas de última venta y último pago en fila 4
+  let ultimaVenta: string | null = null;
+  let ultimoPago: string | null = null;
+  
+  for (let col = 0; col < fila4.length; col++) {
+    const valor = String(fila4[col] || '');
+    const fechaParsed = parsearFechaAspel(valor);
+    if (fechaParsed) {
+      if (!ultimaVenta) {
+        ultimaVenta = fechaParsed;
+      } else if (!ultimoPago) {
+        ultimoPago = fechaParsed;
+        break; // Ya tenemos ambas fechas
+      }
+    }
+  }
+  
+  // Determinar si está activo
+  const activo = estatus === 'Activo' || estatus === 'ALTA';
+  
+  // Verificar actividad reciente
+  const tieneActividadReciente = checkActividadReciente(ultimaVenta);
+  
+  // Crear cliente importado
   return {
-    codigo: aspel.clave.padStart(4, '0'),
-    nombre: aspel.nombre || `Cliente ${aspel.clave}`,
-    razon_social: aspel.nombre || '',
-    rfc,
-    direccion: direccionParseada.direccion_completa || null,
-    // Campos estructurados
+    codigo: clave.padStart(4, '0'),
+    nombre: nombre || `Cliente ${clave}`,
+    razon_social: nombre,
+    rfc: rfc,
+    direccion: direccionCompleta || null,
     tipo_vialidad: direccionParseada.tipo_vialidad,
     nombre_vialidad: direccionParseada.nombre_vialidad,
     numero_exterior: direccionParseada.numero_exterior,
     numero_interior: direccionParseada.numero_interior,
-    nombre_colonia: direccionParseada.nombre_colonia || aspel.colonia || null,
-    codigo_postal: direccionParseada.codigo_postal || aspel.codigoPostal || null,
-    telefono: aspel.telefonos || null,
-    termino_credito: terminoCredito,
+    nombre_colonia: colonia || direccionParseada.nombre_colonia || null,
+    nombre_localidad: poblacion || null,
+    codigo_postal: codigoPostal || direccionParseada.codigo_postal || null,
+    telefono: telefonos || null,
+    termino_credito: convertirTerminoCredito(diasCredito),
     limite_credito: 0,
-    activo: aspel.estatus !== 'Inactivo',
-    ultimaVenta: aspel.ultimaVenta,
-    ultimoPago: aspel.ultimoPago,
-    tieneActividadReciente: checkActividadReciente(aspel.ultimaVenta)
+    activo: activo,
+    ultimaVenta: ultimaVenta,
+    ultimoPago: ultimoPago,
+    tieneActividadReciente: tieneActividadReciente
   };
 }
 
-function checkActividadReciente(ultimaVenta: string): boolean {
+/**
+ * Verifica si hubo actividad en el último año
+ */
+function checkActividadReciente(ultimaVenta: string | null): boolean {
   if (!ultimaVenta) return false;
   
   try {
-    // Formato DD/MM/YYYY
-    const parts = ultimaVenta.split('/');
-    if (parts.length !== 3) return false;
-    
-    const fecha = new Date(
-      parseInt(parts[2]),
-      parseInt(parts[1]) - 1,
-      parseInt(parts[0])
-    );
+    const fecha = new Date(ultimaVenta);
+    if (isNaN(fecha.getTime())) return false;
     
     const haceUnAno = new Date();
     haceUnAno.setFullYear(haceUnAno.getFullYear() - 1);
@@ -414,17 +568,28 @@ function checkActividadReciente(ultimaVenta: string): boolean {
   }
 }
 
-export interface ClienteExistente {
-  id: string;
-  codigo: string;
-  nombre: string;
-  rfc: string | null;
-  cantidadSucursales?: number;
+// ============================================
+// DETECCIÓN DE DUPLICADOS
+// ============================================
+
+function normalizarNombre(nombre: string): string {
+  return nombre
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '')
+    .trim();
+}
+
+function normalizarRfc(rfc: string): string {
+  return rfc
+    .toUpperCase()
+    .replace(/[^A-Z0-9&Ñ]/g, '')
+    .trim();
 }
 
 /**
  * Detecta duplicados entre clientes a importar y existentes en el ERP
- * Ahora también detecta grupos con sucursales
  */
 export function detectarDuplicados(
   clientesImportar: ClienteImportado[],
@@ -467,194 +632,108 @@ export function detectarDuplicados(
   });
 }
 
-function normalizarNombre(nombre: string): string {
-  return nombre
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Quitar acentos
-    .replace(/[^a-z0-9]/g, '') // Solo alfanuméricos
-    .trim();
-}
-
-function normalizarRfc(rfc: string): string {
-  return rfc
-    .toUpperCase()
-    .replace(/[^A-Z0-9&Ñ]/g, '')
-    .trim();
-}
-
 // ============================================
-// SISTEMA DE VALIDACIÓN PRE-IMPORTACIÓN
+// REPORTE DE CALIDAD
 // ============================================
-
-export interface ReporteCalidad {
-  totalClientes: number;
-  conRfcValido: number;
-  conCodigoPostal: number;
-  conTelefono: number;
-  conNombreVialidad: number;
-  conNumeroExterior: number;
-  conColonia: number;
-  direccionesNoParseables: number;
-  porcentajes: {
-    rfc: number;
-    cp: number;
-    telefono: number;
-    vialidad: number;
-    numExt: number;
-    colonia: number;
-  };
-  anomalias: ClienteConAnomalias[];
-}
-
-export interface ClienteConAnomalias extends ClienteImportado {
-  anomalias: string[];
-  calidadParseo: 'completo' | 'parcial' | 'incompleto';
-}
 
 /**
- * Genera un reporte de calidad del parseo de direcciones
+ * Genera reporte de calidad de los datos parseados
  */
 export function generarReporteCalidad(clientes: ClienteImportado[]): ReporteCalidad {
   const total = clientes.length;
-  if (total === 0) {
-    return {
-      totalClientes: 0,
-      conRfcValido: 0,
-      conCodigoPostal: 0,
-      conTelefono: 0,
-      conNombreVialidad: 0,
-      conNumeroExterior: 0,
-      conColonia: 0,
-      direccionesNoParseables: 0,
-      porcentajes: { rfc: 0, cp: 0, telefono: 0, vialidad: 0, numExt: 0, colonia: 0 },
-      anomalias: []
-    };
-  }
-
-  let conRfc = 0, conCp = 0, conTel = 0, conVialidad = 0, conNumExt = 0, conColonia = 0, noParseables = 0;
-  const anomalias: ClienteConAnomalias[] = [];
-
+  
+  let conRfcValido = 0;
+  let conCodigoPostal = 0;
+  let conTelefono = 0;
+  let conNombreVialidad = 0;
+  let conNumeroExterior = 0;
+  let conColonia = 0;
+  let direccionesNoParseables = 0;
+  
+  const anomalias: AnomaliaCliente[] = [];
+  
   for (const cliente of clientes) {
-    if (cliente.rfc) conRfc++;
-    if (cliente.codigo_postal) conCp++;
-    if (cliente.telefono) conTel++;
-    if (cliente.nombre_vialidad) conVialidad++;
-    if (cliente.numero_exterior) conNumExt++;
-    if (cliente.nombre_colonia) conColonia++;
-
-    // Detectar direcciones no parseables
-    const tieneDireccion = cliente.direccion && cliente.direccion.length > 5;
-    const noParseada = tieneDireccion && !cliente.nombre_vialidad && !cliente.numero_exterior && !cliente.nombre_colonia;
-    if (noParseada) noParseables++;
-
-    // Detectar anomalías
-    const problemasDetectados = detectarAnomalias(cliente);
-    if (problemasDetectados.length > 0) {
+    const problemas: string[] = [];
+    
+    if (cliente.rfc && validarRFC(cliente.rfc)) {
+      conRfcValido++;
+    } else {
+      problemas.push('RFC inválido o faltante');
+    }
+    
+    if (cliente.codigo_postal && /^\d{5}$/.test(cliente.codigo_postal)) {
+      conCodigoPostal++;
+    } else {
+      problemas.push('Sin código postal');
+    }
+    
+    if (cliente.telefono && cliente.telefono.length >= 7) {
+      conTelefono++;
+    } else {
+      problemas.push('Sin teléfono');
+    }
+    
+    if (cliente.nombre_vialidad) {
+      conNombreVialidad++;
+    }
+    
+    if (cliente.numero_exterior) {
+      conNumeroExterior++;
+    }
+    
+    if (cliente.nombre_colonia) {
+      conColonia++;
+    } else {
+      problemas.push('Sin colonia');
+    }
+    
+    // Dirección no parseable: tiene dirección pero sin componentes
+    if (cliente.direccion && !cliente.nombre_vialidad && !cliente.numero_exterior) {
+      direccionesNoParseables++;
+    }
+    
+    if (problemas.length > 0) {
       anomalias.push({
-        ...cliente,
-        anomalias: problemasDetectados,
-        calidadParseo: calcularCalidadParseo(cliente)
+        codigo: cliente.codigo,
+        nombre: cliente.nombre,
+        problemas
       });
     }
   }
-
+  
+  // Tomar muestra aleatoria de 15 clientes
+  const shuffled = [...clientes].sort(() => Math.random() - 0.5);
+  const muestraAleatoria = shuffled.slice(0, 15);
+  
   return {
     totalClientes: total,
-    conRfcValido: conRfc,
-    conCodigoPostal: conCp,
-    conTelefono: conTel,
-    conNombreVialidad: conVialidad,
-    conNumeroExterior: conNumExt,
-    conColonia: conColonia,
-    direccionesNoParseables: noParseables,
+    conRfcValido,
+    conCodigoPostal,
+    conTelefono,
+    conNombreVialidad,
+    conNumeroExterior,
+    conColonia,
+    direccionesNoParseables,
     porcentajes: {
-      rfc: Math.round((conRfc / total) * 100),
-      cp: Math.round((conCp / total) * 100),
-      telefono: Math.round((conTel / total) * 100),
-      vialidad: Math.round((conVialidad / total) * 100),
-      numExt: Math.round((conNumExt / total) * 100),
-      colonia: Math.round((conColonia / total) * 100)
+      rfc: total > 0 ? Math.round((conRfcValido / total) * 100) : 0,
+      codigoPostal: total > 0 ? Math.round((conCodigoPostal / total) * 100) : 0,
+      telefono: total > 0 ? Math.round((conTelefono / total) * 100) : 0,
+      nombreVialidad: total > 0 ? Math.round((conNombreVialidad / total) * 100) : 0,
+      numeroExterior: total > 0 ? Math.round((conNumeroExterior / total) * 100) : 0,
+      colonia: total > 0 ? Math.round((conColonia / total) * 100) : 0
     },
-    anomalias
+    muestraAleatoria,
+    anomalias: anomalias.slice(0, 50) // Limitar a 50 anomalías
   };
 }
 
 /**
- * Detecta anomalías en un cliente
+ * Obtiene muestra aleatoria de clientes para validación
  */
-export function detectarAnomalias(cliente: ClienteImportado): string[] {
-  const problemas: string[] = [];
-
-  // RFC inválido o sospechoso
-  if (cliente.rfc) {
-    if (!cliente.rfc.match(/^[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}$/i)) {
-      problemas.push('RFC con formato inválido');
-    }
-  }
-
-  // Dirección muy corta (menos de 10 caracteres)
-  if (cliente.direccion && cliente.direccion.length > 0 && cliente.direccion.length < 10) {
-    problemas.push('Dirección muy corta');
-  }
-
-  // Sin código postal cuando hay dirección
-  if (cliente.direccion && cliente.direccion.length > 15 && !cliente.codigo_postal) {
-    problemas.push('Sin código postal');
-  }
-
-  // Sin número exterior cuando hay dirección
-  if (cliente.direccion && cliente.direccion.length > 15 && !cliente.numero_exterior) {
-    problemas.push('Sin número exterior');
-  }
-
-  // Dirección no parseable (tiene texto pero no se extrajo nada)
-  if (cliente.direccion && cliente.direccion.length > 20 && 
-      !cliente.nombre_vialidad && !cliente.nombre_colonia && !cliente.numero_exterior) {
-    problemas.push('Dirección no parseable');
-  }
-
-  // Nombre sospechoso
-  if (cliente.nombre.length < 3) {
-    problemas.push('Nombre muy corto');
-  }
-
-  // Código postal inválido (no son 5 dígitos)
-  if (cliente.codigo_postal && !cliente.codigo_postal.match(/^\d{5}$/)) {
-    problemas.push('CP inválido');
-  }
-
-  return problemas;
-}
-
-/**
- * Calcula la calidad del parseo de un cliente
- */
-export function calcularCalidadParseo(cliente: ClienteImportado): 'completo' | 'parcial' | 'incompleto' {
-  const camposCriticos = [
-    cliente.nombre_vialidad,
-    cliente.numero_exterior,
-    cliente.nombre_colonia,
-    cliente.codigo_postal
-  ];
-
-  const camposCompletos = camposCriticos.filter(c => c && c.length > 0).length;
-
-  if (camposCompletos >= 3) return 'completo';
-  if (camposCompletos >= 1) return 'parcial';
-  return 'incompleto';
-}
-
-/**
- * Obtiene una muestra aleatoria de clientes para revisión
- */
-export function obtenerMuestraAleatoria(clientes: ClienteImportado[], cantidad: number = 15): ClienteConAnomalias[] {
+export function obtenerMuestraAleatoria(
+  clientes: ClienteImportado[],
+  cantidad: number = 15
+): ClienteImportado[] {
   const shuffled = [...clientes].sort(() => Math.random() - 0.5);
-  const muestra = shuffled.slice(0, Math.min(cantidad, clientes.length));
-  
-  return muestra.map(cliente => ({
-    ...cliente,
-    anomalias: detectarAnomalias(cliente),
-    calidadParseo: calcularCalidadParseo(cliente)
-  }));
+  return shuffled.slice(0, cantidad);
 }
