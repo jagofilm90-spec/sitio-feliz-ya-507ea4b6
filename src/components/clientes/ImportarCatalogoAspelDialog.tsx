@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -46,6 +47,10 @@ import {
   Loader2,
   Building2,
   MapPin,
+  BarChart3,
+  RefreshCw,
+  ShieldCheck,
+  Eye,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import {
@@ -53,6 +58,10 @@ import {
   detectarDuplicados,
   ClienteImportado,
   ClienteExistente,
+  generarReporteCalidad,
+  obtenerMuestraAleatoria,
+  ReporteCalidad,
+  ClienteConAnomalias,
 } from "@/utils/aspelImporter";
 
 interface ImportarCatalogoAspelDialogProps {
@@ -61,7 +70,7 @@ interface ImportarCatalogoAspelDialogProps {
   onImportComplete: () => void;
 }
 
-type ImportStep = "upload" | "preview" | "importing" | "complete";
+type ImportStep = "upload" | "validation" | "preview" | "importing" | "complete";
 
 export function ImportarCatalogoAspelDialog({
   open,
@@ -82,6 +91,11 @@ export function ImportarCatalogoAspelDialog({
   const [filtroActividadReciente, setFiltroActividadReciente] = useState(true);
   const [filtroExcluirMostrador, setFiltroExcluirMostrador] = useState(true);
   const [omitirDuplicados, setOmitirDuplicados] = useState(true);
+
+  // Validación pre-importación
+  const [reporteCalidad, setReporteCalidad] = useState<ReporteCalidad | null>(null);
+  const [muestraAleatoria, setMuestraAleatoria] = useState<ClienteConAnomalias[]>([]);
+  const [validacionRevisada, setValidacionRevisada] = useState(false);
 
   // Progreso de importación
   const [importProgress, setImportProgress] = useState(0);
@@ -139,11 +153,19 @@ export function ImportarCatalogoAspelDialog({
       );
 
       setClientesParsed(clientesConDuplicados);
-      setStep("preview");
+      
+      // Generar reporte de calidad y muestra aleatoria
+      const reporte = generarReporteCalidad(clientesConDuplicados);
+      const muestra = obtenerMuestraAleatoria(clientesConDuplicados, 15);
+      setReporteCalidad(reporte);
+      setMuestraAleatoria(muestra);
+      setValidacionRevisada(false);
+      
+      setStep("validation");
 
       toast({
         title: "Archivo procesado",
-        description: `Se detectaron ${resultado.totalDetectados} clientes en el catálogo`,
+        description: `Se detectaron ${resultado.totalDetectados} clientes. Revisa la validación.`,
       });
     } catch (error: any) {
       console.error("Error processing file:", error);
@@ -281,11 +303,36 @@ export function ImportarCatalogoAspelDialog({
     setErroresParseo([]);
     setImportProgress(0);
     setImportResults({ importados: 0, omitidos: 0, errores: 0 });
+    setReporteCalidad(null);
+    setMuestraAleatoria([]);
+    setValidacionRevisada(false);
     onOpenChange(false);
 
     if (step === "complete" && importResults.importados > 0) {
       onImportComplete();
     }
+  };
+
+  const regenerarMuestra = () => {
+    const muestra = obtenerMuestraAleatoria(clientesParsed, 15);
+    setMuestraAleatoria(muestra);
+  };
+
+  const getCalidadBadge = (calidad: 'completo' | 'parcial' | 'incompleto') => {
+    switch (calidad) {
+      case 'completo':
+        return <Badge className="bg-green-500/20 text-green-700 border-green-500/30">✓ Completo</Badge>;
+      case 'parcial':
+        return <Badge className="bg-yellow-500/20 text-yellow-700 border-yellow-500/30">⚠ Parcial</Badge>;
+      case 'incompleto':
+        return <Badge className="bg-red-500/20 text-red-700 border-red-500/30">✗ Incompleto</Badge>;
+    }
+  };
+
+  const getPorcentajeColor = (pct: number) => {
+    if (pct >= 80) return 'text-green-600';
+    if (pct >= 50) return 'text-yellow-600';
+    return 'text-red-600';
   };
 
   const getCreditLabel = (term: string) => {
@@ -317,8 +364,9 @@ export function ImportarCatalogoAspelDialog({
             <FileSpreadsheet className="h-5 w-5" />
             Importar Catálogo ASPEL
           </DialogTitle>
-          <DialogDescription>
+        <DialogDescription>
             {step === "upload" && "Sube el archivo Excel del catálogo de clientes de ASPEL SAE"}
+            {step === "validation" && "Revisa la calidad del parseo antes de continuar"}
             {step === "preview" && "Revisa y filtra los clientes antes de importar"}
             {step === "importing" && "Importando clientes..."}
             {step === "complete" && "Importación completada"}
@@ -365,6 +413,182 @@ export function ImportarCatalogoAspelDialog({
                 </Button>
               </>
             )}
+          </div>
+        )}
+
+        {step === "validation" && reporteCalidad && (
+          <div className="flex flex-col gap-4 overflow-hidden">
+            {/* Resumen de Calidad */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Calidad del Parseo de Direcciones
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                  <div className="text-center p-2 bg-muted/30 rounded">
+                    <div className={`text-lg font-bold ${getPorcentajeColor(reporteCalidad.porcentajes.rfc)}`}>
+                      {reporteCalidad.porcentajes.rfc}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">RFC válido</div>
+                  </div>
+                  <div className="text-center p-2 bg-muted/30 rounded">
+                    <div className={`text-lg font-bold ${getPorcentajeColor(reporteCalidad.porcentajes.cp)}`}>
+                      {reporteCalidad.porcentajes.cp}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">C.P.</div>
+                  </div>
+                  <div className="text-center p-2 bg-muted/30 rounded">
+                    <div className={`text-lg font-bold ${getPorcentajeColor(reporteCalidad.porcentajes.vialidad)}`}>
+                      {reporteCalidad.porcentajes.vialidad}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">Vialidad</div>
+                  </div>
+                  <div className="text-center p-2 bg-muted/30 rounded">
+                    <div className={`text-lg font-bold ${getPorcentajeColor(reporteCalidad.porcentajes.numExt)}`}>
+                      {reporteCalidad.porcentajes.numExt}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">No. Ext</div>
+                  </div>
+                  <div className="text-center p-2 bg-muted/30 rounded">
+                    <div className={`text-lg font-bold ${getPorcentajeColor(reporteCalidad.porcentajes.colonia)}`}>
+                      {reporteCalidad.porcentajes.colonia}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">Colonia</div>
+                  </div>
+                  <div className="text-center p-2 bg-muted/30 rounded">
+                    <div className={`text-lg font-bold ${getPorcentajeColor(reporteCalidad.porcentajes.telefono)}`}>
+                      {reporteCalidad.porcentajes.telefono}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">Teléfono</div>
+                  </div>
+                </div>
+                
+                {reporteCalidad.direccionesNoParseables > 0 && (
+                  <div className="mt-3 p-2 bg-red-500/10 border border-red-500/20 rounded flex items-center gap-2 text-sm">
+                    <XCircle className="h-4 w-4 text-red-600" />
+                    <span className="text-red-700">
+                      {reporteCalidad.direccionesNoParseables} direcciones no se pudieron parsear
+                    </span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Muestra Aleatoria */}
+            <div className="flex-1 min-h-0">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-medium flex items-center gap-2">
+                  <Eye className="h-4 w-4" />
+                  Muestra Aleatoria ({muestraAleatoria.length} registros)
+                </h4>
+                <Button variant="outline" size="sm" onClick={regenerarMuestra} className="gap-1">
+                  <RefreshCw className="h-3 w-3" />
+                  Nueva muestra
+                </Button>
+              </div>
+              
+              <ScrollArea className="h-[200px] border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-16">Código</TableHead>
+                      <TableHead className="w-32">Nombre</TableHead>
+                      <TableHead>Dirección Original</TableHead>
+                      <TableHead>Campos Parseados</TableHead>
+                      <TableHead className="w-24">Calidad</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {muestraAleatoria.map((c, idx) => (
+                      <TableRow key={`muestra-${c.codigo}-${idx}`}>
+                        <TableCell className="font-mono text-xs">{c.codigo}</TableCell>
+                        <TableCell className="text-xs truncate max-w-[120px]">{c.nombre}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
+                          {c.direccion || '-'}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <div className="space-y-0.5">
+                            {c.nombre_vialidad && <span className="block">{c.tipo_vialidad} {c.nombre_vialidad}</span>}
+                            {c.numero_exterior && <span className="block">#{c.numero_exterior}</span>}
+                            {c.nombre_colonia && <span className="block text-muted-foreground">Col. {c.nombre_colonia}</span>}
+                            {c.codigo_postal && <span className="block text-muted-foreground">C.P. {c.codigo_postal}</span>}
+                            {!c.nombre_vialidad && !c.numero_exterior && !c.nombre_colonia && (
+                              <span className="text-red-500">No parseado</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{getCalidadBadge(c.calidadParseo)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </div>
+
+            {/* Anomalías Detectadas */}
+            {reporteCalidad.anomalias.length > 0 && (
+              <Card className="border-yellow-500/30">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2 text-yellow-700">
+                    <AlertTriangle className="h-4 w-4" />
+                    Anomalías Detectadas ({reporteCalidad.anomalias.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[100px]">
+                    <div className="space-y-1">
+                      {reporteCalidad.anomalias.slice(0, 20).map((c, idx) => (
+                        <div key={`anomalia-${c.codigo}-${idx}`} className="flex items-center gap-2 text-xs">
+                          <span className="font-mono">{c.codigo}</span>
+                          <span className="truncate flex-1">{c.nombre}</span>
+                          <div className="flex gap-1">
+                            {c.anomalias.map((a, i) => (
+                              <Badge key={i} variant="outline" className="text-[10px] bg-yellow-500/10 text-yellow-700">
+                                {a}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      {reporteCalidad.anomalias.length > 20 && (
+                        <p className="text-muted-foreground text-xs">
+                          ... y {reporteCalidad.anomalias.length - 20} más
+                        </p>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Confirmación */}
+            <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+              <Checkbox 
+                id="validacion-revisada" 
+                checked={validacionRevisada}
+                onCheckedChange={(v) => setValidacionRevisada(!!v)}
+              />
+              <Label htmlFor="validacion-revisada" className="text-sm cursor-pointer">
+                He revisado la calidad del parseo y entiendo que algunos campos pueden requerir corrección manual
+              </Label>
+            </div>
+
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={handleClose}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={() => setStep("preview")} 
+                disabled={!validacionRevisada}
+                className="gap-2"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Continuar a Filtros
+              </Button>
+            </div>
           </div>
         )}
 

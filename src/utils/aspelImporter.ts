@@ -482,3 +482,179 @@ function normalizarRfc(rfc: string): string {
     .replace(/[^A-Z0-9&Ñ]/g, '')
     .trim();
 }
+
+// ============================================
+// SISTEMA DE VALIDACIÓN PRE-IMPORTACIÓN
+// ============================================
+
+export interface ReporteCalidad {
+  totalClientes: number;
+  conRfcValido: number;
+  conCodigoPostal: number;
+  conTelefono: number;
+  conNombreVialidad: number;
+  conNumeroExterior: number;
+  conColonia: number;
+  direccionesNoParseables: number;
+  porcentajes: {
+    rfc: number;
+    cp: number;
+    telefono: number;
+    vialidad: number;
+    numExt: number;
+    colonia: number;
+  };
+  anomalias: ClienteConAnomalias[];
+}
+
+export interface ClienteConAnomalias extends ClienteImportado {
+  anomalias: string[];
+  calidadParseo: 'completo' | 'parcial' | 'incompleto';
+}
+
+/**
+ * Genera un reporte de calidad del parseo de direcciones
+ */
+export function generarReporteCalidad(clientes: ClienteImportado[]): ReporteCalidad {
+  const total = clientes.length;
+  if (total === 0) {
+    return {
+      totalClientes: 0,
+      conRfcValido: 0,
+      conCodigoPostal: 0,
+      conTelefono: 0,
+      conNombreVialidad: 0,
+      conNumeroExterior: 0,
+      conColonia: 0,
+      direccionesNoParseables: 0,
+      porcentajes: { rfc: 0, cp: 0, telefono: 0, vialidad: 0, numExt: 0, colonia: 0 },
+      anomalias: []
+    };
+  }
+
+  let conRfc = 0, conCp = 0, conTel = 0, conVialidad = 0, conNumExt = 0, conColonia = 0, noParseables = 0;
+  const anomalias: ClienteConAnomalias[] = [];
+
+  for (const cliente of clientes) {
+    if (cliente.rfc) conRfc++;
+    if (cliente.codigo_postal) conCp++;
+    if (cliente.telefono) conTel++;
+    if (cliente.nombre_vialidad) conVialidad++;
+    if (cliente.numero_exterior) conNumExt++;
+    if (cliente.nombre_colonia) conColonia++;
+
+    // Detectar direcciones no parseables
+    const tieneDireccion = cliente.direccion && cliente.direccion.length > 5;
+    const noParseada = tieneDireccion && !cliente.nombre_vialidad && !cliente.numero_exterior && !cliente.nombre_colonia;
+    if (noParseada) noParseables++;
+
+    // Detectar anomalías
+    const problemasDetectados = detectarAnomalias(cliente);
+    if (problemasDetectados.length > 0) {
+      anomalias.push({
+        ...cliente,
+        anomalias: problemasDetectados,
+        calidadParseo: calcularCalidadParseo(cliente)
+      });
+    }
+  }
+
+  return {
+    totalClientes: total,
+    conRfcValido: conRfc,
+    conCodigoPostal: conCp,
+    conTelefono: conTel,
+    conNombreVialidad: conVialidad,
+    conNumeroExterior: conNumExt,
+    conColonia: conColonia,
+    direccionesNoParseables: noParseables,
+    porcentajes: {
+      rfc: Math.round((conRfc / total) * 100),
+      cp: Math.round((conCp / total) * 100),
+      telefono: Math.round((conTel / total) * 100),
+      vialidad: Math.round((conVialidad / total) * 100),
+      numExt: Math.round((conNumExt / total) * 100),
+      colonia: Math.round((conColonia / total) * 100)
+    },
+    anomalias
+  };
+}
+
+/**
+ * Detecta anomalías en un cliente
+ */
+export function detectarAnomalias(cliente: ClienteImportado): string[] {
+  const problemas: string[] = [];
+
+  // RFC inválido o sospechoso
+  if (cliente.rfc) {
+    if (!cliente.rfc.match(/^[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}$/i)) {
+      problemas.push('RFC con formato inválido');
+    }
+  }
+
+  // Dirección muy corta (menos de 10 caracteres)
+  if (cliente.direccion && cliente.direccion.length > 0 && cliente.direccion.length < 10) {
+    problemas.push('Dirección muy corta');
+  }
+
+  // Sin código postal cuando hay dirección
+  if (cliente.direccion && cliente.direccion.length > 15 && !cliente.codigo_postal) {
+    problemas.push('Sin código postal');
+  }
+
+  // Sin número exterior cuando hay dirección
+  if (cliente.direccion && cliente.direccion.length > 15 && !cliente.numero_exterior) {
+    problemas.push('Sin número exterior');
+  }
+
+  // Dirección no parseable (tiene texto pero no se extrajo nada)
+  if (cliente.direccion && cliente.direccion.length > 20 && 
+      !cliente.nombre_vialidad && !cliente.nombre_colonia && !cliente.numero_exterior) {
+    problemas.push('Dirección no parseable');
+  }
+
+  // Nombre sospechoso
+  if (cliente.nombre.length < 3) {
+    problemas.push('Nombre muy corto');
+  }
+
+  // Código postal inválido (no son 5 dígitos)
+  if (cliente.codigo_postal && !cliente.codigo_postal.match(/^\d{5}$/)) {
+    problemas.push('CP inválido');
+  }
+
+  return problemas;
+}
+
+/**
+ * Calcula la calidad del parseo de un cliente
+ */
+export function calcularCalidadParseo(cliente: ClienteImportado): 'completo' | 'parcial' | 'incompleto' {
+  const camposCriticos = [
+    cliente.nombre_vialidad,
+    cliente.numero_exterior,
+    cliente.nombre_colonia,
+    cliente.codigo_postal
+  ];
+
+  const camposCompletos = camposCriticos.filter(c => c && c.length > 0).length;
+
+  if (camposCompletos >= 3) return 'completo';
+  if (camposCompletos >= 1) return 'parcial';
+  return 'incompleto';
+}
+
+/**
+ * Obtiene una muestra aleatoria de clientes para revisión
+ */
+export function obtenerMuestraAleatoria(clientes: ClienteImportado[], cantidad: number = 15): ClienteConAnomalias[] {
+  const shuffled = [...clientes].sort(() => Math.random() - 0.5);
+  const muestra = shuffled.slice(0, Math.min(cantidad, clientes.length));
+  
+  return muestra.map(cliente => ({
+    ...cliente,
+    anomalias: detectarAnomalias(cliente),
+    calidadParseo: calcularCalidadParseo(cliente)
+  }));
+}
