@@ -319,26 +319,6 @@ const PedidosContent = () => {
     return labels[term] || term;
   };
 
-  const handleFacturarPedido = async (pedidoId: string) => {
-    try {
-      const { error } = await supabase
-        .from("pedidos")
-        .update({ facturado: true })
-        .eq("id", pedidoId);
-
-      if (error) throw error;
-
-      toast({ title: "Pedido marcado como facturado" });
-      loadPedidos();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "No se pudo facturar el pedido",
-        variant: "destructive",
-      });
-    }
-  };
-
   const getEmailForPedido = (pedido: PedidoConCotizacion): string | null => {
     // First check sucursal email_facturacion
     if (pedido.sucursal?.email_facturacion) {
@@ -351,9 +331,11 @@ const PedidosContent = () => {
     return null;
   };
 
-  const handleEnviarFactura = async (pedido: PedidoConCotizacion) => {
+  // Función unificada: Facturar y Enviar en una sola acción
+  const handleFacturarYEnviar = async (pedido: PedidoConCotizacion) => {
     const email = getEmailForPedido(pedido);
     
+    // Si no hay email, abrir diálogo para capturarlo
     if (!email) {
       setSelectedPedidoForEmail(pedido);
       setEmailDialogOpen(true);
@@ -361,7 +343,15 @@ const PedidosContent = () => {
     }
 
     try {
-      // Call edge function to send email
+      // Paso 1: Marcar como facturado
+      const { error: facturarError } = await supabase
+        .from("pedidos")
+        .update({ facturado: true })
+        .eq("id", pedido.id);
+
+      if (facturarError) throw facturarError;
+
+      // Paso 2: Enviar email (la edge function también marca factura_enviada_al_cliente)
       const { data, error } = await supabase.functions.invoke('send-invoice-email', {
         body: {
           pedidoId: pedido.id,
@@ -381,14 +371,14 @@ const PedidosContent = () => {
 
       toast({ 
         title: "Factura enviada",
-        description: `Se envió la factura a ${email}`,
+        description: `Facturado y enviado a ${email}`,
       });
       loadPedidos();
     } catch (error: any) {
-      console.error('Error sending invoice:', error);
+      console.error('Error en facturar y enviar:', error);
       toast({
         title: "Error",
-        description: error.message || "No se pudo enviar la factura",
+        description: error.message || "No se pudo facturar y enviar",
         variant: "destructive",
       });
     }
@@ -822,38 +812,23 @@ const PedidosContent = () => {
                               </Tooltip>
                             </TooltipProvider>
                             
-                            {/* Facturar Pedido - Only show if not facturado */}
-                            {!pedido.facturado && (
+                            {/* Botón unificado: Facturar y Enviar */}
+                            {!pedido.factura_enviada_al_cliente && (
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button 
                                       variant="ghost" 
                                       size="icon"
-                                      onClick={() => handleFacturarPedido(pedido.id)}
-                                    >
-                                      <Receipt className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Facturar Pedido</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                            
-                            {/* Enviar Factura - Only show if facturado but not sent */}
-                            {pedido.facturado && !pedido.factura_enviada_al_cliente && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon"
-                                      onClick={() => handleEnviarFactura(pedido)}
+                                      onClick={() => handleFacturarYEnviar(pedido)}
+                                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
                                     >
                                       <Send className="h-4 w-4" />
                                     </Button>
                                   </TooltipTrigger>
-                                  <TooltipContent>Enviar Factura al Cliente</TooltipContent>
+                                  <TooltipContent>
+                                    {pedido.facturado ? "Enviar Factura" : "Facturar y Enviar"}
+                                  </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
                             )}
