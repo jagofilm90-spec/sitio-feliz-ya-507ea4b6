@@ -30,7 +30,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, MapPin, X, Mail, BarChart3, Loader2, Sparkles, User, Package, Map, ClipboardList } from "lucide-react";
+import { Plus, Search, Edit, Trash2, MapPin, X, Mail, BarChart3, Loader2, Sparkles, User, Package, Map, ClipboardList, FileSpreadsheet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AuditoriaFiscalSheet } from "@/components/clientes/AuditoriaFiscalSheet";
 import ClienteSucursalesDialog from "@/components/clientes/ClienteSucursalesDialog";
@@ -43,6 +43,7 @@ import { ClienteProductosDialog } from "@/components/clientes/ClienteProductosDi
 import { ClienteCreditosExcepcionesTab } from "@/components/clientes/ClienteCreditosExcepcionesTab";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { CreditCard } from "lucide-react";
+import { ImportarCatalogoAspelDialog } from "@/components/clientes/ImportarCatalogoAspelDialog";
 import {
   Dialog as HistorialDialog,
   DialogContent as HistorialDialogContent,
@@ -88,6 +89,7 @@ const Clientes = () => {
   const [productosDialogOpen, setProductosDialogOpen] = useState(false);
   const [selectedClienteForProductos, setSelectedClienteForProductos] = useState<{ id: string; nombre: string } | null>(null);
   const [auditoriaSheetOpen, setAuditoriaSheetOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [sucursalesConRfcCount, setSucursalesConRfcCount] = useState(0);
   const { toast } = useToast();
   const { isAdmin } = useUserRoles();
@@ -717,6 +719,13 @@ const Clientes = () => {
               Mapa Sucursales
             </Button>
             */}
+            <Button
+              variant="outline"
+              onClick={() => setImportDialogOpen(true)}
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Importar ASPEL
+            </Button>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <Button
                 variant="outline"
@@ -1038,8 +1047,14 @@ const Clientes = () => {
         open={auditoriaSheetOpen}
         onOpenChange={(open) => {
           setAuditoriaSheetOpen(open);
-          if (!open) loadSucursalesConRfcCount(); // Actualizar contador al cerrar
+          if (!open) loadSucursalesConRfcCount();
         }}
+      />
+
+      <ImportarCatalogoAspelDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        onImportComplete={loadClientes}
       />
     </Layout>
   );
