@@ -412,6 +412,8 @@ export type Database = {
           direccion: string | null
           email: string | null
           entre_calle: string | null
+          es_grupo: boolean | null
+          grupo_cliente_id: string | null
           id: string
           limite_credito: number | null
           logo_url: string | null
@@ -450,6 +452,8 @@ export type Database = {
           direccion?: string | null
           email?: string | null
           entre_calle?: string | null
+          es_grupo?: boolean | null
+          grupo_cliente_id?: string | null
           id?: string
           limite_credito?: number | null
           logo_url?: string | null
@@ -488,6 +492,8 @@ export type Database = {
           direccion?: string | null
           email?: string | null
           entre_calle?: string | null
+          es_grupo?: boolean | null
+          grupo_cliente_id?: string | null
           id?: string
           limite_credito?: number | null
           logo_url?: string | null
@@ -517,6 +523,13 @@ export type Database = {
           zona_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "clientes_grupo_cliente_id_fkey"
+            columns: ["grupo_cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "clientes_vendedor_asignado_fkey"
             columns: ["vendedor_asignado"]
