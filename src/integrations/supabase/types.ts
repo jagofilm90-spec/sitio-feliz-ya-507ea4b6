@@ -2963,16 +2963,23 @@ export type Database = {
       vehiculos: {
         Row: {
           activo: boolean
+          anio: number | null
           capacidad_toneladas: number | null
           chofer_asignado_id: string | null
           cilindros: string | null
           clase_federal: string | null
           clase_tipo: string | null
           clave_vehicular: string | null
+          color: string | null
           created_at: string
           dimensiones_alto: number | null
           dimensiones_ancho: number | null
           dimensiones_largo: number | null
+          factura_fecha: string | null
+          factura_folio: string | null
+          factura_url: string | null
+          factura_valor: number | null
+          factura_vendedor: string | null
           id: string
           marca: string | null
           modelo: string | null
@@ -3001,16 +3008,23 @@ export type Database = {
         }
         Insert: {
           activo?: boolean
+          anio?: number | null
           capacidad_toneladas?: number | null
           chofer_asignado_id?: string | null
           cilindros?: string | null
           clase_federal?: string | null
           clase_tipo?: string | null
           clave_vehicular?: string | null
+          color?: string | null
           created_at?: string
           dimensiones_alto?: number | null
           dimensiones_ancho?: number | null
           dimensiones_largo?: number | null
+          factura_fecha?: string | null
+          factura_folio?: string | null
+          factura_url?: string | null
+          factura_valor?: number | null
+          factura_vendedor?: string | null
           id?: string
           marca?: string | null
           modelo?: string | null
@@ -3039,16 +3053,23 @@ export type Database = {
         }
         Update: {
           activo?: boolean
+          anio?: number | null
           capacidad_toneladas?: number | null
           chofer_asignado_id?: string | null
           cilindros?: string | null
           clase_federal?: string | null
           clase_tipo?: string | null
           clave_vehicular?: string | null
+          color?: string | null
           created_at?: string
           dimensiones_alto?: number | null
           dimensiones_ancho?: number | null
           dimensiones_largo?: number | null
+          factura_fecha?: string | null
+          factura_folio?: string | null
+          factura_url?: string | null
+          factura_valor?: number | null
+          factura_vendedor?: string | null
           id?: string
           marca?: string | null
           modelo?: string | null
