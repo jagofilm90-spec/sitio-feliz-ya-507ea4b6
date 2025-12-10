@@ -46,6 +46,7 @@ import { CreditCard } from "lucide-react";
 import { ImportarCatalogoAspelDialog } from "@/components/clientes/ImportarCatalogoAspelDialog";
 import { AgruparClientesDialog } from "@/components/clientes/AgruparClientesDialog";
 import { DetectarGruposDialog } from "@/components/clientes/DetectarGruposDialog";
+import { ImportarSucursalesExcelDialog } from "@/components/clientes/ImportarSucursalesExcelDialog";
 import {
   Dialog as HistorialDialog,
   DialogContent as HistorialDialogContent,
@@ -94,6 +95,7 @@ const Clientes = () => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [agruparDialogOpen, setAgruparDialogOpen] = useState(false);
   const [detectarGruposDialogOpen, setDetectarGruposDialogOpen] = useState(false);
+  const [importSucursalesDialogOpen, setImportSucursalesDialogOpen] = useState(false);
   const [sucursalesConRfcCount, setSucursalesConRfcCount] = useState(0);
   const { toast } = useToast();
   const { isAdmin } = useUserRoles();
@@ -745,6 +747,13 @@ const Clientes = () => {
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Importar ASPEL
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => setImportSucursalesDialogOpen(true)}
+            >
+              <Building2 className="h-4 w-4 mr-2" />
+              Importar Sucursales
+            </Button>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <Button
                 variant="outline"
@@ -1111,6 +1120,22 @@ const Clientes = () => {
       <DetectarGruposDialog
         open={detectarGruposDialogOpen}
         onOpenChange={setDetectarGruposDialogOpen}
+        onSuccess={loadClientes}
+      />
+
+      <ImportarSucursalesExcelDialog
+        open={importSucursalesDialogOpen}
+        onOpenChange={setImportSucursalesDialogOpen}
+        clientes={clientes.map(c => ({
+          id: c.id,
+          codigo: c.codigo,
+          nombre: c.nombre,
+          rfc: c.rfc,
+          razon_social: c.razon_social,
+          direccion: c.direccion,
+          es_grupo: c.es_grupo || false,
+          activo: c.activo,
+        }))}
         onSuccess={loadClientes}
       />
     </Layout>
