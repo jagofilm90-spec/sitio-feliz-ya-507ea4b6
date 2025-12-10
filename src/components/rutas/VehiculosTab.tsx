@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Truck, FileText, AlertCircle, Sparkles, Loader2, Palette, User } from "lucide-react";
+import { Plus, Edit, Trash2, Truck, FileText, AlertCircle, Sparkles, Loader2, Palette, User, Receipt } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { format, differenceInDays, parseISO } from "date-fns";
@@ -74,6 +74,14 @@ interface Vehiculo {
   dimensiones_alto: number | null;
   dimensiones_ancho: number | null;
   dimensiones_largo: number | null;
+  // Invoice fields
+  factura_url: string | null;
+  factura_fecha: string | null;
+  factura_folio: string | null;
+  factura_valor: number | null;
+  factura_vendedor: string | null;
+  color: string | null;
+  anio: number | null;
 }
 
 const VehiculosTab = () => {
@@ -84,8 +92,11 @@ const VehiculosTab = () => {
   const [editingVehiculo, setEditingVehiculo] = useState<Vehiculo | null>(null);
   const [uploadingTarjeta, setUploadingTarjeta] = useState(false);
   const [uploadingPoliza, setUploadingPoliza] = useState(false);
+  const [uploadingFactura, setUploadingFactura] = useState(false);
   const [extractingData, setExtractingData] = useState(false);
+  const [extractingFactura, setExtractingFactura] = useState(false);
   const [dataExtracted, setDataExtracted] = useState(false);
+  const [facturaExtracted, setFacturaExtracted] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -123,6 +134,14 @@ const VehiculosTab = () => {
     dimensiones_ancho: "",
     dimensiones_largo: "",
     chofer_asignado_id: "",
+    // Invoice fields
+    factura_url: "",
+    factura_fecha: "",
+    factura_folio: "",
+    factura_valor: "",
+    factura_vendedor: "",
+    color: "",
+    anio: "",
   });
 
   useEffect(() => {
@@ -285,6 +304,135 @@ const VehiculosTab = () => {
     return "diesel";
   };
 
+  const extractFacturaData = async (file: File) => {
+    setExtractingFactura(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ title: "Sesión expirada", variant: "destructive" });
+        return;
+      }
+
+      // Convert file to base64
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      toast({ title: "Analizando factura con IA...", description: "Esto puede tardar unos segundos" });
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-factura-vehiculo`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ pdfBase64: base64 }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al procesar documento');
+      }
+
+      const data = await response.json();
+      
+      // Update form with extracted data
+      setFormData(prev => ({
+        ...prev,
+        // Vehicle identification
+        numero_serie: data.vin || prev.numero_serie,
+        numero_motor: data.numero_motor || prev.numero_motor,
+        marca: data.marca || prev.marca,
+        modelo: data.modelo || prev.modelo,
+        placa: data.placas || prev.placa,
+        tipo_combustible: data.tipo_combustible ? mapCombustible(data.tipo_combustible) : prev.tipo_combustible,
+        color: data.color || prev.color,
+        anio: data.anio?.toString() || prev.anio,
+        // Invoice data
+        factura_folio: data.folio_factura || prev.factura_folio,
+        factura_fecha: data.fecha_factura || prev.factura_fecha,
+        factura_valor: data.valor_factura?.toString() || prev.factura_valor,
+        factura_vendedor: data.vendedor || prev.factura_vendedor,
+        // Capacity if available
+        peso_maximo_local_kg: data.capacidad_carga_kg?.toString() || prev.peso_maximo_local_kg,
+      }));
+
+      setFacturaExtracted(true);
+
+      const extractedFields = [
+        data.marca && "Marca",
+        data.modelo && "Modelo",
+        data.anio && "Año",
+        data.vin && "VIN",
+        data.numero_motor && "Motor",
+        data.color && "Color",
+        data.folio_factura && "Folio",
+        data.valor_factura && "Valor",
+        data.vendedor && "Vendedor",
+      ].filter(Boolean);
+
+      toast({
+        title: "✓ Datos extraídos de factura",
+        description: `Campos detectados: ${extractedFields.join(", ")}`,
+      });
+    } catch (error: any) {
+      console.error('Error extracting factura data:', error);
+      toast({
+        title: "Error al extraer datos de factura",
+        description: error.message || "Ingresa los datos manualmente",
+        variant: "destructive",
+      });
+    } finally {
+      setExtractingFactura(false);
+    }
+  };
+
+  const handleFacturaUpload = async (file: File, vehiculoId?: string) => {
+    setUploadingFactura(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${vehiculoId || 'temp'}_factura_${Date.now()}.${fileExt}`;
+      const filePath = `factura/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('vehiculos-documentos')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('vehiculos-documentos')
+        .getPublicUrl(filePath);
+
+      setFormData(prev => ({
+        ...prev,
+        factura_url: publicUrl,
+      }));
+
+      // Extract data from invoice
+      await extractFacturaData(file);
+    } catch (error: any) {
+      toast({
+        title: "Error al subir factura",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingFactura(false);
+    }
+  };
+
   const handleFileUpload = async (
     file: File, 
     type: 'tarjeta' | 'poliza',
@@ -373,6 +521,14 @@ const VehiculosTab = () => {
         dimensiones_ancho: formData.dimensiones_ancho ? parseFloat(formData.dimensiones_ancho) : null,
         dimensiones_largo: formData.dimensiones_largo ? parseFloat(formData.dimensiones_largo) : null,
         chofer_asignado_id: formData.chofer_asignado_id || null,
+        // Invoice fields
+        factura_url: formData.factura_url || null,
+        factura_fecha: formData.factura_fecha || null,
+        factura_folio: formData.factura_folio || null,
+        factura_valor: formData.factura_valor ? parseFloat(formData.factura_valor) : null,
+        factura_vendedor: formData.factura_vendedor || null,
+        color: formData.color || null,
+        anio: formData.anio ? parseInt(formData.anio) : null,
       };
 
       if (editingVehiculo) {
@@ -439,8 +595,17 @@ const VehiculosTab = () => {
       dimensiones_ancho: vehiculo.dimensiones_ancho?.toString() || "",
       dimensiones_largo: vehiculo.dimensiones_largo?.toString() || "",
       chofer_asignado_id: vehiculo.chofer_asignado_id || "",
+      // Invoice fields
+      factura_url: vehiculo.factura_url || "",
+      factura_fecha: vehiculo.factura_fecha || "",
+      factura_folio: vehiculo.factura_folio || "",
+      factura_valor: vehiculo.factura_valor?.toString() || "",
+      factura_vendedor: vehiculo.factura_vendedor || "",
+      color: vehiculo.color || "",
+      anio: vehiculo.anio?.toString() || "",
     });
     setDataExtracted(false);
+    setFacturaExtracted(false);
     setDialogOpen(true);
   };
 
@@ -468,6 +633,7 @@ const VehiculosTab = () => {
   const resetForm = () => {
     setEditingVehiculo(null);
     setDataExtracted(false);
+    setFacturaExtracted(false);
     setFormData({
       nombre: "",
       tipo: "camioneta",
@@ -501,6 +667,14 @@ const VehiculosTab = () => {
       dimensiones_ancho: "",
       dimensiones_largo: "",
       chofer_asignado_id: "",
+      // Invoice fields
+      factura_url: "",
+      factura_fecha: "",
+      factura_folio: "",
+      factura_valor: "",
+      factura_vendedor: "",
+      color: "",
+      anio: "",
     });
   };
 
@@ -1066,6 +1240,116 @@ const VehiculosTab = () => {
                       value={formData.poliza_seguro_vencimiento}
                       onChange={(e) => setFormData({ ...formData, poliza_seguro_vencimiento: e.target.value })}
                       className="w-40"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Factura de Compra - Extracción Automática */}
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Receipt className="h-5 w-5 text-primary" />
+                  <Label className="font-medium">Factura de Compra del Vehículo (Extracción automática)</Label>
+                  {facturaExtracted && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Datos extraídos
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Sube la factura PDF y el sistema extraerá automáticamente marca, modelo, VIN, motor, color y más.
+                </p>
+                <div className="flex gap-2 items-center">
+                  <Input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFacturaUpload(file, editingVehiculo?.id);
+                    }}
+                    disabled={uploadingFactura || extractingFactura}
+                    className="flex-1"
+                  />
+                  {(uploadingFactura || extractingFactura) && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {extractingFactura ? "Analizando..." : "Subiendo..."}
+                    </div>
+                  )}
+                </div>
+                {formData.factura_url && (
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <FileText className="h-4 w-4" />
+                    <span>Factura cargada</span>
+                  </div>
+                )}
+                
+                {/* Invoice details if extracted or manually entered */}
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="factura_folio" className="text-sm">Folio Factura</Label>
+                    <Input
+                      id="factura_folio"
+                      value={formData.factura_folio}
+                      onChange={(e) => setFormData({ ...formData, factura_folio: e.target.value })}
+                      placeholder="A-12345"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="factura_fecha" className="text-sm">Fecha Factura</Label>
+                    <Input
+                      id="factura_fecha"
+                      type="date"
+                      value={formData.factura_fecha}
+                      onChange={(e) => setFormData({ ...formData, factura_fecha: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="factura_valor" className="text-sm">Valor ($)</Label>
+                    <Input
+                      id="factura_valor"
+                      type="number"
+                      value={formData.factura_valor}
+                      onChange={(e) => setFormData({ ...formData, factura_valor: e.target.value })}
+                      placeholder="485000"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="factura_vendedor" className="text-sm">Vendedor/Agencia</Label>
+                    <Input
+                      id="factura_vendedor"
+                      value={formData.factura_vendedor}
+                      onChange={(e) => setFormData({ ...formData, factura_vendedor: e.target.value })}
+                      placeholder="Nissan del Valle"
+                      autoComplete="off"
+                    />
+                  </div>
+                </div>
+
+                {/* Color and Year fields */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="color" className="text-sm">Color</Label>
+                    <Input
+                      id="color"
+                      value={formData.color}
+                      onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                      placeholder="Blanco"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="anio" className="text-sm">Año</Label>
+                    <Input
+                      id="anio"
+                      type="number"
+                      value={formData.anio}
+                      onChange={(e) => setFormData({ ...formData, anio: e.target.value })}
+                      placeholder="2024"
+                      autoComplete="off"
                     />
                   </div>
                 </div>
