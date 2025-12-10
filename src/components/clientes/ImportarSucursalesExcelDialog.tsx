@@ -96,6 +96,34 @@ export function ImportarSucursalesExcelDialog({
       c.codigo.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Helper function to parse combined format: "RAZON SOCIAL S.A. DE C.V. SUC. NOMBRE PERTENECE..."
+  const parseCombinedFormat = (text: string): { razonSocial: string; nombreSucursal: string } | null => {
+    // Pattern: Everything before "SUC." is razón social, "SUC. XXX" until "PERTENECE" is sucursal name
+    const match = text.match(/^(.+?)\s+(SUC\.?\s*[A-Z0-9\s\-\.]+?)(?:\s+PERTENECE|$)/i);
+    if (match) {
+      return {
+        razonSocial: match[1].trim(),
+        nombreSucursal: match[2].trim(),
+      };
+    }
+    return null;
+  };
+
+  // Detect if the Excel uses combined format (razón social + sucursal in same column)
+  const detectCombinedFormat = (rows: any[][]): boolean => {
+    for (const row of rows.slice(0, 10)) {
+      if (!row || row.length < 3) continue;
+      // Check columns for "SUC." and "PERTENECE" pattern
+      for (let col = 0; col < Math.min(row.length, 5); col++) {
+        const cellText = String(row[col] || "").toUpperCase();
+        if (cellText.includes("SUC.") && cellText.includes("PERTENECE")) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
   const handleFileUpload = useCallback(async (uploadedFile: File) => {
     setFile(uploadedFile);
     setLoading(true);
@@ -107,12 +135,16 @@ export function ImportarSucursalesExcelDialog({
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
 
-      // Find header row (looking for columns B, C, D pattern)
+      // Detect format type
+      const isCombinedFormat = detectCombinedFormat(jsonData);
+      console.log("Detected format:", isCombinedFormat ? "combined" : "separated columns");
+
+      // Find first data row (looking for numeric code)
       let headerRowIndex = -1;
       for (let i = 0; i < Math.min(10, jsonData.length); i++) {
         const row = jsonData[i];
-        if (row && row.length >= 3) {
-          // Check if this looks like the header or data row
+        if (row && row.length >= 2) {
+          // Check if this looks like a data row with numeric code
           const hasNumericCode = row.some((cell: any) => typeof cell === 'number' && cell > 100);
           if (hasNumericCode) {
             headerRowIndex = i;
@@ -130,12 +162,64 @@ export function ImportarSucursalesExcelDialog({
       
       for (let i = headerRowIndex; i < jsonData.length; i++) {
         const row = jsonData[i];
-        if (!row || row.length < 4) continue;
+        if (!row || row.length < 2) continue;
 
-        // Column B (index 1) = código, C (index 2) = razón social, D (index 3) = sucursal
-        const codigo = String(row[1] || "").trim();
-        const razonSocial = String(row[2] || "").trim();
-        const nombreSucursal = String(row[3] || "").trim();
+        let codigo = "";
+        let razonSocial = "";
+        let nombreSucursal = "";
+
+        if (isCombinedFormat) {
+          // Combined format: Find numeric code and combined text
+          // Find the column with the numeric code (usually A or B)
+          let codeColIndex = -1;
+          let textColIndex = -1;
+          
+          for (let col = 0; col < Math.min(row.length, 5); col++) {
+            const cell = row[col];
+            if (typeof cell === 'number' && cell > 100 && codeColIndex === -1) {
+              codeColIndex = col;
+            }
+            const cellText = String(cell || "").toUpperCase();
+            if (cellText.includes("SUC.") && cellText.includes("PERTENECE") && textColIndex === -1) {
+              textColIndex = col;
+            }
+          }
+
+          if (codeColIndex === -1) continue; // Skip rows without numeric code
+          
+          codigo = String(row[codeColIndex]).trim();
+          
+          // If we found combined text column, parse it
+          if (textColIndex !== -1) {
+            const combinedText = String(row[textColIndex]).trim();
+            const parsed = parseCombinedFormat(combinedText);
+            if (parsed) {
+              razonSocial = parsed.razonSocial;
+              nombreSucursal = parsed.nombreSucursal;
+            }
+          }
+          
+          // Fallback: if no combined text found, try adjacent columns
+          if (!razonSocial || !nombreSucursal) {
+            // Try to find any column with "SUC." pattern
+            for (let col = 0; col < row.length; col++) {
+              const cellText = String(row[col] || "").trim();
+              if (cellText.includes("SUC.") || cellText.includes("SUC ")) {
+                const parsed = parseCombinedFormat(cellText);
+                if (parsed) {
+                  razonSocial = parsed.razonSocial;
+                  nombreSucursal = parsed.nombreSucursal;
+                  break;
+                }
+              }
+            }
+          }
+        } else {
+          // Traditional separated format: Column B = código, C = razón social, D = sucursal
+          codigo = String(row[1] || "").trim();
+          razonSocial = String(row[2] || "").trim();
+          nombreSucursal = String(row[3] || "").trim();
+        }
 
         // Skip empty rows or header-like rows
         if (!codigo || !razonSocial || !nombreSucursal) continue;
@@ -164,7 +248,7 @@ export function ImportarSucursalesExcelDialog({
       }
 
       if (sucursalesImport.length === 0) {
-        throw new Error("No se encontraron sucursales válidas en el Excel");
+        throw new Error("No se encontraron sucursales válidas en el Excel. Verifica que el archivo tenga el formato correcto.");
       }
 
       setParsedData(sucursalesImport);
@@ -279,7 +363,7 @@ export function ImportarSucursalesExcelDialog({
             Importar Sucursales desde Excel
           </DialogTitle>
           <DialogDescription>
-            Importa sucursales desde un Excel con columnas: Código, Razón Social, Sucursal
+            Importa sucursales desde Excel. Detecta automáticamente formato combinado (ej: "RAZÓN SOCIAL SUC. NOMBRE PERTENECE...") o columnas separadas.
           </DialogDescription>
         </DialogHeader>
 
@@ -373,7 +457,7 @@ export function ImportarSucursalesExcelDialog({
                     Arrastra el archivo Excel aquí o haz clic para seleccionar
                   </p>
                   <p className="text-xs text-muted-foreground mb-4">
-                    Columnas esperadas: B=Código, C=Razón Social, D=Sucursal
+                    Soporta formato combinado (SUC. en misma celda) o columnas separadas
                   </p>
                   <input
                     type="file"
