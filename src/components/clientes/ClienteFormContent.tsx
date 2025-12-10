@@ -64,6 +64,7 @@ interface ClienteFormContentProps {
     csf_archivo_url: string;
     prioridad_entrega_default: "vip_mismo_dia" | "deadline" | "dia_fijo_recurrente" | "fecha_sugerida" | "flexible";
     deadline_dias_habiles_default: string;
+    es_grupo: boolean;
   };
   setFormData: (data: any) => void;
   zonas: Zona[];
@@ -141,6 +142,21 @@ export function ClienteFormContent({
               onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
               required
             />
+          </div>
+        </div>
+        <div className="flex items-center space-x-2 pt-2">
+          <Checkbox
+            id="es_grupo"
+            checked={formData.es_grupo}
+            onCheckedChange={(checked) => setFormData({ ...formData, es_grupo: checked === true })}
+          />
+          <div className="grid gap-1 leading-none">
+            <Label htmlFor="es_grupo" className="text-sm font-medium cursor-pointer">
+              Es Grupo Padre
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Marcar si este cliente agrupa múltiples sucursales con diferentes razones sociales
+            </p>
           </div>
         </div>
       </div>
