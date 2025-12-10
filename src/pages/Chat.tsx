@@ -222,7 +222,7 @@ const Chat = () => {
 
             // Cargar datos del remitente
             const { data: remitente } = await supabase
-              .from('profiles')
+              .from('profiles_chat')
               .select('id, full_name, email')
               .eq('id', nuevoMensaje.remitente_id)
               .single();
@@ -295,7 +295,7 @@ const Chat = () => {
           let nombreRemitente = 'Usuario';
           if (nuevoMensaje.remitente_id) {
             const { data: remitente } = await supabase
-              .from('profiles')
+              .from('profiles_chat')
               .select('full_name')
               .eq('id', nuevoMensaje.remitente_id)
               .single();
@@ -351,7 +351,7 @@ const Chat = () => {
   const loadUsuarios = async () => {
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_chat')
         .select('id, full_name, email')
         .order('full_name');
 
@@ -446,7 +446,7 @@ const Chat = () => {
           if (participantesData) {
             const userIds = participantesData.map(p => p.user_id);
             const { data: profiles } = await supabase
-              .from('profiles')
+              .from('profiles_chat')
               .select('id, full_name, email')
               .in('id', userIds);
             
@@ -487,7 +487,7 @@ const Chat = () => {
         const remitentesIds = [...new Set(mensajesData.map(m => m.remitente_id).filter(Boolean))];
         
         const { data: remitentes } = await supabase
-          .from('profiles')
+          .from('profiles_chat')
           .select('id, full_name, email')
           .in('id', remitentesIds);
 
