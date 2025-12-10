@@ -30,7 +30,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, MapPin, X, Mail, BarChart3, Loader2, Sparkles, User, Package, Map, ClipboardList, FileSpreadsheet } from "lucide-react";
+import { Plus, Search, Edit, Trash2, MapPin, X, Mail, BarChart3, Loader2, Sparkles, User, Package, Map, ClipboardList, FileSpreadsheet, Users, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AuditoriaFiscalSheet } from "@/components/clientes/AuditoriaFiscalSheet";
 import ClienteSucursalesDialog from "@/components/clientes/ClienteSucursalesDialog";
@@ -44,6 +44,7 @@ import { ClienteCreditosExcepcionesTab } from "@/components/clientes/ClienteCred
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { CreditCard } from "lucide-react";
 import { ImportarCatalogoAspelDialog } from "@/components/clientes/ImportarCatalogoAspelDialog";
+import { AgruparClientesDialog } from "@/components/clientes/AgruparClientesDialog";
 import {
   Dialog as HistorialDialog,
   DialogContent as HistorialDialogContent,
@@ -90,6 +91,7 @@ const Clientes = () => {
   const [selectedClienteForProductos, setSelectedClienteForProductos] = useState<{ id: string; nombre: string } | null>(null);
   const [auditoriaSheetOpen, setAuditoriaSheetOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [agruparDialogOpen, setAgruparDialogOpen] = useState(false);
   const [sucursalesConRfcCount, setSucursalesConRfcCount] = useState(0);
   const { toast } = useToast();
   const { isAdmin } = useUserRoles();
@@ -197,7 +199,8 @@ const Clientes = () => {
           *,
           zona:zona_id (id, nombre),
           cliente_sucursales (count),
-          cliente_productos_frecuentes (count)
+          cliente_productos_frecuentes (count),
+          grupo_padre:grupo_cliente_id (id, nombre, codigo)
         `)
         .order("nombre");
 
@@ -721,6 +724,13 @@ const Clientes = () => {
             */}
             <Button
               variant="outline"
+              onClick={() => setAgruparDialogOpen(true)}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Agrupar
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => setImportDialogOpen(true)}
             >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
@@ -919,9 +929,25 @@ const Clientes = () => {
                 </TableRow>
               ) : (
                 filteredClientes.map((cliente) => (
-                  <TableRow key={cliente.id}>
+                  <TableRow key={cliente.id} className={cliente.grupo_cliente_id ? "bg-muted/30" : ""}>
                     <TableCell className="font-mono">{cliente.codigo}</TableCell>
-                    <TableCell className="font-medium">{cliente.nombre}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {cliente.es_grupo && (
+                          <Badge variant="outline" className="text-xs flex items-center gap-1 bg-primary/10">
+                            <Building2 className="h-3 w-3" />
+                            Grupo
+                          </Badge>
+                        )}
+                        {cliente.grupo_padre && (
+                          <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {cliente.grupo_padre.nombre}
+                          </Badge>
+                        )}
+                        <span>{cliente.nombre}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>{cliente.rfc || "-"}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">
@@ -1055,6 +1081,22 @@ const Clientes = () => {
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
         onImportComplete={loadClientes}
+      />
+
+      <AgruparClientesDialog
+        open={agruparDialogOpen}
+        onOpenChange={setAgruparDialogOpen}
+        clientes={clientes.map(c => ({
+          id: c.id,
+          codigo: c.codigo,
+          nombre: c.nombre,
+          rfc: c.rfc,
+          direccion: c.direccion,
+          telefono: c.telefono,
+          grupo_cliente_id: c.grupo_cliente_id,
+          es_grupo: c.es_grupo || false,
+        }))}
+        onSuccess={loadClientes}
       />
     </Layout>
   );
