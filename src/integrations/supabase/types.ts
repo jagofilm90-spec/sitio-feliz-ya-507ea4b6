@@ -132,6 +132,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "carga_productos_cargado_por_fkey"
+            columns: ["cargado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "carga_productos_entrega_id_fkey"
             columns: ["entrega_id"]
             isOneToOne: false
@@ -538,6 +545,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "clientes_vendedor_asignado_fkey"
+            columns: ["vendedor_asignado"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "clientes_zona_id_fkey"
             columns: ["zona_id"]
             isOneToOne: false
@@ -726,6 +740,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cotizaciones_autorizado_por_fkey"
+            columns: ["autorizado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cotizaciones_cliente_id_fkey"
             columns: ["cliente_id"]
             isOneToOne: false
@@ -758,6 +779,13 @@ export type Database = {
             columns: ["rechazado_por"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_rechazado_por_fkey"
+            columns: ["rechazado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
             referencedColumns: ["id"]
           },
           {
@@ -871,6 +899,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cotizaciones_envios_enviado_por_fkey"
+            columns: ["enviado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cotizaciones_envios_gmail_cuenta_id_fkey"
             columns: ["gmail_cuenta_id"]
             isOneToOne: false
@@ -977,6 +1012,13 @@ export type Database = {
             columns: ["registrado_por"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_registrado_por_fkey"
+            columns: ["registrado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
             referencedColumns: ["id"]
           },
         ]
@@ -1394,6 +1436,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "gmail_auditoria_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
         ]
       }
       gmail_cuenta_permisos: {
@@ -1427,6 +1476,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "gmail_cuenta_permisos_asignado_por_fkey"
+            columns: ["asignado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "gmail_cuenta_permisos_gmail_cuenta_id_fkey"
             columns: ["gmail_cuenta_id"]
             isOneToOne: false
@@ -1445,6 +1501,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gmail_cuenta_permisos_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
             referencedColumns: ["id"]
           },
         ]
@@ -1702,6 +1765,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "inventario_movimientos_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
         ]
       }
       mensajes: {
@@ -1938,6 +2008,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ordenes_compra_autorizado_por_fkey"
+            columns: ["autorizado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ordenes_compra_proveedor_id_fkey"
             columns: ["proveedor_id"]
             isOneToOne: false
@@ -1949,6 +2026,13 @@ export type Database = {
             columns: ["rechazado_por"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordenes_compra_rechazado_por_fkey"
+            columns: ["rechazado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
             referencedColumns: ["id"]
           },
         ]
@@ -2197,6 +2281,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pedidos_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
         ]
       }
       pedidos_acumulativos: {
@@ -2383,6 +2474,13 @@ export type Database = {
             columns: ["precio_ajustado_por"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_detalles_precio_ajustado_por_fkey"
+            columns: ["precio_ajustado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
             referencedColumns: ["id"]
           },
           {
@@ -2750,8 +2848,29 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "rutas_ayudante_id_fkey"
+            columns: ["ayudante_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "rutas_carga_completada_por_fkey"
             columns: ["carga_completada_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rutas_carga_completada_por_fkey"
+            columns: ["carga_completada_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rutas_chofer_id_fkey"
+            columns: ["chofer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2760,7 +2879,7 @@ export type Database = {
             foreignKeyName: "rutas_chofer_id_fkey"
             columns: ["chofer_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "profiles_chat"
             referencedColumns: ["id"]
           },
           {
@@ -2830,6 +2949,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
             referencedColumns: ["id"]
           },
         ]
@@ -3204,6 +3330,33 @@ export type Database = {
           nombre?: string | null
           stock_actual?: number | null
           stock_minimo?: number | null
+        }
+        Relationships: []
+      }
+      profiles_chat: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: never
+          full_name?: string | null
+          id?: string | null
+          phone?: never
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: never
+          full_name?: string | null
+          id?: string | null
+          phone?: never
+          updated_at?: string | null
         }
         Relationships: []
       }
