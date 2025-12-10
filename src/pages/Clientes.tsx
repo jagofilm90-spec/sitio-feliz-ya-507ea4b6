@@ -128,6 +128,7 @@ const Clientes = () => {
     csf_archivo_url: string;
     prioridad_entrega_default: "vip_mismo_dia" | "deadline" | "dia_fijo_recurrente" | "fecha_sugerida" | "flexible";
     deadline_dias_habiles_default: string;
+    es_grupo: boolean;
   }>({
     codigo: "",
     nombre: "",
@@ -155,6 +156,7 @@ const Clientes = () => {
     csf_archivo_url: "",
     prioridad_entrega_default: "flexible",
     deadline_dias_habiles_default: "",
+    es_grupo: false,
   });
   
   // CSF file upload state
@@ -438,6 +440,7 @@ const Clientes = () => {
         csf_archivo_url: csfUrl || null,
         prioridad_entrega_default: formData.prioridad_entrega_default,
         deadline_dias_habiles_default: formData.deadline_dias_habiles_default ? parseInt(formData.deadline_dias_habiles_default) : null,
+        es_grupo: formData.es_grupo,
       };
 
       let clienteId: string;
@@ -612,6 +615,7 @@ const Clientes = () => {
       csf_archivo_url: client.csf_archivo_url || "",
       prioridad_entrega_default: client.prioridad_entrega_default || "flexible",
       deadline_dias_habiles_default: client.deadline_dias_habiles_default?.toString() || "",
+      es_grupo: client.es_grupo || false,
     });
     setEntregarMismaDireccion(true);
     setSucursales([]);
@@ -685,6 +689,7 @@ const Clientes = () => {
       csf_archivo_url: "",
       prioridad_entrega_default: "flexible",
       deadline_dias_habiles_default: "",
+      es_grupo: false,
     });
     setEntregarMismaDireccion(true);
     setSucursales([]);
