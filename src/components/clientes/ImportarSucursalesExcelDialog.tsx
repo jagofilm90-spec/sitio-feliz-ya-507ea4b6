@@ -96,31 +96,75 @@ export function ImportarSucursalesExcelDialog({
       c.codigo.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Helper function to parse combined format: "RAZON SOCIAL S.A. DE C.V. SUC. NOMBRE PERTENECE..."
+  // Helper function to parse combined format with multiple strategies
   const parseCombinedFormat = (text: string): { razonSocial: string; nombreSucursal: string } | null => {
-    // Pattern: Everything before "SUC." is razón social, "SUC. XXX" until "PERTENECE" is sucursal name
-    const match = text.match(/^(.+?)\s+(SUC\.?\s*[A-Z0-9\s\-\.]+?)(?:\s+PERTENECE|$)/i);
+    const trimmedText = text.trim();
+    console.log("[Parser] Intentando parsear:", trimmedText);
+    
+    // Estrategia 1: Formato con "PERTENECE" al final
+    // "ADMOINSA MEXICANA S.A DE C.V. SUC. SAN PEDRO PERTENECE..."
+    const regexConPertenece = /^(.+?)\s+(SUC\.?\s+[\w\s\-\.]+?)\s+PERTENECE/i;
+    let match = trimmedText.match(regexConPertenece);
     if (match) {
+      console.log("[Parser] Match con PERTENECE:", match[1], "|", match[2]);
       return {
         razonSocial: match[1].trim(),
         nombreSucursal: match[2].trim(),
       };
     }
+    
+    // Estrategia 2: Formato sin "PERTENECE" pero con "SUC." seguido de nombre
+    // "ADMOINSA MEXICANA S.A DE C.V. SUC. SAN PEDRO"
+    const regexSinPertenece = /^(.+?)\s+(SUC\.?\s+[\w\s\-\.]+)$/i;
+    match = trimmedText.match(regexSinPertenece);
+    if (match) {
+      console.log("[Parser] Match sin PERTENECE:", match[1], "|", match[2]);
+      return {
+        razonSocial: match[1].trim(),
+        nombreSucursal: match[2].trim(),
+      };
+    }
+    
+    // Estrategia 3: Split simple por "SUC." (más flexible)
+    // Busca cualquier variación de SUC., SUC , Suc.
+    const sucIndex = trimmedText.toUpperCase().indexOf("SUC.");
+    const sucIndexAlt = trimmedText.toUpperCase().indexOf("SUC ");
+    const splitIndex = sucIndex !== -1 ? sucIndex : sucIndexAlt;
+    
+    if (splitIndex > 0) {
+      const razonSocial = trimmedText.substring(0, splitIndex).trim();
+      let nombreSucursal = trimmedText.substring(splitIndex).trim();
+      
+      // Limpiar "PERTENECE..." del final si existe
+      const perteneceIndex = nombreSucursal.toUpperCase().indexOf("PERTENECE");
+      if (perteneceIndex > 0) {
+        nombreSucursal = nombreSucursal.substring(0, perteneceIndex).trim();
+      }
+      
+      console.log("[Parser] Match por split SUC.:", razonSocial, "|", nombreSucursal);
+      return { razonSocial, nombreSucursal };
+    }
+    
+    console.log("[Parser] No se pudo parsear:", trimmedText);
     return null;
   };
 
   // Detect if the Excel uses combined format (razón social + sucursal in same column)
+  // Más flexible: solo busca "SUC." sin requerir "PERTENECE"
   const detectCombinedFormat = (rows: any[][]): boolean => {
-    for (const row of rows.slice(0, 10)) {
-      if (!row || row.length < 3) continue;
-      // Check columns for "SUC." and "PERTENECE" pattern
-      for (let col = 0; col < Math.min(row.length, 5); col++) {
+    for (const row of rows.slice(0, 15)) {
+      if (!row || row.length < 2) continue;
+      // Check columns for "SUC." pattern (con o sin "PERTENECE")
+      for (let col = 0; col < Math.min(row.length, 6); col++) {
         const cellText = String(row[col] || "").toUpperCase();
-        if (cellText.includes("SUC.") && cellText.includes("PERTENECE")) {
+        // Detectar si hay "SUC." o "SUC " en la celda
+        if (cellText.includes("SUC.") || cellText.includes("SUC ")) {
+          console.log("[Detector] Formato combinado detectado en fila, columna", col, ":", cellText.substring(0, 80));
           return true;
         }
       }
     }
+    console.log("[Detector] Formato de columnas separadas detectado");
     return false;
   };
 
@@ -170,28 +214,32 @@ export function ImportarSucursalesExcelDialog({
 
         if (isCombinedFormat) {
           // Combined format: Find numeric code and combined text
-          // Find the column with the numeric code (usually A or B)
           let codeColIndex = -1;
           let textColIndex = -1;
           
-          for (let col = 0; col < Math.min(row.length, 5); col++) {
+          for (let col = 0; col < Math.min(row.length, 6); col++) {
             const cell = row[col];
             if (typeof cell === 'number' && cell > 100 && codeColIndex === -1) {
               codeColIndex = col;
             }
             const cellText = String(cell || "").toUpperCase();
-            if (cellText.includes("SUC.") && cellText.includes("PERTENECE") && textColIndex === -1) {
+            // Buscar "SUC." o "SUC " (más flexible, sin requerir PERTENECE)
+            if ((cellText.includes("SUC.") || cellText.includes("SUC ")) && textColIndex === -1) {
               textColIndex = col;
             }
           }
 
-          if (codeColIndex === -1) continue; // Skip rows without numeric code
+          if (codeColIndex === -1) {
+            console.log("[Fila ignorada] Sin código numérico:", row.slice(0, 4));
+            continue;
+          }
           
           codigo = String(row[codeColIndex]).trim();
           
-          // If we found combined text column, parse it
+          // Si encontramos columna con texto combinado, parsearla
           if (textColIndex !== -1) {
             const combinedText = String(row[textColIndex]).trim();
+            console.log("[Fila", i, "] Código:", codigo, "| Texto combinado:", combinedText.substring(0, 60));
             const parsed = parseCombinedFormat(combinedText);
             if (parsed) {
               razonSocial = parsed.razonSocial;
@@ -199,9 +247,8 @@ export function ImportarSucursalesExcelDialog({
             }
           }
           
-          // Fallback: if no combined text found, try adjacent columns
+          // Fallback: si no encontró en la columna detectada, buscar en cualquier columna
           if (!razonSocial || !nombreSucursal) {
-            // Try to find any column with "SUC." pattern
             for (let col = 0; col < row.length; col++) {
               const cellText = String(row[col] || "").trim();
               if (cellText.includes("SUC.") || cellText.includes("SUC ")) {
@@ -209,21 +256,36 @@ export function ImportarSucursalesExcelDialog({
                 if (parsed) {
                   razonSocial = parsed.razonSocial;
                   nombreSucursal = parsed.nombreSucursal;
+                  console.log("[Fallback] Encontrado en columna", col);
                   break;
                 }
               }
             }
           }
         } else {
-          // Traditional separated format: Column B = código, C = razón social, D = sucursal
+          // Traditional separated format: Try multiple column combinations
+          // Estrategia 1: Columnas B-C-D (índices 1-2-3)
           codigo = String(row[1] || "").trim();
           razonSocial = String(row[2] || "").trim();
           nombreSucursal = String(row[3] || "").trim();
+          
+          // Estrategia 2: Si código no es numérico, probar A-B-C (índices 0-1-2)
+          if (isNaN(Number(codigo))) {
+            codigo = String(row[0] || "").trim();
+            razonSocial = String(row[1] || "").trim();
+            nombreSucursal = String(row[2] || "").trim();
+          }
         }
 
         // Skip empty rows or header-like rows
-        if (!codigo || !razonSocial || !nombreSucursal) continue;
-        if (isNaN(Number(codigo))) continue; // código debe ser numérico
+        if (!codigo || !razonSocial || !nombreSucursal) {
+          console.log("[Fila ignorada] Campos vacíos - código:", codigo, "| razón:", razonSocial?.substring(0, 20), "| suc:", nombreSucursal?.substring(0, 20));
+          continue;
+        }
+        if (isNaN(Number(codigo))) {
+          console.log("[Fila ignorada] Código no numérico:", codigo);
+          continue;
+        }
 
         // Look up existing client by código
         const clienteExistente = clientes.find(
