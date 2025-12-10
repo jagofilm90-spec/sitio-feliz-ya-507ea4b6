@@ -45,6 +45,7 @@ import { useUserRoles } from "@/hooks/useUserRoles";
 import { CreditCard } from "lucide-react";
 import { ImportarCatalogoAspelDialog } from "@/components/clientes/ImportarCatalogoAspelDialog";
 import { AgruparClientesDialog } from "@/components/clientes/AgruparClientesDialog";
+import { DetectarGruposDialog } from "@/components/clientes/DetectarGruposDialog";
 import {
   Dialog as HistorialDialog,
   DialogContent as HistorialDialogContent,
@@ -92,6 +93,7 @@ const Clientes = () => {
   const [auditoriaSheetOpen, setAuditoriaSheetOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [agruparDialogOpen, setAgruparDialogOpen] = useState(false);
+  const [detectarGruposDialogOpen, setDetectarGruposDialogOpen] = useState(false);
   const [sucursalesConRfcCount, setSucursalesConRfcCount] = useState(0);
   const { toast } = useToast();
   const { isAdmin } = useUserRoles();
@@ -724,6 +726,13 @@ const Clientes = () => {
             */}
             <Button
               variant="outline"
+              onClick={() => setDetectarGruposDialogOpen(true)}
+            >
+              <Search className="h-4 w-4 mr-2" />
+              Detectar Grupos
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => setAgruparDialogOpen(true)}
             >
               <Users className="h-4 w-4 mr-2" />
@@ -1096,6 +1105,12 @@ const Clientes = () => {
           grupo_cliente_id: c.grupo_cliente_id,
           es_grupo: c.es_grupo || false,
         }))}
+        onSuccess={loadClientes}
+      />
+
+      <DetectarGruposDialog
+        open={detectarGruposDialogOpen}
+        onOpenChange={setDetectarGruposDialogOpen}
         onSuccess={loadClientes}
       />
     </Layout>
