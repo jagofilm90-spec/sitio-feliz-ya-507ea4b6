@@ -44,7 +44,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Eye, ShoppingCart, FileText, Link2, Printer, Receipt, Send, CheckCircle2, Clock, BarChart3, Trash2, AlertCircle } from "lucide-react";
+import { Plus, Search, Eye, ShoppingCart, FileText, Link2, Printer, Receipt, Send, CheckCircle2, Clock, BarChart3, Trash2, AlertCircle, FileCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import CotizacionesTab from "@/components/cotizaciones/CotizacionesTab";
@@ -55,6 +55,7 @@ import { ImprimirRemisionDialog } from "@/components/remisiones/ImprimirRemision
 import EditarEmailClienteDialog from "@/components/pedidos/EditarEmailClienteDialog";
 import NuevoPedidoDialog from "@/components/pedidos/NuevoPedidoDialog";
 import PedidoDetalleDialog from "@/components/pedidos/PedidoDetalleDialog";
+import GenerarFacturaDialog from "@/components/pedidos/GenerarFacturaDialog";
 import { formatCurrency } from "@/lib/utils";
 import { ordenarProductosAzucarPrimero } from "@/lib/calculos";
 
@@ -68,10 +69,10 @@ interface PedidoConCotizacion {
   requiere_factura: boolean;
   facturado: boolean;
   factura_enviada_al_cliente: boolean;
-  clientes: { id: string; nombre: string; email: string | null } | null;
+  clientes: { id: string; nombre: string; email: string | null; rfc: string | null; razon_social: string | null } | null;
   profiles: { full_name: string } | null;
   cotizacion_origen?: { id: string; folio: string } | null;
-  sucursal?: { nombre: string; email_facturacion: string | null; codigo_sucursal: string | null } | null;
+  sucursal?: { nombre: string; email_facturacion: string | null; codigo_sucursal: string | null; rfc: string | null; razon_social: string | null } | null;
 }
 
 const PedidosContent = () => {
@@ -90,6 +91,8 @@ const PedidosContent = () => {
   const [selectedPedidos, setSelectedPedidos] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [facturaDialogOpen, setFacturaDialogOpen] = useState(false);
+  const [selectedPedidoForFactura, setSelectedPedidoForFactura] = useState<PedidoConCotizacion | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -113,9 +116,9 @@ const PedidosContent = () => {
           facturado,
           factura_enviada_al_cliente,
           sucursal_id,
-          clientes (id, nombre, email),
+          clientes (id, nombre, email, rfc, razon_social),
           profiles:vendedor_id (full_name),
-          cliente_sucursales:sucursal_id (nombre, email_facturacion, codigo_sucursal)
+          cliente_sucursales:sucursal_id (nombre, email_facturacion, codigo_sucursal, rfc, razon_social)
         `)
         .order("fecha_pedido", { ascending: false });
 
@@ -811,6 +814,26 @@ const PedidosContent = () => {
                                 <TooltipContent>Imprimir Remisión</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
+
+                            {/* Botón Generar Factura CFDI */}
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    onClick={() => {
+                                      setSelectedPedidoForFactura(pedido);
+                                      setFacturaDialogOpen(true);
+                                    }}
+                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  >
+                                    <FileCheck className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Generar Factura CFDI</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                             
                             {/* Botón unificado: Facturar y Enviar */}
                             {!pedido.factura_enviada_al_cliente && (
@@ -926,6 +949,32 @@ const PedidosContent = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog para generar factura CFDI */}
+      <GenerarFacturaDialog
+        open={facturaDialogOpen}
+        onOpenChange={setFacturaDialogOpen}
+        pedido={selectedPedidoForFactura ? {
+          id: selectedPedidoForFactura.id,
+          folio: selectedPedidoForFactura.folio,
+          fecha_pedido: selectedPedidoForFactura.fecha_pedido,
+          total: selectedPedidoForFactura.total,
+          clientes: selectedPedidoForFactura.clientes ? {
+            id: selectedPedidoForFactura.clientes.id,
+            nombre: selectedPedidoForFactura.clientes.nombre,
+            rfc: selectedPedidoForFactura.clientes.rfc,
+          } : null,
+          sucursal: selectedPedidoForFactura.sucursal ? {
+            nombre: selectedPedidoForFactura.sucursal.nombre,
+            rfc: selectedPedidoForFactura.sucursal.rfc,
+            razon_social: selectedPedidoForFactura.sucursal.razon_social,
+          } : null,
+        } : null}
+        onSuccess={() => {
+          loadPedidos();
+          setSelectedPedidoForFactura(null);
+        }}
+      />
     </Layout>
   );
 };
