@@ -1,14 +1,15 @@
 /**
  * ==========================================================
- * 🚨 MÓDULO CRÍTICO: FACTURACIÓN
+ * 🚨 MÓDULO CRÍTICO: FACTURACIÓN CFDI 4.0
  * ==========================================================
  * 
  * Este módulo maneja operaciones fiscales y legales.
+ * Integración con Facturama para timbrado CFDI.
  * 
  * ⚠️ NO MODIFICAR sin validar en preview primero.
  * ⚠️ Cualquier error aquí tiene implicaciones legales/fiscales.
  * 
- * Última actualización: 2025-12-08
+ * Última actualización: 2025-12-11
  * ==========================================================
  */
 
@@ -25,15 +26,46 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Eye } from "lucide-react";
+import { 
+  Plus, Search, Eye, MoreHorizontal, FileText, Download, 
+  XCircle, CheckCircle, AlertCircle, Loader2, FileDown 
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const FacturasContent = () => {
   const [facturas, setFacturas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [timbrando, setTimbrando] = useState<string | null>(null);
+  const [cancelando, setCancelando] = useState<string | null>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [facturaToCancel, setFacturaToCancel] = useState<any>(null);
+  const [motivoCancelacion, setMotivoCancelacion] = useState("02");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -46,7 +78,7 @@ const FacturasContent = () => {
         .from("facturas")
         .select(`
           *,
-          clientes (nombre),
+          clientes (nombre, rfc),
           pedidos (folio)
         `)
         .order("fecha_emision", { ascending: false });
@@ -64,10 +96,153 @@ const FacturasContent = () => {
     }
   };
 
+  const handleTimbrar = async (factura: any) => {
+    if (!factura.clientes?.rfc) {
+      toast({
+        title: "RFC requerido",
+        description: "El cliente debe tener RFC configurado para timbrar",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setTimbrando(factura.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('timbrar-cfdi', {
+        body: { factura_id: factura.id }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({
+          title: "CFDI Timbrado",
+          description: `UUID: ${data.uuid}`,
+        });
+        loadFacturas();
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error al timbrar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setTimbrando(null);
+    }
+  };
+
+  const openCancelDialog = (factura: any) => {
+    setFacturaToCancel(factura);
+    setMotivoCancelacion("02");
+    setCancelDialogOpen(true);
+  };
+
+  const handleCancelar = async () => {
+    if (!facturaToCancel) return;
+
+    setCancelando(facturaToCancel.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('cancelar-cfdi', {
+        body: { 
+          factura_id: facturaToCancel.id,
+          motivo: motivoCancelacion
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({
+          title: "CFDI Cancelado",
+          description: "La factura ha sido cancelada ante el SAT",
+        });
+        setCancelDialogOpen(false);
+        loadFacturas();
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error al cancelar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setCancelando(null);
+    }
+  };
+
+  const handleDescargar = async (factura: any, formato: 'pdf' | 'xml') => {
+    try {
+      const { data, error } = await supabase.functions.invoke('descargar-cfdi', {
+        body: { factura_id: factura.id, formato }
+      });
+
+      if (error) throw error;
+
+      if (data.success && data.content) {
+        // Decodificar base64 y descargar
+        const byteCharacters = atob(data.content);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: data.contentType });
+        
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = data.fileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        throw new Error(data.error || 'Error descargando archivo');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error al descargar",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getCfdiStatusBadge = (factura: any) => {
+    const estado = factura.cfdi_estado;
+    
+    if (estado === 'timbrada') {
+      return <Badge className="bg-green-500 hover:bg-green-600"><CheckCircle className="h-3 w-3 mr-1" /> Timbrada</Badge>;
+    } else if (estado === 'cancelada') {
+      return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" /> Cancelada</Badge>;
+    } else if (estado === 'error') {
+      return (
+        <Badge variant="destructive" title={factura.cfdi_error}>
+          <AlertCircle className="h-3 w-3 mr-1" /> Error
+        </Badge>
+      );
+    }
+    return <Badge variant="outline">Sin timbrar</Badge>;
+  };
+
+  const getPaymentStatusBadge = (factura: any) => {
+    return (
+      <Badge variant={factura.pagada ? "default" : "secondary"}>
+        {factura.pagada ? "Pagada" : "Pendiente"}
+      </Badge>
+    );
+  };
+
   const filteredFacturas = facturas.filter(
     (f) =>
-      f.folio.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      f.clientes?.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+      f.folio?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      f.clientes?.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      f.cfdi_uuid?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -75,8 +250,8 @@ const FacturasContent = () => {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">Facturación</h1>
-            <p className="text-muted-foreground">Control de facturas y pagos</p>
+            <h1 className="text-3xl font-bold">Facturación CFDI 4.0</h1>
+            <p className="text-muted-foreground">Timbrado, descarga y cancelación de facturas</p>
           </div>
           <Button>
             <Plus className="h-4 w-4 mr-2" />
@@ -88,7 +263,7 @@ const FacturasContent = () => {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por folio o cliente..."
+              placeholder="Buscar por folio, cliente o UUID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -102,24 +277,25 @@ const FacturasContent = () => {
               <TableRow>
                 <TableHead>Folio</TableHead>
                 <TableHead>Cliente</TableHead>
+                <TableHead>RFC</TableHead>
                 <TableHead>Pedido</TableHead>
-                <TableHead>Fecha Emisión</TableHead>
-                <TableHead>Vencimiento</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Acciones</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead>CFDI</TableHead>
+                <TableHead>Pago</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center">
-                    Cargando...
+                  <TableCell colSpan={9} className="text-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : filteredFacturas.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     No hay facturas registradas
                   </TableCell>
                 </TableRow>
@@ -128,25 +304,77 @@ const FacturasContent = () => {
                   <TableRow key={factura.id}>
                     <TableCell className="font-medium">{factura.folio}</TableCell>
                     <TableCell>{factura.clientes?.nombre || "—"}</TableCell>
+                    <TableCell className="font-mono text-sm">{factura.clientes?.rfc || "—"}</TableCell>
                     <TableCell>{factura.pedidos?.folio || "—"}</TableCell>
                     <TableCell>
-                      {new Date(factura.fecha_emision).toLocaleDateString()}
+                      {new Date(factura.fecha_emision).toLocaleDateString('es-MX')}
                     </TableCell>
-                    <TableCell>
-                      {factura.fecha_vencimiento
-                        ? new Date(factura.fecha_vencimiento).toLocaleDateString()
-                        : "—"}
+                    <TableCell className="text-right font-medium">
+                      ${Number(factura.total).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                     </TableCell>
-                    <TableCell>${factura.total.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Badge variant={factura.pagada ? "default" : "destructive"}>
-                        {factura.pagada ? "Pagada" : "Pendiente"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon">
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                    <TableCell>{getCfdiStatusBadge(factura)}</TableCell>
+                    <TableCell>{getPaymentStatusBadge(factura)}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            {timbrando === factura.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <MoreHorizontal className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Ver detalle
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuSeparator />
+                          
+                          {factura.cfdi_estado !== 'timbrada' && factura.cfdi_estado !== 'cancelada' && (
+                            <DropdownMenuItem 
+                              onClick={() => handleTimbrar(factura)}
+                              disabled={timbrando === factura.id}
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Timbrar CFDI
+                            </DropdownMenuItem>
+                          )}
+                          
+                          {factura.cfdi_estado === 'timbrada' && (
+                            <>
+                              <DropdownMenuItem onClick={() => handleDescargar(factura, 'pdf')}>
+                                <FileDown className="h-4 w-4 mr-2" />
+                                Descargar PDF
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDescargar(factura, 'xml')}>
+                                <Download className="h-4 w-4 mr-2" />
+                                Descargar XML
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => openCancelDialog(factura)}
+                                className="text-destructive"
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Cancelar CFDI
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          
+                          {factura.cfdi_estado === 'error' && (
+                            <DropdownMenuItem 
+                              onClick={() => handleTimbrar(factura)}
+                              disabled={timbrando === factura.id}
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Reintentar timbrado
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))
@@ -154,7 +382,70 @@ const FacturasContent = () => {
             </TableBody>
           </Table>
         </div>
+
+        {/* UUID mostrado debajo si existe */}
+        {filteredFacturas.some(f => f.cfdi_uuid) && (
+          <div className="text-xs text-muted-foreground">
+            Tip: Puedes buscar por UUID del CFDI
+          </div>
+        )}
       </div>
+
+      {/* Dialog de cancelación */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancelar CFDI</DialogTitle>
+            <DialogDescription>
+              Esta acción cancelará la factura ante el SAT. Selecciona el motivo de cancelación.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Factura</Label>
+              <p className="text-sm font-medium">{facturaToCancel?.folio}</p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>UUID</Label>
+              <p className="text-sm font-mono">{facturaToCancel?.cfdi_uuid}</p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="motivo">Motivo de cancelación</Label>
+              <Select value={motivoCancelacion} onValueChange={setMotivoCancelacion}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="01">01 - Con relación (sustituye a otro)</SelectItem>
+                  <SelectItem value="02">02 - Sin relación (error en datos)</SelectItem>
+                  <SelectItem value="03">03 - No se llevó a cabo la operación</SelectItem>
+                  <SelectItem value="04">04 - Operación nominativa en factura global</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleCancelar}
+              disabled={cancelando === facturaToCancel?.id}
+            >
+              {cancelando === facturaToCancel?.id ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Cancelando...</>
+              ) : (
+                "Confirmar cancelación"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
