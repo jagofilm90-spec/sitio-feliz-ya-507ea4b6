@@ -16,10 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, AlertCircle, Loader2, ExternalLink } from "lucide-react";
+import { FileText, AlertCircle, Loader2, Store } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
@@ -45,6 +46,7 @@ const USO_CFDI_OPTIONS = [
   { value: "G01", label: "G01 - Adquisición de mercancías" },
   { value: "G03", label: "G03 - Gastos en general" },
   { value: "P01", label: "P01 - Por definir" },
+  { value: "S01", label: "S01 - Sin efectos fiscales" },
 ];
 
 const FORMA_PAGO_OPTIONS = [
@@ -60,6 +62,9 @@ const METODO_PAGO_OPTIONS = [
   { value: "PPD", label: "PPD - Pago en parcialidades o diferido" },
 ];
 
+// RFC genérico para venta de mostrador (Público en General)
+const RFC_PUBLICO_GENERAL = "XAXX010101000";
+
 export default function GenerarFacturaDialog({
   open,
   onOpenChange,
@@ -70,15 +75,32 @@ export default function GenerarFacturaDialog({
   const [formaPago, setFormaPago] = useState("99");
   const [metodoPago, setMetodoPago] = useState("PUE");
   const [generando, setGenerando] = useState(false);
+  const [esVentaMostrador, setEsVentaMostrador] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   if (!pedido) return null;
 
   // Determinar RFC a usar (sucursal si tiene, sino cliente)
-  const rfcReceptor = pedido.sucursal?.rfc || pedido.clientes?.rfc;
-  const razonSocialReceptor = pedido.sucursal?.razon_social || pedido.clientes?.nombre;
-  const hasValidRfc = rfcReceptor && rfcReceptor.length >= 12;
+  const rfcReceptor = esVentaMostrador 
+    ? RFC_PUBLICO_GENERAL 
+    : (pedido.sucursal?.rfc || pedido.clientes?.rfc);
+  const razonSocialReceptor = esVentaMostrador 
+    ? "PUBLICO EN GENERAL" 
+    : (pedido.sucursal?.razon_social || pedido.clientes?.nombre);
+  const hasValidRfc = esVentaMostrador || (rfcReceptor && rfcReceptor.length >= 12);
+
+  // Cuando se activa venta de mostrador, cambiar uso CFDI a S01
+  const handleVentaMostradorChange = (checked: boolean) => {
+    setEsVentaMostrador(checked);
+    if (checked) {
+      setUsoCfdi("S01");
+      setFormaPago("01"); // Efectivo por defecto para mostrador
+    } else {
+      setUsoCfdi("G03");
+      setFormaPago("99");
+    }
+  };
 
   const handleGenerarFactura = async () => {
     if (!hasValidRfc) {
@@ -92,6 +114,21 @@ export default function GenerarFacturaDialog({
 
     setGenerando(true);
     try {
+      // Si es venta de mostrador, obtener el ID del cliente genérico
+      let clienteIdFactura = pedido.clientes!.id;
+      
+      if (esVentaMostrador) {
+        const { data: clienteGenerico } = await supabase
+          .from('clientes')
+          .select('id')
+          .eq('rfc', RFC_PUBLICO_GENERAL)
+          .single();
+        
+        if (clienteGenerico) {
+          clienteIdFactura = clienteGenerico.id;
+        }
+      }
+
       // Generar folio automático
       const now = new Date();
       const yearMonth = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -119,7 +156,7 @@ export default function GenerarFacturaDialog({
         .insert({
           folio: nuevoFolio,
           pedido_id: pedido.id,
-          cliente_id: pedido.clientes!.id,
+          cliente_id: clienteIdFactura,
           subtotal: pedido.total / 1.16, // Aproximación, se recalcula en timbrado
           impuestos: pedido.total - (pedido.total / 1.16),
           total: pedido.total,
@@ -127,6 +164,7 @@ export default function GenerarFacturaDialog({
           forma_pago: formaPago,
           metodo_pago: metodoPago,
           cfdi_estado: "pendiente",
+          notas: esVentaMostrador ? `Venta de mostrador - Pedido original: ${pedido.folio}` : null,
         })
         .select()
         .single();
@@ -134,14 +172,15 @@ export default function GenerarFacturaDialog({
       if (error) throw error;
 
       toast({
-        title: "Factura generada",
+        title: esVentaMostrador ? "Factura de mostrador generada" : "Factura generada",
         description: `Folio ${nuevoFolio} creado. Ve a Facturas para timbrar.`,
       });
 
       onOpenChange(false);
+      setEsVentaMostrador(false);
       onSuccess?.();
       
-      // Opción: navegar a facturas
+      // Navegar a facturas
       navigate("/facturas");
     } catch (error: any) {
       console.error("Error generando factura:", error);
@@ -169,13 +208,35 @@ export default function GenerarFacturaDialog({
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Toggle Venta de Mostrador */}
+          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+            <div className="flex items-center gap-2">
+              <Store className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <Label htmlFor="venta-mostrador" className="font-medium cursor-pointer">
+                  Venta de Mostrador
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Facturar a Público en General
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="venta-mostrador"
+              checked={esVentaMostrador}
+              onCheckedChange={handleVentaMostradorChange}
+            />
+          </div>
+
           {/* Resumen del pedido */}
-          <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+          <div className={`rounded-lg p-3 space-y-1 ${esVentaMostrador ? 'bg-primary/10 border border-primary/20' : 'bg-muted/50'}`}>
             <p className="text-sm">
               <span className="text-muted-foreground">Cliente:</span>{" "}
-              <span className="font-medium">{pedido.clientes?.nombre}</span>
+              <span className="font-medium">
+                {esVentaMostrador ? "PÚBLICO EN GENERAL" : pedido.clientes?.nombre}
+              </span>
             </p>
-            {pedido.sucursal && (
+            {pedido.sucursal && !esVentaMostrador && (
               <p className="text-sm">
                 <span className="text-muted-foreground">Sucursal:</span>{" "}
                 <span className="font-medium">{pedido.sucursal.nombre}</span>
@@ -191,13 +252,16 @@ export default function GenerarFacturaDialog({
               <span className="text-muted-foreground">Total:</span>{" "}
               <span className="font-mono font-bold">${formatCurrency(pedido.total)}</span>
             </p>
+            {esVentaMostrador && (
+              <p className="text-xs text-primary mt-1">Se facturará como venta de mostrador</p>
+            )}
           </div>
 
           {!hasValidRfc && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                El cliente no tiene RFC configurado. Agrega el RFC en el módulo de Clientes antes de facturar.
+                El cliente no tiene RFC configurado. Activa "Venta de Mostrador" o configura el RFC en Clientes.
               </AlertDescription>
             </Alert>
           )}
@@ -270,7 +334,7 @@ export default function GenerarFacturaDialog({
             ) : (
               <>
                 <FileText className="h-4 w-4 mr-2" />
-                Generar Factura
+                {esVentaMostrador ? "Generar Factura Mostrador" : "Generar Factura"}
               </>
             )}
           </Button>
