@@ -145,7 +145,7 @@ export const NuevaFacturaDirectaDialog = ({
     try {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, nombre, codigo, precio_unitario, aplica_iva, aplica_ieps, unidad_comercial")
+        .select("id, nombre, codigo, precio_venta, aplica_iva, aplica_ieps, unidad_comercial")
         .eq("activo", true)
         .order("nombre");
 
@@ -178,8 +178,8 @@ export const NuevaFacturaDirectaDialog = ({
         producto_id: producto.id,
         nombre: producto.nombre,
         cantidad: 1,
-        precio_unitario: producto.precio_unitario || 0,
-        subtotal: producto.precio_unitario || 0,
+        precio_unitario: producto.precio_venta || 0,
+        subtotal: producto.precio_venta || 0,
         aplica_iva: producto.aplica_iva || false,
         aplica_ieps: producto.aplica_ieps || false,
       };
@@ -490,7 +490,7 @@ export const NuevaFacturaDirectaDialog = ({
                         </span>
                       </div>
                       <Badge variant="outline">
-                        ${producto.precio_unitario?.toLocaleString("es-MX", {
+                        ${producto.precio_venta?.toLocaleString("es-MX", {
                           minimumFractionDigits: 2,
                         }) || "0.00"}
                       </Badge>
