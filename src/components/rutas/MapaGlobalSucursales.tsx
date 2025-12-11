@@ -36,7 +36,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Search, MapPin, Navigation, Building2, Loader2, RefreshCw, AlertTriangle, ExternalLink } from "lucide-react";
+import { Search, MapPin, Navigation, Building2, Loader2, RefreshCw, AlertTriangle, ExternalLink, Share2 } from "lucide-react";
+import { toast as sonnerToast } from "sonner";
 import { ErrorBoundaryModule } from "@/components/ErrorBoundaryModule";
 
 interface Sucursal {
@@ -54,7 +55,7 @@ interface Sucursal {
 
 const mapContainerStyle = {
   width: "100%",
-  height: "500px",
+  height: "100%",
 };
 
 const defaultCenter = {
@@ -320,6 +321,32 @@ const MapaContent = () => {
     }
   };
 
+  const handleShare = async (sucursal: Sucursal) => {
+    const url = sucursal.latitud && sucursal.longitud
+      ? `https://www.google.com/maps?q=${sucursal.latitud},${sucursal.longitud}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(sucursal.direccion || sucursal.nombre)}`;
+    
+    const shareData = {
+      title: sucursal.nombre,
+      text: `📍 ${sucursal.nombre}\n${sucursal.cliente_nombre}\n${sucursal.direccion || ""}`,
+      url: url,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(url);
+        sonnerToast.success("Link copiado al portapapeles");
+      }
+    } catch (error: any) {
+      if (error.name !== "AbortError") {
+        await navigator.clipboard.writeText(url);
+        sonnerToast.success("Link copiado al portapapeles");
+      }
+    }
+  };
+
   const getMarkerColor = (clienteId: string) => {
     const hash = clienteId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return MARKER_COLORS[hash % MARKER_COLORS.length];
@@ -373,7 +400,7 @@ const MapaContent = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <ScrollArea className="h-[450px]">
+          <ScrollArea className="h-[300px] lg:h-[450px]">
             {loading ? (
               <div className="flex items-center justify-center p-6">
                 <Loader2 className="h-6 w-6 animate-spin" />
@@ -421,18 +448,33 @@ const MapaContent = () => {
                           )}
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="flex-shrink-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleNavigate(sucursal);
-                        }}
-                        disabled={!sucursal.latitud}
-                      >
-                        <Navigation className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleShare(sucursal);
+                          }}
+                          title="Compartir ubicación"
+                        >
+                          <Share2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleNavigate(sucursal);
+                          }}
+                          disabled={!sucursal.latitud}
+                          title="Navegar"
+                        >
+                          <Navigation className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -461,9 +503,9 @@ const MapaContent = () => {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 h-[350px] lg:h-[500px]">
           {!isLoaded ? (
-            <div className="h-[500px] flex items-center justify-center bg-muted">
+            <div className="h-full flex items-center justify-center bg-muted">
               <Loader2 className="h-8 w-8 animate-spin" />
             </div>
           ) : (
@@ -511,14 +553,25 @@ const MapaContent = () => {
                         Horario: {selectedSucursal.horario_entrega}
                       </p>
                     )}
-                    <Button
-                      size="sm"
-                      className="mt-2 w-full"
-                      onClick={() => handleNavigate(selectedSucursal)}
-                    >
-                      <Navigation className="h-3 w-3 mr-1" />
-                      Navegar
-                    </Button>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => handleShare(selectedSucursal)}
+                      >
+                        <Share2 className="h-3 w-3 mr-1" />
+                        Compartir
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleNavigate(selectedSucursal)}
+                      >
+                        <Navigation className="h-3 w-3 mr-1" />
+                        Navegar
+                      </Button>
+                    </div>
                   </div>
                 </InfoWindow>
               )}

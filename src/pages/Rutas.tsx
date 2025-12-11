@@ -138,40 +138,42 @@ const RutasContent = () => {
         </div>
 
         <Tabs defaultValue="planificar" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="planificar" className="flex items-center gap-2">
-              <Route className="h-4 w-4" />
-              Planificar
-            </TabsTrigger>
-            <TabsTrigger value="asignaciones" className="flex items-center gap-2">
-              <CalendarCheck className="h-4 w-4" />
-              Asignaciones
-            </TabsTrigger>
-            <TabsTrigger value="mapa" className="flex items-center gap-2">
-              <Globe className="h-4 w-4" />
-              Mapa Global
-            </TabsTrigger>
-            <TabsTrigger value="rutas" className="flex items-center gap-2">
-              <Truck className="h-4 w-4" />
-              Rutas
-            </TabsTrigger>
-            <TabsTrigger value="vehiculos" className="flex items-center gap-2">
-              <Truck className="h-4 w-4" />
-              Vehículos
-            </TabsTrigger>
-            <TabsTrigger value="zonas" className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Zonas
-            </TabsTrigger>
-            <TabsTrigger value="disponibilidad" className="flex items-center gap-2">
-              <ClipboardList className="h-4 w-4" />
-              Disponibilidad
-            </TabsTrigger>
-            <TabsTrigger value="externos" className="flex items-center gap-2">
-              <UserPlus className="h-4 w-4" />
-              Externos
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-1 px-1 pb-1">
+            <TabsList className="inline-flex w-max min-w-full lg:w-auto">
+              <TabsTrigger value="planificar" className="flex items-center gap-2">
+                <Route className="h-4 w-4" />
+                Planificar
+              </TabsTrigger>
+              <TabsTrigger value="asignaciones" className="flex items-center gap-2">
+                <CalendarCheck className="h-4 w-4" />
+                Asignaciones
+              </TabsTrigger>
+              <TabsTrigger value="mapa" className="flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                Mapa Global
+              </TabsTrigger>
+              <TabsTrigger value="rutas" className="flex items-center gap-2">
+                <Truck className="h-4 w-4" />
+                Rutas
+              </TabsTrigger>
+              <TabsTrigger value="vehiculos" className="flex items-center gap-2">
+                <Truck className="h-4 w-4" />
+                Vehículos
+              </TabsTrigger>
+              <TabsTrigger value="zonas" className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Zonas
+              </TabsTrigger>
+              <TabsTrigger value="disponibilidad" className="flex items-center gap-2">
+                <ClipboardList className="h-4 w-4" />
+                Disponibilidad
+              </TabsTrigger>
+              <TabsTrigger value="externos" className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4" />
+                Externos
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="planificar">
             <PlanificadorRutas />
