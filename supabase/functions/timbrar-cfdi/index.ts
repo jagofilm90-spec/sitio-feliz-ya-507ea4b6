@@ -66,6 +66,29 @@ serve(async (req) => {
 
     console.log('Factura obtenida:', factura.folio);
 
+    // Constantes para Público en General
+    const RFC_PUBLICO_GENERAL = 'XAXX010101000';
+    const esVentaMostrador = factura.clientes?.rfc === RFC_PUBLICO_GENERAL;
+
+    // Obtener datos del emisor primero (necesitamos el CP para público en general)
+    const { data: emisorConfig } = await supabase
+      .from('configuracion_empresa')
+      .select('valor')
+      .eq('clave', 'datos_fiscales_emisor')
+      .single();
+
+    if (!emisorConfig?.valor) {
+      throw new Error('Datos fiscales del emisor no configurados');
+    }
+
+    const emisor = emisorConfig.valor as {
+      rfc: string;
+      razon_social: string;
+      regimen_fiscal: string;
+      codigo_postal: string;
+      lugar_expedicion: string;
+    };
+
     // Si la factura tiene sucursal, verificar si tiene datos fiscales propios
     let receptorData = {
       rfc: factura.clientes?.rfc,
@@ -75,7 +98,17 @@ serve(async (req) => {
       email: factura.clientes?.email
     };
 
-    if (factura.pedidos?.sucursal_id) {
+    // Para venta de mostrador: usar régimen 616 y CP del emisor
+    if (esVentaMostrador) {
+      receptorData = {
+        rfc: RFC_PUBLICO_GENERAL,
+        razon_social: 'PUBLICO EN GENERAL',
+        codigo_postal: emisor.codigo_postal, // Usar CP del emisor para público general
+        regimen_fiscal: '616', // Sin obligaciones fiscales
+        email: null
+      };
+      console.log('Factura de venta de mostrador detectada');
+    } else if (factura.pedidos?.sucursal_id) {
       const { data: sucursal } = await supabase
         .from('cliente_sucursales')
         .select('rfc, razon_social, direccion_fiscal, email_facturacion')
@@ -97,25 +130,6 @@ serve(async (req) => {
     if (!receptorData.rfc) {
       throw new Error('El cliente no tiene RFC configurado');
     }
-
-    // Obtener datos del emisor
-    const { data: emisorConfig } = await supabase
-      .from('configuracion_empresa')
-      .select('valor')
-      .eq('clave', 'datos_fiscales_emisor')
-      .single();
-
-    if (!emisorConfig?.valor) {
-      throw new Error('Datos fiscales del emisor no configurados');
-    }
-
-    const emisor = emisorConfig.valor as {
-      rfc: string;
-      razon_social: string;
-      regimen_fiscal: string;
-      codigo_postal: string;
-      lugar_expedicion: string;
-    };
 
     console.log('Emisor:', emisor.rfc, 'Receptor:', receptorData.rfc);
 
