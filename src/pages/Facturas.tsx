@@ -56,6 +56,7 @@ import {
   XCircle, CheckCircle, AlertCircle, Loader2, FileDown 
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { NuevaFacturaDirectaDialog } from "@/components/facturas/NuevaFacturaDirectaDialog";
 
 const FacturasContent = () => {
   const [facturas, setFacturas] = useState<any[]>([]);
@@ -66,6 +67,7 @@ const FacturasContent = () => {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [facturaToCancel, setFacturaToCancel] = useState<any>(null);
   const [motivoCancelacion, setMotivoCancelacion] = useState("02");
+  const [nuevaFacturaOpen, setNuevaFacturaOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -253,7 +255,7 @@ const FacturasContent = () => {
             <h1 className="text-3xl font-bold">Facturación CFDI 4.0</h1>
             <p className="text-muted-foreground">Timbrado, descarga y cancelación de facturas</p>
           </div>
-          <Button>
+          <Button onClick={() => setNuevaFacturaOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Nueva Factura
           </Button>
@@ -390,6 +392,13 @@ const FacturasContent = () => {
           </div>
         )}
       </div>
+
+      {/* Dialog de nueva factura directa */}
+      <NuevaFacturaDirectaDialog
+        open={nuevaFacturaOpen}
+        onOpenChange={setNuevaFacturaOpen}
+        onSuccess={loadFacturas}
+      />
 
       {/* Dialog de cancelación */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
