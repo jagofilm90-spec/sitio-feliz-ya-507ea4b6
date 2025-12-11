@@ -145,7 +145,7 @@ export const NuevaFacturaDirectaDialog = ({
     try {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, nombre, codigo, precio_venta, aplica_iva, aplica_ieps, unidad_comercial")
+        .select("id, nombre, codigo, precio_venta, aplica_iva, aplica_ieps, unidad")
         .eq("activo", true)
         .order("nombre");
 
