@@ -1316,12 +1316,19 @@ export type Database = {
       }
       facturas: {
         Row: {
+          cfdi_error: string | null
+          cfdi_estado: string | null
+          cfdi_fecha_timbrado: string | null
+          cfdi_pdf_url: string | null
+          cfdi_uuid: string | null
+          cfdi_xml_url: string | null
           cliente_id: string
           created_at: string
           fecha_emision: string
           fecha_pago: string | null
           fecha_vencimiento: string | null
           folio: string
+          forma_pago: string | null
           id: string
           impuestos: number
           metodo_pago: string | null
@@ -1331,14 +1338,22 @@ export type Database = {
           subtotal: number
           total: number
           updated_at: string
+          uso_cfdi: string | null
         }
         Insert: {
+          cfdi_error?: string | null
+          cfdi_estado?: string | null
+          cfdi_fecha_timbrado?: string | null
+          cfdi_pdf_url?: string | null
+          cfdi_uuid?: string | null
+          cfdi_xml_url?: string | null
           cliente_id: string
           created_at?: string
           fecha_emision?: string
           fecha_pago?: string | null
           fecha_vencimiento?: string | null
           folio: string
+          forma_pago?: string | null
           id?: string
           impuestos: number
           metodo_pago?: string | null
@@ -1348,14 +1363,22 @@ export type Database = {
           subtotal: number
           total: number
           updated_at?: string
+          uso_cfdi?: string | null
         }
         Update: {
+          cfdi_error?: string | null
+          cfdi_estado?: string | null
+          cfdi_fecha_timbrado?: string | null
+          cfdi_pdf_url?: string | null
+          cfdi_uuid?: string | null
+          cfdi_xml_url?: string | null
           cliente_id?: string
           created_at?: string
           fecha_emision?: string
           fecha_pago?: string | null
           fecha_vencimiento?: string | null
           folio?: string
+          forma_pago?: string | null
           id?: string
           impuestos?: number
           metodo_pago?: string | null
@@ -1365,6 +1388,7 @@ export type Database = {
           subtotal?: number
           total?: number
           updated_at?: string
+          uso_cfdi?: string | null
         }
         Relationships: [
           {

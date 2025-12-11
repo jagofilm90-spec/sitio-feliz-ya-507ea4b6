@@ -74,3 +74,12 @@ verify_jwt = true
 
 [functions.get-route-directions]
 verify_jwt = true
+
+[functions.timbrar-cfdi]
+verify_jwt = true
+
+[functions.cancelar-cfdi]
+verify_jwt = true
+
+[functions.descargar-cfdi]
+verify_jwt = true
