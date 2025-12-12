@@ -216,6 +216,7 @@ const Productos = () => {
     unidad: "bulto" | "caja" | "churla" | "costal" | "cubeta" | "kg" | "litro" | "pieza" | "balón";
     precio_por_kilo: boolean;
     kg_por_unidad: string;
+    piezas_por_unidad: string;
     precio_venta: string;
     precio_compra: string;
     stock_minimo: string;
@@ -239,6 +240,7 @@ const Productos = () => {
     unidad: "bulto",
     precio_por_kilo: false,
     kg_por_unidad: "",
+    piezas_por_unidad: "1",
     precio_venta: "",
     precio_compra: "",
     stock_minimo: "",
@@ -327,6 +329,7 @@ const Productos = () => {
         unidad: formData.unidad,
         precio_por_kilo: formData.precio_por_kilo,
         kg_por_unidad: formData.kg_por_unidad ? parseFloat(formData.kg_por_unidad) : null,
+        piezas_por_unidad: formData.piezas_por_unidad ? parseInt(formData.piezas_por_unidad) : 1,
         precio_venta: parseFloat(formData.precio_venta),
         precio_compra: parseFloat(formData.precio_compra) || 0,
         stock_minimo: parseInt(formData.stock_minimo),
@@ -456,20 +459,21 @@ const Productos = () => {
       unidad: product.unidad,
       precio_por_kilo: product.precio_por_kilo || false,
       kg_por_unidad: product.kg_por_unidad?.toString() || "",
+      piezas_por_unidad: product.piezas_por_unidad?.toString() || "1",
       precio_venta: product.precio_venta.toString(),
       precio_compra: product.precio_compra.toString(),
       stock_minimo: product.stock_minimo.toString(),
       maneja_caducidad: product.maneja_caducidad,
       aplica_iva: product.aplica_iva || false,
       aplica_ieps: product.aplica_ieps || false,
-        activo: product.activo !== false,
-        requiere_fumigacion: product.requiere_fumigacion || false,
-        fecha_ultima_fumigacion: product.fecha_ultima_fumigacion || "",
-        fecha_caducidad_inicial: "",
-        stock_inicial: "",
-        proveedor_id: "",
-        solo_uso_interno: product.solo_uso_interno || false,
-      });
+      activo: product.activo !== false,
+      requiere_fumigacion: product.requiere_fumigacion || false,
+      fecha_ultima_fumigacion: product.fecha_ultima_fumigacion || "",
+      fecha_caducidad_inicial: "",
+      stock_inicial: "",
+      proveedor_id: "",
+      solo_uso_interno: product.solo_uso_interno || false,
+    });
     setDialogOpen(true);
   };
 
@@ -509,6 +513,7 @@ const Productos = () => {
       unidad: "bulto",
       precio_por_kilo: false,
       kg_por_unidad: "",
+      piezas_por_unidad: "1",
       precio_venta: "",
       precio_compra: "",
       stock_minimo: "",
@@ -804,7 +809,7 @@ const Productos = () => {
                   </p>
                 )}
                 
-                <div className="flex items-center gap-4 p-3 bg-muted rounded-md">
+                <div className="flex flex-wrap items-center gap-4 p-3 bg-muted rounded-md">
                   <div className="flex items-center space-x-2">
                     <input
                       type="checkbox"
@@ -827,12 +832,26 @@ const Productos = () => {
                       step="0.01"
                       value={formData.kg_por_unidad}
                       onChange={(e) => setFormData({ ...formData, kg_por_unidad: e.target.value })}
-                      placeholder="ej: 5"
-                      className="w-24"
+                      placeholder="ej: 13"
+                      className="w-20"
                     />
-                    {formData.kg_por_unidad && (
-                      <span className="text-xs text-muted-foreground">
-                        (para conversión en compras)
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="piezas_por_unidad" className="text-sm whitespace-nowrap">
+                      Piezas por unidad:
+                    </Label>
+                    <Input
+                      id="piezas_por_unidad"
+                      type="number"
+                      min="1"
+                      value={formData.piezas_por_unidad}
+                      onChange={(e) => setFormData({ ...formData, piezas_por_unidad: e.target.value })}
+                      placeholder="1"
+                      className="w-16"
+                    />
+                    {parseInt(formData.piezas_por_unidad) > 1 && (
+                      <span className="text-xs text-primary font-medium">
+                        ({formData.piezas_por_unidad} piezas por {formData.unidad})
                       </span>
                     )}
                   </div>
