@@ -243,6 +243,61 @@ export type Database = {
           },
         ]
       }
+      cliente_cortesias_default: {
+        Row: {
+          activo: boolean | null
+          cantidad: number
+          cliente_id: string
+          created_at: string
+          id: string
+          notas: string | null
+          producto_id: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean | null
+          cantidad?: number
+          cliente_id: string
+          created_at?: string
+          id?: string
+          notas?: string | null
+          producto_id: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean | null
+          cantidad?: number
+          cliente_id?: string
+          created_at?: string
+          id?: string
+          notas?: string | null
+          producto_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_cortesias_default_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_cortesias_default_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_cortesias_default_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cliente_creditos_excepciones: {
         Row: {
           cliente_id: string
@@ -2526,6 +2581,7 @@ export type Database = {
         Row: {
           cantidad: number
           created_at: string
+          es_cortesia: boolean | null
           fecha_ajuste_precio: string | null
           id: string
           linea_dividida_de: string | null
@@ -2541,6 +2597,7 @@ export type Database = {
         Insert: {
           cantidad: number
           created_at?: string
+          es_cortesia?: boolean | null
           fecha_ajuste_precio?: string | null
           id?: string
           linea_dividida_de?: string | null
@@ -2556,6 +2613,7 @@ export type Database = {
         Update: {
           cantidad?: number
           created_at?: string
+          es_cortesia?: boolean | null
           fecha_ajuste_precio?: string | null
           id?: string
           linea_dividida_de?: string | null

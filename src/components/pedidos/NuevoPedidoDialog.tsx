@@ -28,7 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Search, ShoppingCart, Building2, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Search, ShoppingCart, Building2, AlertTriangle, Gift } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { calcularSubtotal, calcularDesgloseImpuestos, validarAntesDeGuardar, redondear, LineaPedido } from "@/lib/calculos";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -72,6 +72,15 @@ interface DetallePedido {
   cantidad: number;
   precio_unitario: number;
   subtotal: number;
+  es_cortesia: boolean;
+}
+
+interface CortesiaDefault {
+  id: string;
+  producto_id: string;
+  cantidad: number;
+  notas: string | null;
+  producto: Producto;
 }
 
 const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoDialogProps) => {
@@ -83,7 +92,10 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
   const [requiereFactura, setRequiereFactura] = useState(false);
   const [notas, setNotas] = useState("");
   const [detalles, setDetalles] = useState<DetallePedido[]>([]);
+  const [cortesias, setCortesias] = useState<DetallePedido[]>([]);
   const [searchProducto, setSearchProducto] = useState("");
+  const [searchCortesia, setSearchCortesia] = useState("");
+  const [showCortesiaSearch, setShowCortesiaSearch] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -97,6 +109,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
   useEffect(() => {
     if (selectedClienteId) {
       loadSucursales(selectedClienteId);
+      loadCortesiasDefault(selectedClienteId);
       // Set default factura preference based on client
       const cliente = clientes.find(c => c.id === selectedClienteId);
       if (cliente) {
@@ -105,6 +118,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
     } else {
       setSucursales([]);
       setSelectedSucursalId("");
+      setCortesias([]);
     }
   }, [selectedClienteId]);
 
@@ -148,10 +162,44 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
     }
   };
 
+  const loadCortesiasDefault = async (clienteId: string) => {
+    const { data, error } = await supabase
+      .from("cliente_cortesias_default")
+      .select(`
+        id,
+        producto_id,
+        cantidad,
+        notas,
+        producto:productos(id, codigo, nombre, precio_venta, unidad, aplica_iva, aplica_ieps, stock_actual, kg_por_unidad)
+      `)
+      .eq("cliente_id", clienteId)
+      .eq("activo", true);
+
+    if (!error && data) {
+      const cortesiasFromDb = data.map((c: any) => ({
+        producto_id: c.producto_id,
+        producto: c.producto as Producto,
+        cantidad: c.cantidad,
+        precio_unitario: 0,
+        subtotal: 0,
+        es_cortesia: true,
+      }));
+      setCortesias(cortesiasFromDb);
+    }
+  };
+
   const filteredProductos = productos.filter(p =>
     !detalles.some(d => d.producto_id === p.id) &&
+    !cortesias.some(c => c.producto_id === p.id) &&
     (p.nombre.toLowerCase().includes(searchProducto.toLowerCase()) ||
      p.codigo.toLowerCase().includes(searchProducto.toLowerCase()))
+  );
+
+  const filteredCortesias = productos.filter(p =>
+    !detalles.some(d => d.producto_id === p.id) &&
+    !cortesias.some(c => c.producto_id === p.id) &&
+    (p.nombre.toLowerCase().includes(searchCortesia.toLowerCase()) ||
+     p.codigo.toLowerCase().includes(searchCortesia.toLowerCase()))
   );
 
   const addProducto = (producto: Producto) => {
@@ -161,8 +209,22 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
       cantidad: 1,
       precio_unitario: producto.precio_venta,
       subtotal: producto.precio_venta,
+      es_cortesia: false,
     }]);
     setSearchProducto("");
+  };
+
+  const addCortesia = (producto: Producto) => {
+    setCortesias([...cortesias, {
+      producto_id: producto.id,
+      producto,
+      cantidad: 1,
+      precio_unitario: 0,
+      subtotal: 0,
+      es_cortesia: true,
+    }]);
+    setSearchCortesia("");
+    setShowCortesiaSearch(false);
   };
 
   const updateDetalle = (index: number, field: "cantidad" | "precio_unitario", value: number) => {
@@ -178,13 +240,23 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
     setDetalles(newDetalles);
   };
 
+  const updateCortesiaCantidad = (index: number, value: number) => {
+    const newCortesias = [...cortesias];
+    newCortesias[index].cantidad = value;
+    setCortesias(newCortesias);
+  };
+
   const removeDetalle = (index: number) => {
     setDetalles(detalles.filter((_, i) => i !== index));
   };
 
-  // Convertir detalles a formato LineaPedido para validación
+  const removeCortesia = (index: number) => {
+    setCortesias(cortesias.filter((_, i) => i !== index));
+  };
+
+  // Convertir detalles a formato LineaPedido para validación (solo productos con precio, no cortesías)
   const getLineasPedido = (): LineaPedido[] => {
-    return detalles.map(d => ({
+    return detalles.filter(d => !d.es_cortesia).map(d => ({
       producto_id: d.producto_id,
       nombre_producto: d.producto.nombre,
       cantidad: d.cantidad,
@@ -288,18 +360,31 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
 
       if (pedidoError) throw pedidoError;
 
-      // Create detalles
+      // Create detalles (productos normales)
       const detallesInsert = detalles.map(d => ({
         pedido_id: pedido.id,
         producto_id: d.producto_id,
         cantidad: d.cantidad,
         precio_unitario: d.precio_unitario,
         subtotal: d.subtotal,
+        es_cortesia: false,
       }));
+
+      // Create cortesias (productos sin cargo)
+      const cortesiasInsert = cortesias.map(c => ({
+        pedido_id: pedido.id,
+        producto_id: c.producto_id,
+        cantidad: c.cantidad,
+        precio_unitario: 0,
+        subtotal: 0,
+        es_cortesia: true,
+      }));
+
+      const allDetalles = [...detallesInsert, ...cortesiasInsert];
 
       const { error: detallesError } = await supabase
         .from("pedidos_detalles")
-        .insert(detallesInsert);
+        .insert(allDetalles);
 
       if (detallesError) throw detallesError;
 
@@ -319,9 +404,12 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
     setSelectedSucursalId("");
     setSucursales([]);
     setDetalles([]);
+    setCortesias([]);
     setNotas("");
     setRequiereFactura(false);
     setSearchProducto("");
+    setSearchCortesia("");
+    setShowCortesiaSearch(false);
   };
 
   const totales = calcularTotales();
@@ -501,6 +589,89 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
                   ))}
                 </TableBody>
               </Table>
+            )}
+          </div>
+
+          {/* Cortesías Sin Cargo */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2">
+                <Gift className="h-4 w-4 text-amber-500" />
+                Cortesías Sin Cargo
+              </Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCortesiaSearch(!showCortesiaSearch)}
+                className="text-amber-600 border-amber-300 hover:bg-amber-50"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Agregar Cortesía
+              </Button>
+            </div>
+
+            {showCortesiaSearch && (
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar producto para agregar como cortesía..."
+                  value={searchCortesia}
+                  onChange={(e) => setSearchCortesia(e.target.value)}
+                  className="pl-10 border-amber-300 focus:border-amber-500"
+                />
+                {searchCortesia && filteredCortesias.length > 0 && (
+                  <div className="border border-amber-200 rounded-md max-h-40 overflow-y-auto mt-1 bg-amber-50">
+                    {filteredCortesias.slice(0, 10).map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => addCortesia(p)}
+                        className="w-full px-3 py-2 text-left hover:bg-amber-100 flex justify-between items-center"
+                      >
+                        <span>
+                          <span className="font-mono text-xs mr-2">{p.codigo}</span>
+                          {p.nombre}
+                        </span>
+                        <Badge className="bg-amber-500 text-white">Sin Cargo</Badge>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {cortesias.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+                {cortesias.map((c, idx) => (
+                  <div key={idx} className="flex items-center justify-between gap-3 bg-white p-2 rounded border border-amber-100">
+                    <div className="flex items-center gap-2 flex-1">
+                      <Gift className="h-4 w-4 text-amber-500" />
+                      <span className="font-mono text-xs">{c.producto.codigo}</span>
+                      <span className="text-sm">{c.producto.nombre}</span>
+                      <Badge className="bg-amber-500 text-white text-xs">CORTESÍA</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={1}
+                        value={c.cantidad}
+                        onChange={(e) => updateCortesiaCantidad(idx, Number(e.target.value))}
+                        className="w-16 h-8 text-center"
+                      />
+                      <span className="text-sm text-muted-foreground">{c.producto.unidad}</span>
+                      <span className="font-mono text-amber-600">$0.00</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeCortesia(idx)}
+                        className="h-8 w-8"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 

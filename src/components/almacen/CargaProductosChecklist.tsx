@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Package, ChevronDown, AlertTriangle, Calendar } from "lucide-react";
+import { Package, ChevronDown, AlertTriangle, Calendar, Gift } from "lucide-react";
 
 interface LoteDisponible {
   id: string;
@@ -42,7 +42,7 @@ interface ProductoCarga {
   lotes_disponibles: LoteDisponible[];
 }
 
-interface CargaProductosChecklistProps {
+export interface CargaProductosChecklistProps {
   productos: ProductoCarga[];
   onToggle: (
     cargaId: string,
@@ -51,12 +51,14 @@ interface CargaProductosChecklistProps {
     loteId: string | null
   ) => void;
   disabled?: boolean;
+  isCortesia?: boolean;
 }
 
 export const CargaProductosChecklist = ({
   productos,
   onToggle,
   disabled = false,
+  isCortesia = false,
 }: CargaProductosChecklistProps) => {
   return (
     <div className="space-y-2">
@@ -66,6 +68,7 @@ export const CargaProductosChecklist = ({
           producto={producto}
           onToggle={onToggle}
           disabled={disabled}
+          isCortesia={isCortesia}
         />
       ))}
     </div>
@@ -76,10 +79,12 @@ const ProductoItem = ({
   producto,
   onToggle,
   disabled,
+  isCortesia = false,
 }: {
   producto: ProductoCarga;
   onToggle: CargaProductosChecklistProps["onToggle"];
   disabled: boolean;
+  isCortesia?: boolean;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [cantidadCargada, setCantidadCargada] = useState(
@@ -120,8 +125,12 @@ const ProductoItem = ({
       <div
         className={`border rounded-lg transition-colors ${
           producto.cargado
-            ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800"
-            : "bg-card border-border"
+            ? isCortesia
+              ? "bg-amber-100 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800"
+              : "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800"
+            : isCortesia
+              ? "bg-amber-50 border-amber-200"
+              : "bg-card border-border"
         }`}
       >
         {/* Línea principal */}
@@ -135,12 +144,16 @@ const ProductoItem = ({
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
+              {isCortesia && <Gift className="w-4 h-4 text-amber-600" />}
               <span className="font-medium text-base">
                 {producto.cantidad_solicitada} {producto.producto.unidad_comercial}
               </span>
               <span className="text-sm text-muted-foreground">
                 {producto.producto.codigo}
               </span>
+              {isCortesia && (
+                <Badge className="bg-amber-500 text-white text-xs">CORTESÍA</Badge>
+              )}
             </div>
             <p className="text-sm text-muted-foreground truncate">
               {producto.producto.nombre}
