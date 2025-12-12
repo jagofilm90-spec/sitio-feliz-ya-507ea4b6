@@ -23,6 +23,15 @@ import {
 } from "lucide-react";
 import { CargaProductosChecklist } from "./CargaProductosChecklist";
 import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
+import { CargaEvidenciasSection } from "./CargaEvidenciasSection";
+
+interface CargaEvidencia {
+  id: string;
+  tipo_evidencia: string;
+  ruta_storage: string;
+  nombre_archivo: string;
+  created_at: string;
+}
 
 interface Ruta {
   id: string;
@@ -99,10 +108,21 @@ export const RutaCargaSheet = ({
   onCargaCompletada,
 }: RutaCargaSheetProps) => {
   const [entregas, setEntregas] = useState<EntregaConProductos[]>([]);
+  const [evidencias, setEvidencias] = useState<CargaEvidencia[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [firmaDialogOpen, setFirmaDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  const loadEvidencias = async () => {
+    const { data } = await supabase
+      .from("carga_evidencias")
+      .select("id, tipo_evidencia, ruta_storage, nombre_archivo, created_at")
+      .eq("ruta_id", ruta.id)
+      .order("created_at", { ascending: false });
+    
+    setEvidencias(data || []);
+  };
 
   const loadEntregasYProductos = async () => {
     setLoading(true);
@@ -239,6 +259,7 @@ export const RutaCargaSheet = ({
   useEffect(() => {
     if (open && ruta.id) {
       loadEntregasYProductos();
+      loadEvidencias();
     }
   }, [open, ruta.id]);
 
@@ -421,6 +442,14 @@ export const RutaCargaSheet = ({
                     <Separator className="mt-4" />
                   </div>
                 ))}
+
+                {/* Sección de evidencias fotográficas */}
+                <CargaEvidenciasSection
+                  rutaId={ruta.id}
+                  evidencias={evidencias}
+                  onEvidenciaAdded={loadEvidencias}
+                  disabled={ruta.carga_completada || false}
+                />
               </div>
             )}
           </ScrollArea>

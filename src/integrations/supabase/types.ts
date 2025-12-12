@@ -80,6 +80,44 @@ export type Database = {
         }
         Relationships: []
       }
+      carga_evidencias: {
+        Row: {
+          capturado_por: string | null
+          created_at: string | null
+          id: string
+          nombre_archivo: string | null
+          ruta_id: string
+          ruta_storage: string
+          tipo_evidencia: string
+        }
+        Insert: {
+          capturado_por?: string | null
+          created_at?: string | null
+          id?: string
+          nombre_archivo?: string | null
+          ruta_id: string
+          ruta_storage: string
+          tipo_evidencia: string
+        }
+        Update: {
+          capturado_por?: string | null
+          created_at?: string | null
+          id?: string
+          nombre_archivo?: string | null
+          ruta_id?: string
+          ruta_storage?: string
+          tipo_evidencia?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carga_evidencias_ruta_id_fkey"
+            columns: ["ruta_id"]
+            isOneToOne: false
+            referencedRelation: "rutas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       carga_productos: {
         Row: {
           cantidad_cargada: number | null
