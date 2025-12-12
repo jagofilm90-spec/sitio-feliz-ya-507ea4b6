@@ -2630,6 +2630,7 @@ export type Database = {
           maneja_caducidad: boolean | null
           marca: string | null
           nombre: string
+          piezas_por_unidad: number | null
           precio_compra: number
           precio_por_kilo: boolean
           precio_venta: number
@@ -2659,6 +2660,7 @@ export type Database = {
           maneja_caducidad?: boolean | null
           marca?: string | null
           nombre: string
+          piezas_por_unidad?: number | null
           precio_compra?: number
           precio_por_kilo?: boolean
           precio_venta?: number
@@ -2688,6 +2690,7 @@ export type Database = {
           maneja_caducidad?: boolean | null
           marca?: string | null
           nombre?: string
+          piezas_por_unidad?: number | null
           precio_compra?: number
           precio_por_kilo?: boolean
           precio_venta?: number
