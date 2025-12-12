@@ -292,13 +292,21 @@ serve(async (req) => {
 
     // Llamar API de Facturama para timbrar
     const auth = btoa(`${apiUser}:${apiPassword}`);
+    
+    // Crear cliente HTTP que ignora validación de certificado SSL (necesario para Facturama en Deno)
+    const httpClient = Deno.createHttpClient({
+      caCerts: [],
+    });
+    
     const response = await fetch(`${apiUrl}/3/cfdis`, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${auth}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(cfdiPayload)
+      body: JSON.stringify(cfdiPayload),
+      // @ts-ignore - Deno specific option
+      client: httpClient
     });
 
     const responseText = await response.text();
