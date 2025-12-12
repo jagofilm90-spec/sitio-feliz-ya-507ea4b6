@@ -9,6 +9,7 @@ interface ProductoRemision {
   precio_unitario: number;
   total: number;
   cantidadDisplay?: string; // Cantidad con unidad original (ej: "45 kg")
+  es_cortesia?: boolean; // Indica si es cortesía sin cargo
 }
 
 interface DatosRemision {
@@ -158,12 +159,32 @@ export const RemisionPrintTemplate = ({ datos }: RemisionPrintTemplateProps) => 
         </thead>
         <tbody>
           {datos.productos.map((producto, index) => (
-            <tr key={index} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+            <tr 
+              key={index} 
+              className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${producto.es_cortesia ? "bg-amber-50" : ""}`}
+            >
               <td className="p-2 border-b">{producto.cantidadDisplay || producto.cantidad}</td>
               <td className="p-2 border-b font-semibold text-primary">{abreviarUnidad(producto.unidad)}</td>
-              <td className="p-2 border-b">{producto.descripcion}</td>
-              <td className="p-2 border-b text-right">${producto.precio_unitario.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-              <td className="p-2 border-b text-right">${producto.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+              <td className="p-2 border-b">
+                {producto.descripcion}
+                {producto.es_cortesia && (
+                  <span className="ml-2 text-amber-600 font-semibold text-xs">(CORTESÍA)</span>
+                )}
+              </td>
+              <td className="p-2 border-b text-right">
+                {producto.es_cortesia ? (
+                  <span className="text-amber-600 font-medium">CORTESÍA</span>
+                ) : (
+                  `$${producto.precio_unitario.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+                )}
+              </td>
+              <td className="p-2 border-b text-right">
+                {producto.es_cortesia ? (
+                  <span className="text-amber-600 font-medium">$0.00</span>
+                ) : (
+                  `$${producto.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+                )}
+              </td>
             </tr>
           ))}
           {/* Empty rows to fill space */}

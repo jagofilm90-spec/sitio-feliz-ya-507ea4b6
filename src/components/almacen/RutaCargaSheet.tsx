@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   ArrowLeft,
   Loader2,
+  Gift,
 } from "lucide-react";
 import { CargaProductosChecklist } from "./CargaProductosChecklist";
 import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
@@ -78,6 +79,7 @@ interface ProductoCarga {
   cantidad_cargada: number | null;
   cargado: boolean;
   lote_id: string | null;
+  es_cortesia: boolean;
   producto: {
     id: string;
     codigo: string;
@@ -168,7 +170,7 @@ export const RutaCargaSheet = ({
         if (!cargaProductos || cargaProductos.length === 0) {
           const { data: detalles, error: detallesError } = await supabase
             .from("pedidos_detalles")
-            .select("id, cantidad, producto_id")
+            .select("id, cantidad, producto_id, es_cortesia")
             .eq("pedido_id", (entrega.pedido as any).id);
 
           if (detallesError) throw detallesError;
@@ -200,6 +202,7 @@ export const RutaCargaSheet = ({
           const { data: detalle } = await supabase
             .from("pedidos_detalles")
             .select(`
+              es_cortesia,
               producto:productos(
                 id,
                 codigo,
@@ -225,6 +228,7 @@ export const RutaCargaSheet = ({
             cantidad_cargada: cp.cantidad_cargada,
             cargado: cp.cargado || false,
             lote_id: cp.lote_id,
+            es_cortesia: (detalle as any)?.es_cortesia || false,
             producto: (detalle?.producto as any) || {
               id: "",
               codigo: "N/A",
@@ -419,29 +423,56 @@ export const RutaCargaSheet = ({
               </div>
             ) : (
               <div className="p-4 space-y-6">
-                {entregas.map((entrega) => (
-                  <div key={entrega.id}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Badge variant="outline" className="text-xs">
-                        #{entrega.orden_entrega}
-                      </Badge>
-                      <span className="font-medium">
-                        {entrega.pedido.cliente.nombre}
-                      </span>
-                      {entrega.pedido.sucursal && (
-                        <span className="text-sm text-muted-foreground">
-                          - {entrega.pedido.sucursal.nombre}
+                {entregas.map((entrega) => {
+                  const productosNormales = entrega.productos.filter(p => !p.es_cortesia);
+                  const cortesias = entrega.productos.filter(p => p.es_cortesia);
+                  
+                  return (
+                    <div key={entrega.id}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Badge variant="outline" className="text-xs">
+                          #{entrega.orden_entrega}
+                        </Badge>
+                        <span className="font-medium">
+                          {entrega.pedido.cliente.nombre}
                         </span>
+                        {entrega.pedido.sucursal && (
+                          <span className="text-sm text-muted-foreground">
+                            - {entrega.pedido.sucursal.nombre}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Productos normales */}
+                      {productosNormales.length > 0 && (
+                        <CargaProductosChecklist
+                          productos={productosNormales}
+                          onToggle={handleProductoToggle}
+                          disabled={ruta.carga_completada || false}
+                        />
                       )}
+                      
+                      {/* Cortesías sin cargo */}
+                      {cortesias.length > 0 && (
+                        <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Gift className="h-5 w-5 text-amber-600" />
+                            <span className="font-semibold text-amber-800">CORTESÍAS A INCLUIR</span>
+                            <Badge className="bg-amber-500 text-white text-xs">Sin Cargo</Badge>
+                          </div>
+                          <CargaProductosChecklist
+                            productos={cortesias}
+                            onToggle={handleProductoToggle}
+                            disabled={ruta.carga_completada || false}
+                            isCortesia
+                          />
+                        </div>
+                      )}
+                      
+                      <Separator className="mt-4" />
                     </div>
-                    <CargaProductosChecklist
-                      productos={entrega.productos}
-                      onToggle={handleProductoToggle}
-                      disabled={ruta.carga_completada || false}
-                    />
-                    <Separator className="mt-4" />
-                  </div>
-                ))}
+                  );
+                })}
 
                 {/* Sección de evidencias fotográficas */}
                 <CargaEvidenciasSection
