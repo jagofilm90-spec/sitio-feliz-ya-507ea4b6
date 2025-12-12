@@ -445,9 +445,12 @@ const InventarioContent = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="entrada">Entrada</SelectItem>
-                          <SelectItem value="salida">Salida</SelectItem>
-                          <SelectItem value="ajuste">Ajuste</SelectItem>
+                          <SelectItem value="entrada">Entrada (compras/recepciones)</SelectItem>
+                          <SelectItem value="salida">Salida (ventas)</SelectItem>
+                          <SelectItem value="ajuste">Ajuste (correcciones)</SelectItem>
+                          <SelectItem value="consumo_interno">Consumo interno (sin cobro)</SelectItem>
+                          <SelectItem value="merma">Merma (producto dañado/perdido)</SelectItem>
+                          <SelectItem value="transferencia">Transferencia (conversión entre productos)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -571,6 +574,9 @@ const InventarioContent = () => {
                   <SelectItem value="entrada">Entradas</SelectItem>
                   <SelectItem value="salida">Salidas</SelectItem>
                   <SelectItem value="ajuste">Ajustes</SelectItem>
+                  <SelectItem value="consumo_interno">Consumo interno</SelectItem>
+                  <SelectItem value="merma">Merma</SelectItem>
+                  <SelectItem value="transferencia">Transferencia</SelectItem>
                 </SelectContent>
               </Select>
             </div>
