@@ -35,7 +35,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Obtener datos de la factura con pedido y cliente
+    // Obtener datos de la factura con cliente
     const { data: factura, error: facturaError } = await supabase
       .from('facturas')
       .select(`
@@ -44,16 +44,6 @@ serve(async (req) => {
           id, nombre, rfc, razon_social, direccion, codigo_postal,
           nombre_colonia, nombre_municipio, nombre_entidad_federativa,
           email, telefono, regimen_capital
-        ),
-        pedidos (
-          id, folio, sucursal_id,
-          pedidos_detalles (
-            id, cantidad, precio_unitario, subtotal,
-            productos (
-              id, codigo, nombre, descripcion, unidad_comercial,
-              aplica_iva, aplica_ieps, clave_sat, unidad_sat
-            )
-          )
         )
       `)
       .eq('id', factura_id)
@@ -64,13 +54,84 @@ serve(async (req) => {
       throw new Error('Factura no encontrada');
     }
 
-    console.log('Factura obtenida:', factura.folio);
+    console.log('Factura obtenida:', factura.folio, 'pedido_id:', factura.pedido_id);
+
+    // Determinar de dónde obtener los productos
+    let productosFactura: any[] = [];
+
+    if (factura.pedido_id) {
+      // Factura con pedido - obtener de pedidos_detalles
+      console.log('Obteniendo productos desde pedido:', factura.pedido_id);
+      const { data: pedidoData, error: pedidoError } = await supabase
+        .from('pedidos')
+        .select(`
+          id, folio, sucursal_id,
+          pedidos_detalles (
+            id, cantidad, precio_unitario, subtotal,
+            productos (
+              id, codigo, nombre, descripcion, unidad,
+              aplica_iva, aplica_ieps, codigo_sat
+            )
+          )
+        `)
+        .eq('id', factura.pedido_id)
+        .single();
+
+      if (pedidoError) {
+        console.error('Error obteniendo pedido:', pedidoError);
+        throw new Error('Error obteniendo detalles del pedido');
+      }
+
+      // Si hay sucursal, guardar referencia
+      if (pedidoData?.sucursal_id) {
+        factura.sucursal_id = pedidoData.sucursal_id;
+      }
+
+      productosFactura = pedidoData?.pedidos_detalles?.map((detalle: any) => ({
+        cantidad: detalle.cantidad,
+        precio_unitario: detalle.precio_unitario,
+        subtotal: detalle.subtotal,
+        producto: detalle.productos
+      })) || [];
+
+    } else {
+      // Factura directa - obtener de factura_detalles
+      console.log('Obteniendo productos desde factura_detalles');
+      const { data: detallesData, error: detallesError } = await supabase
+        .from('factura_detalles')
+        .select(`
+          id, cantidad, precio_unitario, subtotal,
+          productos (
+            id, codigo, nombre, descripcion, unidad,
+            aplica_iva, aplica_ieps, codigo_sat
+          )
+        `)
+        .eq('factura_id', factura_id);
+
+      if (detallesError) {
+        console.error('Error obteniendo detalles de factura:', detallesError);
+        throw new Error('Error obteniendo detalles de la factura');
+      }
+
+      productosFactura = detallesData?.map((detalle: any) => ({
+        cantidad: detalle.cantidad,
+        precio_unitario: detalle.precio_unitario,
+        subtotal: detalle.subtotal,
+        producto: detalle.productos
+      })) || [];
+    }
+
+    console.log('Productos encontrados:', productosFactura.length);
+
+    if (productosFactura.length === 0) {
+      throw new Error('La factura no tiene productos');
+    }
 
     // Constantes para Público en General
     const RFC_PUBLICO_GENERAL = 'XAXX010101000';
     const esVentaMostrador = factura.clientes?.rfc === RFC_PUBLICO_GENERAL;
 
-    // Obtener datos del emisor primero (necesitamos el CP para público en general)
+    // Obtener datos del emisor
     const { data: emisorConfig } = await supabase
       .from('configuracion_empresa')
       .select('valor')
@@ -89,7 +150,7 @@ serve(async (req) => {
       lugar_expedicion: string;
     };
 
-    // Si la factura tiene sucursal, verificar si tiene datos fiscales propios
+    // Configurar datos del receptor
     let receptorData = {
       rfc: factura.clientes?.rfc,
       razon_social: factura.clientes?.razon_social || factura.clientes?.nombre,
@@ -103,16 +164,17 @@ serve(async (req) => {
       receptorData = {
         rfc: RFC_PUBLICO_GENERAL,
         razon_social: 'PUBLICO EN GENERAL',
-        codigo_postal: emisor.codigo_postal, // Usar CP del emisor para público general
-        regimen_fiscal: '616', // Sin obligaciones fiscales
+        codigo_postal: emisor.codigo_postal,
+        regimen_fiscal: '616',
         email: null
       };
       console.log('Factura de venta de mostrador detectada');
-    } else if (factura.pedidos?.sucursal_id) {
+    } else if (factura.sucursal_id) {
+      // Verificar si la sucursal tiene datos fiscales propios
       const { data: sucursal } = await supabase
         .from('cliente_sucursales')
         .select('rfc, razon_social, direccion_fiscal, email_facturacion')
-        .eq('id', factura.pedidos.sucursal_id)
+        .eq('id', factura.sucursal_id)
         .single();
       
       if (sucursal?.rfc) {
@@ -134,8 +196,8 @@ serve(async (req) => {
     console.log('Emisor:', emisor.rfc, 'Receptor:', receptorData.rfc);
 
     // Construir items del CFDI
-    const items = factura.pedidos?.pedidos_detalles?.map((detalle: any) => {
-      const producto = detalle.productos;
+    const items = productosFactura.map((detalle: any) => {
+      const producto = detalle.producto;
       const precioUnitario = Number(detalle.precio_unitario);
       const cantidad = Number(detalle.cantidad);
       
@@ -148,12 +210,24 @@ serve(async (req) => {
       const precioBase = precioUnitario / divisor;
       const subtotalItem = precioBase * cantidad;
       
+      // Mapear unidad comercial a código SAT
+      const unidadSatMap: Record<string, string> = {
+        'bulto': 'XBX',
+        'caja': 'XBX',
+        'saco': 'XBX',
+        'kg': 'KGM',
+        'pieza': 'H87',
+        'pza': 'H87',
+        'litro': 'LTR'
+      };
+      const unidadSat = unidadSatMap[(producto.unidad || 'bulto').toLowerCase()] || 'XBX';
+
       const item: any = {
-        ProductCode: producto.clave_sat || '50181900', // Semillas y granos comestibles
+        ProductCode: producto.codigo_sat || '50181900', // Semillas y granos comestibles
         IdentificationNumber: producto.codigo,
         Description: producto.nombre,
-        Unit: producto.unidad_sat || 'XBX', // Caja
-        UnitCode: producto.unidad_sat || 'XBX',
+        Unit: producto.unidad || 'Bulto',
+        UnitCode: unidadSat,
         UnitPrice: precioBase.toFixed(6),
         Quantity: cantidad.toFixed(6),
         Subtotal: subtotalItem.toFixed(2),
@@ -189,11 +263,7 @@ serve(async (req) => {
       item.Total = (subtotalItem + totalImpuestos).toFixed(2);
 
       return item;
-    }) || [];
-
-    if (items.length === 0) {
-      throw new Error('La factura no tiene productos');
-    }
+    });
 
     // Construir payload CFDI 4.0
     const cfdiPayload = {
@@ -209,11 +279,11 @@ serve(async (req) => {
         FiscalRegime: receptorData.regimen_fiscal,
         TaxZipCode: receptorData.codigo_postal || emisor.codigo_postal
       },
-      CfdiType: 'I', // Ingreso
-      NameId: '1', // Factura
+      CfdiType: 'I',
+      NameId: '1',
       ExpeditionPlace: emisor.lugar_expedicion,
-      PaymentForm: factura.forma_pago || '99', // Por definir
-      PaymentMethod: factura.metodo_pago || 'PUE', // Pago en una sola exhibición
+      PaymentForm: factura.forma_pago || '99',
+      PaymentMethod: factura.metodo_pago || 'PUE',
       Currency: 'MXN',
       Items: items
     };
@@ -265,7 +335,7 @@ serve(async (req) => {
         cfdi_uuid: cfdiResult.Complement?.TaxStamp?.Uuid || cfdiResult.Id,
         cfdi_fecha_timbrado: new Date().toISOString(),
         cfdi_estado: 'timbrada',
-        cfdi_xml_url: cfdiResult.Id, // ID para descargar XML/PDF
+        cfdi_xml_url: cfdiResult.Id,
         cfdi_pdf_url: cfdiResult.Id,
         cfdi_error: null
       })
