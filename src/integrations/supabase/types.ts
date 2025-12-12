@@ -2636,6 +2636,7 @@ export type Database = {
           presentacion: string | null
           proveedor_preferido_id: string | null
           requiere_fumigacion: boolean
+          solo_uso_interno: boolean | null
           stock_actual: number
           stock_minimo: number
           ultimo_costo_compra: number | null
@@ -2664,6 +2665,7 @@ export type Database = {
           presentacion?: string | null
           proveedor_preferido_id?: string | null
           requiere_fumigacion?: boolean
+          solo_uso_interno?: boolean | null
           stock_actual?: number
           stock_minimo?: number
           ultimo_costo_compra?: number | null
@@ -2692,6 +2694,7 @@ export type Database = {
           presentacion?: string | null
           proveedor_preferido_id?: string | null
           requiere_fumigacion?: boolean
+          solo_uso_interno?: boolean | null
           stock_actual?: number
           stock_minimo?: number
           ultimo_costo_compra?: number | null

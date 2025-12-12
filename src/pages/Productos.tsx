@@ -228,6 +228,7 @@ const Productos = () => {
     fecha_caducidad_inicial: string;
     stock_inicial: string;
     proveedor_id: string;
+    solo_uso_interno: boolean;
   }>({
     codigo: "",
     codigo_sat: "",
@@ -250,6 +251,7 @@ const Productos = () => {
     fecha_caducidad_inicial: "",
     stock_inicial: "",
     proveedor_id: "",
+    solo_uso_interno: false,
   });
 
   useEffect(() => {
@@ -334,6 +336,7 @@ const Productos = () => {
         activo: formData.activo,
         requiere_fumigacion: formData.requiere_fumigacion,
         fecha_ultima_fumigacion: formData.fecha_ultima_fumigacion || null,
+        solo_uso_interno: formData.solo_uso_interno,
       };
 
       if (editingProduct) {
@@ -459,13 +462,14 @@ const Productos = () => {
       maneja_caducidad: product.maneja_caducidad,
       aplica_iva: product.aplica_iva || false,
       aplica_ieps: product.aplica_ieps || false,
-      activo: product.activo !== false,
-      requiere_fumigacion: product.requiere_fumigacion || false,
-      fecha_ultima_fumigacion: product.fecha_ultima_fumigacion || "",
-      fecha_caducidad_inicial: "",
-      stock_inicial: "",
-      proveedor_id: "",
-    });
+        activo: product.activo !== false,
+        requiere_fumigacion: product.requiere_fumigacion || false,
+        fecha_ultima_fumigacion: product.fecha_ultima_fumigacion || "",
+        fecha_caducidad_inicial: "",
+        stock_inicial: "",
+        proveedor_id: "",
+        solo_uso_interno: product.solo_uso_interno || false,
+      });
     setDialogOpen(true);
   };
 
@@ -517,6 +521,7 @@ const Productos = () => {
       fecha_caducidad_inicial: "",
       stock_inicial: "",
       proveedor_id: "",
+      solo_uso_interno: false,
     });
   };
 
@@ -973,6 +978,21 @@ const Productos = () => {
                       className="rounded"
                     />
                     <Label htmlFor="aplica_ieps">Precio incluye IEPS (8%)</Label>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                  <input
+                    type="checkbox"
+                    id="solo_uso_interno"
+                    checked={formData.solo_uso_interno}
+                    onChange={(e) => setFormData({ ...formData, solo_uso_interno: e.target.checked })}
+                    className="rounded"
+                  />
+                  <div>
+                    <Label htmlFor="solo_uso_interno" className="cursor-pointer">Solo uso interno (no aparece en ventas)</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Productos como rollos de playo para servicio al cliente, no para venta
+                    </p>
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
