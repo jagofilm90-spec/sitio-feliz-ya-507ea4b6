@@ -134,6 +134,9 @@ const handleNotificationTap = (action: ActionPerformed) => {
     case 'cotizacion_pendiente':
       window.location.href = '/pedidos?tab=cotizaciones';
       break;
+    case 'carga_completa':
+      window.location.href = '/rutas';
+      break;
     default:
       console.log('Tipo de notificación no manejado:', data.type);
   }
