@@ -1352,6 +1352,58 @@ export type Database = {
           },
         ]
       }
+      factura_detalles: {
+        Row: {
+          cantidad: number
+          created_at: string
+          factura_id: string
+          id: string
+          precio_unitario: number
+          producto_id: string
+          subtotal: number
+        }
+        Insert: {
+          cantidad: number
+          created_at?: string
+          factura_id: string
+          id?: string
+          precio_unitario: number
+          producto_id: string
+          subtotal: number
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          factura_id?: string
+          id?: string
+          precio_unitario?: number
+          producto_id?: string
+          subtotal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "factura_detalles_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "facturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "factura_detalles_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "factura_detalles_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       facturas: {
         Row: {
           cfdi_error: string | null
@@ -1372,7 +1424,7 @@ export type Database = {
           metodo_pago: string | null
           notas: string | null
           pagada: boolean | null
-          pedido_id: string
+          pedido_id: string | null
           subtotal: number
           total: number
           updated_at: string
@@ -1397,7 +1449,7 @@ export type Database = {
           metodo_pago?: string | null
           notas?: string | null
           pagada?: boolean | null
-          pedido_id: string
+          pedido_id?: string | null
           subtotal: number
           total: number
           updated_at?: string
@@ -1422,7 +1474,7 @@ export type Database = {
           metodo_pago?: string | null
           notas?: string | null
           pagada?: boolean | null
-          pedido_id?: string
+          pedido_id?: string | null
           subtotal?: number
           total?: number
           updated_at?: string

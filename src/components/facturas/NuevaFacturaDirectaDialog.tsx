@@ -303,13 +303,13 @@ export const NuevaFacturaDirectaDialog = ({
 
       const folio = await generarFolio();
 
-      // Insertar factura
+      // Insertar factura (pedido_id es null para facturas directas)
       const { data: factura, error: errorFactura } = await supabase
         .from("facturas")
         .insert({
           folio,
           cliente_id: clienteIdFactura,
-          pedido_id: clienteIdFactura, // Usamos el mismo ID como placeholder ya que pedido_id es requerido
+          pedido_id: null, // Factura directa sin pedido asociado
           subtotal: totales.subtotal,
           impuestos: totales.iva + totales.ieps,
           total: totales.total,
@@ -323,6 +323,21 @@ export const NuevaFacturaDirectaDialog = ({
         .single();
 
       if (errorFactura) throw errorFactura;
+
+      // Insertar detalles de la factura (productos)
+      const detalles = lineas.map((linea) => ({
+        factura_id: factura.id,
+        producto_id: linea.producto_id,
+        cantidad: linea.cantidad,
+        precio_unitario: linea.precio_unitario,
+        subtotal: linea.subtotal,
+      }));
+
+      const { error: errorDetalles } = await supabase
+        .from("factura_detalles")
+        .insert(detalles);
+
+      if (errorDetalles) throw errorDetalles;
 
       toast({
         title: "Factura creada",
