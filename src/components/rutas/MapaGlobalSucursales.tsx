@@ -26,7 +26,7 @@
  * ==========================================================
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Circle } from "@react-google-maps/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,7 +37,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Search, MapPin, Navigation, Building2, Loader2, RefreshCw, AlertTriangle, ExternalLink, Share2, Target, X } from "lucide-react";
+import { Search, MapPin, Navigation, Building2, Loader2, RefreshCw, AlertTriangle, ExternalLink, Share2, Target, X, Maximize2, Minimize2 } from "lucide-react";
 import { toast as sonnerToast } from "sonner";
 import { ErrorBoundaryModule } from "@/components/ErrorBoundaryModule";
 
@@ -248,7 +248,28 @@ const MapaContent = () => {
   const [radioKm, setRadioKm] = useState(5);
   const [mostrarCercanas, setMostrarCercanas] = useState(false);
   const [hoveredSucursal, setHoveredSucursal] = useState<Sucursal | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Escuchar cambios de fullscreen
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  // Toggle fullscreen custom
+  const toggleFullscreen = useCallback(() => {
+    if (!mapContainerRef.current) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      mapContainerRef.current.requestFullscreen();
+    }
+  }, []);
 
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
@@ -622,7 +643,7 @@ const MapaContent = () => {
               <Loader2 className="h-8 w-8 animate-spin" />
             </div>
           ) : (
-            <div className="relative h-full">
+            <div ref={mapContainerRef} className={`relative h-full ${isFullscreen ? 'bg-white' : ''}`}>
               <GoogleMap
                 mapContainerStyle={mapContainerStyle}
                 center={mapCenter}
@@ -630,92 +651,10 @@ const MapaContent = () => {
                 options={{
                   streetViewControl: false,
                   mapTypeControl: false,
-                  fullscreenControl: true,
+                  fullscreenControl: false, // Deshabilitado - usamos custom
                 }}
               >
               
-              {/* Buscador flotante dentro del mapa - visible en fullscreen */}
-              <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
-                {/* Input de búsqueda */}
-                <div className="bg-white rounded-lg shadow-lg p-2 w-72">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar sucursal en mapa..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 h-9"
-                    />
-                    {searchTerm && (
-                      <button
-                        onClick={() => setSearchTerm('')}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                  
-                  {/* Lista de resultados al buscar */}
-                  {searchTerm && filteredSucursales.length > 0 && (
-                    <div className="mt-2 max-h-48 overflow-y-auto border-t pt-2">
-                      {filteredSucursales.slice(0, 8).map((suc) => (
-                        <div
-                          key={suc.id}
-                          className="px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer"
-                          onClick={() => handleSucursalClick(suc)}
-                        >
-                          <p className="font-medium text-sm truncate">{suc.nombre}</p>
-                          <p className="text-xs text-gray-500 truncate">{suc.cliente_nombre}</p>
-                        </div>
-                      ))}
-                      {filteredSucursales.length > 8 && (
-                        <p className="text-xs text-gray-400 text-center mt-1">
-                          +{filteredSucursales.length - 8} más...
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  
-                  {searchTerm && filteredSucursales.length === 0 && (
-                    <p className="text-xs text-gray-500 text-center mt-2">Sin resultados</p>
-                  )}
-                </div>
-                
-                {/* Selector de radio cuando hay selección */}
-                {selectedSucursal && (
-                  <div className="bg-white rounded-lg shadow-lg p-2 w-72">
-                    <div className="flex items-center gap-2">
-                      <Select
-                        value={radioKm.toString()}
-                        onValueChange={(value) => setRadioKm(parseInt(value))}
-                      >
-                        <SelectTrigger className="h-8 w-24">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white">
-                          {RADIO_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value.toString()}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-                        {sucursalesCercanas.length} cercanas
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleClearSelection}
-                        className="ml-auto h-7 px-2"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
               {/* Círculo de radio cuando hay sucursal seleccionada */}
               {selectedSucursal && selectedSucursal.latitud && selectedSucursal.longitud && (
                 <Circle
@@ -841,6 +780,100 @@ const MapaContent = () => {
                 </InfoWindow>
               )}
               </GoogleMap>
+              
+              {/* Buscador flotante - FUERA del GoogleMap para que funcione en fullscreen */}
+              <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
+                {/* Input de búsqueda */}
+                <div className="bg-white rounded-lg shadow-lg p-2 w-72">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar sucursal en mapa..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 h-9"
+                    />
+                    {searchTerm && (
+                      <button
+                        onClick={() => setSearchTerm('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Lista de resultados al buscar */}
+                  {searchTerm && filteredSucursales.length > 0 && (
+                    <div className="mt-2 max-h-48 overflow-y-auto border-t pt-2">
+                      {filteredSucursales.slice(0, 8).map((suc) => (
+                        <div
+                          key={suc.id}
+                          className="px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer"
+                          onClick={() => handleSucursalClick(suc)}
+                        >
+                          <p className="font-medium text-sm truncate">{suc.nombre}</p>
+                          <p className="text-xs text-gray-500 truncate">{suc.cliente_nombre}</p>
+                        </div>
+                      ))}
+                      {filteredSucursales.length > 8 && (
+                        <p className="text-xs text-gray-400 text-center mt-1">
+                          +{filteredSucursales.length - 8} más...
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {searchTerm && filteredSucursales.length === 0 && (
+                    <p className="text-xs text-gray-500 text-center mt-2">Sin resultados</p>
+                  )}
+                </div>
+                
+                {/* Selector de radio cuando hay selección */}
+                {selectedSucursal && (
+                  <div className="bg-white rounded-lg shadow-lg p-2 w-72">
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={radioKm.toString()}
+                        onValueChange={(value) => setRadioKm(parseInt(value))}
+                      >
+                        <SelectTrigger className="h-8 w-24">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          {RADIO_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value.toString()}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                        {sucursalesCercanas.length} cercanas
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleClearSelection}
+                        className="ml-auto h-7 px-2"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Botón custom de fullscreen */}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={toggleFullscreen}
+                className="absolute top-3 right-3 z-10 bg-white shadow-lg h-10 w-10"
+                title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+              >
+                {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+              </Button>
             </div>
           )}
         </CardContent>
