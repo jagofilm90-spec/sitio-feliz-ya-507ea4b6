@@ -41,51 +41,167 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-// Nearest-neighbor algorithm to optimize delivery order using GPS coordinates
-// Now accepts warehouse origin coordinates as parameter
-function optimizarOrdenEntrega(pedidos: any[], puntoOrigen: { lat: number; lng: number }): any[] {
-  if (pedidos.length <= 2) return pedidos;
+// Calcula si un punto queda "de pasada" hacia el destino ancla
+// Devuelve la desviación en km respecto a la ruta directa
+function calcularDesviacionDeRuta(
+  origen: { lat: number; lng: number },
+  destino: { lat: number; lng: number },
+  punto: { lat: number; lng: number }
+): { enRuta: boolean; desviacionKm: number } {
+  // Distancia directa origen → destino
+  const distanciaDirecta = haversineDistance(origen.lat, origen.lng, destino.lat, destino.lng);
   
-  // Filter pedidos with valid coordinates
+  // Distancia pasando por el punto: origen → punto → destino
+  const distanciaConPunto = 
+    haversineDistance(origen.lat, origen.lng, punto.lat, punto.lng) +
+    haversineDistance(punto.lat, punto.lng, destino.lat, destino.lng);
+  
+  // Desviación = km extra por pasar por este punto
+  const desviacionKm = distanciaConPunto - distanciaDirecta;
+  
+  // Consideramos "en ruta" si la desviación es menor a 15km
+  const enRuta = desviacionKm < 15;
+  
+  return { enRuta, desviacionKm };
+}
+
+// Optimiza la ruta basándose en el punto ancla (destino más lejano)
+// Ordena: puntos de IDA → ANCLA → puntos de REGRESO
+function optimizarRutaConAncla(
+  pedidos: any[], 
+  puntoBodega: { lat: number; lng: number },
+  maxDesviacionKm: number = 15
+): any[] {
   const conCoords = pedidos.filter(p => p.sucursal?.latitud && p.sucursal?.longitud);
   const sinCoords = pedidos.filter(p => !p.sucursal?.latitud || !p.sucursal?.longitud);
   
-  if (conCoords.length <= 1) {
-    // Not enough coordinates to optimize, return original order
-    return pedidos;
-  }
+  if (conCoords.length <= 1) return pedidos;
   
-  const ordenados: any[] = [];
-  const restantes = [...conCoords];
+  // 1. Encontrar el punto MÁS LEJANO de la bodega (ANCLA)
+  let ancla = conCoords[0];
+  let maxDistancia = 0;
   
-  let currentLat = puntoOrigen.lat;
-  let currentLng = puntoOrigen.lng;
-  
-  // Greedy nearest-neighbor
-  while (restantes.length > 0) {
-    let nearestIdx = 0;
-    let nearestDist = Infinity;
-    
-    for (let i = 0; i < restantes.length; i++) {
-      const p = restantes[i];
-      const dist = haversineDistance(
-        currentLat, currentLng,
-        p.sucursal.latitud, p.sucursal.longitud
-      );
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearestIdx = i;
-      }
+  for (const p of conCoords) {
+    const dist = haversineDistance(
+      puntoBodega.lat, puntoBodega.lng,
+      p.sucursal.latitud, p.sucursal.longitud
+    );
+    if (dist > maxDistancia) {
+      maxDistancia = dist;
+      ancla = p;
     }
-    
-    const nearest = restantes.splice(nearestIdx, 1)[0];
-    ordenados.push(nearest);
-    currentLat = nearest.sucursal.latitud;
-    currentLng = nearest.sucursal.longitud;
   }
   
-  // Append pedidos without coordinates at the end
-  return [...ordenados, ...sinCoords];
+  console.log(`[suggest-routes] Ancla identificada: ${ancla.sucursal?.nombre || ancla.id} a ${maxDistancia.toFixed(1)}km`);
+  
+  // 2. Separar puntos de IDA vs REGRESO
+  const puntosIda: any[] = [];
+  const puntosRegreso: any[] = [];
+  
+  for (const p of conCoords) {
+    if (p.id === ancla.id) continue;
+    
+    const puntoCoords = { lat: p.sucursal.latitud, lng: p.sucursal.longitud };
+    const anclaCoords = { lat: ancla.sucursal.latitud, lng: ancla.sucursal.longitud };
+    
+    const { enRuta, desviacionKm } = calcularDesviacionDeRuta(
+      puntoBodega,
+      anclaCoords,
+      puntoCoords
+    );
+    
+    // Clasificar si está más cerca de bodega (ida) o de ancla (regreso)
+    const distABodega = haversineDistance(puntoBodega.lat, puntoBodega.lng, p.sucursal.latitud, p.sucursal.longitud);
+    const distAAncla = haversineDistance(ancla.sucursal.latitud, ancla.sucursal.longitud, p.sucursal.latitud, p.sucursal.longitud);
+    
+    if (distABodega < distAAncla) {
+      // Punto de ida (más cerca de la bodega que del ancla)
+      puntosIda.push({ ...p, distABodega, desviacionKm });
+    } else {
+      // Punto de regreso (más cerca del ancla)
+      puntosRegreso.push({ ...p, distAAncla, desviacionKm });
+    }
+  }
+  
+  // 3. Ordenar IDA por distancia desde bodega (más cercano primero)
+  puntosIda.sort((a, b) => a.distABodega - b.distABodega);
+  
+  // 4. Ordenar REGRESO por distancia desde ancla (más cercano primero)
+  puntosRegreso.sort((a, b) => a.distAAncla - b.distAAncla);
+  
+  console.log(`[suggest-routes] Ruta optimizada: ${puntosIda.length} puntos ida → ancla → ${puntosRegreso.length} puntos regreso`);
+  
+  // 5. Construir ruta: IDA → ANCLA → REGRESO → sin coords al final
+  const rutaOptimizada = [...puntosIda, ancla, ...puntosRegreso, ...sinCoords];
+  
+  return rutaOptimizada;
+}
+
+// Valida la coherencia geográfica de una ruta
+// Rechaza rutas con puntos en direcciones incompatibles
+function validarCoherenciaGeografica(
+  pedidos: any[],
+  puntoBodega: { lat: number; lng: number },
+  maxDesviacionTotal: number = 30
+): { valida: boolean; razon?: string; anclaId?: string; desviacionMax?: number } {
+  const conCoords = pedidos.filter(p => p.sucursal?.latitud && p.sucursal?.longitud);
+  
+  if (conCoords.length <= 1) {
+    return { valida: true };
+  }
+  
+  // Encontrar ancla (punto más lejano)
+  let ancla = conCoords[0];
+  let maxDistancia = 0;
+  
+  for (const p of conCoords) {
+    const dist = haversineDistance(
+      puntoBodega.lat, puntoBodega.lng,
+      p.sucursal.latitud, p.sucursal.longitud
+    );
+    if (dist > maxDistancia) {
+      maxDistancia = dist;
+      ancla = p;
+    }
+  }
+  
+  const anclaCoords = { lat: ancla.sucursal.latitud, lng: ancla.sucursal.longitud };
+  
+  // Verificar que todos los puntos tengan desviación aceptable
+  let desviacionMaxEncontrada = 0;
+  let puntoProblematico: any = null;
+  
+  for (const p of conCoords) {
+    if (p.id === ancla.id) continue;
+    
+    const puntoCoords = { lat: p.sucursal.latitud, lng: p.sucursal.longitud };
+    const { desviacionKm } = calcularDesviacionDeRuta(puntoBodega, anclaCoords, puntoCoords);
+    
+    if (desviacionKm > desviacionMaxEncontrada) {
+      desviacionMaxEncontrada = desviacionKm;
+      puntoProblematico = p;
+    }
+  }
+  
+  if (desviacionMaxEncontrada > maxDesviacionTotal) {
+    return {
+      valida: false,
+      razon: `Punto ${puntoProblematico?.sucursal?.nombre || puntoProblematico?.id} tiene desviación de ${desviacionMaxEncontrada.toFixed(1)}km (máx permitido: ${maxDesviacionTotal}km)`,
+      anclaId: ancla.id,
+      desviacionMax: desviacionMaxEncontrada,
+    };
+  }
+  
+  return { 
+    valida: true, 
+    anclaId: ancla.id,
+    desviacionMax: desviacionMaxEncontrada,
+  };
+}
+
+// Función legacy para compatibilidad (usa el nuevo algoritmo internamente)
+function optimizarOrdenEntrega(pedidos: any[], puntoOrigen: { lat: number; lng: number }): any[] {
+  return optimizarRutaConAncla(pedidos, puntoOrigen);
 }
 
 // Simple bin-packing algorithm as fallback
@@ -517,18 +633,31 @@ serve(async (req) => {
 4. fecha_sugerida
 5. flexible: usar para LLENAR capacidad restante
 
-## OPTIMIZACIÓN GEOGRÁFICA:
-- Los pedidos tienen coordenadas GPS (lat, lng) cuando están disponibles
-- Agrupa pedidos CERCANOS geográficamente en la misma ruta
-- Considera la zona y región para agrupar pedidos de la misma área
-- El sistema optimizará el orden de entrega automáticamente después
+## ESTRATEGIA DE AGRUPACIÓN GEOGRÁFICA (CRÍTICO - PUNTO ANCLA):
+- Para cada ruta, identifica el punto MÁS LEJANO de la bodega como "ANCLA"
+- Solo agrupa pedidos que queden EN EL CAMINO hacia la ancla (ida o regreso)
+- NUNCA combines puntos en direcciones OPUESTAS (ej: Tlalnepantla + Chimalhuacán = ERROR)
+- La bodega está en CDMX Centro. Agrupa por DIRECCIÓN desde la bodega:
+  - Norte: Tlalnepantla, Ecatepec, Tultitlán, Cuautitlán
+  - Sur: Xochimilco, Milpa Alta, Morelos, Cuernavaca
+  - Este: Chimalhuacán, Nezahualcóyotl, Texcoco, Los Reyes
+  - Oeste: Toluca, Naucalpan, Huixquilucan
+- Desviación máxima permitida de la ruta directa: 15km
+
+## EJEMPLO CORRECTO:
+Ruta a Morelos: BODEGA → Xochimilco (de pasada) → Milpa Alta (de pasada) → MORELOS (ancla) → regreso
+
+## EJEMPLO INCORRECTO (NO HACER):
+❌ BODEGA → Tlalnepantla (norte) → Chimalhuacán (este) = DIRECCIONES INCOMPATIBLES
 
 ## ESTRATEGIA PARA HOY:
 1. Primero asigna TODOS los pedidos VIP
-2. Luego los deadline más urgentes
-3. Agrupa por PROXIMIDAD GEOGRÁFICA (usa lat/lng) y zona/región
-4. Llena capacidad restante con pedidos flexibles cercanos
-5. Los que NO quepan van a "para_despues" (NO es error)
+2. Luego los deadline más urgentes  
+3. Agrupa por DIRECCIÓN desde bodega (norte, sur, este, oeste)
+4. El punto más lejano en cada dirección es el ANCLA de esa ruta
+5. Solo incluye puntos que queden DE PASADA hacia/desde la ancla
+6. Llena capacidad restante con pedidos flexibles EN LA MISMA DIRECCIÓN
+7. Los que NO quepan o estén en otra dirección van a "para_despues"
 
 ## FORMATO DE RESPUESTA (JSON exacto):
 {
@@ -712,10 +841,19 @@ Los pedidos que no quepan hoy van a "para_despues" - esto es NORMAL, no un error
         continue;
       }
 
-      // OPTIMIZE delivery order using GPS coordinates (nearest-neighbor algorithm)
+      // VALIDATE geographic coherence before optimizing
+      const validacionGeo = validarCoherenciaGeografica(pedidosRuta, puntoBodega);
+      if (!validacionGeo.valida) {
+        console.warn(`[suggest-routes] Route ${vehiculo.nombre} has geographic issues: ${validacionGeo.razon}`);
+        // Continue anyway but log the warning - AI may have valid reasons
+      } else {
+        console.log(`[suggest-routes] Route ${vehiculo.nombre} is geographically coherent (max deviation: ${validacionGeo.desviacionMax?.toFixed(1)}km)`);
+      }
+
+      // OPTIMIZE delivery order using anchor-based algorithm (furthest point first)
       // Starting from the warehouse location (Bodega 1 - Melchor Campo)
-      pedidosRuta = optimizarOrdenEntrega(pedidosRuta, puntoBodega);
-      console.log(`[suggest-routes] Optimized delivery order for ${vehiculo.nombre} using GPS coordinates from warehouse`);
+      pedidosRuta = optimizarRutaConAncla(pedidosRuta, puntoBodega);
+      console.log(`[suggest-routes] Optimized delivery order for ${vehiculo.nombre} using anchor-based algorithm from warehouse`);
 
       const tipoRuta = ruta.tipo_ruta === "foranea" ? "foranea" : "local";
       const capacidadMax = ruta.capacidad_maxima;
@@ -808,8 +946,14 @@ Los pedidos que no quepan hoy van a "para_despues" - esto es NORMAL, no un error
         
         if (!pedidosRuta.length) continue;
         
-        // Optimize delivery order
-        pedidosRuta = optimizarOrdenEntrega(pedidosRuta, puntoBodega);
+        // Validate geographic coherence
+        const validacionGeo = validarCoherenciaGeografica(pedidosRuta, puntoBodega);
+        if (!validacionGeo.valida) {
+          console.warn(`[suggest-routes] Fallback route ${vehiculo.nombre} has geographic issues: ${validacionGeo.razon}`);
+        }
+        
+        // Optimize delivery order using anchor-based algorithm
+        pedidosRuta = optimizarRutaConAncla(pedidosRuta, puntoBodega);
         
         const tipoRuta = ruta.tipo_ruta === "foranea" ? "foranea" : "local";
         const capacidadMax = ruta.capacidad_maxima;
