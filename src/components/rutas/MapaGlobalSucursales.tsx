@@ -345,18 +345,25 @@ const MapaContent = () => {
     );
   }, [sucursales, searchTerm]);
 
+  // TODAS las sucursales con coordenadas (sin filtrar por búsqueda)
+  const todasSucursalesConCoordenadas = useMemo(() => 
+    sucursales.filter(s => s.latitud && s.longitud),
+    [sucursales]
+  );
+
+  // Sucursales filtradas por búsqueda (para mostrar en lista)
   const sucursalesConCoordenadas = useMemo(() => 
     filteredSucursales.filter(s => s.latitud && s.longitud),
     [filteredSucursales]
   );
 
-  // Calcular sucursales cercanas cuando hay una seleccionada
+  // Calcular sucursales cercanas usando TODAS las sucursales, no las filtradas
   const sucursalesCercanas = useMemo(() => {
     if (!selectedSucursal || !selectedSucursal.latitud || !selectedSucursal.longitud) {
       return [];
     }
     
-    return sucursalesConCoordenadas
+    return todasSucursalesConCoordenadas
       .filter(s => s.id !== selectedSucursal.id)
       .map(s => ({
         ...s,
@@ -369,7 +376,17 @@ const MapaContent = () => {
       }))
       .filter(s => s.distancia <= radioKm)
       .sort((a, b) => a.distancia - b.distancia);
-  }, [selectedSucursal, sucursalesConCoordenadas, radioKm]);
+  }, [selectedSucursal, todasSucursalesConCoordenadas, radioKm]);
+
+  // Marcadores a mostrar: filtradas + cercanas (sin duplicados)
+  const marcadoresAMostrar = useMemo(() => {
+    if (selectedSucursal && mostrarCercanas) {
+      const ids = new Set(sucursalesConCoordenadas.map(s => s.id));
+      const cercanasFaltantes = sucursalesCercanas.filter(s => !ids.has(s.id));
+      return [...sucursalesConCoordenadas, ...cercanasFaltantes];
+    }
+    return sucursalesConCoordenadas;
+  }, [sucursalesConCoordenadas, sucursalesCercanas, selectedSucursal, mostrarCercanas]);
 
   // IDs de sucursales cercanas para resaltado en mapa
   const idsCercanas = useMemo(() => new Set(sucursalesCercanas.map(s => s.id)), [sucursalesCercanas]);
@@ -673,8 +690,8 @@ const MapaContent = () => {
                 />
               )}
 
-              {/* Marcadores con opacidad diferenciada */}
-              {sucursalesConCoordenadas.map((sucursal) => {
+              {/* Marcadores: usa marcadoresAMostrar para incluir cercanas aunque no coincidan con búsqueda */}
+              {marcadoresAMostrar.map((sucursal) => {
                 const esSeleccionada = selectedSucursal?.id === sucursal.id;
                 const esCercana = idsCercanas.has(sucursal.id);
                 const tieneSeleccion = !!selectedSucursal;
