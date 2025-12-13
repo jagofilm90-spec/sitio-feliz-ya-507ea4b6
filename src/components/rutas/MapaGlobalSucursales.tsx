@@ -247,6 +247,7 @@ const MapaContent = () => {
   const [mapZoom, setMapZoom] = useState(11);
   const [radioKm, setRadioKm] = useState(5);
   const [mostrarCercanas, setMostrarCercanas] = useState(false);
+  const [hoveredSucursal, setHoveredSucursal] = useState<Sucursal | null>(null);
   const { toast } = useToast();
 
   const { isLoaded, loadError } = useJsApiLoader({
@@ -668,11 +669,46 @@ const MapaContent = () => {
                     icon={createMarkerIcon(getMarkerColor(sucursal.cliente_id))}
                     opacity={opacidad}
                     onClick={() => handleSucursalClick(sucursal)}
+                    onMouseOver={() => setHoveredSucursal(sucursal)}
+                    onMouseOut={() => setHoveredSucursal(null)}
                     zIndex={esSeleccionada ? 1000 : esCercana ? 500 : 1}
                   />
                 );
               })}
 
+              {/* InfoWindow de hover - tooltip rápido */}
+              {hoveredSucursal && hoveredSucursal.latitud && hoveredSucursal.longitud && 
+               hoveredSucursal.id !== selectedSucursal?.id && (
+                <InfoWindow
+                  position={{
+                    lat: hoveredSucursal.latitud,
+                    lng: hoveredSucursal.longitud,
+                  }}
+                  options={{ disableAutoPan: true }}
+                >
+                  <div className="p-1 min-w-[160px]">
+                    <p className="font-semibold text-sm">{hoveredSucursal.nombre}</p>
+                    <p className="text-xs text-gray-600">{hoveredSucursal.cliente_nombre}</p>
+                    {hoveredSucursal.zona_nombre && (
+                      <p className="text-xs text-gray-500">Zona: {hoveredSucursal.zona_nombre}</p>
+                    )}
+                    {/* Mostrar distancia si hay sucursal seleccionada */}
+                    {selectedSucursal && selectedSucursal.latitud && selectedSucursal.longitud && (
+                      <p className="text-xs text-blue-600 font-medium mt-1 flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {calcularDistanciaKm(
+                          selectedSucursal.latitud,
+                          selectedSucursal.longitud,
+                          hoveredSucursal.latitud,
+                          hoveredSucursal.longitud
+                        ).toFixed(1)} km de {selectedSucursal.nombre}
+                      </p>
+                    )}
+                  </div>
+                </InfoWindow>
+              )}
+
+              {/* InfoWindow de selección - con acciones */}
               {selectedSucursal && selectedSucursal.latitud && selectedSucursal.longitud && (
                 <InfoWindow
                   position={{
