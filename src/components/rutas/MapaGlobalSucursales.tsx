@@ -27,7 +27,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Circle } from "@react-google-maps/api";
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Circle, Polyline } from "@react-google-maps/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -35,25 +35,17 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Search, MapPin, Navigation, Building2, Loader2, RefreshCw, AlertTriangle, ExternalLink, Share2, Target, X, Maximize2, Minimize2 } from "lucide-react";
+import { Search, MapPin, Navigation, Building2, Loader2, RefreshCw, AlertTriangle, ExternalLink, Share2, Target, X, Maximize2, Minimize2, Route, CircleDot, Warehouse, Package } from "lucide-react";
 import { toast as sonnerToast } from "sonner";
 import { ErrorBoundaryModule } from "@/components/ErrorBoundaryModule";
+import { PanelEnRuta } from "./PanelEnRuta";
+import { useEnRutaCalculations, BODEGA_COORDS, SucursalConRuta, calcularDistanciaKm as calcDistanciaKm } from "./hooks/useEnRutaCalculations";
 
-/**
- * Calcula la distancia en kilómetros entre dos puntos usando fórmula de Haversine
- */
-const calcularDistanciaKm = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
-  const R = 6371; // Radio de la Tierra en km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-};
+// Re-export para compatibilidad
+const calcularDistanciaKm = calcDistanciaKm;
 
 const RADIO_OPTIONS = [
   { value: "2", label: "2 km" },
@@ -239,18 +231,24 @@ const MapaFallback = ({
  * Contenido principal del mapa (cuando Google Maps carga correctamente)
  */
 const MapaContent = () => {
-  const [sucursales, setSucursales] = useState<Sucursal[]>([]);
+  const [sucursales, setSucursales] = useState<SucursalConRuta[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedSucursal, setSelectedSucursal] = useState<Sucursal | null>(null);
+  const [selectedSucursal, setSelectedSucursal] = useState<SucursalConRuta | null>(null);
   const [mapCenter, setMapCenter] = useState(defaultCenter);
   const [mapZoom, setMapZoom] = useState(11);
   const [radioKm, setRadioKm] = useState(5);
   const [mostrarCercanas, setMostrarCercanas] = useState(false);
-  const [hoveredSucursal, setHoveredSucursal] = useState<Sucursal | null>(null);
+  const [hoveredSucursal, setHoveredSucursal] = useState<SucursalConRuta | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Nuevos estados para modo "En Ruta"
+  const [modoVista, setModoVista] = useState<'radio' | 'enRuta'>('radio');
+  const [anclaId, setAnclaId] = useState<string | null>(null);
+  const [soloConPedidos, setSoloConPedidos] = useState(false);
+  const [pedidosPendientesIds, setPedidosPendientesIds] = useState<Set<string>>(new Set());
 
   // Escuchar cambios de fullscreen
   useEffect(() => {
@@ -278,25 +276,40 @@ const MapaContent = () => {
   const loadSucursales = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("cliente_sucursales")
-        .select(`
-          id,
-          nombre,
-          direccion,
-          latitud,
-          longitud,
-          telefono,
-          cliente_id,
-          horario_entrega,
-          clientes!inner (nombre),
-          zonas (nombre)
-        `)
-        .eq("activo", true);
+      
+      // Cargar sucursales y pedidos pendientes en paralelo
+      const [sucursalesRes, pedidosRes] = await Promise.all([
+        supabase
+          .from("cliente_sucursales")
+          .select(`
+            id,
+            nombre,
+            direccion,
+            latitud,
+            longitud,
+            telefono,
+            cliente_id,
+            horario_entrega,
+            clientes!inner (nombre),
+            zonas (nombre)
+          `)
+          .eq("activo", true),
+        supabase
+          .from("pedidos")
+          .select("sucursal_id")
+          .eq("status", "pendiente")
+          .not("sucursal_id", "is", null)
+      ]);
 
-      if (error) throw error;
+      if (sucursalesRes.error) throw sucursalesRes.error;
 
-      const formattedData: Sucursal[] = (data || []).map((s: any) => ({
+      // Crear set de IDs con pedidos pendientes
+      const pendientesIds = new Set<string>(
+        (pedidosRes.data || []).map((p: any) => p.sucursal_id).filter(Boolean)
+      );
+      setPedidosPendientesIds(pendientesIds);
+
+      const formattedData: SucursalConRuta[] = (sucursalesRes.data || []).map((s: any) => ({
         id: s.id,
         nombre: s.nombre,
         direccion: s.direccion,
@@ -307,6 +320,7 @@ const MapaContent = () => {
         cliente_nombre: s.clientes?.nombre || "Sin cliente",
         zona_nombre: s.zonas?.nombre || null,
         horario_entrega: s.horario_entrega,
+        tienePedidoPendiente: pendientesIds.has(s.id)
       }));
 
       setSucursales(formattedData);
@@ -332,6 +346,9 @@ const MapaContent = () => {
   useEffect(() => {
     loadSucursales();
   }, [loadSucursales]);
+
+  // Hook para cálculos de "En Ruta"
+  const enRutaData = useEnRutaCalculations(sucursales, anclaId, pedidosPendientesIds);
 
   const filteredSucursales = useMemo(() => {
     if (!searchTerm) return sucursales;
@@ -378,33 +395,77 @@ const MapaContent = () => {
       .sort((a, b) => a.distancia - b.distancia);
   }, [selectedSucursal, todasSucursalesConCoordenadas, radioKm]);
 
-  // Marcadores a mostrar: filtradas + cercanas (sin duplicados)
+  // Marcadores a mostrar según modo de vista
   const marcadoresAMostrar = useMemo(() => {
+    if (modoVista === 'enRuta' && anclaId) {
+      // En modo "En Ruta", mostrar solo sucursales en el corredor + ancla
+      const enRutaIds = new Set([
+        ...enRutaData.sucursalesIda.map(s => s.id),
+        ...enRutaData.sucursalesRegreso.map(s => s.id),
+        anclaId
+      ]);
+      
+      let resultado = sucursalesConCoordenadas.filter(s => {
+        if (soloConPedidos) {
+          return enRutaIds.has(s.id) && s.tienePedidoPendiente;
+        }
+        return enRutaIds.has(s.id);
+      });
+      
+      // Siempre incluir el ancla aunque no tenga pedido pendiente
+      const ancla = sucursalesConCoordenadas.find(s => s.id === anclaId);
+      if (ancla && !resultado.find(s => s.id === anclaId)) {
+        resultado = [...resultado, ancla];
+      }
+      
+      return resultado;
+    }
+    
+    // Modo "Radio" - comportamiento original
     if (selectedSucursal && mostrarCercanas) {
       const ids = new Set(sucursalesConCoordenadas.map(s => s.id));
       const cercanasFaltantes = sucursalesCercanas.filter(s => !ids.has(s.id));
       return [...sucursalesConCoordenadas, ...cercanasFaltantes];
     }
     return sucursalesConCoordenadas;
-  }, [sucursalesConCoordenadas, sucursalesCercanas, selectedSucursal, mostrarCercanas]);
+  }, [sucursalesConCoordenadas, sucursalesCercanas, selectedSucursal, mostrarCercanas, modoVista, anclaId, enRutaData, soloConPedidos]);
 
   // IDs de sucursales cercanas para resaltado en mapa
   const idsCercanas = useMemo(() => new Set(sucursalesCercanas.map(s => s.id)), [sucursalesCercanas]);
+  
+  // IDs de sucursales en ruta para resaltado
+  const idsEnRuta = useMemo(() => new Set([
+    ...enRutaData.sucursalesIda.map(s => s.id),
+    ...enRutaData.sucursalesRegreso.map(s => s.id)
+  ]), [enRutaData]);
 
-  const handleSucursalClick = (sucursal: Sucursal) => {
-    setSelectedSucursal(sucursal);
-    setMostrarCercanas(true);
-    if (sucursal.latitud && sucursal.longitud) {
-      setMapCenter({ lat: sucursal.latitud, lng: sucursal.longitud });
-      // Ajustar zoom según el radio
-      const zoomPorRadio: Record<number, number> = { 2: 15, 5: 14, 10: 13, 15: 12 };
-      setMapZoom(zoomPorRadio[radioKm] || 14);
+  const handleSucursalClick = (sucursal: SucursalConRuta) => {
+    if (modoVista === 'enRuta') {
+      // En modo En Ruta, seleccionar como ancla
+      setAnclaId(sucursal.id);
+      if (sucursal.latitud && sucursal.longitud) {
+        // Centrar en el punto medio entre bodega y ancla
+        const midLat = (BODEGA_COORDS.lat + sucursal.latitud) / 2;
+        const midLng = (BODEGA_COORDS.lng + sucursal.longitud) / 2;
+        setMapCenter({ lat: midLat, lng: midLng });
+        setMapZoom(11);
+      }
+    } else {
+      // Modo Radio - comportamiento original
+      setSelectedSucursal(sucursal);
+      setMostrarCercanas(true);
+      if (sucursal.latitud && sucursal.longitud) {
+        setMapCenter({ lat: sucursal.latitud, lng: sucursal.longitud });
+        const zoomPorRadio: Record<number, number> = { 2: 15, 5: 14, 10: 13, 15: 12 };
+        setMapZoom(zoomPorRadio[radioKm] || 14);
+      }
     }
   };
 
   const handleClearSelection = () => {
     setSelectedSucursal(null);
     setMostrarCercanas(false);
+    setAnclaId(null);
   };
 
   const handleNavigate = (sucursal: Sucursal) => {
@@ -482,176 +543,200 @@ const MapaContent = () => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      {/* Lista de sucursales */}
-      <Card className="lg:col-span-1">
-        <CardHeader className="pb-3">
-          {mostrarCercanas && selectedSucursal ? (
-            <>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Target className="h-5 w-5 text-primary" />
-                  Cercanas
-                </CardTitle>
-                <Button variant="ghost" size="sm" onClick={handleClearSelection}>
-                  <X className="h-4 w-4 mr-1" />
-                  Limpiar
-                </Button>
-              </div>
-              <div className="bg-primary/10 border border-primary/20 rounded-lg p-2 mt-2">
-                <p className="text-sm font-medium">{selectedSucursal.nombre}</p>
-                <p className="text-xs text-muted-foreground">{selectedSucursal.cliente_nombre}</p>
-              </div>
-              <div className="flex items-center gap-2 mt-2">
-                <Select 
-                  value={radioKm.toString()} 
-                  onValueChange={(v) => setRadioKm(parseInt(v))}
-                >
-                  <SelectTrigger className="w-24">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {RADIO_OPTIONS.map(opt => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Badge variant="secondary" className="flex-1 justify-center">
-                  {sucursalesCercanas.length} encontradas
-                </Badge>
-              </div>
-            </>
-          ) : (
-            <>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Sucursales ({filteredSucursales.length})
-              </CardTitle>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar sucursal, cliente, zona..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </>
-          )}
-        </CardHeader>
-        <CardContent className="p-0">
-          <ScrollArea className="h-[300px] lg:h-[450px]">
-            {loading ? (
-              <div className="flex items-center justify-center p-6">
-                <Loader2 className="h-6 w-6 animate-spin" />
-              </div>
-            ) : listaAMostrar.length === 0 ? (
-              <div className="p-6 text-center text-muted-foreground">
-                <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">
-                  {mostrarCercanas ? "No hay sucursales en este radio" : "No se encontraron sucursales"}
-                </p>
-              </div>
+      {/* Panel lateral - depende del modo */}
+      {modoVista === 'enRuta' ? (
+        <PanelEnRuta
+          ancla={enRutaData.ancla}
+          sucursalesIda={enRutaData.sucursalesIda}
+          sucursalesRegreso={enRutaData.sucursalesRegreso}
+          sucursalesFueraRuta={enRutaData.sucursalesFueraRuta}
+          soloConPedidos={soloConPedidos}
+          onSoloConPedidosChange={setSoloConPedidos}
+          onSucursalClick={handleSucursalClick}
+          onNavigate={handleNavigate}
+          onClearAncla={handleClearSelection}
+          loading={loading}
+        />
+      ) : (
+        <Card className="lg:col-span-1">
+          <CardHeader className="pb-3">
+            {mostrarCercanas && selectedSucursal ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Target className="h-5 w-5 text-primary" />
+                    Cercanas
+                  </CardTitle>
+                  <Button variant="ghost" size="sm" onClick={handleClearSelection}>
+                    <X className="h-4 w-4 mr-1" />
+                    Limpiar
+                  </Button>
+                </div>
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-2 mt-2">
+                  <p className="text-sm font-medium">{selectedSucursal.nombre}</p>
+                  <p className="text-xs text-muted-foreground">{selectedSucursal.cliente_nombre}</p>
+                </div>
+                <div className="flex items-center gap-2 mt-2">
+                  <Select 
+                    value={radioKm.toString()} 
+                    onValueChange={(v) => setRadioKm(parseInt(v))}
+                  >
+                    <SelectTrigger className="w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RADIO_OPTIONS.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Badge variant="secondary" className="flex-1 justify-center">
+                    {sucursalesCercanas.length} encontradas
+                  </Badge>
+                </div>
+              </>
             ) : (
-              <div className="divide-y">
-                {listaAMostrar.map((sucursal) => {
-                  const distancia = 'distancia' in sucursal ? (sucursal as any).distancia : null;
-                  return (
-                    <div
-                      key={sucursal.id}
-                      className={`p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
-                        selectedSucursal?.id === sucursal.id ? "bg-primary/10 border-l-2 border-primary" : ""
-                      }`}
-                      onClick={() => handleSucursalClick(sucursal)}
-                    >
-                      <div className="flex items-start gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full mt-1.5 flex-shrink-0"
-                          style={{ backgroundColor: getMarkerColor(sucursal.cliente_id) }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-sm truncate">{sucursal.nombre}</p>
-                            {distancia !== null && (
-                              <Badge variant="outline" className="text-xs shrink-0 bg-background">
-                                {distancia.toFixed(1)} km
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {sucursal.cliente_nombre}
-                          </p>
-                          {sucursal.direccion && (
-                            <p className="text-xs text-muted-foreground truncate mt-1">
-                              {sucursal.direccion}
+              <>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  Sucursales ({filteredSucursales.length})
+                </CardTitle>
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar sucursal, cliente, zona..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </>
+            )}
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[300px] lg:h-[450px]">
+              {loading ? (
+                <div className="flex items-center justify-center p-6">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : listaAMostrar.length === 0 ? (
+                <div className="p-6 text-center text-muted-foreground">
+                  <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">
+                    {mostrarCercanas ? "No hay sucursales en este radio" : "No se encontraron sucursales"}
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {listaAMostrar.map((sucursal) => {
+                    const distancia = 'distancia' in sucursal ? (sucursal as any).distancia : null;
+                    return (
+                      <div
+                        key={sucursal.id}
+                        className={`p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
+                          selectedSucursal?.id === sucursal.id ? "bg-primary/10 border-l-2 border-primary" : ""
+                        }`}
+                        onClick={() => handleSucursalClick(sucursal)}
+                      >
+                        <div className="flex items-start gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full mt-1.5 flex-shrink-0"
+                            style={{ backgroundColor: getMarkerColor(sucursal.cliente_id) }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm truncate">{sucursal.nombre}</p>
+                              {sucursal.tienePedidoPendiente && (
+                                <Package className="h-3.5 w-3.5 text-orange-500 shrink-0" />
+                              )}
+                              {distancia !== null && (
+                                <Badge variant="outline" className="text-xs shrink-0 bg-background">
+                                  {distancia.toFixed(1)} km
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {sucursal.cliente_nombre}
                             </p>
-                          )}
-                          <div className="flex items-center gap-2 mt-1">
-                            {sucursal.zona_nombre && (
-                              <Badge variant="outline" className="text-xs">
-                                {sucursal.zona_nombre}
-                              </Badge>
+                            {sucursal.direccion && (
+                              <p className="text-xs text-muted-foreground truncate mt-1">
+                                {sucursal.direccion}
+                              </p>
                             )}
-                            {!sucursal.latitud && (
-                              <Badge variant="secondary" className="text-xs text-orange-600">
-                                Sin coordenadas
-                              </Badge>
-                            )}
+                            <div className="flex items-center gap-2 mt-1">
+                              {sucursal.zona_nombre && (
+                                <Badge variant="outline" className="text-xs">
+                                  {sucursal.zona_nombre}
+                                </Badge>
+                              )}
+                              {!sucursal.latitud && (
+                                <Badge variant="secondary" className="text-xs text-orange-600">
+                                  Sin coordenadas
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex gap-1 flex-shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleShare(sucursal);
-                            }}
-                            title="Compartir ubicación"
-                          >
-                            <Share2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleNavigate(sucursal);
-                            }}
-                            disabled={!sucursal.latitud}
-                            title="Navegar"
-                          >
-                            <Navigation className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-1 flex-shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleShare(sucursal);
+                              }}
+                              title="Compartir ubicación"
+                            >
+                              <Share2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleNavigate(sucursal);
+                              }}
+                              disabled={!sucursal.latitud}
+                              title="Navegar"
+                            >
+                              <Navigation className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </ScrollArea>
-        </CardContent>
-      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Mapa */}
       <Card className="lg:col-span-2">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <MapPin className="h-5 w-5" />
-              Mapa de Ubicaciones
-              {sucursalesConCoordenadas.length < filteredSucursales.length && (
-                <Badge variant="secondary" className="text-xs">
-                  {sucursalesConCoordenadas.length} de {filteredSucursales.length} con coordenadas
-                </Badge>
-              )}
+              Mapa
             </CardTitle>
-            <Button variant="outline" size="sm" onClick={loadSucursales}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Actualizar
-            </Button>
+            <div className="flex items-center gap-2">
+              <ToggleGroup type="single" value={modoVista} onValueChange={(v) => v && setModoVista(v as 'radio' | 'enRuta')}>
+                <ToggleGroupItem value="radio" size="sm" className="text-xs gap-1">
+                  <CircleDot className="h-3.5 w-3.5" />
+                  Radio
+                </ToggleGroupItem>
+                <ToggleGroupItem value="enRuta" size="sm" className="text-xs gap-1">
+                  <Route className="h-3.5 w-3.5" />
+                  En Ruta
+                </ToggleGroupItem>
+              </ToggleGroup>
+              <Button variant="outline" size="sm" onClick={loadSucursales}>
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0 h-[350px] lg:h-[500px]">
@@ -668,12 +753,37 @@ const MapaContent = () => {
                 options={{
                   streetViewControl: false,
                   mapTypeControl: false,
-                  fullscreenControl: false, // Deshabilitado - usamos custom
+                  fullscreenControl: false,
                 }}
               >
               
-              {/* Círculo de radio cuando hay sucursal seleccionada */}
-              {selectedSucursal && selectedSucursal.latitud && selectedSucursal.longitud && (
+              {/* Línea de ruta Bodega → Ancla en modo En Ruta */}
+              {modoVista === 'enRuta' && enRutaData.ancla && enRutaData.ancla.latitud && enRutaData.ancla.longitud && (
+                <Polyline
+                  path={[
+                    { lat: BODEGA_COORDS.lat, lng: BODEGA_COORDS.lng },
+                    { lat: enRutaData.ancla.latitud, lng: enRutaData.ancla.longitud }
+                  ]}
+                  options={{
+                    strokeColor: "#3b82f6",
+                    strokeOpacity: 0.6,
+                    strokeWeight: 3,
+                    geodesic: true,
+                  }}
+                />
+              )}
+
+              {/* Marcador de Bodega en modo En Ruta */}
+              {modoVista === 'enRuta' && (
+                <Marker
+                  position={{ lat: BODEGA_COORDS.lat, lng: BODEGA_COORDS.lng }}
+                  zIndex={2000}
+                  title="Bodega Principal"
+                />
+              )}
+
+              {/* Círculo de radio (solo modo Radio) */}
+              {modoVista === 'radio' && selectedSucursal && selectedSucursal.latitud && selectedSucursal.longitud && (
                 <Circle
                   center={{
                     lat: selectedSucursal.latitud,
