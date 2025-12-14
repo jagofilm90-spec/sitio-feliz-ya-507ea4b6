@@ -3,61 +3,37 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Package, 
   Truck, 
-  User, 
   Calendar,
   RefreshCw,
-  ChevronRight,
   CheckCircle2,
   Clock,
-  AlertCircle,
   LogOut,
   Wifi,
-  WifiOff
+  WifiOff,
+  Bug,
+  AlertTriangle
 } from "lucide-react";
-import { RutaCargaSheet } from "@/components/almacen/RutaCargaSheet";
-
-interface Ruta {
-  id: string;
-  folio: string;
-  fecha_ruta: string;
-  status: string;
-  peso_total_kg: number | null;
-  carga_completada: boolean | null;
-  carga_completada_en: string | null;
-  vehiculo: {
-    id: string;
-    nombre: string;
-    placas: string;
-  } | null;
-  chofer: {
-    id: string;
-    nombre_completo: string;
-  } | null;
-  entregas: {
-    id: string;
-    pedido_id: string;
-  }[];
-}
+import { AlmacenCargaRutasTab } from "@/components/almacen/AlmacenCargaRutasTab";
+import { AlmacenRecepcionTab } from "@/components/almacen/AlmacenRecepcionTab";
+import { AlmacenFumigacionesTab } from "@/components/almacen/AlmacenFumigacionesTab";
 
 const AlmacenTablet = () => {
-  const [rutas, setRutas] = useState<Ruta[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedRuta, setSelectedRuta] = useState<Ruta | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("rutas");
+  const [refreshKey, setRefreshKey] = useState(0);
   const navigate = useNavigate();
 
-  const fechaHoy = format(new Date(), "yyyy-MM-dd");
+  // Stats
+  const [rutasStats, setRutasStats] = useState({ total: 0, pendientes: 0, completadas: 0, entregas: 0 });
+  const [recepcionStats, setRecepcionStats] = useState({ pendientes: 0, recibidas: 0 });
+  const [fumigacionStats, setFumigacionStats] = useState({ vencidas: 0, proximas: 0, vigentes: 0 });
 
   // Monitor de conexión
   useEffect(() => {
@@ -76,73 +52,19 @@ const AlmacenTablet = () => {
     navigate("/auth", { replace: true });
   };
 
-  const loadRutas = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("rutas")
-        .select(`
-          id,
-          folio,
-          fecha_ruta,
-          status,
-          peso_total_kg,
-          carga_completada,
-          carga_completada_en,
-          vehiculo:vehiculos(id, nombre, placas),
-          chofer:empleados!rutas_chofer_id_fkey(id, nombre_completo),
-          entregas(id, pedido_id)
-        `)
-        .eq("fecha_ruta", fechaHoy)
-        .order("folio", { ascending: true });
-
-      if (error) throw error;
-
-      setRutas((data as any[]) || []);
-    } catch (error) {
-      console.error("Error cargando rutas:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar las rutas",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
   };
-
-  useEffect(() => {
-    loadRutas();
-  }, []);
-
-  const getEstadoCarga = (ruta: Ruta) => {
-    if (ruta.carga_completada) {
-      return { label: "Completada", color: "bg-green-500", icon: CheckCircle2 };
-    }
-    if (ruta.status === "en_carga") {
-      return { label: "En progreso", color: "bg-yellow-500", icon: Clock };
-    }
-    return { label: "Sin iniciar", color: "bg-muted", icon: AlertCircle };
-  };
-
-  const handleSelectRuta = (ruta: Ruta) => {
-    setSelectedRuta(ruta);
-    setSheetOpen(true);
-  };
-
-  const rutasPendientes = rutas.filter(r => !r.carga_completada);
-  const rutasCompletadas = rutas.filter(r => r.carga_completada);
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
-      {/* Header con indicador de conexión y logout */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-              Carga de Rutas
+              Almacén
             </h1>
-            {/* Indicador de conexión */}
             <Badge variant={isOnline ? "default" : "destructive"} className="h-8 px-3 text-sm">
               {isOnline ? (
                 <><Wifi className="w-4 h-4 mr-1" /> Conectado</>
@@ -160,11 +82,10 @@ const AlmacenTablet = () => {
           <Button
             variant="outline"
             size="lg"
-            onClick={loadRutas}
-            disabled={loading}
+            onClick={handleRefresh}
             className="h-14 px-6 text-lg"
           >
-            <RefreshCw className={`w-5 h-5 mr-2 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className="w-5 h-5 mr-2" />
             Actualizar
           </Button>
           <Button
@@ -179,147 +100,159 @@ const AlmacenTablet = () => {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-3 rounded-full bg-primary/10">
-              <Truck className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{rutas.length}</p>
-              <p className="text-sm text-muted-foreground">Rutas hoy</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-3 rounded-full bg-yellow-500/10">
-              <Clock className="w-6 h-6 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{rutasPendientes.length}</p>
-              <p className="text-sm text-muted-foreground">Pendientes</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-3 rounded-full bg-green-500/10">
-              <CheckCircle2 className="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{rutasCompletadas.length}</p>
-              <p className="text-sm text-muted-foreground">Completadas</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-3 rounded-full bg-muted">
-              <Package className="w-6 h-6 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">
-                {rutas.reduce((acc, r) => acc + r.entregas.length, 0)}
-              </p>
-              <p className="text-sm text-muted-foreground">Entregas</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Lista de rutas */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Rutas para cargar</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="p-4 space-y-4">
-              {[1, 2, 3].map(i => (
-                <Skeleton key={i} className="h-24 w-full" />
-              ))}
-            </div>
-          ) : rutas.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">
-              <Truck className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>No hay rutas programadas para hoy</p>
-            </div>
-          ) : (
-            <ScrollArea className="h-[calc(100vh-400px)] min-h-[300px]">
-              <div className="divide-y divide-border">
-                {rutas.map((ruta) => {
-                  const estado = getEstadoCarga(ruta);
-                  const EstadoIcon = estado.icon;
-                  
-                  return (
-                    <button
-                      key={ruta.id}
-                      onClick={() => handleSelectRuta(ruta)}
-                      className="w-full p-4 hover:bg-muted/50 transition-colors text-left flex items-center gap-4"
-                    >
-                      {/* Estado */}
-                      <div className={`w-3 h-3 rounded-full ${estado.color}`} />
-                      
-                      {/* Info principal */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold text-lg">{ruta.folio}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {ruta.entregas.length} entregas
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Truck className="w-4 h-4" />
-                            {ruta.vehiculo?.nombre || "Sin vehículo"}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <User className="w-4 h-4" />
-                            {ruta.chofer?.nombre_completo || "Sin chofer"}
-                          </span>
-                          {ruta.peso_total_kg && (
-                            <span className="flex items-center gap-1">
-                              <Package className="w-4 h-4" />
-                              {ruta.peso_total_kg.toLocaleString()} kg
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Estado badge */}
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant={ruta.carga_completada ? "default" : "secondary"}
-                          className="flex items-center gap-1"
-                        >
-                          <EstadoIcon className="w-3 h-3" />
-                          {estado.label}
-                        </Badge>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                      </div>
-                    </button>
-                  );
-                })}
+      {/* Stats según tab activo */}
+      {activeTab === "rutas" && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-3 rounded-full bg-primary/10">
+                <Truck className="w-6 h-6 text-primary" />
               </div>
-            </ScrollArea>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Sheet de carga */}
-      {selectedRuta && (
-        <RutaCargaSheet
-          ruta={selectedRuta}
-          open={sheetOpen}
-          onOpenChange={setSheetOpen}
-          onCargaCompletada={() => {
-            loadRutas();
-            setSheetOpen(false);
-          }}
-        />
+              <div>
+                <p className="text-2xl font-bold">{rutasStats.total}</p>
+                <p className="text-sm text-muted-foreground">Rutas hoy</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-3 rounded-full bg-yellow-500/10">
+                <Clock className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{rutasStats.pendientes}</p>
+                <p className="text-sm text-muted-foreground">Pendientes</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-3 rounded-full bg-green-500/10">
+                <CheckCircle2 className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{rutasStats.completadas}</p>
+                <p className="text-sm text-muted-foreground">Completadas</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-3 rounded-full bg-muted">
+                <Package className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{rutasStats.entregas}</p>
+                <p className="text-sm text-muted-foreground">Entregas</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
+
+      {activeTab === "recepcion" && (
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-3 rounded-full bg-yellow-500/10">
+                <Clock className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{recepcionStats.pendientes}</p>
+                <p className="text-sm text-muted-foreground">Pendientes</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-3 rounded-full bg-green-500/10">
+                <CheckCircle2 className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{recepcionStats.recibidas}</p>
+                <p className="text-sm text-muted-foreground">Recibidas hoy</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {activeTab === "fumigaciones" && (
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-3 rounded-full bg-destructive/10">
+                <AlertTriangle className="w-6 h-6 text-destructive" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{fumigacionStats.vencidas}</p>
+                <p className="text-sm text-muted-foreground">Vencidas</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-3 rounded-full bg-yellow-500/10">
+                <Clock className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{fumigacionStats.proximas}</p>
+                <p className="text-sm text-muted-foreground">Próximas</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-3 rounded-full bg-green-500/10">
+                <CheckCircle2 className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{fumigacionStats.vigentes}</p>
+                <p className="text-sm text-muted-foreground">Vigentes</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="w-full grid grid-cols-3 h-14 mb-4">
+          <TabsTrigger value="rutas" className="text-base h-12 gap-2">
+            <Truck className="w-5 h-5" />
+            Cargar Rutas
+          </TabsTrigger>
+          <TabsTrigger value="recepcion" className="text-base h-12 gap-2">
+            <Package className="w-5 h-5" />
+            Recepción
+          </TabsTrigger>
+          <TabsTrigger value="fumigaciones" className="text-base h-12 gap-2">
+            <Bug className="w-5 h-5" />
+            Fumigaciones
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="rutas" className="mt-0">
+          <AlmacenCargaRutasTab 
+            key={`rutas-${refreshKey}`}
+            onStatsUpdate={setRutasStats} 
+          />
+        </TabsContent>
+
+        <TabsContent value="recepcion" className="mt-0">
+          <AlmacenRecepcionTab 
+            key={`recepcion-${refreshKey}`}
+            onStatsUpdate={setRecepcionStats} 
+          />
+        </TabsContent>
+
+        <TabsContent value="fumigaciones" className="mt-0">
+          <AlmacenFumigacionesTab 
+            key={`fumigaciones-${refreshKey}`}
+            onStatsUpdate={setFumigacionStats} 
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
