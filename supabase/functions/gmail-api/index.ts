@@ -131,25 +131,35 @@ serve(async (req) => {
 
     console.log("Gmail API request:", { action, email, hasTo: !!to, hasSubject: !!subject });
 
-    // Get account credentials
-    const { data: cuenta, error: cuentaError } = await supabase
-      .from("gmail_cuentas")
-      .select("*")
-      .eq("email", email)
-      .eq("activo", true)
-      .single();
+    // Get account credentials with retry for transient failures
+    let cuenta = null;
+    let cuentaError = null;
+    
+    for (let retryAttempt = 0; retryAttempt < 3; retryAttempt++) {
+      const { data, error } = await supabase
+        .from("gmail_cuentas")
+        .select("*")
+        .eq("email", email)
+        .eq("activo", true)
+        .maybeSingle();
+      
+      cuenta = data;
+      cuentaError = error;
+      
+      if (cuenta || (cuentaError && !cuentaError.message?.includes('connection'))) {
+        break;
+      }
+      
+      // Wait before retry on connection issues
+      if (retryAttempt < 2) {
+        console.log(`DB query retry ${retryAttempt + 1} for ${email}`);
+        await new Promise(resolve => setTimeout(resolve, 200 * (retryAttempt + 1)));
+      }
+    }
 
     console.log("Query result:", { found: !!cuenta, error: cuentaError?.message, emailSearched: email });
 
     if (cuentaError || !cuenta) {
-      // Also try without activo filter to diagnose
-      const { data: anyAccount } = await supabase
-        .from("gmail_cuentas")
-        .select("email, activo")
-        .eq("email", email)
-        .single();
-      
-      console.log("Debug - Account without activo filter:", anyAccount);
       throw new Error(`Cuenta ${email} no encontrada o no activa`);
     }
 
