@@ -61,9 +61,14 @@ const Auth = () => {
 
       const roles = userRoles?.map(r => r.role) || [];
       
-      // Solo almacén -> tablet
-      const isOnlyAlmacen = roles.length === 1 && roles[0] === "almacen";
+      console.log("User roles for redirect:", roles);
+      
+      // Si tiene rol almacen (solo o combinado), ir a tablet
+      const hasAlmacenRole = roles.includes("almacen");
+      const isOnlyAlmacen = roles.length === 1 && hasAlmacenRole;
+      
       if (isOnlyAlmacen) {
+        console.log("Redirecting to /almacen-tablet");
         navigate("/almacen-tablet", { replace: true });
         return;
       }

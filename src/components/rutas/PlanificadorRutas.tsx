@@ -32,6 +32,11 @@ interface Chofer {
   full_name: string;
 }
 
+interface Almacenista {
+  id: string;
+  nombre_completo: string;
+}
+
 interface Vehiculo {
   id: string;
   nombre: string;
@@ -61,6 +66,7 @@ interface PedidoSeleccionado extends Pedido {
 const PlanificadorRutas = () => {
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
   const [choferes, setChoferes] = useState<Chofer[]>([]);
+  const [almacenistas, setAlmacenistas] = useState<Almacenista[]>([]);
   const [pedidosPendientes, setPedidosPendientes] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -72,6 +78,7 @@ const PlanificadorRutas = () => {
   const [selectedVehiculo, setSelectedVehiculo] = useState<string>("");
   const [selectedChofer, setSelectedChofer] = useState<string>("");
   const [selectedAyudante, setSelectedAyudante] = useState<string>("");
+  const [selectedAlmacenista, setSelectedAlmacenista] = useState<string>("");
   // Default to TOMORROW for anticipated planning
   const [fechaRuta, setFechaRuta] = useState<string>(format(addDays(new Date(), 1), "yyyy-MM-dd"));
   const [tipoRuta, setTipoRuta] = useState<"local" | "foranea">("local");
@@ -114,7 +121,25 @@ const PlanificadorRutas = () => {
         }));
       setChoferes(transformedChoferes);
 
-      // Load pending orders with client info and zone
+      // Load almacenistas
+      const { data: almacenistasData, error: almacenistasError } = await supabase
+        .from("user_roles")
+        .select(`
+          user_id,
+          empleado:empleados!inner(id, nombre_completo, user_id)
+        `)
+        .eq("role", "almacen");
+
+      if (!almacenistasError) {
+        const transformedAlmacenistas = (almacenistasData || [])
+          .filter((a: any) => a.empleado && a.empleado.length > 0)
+          .map((a: any) => ({
+            id: a.empleado[0].id,
+            nombre_completo: a.empleado[0].nombre_completo,
+          }));
+        setAlmacenistas(transformedAlmacenistas);
+      }
+
       const { data: pedidosData, error: pedidosError } = await supabase
         .from("pedidos")
         .select(`
@@ -215,6 +240,7 @@ const PlanificadorRutas = () => {
           chofer_id: selectedChofer,
           ayudante_id: selectedAyudante || null,
           vehiculo_id: selectedVehiculo,
+          almacenista_id: selectedAlmacenista || null,
           peso_total_kg: pesoTotal,
           tipo_ruta: tipoRuta,
           status: "programada",
@@ -280,6 +306,7 @@ const PlanificadorRutas = () => {
     setSelectedVehiculo("");
     setSelectedChofer("");
     setSelectedAyudante("");
+    setSelectedAlmacenista("");
     setFechaRuta(format(addDays(new Date(), 1), "yyyy-MM-dd"));
     setTipoRuta("local");
     setPedidosSeleccionados([]);
@@ -414,6 +441,31 @@ const PlanificadorRutas = () => {
                   </Select>
                 </div>
               </div>
+
+              {/* Almacenista selector */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1">
+                  <Package className="h-4 w-4" />
+                  Almacenista Responsable de Carga
+                </Label>
+                <Select value={selectedAlmacenista} onValueChange={(v) => setSelectedAlmacenista(v === "none" ? "" : v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar almacenista..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin asignar</SelectItem>
+                    {almacenistas.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.nombre_completo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  El almacenista seleccionado verá esta ruta en su panel de tablet para cargarla.
+                </p>
+              </div>
+
 
               {vehiculoSeleccionado && (
                 <Card>

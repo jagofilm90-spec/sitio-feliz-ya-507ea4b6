@@ -42,9 +42,10 @@ interface Ruta {
 
 interface AlmacenCargaRutasTabProps {
   onStatsUpdate: (stats: { total: number; pendientes: number; completadas: number; entregas: number }) => void;
+  empleadoId?: string | null;
 }
 
-export const AlmacenCargaRutasTab = ({ onStatsUpdate }: AlmacenCargaRutasTabProps) => {
+export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCargaRutasTabProps) => {
   const [rutas, setRutas] = useState<Ruta[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRuta, setSelectedRuta] = useState<Ruta | null>(null);
@@ -56,7 +57,8 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate }: AlmacenCargaRutasTabProp
   const loadRutas = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Construir query base
+      let query = supabase
         .from("rutas")
         .select(`
           id,
@@ -66,12 +68,20 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate }: AlmacenCargaRutasTabProp
           peso_total_kg,
           carga_completada,
           carga_completada_en,
+          almacenista_id,
           vehiculo:vehiculos(id, nombre, placas),
           chofer:empleados!rutas_chofer_id_fkey(id, nombre_completo),
           entregas(id, pedido_id)
         `)
         .eq("fecha_ruta", fechaHoy)
         .order("folio", { ascending: true });
+
+      // Si tiene empleadoId, filtrar solo sus rutas asignadas
+      if (empleadoId) {
+        query = query.eq("almacenista_id", empleadoId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
