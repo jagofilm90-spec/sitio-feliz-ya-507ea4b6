@@ -49,12 +49,13 @@ export const AlmacenFumigacionesTab = ({ onStatsUpdate }: AlmacenFumigacionesTab
   const loadProductos = async () => {
     setLoading(true);
     try {
+      // Cargar TODOS los productos que requieren fumigación (sin filtrar por stock)
+      // Esto permite ver productos que necesitan fumigación antes de recibir inventario
       const { data, error } = await supabase
         .from("productos")
         .select("id, codigo, nombre, fecha_ultima_fumigacion, stock_actual")
         .eq("requiere_fumigacion", true)
         .eq("activo", true)
-        .gt("stock_actual", 0)
         .order("fecha_ultima_fumigacion", { ascending: true, nullsFirst: true });
 
       if (error) throw error;
@@ -169,7 +170,8 @@ export const AlmacenFumigacionesTab = ({ onStatsUpdate }: AlmacenFumigacionesTab
     return (
       <div className="p-8 text-center text-muted-foreground">
         <Bug className="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p>No hay productos que requieran fumigación con stock disponible</p>
+        <p>No hay productos configurados para fumigación</p>
+        <p className="text-xs mt-1">Marca productos con "Requiere fumigación" en el catálogo</p>
       </div>
     );
   }

@@ -53,6 +53,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
   const [loading, setLoading] = useState(true);
   const [selectedRuta, setSelectedRuta] = useState<Ruta | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [modoVisualizacion, setModoVisualizacion] = useState<"asignadas" | "todas">("asignadas");
   const { toast } = useToast();
 
   const fechaHoy = format(new Date(), "yyyy-MM-dd");
@@ -60,7 +61,11 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
   const loadRutas = async () => {
     setLoading(true);
     try {
-      let query = supabase
+      // Sistema híbrido: primero buscar rutas asignadas al almacenista
+      // Si no hay ninguna, mostrar todas las rutas del día
+      
+      // Cargar TODAS las rutas del día primero
+      const { data: todasLasRutas, error } = await supabase
         .from("rutas")
         .select(`
           id,
@@ -80,17 +85,28 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
         .eq("fecha_ruta", fechaHoy)
         .order("hora_salida_sugerida", { ascending: true, nullsFirst: false });
 
-      // Si tiene empleadoId, filtrar solo sus rutas asignadas
-      if (empleadoId) {
-        query = query.eq("almacenista_id", empleadoId);
-      }
-
-      const { data, error } = await query;
-
       if (error) throw error;
 
+      const rutasData = (todasLasRutas as any[]) || [];
+      
+      // Si el almacenista tiene empleadoId, verificar si hay rutas asignadas
+      let rutasFiltradas = rutasData;
+      let modo: "asignadas" | "todas" = "todas";
+      
+      if (empleadoId) {
+        const rutasAsignadas = rutasData.filter(r => r.almacenista_id === empleadoId);
+        if (rutasAsignadas.length > 0) {
+          // Tiene rutas asignadas, mostrar solo esas
+          rutasFiltradas = rutasAsignadas;
+          modo = "asignadas";
+        }
+        // Si no tiene rutas asignadas, mostrar todas (modo fallback)
+      }
+      
+      setModoVisualizacion(modo);
+
       // Ordenar: completadas al final, luego por hora de salida
-      const sortedRutas = ((data as any[]) || []).sort((a, b) => {
+      const sortedRutas = rutasFiltradas.sort((a, b) => {
         // Completadas van al final
         if (a.carga_completada && !b.carga_completada) return 1;
         if (!a.carga_completada && b.carga_completada) return -1;
@@ -180,8 +196,8 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
     return (
       <div className="p-8 text-center text-muted-foreground">
         <Truck className="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p>No hay rutas asignadas para hoy</p>
-        {empleadoId && <p className="text-xs mt-1">Solo puedes ver rutas asignadas a ti</p>}
+        <p>No hay rutas programadas para hoy</p>
+        <p className="text-xs mt-1">Las rutas se crean desde el módulo de planificación</p>
       </div>
     );
   }
@@ -190,7 +206,19 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
     <>
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Rutas para cargar</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Rutas para cargar</CardTitle>
+            {modoVisualizacion === "todas" && empleadoId && (
+              <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                Viendo todas las rutas del día
+              </Badge>
+            )}
+            {modoVisualizacion === "asignadas" && (
+              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                Mis rutas asignadas
+              </Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <ScrollArea className="h-[calc(100vh-320px)] min-h-[300px]">
