@@ -103,6 +103,7 @@ export const MODULE_PERMISSIONS: Record<string, AppRole[]> = {
   '/correos': ['admin', 'secretaria'],
   '/generate-assets': ['admin'],
   '/permisos': ['admin'],
+  '/chofer': ['chofer'],
 };
 
 // Hook para verificar acceso a un módulo específico (usa permisos de BD con fallback)
