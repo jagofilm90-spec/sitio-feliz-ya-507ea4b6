@@ -86,8 +86,10 @@ export const useUserRoles = (): UseUserRolesReturn => {
 };
 
 // Configuración de permisos por módulo (fallback si la BD no está disponible)
+// IMPORTANTE: almacen y chofer NO deben tener acceso a /dashboard
+// Se redirigen automáticamente a sus interfaces dedicadas
 export const MODULE_PERMISSIONS: Record<string, AppRole[]> = {
-  '/dashboard': ['admin', 'secretaria', 'vendedor', 'chofer', 'almacen', 'contadora'],
+  '/dashboard': ['admin', 'secretaria', 'vendedor', 'contadora'], // SIN almacen ni chofer
   '/productos': ['admin', 'secretaria', 'almacen'],
   '/fumigaciones': ['admin', 'secretaria', 'almacen'],
   '/clientes': ['admin', 'secretaria', 'vendedor'],
@@ -103,7 +105,8 @@ export const MODULE_PERMISSIONS: Record<string, AppRole[]> = {
   '/correos': ['admin', 'secretaria'],
   '/generate-assets': ['admin'],
   '/permisos': ['admin'],
-  '/chofer': ['chofer'],
+  '/almacen-tablet': ['almacen'], // Interfaz dedicada para almacenistas
+  '/chofer': ['chofer'], // Interfaz dedicada para choferes
 };
 
 // Hook para verificar acceso a un módulo específico (usa permisos de BD con fallback)
