@@ -30,6 +30,7 @@ import DisenosCamioneta from "./pages/DisenosCamioneta";
 import Permisos from "./pages/Permisos";
 import Respaldos from "./pages/Respaldos";
 import AlmacenTablet from "./pages/AlmacenTablet";
+import ChoferPanel from "./pages/ChoferPanel";
 
 import PushNotificationSetup from "./components/PushNotificationSetup";
 import { initPushNotifications, isNativePlatform } from "./services/pushNotifications";
@@ -101,6 +102,7 @@ const App = () => (
               <Route path="/permisos" element={<Permisos />} />
               <Route path="/respaldos" element={<Respaldos />} />
               <Route path="/almacen-tablet" element={<AlmacenTablet />} />
+              <Route path="/chofer" element={<ChoferPanel />} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

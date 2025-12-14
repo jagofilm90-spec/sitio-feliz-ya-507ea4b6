@@ -1359,11 +1359,15 @@ export type Database = {
           entregado: boolean | null
           fecha_entrega: string | null
           firma_recibido: string | null
+          hora_entrega_real: string | null
           id: string
+          motivo_rechazo: string | null
+          nombre_receptor: string | null
           notas: string | null
           orden_entrega: number
           pedido_id: string
           ruta_id: string
+          status_entrega: string | null
           updated_at: string
         }
         Insert: {
@@ -1371,11 +1375,15 @@ export type Database = {
           entregado?: boolean | null
           fecha_entrega?: string | null
           firma_recibido?: string | null
+          hora_entrega_real?: string | null
           id?: string
+          motivo_rechazo?: string | null
+          nombre_receptor?: string | null
           notas?: string | null
           orden_entrega: number
           pedido_id: string
           ruta_id: string
+          status_entrega?: string | null
           updated_at?: string
         }
         Update: {
@@ -1383,11 +1391,15 @@ export type Database = {
           entregado?: boolean | null
           fecha_entrega?: string | null
           firma_recibido?: string | null
+          hora_entrega_real?: string | null
           id?: string
+          motivo_rechazo?: string | null
+          nombre_receptor?: string | null
           notas?: string | null
           orden_entrega?: number
           pedido_id?: string
           ruta_id?: string
+          status_entrega?: string | null
           updated_at?: string
         }
         Relationships: [
