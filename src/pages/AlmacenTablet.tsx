@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,7 +18,10 @@ import {
   ChevronRight,
   CheckCircle2,
   Clock,
-  AlertCircle
+  AlertCircle,
+  LogOut,
+  Wifi,
+  WifiOff
 } from "lucide-react";
 import { RutaCargaSheet } from "@/components/almacen/RutaCargaSheet";
 
@@ -49,9 +53,28 @@ const AlmacenTablet = () => {
   const [loading, setLoading] = useState(true);
   const [selectedRuta, setSelectedRuta] = useState<Ruta | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const fechaHoy = format(new Date(), "yyyy-MM-dd");
+
+  // Monitor de conexión
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth", { replace: true });
+  };
 
   const loadRutas = async () => {
     setLoading(true);
@@ -112,27 +135,48 @@ const AlmacenTablet = () => {
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
-      {/* Header */}
+      {/* Header con indicador de conexión y logout */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-            Carga de Rutas
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            <Calendar className="inline-block w-4 h-4 mr-1" />
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+              Carga de Rutas
+            </h1>
+            {/* Indicador de conexión */}
+            <Badge variant={isOnline ? "default" : "destructive"} className="h-8 px-3 text-sm">
+              {isOnline ? (
+                <><Wifi className="w-4 h-4 mr-1" /> Conectado</>
+              ) : (
+                <><WifiOff className="w-4 h-4 mr-1" /> Sin conexión</>
+              )}
+            </Badge>
+          </div>
+          <p className="text-muted-foreground mt-1 text-lg">
+            <Calendar className="inline-block w-5 h-5 mr-2" />
             {format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es })}
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="lg"
-          onClick={loadRutas}
-          disabled={loading}
-          className="h-14 px-6 text-lg"
-        >
-          <RefreshCw className={`w-5 h-5 mr-2 ${loading ? "animate-spin" : ""}`} />
-          Actualizar
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={loadRutas}
+            disabled={loading}
+            className="h-14 px-6 text-lg"
+          >
+            <RefreshCw className={`w-5 h-5 mr-2 ${loading ? "animate-spin" : ""}`} />
+            Actualizar
+          </Button>
+          <Button
+            variant="ghost"
+            size="lg"
+            onClick={handleLogout}
+            className="h-14 px-6 text-lg text-destructive hover:text-destructive hover:bg-destructive/10"
+          >
+            <LogOut className="w-5 h-5 mr-2" />
+            Salir
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}

@@ -133,13 +133,13 @@ const ProductoItem = ({
               : "bg-card border-border"
         }`}
       >
-        {/* Línea principal */}
-        <div className="flex items-center gap-3 p-4">
+        {/* Línea principal - optimizada para tablet */}
+        <div className="flex items-center gap-4 p-5">
           <Checkbox
             checked={producto.cargado}
             onCheckedChange={handleCheckChange}
             disabled={disabled}
-            className="h-6 w-6"
+            className="h-8 w-8 rounded-md border-2"
           />
 
           <div className="flex-1 min-w-0">
@@ -176,9 +176,9 @@ const ProductoItem = ({
           )}
 
           <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="icon" className="shrink-0">
+            <Button variant="ghost" size="icon" className="shrink-0 h-12 w-12">
               <ChevronDown
-                className={`w-5 h-5 transition-transform ${
+                className={`w-6 h-6 transition-transform ${
                   isOpen ? "rotate-180" : ""
                 }`}
               />
@@ -189,16 +189,17 @@ const ProductoItem = ({
         {/* Detalles expandibles */}
         <CollapsibleContent>
           <div className="px-4 pb-4 pt-0 space-y-3 border-t border-border/50">
-            {/* Cantidad real cargada */}
-            <div className="flex items-center gap-3 mt-3">
-              <label className="text-sm text-muted-foreground whitespace-nowrap">
+            {/* Cantidad real cargada - optimizada para tablet */}
+            <div className="flex items-center gap-4 mt-3">
+              <label className="text-base text-muted-foreground whitespace-nowrap">
                 Cantidad cargada:
               </label>
               <Input
                 type="number"
+                inputMode="numeric"
                 value={cantidadCargada}
                 onChange={(e) => handleCantidadChange(e.target.value)}
-                className="w-24 h-10 text-center"
+                className="w-28 h-14 text-center text-xl font-medium"
                 disabled={disabled}
               />
               <span className="text-sm text-muted-foreground">
@@ -223,7 +224,7 @@ const ProductoItem = ({
                   onValueChange={handleLoteChange}
                   disabled={disabled}
                 >
-                  <SelectTrigger className="h-12">
+                  <SelectTrigger className="h-14 text-base">
                     <SelectValue placeholder="Seleccionar lote" />
                   </SelectTrigger>
                   <SelectContent>
