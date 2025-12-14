@@ -2995,6 +2995,8 @@ export type Database = {
           carga_completada: boolean | null
           carga_completada_en: string | null
           carga_completada_por: string | null
+          carga_iniciada_en: string | null
+          carga_iniciada_por: string | null
           chofer_id: string
           costo_ayudante_externo: number | null
           created_at: string
@@ -3023,6 +3025,8 @@ export type Database = {
           carga_completada?: boolean | null
           carga_completada_en?: string | null
           carga_completada_por?: string | null
+          carga_iniciada_en?: string | null
+          carga_iniciada_por?: string | null
           chofer_id: string
           costo_ayudante_externo?: number | null
           created_at?: string
@@ -3051,6 +3055,8 @@ export type Database = {
           carga_completada?: boolean | null
           carga_completada_en?: string | null
           carga_completada_por?: string | null
+          carga_iniciada_en?: string | null
+          carga_iniciada_por?: string | null
           chofer_id?: string
           costo_ayudante_externo?: number | null
           created_at?: string
@@ -3118,6 +3124,20 @@ export type Database = {
           {
             foreignKeyName: "rutas_carga_completada_por_fkey"
             columns: ["carga_completada_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rutas_carga_iniciada_por_fkey"
+            columns: ["carga_iniciada_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rutas_carga_iniciada_por_fkey"
+            columns: ["carga_iniciada_por"]
             isOneToOne: false
             referencedRelation: "profiles_chat"
             referencedColumns: ["id"]

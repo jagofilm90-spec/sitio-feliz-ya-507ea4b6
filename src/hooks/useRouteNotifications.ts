@@ -214,6 +214,39 @@ export const useRouteNotifications = () => {
     }
   };
 
+  const notifyAlmacenistaAssignment = async (params: {
+    almacenistaId: string;
+    rutaFolio: string;
+    rutaId: string;
+    fechaRuta: Date | string;
+    horaSalida?: string | null;
+    vehiculoNombre?: string;
+  }) => {
+    const fechaFormateada = format(
+      typeof params.fechaRuta === "string" ? new Date(params.fechaRuta) : params.fechaRuta,
+      "d 'de' MMMM",
+      { locale: es }
+    );
+
+    const horaTexto = params.horaSalida 
+      ? ` - Sale ${params.horaSalida.slice(0, 5)}`
+      : "";
+
+    try {
+      await supabase.functions.invoke("send-push-notification", {
+        body: {
+          user_ids: [params.almacenistaId],
+          title: "📦 Nueva ruta para cargar",
+          body: `Ruta ${params.rutaFolio}${horaTexto} para ${fechaFormateada}${params.vehiculoNombre ? ` (${params.vehiculoNombre})` : ""}`,
+          data: { type: "ruta_asignada_almacen", ruta_id: params.rutaId },
+        },
+      });
+      console.log("Notificación enviada al almacenista:", params.almacenistaId);
+    } catch (error) {
+      console.error("Error enviando notificación al almacenista:", error);
+    }
+  };
+
   return {
     notifyRouteAssignment,
     notifyRouteChange,
@@ -223,5 +256,6 @@ export const useRouteNotifications = () => {
     notifyDeliveryRemoved,
     notifyLoadComplete,
     notifyUrgentMessage,
+    notifyAlmacenistaAssignment,
   };
 };

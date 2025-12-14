@@ -72,13 +72,14 @@ const PlanificadorRutas = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const { toast } = useToast();
-  const { notifyRouteAssignment } = useRouteNotifications();
+  const { notifyRouteAssignment, notifyAlmacenistaAssignment } = useRouteNotifications();
 
   // Form state
   const [selectedVehiculo, setSelectedVehiculo] = useState<string>("");
   const [selectedChofer, setSelectedChofer] = useState<string>("");
   const [selectedAyudante, setSelectedAyudante] = useState<string>("");
   const [selectedAlmacenista, setSelectedAlmacenista] = useState<string>("");
+  const [horaSalida, setHoraSalida] = useState<string>("09:00");
   // Default to TOMORROW for anticipated planning
   const [fechaRuta, setFechaRuta] = useState<string>(format(addDays(new Date(), 1), "yyyy-MM-dd"));
   const [tipoRuta, setTipoRuta] = useState<"local" | "foranea">("local");
@@ -241,6 +242,7 @@ const PlanificadorRutas = () => {
           ayudante_id: selectedAyudante || null,
           vehiculo_id: selectedVehiculo,
           almacenista_id: selectedAlmacenista || null,
+          hora_salida_sugerida: horaSalida,
           peso_total_kg: pesoTotal,
           tipo_ruta: tipoRuta,
           status: "programada",
@@ -288,6 +290,19 @@ const PlanificadorRutas = () => {
         rutaId: rutaData.id,
         fechaRuta: fechaRuta,
       });
+
+      // Enviar notificación push al almacenista asignado
+      if (selectedAlmacenista) {
+        const vehiculoInfo = vehiculos.find(v => v.id === selectedVehiculo);
+        await notifyAlmacenistaAssignment({
+          almacenistaId: selectedAlmacenista,
+          rutaFolio: newFolio,
+          rutaId: rutaData.id,
+          fechaRuta: fechaRuta,
+          horaSalida: horaSalida,
+          vehiculoNombre: vehiculoInfo?.nombre,
+        });
+      }
       
       // Reset and reload
       setDialogOpen(false);
@@ -307,6 +322,7 @@ const PlanificadorRutas = () => {
     setSelectedChofer("");
     setSelectedAyudante("");
     setSelectedAlmacenista("");
+    setHoraSalida("09:00");
     setFechaRuta(format(addDays(new Date(), 1), "yyyy-MM-dd"));
     setTipoRuta("local");
     setPedidosSeleccionados([]);
@@ -367,6 +383,14 @@ const PlanificadorRutas = () => {
                     type="date"
                     value={fechaRuta}
                     onChange={(e) => setFechaRuta(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Hora de Salida *</Label>
+                  <Input
+                    type="time"
+                    value={horaSalida}
+                    onChange={(e) => setHoraSalida(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
