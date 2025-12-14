@@ -81,13 +81,14 @@ const Layout = ({ children }: LayoutProps) => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  // Redirigir almacenistas SOLO a la interfaz de tablet
+  // Redirigir almacenistas SOLO a la interfaz de tablet (excepto chat)
   useEffect(() => {
     if (rolesLoading || !roles.length) return;
     
-    // Si el usuario tiene SOLO el rol almacen, redirigir a tablet
+    // Si el usuario tiene SOLO el rol almacen, redirigir a tablet (excepto si está en chat)
     const isOnlyAlmacen = roles.length === 1 && roles.includes("almacen");
-    if (isOnlyAlmacen && location.pathname !== "/almacen-tablet") {
+    const allowedPagesForAlmacen = ["/almacen-tablet", "/chat"];
+    if (isOnlyAlmacen && !allowedPagesForAlmacen.includes(location.pathname)) {
       navigate("/almacen-tablet", { replace: true });
     }
   }, [roles, rolesLoading, location.pathname, navigate]);
@@ -117,7 +118,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: Smartphone, label: "App Móvil", path: "/generate-assets" },
     { icon: Lock, label: "Permisos", path: "/permisos" },
     { icon: Database, label: "Respaldos", path: "/respaldos" },
-    
+    { icon: Warehouse, label: "Almacén Tablet", path: "/almacen-tablet" },
   ];
 
   // Filtrar menú según permisos dinámicos del usuario
