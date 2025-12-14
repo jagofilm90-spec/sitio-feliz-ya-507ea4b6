@@ -53,15 +53,23 @@ const Auth = () => {
         return;
       }
 
-      // Verificar si es chofer (solo chofer, sin otros roles admin/secretaria)
+      // Verificar roles del usuario
       const { data: userRoles } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", userId);
 
       const roles = userRoles?.map(r => r.role) || [];
-      const isOnlyChofer = roles.length === 1 && roles[0] === "chofer";
+      
+      // Solo almacén -> tablet
+      const isOnlyAlmacen = roles.length === 1 && roles[0] === "almacen";
+      if (isOnlyAlmacen) {
+        navigate("/almacen-tablet", { replace: true });
+        return;
+      }
 
+      // Solo chofer -> panel chofer
+      const isOnlyChofer = roles.length === 1 && roles[0] === "chofer";
       if (isOnlyChofer) {
         navigate("/chofer", { replace: true });
         return;

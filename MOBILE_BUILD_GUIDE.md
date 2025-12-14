@@ -89,7 +89,7 @@ npx cap open ios
    - En "Signing & Capabilities", selecciona tu Apple Developer Team
 
 2. **Configurar Bundle Identifier**:
-   - Debe coincidir con `app.lovable.0a4fe6f267d54980a499e679897a2f15`
+   - Debe coincidir con `com.almasa.erp`
 
 3. **Configurar Permisos** (Info.plist):
    ```xml
@@ -213,7 +213,7 @@ El archivo `capacitor.config.ts` contiene la configuración principal:
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.0a4fe6f267d54980a499e679897a2f15',
+  appId: 'com.almasa.erp',
   appName: 'ALMASA ERP',
   webDir: 'dist',
   server: {
@@ -232,7 +232,7 @@ Comentar o eliminar la sección `server` para que la app use los archivos locale
 
 ```typescript
 const config: CapacitorConfig = {
-  appId: 'app.lovable.0a4fe6f267d54980a499e679897a2f15',
+  appId: 'com.almasa.erp',
   appName: 'ALMASA ERP',
   webDir: 'dist',
   // server: { ... } // Comentado para producción
@@ -246,7 +246,7 @@ const config: CapacitorConfig = {
 ### Configuración Firebase (Android)
 
 1. Crear proyecto en [Firebase Console](https://console.firebase.google.com/)
-2. Agregar app Android con package name: `app.lovable.0a4fe6f267d54980a499e679897a2f15`
+2. Agregar app Android con package name: `com.almasa.erp`
 3. Descargar `google-services.json`
 4. Colocar en `android/app/`
 5. Obtener Server Key para usar en Edge Functions
