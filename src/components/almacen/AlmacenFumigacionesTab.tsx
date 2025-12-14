@@ -24,7 +24,8 @@ import {
   AlertTriangle,
   AlertCircle,
   FileQuestion,
-  Edit2
+  Edit2,
+  CheckCircle2
 } from "lucide-react";
 
 interface ProductoFumigacion {
@@ -177,6 +178,10 @@ export const AlmacenFumigacionesTab = ({ onStatsUpdate }: AlmacenFumigacionesTab
 
   // Filtrar productos por categoría
   const productosSinRegistro = productos.filter(p => p.fecha_ultima_fumigacion === null);
+  const productosVigentes = productos.filter(p => {
+    const estado = getEstadoFumigacion(p.fecha_ultima_fumigacion);
+    return estado.tipo === "vigente";
+  });
   const productosProximos = productos.filter(p => {
     const estado = getEstadoFumigacion(p.fecha_ultima_fumigacion);
     return estado.tipo === "proxima";
@@ -237,13 +242,19 @@ export const AlmacenFumigacionesTab = ({ onStatsUpdate }: AlmacenFumigacionesTab
     );
   };
 
-  const renderEmptyState = (tipo: "sin_registro" | "proxima" | "vencida") => {
+  const renderEmptyState = (tipo: "sin_registro" | "vigente" | "proxima" | "vencida") => {
     const configs = {
       sin_registro: {
         icon: FileQuestion,
         title: "No hay productos sin registro",
         subtitle: "Todos los productos tienen fecha de fumigación",
         colorClass: "text-muted-foreground"
+      },
+      vigente: {
+        icon: CheckCircle2,
+        title: "No hay productos vigentes",
+        subtitle: "Ningún producto tiene fumigación al día",
+        colorClass: "text-green-600"
       },
       proxima: {
         icon: AlertTriangle,
@@ -294,8 +305,8 @@ export const AlmacenFumigacionesTab = ({ onStatsUpdate }: AlmacenFumigacionesTab
   return (
     <>
       <Tabs defaultValue="sin_registro" className="w-full">
-        <TabsList className="w-full grid grid-cols-3 mb-2">
-          <TabsTrigger value="sin_registro" className="flex items-center gap-1 text-xs px-2">
+        <TabsList className="w-full grid grid-cols-4 mb-2">
+          <TabsTrigger value="sin_registro" className="flex items-center gap-1 text-xs px-1">
             <FileQuestion className="w-3.5 h-3.5 shrink-0" />
             <span className="hidden sm:inline">Sin registro</span>
             <span className="sm:hidden">S/R</span>
@@ -305,7 +316,17 @@ export const AlmacenFumigacionesTab = ({ onStatsUpdate }: AlmacenFumigacionesTab
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="proxima" className="flex items-center gap-1 text-xs px-2">
+          <TabsTrigger value="vigente" className="flex items-center gap-1 text-xs px-1">
+            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Vigentes</span>
+            <span className="sm:hidden">Vig</span>
+            {productosVigentes.length > 0 && (
+              <Badge className="ml-1 h-5 px-1.5 text-xs bg-green-600 hover:bg-green-600">
+                {productosVigentes.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="proxima" className="flex items-center gap-1 text-xs px-1">
             <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
             <span className="hidden sm:inline">Por vencer</span>
             <span className="sm:hidden">Próx</span>
@@ -315,7 +336,7 @@ export const AlmacenFumigacionesTab = ({ onStatsUpdate }: AlmacenFumigacionesTab
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="vencida" className="flex items-center gap-1 text-xs px-2">
+          <TabsTrigger value="vencida" className="flex items-center gap-1 text-xs px-1">
             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
             <span className="hidden sm:inline">Vencidas</span>
             <span className="sm:hidden">Venc</span>
@@ -334,6 +355,12 @@ export const AlmacenFumigacionesTab = ({ onStatsUpdate }: AlmacenFumigacionesTab
                 {productosSinRegistro.length > 0
                   ? productosSinRegistro.map(renderProductoItem)
                   : renderEmptyState("sin_registro")}
+              </TabsContent>
+
+              <TabsContent value="vigente" className="m-0">
+                {productosVigentes.length > 0
+                  ? productosVigentes.map(renderProductoItem)
+                  : renderEmptyState("vigente")}
               </TabsContent>
 
               <TabsContent value="proxima" className="m-0">
