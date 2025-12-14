@@ -154,36 +154,35 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                     onClick={() => handleSelectEntrega(entrega)}
                     className="w-full p-4 hover:bg-muted/50 transition-colors text-left flex items-center gap-4"
                   >
-                    <div className={`w-3 h-3 rounded-full ${estado.color}`} />
+                    <div className={`w-3 h-3 rounded-full ${estado.color} flex-shrink-0`} />
                     
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-lg">
-                          {entrega.orden_compra?.folio}
-                        </span>
-                        <Badge variant="outline" className="text-xs">
-                          Entrega #{entrega.numero_entrega}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Truck className="w-4 h-4" />
+                      {/* LÍNEA 1: Proveedor + Cantidad (prominente) */}
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="font-semibold text-lg truncate">
                           {entrega.orden_compra?.proveedor?.nombre || "Sin proveedor"}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Package className="w-4 h-4" />
-                          {entrega.cantidad_bultos} bultos
-                        </span>
+                        <Badge className="text-base font-bold bg-primary text-primary-foreground flex-shrink-0">
+                          {entrega.cantidad_bultos.toLocaleString()} bultos
+                        </Badge>
+                      </div>
+                      
+                      {/* LÍNEA 2: Fecha + OC (secundario) */}
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         {entrega.fecha_programada && (
                           <span className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            {format(new Date(entrega.fecha_programada), "dd/MM/yyyy")}
+                            {format(new Date(entrega.fecha_programada + "T12:00:00"), "dd/MM/yyyy", { locale: es })}
                           </span>
                         )}
+                        <span>•</span>
+                        <span className="truncate">
+                          {entrega.orden_compra?.folio} - Entrega #{entrega.numero_entrega}
+                        </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <Badge variant={estado.variant}>
                         {estado.label}
                       </Badge>
