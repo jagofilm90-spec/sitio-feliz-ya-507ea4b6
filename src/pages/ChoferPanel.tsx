@@ -13,6 +13,7 @@ import { es } from "date-fns/locale";
 import { Truck, MapPin, Package, User, LogOut, Navigation } from "lucide-react";
 import { EntregaCard } from "@/components/chofer/EntregaCard";
 import { ResumenRuta } from "@/components/chofer/ResumenRuta";
+import PushNotificationSetup from "@/components/PushNotificationSetup";
 
 export default function ChoferPanel() {
   const navigate = useNavigate();
@@ -112,6 +113,7 @@ export default function ChoferPanel() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PushNotificationSetup />
       <header className="sticky top-0 z-50 bg-primary text-primary-foreground p-4 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

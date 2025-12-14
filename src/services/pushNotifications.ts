@@ -137,6 +137,11 @@ const handleNotificationTap = (action: ActionPerformed) => {
     case 'carga_completa':
       window.location.href = '/rutas';
       break;
+    case 'ruta_asignada':
+    case 'ruta_modificada':
+    case 'ruta_cancelada':
+      window.location.href = '/chofer';
+      break;
     default:
       console.log('Tipo de notificación no manejado:', data.type);
   }

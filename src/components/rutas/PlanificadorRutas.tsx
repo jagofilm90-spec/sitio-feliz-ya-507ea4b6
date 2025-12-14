@@ -25,6 +25,7 @@ import { Plus, Truck, Package, AlertTriangle, Check, X, MapPin, Calendar, User, 
 import { SugerirRutasAIDialog } from "./SugerirRutasAIDialog";
 import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
+import { useRouteNotifications } from "@/hooks/useRouteNotifications";
 
 interface Chofer {
   id: string;
@@ -65,6 +66,7 @@ const PlanificadorRutas = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { notifyRouteAssignment } = useRouteNotifications();
 
   // Form state
   const [selectedVehiculo, setSelectedVehiculo] = useState<string>("");
@@ -251,6 +253,15 @@ const PlanificadorRutas = () => {
         .eq("id", selectedVehiculo);
 
       toast({ title: `Ruta ${newFolio} creada correctamente` });
+
+      // Enviar notificación push al chofer y ayudante
+      await notifyRouteAssignment({
+        choferId: selectedChofer,
+        ayudanteId: selectedAyudante || null,
+        rutaFolio: newFolio,
+        rutaId: rutaData.id,
+        fechaRuta: fechaRuta,
+      });
       
       // Reset and reload
       setDialogOpen(false);

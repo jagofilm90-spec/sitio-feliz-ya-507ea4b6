@@ -35,6 +35,7 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { RouteMapVisualization } from "./RouteMapVisualization";
+import { useRouteNotifications } from "@/hooks/useRouteNotifications";
 
 interface RutaSugerida {
   vehiculo: {
@@ -105,6 +106,7 @@ export const SugerirRutasAIDialog = ({
   const [vehiculosSeleccionados, setVehiculosSeleccionados] = useState<Set<string>>(new Set());
   
   const { toast } = useToast();
+  const { notifyRouteAssignment } = useRouteNotifications();
 
   // Load available vehicles when dialog opens
   useEffect(() => {
@@ -286,6 +288,15 @@ export const SugerirRutasAIDialog = ({
         .eq("id", ruta.vehiculo.id);
 
       toast({ title: `Ruta ${newFolio} creada` });
+
+      // Enviar notificación push al chofer asignado
+      await notifyRouteAssignment({
+        choferId: choferes[0].id,
+        ayudanteId: null,
+        rutaFolio: newFolio,
+        rutaId: rutaData.id,
+        fechaRuta: new Date(),
+      });
 
       setRutasSugeridas(prev => prev.filter((_, i) => i !== index));
       onRutaCreada();
