@@ -23,12 +23,15 @@ export interface RutaMonitoreo {
 export interface EntregaMonitoreo {
   id: string;
   pedido_id: string;
+  orden_entrega: number;
   status_entrega: string;
   hora_entrega_real: string | null;
   motivo_rechazo: string | null;
   nombre_receptor: string | null;
   cliente_nombre?: string;
   sucursal_nombre?: string;
+  latitud?: number | null;
+  longitud?: number | null;
 }
 
 export interface CargaProductoMonitoreo {
@@ -230,19 +233,26 @@ export const useMonitoreoRutas = () => {
           const { data: entregas } = await supabase
             .from('entregas')
             .select(`
-              id, pedido_id, status_entrega, hora_entrega_real, 
+              id, pedido_id, orden_entrega, status_entrega, hora_entrega_real, 
               motivo_rechazo, nombre_receptor,
               pedido:pedido_id (
                 cliente:cliente_id (nombre),
-                sucursal:sucursal_id (nombre)
+                sucursal:sucursal_id (nombre, latitud, longitud)
               )
             `)
-            .eq('ruta_id', ruta.id);
+            .eq('ruta_id', ruta.id)
+            .order('orden_entrega', { ascending: true });
 
-          const { data: carga } = await supabase
-            .from('carga_productos')
-            .select('id, cargado, cargado_en, cantidad_solicitada, cantidad_cargada')
-            .eq('entrega_id', (entregas || []).map(e => e.id)[0] || '00000000-0000-0000-0000-000000000000');
+          const entregaIds = (entregas || []).map(e => e.id);
+          let carga: any[] = [];
+          
+          if (entregaIds.length > 0) {
+            const { data: cargaData } = await supabase
+              .from('carga_productos')
+              .select('id, cargado, cargado_en, cantidad_solicitada, cantidad_cargada, entrega_id')
+              .in('entrega_id', entregaIds);
+            carga = cargaData || [];
+          }
 
           return {
             ...ruta,
@@ -252,14 +262,17 @@ export const useMonitoreoRutas = () => {
             entregas: (entregas || []).map((e: any) => ({
               id: e.id,
               pedido_id: e.pedido_id,
+              orden_entrega: e.orden_entrega,
               status_entrega: e.status_entrega || 'pendiente',
               hora_entrega_real: e.hora_entrega_real,
               motivo_rechazo: e.motivo_rechazo,
               nombre_receptor: e.nombre_receptor,
               cliente_nombre: e.pedido?.cliente?.nombre,
               sucursal_nombre: e.pedido?.sucursal?.nombre,
+              latitud: e.pedido?.sucursal?.latitud,
+              longitud: e.pedido?.sucursal?.longitud,
             })),
-            carga_productos: carga || [],
+            carga_productos: carga,
           };
         })
       );

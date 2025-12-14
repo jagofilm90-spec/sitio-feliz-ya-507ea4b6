@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -5,11 +6,13 @@ import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Truck, User, Clock, Package, MapPin, Phone, CheckCircle2, 
-  XCircle, AlertTriangle, Circle
+  XCircle, AlertTriangle, Circle, Navigation
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { RutaMonitoreo } from '@/hooks/useMonitoreoRutas';
+import { useChoferUbicacionRealtime } from '@/hooks/useChoferUbicacionRealtime';
+import { MapaRutaEnVivo } from './MapaRutaEnVivo';
 
 interface RutaMonitorCardProps {
   ruta: RutaMonitoreo;
@@ -72,6 +75,16 @@ const StatusTimeline = ({ status }: { status: string }) => {
 };
 
 export const RutaMonitorCard = ({ ruta, onVerDetalles }: RutaMonitorCardProps) => {
+  const [showMapa, setShowMapa] = useState(false);
+  
+  const { getUbicacionByRuta, isLocationStale } = useChoferUbicacionRealtime({
+    rutaIds: [ruta.id],
+    enabled: ruta.status === 'en_curso',
+  });
+
+  const ubicacionChofer = getUbicacionByRuta(ruta.id);
+  const hasActiveGps = ubicacionChofer && !isLocationStale(ruta.id);
+
   const totalProductos = ruta.carga_productos.length;
   const productosCargados = ruta.carga_productos.filter(cp => cp.cargado).length;
   const progresoCarga = totalProductos > 0 ? (productosCargados / totalProductos) * 100 : 0;
@@ -228,6 +241,27 @@ export const RutaMonitorCard = ({ ruta, onVerDetalles }: RutaMonitorCardProps) =
           >
             Ver detalles
           </Button>
+          {(ruta.status === 'en_curso' || ruta.status === 'cargada') && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant={hasActiveGps ? 'default' : 'outline'} 
+                    size="sm"
+                    className={hasActiveGps ? 'bg-green-600 hover:bg-green-700' : ''}
+                    onClick={() => setShowMapa(true)}
+                  >
+                    <Navigation className="h-4 w-4 mr-1" />
+                    {hasActiveGps && <span className="w-1.5 h-1.5 rounded-full bg-green-300 animate-pulse mr-1" />}
+                    Mapa
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {hasActiveGps ? 'GPS activo - Ver ubicación en tiempo real' : 'Ver ruta en mapa'}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           {ruta.chofer && (
             <TooltipProvider>
               <Tooltip>
@@ -242,6 +276,13 @@ export const RutaMonitorCard = ({ ruta, onVerDetalles }: RutaMonitorCardProps) =
           )}
         </div>
       </CardContent>
+
+      {/* Mapa Dialog */}
+      <MapaRutaEnVivo 
+        ruta={ruta} 
+        open={showMapa} 
+        onOpenChange={setShowMapa} 
+      />
     </Card>
   );
 };
