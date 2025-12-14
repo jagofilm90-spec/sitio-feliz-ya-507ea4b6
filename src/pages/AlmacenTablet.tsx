@@ -240,10 +240,14 @@ const AlmacenTablet = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full grid grid-cols-4 h-14 mb-4">
+        <TabsList className="w-full grid grid-cols-5 h-14 mb-4">
           <TabsTrigger value="rutas" className="text-base h-12 gap-2">
             <Truck className="w-5 h-5" />
             <span className="hidden sm:inline">Mis</span> Rutas
+          </TabsTrigger>
+          <TabsTrigger value="recepcion" className="text-base h-12 gap-2">
+            <Package className="w-5 h-5" />
+            Recepción
           </TabsTrigger>
           <TabsTrigger value="inventario" className="text-base h-12 gap-2">
             <Boxes className="w-5 h-5" />
@@ -264,6 +268,13 @@ const AlmacenTablet = () => {
             key={`rutas-${refreshKey}`}
             onStatsUpdate={setRutasStats}
             empleadoId={empleadoId}
+          />
+        </TabsContent>
+
+        <TabsContent value="recepcion" className="mt-0">
+          <AlmacenRecepcionTab 
+            key={`recepcion-${refreshKey}`}
+            onStatsUpdate={setRecepcionStats}
           />
         </TabsContent>
 
