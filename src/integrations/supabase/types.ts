@@ -199,6 +199,53 @@ export type Database = {
           },
         ]
       }
+      chofer_ubicaciones: {
+        Row: {
+          chofer_id: string
+          created_at: string | null
+          heading: number | null
+          id: string
+          latitud: number
+          longitud: number
+          precision_metros: number | null
+          ruta_id: string | null
+          timestamp: string | null
+          velocidad_kmh: number | null
+        }
+        Insert: {
+          chofer_id: string
+          created_at?: string | null
+          heading?: number | null
+          id?: string
+          latitud: number
+          longitud: number
+          precision_metros?: number | null
+          ruta_id?: string | null
+          timestamp?: string | null
+          velocidad_kmh?: number | null
+        }
+        Update: {
+          chofer_id?: string
+          created_at?: string | null
+          heading?: number | null
+          id?: string
+          latitud?: number
+          longitud?: number
+          precision_metros?: number | null
+          ruta_id?: string | null
+          timestamp?: string | null
+          velocidad_kmh?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chofer_ubicaciones_ruta_id_fkey"
+            columns: ["ruta_id"]
+            isOneToOne: true
+            referencedRelation: "rutas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cliente_correos: {
         Row: {
           activo: boolean | null

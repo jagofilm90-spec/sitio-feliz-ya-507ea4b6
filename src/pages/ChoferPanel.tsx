@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useChoferGeolocation } from "@/hooks/useChoferGeolocation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,7 @@ import { es } from "date-fns/locale";
 import { Truck, MapPin, Package, User, LogOut, Navigation } from "lucide-react";
 import { EntregaCard } from "@/components/chofer/EntregaCard";
 import { ResumenRuta } from "@/components/chofer/ResumenRuta";
+import { GpsTrackingIndicator } from "@/components/rutas/GpsTrackingIndicator";
 import PushNotificationSetup from "@/components/PushNotificationSetup";
 
 export default function ChoferPanel() {
@@ -23,6 +25,13 @@ export default function ChoferPanel() {
   const [entregas, setEntregas] = useState<any[]>([]);
   const [choferNombre, setChoferNombre] = useState("");
   const [showResumen, setShowResumen] = useState(false);
+
+  // GPS Tracking - only enabled when route is in progress
+  const isRutaActiva = ruta && ['en_ruta', 'cargada'].includes(ruta.status);
+  const { isTracking, accuracy, error: gpsError } = useChoferGeolocation({
+    rutaId: ruta?.id || null,
+    enabled: isRutaActiva,
+  });
 
   useEffect(() => {
     if (!rolesLoading && !isChofer && !isAdmin) {
@@ -128,6 +137,11 @@ export default function ChoferPanel() {
           </Button>
         </div>
         {choferNombre && <div className="flex items-center gap-2 mt-2 text-sm"><User className="h-4 w-4" /><span>{choferNombre}</span></div>}
+        {isRutaActiva && (
+          <div className="mt-2">
+            <GpsTrackingIndicator isTracking={isTracking} accuracy={accuracy} error={gpsError} />
+          </div>
+        )}
       </header>
 
       <main className="p-4 pb-24">
