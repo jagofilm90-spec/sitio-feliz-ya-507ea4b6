@@ -28,7 +28,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Eye, Truck, MapPin, Route, Play, Square, Gauge, Pencil, Globe } from "lucide-react";
+import { Search, Eye, Truck, MapPin, Route, Play, Square, Gauge, Pencil, Globe, Activity } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import VehiculosTab from "@/components/rutas/VehiculosTab";
@@ -40,6 +40,8 @@ import { MapaGlobalSucursales } from "@/components/rutas/MapaGlobalSucursales";
 import AsignacionesDelDiaTab from "@/components/rutas/AsignacionesDelDiaTab";
 import AyudantesExternosTab from "@/components/rutas/AyudantesExternosTab";
 import DisponibilidadPersonalTab from "@/components/rutas/DisponibilidadPersonalTab";
+import { MonitoreoRutasTab } from "@/components/rutas/MonitoreoRutasTab";
+import { useMonitoreoRutas } from "@/hooks/useMonitoreoRutas";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Users, CalendarCheck, UserPlus, ClipboardList } from "lucide-react";
@@ -53,6 +55,9 @@ const RutasContent = () => {
   const [selectedRuta, setSelectedRuta] = useState<any>(null);
   const [kmMode, setKmMode] = useState<"iniciar" | "finalizar">("iniciar");
   const { toast } = useToast();
+  
+  // Hook de monitoreo para obtener alertas activas
+  const { alertas } = useMonitoreoRutas();
 
   useEffect(() => {
     loadRutas();
@@ -148,6 +153,15 @@ const RutasContent = () => {
                 <CalendarCheck className="h-4 w-4" />
                 Asignaciones
               </TabsTrigger>
+              <TabsTrigger value="monitoreo" className="flex items-center gap-2">
+                <Activity className="h-4 w-4" />
+                Monitoreo
+                {alertas.length > 0 && (
+                  <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1">
+                    {alertas.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="mapa" className="flex items-center gap-2">
                 <Globe className="h-4 w-4" />
                 Mapa Global
@@ -181,6 +195,10 @@ const RutasContent = () => {
 
           <TabsContent value="asignaciones">
             <AsignacionesDelDiaTab />
+          </TabsContent>
+
+          <TabsContent value="monitoreo">
+            <MonitoreoRutasTab />
           </TabsContent>
 
           <TabsContent value="mapa">
