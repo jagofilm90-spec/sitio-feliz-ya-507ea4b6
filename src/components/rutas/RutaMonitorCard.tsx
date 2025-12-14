@@ -6,13 +6,14 @@ import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Truck, User, Clock, Package, MapPin, Phone, CheckCircle2, 
-  XCircle, AlertTriangle, Circle, Navigation
+  XCircle, AlertTriangle, Navigation, MessageSquare
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { RutaMonitoreo } from '@/hooks/useMonitoreoRutas';
 import { useChoferUbicacionRealtime } from '@/hooks/useChoferUbicacionRealtime';
 import { MapaRutaEnVivo } from './MapaRutaEnVivo';
+import EnviarMensajeChoferDialog from './EnviarMensajeChoferDialog';
 
 interface RutaMonitorCardProps {
   ruta: RutaMonitoreo;
@@ -76,6 +77,7 @@ const StatusTimeline = ({ status }: { status: string }) => {
 
 export const RutaMonitorCard = ({ ruta, onVerDetalles }: RutaMonitorCardProps) => {
   const [showMapa, setShowMapa] = useState(false);
+  const [showMensaje, setShowMensaje] = useState(false);
   
   const { getUbicacionByRuta, isLocationStale } = useChoferUbicacionRealtime({
     rutaIds: [ruta.id],
@@ -262,6 +264,23 @@ export const RutaMonitorCard = ({ ruta, onVerDetalles }: RutaMonitorCardProps) =
               </Tooltip>
             </TooltipProvider>
           )}
+          {ruta.chofer && (ruta.status === 'en_curso' || ruta.status === 'cargada') && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="h-8 w-8"
+                    onClick={() => setShowMensaje(true)}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Enviar mensaje urgente</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           {ruta.chofer && (
             <TooltipProvider>
               <Tooltip>
@@ -283,6 +302,18 @@ export const RutaMonitorCard = ({ ruta, onVerDetalles }: RutaMonitorCardProps) =
         open={showMapa} 
         onOpenChange={setShowMapa} 
       />
+
+      {/* Mensaje Urgente Dialog */}
+      {ruta.chofer && (
+        <EnviarMensajeChoferDialog
+          open={showMensaje}
+          onOpenChange={setShowMensaje}
+          choferId={ruta.chofer.id}
+          choferNombre={ruta.chofer.full_name}
+          rutaId={ruta.id}
+          rutaFolio={ruta.folio}
+        />
+      )}
     </Card>
   );
 };

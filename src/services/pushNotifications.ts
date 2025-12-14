@@ -135,11 +135,12 @@ const handleNotificationTap = (action: ActionPerformed) => {
       window.location.href = '/pedidos?tab=cotizaciones';
       break;
     case 'carga_completa':
-      window.location.href = '/rutas';
-      break;
     case 'ruta_asignada':
     case 'ruta_modificada':
     case 'ruta_cancelada':
+    case 'entrega_agregada':
+    case 'entrega_removida':
+    case 'mensaje_urgente':
       window.location.href = '/chofer';
       break;
     default:

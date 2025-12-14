@@ -22,7 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Truck, User, Users, AlertTriangle, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
+import { useRouteNotifications } from "@/hooks/useRouteNotifications";
 interface Vehiculo {
   id: string;
   nombre: string;
@@ -75,6 +75,7 @@ const EditarRutaDialog = ({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const { notifyDriverReassignment, notifyRouteChange } = useRouteNotifications();
 
   const [selectedChofer, setSelectedChofer] = useState<string>("");
   const [selectedAyudante, setSelectedAyudante] = useState<string>("");
@@ -171,6 +172,27 @@ const EditarRutaDialog = ({
         .eq("id", ruta.id);
 
       if (error) throw error;
+
+      // Enviar notificaciones push si hubo cambios de personal
+      if (choferCambiado) {
+        await notifyDriverReassignment({
+          newChoferId: selectedChofer,
+          oldChoferId: ruta.chofer_id,
+          rutaFolio: ruta.folio,
+          rutaId: ruta.id,
+        });
+      }
+
+      // Notificar cambio de ayudante
+      const ayudanteCambiado = ruta.ayudante_id !== (selectedAyudante || null);
+      if (ayudanteCambiado && selectedAyudante) {
+        await notifyRouteChange({
+          choferId: selectedAyudante,
+          rutaFolio: ruta.folio,
+          rutaId: ruta.id,
+          mensaje: `Te asignaron como ayudante en ruta ${ruta.folio}`,
+        });
+      }
 
       toast({ title: "Ruta actualizada correctamente" });
       onOpenChange(false);
