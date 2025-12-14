@@ -17,13 +17,22 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Package,
   Camera,
   CheckCircle2,
   User,
   FileText,
   Truck,
-  Hash
+  Hash,
+  Warehouse,
+  Calendar
 } from "lucide-react";
 import { EvidenciaCapture, EvidenciasPreviewGrid } from "@/components/compras/EvidenciaCapture";
 
@@ -50,6 +59,7 @@ interface ProductoEntrega {
   producto_id: string;
   cantidad_ordenada: number;
   cantidad_recibida: number;
+  precio_unitario_compra: number;
   producto: {
     id: string;
     codigo: string;
@@ -61,6 +71,12 @@ interface Evidencia {
   tipo: string;
   file: File;
   preview: string;
+}
+
+interface Bodega {
+  id: string;
+  nombre: string;
+  es_externa: boolean;
 }
 
 interface AlmacenRecepcionSheetProps {
@@ -80,17 +96,36 @@ export const AlmacenRecepcionSheet = ({
   const [saving, setSaving] = useState(false);
   const [productos, setProductos] = useState<ProductoEntrega[]>([]);
   const [cantidadesRecibidas, setCantidadesRecibidas] = useState<Record<string, number>>({});
+  const [fechasCaducidad, setFechasCaducidad] = useState<Record<string, string>>({});
   const [evidencias, setEvidencias] = useState<Evidencia[]>([]);
   const [nombreEntrega, setNombreEntrega] = useState("");
   const [numeroSello, setNumeroSello] = useState("");
   const [notas, setNotas] = useState("");
+  const [bodegas, setBodegas] = useState<Bodega[]>([]);
+  const [bodegaSeleccionada, setBodegaSeleccionada] = useState<string>("");
   const { toast } = useToast();
 
   useEffect(() => {
     if (open && entrega) {
       loadProductos();
+      loadBodegas();
     }
   }, [open, entrega]);
+
+  const loadBodegas = async () => {
+    const { data } = await supabase
+      .from("bodegas")
+      .select("id, nombre, es_externa")
+      .eq("activo", true)
+      .order("nombre");
+    
+    if (data) {
+      setBodegas(data);
+      // Seleccionar Bodega 1 por defecto
+      const bodega1 = data.find(b => b.nombre === "Bodega 1");
+      if (bodega1) setBodegaSeleccionada(bodega1.id);
+    }
+  };
 
   const loadProductos = async () => {
     setLoading(true);
@@ -102,6 +137,7 @@ export const AlmacenRecepcionSheet = ({
           producto_id,
           cantidad_ordenada,
           cantidad_recibida,
+          precio_unitario_compra,
           producto:productos(id, codigo, nombre)
         `)
         .eq("orden_compra_id", entrega.orden_compra.id);
@@ -113,11 +149,14 @@ export const AlmacenRecepcionSheet = ({
       
       // Inicializar cantidades con lo que falta por recibir
       const cantidades: Record<string, number> = {};
+      const fechas: Record<string, string> = {};
       productosData.forEach(p => {
         const faltante = p.cantidad_ordenada - p.cantidad_recibida;
         cantidades[p.id] = Math.max(0, faltante);
+        fechas[p.id] = ""; // Sin fecha de caducidad por defecto
       });
       setCantidadesRecibidas(cantidades);
+      setFechasCaducidad(fechas);
     } catch (error) {
       console.error("Error cargando productos:", error);
       toast({
@@ -134,6 +173,13 @@ export const AlmacenRecepcionSheet = ({
     setCantidadesRecibidas(prev => ({
       ...prev,
       [detalleId]: cantidad
+    }));
+  };
+
+  const handleFechaCaducidadChange = (detalleId: string, fecha: string) => {
+    setFechasCaducidad(prev => ({
+      ...prev,
+      [detalleId]: fecha
     }));
   };
 
@@ -161,21 +207,67 @@ export const AlmacenRecepcionSheet = ({
       return;
     }
 
+    if (!bodegaSeleccionada) {
+      toast({
+        title: "Datos incompletos",
+        description: "Selecciona la bodega de destino",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No autenticado");
 
-      // 1. Actualizar cantidades recibidas en ordenes_compra_detalles
+      const loteReferencia = `REC-${entrega.orden_compra.folio}-${entrega.numero_entrega}`;
+
+      // 1. Actualizar cantidades recibidas y crear lotes en inventario
       for (const [detalleId, cantidad] of Object.entries(cantidadesRecibidas)) {
         if (cantidad > 0) {
           const producto = productos.find(p => p.id === detalleId);
           if (producto) {
+            // Actualizar cantidad recibida en orden de compra
             const nuevaCantidadRecibida = producto.cantidad_recibida + cantidad;
             await supabase
               .from("ordenes_compra_detalles")
               .update({ cantidad_recibida: nuevaCantidadRecibida })
               .eq("id", detalleId);
+
+            // CREAR LOTE EN INVENTARIO
+            const fechaCaducidad = fechasCaducidad[detalleId] || null;
+            const { error: loteError } = await supabase
+              .from("inventario_lotes")
+              .insert({
+                producto_id: producto.producto_id,
+                cantidad_disponible: cantidad,
+                precio_compra: producto.precio_unitario_compra || 0,
+                fecha_entrada: new Date().toISOString(),
+                fecha_caducidad: fechaCaducidad || null,
+                lote_referencia: loteReferencia,
+                orden_compra_id: entrega.orden_compra.id,
+                bodega_id: bodegaSeleccionada,
+                notas: `Recibido de ${entrega.orden_compra.proveedor?.nombre || 'proveedor'} por ${nombreEntrega}`
+              });
+
+            if (loteError) {
+              console.error("Error creando lote:", loteError);
+              throw loteError;
+            }
+
+            // ACTUALIZAR STOCK DEL PRODUCTO
+            const { data: productoActual } = await supabase
+              .from("productos")
+              .select("stock_actual")
+              .eq("id", producto.producto_id)
+              .single();
+
+            const nuevoStock = (productoActual?.stock_actual || 0) + cantidad;
+            await supabase
+              .from("productos")
+              .update({ stock_actual: nuevoStock })
+              .eq("id", producto.producto_id);
           }
         }
       }
@@ -205,7 +297,7 @@ export const AlmacenRecepcionSheet = ({
 
       toast({
         title: "Recepción registrada",
-        description: "La mercancía ha sido registrada correctamente"
+        description: "Mercancía ingresada al inventario correctamente"
       });
 
       onRecepcionCompletada();
@@ -243,7 +335,27 @@ export const AlmacenRecepcionSheet = ({
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Productos a recibir - SIN PRECIOS */}
+              {/* Bodega destino */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Warehouse className="w-4 h-4" />
+                  Bodega destino *
+                </Label>
+                <Select value={bodegaSeleccionada} onValueChange={setBodegaSeleccionada}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona bodega" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bodegas.map(bodega => (
+                      <SelectItem key={bodega.id} value={bodega.id}>
+                        {bodega.nombre} {bodega.es_externa && "(Externa)"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Productos a recibir - CON FECHA CADUCIDAD */}
               <div>
                 <h3 className="font-medium mb-3">Productos a recibir</h3>
                 <div className="space-y-3">
@@ -251,7 +363,7 @@ export const AlmacenRecepcionSheet = ({
                     const faltante = producto.cantidad_ordenada - producto.cantidad_recibida;
                     return (
                       <Card key={producto.id}>
-                        <CardContent className="p-3">
+                        <CardContent className="p-3 space-y-3">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
                               <p className="font-medium truncate">{producto.producto?.nombre}</p>
@@ -265,6 +377,7 @@ export const AlmacenRecepcionSheet = ({
                               </p>
                             </div>
                             <div className="w-24">
+                              <Label className="text-xs text-muted-foreground">Cantidad</Label>
                               <Input
                                 type="number"
                                 min={0}
@@ -274,6 +387,17 @@ export const AlmacenRecepcionSheet = ({
                                 className="text-center"
                               />
                             </div>
+                          </div>
+                          {/* Fecha de caducidad opcional */}
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+                            <Input
+                              type="date"
+                              value={fechasCaducidad[producto.id] || ""}
+                              onChange={(e) => handleFechaCaducidadChange(producto.id, e.target.value)}
+                              className="flex-1"
+                              placeholder="Fecha caducidad (opcional)"
+                            />
                           </div>
                         </CardContent>
                       </Card>
