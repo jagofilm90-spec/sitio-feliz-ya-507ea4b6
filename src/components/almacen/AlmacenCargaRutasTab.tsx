@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, differenceInMinutes, parseISO, set } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,8 @@ import {
   ChevronRight,
   CheckCircle2,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Timer
 } from "lucide-react";
 import { RutaCargaSheet } from "@/components/almacen/RutaCargaSheet";
 
@@ -25,6 +26,8 @@ interface Ruta {
   peso_total_kg: number | null;
   carga_completada: boolean | null;
   carga_completada_en: string | null;
+  hora_salida_sugerida: string | null;
+  carga_iniciada_en: string | null;
   vehiculo: {
     id: string;
     nombre: string;
@@ -57,7 +60,6 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
   const loadRutas = async () => {
     setLoading(true);
     try {
-      // Construir query base
       let query = supabase
         .from("rutas")
         .select(`
@@ -68,13 +70,15 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
           peso_total_kg,
           carga_completada,
           carga_completada_en,
+          hora_salida_sugerida,
+          carga_iniciada_en,
           almacenista_id,
           vehiculo:vehiculos(id, nombre, placas),
           chofer:empleados!rutas_chofer_id_fkey(id, nombre_completo),
           entregas(id, pedido_id)
         `)
         .eq("fecha_ruta", fechaHoy)
-        .order("folio", { ascending: true });
+        .order("hora_salida_sugerida", { ascending: true, nullsFirst: false });
 
       // Si tiene empleadoId, filtrar solo sus rutas asignadas
       if (empleadoId) {
@@ -85,16 +89,30 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
 
       if (error) throw error;
 
-      const rutasData = (data as any[]) || [];
-      setRutas(rutasData);
+      // Ordenar: completadas al final, luego por hora de salida
+      const sortedRutas = ((data as any[]) || []).sort((a, b) => {
+        // Completadas van al final
+        if (a.carga_completada && !b.carga_completada) return 1;
+        if (!a.carga_completada && b.carga_completada) return -1;
+        
+        // Luego ordenar por hora de salida
+        if (a.hora_salida_sugerida && b.hora_salida_sugerida) {
+          return a.hora_salida_sugerida.localeCompare(b.hora_salida_sugerida);
+        }
+        if (a.hora_salida_sugerida && !b.hora_salida_sugerida) return -1;
+        if (!a.hora_salida_sugerida && b.hora_salida_sugerida) return 1;
+        return 0;
+      });
+
+      setRutas(sortedRutas);
       
-      const pendientes = rutasData.filter(r => !r.carga_completada);
-      const completadas = rutasData.filter(r => r.carga_completada);
+      const pendientes = sortedRutas.filter(r => !r.carga_completada);
+      const completadas = sortedRutas.filter(r => r.carga_completada);
       onStatsUpdate({
-        total: rutasData.length,
+        total: sortedRutas.length,
         pendientes: pendientes.length,
         completadas: completadas.length,
-        entregas: rutasData.reduce((acc, r) => acc + r.entregas.length, 0)
+        entregas: sortedRutas.reduce((acc, r) => acc + r.entregas.length, 0)
       });
     } catch (error) {
       console.error("Error cargando rutas:", error);
@@ -112,11 +130,32 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
     loadRutas();
   }, []);
 
+  // Calcular urgencia basada en hora de salida
+  const getUrgencia = (horaSalida: string | null) => {
+    if (!horaSalida) return null;
+    
+    const now = new Date();
+    const [hours, minutes] = horaSalida.split(':').map(Number);
+    const horaSalidaDate = set(now, { hours, minutes, seconds: 0 });
+    const minutosFaltantes = differenceInMinutes(horaSalidaDate, now);
+    
+    if (minutosFaltantes < 0) {
+      return { nivel: 'atrasada', color: 'bg-red-500', texto: 'ATRASADA' };
+    }
+    if (minutosFaltantes <= 60) {
+      return { nivel: 'urgente', color: 'bg-red-500', texto: `${minutosFaltantes} min` };
+    }
+    if (minutosFaltantes <= 120) {
+      return { nivel: 'proximo', color: 'bg-amber-500', texto: `${Math.floor(minutosFaltantes / 60)}h ${minutosFaltantes % 60}m` };
+    }
+    return { nivel: 'normal', color: 'bg-green-500', texto: `${Math.floor(minutosFaltantes / 60)}h` };
+  };
+
   const getEstadoCarga = (ruta: Ruta) => {
     if (ruta.carga_completada) {
       return { label: "Completada", color: "bg-green-500", icon: CheckCircle2 };
     }
-    if (ruta.status === "en_carga") {
+    if (ruta.status === "cargando" || ruta.carga_iniciada_en) {
       return { label: "En progreso", color: "bg-yellow-500", icon: Clock };
     }
     return { label: "Sin iniciar", color: "bg-muted", icon: AlertCircle };
@@ -141,7 +180,8 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
     return (
       <div className="p-8 text-center text-muted-foreground">
         <Truck className="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p>No hay rutas programadas para hoy</p>
+        <p>No hay rutas asignadas para hoy</p>
+        {empleadoId && <p className="text-xs mt-1">Solo puedes ver rutas asignadas a ti</p>}
       </div>
     );
   }
@@ -158,14 +198,17 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
               {rutas.map((ruta) => {
                 const estado = getEstadoCarga(ruta);
                 const EstadoIcon = estado.icon;
+                const urgencia = !ruta.carga_completada ? getUrgencia(ruta.hora_salida_sugerida) : null;
                 
                 return (
                   <button
                     key={ruta.id}
                     onClick={() => handleSelectRuta(ruta)}
-                    className="w-full p-4 hover:bg-muted/50 transition-colors text-left flex items-center gap-4"
+                    className={`w-full p-4 hover:bg-muted/50 transition-colors text-left flex items-center gap-4 ${
+                      urgencia?.nivel === 'urgente' || urgencia?.nivel === 'atrasada' ? 'bg-red-50' : ''
+                    }`}
                   >
-                    <div className={`w-3 h-3 rounded-full ${estado.color}`} />
+                    <div className={`w-3 h-3 rounded-full ${urgencia ? urgencia.color : estado.color}`} />
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -173,6 +216,12 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
                         <Badge variant="outline" className="text-xs">
                           {ruta.entregas.length} entregas
                         </Badge>
+                        {urgencia && !ruta.carga_completada && (
+                          <Badge className={`${urgencia.color} text-white text-xs`}>
+                            <Timer className="w-3 h-3 mr-1" />
+                            {urgencia.texto}
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
@@ -183,10 +232,15 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
                           <User className="w-4 h-4" />
                           {ruta.chofer?.nombre_completo || "Sin chofer"}
                         </span>
-                        {ruta.peso_total_kg && (
+                        {ruta.hora_salida_sugerida && (
                           <span className="flex items-center gap-1">
-                            <Package className="w-4 h-4" />
-                            {ruta.peso_total_kg.toLocaleString()} kg
+                            <Clock className="w-4 h-4" />
+                            Sale {ruta.hora_salida_sugerida.slice(0, 5)}
+                          </span>
+                        )}
+                        {ruta.carga_iniciada_en && !ruta.carga_completada && (
+                          <span className="text-blue-600 text-xs">
+                            Iniciada {format(parseISO(ruta.carga_iniciada_en), 'HH:mm')}
                           </span>
                         )}
                       </div>

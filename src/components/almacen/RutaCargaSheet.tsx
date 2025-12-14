@@ -260,10 +260,38 @@ export const RutaCargaSheet = ({
     }
   };
 
+  // Registrar inicio de carga cuando se abre el sheet
+  const registrarInicioCarga = async () => {
+    try {
+      const { data: rutaActual } = await supabase
+        .from("rutas")
+        .select("carga_iniciada_en")
+        .eq("id", ruta.id)
+        .single();
+      
+      // Solo registrar si no se ha iniciado antes
+      if (!rutaActual?.carga_iniciada_en) {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase
+          .from("rutas")
+          .update({
+            carga_iniciada_en: new Date().toISOString(),
+            carga_iniciada_por: user?.id,
+            status: "cargando"
+          })
+          .eq("id", ruta.id);
+        console.log("Inicio de carga registrado para ruta:", ruta.folio);
+      }
+    } catch (error) {
+      console.error("Error registrando inicio de carga:", error);
+    }
+  };
+
   useEffect(() => {
     if (open && ruta.id) {
       loadEntregasYProductos();
       loadEvidencias();
+      registrarInicioCarga();
     }
   }, [open, ruta.id]);
 
