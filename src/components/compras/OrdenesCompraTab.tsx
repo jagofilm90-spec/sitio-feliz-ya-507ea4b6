@@ -361,8 +361,9 @@ const OrdenesCompraTab = () => {
 
       if (detallesError) throw detallesError;
 
-      // Create multiple deliveries if enabled
+      // Create deliveries - either multiple or single automatic
       if (entregasMultiples && entregasProgramadas.length > 0) {
+        // Multiple deliveries
         const entregas = entregasProgramadas.map((e) => ({
           orden_compra_id: orden.id,
           numero_entrega: e.numero_entrega,
@@ -376,6 +377,21 @@ const OrdenesCompraTab = () => {
           .insert(entregas);
 
         if (entregasError) throw entregasError;
+      } else if (!entregasMultiples && fechaEntrega) {
+        // Single delivery - auto-create one entry for simple orders
+        const cantidadTotalBultos = productosEnOrden.reduce((sum, p) => sum + p.cantidad, 0);
+        
+        const { error: entregaError } = await supabase
+          .from("ordenes_compra_entregas")
+          .insert({
+            orden_compra_id: orden.id,
+            numero_entrega: 1,
+            cantidad_bultos: cantidadTotalBultos,
+            fecha_programada: fechaEntrega,
+            status: "programada",
+          });
+
+        if (entregaError) throw entregaError;
       }
 
       // Update productos with last purchase info
