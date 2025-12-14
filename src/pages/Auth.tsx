@@ -39,7 +39,7 @@ const Auth = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const checkUserRoleAndRedirect = async (userId: string) => {
+  const checkUserRoleAndRedirect = async (userId: string, retries = 3): Promise<void> => {
     try {
       // Verificar si es cliente portal
       const { data: cliente } = await supabase
@@ -53,20 +53,30 @@ const Auth = () => {
         return;
       }
 
-      // Verificar roles del usuario
-      const { data: userRoles } = await supabase
+      // Verificar roles del usuario con retry logic
+      const { data: userRoles, error } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", userId);
 
-      const roles = userRoles?.map(r => r.role) || [];
-      
+      // Si hay error o no hay roles, reintentar
+      if (error || !userRoles || userRoles.length === 0) {
+        console.warn("Roles query issue, attempt:", 4 - retries, { error, userRoles });
+        if (retries > 0) {
+          await new Promise(r => setTimeout(r, 500));
+          return checkUserRoleAndRedirect(userId, retries - 1);
+        }
+        // Si agotamos reintentos, ir a dashboard
+        console.warn("Exhausted retries, defaulting to dashboard");
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      const roles = userRoles.map(r => r.role);
       console.log("User roles for redirect:", roles);
       
-      // Si tiene rol almacen (solo o combinado), ir a tablet
-      const hasAlmacenRole = roles.includes("almacen");
-      const isOnlyAlmacen = roles.length === 1 && hasAlmacenRole;
-      
+      // Si tiene SOLO rol almacen, ir a tablet
+      const isOnlyAlmacen = roles.length === 1 && roles[0] === "almacen";
       if (isOnlyAlmacen) {
         console.log("Redirecting to /almacen-tablet");
         navigate("/almacen-tablet", { replace: true });
@@ -76,6 +86,7 @@ const Auth = () => {
       // Solo chofer -> panel chofer
       const isOnlyChofer = roles.length === 1 && roles[0] === "chofer";
       if (isOnlyChofer) {
+        console.log("Redirecting to /chofer");
         navigate("/chofer", { replace: true });
         return;
       }
@@ -83,6 +94,10 @@ const Auth = () => {
       navigate("/dashboard", { replace: true });
     } catch (error) {
       console.error("Error checking user role:", error);
+      if (retries > 0) {
+        await new Promise(r => setTimeout(r, 500));
+        return checkUserRoleAndRedirect(userId, retries - 1);
+      }
       navigate("/dashboard", { replace: true });
     }
   };

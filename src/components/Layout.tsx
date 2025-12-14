@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState, useMemo } from "react";
-import { useNavigate, Link, useLocation, useSearchParams } from "react-router-dom";
+import { useNavigate, Link, useLocation, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -81,17 +81,17 @@ const Layout = ({ children }: LayoutProps) => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  // Redirigir almacenistas SOLO a la interfaz de tablet (excepto chat)
-  useEffect(() => {
-    if (rolesLoading || !roles.length) return;
-    
-    // Si el usuario tiene SOLO el rol almacen, redirigir a tablet (excepto si está en chat)
-    const isOnlyAlmacen = roles.length === 1 && roles.includes("almacen");
-    const allowedPagesForAlmacen = ["/almacen-tablet", "/chat"];
-    if (isOnlyAlmacen && !allowedPagesForAlmacen.includes(location.pathname)) {
-      navigate("/almacen-tablet", { replace: true });
-    }
-  }, [roles, rolesLoading, location.pathname, navigate]);
+  // Detectar si usuario es solo almacen
+  const isOnlyAlmacen = useMemo(() => {
+    return roles.length === 1 && roles.includes("almacen");
+  }, [roles]);
+
+  const allowedPagesForAlmacen = ["/almacen-tablet", "/chat"];
+
+  // Segunda capa de defensa: si roles están listos y es solo almacen, redirigir inmediatamente
+  if (!rolesLoading && isOnlyAlmacen && !allowedPagesForAlmacen.includes(location.pathname)) {
+    return <Navigate to="/almacen-tablet" replace />;
+  }
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -206,7 +206,8 @@ const Layout = ({ children }: LayoutProps) => {
     );
   };
 
-  if (loading) {
+  // Mostrar loader mientras carga sesión O roles
+  if (loading || rolesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">

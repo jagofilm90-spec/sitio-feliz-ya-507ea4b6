@@ -34,6 +34,7 @@ import ChoferPanel from "./pages/ChoferPanel";
 import AppMobileGuide from "./pages/AppMobileGuide";
 
 import PushNotificationSetup from "./components/PushNotificationSetup";
+import ProtectedRoute from "./components/ProtectedRoute";
 import { initPushNotifications, isNativePlatform } from "./services/pushNotifications";
 import { supabase } from "./integrations/supabase/client";
 
@@ -82,7 +83,14 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Navigate to="/auth" replace />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              
+              {/* Rutas protegidas - Dashboard requiere roles que NO sean solo almacen/chofer */}
+              <Route path="/dashboard" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor', 'contadora']} redirectTo="/auth">
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              
               <Route path="/productos" element={<Productos />} />
               <Route path="/clientes" element={<Clientes />} />
               <Route path="/pedidos" element={<Pedidos />} />
