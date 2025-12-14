@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, CheckCircle, Loader2 } from 'lucide-react';
+import { Download, CheckCircle, Loader2, Apple, Smartphone } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import logoAlmasa from '@/assets/logo-almasa.png';
 
 // All iOS icon sizes required for App Store
@@ -23,11 +24,29 @@ const IOS_ICON_SIZES = [
   { name: 'Notification-20@1x', size: 20, description: 'Notification @1x' },
 ];
 
+// All Android icon sizes required for Play Store
+const ANDROID_ICON_SIZES = [
+  { name: 'play-store', size: 512, description: 'Play Store', folder: '' },
+  { name: 'ic_launcher', size: 192, description: 'xxxhdpi', folder: 'mipmap-xxxhdpi' },
+  { name: 'ic_launcher', size: 144, description: 'xxhdpi', folder: 'mipmap-xxhdpi' },
+  { name: 'ic_launcher', size: 96, description: 'xhdpi', folder: 'mipmap-xhdpi' },
+  { name: 'ic_launcher', size: 72, description: 'hdpi', folder: 'mipmap-hdpi' },
+  { name: 'ic_launcher', size: 48, description: 'mdpi', folder: 'mipmap-mdpi' },
+  { name: 'ic_launcher_round', size: 192, description: 'xxxhdpi round', folder: 'mipmap-xxxhdpi' },
+  { name: 'ic_launcher_round', size: 144, description: 'xxhdpi round', folder: 'mipmap-xxhdpi' },
+  { name: 'ic_launcher_round', size: 96, description: 'xhdpi round', folder: 'mipmap-xhdpi' },
+  { name: 'ic_launcher_round', size: 72, description: 'hdpi round', folder: 'mipmap-hdpi' },
+  { name: 'ic_launcher_round', size: 48, description: 'mdpi round', folder: 'mipmap-mdpi' },
+];
+
 const AppIconGenerator = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [generatedIcons, setGeneratedIcons] = useState<Map<string, string>>(new Map());
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewReady, setPreviewReady] = useState(false);
+  const [platform, setPlatform] = useState<'ios' | 'android'>('ios');
+
+  const currentSizes = platform === 'ios' ? IOS_ICON_SIZES : ANDROID_ICON_SIZES;
 
   useEffect(() => {
     generatePreview();
@@ -81,7 +100,7 @@ const AppIconGenerator = () => {
     img.src = logoAlmasa;
   };
 
-  const generateIconAtSize = (size: number): Promise<string> => {
+  const generateIconAtSize = (size: number, isRound = false): Promise<string> => {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
       canvas.width = size;
@@ -90,6 +109,14 @@ const AppIconGenerator = () => {
       if (!ctx) {
         resolve('');
         return;
+      }
+
+      // For round icons, clip to circle
+      if (isRound) {
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
       }
 
       ctx.fillStyle = '#B22234';
@@ -133,9 +160,18 @@ const AppIconGenerator = () => {
     setIsGenerating(true);
     const icons = new Map<string, string>();
 
-    for (const iconConfig of IOS_ICON_SIZES) {
-      const dataUrl = await generateIconAtSize(iconConfig.size);
-      icons.set(iconConfig.name, dataUrl);
+    if (platform === 'ios') {
+      for (const iconConfig of IOS_ICON_SIZES) {
+        const dataUrl = await generateIconAtSize(iconConfig.size);
+        icons.set(iconConfig.name, dataUrl);
+      }
+    } else {
+      for (const iconConfig of ANDROID_ICON_SIZES) {
+        const isRound = iconConfig.name.includes('round');
+        const dataUrl = await generateIconAtSize(iconConfig.size, isRound);
+        const key = iconConfig.folder ? `${iconConfig.folder}/${iconConfig.name}` : iconConfig.name;
+        icons.set(key, dataUrl);
+      }
     }
 
     setGeneratedIcons(icons);
@@ -144,7 +180,7 @@ const AppIconGenerator = () => {
 
   const downloadIcon = (name: string, dataUrl: string) => {
     const link = document.createElement('a');
-    link.download = `icon-${name}.png`;
+    link.download = `${name}.png`;
     link.href = dataUrl;
     link.click();
   };
@@ -157,15 +193,34 @@ const AppIconGenerator = () => {
     });
   };
 
+  const handlePlatformChange = (newPlatform: string) => {
+    setPlatform(newPlatform as 'ios' | 'android');
+    setGeneratedIcons(new Map());
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Download className="h-5 w-5" />
-          Íconos iOS ({IOS_ICON_SIZES.length} tamaños)
+          Íconos de App
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Platform Tabs */}
+        <Tabs value={platform} onValueChange={handlePlatformChange}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="ios" className="gap-2">
+              <Apple className="h-4 w-4" />
+              iOS ({IOS_ICON_SIZES.length})
+            </TabsTrigger>
+            <TabsTrigger value="android" className="gap-2">
+              <Smartphone className="h-4 w-4" />
+              Android ({ANDROID_ICON_SIZES.length})
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         {/* Preview */}
         <div className="flex justify-center">
           <div className="w-32 h-32 bg-[#B22234] rounded-2xl overflow-hidden shadow-lg">
@@ -186,11 +241,11 @@ const AppIconGenerator = () => {
           {isGenerating ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Generando {IOS_ICON_SIZES.length} íconos...
+              Generando {currentSizes.length} íconos...
             </>
           ) : (
             <>
-              Generar Todos los Íconos
+              Generar Íconos {platform === 'ios' ? 'iOS' : 'Android'}
             </>
           )}
         </Button>
@@ -199,11 +254,15 @@ const AppIconGenerator = () => {
         {generatedIcons.size > 0 && (
           <>
             <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
-              {IOS_ICON_SIZES.map((config) => {
-                const dataUrl = generatedIcons.get(config.name);
+              {currentSizes.map((config, index) => {
+                const androidConfig = config as typeof ANDROID_ICON_SIZES[number];
+                const key = platform === 'android' && androidConfig.folder 
+                  ? `${androidConfig.folder}/${config.name}` 
+                  : config.name;
+                const dataUrl = generatedIcons.get(key);
                 return (
                   <div
-                    key={config.name}
+                    key={`${config.name}-${index}`}
                     className="flex items-center justify-between p-2 text-sm"
                   >
                     <div className="flex items-center gap-2">
@@ -216,12 +275,15 @@ const AppIconGenerator = () => {
                       )}
                       <span className="font-medium">{config.size}x{config.size}</span>
                       <span className="text-muted-foreground">{config.description}</span>
+                      {platform === 'android' && androidConfig.folder && (
+                        <code className="text-xs bg-muted px-1 rounded">{androidConfig.folder}</code>
+                      )}
                     </div>
                     {dataUrl && (
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => downloadIcon(config.name, dataUrl)}
+                        onClick={() => downloadIcon(key, dataUrl)}
                       >
                         <Download className="h-3 w-3" />
                       </Button>
@@ -238,7 +300,9 @@ const AppIconGenerator = () => {
 
             <div className="flex items-center gap-2 text-sm text-green-600">
               <CheckCircle className="h-4 w-4" />
-              <span>Íconos listos para App Store Connect</span>
+              <span>
+                Íconos listos para {platform === 'ios' ? 'App Store Connect' : 'Google Play Console'}
+              </span>
             </div>
           </>
         )}
