@@ -18,16 +18,20 @@ import {
   Wifi,
   WifiOff,
   Bug,
-  AlertTriangle
+  AlertTriangle,
+  Boxes
 } from "lucide-react";
 import { AlmacenCargaRutasTab } from "@/components/almacen/AlmacenCargaRutasTab";
 import { AlmacenRecepcionTab } from "@/components/almacen/AlmacenRecepcionTab";
 import { AlmacenFumigacionesTab } from "@/components/almacen/AlmacenFumigacionesTab";
+import { AlmacenInventarioTab } from "@/components/almacen/AlmacenInventarioTab";
+import { AlmacenProductosTab } from "@/components/almacen/AlmacenProductosTab";
 
 const AlmacenTablet = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [activeTab, setActiveTab] = useState("rutas");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [empleadoId, setEmpleadoId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   // Stats
@@ -45,6 +49,25 @@ const AlmacenTablet = () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
+  }, []);
+
+  // Obtener el empleado_id del usuario actual
+  useEffect(() => {
+    const loadEmpleadoId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: empleado } = await supabase
+          .from("empleados")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        
+        if (empleado) {
+          setEmpleadoId(empleado.id);
+        }
+      }
+    };
+    loadEmpleadoId();
   }, []);
 
   const handleLogout = async () => {
@@ -110,7 +133,7 @@ const AlmacenTablet = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold">{rutasStats.total}</p>
-                <p className="text-sm text-muted-foreground">Rutas hoy</p>
+                <p className="text-sm text-muted-foreground">Mis Rutas</p>
               </div>
             </CardContent>
           </Card>
@@ -217,14 +240,18 @@ const AlmacenTablet = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full grid grid-cols-3 h-14 mb-4">
+        <TabsList className="w-full grid grid-cols-4 h-14 mb-4">
           <TabsTrigger value="rutas" className="text-base h-12 gap-2">
             <Truck className="w-5 h-5" />
-            Cargar Rutas
+            <span className="hidden sm:inline">Mis</span> Rutas
           </TabsTrigger>
-          <TabsTrigger value="recepcion" className="text-base h-12 gap-2">
+          <TabsTrigger value="inventario" className="text-base h-12 gap-2">
+            <Boxes className="w-5 h-5" />
+            Inventario
+          </TabsTrigger>
+          <TabsTrigger value="productos" className="text-base h-12 gap-2">
             <Package className="w-5 h-5" />
-            Recepción
+            Productos
           </TabsTrigger>
           <TabsTrigger value="fumigaciones" className="text-base h-12 gap-2">
             <Bug className="w-5 h-5" />
@@ -235,15 +262,17 @@ const AlmacenTablet = () => {
         <TabsContent value="rutas" className="mt-0">
           <AlmacenCargaRutasTab 
             key={`rutas-${refreshKey}`}
-            onStatsUpdate={setRutasStats} 
+            onStatsUpdate={setRutasStats}
+            empleadoId={empleadoId}
           />
         </TabsContent>
 
-        <TabsContent value="recepcion" className="mt-0">
-          <AlmacenRecepcionTab 
-            key={`recepcion-${refreshKey}`}
-            onStatsUpdate={setRecepcionStats} 
-          />
+        <TabsContent value="inventario" className="mt-0">
+          <AlmacenInventarioTab key={`inventario-${refreshKey}`} />
+        </TabsContent>
+
+        <TabsContent value="productos" className="mt-0">
+          <AlmacenProductosTab key={`productos-${refreshKey}`} />
         </TabsContent>
 
         <TabsContent value="fumigaciones" className="mt-0">

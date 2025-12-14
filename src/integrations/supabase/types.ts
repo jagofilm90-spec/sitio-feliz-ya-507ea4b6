@@ -2989,6 +2989,7 @@ export type Database = {
       }
       rutas: {
         Row: {
+          almacenista_id: string | null
           ayudante_externo_id: string | null
           ayudante_id: string | null
           carga_completada: boolean | null
@@ -3016,6 +3017,7 @@ export type Database = {
           vehiculo_id: string | null
         }
         Insert: {
+          almacenista_id?: string | null
           ayudante_externo_id?: string | null
           ayudante_id?: string | null
           carga_completada?: boolean | null
@@ -3043,6 +3045,7 @@ export type Database = {
           vehiculo_id?: string | null
         }
         Update: {
+          almacenista_id?: string | null
           ayudante_externo_id?: string | null
           ayudante_id?: string | null
           carga_completada?: boolean | null
@@ -3070,6 +3073,20 @@ export type Database = {
           vehiculo_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "rutas_almacenista_id_fkey"
+            columns: ["almacenista_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rutas_almacenista_id_fkey"
+            columns: ["almacenista_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "rutas_ayudante_externo_id_fkey"
             columns: ["ayudante_externo_id"]
