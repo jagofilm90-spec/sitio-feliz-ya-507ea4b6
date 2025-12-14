@@ -81,6 +81,17 @@ const Layout = ({ children }: LayoutProps) => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  // Redirigir almacenistas SOLO a la interfaz de tablet
+  useEffect(() => {
+    if (rolesLoading || !roles.length) return;
+    
+    // Si el usuario tiene SOLO el rol almacen, redirigir a tablet
+    const isOnlyAlmacen = roles.length === 1 && roles.includes("almacen");
+    if (isOnlyAlmacen && location.pathname !== "/almacen-tablet") {
+      navigate("/almacen-tablet", { replace: true });
+    }
+  }, [roles, rolesLoading, location.pathname, navigate]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast({
