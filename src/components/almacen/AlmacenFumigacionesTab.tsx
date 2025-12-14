@@ -3,12 +3,13 @@ import { format, differenceInDays, addMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -21,8 +22,8 @@ import {
   Bug,
   Calendar,
   AlertTriangle,
-  CheckCircle2,
-  Clock,
+  AlertCircle,
+  FileQuestion,
   Edit2
 } from "lucide-react";
 
@@ -38,6 +39,17 @@ interface AlmacenFumigacionesTabProps {
   onStatsUpdate: (stats: { vencidas: number; proximas: number; vigentes: number }) => void;
 }
 
+type EstadoTipo = "sin_registro" | "proxima" | "vencida" | "vigente";
+
+interface EstadoFumigacion {
+  tipo: EstadoTipo;
+  label: string;
+  color: string;
+  bgColor: string;
+}
+
+const DIAS_ALERTA_PROXIMA = 14; // 2 semanas antes de vencer
+
 export const AlmacenFumigacionesTab = ({ onStatsUpdate }: AlmacenFumigacionesTabProps) => {
   const [productos, setProductos] = useState<ProductoFumigacion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,8 +61,6 @@ export const AlmacenFumigacionesTab = ({ onStatsUpdate }: AlmacenFumigacionesTab
   const loadProductos = async () => {
     setLoading(true);
     try {
-      // Cargar TODOS los productos que requieren fumigación (sin filtrar por stock)
-      // Esto permite ver productos que necesitan fumigación antes de recibir inventario
       const { data, error } = await supabase
         .from("productos")
         .select("id, codigo, nombre, fecha_ultima_fumigacion, stock_actual")
@@ -70,7 +80,7 @@ export const AlmacenFumigacionesTab = ({ onStatsUpdate }: AlmacenFumigacionesTab
       
       productosData.forEach(p => {
         const estado = getEstadoFumigacion(p.fecha_ultima_fumigacion);
-        if (estado.tipo === "vencida") vencidas++;
+        if (estado.tipo === "vencida" || estado.tipo === "sin_registro") vencidas++;
         else if (estado.tipo === "proxima") proximas++;
         else vigentes++;
       });
@@ -92,31 +102,40 @@ export const AlmacenFumigacionesTab = ({ onStatsUpdate }: AlmacenFumigacionesTab
     loadProductos();
   }, []);
 
-  const getEstadoFumigacion = (fechaUltima: string | null) => {
+  const getEstadoFumigacion = (fechaUltima: string | null): EstadoFumigacion => {
     if (!fechaUltima) {
-      return { tipo: "vencida", label: "Sin registro", color: "text-destructive", bgColor: "bg-destructive/10" };
+      return { 
+        tipo: "sin_registro", 
+        label: "Sin registro", 
+        color: "text-destructive", 
+        bgColor: "bg-destructive/10" 
+      };
     }
 
     const fechaProxima = addMonths(new Date(fechaUltima), 6);
     const diasRestantes = differenceInDays(fechaProxima, new Date());
 
     if (diasRestantes < 0) {
-      return { tipo: "vencida", label: `Vencida hace ${Math.abs(diasRestantes)} días`, color: "text-destructive", bgColor: "bg-destructive/10" };
-    } else if (diasRestantes <= 14) {
-      return { tipo: "proxima", label: `Vence en ${diasRestantes} días`, color: "text-yellow-600", bgColor: "bg-yellow-500/10" };
+      return { 
+        tipo: "vencida", 
+        label: `Vencida hace ${Math.abs(diasRestantes)} días`, 
+        color: "text-destructive", 
+        bgColor: "bg-destructive/10" 
+      };
+    } else if (diasRestantes <= DIAS_ALERTA_PROXIMA) {
+      return { 
+        tipo: "proxima", 
+        label: `Vence en ${diasRestantes} días`, 
+        color: "text-amber-600", 
+        bgColor: "bg-amber-500/10" 
+      };
     } else {
-      return { tipo: "vigente", label: `${diasRestantes} días restantes`, color: "text-green-600", bgColor: "bg-green-500/10" };
-    }
-  };
-
-  const getEstadoIcon = (tipo: string) => {
-    switch (tipo) {
-      case "vencida":
-        return AlertTriangle;
-      case "proxima":
-        return Clock;
-      default:
-        return CheckCircle2;
+      return { 
+        tipo: "vigente", 
+        label: `${diasRestantes} días restantes`, 
+        color: "text-green-600", 
+        bgColor: "bg-green-500/10" 
+      };
     }
   };
 
@@ -156,6 +175,102 @@ export const AlmacenFumigacionesTab = ({ onStatsUpdate }: AlmacenFumigacionesTab
     }
   };
 
+  // Filtrar productos por categoría
+  const productosSinRegistro = productos.filter(p => p.fecha_ultima_fumigacion === null);
+  const productosProximos = productos.filter(p => {
+    const estado = getEstadoFumigacion(p.fecha_ultima_fumigacion);
+    return estado.tipo === "proxima";
+  });
+  const productosVencidos = productos.filter(p => {
+    const estado = getEstadoFumigacion(p.fecha_ultima_fumigacion);
+    return estado.tipo === "vencida" && p.fecha_ultima_fumigacion !== null;
+  });
+
+  const renderProductoItem = (producto: ProductoFumigacion) => {
+    const estado = getEstadoFumigacion(producto.fecha_ultima_fumigacion);
+
+    return (
+      <div
+        key={producto.id}
+        className={`p-4 flex items-center gap-4 border-b last:border-b-0 ${estado.bgColor}`}
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-semibold">{producto.codigo}</span>
+            {producto.stock_actual > 0 && (
+              <Badge variant="outline" className="text-xs">
+                {producto.stock_actual} kg
+              </Badge>
+            )}
+            {producto.stock_actual === 0 && (
+              <Badge variant="secondary" className="text-xs">
+                Sin stock
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground truncate">
+            {producto.nombre}
+          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <Calendar className="w-3 h-3 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">
+              Última: {producto.fecha_ultima_fumigacion 
+                ? format(new Date(producto.fecha_ultima_fumigacion), "dd/MM/yyyy", { locale: es })
+                : "Sin registro"}
+            </span>
+            <span className={`text-xs font-medium ${estado.color}`}>
+              • {estado.label}
+            </span>
+          </div>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleEditarFecha(producto)}
+          className="shrink-0"
+        >
+          <Edit2 className="w-4 h-4 mr-1" />
+          Registrar
+        </Button>
+      </div>
+    );
+  };
+
+  const renderEmptyState = (tipo: "sin_registro" | "proxima" | "vencida") => {
+    const configs = {
+      sin_registro: {
+        icon: FileQuestion,
+        title: "No hay productos sin registro",
+        subtitle: "Todos los productos tienen fecha de fumigación",
+        colorClass: "text-muted-foreground"
+      },
+      proxima: {
+        icon: AlertTriangle,
+        title: "No hay fumigaciones próximas a vencer",
+        subtitle: "Ningún producto vence en los próximos 14 días",
+        colorClass: "text-amber-500"
+      },
+      vencida: {
+        icon: AlertCircle,
+        title: "No hay fumigaciones vencidas",
+        subtitle: "Todos los productos están al día",
+        colorClass: "text-green-600"
+      },
+    };
+
+    const config = configs[tipo];
+    const Icon = config.icon;
+
+    return (
+      <div className="p-8 text-center text-muted-foreground">
+        <Icon className={`w-10 h-10 mx-auto mb-3 opacity-50 ${config.colorClass}`} />
+        <p className="font-medium">{config.title}</p>
+        <p className="text-xs mt-1">{config.subtitle}</p>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="p-4 space-y-4">
@@ -178,68 +293,64 @@ export const AlmacenFumigacionesTab = ({ onStatsUpdate }: AlmacenFumigacionesTab
 
   return (
     <>
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Bug className="w-5 h-5" />
-            Control de fumigaciones
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <ScrollArea className="h-[calc(100vh-320px)] min-h-[300px]">
-            <div className="divide-y divide-border">
-              {productos.map((producto) => {
-                const estado = getEstadoFumigacion(producto.fecha_ultima_fumigacion);
-                const EstadoIcon = getEstadoIcon(estado.tipo);
-                
-                return (
-                  <div
-                    key={producto.id}
-                    className={`p-4 flex items-center gap-4 ${estado.bgColor}`}
-                  >
-                    <div className={`p-2 rounded-full ${estado.bgColor}`}>
-                      <EstadoIcon className={`w-5 h-5 ${estado.color}`} />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold">{producto.codigo}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {producto.stock_actual} kg
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {producto.nombre}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Calendar className="w-3 h-3 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">
-                          Última: {producto.fecha_ultima_fumigacion 
-                            ? format(new Date(producto.fecha_ultima_fumigacion), "dd/MM/yyyy")
-                            : "Sin registro"}
-                        </span>
-                        <span className={`text-xs font-medium ${estado.color}`}>
-                          • {estado.label}
-                        </span>
-                      </div>
-                    </div>
+      <Tabs defaultValue="sin_registro" className="w-full">
+        <TabsList className="w-full grid grid-cols-3 mb-2">
+          <TabsTrigger value="sin_registro" className="flex items-center gap-1 text-xs px-2">
+            <FileQuestion className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Sin registro</span>
+            <span className="sm:hidden">S/R</span>
+            {productosSinRegistro.length > 0 && (
+              <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-xs">
+                {productosSinRegistro.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="proxima" className="flex items-center gap-1 text-xs px-2">
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Por vencer</span>
+            <span className="sm:hidden">Próx</span>
+            {productosProximos.length > 0 && (
+              <Badge className="ml-1 h-5 px-1.5 text-xs bg-amber-500 hover:bg-amber-500">
+                {productosProximos.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="vencida" className="flex items-center gap-1 text-xs px-2">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Vencidas</span>
+            <span className="sm:hidden">Venc</span>
+            {productosVencidos.length > 0 && (
+              <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-xs">
+                {productosVencidos.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditarFecha(producto)}
-                      className="shrink-0"
-                    >
-                      <Edit2 className="w-4 h-4 mr-1" />
-                      Registrar
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+        <Card>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[calc(100vh-380px)] min-h-[250px]">
+              <TabsContent value="sin_registro" className="m-0">
+                {productosSinRegistro.length > 0
+                  ? productosSinRegistro.map(renderProductoItem)
+                  : renderEmptyState("sin_registro")}
+              </TabsContent>
+
+              <TabsContent value="proxima" className="m-0">
+                {productosProximos.length > 0
+                  ? productosProximos.map(renderProductoItem)
+                  : renderEmptyState("proxima")}
+              </TabsContent>
+
+              <TabsContent value="vencida" className="m-0">
+                {productosVencidos.length > 0
+                  ? productosVencidos.map(renderProductoItem)
+                  : renderEmptyState("vencida")}
+              </TabsContent>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </Tabs>
 
       {/* Dialog para editar fecha */}
       <Dialog open={!!editingProducto} onOpenChange={() => setEditingProducto(null)}>
