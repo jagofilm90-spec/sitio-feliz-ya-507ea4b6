@@ -41,23 +41,33 @@ const Auth = () => {
 
   const checkUserRoleAndRedirect = async (userId: string) => {
     try {
-      const { data: cliente, error } = await supabase
+      // Verificar si es cliente portal
+      const { data: cliente } = await supabase
         .from("clientes")
         .select("id")
         .eq("user_id", userId)
         .maybeSingle();
 
-      if (error) {
-        console.error("Error checking user role:", error);
-        navigate("/dashboard");
+      if (cliente) {
+        navigate("/portal-cliente", { replace: true });
         return;
       }
 
-      if (cliente) {
-        navigate("/portal-cliente", { replace: true });
-      } else {
-        navigate("/dashboard", { replace: true });
+      // Verificar si es chofer (solo chofer, sin otros roles admin/secretaria)
+      const { data: userRoles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+
+      const roles = userRoles?.map(r => r.role) || [];
+      const isOnlyChofer = roles.length === 1 && roles[0] === "chofer";
+
+      if (isOnlyChofer) {
+        navigate("/chofer", { replace: true });
+        return;
       }
+
+      navigate("/dashboard", { replace: true });
     } catch (error) {
       console.error("Error checking user role:", error);
       navigate("/dashboard", { replace: true });
