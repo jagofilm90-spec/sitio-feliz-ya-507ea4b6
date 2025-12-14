@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, Users, ShoppingCart, TrendingUp, AlertTriangle, TrendingDown, DollarSign } from "lucide-react";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { Package, Users, ShoppingCart, TrendingUp, AlertTriangle, DollarSign, Loader2 } from "lucide-react";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { NotificacionesSistema } from "@/components/NotificacionesSistema";
+import { useUserRoles } from "@/hooks/useUserRoles";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+  const { roles, isLoading: rolesLoading } = useUserRoles();
+  
   const [stats, setStats] = useState({
     totalProductos: 0,
     totalClientes: 0,
@@ -19,9 +24,35 @@ const Dashboard = () => {
   const [productosStockData, setProductosStockData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Redirección inmediata para almacenistas y choferes
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (!rolesLoading && roles.length > 0) {
+      const isOnlyAlmacen = roles.length === 1 && roles.includes('almacen');
+      const isOnlyChofer = roles.length === 1 && roles.includes('chofer');
+      
+      if (isOnlyAlmacen) {
+        console.log('Dashboard: Redirigiendo almacenista a /almacen-tablet');
+        navigate('/almacen-tablet', { replace: true });
+        return;
+      }
+      if (isOnlyChofer) {
+        console.log('Dashboard: Redirigiendo chofer a /chofer');
+        navigate('/chofer', { replace: true });
+        return;
+      }
+    }
+  }, [roles, rolesLoading, navigate]);
+
+  useEffect(() => {
+    // Solo cargar datos si no es almacen/chofer
+    if (!rolesLoading && roles.length > 0) {
+      const isOnlyAlmacen = roles.length === 1 && roles.includes('almacen');
+      const isOnlyChofer = roles.length === 1 && roles.includes('chofer');
+      if (!isOnlyAlmacen && !isOnlyChofer) {
+        loadDashboardData();
+      }
+    }
+  }, [roles, rolesLoading]);
 
   const loadDashboardData = async () => {
     try {
@@ -191,6 +222,26 @@ const Dashboard = () => {
   ];
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+
+  // Mostrar loader mientras verifica roles
+  if (rolesLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Si es almacen o chofer, mostrar loader mientras redirige
+  const isOnlyAlmacen = roles.length === 1 && roles.includes('almacen');
+  const isOnlyChofer = roles.length === 1 && roles.includes('chofer');
+  if (isOnlyAlmacen || isOnlyChofer) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <Layout>
