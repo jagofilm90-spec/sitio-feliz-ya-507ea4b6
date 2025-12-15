@@ -55,3 +55,61 @@ export function abreviarUnidad(presentacion: string): string {
     .replace(/\bbolsas?\b/gi, 'BOL')
     .replace(/\bcubetas?\b/gi, 'CBTA');
 }
+
+/**
+ * Valida que una contraseña cumpla requisitos de seguridad:
+ * - Mínimo 12 caracteres
+ * - Al menos una mayúscula
+ * - Al menos una minúscula
+ * - Al menos un número
+ * - Al menos un símbolo
+ */
+export function validateStrongPassword(password: string): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  if (password.length < 12) {
+    errors.push("Mínimo 12 caracteres");
+  }
+  if (!/[A-Z]/.test(password)) {
+    errors.push("Al menos una mayúscula");
+  }
+  if (!/[a-z]/.test(password)) {
+    errors.push("Al menos una minúscula");
+  }
+  if (!/[0-9]/.test(password)) {
+    errors.push("Al menos un número");
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push("Al menos un símbolo (!@#$%^&*...)");
+  }
+  
+  return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Genera contraseña segura con todos los tipos de caracteres requeridos
+ * @param length Longitud de la contraseña (mínimo 12)
+ */
+export function generateSecurePassword(length: number = 14): string {
+  const lowercase = "abcdefghijklmnopqrstuvwxyz";
+  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const numbers = "0123456789";
+  const symbols = "!@#$%^&*()_+-=";
+  const all = lowercase + uppercase + numbers + symbols;
+  
+  // Garantizar al menos uno de cada tipo
+  let password = "";
+  password += lowercase.charAt(Math.floor(Math.random() * lowercase.length));
+  password += uppercase.charAt(Math.floor(Math.random() * uppercase.length));
+  password += numbers.charAt(Math.floor(Math.random() * numbers.length));
+  password += symbols.charAt(Math.floor(Math.random() * symbols.length));
+  
+  // Completar el resto
+  const finalLength = Math.max(length, 12);
+  for (let i = password.length; i < finalLength; i++) {
+    password += all.charAt(Math.floor(Math.random() * all.length));
+  }
+  
+  // Mezclar caracteres para no tener patrón predecible
+  return password.split('').sort(() => Math.random() - 0.5).join('');
+}

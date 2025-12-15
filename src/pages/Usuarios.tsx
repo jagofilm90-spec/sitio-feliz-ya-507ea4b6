@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { validateStrongPassword, generateSecurePassword } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -240,6 +241,17 @@ export default function Usuarios() {
         return;
       }
 
+      // Validar contraseña fuerte
+      const passwordValidation = validateStrongPassword(newUser.password);
+      if (!passwordValidation.valid) {
+        toast({
+          variant: "destructive",
+          title: "Contraseña débil",
+          description: passwordValidation.errors.join(", "),
+        });
+        return;
+      }
+
       if (emailCheckResult !== "available") {
         toast({
           variant: "destructive",
@@ -459,11 +471,13 @@ export default function Usuarios() {
     if (!resetPasswordUser || !newPassword) return;
 
     try {
-      if (newPassword.length < 6) {
+      // Validar contraseña fuerte
+      const passwordValidation = validateStrongPassword(newPassword);
+      if (!passwordValidation.valid) {
         toast({
           variant: "destructive",
-          title: "Error",
-          description: "La contraseña debe tener al menos 6 caracteres",
+          title: "Contraseña débil",
+          description: passwordValidation.errors.join(", "),
         });
         return;
       }
