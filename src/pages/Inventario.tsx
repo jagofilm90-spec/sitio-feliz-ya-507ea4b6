@@ -43,15 +43,17 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, ArrowUp, ArrowDown, Minus, Package, List, AlertTriangle } from "lucide-react";
+import { Plus, Search, ArrowUp, ArrowDown, Minus, Package, List, AlertTriangle, Warehouse, Calendar, Boxes } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { NotificacionesSistema } from "@/components/NotificacionesSistema";
 import { InventarioPorCategoria } from "@/components/inventario/InventarioPorCategoria";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const InventarioContent = () => {
+  const [lotes, setLotes] = useState<any[]>([]);
   const [movimientos, setMovimientos] = useState<any[]>([]);
   const [productos, setProductos] = useState<any[]>([]);
+  const [bodegas, setBodegas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -62,6 +64,7 @@ const InventarioContent = () => {
   const [filterTipo, setFilterTipo] = useState<string>("todos");
   const [filterFechaInicio, setFilterFechaInicio] = useState("");
   const [filterFechaFin, setFilterFechaFin] = useState("");
+  const [filterBodega, setFilterBodega] = useState<string>("todas");
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -81,7 +84,19 @@ const InventarioContent = () => {
 
   const loadData = async () => {
     try {
-      const [movimientosData, productosData] = await Promise.all([
+      const [lotesData, movimientosData, productosData, bodegasData] = await Promise.all([
+        // Cargar lotes (entradas desde recepciones de compras)
+        supabase
+          .from("inventario_lotes")
+          .select(`
+            *,
+            productos (nombre, codigo, unidad_comercial),
+            bodegas (nombre),
+            ordenes_compra (folio)
+          `)
+          .order("fecha_entrada", { ascending: false })
+          .limit(200),
+        // Cargar movimientos manuales
         supabase
           .from("inventario_movimientos")
           .select(`
@@ -96,13 +111,22 @@ const InventarioContent = () => {
           .select("id, codigo, nombre, stock_actual, maneja_caducidad, requiere_fumigacion, fecha_ultima_fumigacion")
           .eq("activo", true)
           .order("nombre"),
+        supabase
+          .from("bodegas")
+          .select("id, nombre")
+          .eq("activo", true)
+          .order("nombre"),
       ]);
 
+      if (lotesData.error) throw lotesData.error;
       if (movimientosData.error) throw movimientosData.error;
       if (productosData.error) throw productosData.error;
+      if (bodegasData.error) throw bodegasData.error;
 
+      setLotes(lotesData.data || []);
       setMovimientos(movimientosData.data || []);
       setProductos(productosData.data || []);
+      setBodegas(bodegasData.data || []);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -276,11 +300,30 @@ const InventarioContent = () => {
     }
   };
 
+  // Filtro para lotes (entradas)
+  const filteredLotes = lotes.filter((lote) => {
+    const matchesSearch = 
+      lote.productos?.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lote.productos?.codigo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lote.lote_referencia?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesBodega = filterBodega === "todas" || lote.bodega_id === filterBodega;
+
+    let matchesFecha = true;
+    if (filterFechaInicio || filterFechaFin) {
+      const loteFecha = new Date(lote.fecha_entrada).toISOString().split('T')[0];
+      if (filterFechaInicio && loteFecha < filterFechaInicio) matchesFecha = false;
+      if (filterFechaFin && loteFecha > filterFechaFin) matchesFecha = false;
+    }
+
+    return matchesSearch && matchesBodega && matchesFecha;
+  });
+
   const filteredMovimientos = movimientos.filter((m) => {
     // Filtro por búsqueda de texto
     const matchesSearch = 
-      m.productos?.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.productos?.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.productos?.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.productos?.codigo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       m.lote?.toLowerCase().includes(searchTerm.toLowerCase());
 
     // Filtro por tipo de movimiento
@@ -349,7 +392,24 @@ const InventarioContent = () => {
     }
   };
 
-  const [activeTab, setActiveTab] = useState("movimientos");
+  const [activeTab, setActiveTab] = useState("lotes");
+
+  // Helper para formato de caducidad
+  const getCaducidadBadge = (fechaCaducidad: string | null) => {
+    if (!fechaCaducidad) return null;
+    
+    const fecha = new Date(fechaCaducidad);
+    const hoy = new Date();
+    const diasRestantes = Math.ceil((fecha.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diasRestantes < 0) {
+      return <Badge variant="destructive">Vencido hace {Math.abs(diasRestantes)} días</Badge>;
+    } else if (diasRestantes <= 30) {
+      return <Badge variant="outline" className="border-orange-500 text-orange-600">Vence en {diasRestantes} días</Badge>;
+    } else {
+      return <Badge variant="secondary">{fecha.toLocaleDateString('es-MX')}</Badge>;
+    }
+  };
 
   return (
     <Layout>
@@ -544,9 +604,13 @@ const InventarioContent = () => {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
+            <TabsTrigger value="lotes" className="flex items-center gap-2">
+              <Boxes className="h-4 w-4" />
+              Lotes (Entradas)
+            </TabsTrigger>
             <TabsTrigger value="movimientos" className="flex items-center gap-2">
               <List className="h-4 w-4" />
-              Movimientos
+              Movimientos Manuales
             </TabsTrigger>
             <TabsTrigger value="categoria" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
@@ -554,6 +618,155 @@ const InventarioContent = () => {
             </TabsTrigger>
           </TabsList>
 
+          {/* PESTAÑA LOTES - Entradas desde recepciones de compras */}
+          <TabsContent value="lotes" className="space-y-4">
+            <div className="flex gap-4 flex-wrap">
+              <div className="relative flex-1 min-w-[250px]">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por producto, código o referencia de lote..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={filterBodega} onValueChange={setFilterBodega}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filtrar por bodega" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas las bodegas</SelectItem>
+                  {bodegas.map((bodega) => (
+                    <SelectItem key={bodega.id} value={bodega.id}>
+                      {bodega.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex gap-4 flex-wrap items-end">
+              <div className="space-y-2">
+                <Label htmlFor="fecha_inicio_lotes">Desde</Label>
+                <Input
+                  id="fecha_inicio_lotes"
+                  type="date"
+                  value={filterFechaInicio}
+                  onChange={(e) => setFilterFechaInicio(e.target.value)}
+                  className="w-[180px]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fecha_fin_lotes">Hasta</Label>
+                <Input
+                  id="fecha_fin_lotes"
+                  type="date"
+                  value={filterFechaFin}
+                  onChange={(e) => setFilterFechaFin(e.target.value)}
+                  className="w-[180px]"
+                />
+              </div>
+              {(filterBodega !== "todas" || filterFechaInicio || filterFechaFin) && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setFilterBodega("todas");
+                    setFilterFechaInicio("");
+                    setFilterFechaFin("");
+                  }}
+                >
+                  Limpiar filtros
+                </Button>
+              )}
+              <div className="ml-auto text-sm text-muted-foreground">
+                Mostrando {filteredLotes.length} de {lotes.length} lotes
+              </div>
+            </div>
+
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha Entrada</TableHead>
+                    <TableHead>Producto</TableHead>
+                    <TableHead>Cantidad Disponible</TableHead>
+                    <TableHead>Bodega</TableHead>
+                    <TableHead>Referencia Lote</TableHead>
+                    <TableHead>Caducidad</TableHead>
+                    <TableHead>Orden Compra</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center">
+                        Cargando...
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredLotes.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center">
+                        No hay lotes registrados. Las entradas se crean desde Recepción en el módulo de Almacén.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredLotes.map((lote) => (
+                      <TableRow key={lote.id} className={lote.cantidad_disponible === 0 ? "opacity-50" : ""}>
+                        <TableCell className="font-mono text-xs">
+                          <div>{new Date(lote.fecha_entrada).toLocaleDateString('es-MX')}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">{lote.productos?.codigo}</div>
+                          <div className="text-sm text-muted-foreground">{lote.productos?.nombre}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className={`font-semibold ${lote.cantidad_disponible === 0 ? 'text-muted-foreground' : ''}`}>
+                              {lote.cantidad_disponible}
+                            </span>
+                            <span className="text-sm text-muted-foreground">
+                              {lote.productos?.unidad_comercial || 'uds'}
+                            </span>
+                            {lote.cantidad_disponible === 0 && (
+                              <Badge variant="secondary">Agotado</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Warehouse className="h-3 w-3 text-muted-foreground" />
+                            <span>{lote.bodegas?.nombre || "Sin asignar"}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-mono text-xs">{lote.lote_referencia || "—"}</span>
+                        </TableCell>
+                        <TableCell>
+                          {lote.fecha_caducidad ? (
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3 text-muted-foreground" />
+                              {getCaducidadBadge(lote.fecha_caducidad)}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {lote.ordenes_compra?.folio ? (
+                            <Badge variant="outline">{lote.ordenes_compra.folio}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+
+          {/* PESTAÑA MOVIMIENTOS MANUALES */}
           <TabsContent value="movimientos" className="space-y-4">
             <div className="flex gap-4 flex-wrap">
               <div className="relative flex-1 min-w-[250px]">
