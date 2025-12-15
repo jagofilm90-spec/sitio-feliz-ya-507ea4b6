@@ -28,15 +28,70 @@ export const FirmaDigitalDialog = ({
     if (open) {
       const originalPointerEvents = document.body.style.pointerEvents;
       const originalOverflow = document.body.style.overflow;
-      
-      document.body.style.pointerEvents = 'auto';
-      document.body.style.overflow = 'hidden';
-      
+
+      document.body.style.pointerEvents = "auto";
+      document.body.style.overflow = "hidden";
+
       return () => {
         document.body.style.pointerEvents = originalPointerEvents;
         document.body.style.overflow = originalOverflow;
       };
     }
+  }, [open]);
+
+  // Radix (Sheet/Dialog) puede aplicar `inert` / `aria-hidden` y bloquear eventos táctiles.
+  // Mientras este dialog esté abierto, removemos temporalmente esos atributos y restauramos al cerrar.
+  useEffect(() => {
+    if (!open) return;
+
+    const portalRoot = document.getElementById("firma-portal-root") as HTMLElement | null;
+    const prevPortalStyles = portalRoot
+      ? {
+          pointerEvents: portalRoot.style.pointerEvents,
+          position: portalRoot.style.position,
+          zIndex: portalRoot.style.zIndex,
+          isolation: portalRoot.style.isolation,
+        }
+      : null;
+
+    if (portalRoot) {
+      portalRoot.style.pointerEvents = "auto";
+      if (!portalRoot.style.position) portalRoot.style.position = "relative";
+      portalRoot.style.zIndex = "999999";
+      portalRoot.style.isolation = "isolate";
+    }
+
+    const inertElements = Array.from(document.querySelectorAll<HTMLElement>("[inert]"));
+    const inertSnapshot = inertElements.map((el) => ({
+      el,
+      value: el.getAttribute("inert"),
+    }));
+    inertElements.forEach((el) => el.removeAttribute("inert"));
+
+    const ariaHiddenElements = Array.from(
+      document.querySelectorAll<HTMLElement>("[aria-hidden=\"true\"]")
+    );
+    const ariaHiddenSnapshot = ariaHiddenElements.map((el) => ({
+      el,
+      value: el.getAttribute("aria-hidden"),
+    }));
+    ariaHiddenElements.forEach((el) => el.removeAttribute("aria-hidden"));
+
+    return () => {
+      inertSnapshot.forEach(({ el, value }) => {
+        el.setAttribute("inert", value ?? "");
+      });
+      ariaHiddenSnapshot.forEach(({ el, value }) => {
+        el.setAttribute("aria-hidden", value ?? "true");
+      });
+
+      if (portalRoot && prevPortalStyles) {
+        portalRoot.style.pointerEvents = prevPortalStyles.pointerEvents;
+        portalRoot.style.position = prevPortalStyles.position;
+        portalRoot.style.zIndex = prevPortalStyles.zIndex;
+        portalRoot.style.isolation = prevPortalStyles.isolation;
+      }
+    };
   }, [open]);
 
   // Inicializar canvas cuando se abre
@@ -164,8 +219,11 @@ export const FirmaDigitalDialog = ({
   // No renderizar si no está abierto
   if (!open) return null;
 
-  // Usar createPortal para renderizar directamente en document.body
-  // Esto evita cualquier interferencia de Radix UI Sheets/Dialogs padres
+  const portalContainer =
+    (document.getElementById("firma-portal-root") as HTMLElement | null) ?? document.body;
+
+  // Usar createPortal para renderizar fuera del árbol de Radix (Sheet/Dialog)
+  // y evitar que `inert` bloquee eventos del stylus/touch.
   return createPortal(
     <>
       {/* Overlay - z-index muy alto para estar encima de todo */}
@@ -272,6 +330,6 @@ export const FirmaDigitalDialog = ({
         </div>
       </div>
     </>,
-    document.body
+    portalContainer
   );
 };
