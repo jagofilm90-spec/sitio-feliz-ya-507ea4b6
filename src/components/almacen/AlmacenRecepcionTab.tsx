@@ -8,6 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Package, 
   ChevronRight,
@@ -16,9 +26,17 @@ import {
   Clock,
   CheckCircle2,
   PackageCheck,
+  User,
+  UserCheck,
+  RefreshCw,
 } from "lucide-react";
 import { RegistrarLlegadaSheet } from "./RegistrarLlegadaSheet";
 import { AlmacenRecepcionSheet } from "./AlmacenRecepcionSheet";
+
+interface TrabajandoPor {
+  id: string;
+  full_name: string;
+}
 
 interface EntregaCompra {
   id: string;
@@ -30,6 +48,9 @@ interface EntregaCompra {
   notas: string | null;
   llegada_registrada_en: string | null;
   nombre_chofer_proveedor: string | null;
+  trabajando_por: string | null;
+  trabajando_desde: string | null;
+  trabajando_por_profile?: TrabajandoPor | null;
   orden_compra: {
     id: string;
     folio: string;
@@ -52,7 +73,19 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
   const [selectedEntrega, setSelectedEntrega] = useState<EntregaCompra | null>(null);
   const [llegadaSheetOpen, setLlegadaSheetOpen] = useState(false);
   const [recepcionSheetOpen, setRecepcionSheetOpen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [tomarRecepcionEntrega, setTomarRecepcionEntrega] = useState<EntregaCompra | null>(null);
+  const [tomandoRecepcion, setTomandoRecepcion] = useState(false);
   const { toast } = useToast();
+
+  // Obtener usuario actual
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id || null);
+    };
+    getUser();
+  }, []);
 
   const loadEntregas = async () => {
     setLoading(true);
@@ -69,6 +102,8 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
           notas,
           llegada_registrada_en,
           nombre_chofer_proveedor,
+          trabajando_por,
+          trabajando_desde,
           orden_compra:ordenes_compra(
             id,
             folio,
@@ -82,7 +117,28 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
 
       if (error) throw error;
 
-      const entregasData = (data as any[]) || [];
+      let entregasData = (data as any[]) || [];
+      
+      // Cargar nombres de quienes están trabajando
+      const trabajandoPorIds = entregasData
+        .filter(e => e.trabajando_por)
+        .map(e => e.trabajando_por);
+      
+      if (trabajandoPorIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", trabajandoPorIds);
+        
+        if (profiles) {
+          const profileMap = new Map(profiles.map(p => [p.id, p]));
+          entregasData = entregasData.map(e => ({
+            ...e,
+            trabajando_por_profile: e.trabajando_por ? profileMap.get(e.trabajando_por) : null
+          }));
+        }
+      }
+      
       setEntregas(entregasData);
       
       // Estadísticas para el padre
@@ -90,7 +146,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
       const enDescarga = entregasData.filter(e => e.status === "en_descarga");
       onStatsUpdate({
         pendientes: pendientes.length + enDescarga.length,
-        recibidas: 0 // Solo contamos las activas aquí
+        recibidas: 0
       });
     } catch (error) {
       console.error("Error cargando entregas:", error);
@@ -101,6 +157,62 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Tomar recepción de otro almacenista
+  const handleTomarRecepcion = async () => {
+    if (!tomarRecepcionEntrega || !currentUserId) return;
+    
+    setTomandoRecepcion(true);
+    try {
+      const anteriorUsuario = tomarRecepcionEntrega.trabajando_por;
+      
+      // Actualizar quién está trabajando
+      const { error: updateError } = await supabase
+        .from("ordenes_compra_entregas")
+        .update({
+          trabajando_por: currentUserId,
+          trabajando_desde: new Date().toISOString()
+        })
+        .eq("id", tomarRecepcionEntrega.id);
+      
+      if (updateError) throw updateError;
+      
+      // Registrar transferencia en historial
+      if (anteriorUsuario) {
+        await supabase.from("recepciones_participantes").insert([
+          {
+            entrega_id: tomarRecepcionEntrega.id,
+            user_id: anteriorUsuario,
+            accion: "transferido_a",
+            notas: `Transferido a otro almacenista`
+          },
+          {
+            entrega_id: tomarRecepcionEntrega.id,
+            user_id: currentUserId,
+            accion: "transferido_de",
+            notas: `Tomó recepción de otro almacenista`
+          }
+        ]);
+      }
+      
+      toast({
+        title: "Recepción tomada",
+        description: "Ahora estás trabajando en esta recepción"
+      });
+      
+      loadEntregas();
+    } catch (error) {
+      console.error("Error tomando recepción:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo tomar la recepción",
+        variant: "destructive"
+      });
+    } finally {
+      setTomandoRecepcion(false);
+      setTomarRecepcionEntrega(null);
     }
   };
 
@@ -191,8 +303,10 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                       <EntregaCard 
                         key={entrega.id}
                         entrega={entrega}
+                        currentUserId={currentUserId}
                         onRegistrarLlegada={handleRegistrarLlegada}
                         onCompletarRecepcion={handleCompletarRecepcion}
+                        onTomarRecepcion={setTomarRecepcionEntrega}
                       />
                     ))}
                   </div>
@@ -204,8 +318,10 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                 <EntregaCard 
                   key={entrega.id}
                   entrega={entrega}
+                  currentUserId={currentUserId}
                   onRegistrarLlegada={handleRegistrarLlegada}
                   onCompletarRecepcion={handleCompletarRecepcion}
+                  onTomarRecepcion={setTomarRecepcionEntrega}
                 />
               ))}
             </div>
@@ -238,6 +354,31 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
           }}
         />
       )}
+
+      {/* Diálogo de confirmación para tomar recepción */}
+      <AlertDialog open={!!tomarRecepcionEntrega} onOpenChange={(open) => !open && setTomarRecepcionEntrega(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <RefreshCw className="w-5 h-5" />
+              ¿Tomar esta recepción?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {tomarRecepcionEntrega?.trabajando_por_profile?.full_name 
+                ? `${tomarRecepcionEntrega.trabajando_por_profile.full_name} está trabajando en esta recepción. ¿Deseas tomarla?`
+                : "Esta recepción está asignada a otro almacenista. ¿Deseas tomarla?"}
+              <br /><br />
+              El almacenista anterior será notificado del cambio.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={tomandoRecepcion}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleTomarRecepcion} disabled={tomandoRecepcion}>
+              {tomandoRecepcion ? "Tomando..." : "Sí, tomar recepción"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
@@ -245,11 +386,13 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
 // Componente interno para cada entrega
 interface EntregaCardProps {
   entrega: EntregaCompra;
+  currentUserId: string | null;
   onRegistrarLlegada: (entrega: EntregaCompra) => void;
   onCompletarRecepcion: (entrega: EntregaCompra) => void;
+  onTomarRecepcion: (entrega: EntregaCompra) => void;
 }
 
-const EntregaCard = ({ entrega, onRegistrarLlegada, onCompletarRecepcion }: EntregaCardProps) => {
+const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRecepcion, onTomarRecepcion }: EntregaCardProps) => {
   const estado = getEstadoConfigStatic(entrega.status);
   const esEnDescarga = entrega.status === "en_descarga";
   const Icon = estado.icon;
@@ -257,6 +400,16 @@ const EntregaCard = ({ entrega, onRegistrarLlegada, onCompletarRecepcion }: Entr
   const proveedorNombre = entrega.orden_compra?.proveedor_id 
     ? (entrega.orden_compra?.proveedor?.nombre || "Sin proveedor")
     : (entrega.orden_compra?.proveedor_nombre_manual || "Sin proveedor");
+
+  // Verificar si otro usuario está trabajando en esta recepción
+  const otroUsuarioTrabajando = entrega.trabajando_por && entrega.trabajando_por !== currentUserId;
+  const yoEstoyTrabajando = entrega.trabajando_por === currentUserId;
+  
+  // Verificar si el timeout de 4 horas ha pasado
+  const tiempoTrabajando = entrega.trabajando_desde 
+    ? (Date.now() - new Date(entrega.trabajando_desde).getTime()) / (1000 * 60 * 60) 
+    : 0;
+  const timeoutExpirado = tiempoTrabajando > 4;
 
   return (
     <div className="p-4 hover:bg-muted/50 transition-colors">
@@ -299,17 +452,56 @@ const EntregaCard = ({ entrega, onRegistrarLlegada, onCompletarRecepcion }: Entr
             </div>
           )}
 
+          {/* Badge de quién está trabajando */}
+          {entrega.trabajando_por && (
+            <div className="flex items-center gap-2">
+              {yoEstoyTrabajando ? (
+                <Badge variant="secondary" className="gap-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                  <UserCheck className="w-3 h-3" />
+                  Tú estás trabajando
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="gap-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                  <User className="w-3 h-3" />
+                  {entrega.trabajando_por_profile?.full_name || "Otro almacenista"}
+                  {entrega.trabajando_desde && (
+                    <span className="opacity-75">
+                      • hace {formatDistanceToNow(new Date(entrega.trabajando_desde), { locale: es })}
+                    </span>
+                  )}
+                </Badge>
+              )}
+            </div>
+          )}
+
           {/* Botones de acción */}
-          <div className="flex gap-2 pt-1">
+          <div className="flex gap-2 pt-1 flex-wrap">
             {esEnDescarga ? (
-              <Button 
-                size="sm" 
-                onClick={() => onCompletarRecepcion(entrega)}
-                className="gap-2"
-              >
-                <PackageCheck className="w-4 h-4" />
-                Completar Recepción
-              </Button>
+              <>
+                {/* Solo mostrar botón de completar si soy yo o no hay nadie asignado */}
+                {(!otroUsuarioTrabajando || timeoutExpirado) && (
+                  <Button 
+                    size="sm" 
+                    onClick={() => onCompletarRecepcion(entrega)}
+                    className="gap-2"
+                  >
+                    <PackageCheck className="w-4 h-4" />
+                    Completar Recepción
+                  </Button>
+                )}
+                {/* Botón para tomar recepción de otro */}
+                {otroUsuarioTrabajando && (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => onTomarRecepcion(entrega)}
+                    className="gap-2"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Tomar recepción
+                  </Button>
+                )}
+              </>
             ) : (
               <Button 
                 size="sm" 

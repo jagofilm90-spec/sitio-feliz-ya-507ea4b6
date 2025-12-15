@@ -2541,6 +2541,8 @@ export type Database = {
           placas_vehiculo: string | null
           recibido_por: string | null
           status: string
+          trabajando_desde: string | null
+          trabajando_por: string | null
           updated_at: string
         }
         Insert: {
@@ -2561,6 +2563,8 @@ export type Database = {
           placas_vehiculo?: string | null
           recibido_por?: string | null
           status?: string
+          trabajando_desde?: string | null
+          trabajando_por?: string | null
           updated_at?: string
         }
         Update: {
@@ -2581,6 +2585,8 @@ export type Database = {
           placas_vehiculo?: string | null
           recibido_por?: string | null
           status?: string
+          trabajando_desde?: string | null
+          trabajando_por?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -3253,6 +3259,58 @@ export type Database = {
             columns: ["orden_compra_id"]
             isOneToOne: false
             referencedRelation: "ordenes_compra"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recepciones_participantes: {
+        Row: {
+          accion: string
+          created_at: string | null
+          empleado_id: string | null
+          entrega_id: string
+          id: string
+          notas: string | null
+          user_id: string
+        }
+        Insert: {
+          accion: string
+          created_at?: string | null
+          empleado_id?: string | null
+          entrega_id: string
+          id?: string
+          notas?: string | null
+          user_id: string
+        }
+        Update: {
+          accion?: string
+          created_at?: string | null
+          empleado_id?: string | null
+          entrega_id?: string
+          id?: string
+          notas?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recepciones_participantes_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recepciones_participantes_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recepciones_participantes_entrega_id_fkey"
+            columns: ["entrega_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_compra_entregas"
             referencedColumns: ["id"]
           },
         ]

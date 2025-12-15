@@ -133,7 +133,7 @@ export const RegistrarLlegadaSheet = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No autenticado");
 
-      // 1. Actualizar entrega con datos de llegada
+      // 1. Actualizar entrega con datos de llegada y asignar trabajando_por
       const { error: updateError } = await supabase
         .from("ordenes_compra_entregas")
         .update({
@@ -143,12 +143,22 @@ export const RegistrarLlegadaSheet = ({
           nombre_chofer_proveedor: nombreChofer.trim(),
           placas_vehiculo: placasVehiculo.trim() || null,
           numero_sello_llegada: numeroSello.trim() || null,
+          trabajando_por: user.id,
+          trabajando_desde: new Date().toISOString(),
         })
         .eq("id", entrega.id);
 
       if (updateError) throw updateError;
 
-      // 2. Subir y registrar evidencias de llegada
+      // 2. Registrar participación en historial
+      await supabase.from("recepciones_participantes").insert({
+        entrega_id: entrega.id,
+        user_id: user.id,
+        accion: "inicio_llegada",
+        notas: `Registró llegada del camión con chofer: ${nombreChofer.trim()}`
+      });
+
+      // 3. Subir y registrar evidencias de llegada
       for (const evidencia of evidencias) {
         const fileName = `llegada/${entrega.orden_compra.id}/${entrega.id}/${Date.now()}-${evidencia.tipo}.jpg`;
         

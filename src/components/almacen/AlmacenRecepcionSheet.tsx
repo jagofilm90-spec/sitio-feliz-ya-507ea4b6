@@ -430,6 +430,14 @@ export const AlmacenRecepcionSheet = ({
                               entrega.orden_compra?.proveedor_nombre_manual || 
                               'proveedor';
 
+      // 0. Registrar participación - inicio de recepción
+      await supabase.from("recepciones_participantes").insert({
+        entrega_id: entrega.id,
+        user_id: user.id,
+        accion: "inicio_recepcion",
+        notas: `Inició completar recepción`
+      });
+
       // 1. Actualizar cantidades recibidas y crear lotes en inventario
       for (const [detalleId, cantidad] of Object.entries(cantidadesRecibidas)) {
         const producto = productos.find(p => p.id === detalleId);
@@ -504,7 +512,9 @@ export const AlmacenRecepcionSheet = ({
         status: "recibida",
         fecha_entrega_real: new Date().toISOString().split("T")[0],
         recibido_por: user.id,
-        notas: `Recibido por: ${nombreEntrega}${numeroSello ? `. Sello: ${numeroSello}` : ""}${notas ? `. ${notas}` : ""}`
+        notas: `Recibido por: ${nombreEntrega}${numeroSello ? `. Sello: ${numeroSello}` : ""}${notas ? `. ${notas}` : ""}`,
+        trabajando_por: null,
+        trabajando_desde: null,
       };
 
       // Guardar firma del chofer si hay diferencias
@@ -517,6 +527,14 @@ export const AlmacenRecepcionSheet = ({
         .from("ordenes_compra_entregas")
         .update(updateEntrega)
         .eq("id", entrega.id);
+
+      // 2.5 Registrar participación - fin de recepción
+      await supabase.from("recepciones_participantes").insert({
+        entrega_id: entrega.id,
+        user_id: user.id,
+        accion: "fin_recepcion",
+        notas: `Completó recepción. Recibido por: ${nombreEntrega}`
+      });
 
       // 3. Subir evidencias y registrar en tabla recepciones_evidencias
       for (const evidencia of evidencias) {
