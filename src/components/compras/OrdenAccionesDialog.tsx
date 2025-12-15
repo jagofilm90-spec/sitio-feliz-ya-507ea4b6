@@ -1771,14 +1771,14 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {nuevaFecha 
-                      ? format(new Date(nuevaFecha), "dd/MM/yyyy") 
+                      ? format(new Date(nuevaFecha + "T12:00:00"), "dd/MM/yyyy") 
                       : "Seleccionar fecha"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={nuevaFecha ? new Date(nuevaFecha) : undefined}
+                    selected={nuevaFecha ? new Date(nuevaFecha + "T12:00:00") : undefined}
                     onSelect={(date) => setNuevaFecha(date ? format(date, "yyyy-MM-dd") : "")}
                     initialFocus
                     className="pointer-events-auto"

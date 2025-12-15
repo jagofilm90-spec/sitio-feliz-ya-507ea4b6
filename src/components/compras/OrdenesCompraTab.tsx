@@ -1160,14 +1160,14 @@ const OrdenesCompraTab = () => {
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {fechaEntrega 
-                          ? format(new Date(fechaEntrega), "dd/MM/yyyy") 
+                          ? format(new Date(fechaEntrega + "T12:00:00"), "dd/MM/yyyy") 
                           : "Seleccionar fecha"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={fechaEntrega ? new Date(fechaEntrega) : undefined}
+                        selected={fechaEntrega ? new Date(fechaEntrega + "T12:00:00") : undefined}
                         onSelect={(date) => setFechaEntrega(date ? format(date, "yyyy-MM-dd") : "")}
                         initialFocus
                         className="pointer-events-auto"
