@@ -1,5 +1,8 @@
 project_id = "vrcyjmfpteoccqdmdmqn"
 
+[functions.extract-placas-vehiculo]
+verify_jwt = true
+
 [functions.extract-license-expiry]
 verify_jwt = true
 

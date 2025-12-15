@@ -2539,6 +2539,7 @@ export type Database = {
           numero_sello_llegada: string | null
           orden_compra_id: string
           placas_vehiculo: string | null
+          recepcion_finalizada_en: string | null
           recibido_por: string | null
           status: string
           trabajando_desde: string | null
@@ -2561,6 +2562,7 @@ export type Database = {
           numero_sello_llegada?: string | null
           orden_compra_id: string
           placas_vehiculo?: string | null
+          recepcion_finalizada_en?: string | null
           recibido_por?: string | null
           status?: string
           trabajando_desde?: string | null
@@ -2583,6 +2585,7 @@ export type Database = {
           numero_sello_llegada?: string | null
           orden_compra_id?: string
           placas_vehiculo?: string | null
+          recepcion_finalizada_en?: string | null
           recibido_por?: string | null
           status?: string
           trabajando_desde?: string | null
