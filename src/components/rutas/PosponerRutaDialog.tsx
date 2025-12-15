@@ -26,10 +26,10 @@ interface Ruta {
   folio: string;
   fecha_ruta: string;
   chofer_id: string;
-  ayudante_id: string | null;
+  ayudantes_ids?: string[] | null;
   vehiculo_id: string | null;
   notas: string | null;
-  chofer?: { full_name: string };
+  chofer_nombre?: string;
   vehiculo?: { nombre: string };
 }
 
@@ -88,12 +88,12 @@ const PosponerRutaDialog = ({
         }
       }
 
-      // Also notify helper
-      if (ruta.ayudante_id) {
+      // Also notify helpers
+      if (ruta.ayudantes_ids && ruta.ayudantes_ids.length > 0) {
         try {
           await supabase.functions.invoke("send-push-notification", {
             body: {
-              user_ids: [ruta.ayudante_id],
+              user_ids: ruta.ayudantes_ids,
               title: "Ruta pospuesta",
               body: `La ruta ${ruta.folio} donde eres ayudante se movió a ${format(nuevaFecha, "EEEE d 'de' MMMM", { locale: es })}`,
               data: { type: "ruta", ruta_id: ruta.id }
@@ -155,7 +155,7 @@ const PosponerRutaDialog = ({
               </div>
               <div className="flex items-center gap-2">
                 <User className="h-3 w-3" />
-                <span>{ruta.chofer?.full_name || "Sin chofer"}</span>
+                <span>{ruta.chofer_nombre || "Sin chofer"}</span>
               </div>
             </div>
           </div>
