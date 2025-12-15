@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { compressImageForUpload } from '@/lib/imageUtils';
 import {
   Dialog,
   DialogContent,
@@ -32,40 +33,6 @@ const TIPOS_EVIDENCIA = [
   { tipo: 'carta_porte', label: 'Carta Porte', icon: FileText },
 ];
 
-// Compress image before upload
-const compressImage = async (file: File, maxWidth = 1200, quality = 0.7): Promise<File> => {
-  return new Promise((resolve) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-    
-    img.onload = () => {
-      let { width, height } = img;
-      if (width > maxWidth) {
-        height = (height * maxWidth) / width;
-        width = maxWidth;
-      }
-      canvas.width = width;
-      canvas.height = height;
-      ctx?.drawImage(img, 0, 0, width, height);
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(new File([blob], file.name, { type: 'image/jpeg' }));
-          } else {
-            resolve(file);
-          }
-        },
-        'image/jpeg',
-        quality
-      );
-    };
-    
-    img.onerror = () => resolve(file);
-    img.src = URL.createObjectURL(file);
-  });
-};
-
 export function CargaEvidenciasSection({
   rutaId,
   evidencias,
@@ -88,8 +55,8 @@ export function CargaEvidenciasSection({
 
       setUploading(tipo);
       try {
-        // Compress image
-        const compressed = await compressImage(file);
+        // Usar función centralizada de compresión con perfil 'evidence'
+        const compressed = await compressImageForUpload(file, 'evidence');
         
         // Generate unique filename
         const timestamp = Date.now();
