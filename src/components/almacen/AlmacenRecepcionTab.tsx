@@ -48,6 +48,7 @@ interface EntregaCompra {
   notas: string | null;
   llegada_registrada_en: string | null;
   nombre_chofer_proveedor: string | null;
+  placas_vehiculo: string | null;
   trabajando_por: string | null;
   trabajando_desde: string | null;
   trabajando_por_profile?: TrabajandoPor | null;
