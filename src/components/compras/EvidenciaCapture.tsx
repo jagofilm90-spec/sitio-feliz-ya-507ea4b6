@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, CreditCard, FileText, Truck, Package, X, Loader2, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { compressImageForUpload, type ImageCompressionProfile } from "@/lib/imageUtils";
 
 export type TipoEvidencia = 'sello' | 'identificacion' | 'documento' | 'vehiculo' | 'placas' | 'caducidad' | 'producto_danado' | 'otro';
 
@@ -23,53 +24,17 @@ const tipoConfig: Record<TipoEvidencia, { label: string; icon: typeof Camera }> 
   otro: { label: "Otra evidencia", icon: Package },
 };
 
-// Compress image to reduce file size
-async function compressImage(file: File, maxWidth = 1920, quality = 0.8): Promise<File> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        let width = img.width;
-        let height = img.height;
-
-        // Scale down if needed
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width;
-          width = maxWidth;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          canvas.toBlob(
-            (blob) => {
-              if (blob) {
-                const compressedFile = new File([blob], file.name, {
-                  type: "image/jpeg",
-                  lastModified: Date.now(),
-                });
-                resolve(compressedFile);
-              } else {
-                resolve(file);
-              }
-            },
-            "image/jpeg",
-            quality
-          );
-        } else {
-          resolve(file);
-        }
-      };
-      img.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-  });
-}
+// Mapeo de tipo de evidencia a perfil de compresión centralizado
+const TIPO_TO_PROFILE: Record<TipoEvidencia, ImageCompressionProfile> = {
+  sello: 'evidence',
+  identificacion: 'ocr', // INE necesita OCR
+  documento: 'ocr',
+  vehiculo: 'evidence',
+  placas: 'ocr', // Placas necesitan OCR
+  caducidad: 'ocr', // Fechas necesitan OCR
+  producto_danado: 'evidence',
+  otro: 'evidence',
+};
 
 export function EvidenciaCapture({ tipo, onCapture, disabled, className }: EvidenciaCaptureProps) {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -87,8 +52,9 @@ export function EvidenciaCapture({ tipo, onCapture, disabled, className }: Evide
 
     setIsProcessing(true);
     try {
-      // Compress the image
-      const compressedFile = await compressImage(file);
+      // Usar función centralizada de compresión con perfil según tipo
+      const compressionProfile = TIPO_TO_PROFILE[tipo];
+      const compressedFile = await compressImageForUpload(file, compressionProfile);
       
       // Create preview URL
       const preview = URL.createObjectURL(compressedFile);
