@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { format } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -965,7 +966,7 @@ const OrdenesCompraTab = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      {new Date(orden.fecha_orden).toLocaleDateString()}
+                      {format(new Date(orden.fecha_orden), "dd/MM/yyyy")}
                     </TableCell>
                     <TableCell>{formatCurrency(orden.total)}</TableCell>
                     <TableCell>{getStatusBadge(orden.status)}</TableCell>
