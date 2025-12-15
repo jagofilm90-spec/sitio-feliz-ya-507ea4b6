@@ -3008,6 +3008,7 @@ export type Database = {
           almacenista_id: string | null
           ayudante_externo_id: string | null
           ayudante_id: string | null
+          ayudantes_ids: string[] | null
           carga_completada: boolean | null
           carga_completada_en: string | null
           carga_completada_por: string | null
@@ -3038,6 +3039,7 @@ export type Database = {
           almacenista_id?: string | null
           ayudante_externo_id?: string | null
           ayudante_id?: string | null
+          ayudantes_ids?: string[] | null
           carga_completada?: boolean | null
           carga_completada_en?: string | null
           carga_completada_por?: string | null
@@ -3068,6 +3070,7 @@ export type Database = {
           almacenista_id?: string | null
           ayudante_externo_id?: string | null
           ayudante_id?: string | null
+          ayudantes_ids?: string[] | null
           carga_completada?: boolean | null
           carga_completada_en?: string | null
           carga_completada_por?: string | null
