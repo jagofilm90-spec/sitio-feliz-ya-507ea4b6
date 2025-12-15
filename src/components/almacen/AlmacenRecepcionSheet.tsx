@@ -348,7 +348,7 @@ export const AlmacenRecepcionSheet = ({
         })
         .eq("id", entrega.id);
 
-      // 3. Subir evidencias
+      // 3. Subir evidencias y registrar en tabla recepciones_evidencias
       for (const evidencia of evidencias) {
         const fileName = `${entrega.orden_compra.id}/${entrega.id}/${Date.now()}-${evidencia.tipo}.jpg`;
         
@@ -358,6 +358,18 @@ export const AlmacenRecepcionSheet = ({
 
         if (uploadError) {
           console.error("Error subiendo evidencia:", uploadError);
+        } else {
+          // Registrar en tabla recepciones_evidencias
+          await supabase
+            .from("recepciones_evidencias")
+            .insert({
+              orden_compra_id: entrega.orden_compra.id,
+              orden_compra_entrega_id: entrega.id,
+              tipo_evidencia: evidencia.tipo,
+              ruta_storage: fileName,
+              nombre_archivo: evidencia.file.name,
+              capturado_por: user.id
+            });
         }
       }
 

@@ -54,7 +54,7 @@ interface EntregaCardProps {
         producto: {
           id: string;
           nombre: string;
-          unidad_comercial: string;
+          unidad: string;
         };
       }>;
     };
@@ -192,7 +192,7 @@ export function EntregaCard({ entrega, onEntregaActualizada }: EntregaCardProps)
                   <div key={detalle.id} className="flex justify-between text-sm">
                     <span className="truncate pr-2">{detalle.producto.nombre}</span>
                     <span className="font-medium whitespace-nowrap">
-                      {detalle.cantidad} {detalle.producto.unidad_comercial}
+                      {detalle.cantidad} {detalle.producto.unidad}
                     </span>
                   </div>
                 ))}
@@ -209,14 +209,14 @@ export function EntregaCard({ entrega, onEntregaActualizada }: EntregaCardProps)
                     <div key={detalle.id} className="flex justify-between text-sm">
                       <span className="truncate pr-2">{detalle.producto.nombre}</span>
                       <span className="font-medium whitespace-nowrap">
-                        {detalle.cantidad} {detalle.producto.unidad_comercial}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
+                      {detalle.cantidad} {detalle.producto.unidad}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
 
-              {/* Contacto */}
+            {/* Contacto */}
               {sucursal?.telefono && (
                 <div className="flex items-center gap-2 text-sm">
                   <Phone className="h-4 w-4 text-muted-foreground" />
