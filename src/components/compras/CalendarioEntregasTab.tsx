@@ -41,6 +41,8 @@ const CalendarioEntregasTab = () => {
             folio,
             total,
             status,
+            proveedor_id,
+            proveedor_nombre_manual,
             proveedores (nombre),
             ordenes_compra_detalles (
               cantidad_ordenada,
@@ -105,7 +107,10 @@ const CalendarioEntregasTab = () => {
       id: entrega.id,
       fecha: entrega.fecha_programada,
       folio: entrega.ordenes_compra?.folio,
-      proveedor: entrega.ordenes_compra?.proveedores?.nombre,
+      proveedor: entrega.ordenes_compra?.proveedor_id 
+        ? entrega.ordenes_compra?.proveedores?.nombre 
+        : entrega.ordenes_compra?.proveedor_nombre_manual,
+      esProveedorManual: !entrega.ordenes_compra?.proveedor_id,
       productos: entrega.ordenes_compra?.ordenes_compra_detalles,
       total: entrega.ordenes_compra?.total,
       status: entrega.status,
@@ -120,7 +125,10 @@ const CalendarioEntregasTab = () => {
       id: orden.id,
       fecha: orden.fecha_entrega_programada,
       folio: orden.folio,
-      proveedor: orden.proveedores?.nombre,
+      proveedor: orden.proveedor_id 
+        ? orden.proveedores?.nombre 
+        : orden.proveedor_nombre_manual,
+      esProveedorManual: !orden.proveedor_id,
       productos: orden.ordenes_compra_detalles,
       total: orden.total,
       status: orden.status,

@@ -2170,7 +2170,9 @@ export type Database = {
           motivo_devolucion: string | null
           motivo_rechazo: string | null
           notas: string | null
-          proveedor_id: string
+          proveedor_id: string | null
+          proveedor_nombre_manual: string | null
+          proveedor_telefono_manual: string | null
           rechazado_por: string | null
           status: string
           subtotal: number
@@ -2195,7 +2197,9 @@ export type Database = {
           motivo_devolucion?: string | null
           motivo_rechazo?: string | null
           notas?: string | null
-          proveedor_id: string
+          proveedor_id?: string | null
+          proveedor_nombre_manual?: string | null
+          proveedor_telefono_manual?: string | null
           rechazado_por?: string | null
           status?: string
           subtotal?: number
@@ -2220,7 +2224,9 @@ export type Database = {
           motivo_devolucion?: string | null
           motivo_rechazo?: string | null
           notas?: string | null
-          proveedor_id?: string
+          proveedor_id?: string | null
+          proveedor_nombre_manual?: string | null
+          proveedor_telefono_manual?: string | null
           rechazado_por?: string | null
           status?: string
           subtotal?: number

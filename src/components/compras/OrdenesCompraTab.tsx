@@ -69,7 +69,10 @@ const OrdenesCompraTab = () => {
   const [editingOrdenId, setEditingOrdenId] = useState<string | null>(null);
   
   // Form state
+  const [tipoProveedor, setTipoProveedor] = useState<'catalogo' | 'manual'>('catalogo');
   const [proveedorId, setProveedorId] = useState("");
+  const [proveedorNombreManual, setProveedorNombreManual] = useState("");
+  const [proveedorTelefonoManual, setProveedorTelefonoManual] = useState("");
   const [folio, setFolio] = useState("");
   const [fechaEntrega, setFechaEntrega] = useState("");
   const [notas, setNotas] = useState("");
@@ -166,9 +169,12 @@ const OrdenesCompraTab = () => {
   });
 
   // Filter products: if proveedor has associated products, show only those; otherwise show all
-  const productosDisponibles = proveedorId && productosProveedor.length > 0
-    ? productos.filter(p => productosProveedor.includes(p.id))
-    : productos;
+  // For manual providers, show all products
+  const productosDisponibles = tipoProveedor === 'manual' 
+    ? productos
+    : (proveedorId && productosProveedor.length > 0
+        ? productos.filter(p => productosProveedor.includes(p.id))
+        : productos);
 
   // Fetch ordenes de compra
   const { data: ordenes = [] } = useQuery({
@@ -331,7 +337,9 @@ const OrdenesCompraTab = () => {
         .from("ordenes_compra")
         .insert({
           folio,
-          proveedor_id: proveedorId,
+          proveedor_id: tipoProveedor === 'catalogo' ? proveedorId : null,
+          proveedor_nombre_manual: tipoProveedor === 'manual' ? proveedorNombreManual : null,
+          proveedor_telefono_manual: tipoProveedor === 'manual' ? proveedorTelefonoManual || null : null,
           fecha_entrega_programada: entregasMultiples ? null : (fechaEntrega || null),
           subtotal: subtotalBase,
           impuestos,
@@ -483,7 +491,10 @@ const OrdenesCompraTab = () => {
   };
 
   const resetForm = () => {
+    setTipoProveedor('catalogo');
     setProveedorId("");
+    setProveedorNombreManual("");
+    setProveedorTelefonoManual("");
     setFolio("");
     setFechaEntrega("");
     setNotas("");
@@ -539,7 +550,9 @@ const OrdenesCompraTab = () => {
         .from("ordenes_compra")
         .update({
           folio,
-          proveedor_id: proveedorId,
+          proveedor_id: tipoProveedor === 'catalogo' ? proveedorId : null,
+          proveedor_nombre_manual: tipoProveedor === 'manual' ? proveedorNombreManual : null,
+          proveedor_telefono_manual: tipoProveedor === 'manual' ? proveedorTelefonoManual || null : null,
           fecha_entrega_programada: entregasMultiples ? null : (fechaEntrega || null),
           subtotal: subtotalBase,
           impuestos,
@@ -624,7 +637,20 @@ const OrdenesCompraTab = () => {
   const handleEditOrden = async (orden: any) => {
     setEditingOrdenId(orden.id);
     setFolio(orden.folio);
-    setProveedorId(orden.proveedor_id);
+    
+    // Handle hybrid provider type
+    if (orden.proveedor_id) {
+      setTipoProveedor('catalogo');
+      setProveedorId(orden.proveedor_id);
+      setProveedorNombreManual("");
+      setProveedorTelefonoManual("");
+    } else {
+      setTipoProveedor('manual');
+      setProveedorId("");
+      setProveedorNombreManual(orden.proveedor_nombre_manual || "");
+      setProveedorTelefonoManual(orden.proveedor_telefono_manual || "");
+    }
+    
     setFechaEntrega(orden.fecha_entrega_programada || "");
     setNotas(orden.notas || "");
     setEntregasMultiples(orden.entregas_multiples || false);
@@ -664,7 +690,27 @@ const OrdenesCompraTab = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!proveedorId || !folio || productosEnOrden.length === 0) {
+    
+    // Validate provider based on type
+    if (tipoProveedor === 'catalogo' && !proveedorId) {
+      toast({
+        title: "Selecciona un proveedor",
+        description: "Selecciona un proveedor del catálogo",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (tipoProveedor === 'manual' && !proveedorNombreManual.trim()) {
+      toast({
+        title: "Ingresa el proveedor",
+        description: "Ingresa el nombre del proveedor",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!folio || productosEnOrden.length === 0) {
       toast({
         title: "Campos incompletos",
         description: "Completa todos los campos requeridos",
@@ -804,9 +850,13 @@ const OrdenesCompraTab = () => {
   };
 
   const filteredOrdenes = ordenes.filter(
-    (orden) =>
-      orden.folio.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      orden.proveedores?.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+    (orden) => {
+      const proveedorNombre = orden.proveedor_id 
+        ? orden.proveedores?.nombre 
+        : orden.proveedor_nombre_manual;
+      return orden.folio.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        proveedorNombre?.toLowerCase().includes(searchTerm.toLowerCase());
+    }
   );
 
   const getStatusBadge = (status: string) => {
@@ -891,7 +941,16 @@ const OrdenesCompraTab = () => {
                 return (
                   <TableRow key={orden.id}>
                     <TableCell className="font-medium">{orden.folio}</TableCell>
-                    <TableCell>{orden.proveedores?.nombre}</TableCell>
+                    <TableCell>
+                      {orden.proveedor_id ? (
+                        orden.proveedores?.nombre
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          {orden.proveedor_nombre_manual}
+                          <Badge variant="outline" className="text-xs">Manual</Badge>
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {new Date(orden.fecha_orden).toLocaleDateString()}
                     </TableCell>
@@ -996,28 +1055,79 @@ const OrdenesCompraTab = () => {
                   <p className="text-xs text-muted-foreground mt-1">Auto-generado</p>
                 )}
               </div>
-              <div>
+              <div className="col-span-2">
                 <Label>Proveedor *</Label>
-                <Select 
-                  value={proveedorId} 
-                  onValueChange={(value) => {
-                    setProveedorId(value);
-                    setProductoSeleccionado(""); // Reset product when proveedor changes
-                    setPrecioUnitario("");
-                  }} 
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar proveedor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {proveedores.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  {/* Tipo de proveedor toggle */}
+                  <div className="flex items-center gap-4 text-sm">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="tipoProveedor"
+                        checked={tipoProveedor === 'catalogo'}
+                        onChange={() => {
+                          setTipoProveedor('catalogo');
+                          setProveedorNombreManual("");
+                          setProveedorTelefonoManual("");
+                        }}
+                        className="accent-primary"
+                      />
+                      <span>Del catálogo</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="tipoProveedor"
+                        checked={tipoProveedor === 'manual'}
+                        onChange={() => {
+                          setTipoProveedor('manual');
+                          setProveedorId("");
+                          setProductoSeleccionado("");
+                        }}
+                        className="accent-primary"
+                      />
+                      <span>No registrado</span>
+                    </label>
+                  </div>
+                  
+                  {tipoProveedor === 'catalogo' ? (
+                    <Select 
+                      value={proveedorId} 
+                      onValueChange={(value) => {
+                        setProveedorId(value);
+                        setProductoSeleccionado(""); // Reset product when proveedor changes
+                        setPrecioUnitario("");
+                      }} 
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar proveedor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {proveedores.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.nombre}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="space-y-2">
+                      <Input
+                        value={proveedorNombreManual}
+                        onChange={(e) => setProveedorNombreManual(e.target.value)}
+                        placeholder="Nombre del proveedor *"
+                      />
+                      <Input
+                        value={proveedorTelefonoManual}
+                        onChange={(e) => setProveedorTelefonoManual(e.target.value)}
+                        placeholder="Teléfono (opcional)"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Los proveedores manuales muestran todos los productos
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
               {!entregasMultiples && (
                 <div>
@@ -1070,10 +1180,14 @@ const OrdenesCompraTab = () => {
                           setKgPorUnidad("");
                         }
                       }}
-                      disabled={!proveedorId}
+                      disabled={tipoProveedor === 'catalogo' && !proveedorId}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={proveedorId ? "Seleccionar" : "Primero selecciona proveedor"} />
+                        <SelectValue placeholder={
+                          tipoProveedor === 'catalogo' 
+                            ? (proveedorId ? "Seleccionar" : "Primero selecciona proveedor")
+                            : "Seleccionar producto"
+                        } />
                       </SelectTrigger>
                       <SelectContent>
                         {productosDisponibles.map((p) => (
