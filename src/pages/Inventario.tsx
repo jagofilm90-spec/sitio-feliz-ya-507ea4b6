@@ -92,7 +92,8 @@ const InventarioContent = () => {
             *,
             productos (nombre, codigo, unidad),
             bodegas (nombre),
-            ordenes_compra (folio)
+            ordenes_compra (folio),
+            recibido_por_profile:recibido_por (full_name)
           `)
           .order("fecha_entrada", { ascending: false })
           .limit(200),
@@ -694,18 +695,19 @@ const InventarioContent = () => {
                     <TableHead>Referencia Lote</TableHead>
                     <TableHead>Caducidad</TableHead>
                     <TableHead>Orden Compra</TableHead>
+                    <TableHead>Recibido por</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center">
+                      <TableCell colSpan={8} className="text-center">
                         Cargando...
                       </TableCell>
                     </TableRow>
                   ) : filteredLotes.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center">
+                      <TableCell colSpan={8} className="text-center">
                         No hay lotes registrados. Las entradas se crean desde Recepción en el módulo de Almacén.
                       </TableCell>
                     </TableRow>
@@ -725,7 +727,7 @@ const InventarioContent = () => {
                               {lote.cantidad_disponible}
                             </span>
                             <span className="text-sm text-muted-foreground">
-                              {lote.productos?.unidad_comercial || 'uds'}
+                              {lote.productos?.unidad || 'uds'}
                             </span>
                             {lote.cantidad_disponible === 0 && (
                               <Badge variant="secondary">Agotado</Badge>
@@ -756,6 +758,13 @@ const InventarioContent = () => {
                             <Badge variant="outline">{lote.ordenes_compra.folio}</Badge>
                           ) : (
                             <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {lote.recibido_por_profile?.full_name ? (
+                            <span className="text-sm">{lote.recibido_por_profile.full_name}</span>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
                           )}
                         </TableCell>
                       </TableRow>

@@ -1845,6 +1845,7 @@ export type Database = {
           orden_compra_id: string | null
           precio_compra: number
           producto_id: string
+          recibido_por: string | null
           updated_at: string
         }
         Insert: {
@@ -1860,6 +1861,7 @@ export type Database = {
           orden_compra_id?: string | null
           precio_compra: number
           producto_id: string
+          recibido_por?: string | null
           updated_at?: string
         }
         Update: {
@@ -1875,6 +1877,7 @@ export type Database = {
           orden_compra_id?: string | null
           precio_compra?: number
           producto_id?: string
+          recibido_por?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2381,6 +2384,7 @@ export type Database = {
           notas: string | null
           numero_entrega: number
           orden_compra_id: string
+          recibido_por: string | null
           status: string
           updated_at: string
         }
@@ -2393,6 +2397,7 @@ export type Database = {
           notas?: string | null
           numero_entrega: number
           orden_compra_id: string
+          recibido_por?: string | null
           status?: string
           updated_at?: string
         }
@@ -2405,6 +2410,7 @@ export type Database = {
           notas?: string | null
           numero_entrega?: number
           orden_compra_id?: string
+          recibido_por?: string | null
           status?: string
           updated_at?: string
         }
