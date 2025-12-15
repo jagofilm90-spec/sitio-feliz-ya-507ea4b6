@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -36,15 +36,15 @@ import {
   Package,
   Camera,
   CheckCircle2,
-  User,
   FileText,
   Truck,
-  Hash,
   Warehouse,
   CalendarIcon,
   X,
   AlertTriangle,
   PenLine,
+  Clock,
+  Timer,
 } from "lucide-react";
 import { EvidenciaCapture, EvidenciasPreviewGrid } from "@/components/compras/EvidenciaCapture";
 import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
@@ -72,6 +72,7 @@ interface EntregaCompra {
   notas: string | null;
   llegada_registrada_en: string | null;
   nombre_chofer_proveedor: string | null;
+  placas_vehiculo: string | null;
   orden_compra: {
     id: string;
     folio: string;
@@ -132,11 +133,12 @@ export const AlmacenRecepcionSheet = ({
   const [devolucionAlChofer, setDevolucionAlChofer] = useState<Record<string, boolean>>({});
   const [evidencias, setEvidencias] = useState<Evidencia[]>([]);
   const [fotosCaducidad, setFotosCaducidad] = useState<Record<string, { file: File; preview: string } | null>>({});
-  const [nombreEntrega, setNombreEntrega] = useState("");
-  const [numeroSello, setNumeroSello] = useState("");
   const [notas, setNotas] = useState("");
   const [bodegas, setBodegas] = useState<Bodega[]>([]);
   const [bodegaSeleccionada, setBodegaSeleccionada] = useState<string>("");
+  
+  // Timer para tiempo de descarga
+  const [tiempoDescarga, setTiempoDescarga] = useState<string>("");
   
   // Estados para firma y devolución
   const [showFirmaDialog, setShowFirmaDialog] = useState(false);
@@ -144,6 +146,22 @@ export const AlmacenRecepcionSheet = ({
   const [firmaChoferDiferencia, setFirmaChoferDiferencia] = useState<string | null>(null);
   
   const { toast } = useToast();
+
+  // Timer effect - actualizar cada minuto
+  useEffect(() => {
+    if (!open || !entrega?.llegada_registrada_en) return;
+    
+    const updateTimer = () => {
+      const llegada = new Date(entrega.llegada_registrada_en!);
+      const tiempo = formatDistanceToNow(llegada, { locale: es, addSuffix: false });
+      setTiempoDescarga(tiempo);
+    };
+    
+    updateTimer();
+    const interval = setInterval(updateTimer, 60000); // Actualizar cada minuto
+    
+    return () => clearInterval(interval);
+  }, [open, entrega?.llegada_registrada_en]);
 
   useEffect(() => {
     if (open && entrega) {
@@ -161,7 +179,6 @@ export const AlmacenRecepcionSheet = ({
     
     if (data) {
       setBodegas(data);
-      // Seleccionar Bodega 1 por defecto
       const bodega1 = data.find(b => b.nombre === "Bodega 1");
       if (bodega1) setBodegaSeleccionada(bodega1.id);
     }
@@ -170,8 +187,6 @@ export const AlmacenRecepcionSheet = ({
   const loadProductos = async () => {
     setLoading(true);
     try {
-      // NOTA: NO consultamos precio_unitario_compra aquí
-      // Los almacenistas no deben ver precios - se consulta solo al guardar
       const { data, error } = await supabase
         .from("ordenes_compra_detalles")
         .select(`
@@ -188,13 +203,12 @@ export const AlmacenRecepcionSheet = ({
       const productosData = (data as any[]) || [];
       setProductos(productosData);
       
-      // Inicializar cantidades con lo que falta por recibir
       const cantidades: Record<string, number> = {};
       const fechas: Record<string, string> = {};
       productosData.forEach(p => {
         const faltante = p.cantidad_ordenada - p.cantidad_recibida;
         cantidades[p.id] = Math.max(0, faltante);
-        fechas[p.id] = ""; // Sin fecha de caducidad por defecto
+        fechas[p.id] = "";
       });
       setCantidadesRecibidas(cantidades);
       setFechasCaducidad(fechas);
@@ -211,31 +225,19 @@ export const AlmacenRecepcionSheet = ({
   };
 
   const handleCantidadChange = (detalleId: string, cantidad: number) => {
-    setCantidadesRecibidas(prev => ({
-      ...prev,
-      [detalleId]: cantidad
-    }));
+    setCantidadesRecibidas(prev => ({ ...prev, [detalleId]: cantidad }));
   };
 
   const handleFechaCaducidadChange = (detalleId: string, fecha: string) => {
-    setFechasCaducidad(prev => ({
-      ...prev,
-      [detalleId]: fecha
-    }));
+    setFechasCaducidad(prev => ({ ...prev, [detalleId]: fecha }));
   };
 
   const handleRazonDiferenciaChange = (detalleId: string, razon: string) => {
-    setRazonesDiferencia(prev => ({
-      ...prev,
-      [detalleId]: razon
-    }));
+    setRazonesDiferencia(prev => ({ ...prev, [detalleId]: razon }));
   };
 
   const handleNotaDiferenciaChange = (detalleId: string, nota: string) => {
-    setNotasDiferencia(prev => ({
-      ...prev,
-      [detalleId]: nota
-    }));
+    setNotasDiferencia(prev => ({ ...prev, [detalleId]: nota }));
   };
 
   const handleEvidenciaCapture = (tipo: string, file: File) => {
@@ -253,29 +255,20 @@ export const AlmacenRecepcionSheet = ({
   };
 
   const handleFotoCaducidadCapture = (productoId: string, file: File, preview: string) => {
-    setFotosCaducidad(prev => ({
-      ...prev,
-      [productoId]: { file, preview }
-    }));
+    setFotosCaducidad(prev => ({ ...prev, [productoId]: { file, preview } }));
   };
 
   const handleRemoveFotoCaducidad = (productoId: string) => {
     setFotosCaducidad(prev => {
-      if (prev[productoId]) {
-        URL.revokeObjectURL(prev[productoId]!.preview);
-      }
+      if (prev[productoId]) URL.revokeObjectURL(prev[productoId]!.preview);
       return { ...prev, [productoId]: null };
     });
   };
 
   const handleDevolucionChange = (detalleId: string, checked: boolean) => {
-    setDevolucionAlChofer(prev => ({
-      ...prev,
-      [detalleId]: checked
-    }));
+    setDevolucionAlChofer(prev => ({ ...prev, [detalleId]: checked }));
   };
 
-  // Calcular productos con diferencia
   const getProductosConDiferencia = () => {
     return productos.filter(p => {
       const faltante = p.cantidad_ordenada - p.cantidad_recibida;
@@ -284,7 +277,6 @@ export const AlmacenRecepcionSheet = ({
     });
   };
 
-  // Calcular productos para devolución física
   const getProductosParaDevolucion = () => {
     return productos.filter(p => {
       const faltante = p.cantidad_ordenada - p.cantidad_recibida;
@@ -309,17 +301,7 @@ export const AlmacenRecepcionSheet = ({
     });
   };
 
-  // Validar antes de guardar
   const validarRecepcion = (): boolean => {
-    if (!nombreEntrega.trim()) {
-      toast({
-        title: "Datos incompletos",
-        description: "Ingresa el nombre de quien entrega",
-        variant: "destructive"
-      });
-      return false;
-    }
-
     if (!bodegaSeleccionada) {
       toast({
         title: "Datos incompletos",
@@ -329,7 +311,6 @@ export const AlmacenRecepcionSheet = ({
       return false;
     }
 
-    // Validar productos que requieren caducidad
     const productosConCaducidad = productos.filter(p => 
       p.producto?.maneja_caducidad && (cantidadesRecibidas[p.id] || 0) > 0
     );
@@ -354,15 +335,12 @@ export const AlmacenRecepcionSheet = ({
       return false;
     }
 
-    // Validar que productos con diferencia tengan razón
     const productosConDiferencia = getProductosConDiferencia();
     const faltaRazon = productosConDiferencia.find(p => !razonesDiferencia[p.id]);
     if (faltaRazon) {
-      const faltante = faltaRazon.cantidad_ordenada - faltaRazon.cantidad_recibida;
-      const recibiendo = cantidadesRecibidas[faltaRazon.id] || 0;
       toast({
         title: "Razón de diferencia requerida",
-        description: `Indica por qué "${faltaRazon.producto?.nombre}" tiene diferencia (esperado: ${faltante}, recibido: ${recibiendo})`,
+        description: `Indica por qué "${faltaRazon.producto?.nombre}" tiene diferencia`,
         variant: "destructive"
       });
       return false;
@@ -371,42 +349,33 @@ export const AlmacenRecepcionSheet = ({
     return true;
   };
 
-  // Manejar clic en confirmar recepción
   const handleConfirmarRecepcion = () => {
     if (!validarRecepcion()) return;
 
     const productosConDiferencia = getProductosConDiferencia();
     const productosParaDevolucion = getProductosParaDevolucion();
 
-    // Si hay productos para devolver físicamente, abrir ese diálogo primero
     if (productosParaDevolucion.length > 0) {
       setShowDevolucionDialog(true);
       return;
     }
 
-    // Si hay diferencias pero no devolución física, pedir firma del chofer
     if (productosConDiferencia.length > 0 && !firmaChoferDiferencia) {
       setShowFirmaDialog(true);
       return;
     }
 
-    // Si no hay diferencias o ya tenemos firma, guardar
     handleGuardarRecepcion();
   };
 
-  // Cuando se completa la firma del chofer
   const handleFirmaConfirmada = (firmaBase64: string) => {
     setFirmaChoferDiferencia(firmaBase64);
     setShowFirmaDialog(false);
-    // Proceder a guardar con la firma
     handleGuardarRecepcionConFirma(firmaBase64);
   };
 
-  // Cuando se completa la devolución
   const handleDevolucionCompletada = () => {
     setShowDevolucionDialog(false);
-    // Después de registrar devolución, continuar con la recepción normal
-    // Las cantidades ya se ajustaron, proceder a pedir firma si hay más diferencias
     const productosConDiferencia = getProductosConDiferencia();
     if (productosConDiferencia.length > 0 && !firmaChoferDiferencia) {
       setShowFirmaDialog(true);
@@ -430,7 +399,6 @@ export const AlmacenRecepcionSheet = ({
                               entrega.orden_compra?.proveedor_nombre_manual || 
                               'proveedor';
 
-      // 0. Registrar participación - inicio de recepción
       await supabase.from("recepciones_participantes").insert({
         entrega_id: entrega.id,
         user_id: user.id,
@@ -438,15 +406,12 @@ export const AlmacenRecepcionSheet = ({
         notas: `Inició completar recepción`
       });
 
-      // 1. Actualizar cantidades recibidas y crear lotes en inventario
       for (const [detalleId, cantidad] of Object.entries(cantidadesRecibidas)) {
         const producto = productos.find(p => p.id === detalleId);
         if (producto) {
-          // Actualizar cantidad recibida y razón de diferencia
           const nuevaCantidadRecibida = producto.cantidad_recibida + cantidad;
           const updateData: any = { cantidad_recibida: nuevaCantidadRecibida };
           
-          // Si hay diferencia, guardar razón y notas
           const faltante = producto.cantidad_ordenada - producto.cantidad_recibida;
           if (cantidad < faltante && razonesDiferencia[detalleId]) {
             updateData.razon_diferencia = razonesDiferencia[detalleId];
@@ -458,9 +423,7 @@ export const AlmacenRecepcionSheet = ({
             .update(updateData)
             .eq("id", detalleId);
 
-          // Solo crear lote si cantidad > 0
           if (cantidad > 0) {
-            // CONSULTAR PRECIO SOLO AL MOMENTO DE GUARDAR
             const { data: detalleConPrecio } = await supabase
               .from("ordenes_compra_detalles")
               .select("precio_unitario_compra")
@@ -469,7 +432,6 @@ export const AlmacenRecepcionSheet = ({
             
             const precioCompra = detalleConPrecio?.precio_unitario_compra || 0;
 
-            // CREAR LOTE EN INVENTARIO
             const fechaCaducidad = fechasCaducidad[detalleId] || null;
             const { error: loteError } = await supabase
               .from("inventario_lotes")
@@ -483,7 +445,7 @@ export const AlmacenRecepcionSheet = ({
                 orden_compra_id: entrega.orden_compra.id,
                 bodega_id: bodegaSeleccionada,
                 recibido_por: user.id,
-                notas: `Recibido de ${proveedorNombre} por ${nombreEntrega}`
+                notas: `Recibido de ${proveedorNombre}`
               });
 
             if (loteError) {
@@ -491,7 +453,6 @@ export const AlmacenRecepcionSheet = ({
               throw loteError;
             }
 
-            // ACTUALIZAR STOCK DEL PRODUCTO
             const { data: productoActual } = await supabase
               .from("productos")
               .select("stock_actual")
@@ -507,17 +468,17 @@ export const AlmacenRecepcionSheet = ({
         }
       }
 
-      // 2. Actualizar status de la entrega (incluir firma si hay diferencias)
+      // Actualizar status de la entrega con hora de finalización
       const updateEntrega: any = {
         status: "recibida",
         fecha_entrega_real: new Date().toISOString().split("T")[0],
         recibido_por: user.id,
-        notas: `Recibido por: ${nombreEntrega}${numeroSello ? `. Sello: ${numeroSello}` : ""}${notas ? `. ${notas}` : ""}`,
+        recepcion_finalizada_en: new Date().toISOString(),
+        notas: notas || null,
         trabajando_por: null,
         trabajando_desde: null,
       };
 
-      // Guardar firma del chofer si hay diferencias
       if (firma) {
         updateEntrega.firma_chofer_diferencia = firma;
         updateEntrega.firma_chofer_diferencia_fecha = new Date().toISOString();
@@ -528,15 +489,13 @@ export const AlmacenRecepcionSheet = ({
         .update(updateEntrega)
         .eq("id", entrega.id);
 
-      // 2.5 Registrar participación - fin de recepción
       await supabase.from("recepciones_participantes").insert({
         entrega_id: entrega.id,
         user_id: user.id,
         accion: "fin_recepcion",
-        notas: `Completó recepción. Recibido por: ${nombreEntrega}`
+        notas: `Completó recepción. Tiempo de descarga: ${tiempoDescarga}`
       });
 
-      // 3. Subir evidencias y registrar en tabla recepciones_evidencias
       for (const evidencia of evidencias) {
         const fileName = `${entrega.orden_compra.id}/${entrega.id}/${Date.now()}-${evidencia.tipo}.jpg`;
         
@@ -544,9 +503,7 @@ export const AlmacenRecepcionSheet = ({
           .from("recepciones-evidencias")
           .upload(fileName, evidencia.file);
 
-        if (uploadError) {
-          console.error("Error subiendo evidencia:", uploadError);
-        } else {
+        if (!uploadError) {
           await supabase
             .from("recepciones_evidencias")
             .insert({
@@ -578,7 +535,6 @@ export const AlmacenRecepcionSheet = ({
     }
   };
 
-  // Calcular si hay diferencias para mostrar indicador
   const hayDiferencias = getProductosConDiferencia().length > 0;
   const totalDiferencias = getProductosConDiferencia().reduce((sum, p) => {
     const faltante = p.cantidad_ordenada - p.cantidad_recibida;
@@ -599,9 +555,6 @@ export const AlmacenRecepcionSheet = ({
               <Truck className="w-4 h-4" />
               {entrega.orden_compra?.proveedor?.nombre || entrega.orden_compra?.proveedor_nombre_manual}
               <Badge variant="outline">Entrega #{entrega.numero_entrega}</Badge>
-              {entrega.nombre_chofer_proveedor && (
-                <Badge variant="secondary">Chofer: {entrega.nombre_chofer_proveedor}</Badge>
-              )}
             </div>
           </SheetHeader>
 
@@ -612,6 +565,47 @@ export const AlmacenRecepcionSheet = ({
               </div>
             ) : (
               <div className="space-y-6">
+                {/* Info de llegada - datos ya capturados en Fase 1 */}
+                <div className="p-3 bg-muted/50 border rounded-lg space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Clock className="w-4 h-4" />
+                    Datos de llegada (Fase 1)
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Chofer:</span>{" "}
+                      <span className="font-medium">{entrega.nombre_chofer_proveedor || "-"}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Placas:</span>{" "}
+                      <span className="font-medium">{entrega.placas_vehiculo || "-"}</span>
+                    </div>
+                    {entrega.llegada_registrada_en && (
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">Llegó:</span>{" "}
+                        <span className="font-medium">
+                          {format(new Date(entrega.llegada_registrada_en), "HH:mm 'del' dd/MM", { locale: es })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Timer de tiempo de descarga */}
+                {entrega.llegada_registrada_en && (
+                  <div className="p-4 bg-primary/10 border border-primary/30 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Timer className="w-5 h-5 text-primary" />
+                        <span className="font-medium">Tiempo de descarga</span>
+                      </div>
+                      <Badge variant="secondary" className="text-lg font-mono">
+                        {tiempoDescarga || "calculando..."}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+
                 {/* Bodega destino */}
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
@@ -667,13 +661,11 @@ export const AlmacenRecepcionSheet = ({
                                   Código: {producto.producto?.codigo}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                  Ordenado: {producto.cantidad_ordenada} | 
-                                  Recibido: {producto.cantidad_recibida} | 
-                                  Faltante: {faltante}
+                                  Esperado: {faltante} unidades
                                 </p>
                               </div>
                               <div className="w-24">
-                                <Label className="text-xs text-muted-foreground">Cantidad</Label>
+                                <Label className="text-xs text-muted-foreground">Recibido</Label>
                                 <Input
                                   type="number"
                                   min={0}
@@ -720,7 +712,6 @@ export const AlmacenRecepcionSheet = ({
                                   />
                                 )}
                                 
-                                {/* Checkbox para devolución física si es producto dañado */}
                                 {esRazonDevolucion && (
                                   <div className="flex items-center space-x-2 p-2 bg-destructive/10 rounded border border-destructive/20">
                                     <Checkbox
@@ -730,15 +721,11 @@ export const AlmacenRecepcionSheet = ({
                                     />
                                     <label 
                                       htmlFor={`devolucion-${producto.id}`}
-                                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                      className="text-sm font-medium leading-none"
                                     >
                                       Los {faltante - cantidadActual} bultos se devuelven al chofer
                                     </label>
                                   </div>
-                                )}
-                                
-                                {faltaRazonDiferencia && (
-                                  <span className="text-xs text-destructive">* Indica la razón de la diferencia</span>
                                 )}
                               </div>
                             )}
@@ -817,85 +804,51 @@ export const AlmacenRecepcionSheet = ({
                   </div>
                 </div>
 
-                {/* Datos de control */}
-                <div className="space-y-4">
-                  <h3 className="font-medium">Datos de control</h3>
-                  
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      Nombre de quien entrega *
-                    </Label>
-                    <Input
-                      value={nombreEntrega}
-                      onChange={(e) => setNombreEntrega(e.target.value)}
-                      placeholder="Nombre del transportista o representante"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Hash className="w-4 h-4" />
-                      Número de sello
-                    </Label>
-                    <Input
-                      value={numeroSello}
-                      onChange={(e) => setNumeroSello(e.target.value)}
-                      placeholder="Número del sello de seguridad"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <FileText className="w-4 h-4" />
-                      Notas adicionales
-                    </Label>
-                    <Textarea
-                      value={notas}
-                      onChange={(e) => setNotas(e.target.value)}
-                      placeholder="Observaciones de la recepción"
-                      rows={2}
-                    />
-                  </div>
+                {/* Notas adicionales */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Notas adicionales
+                  </Label>
+                  <Textarea
+                    value={notas}
+                    onChange={(e) => setNotas(e.target.value)}
+                    placeholder="Observaciones de la recepción"
+                    rows={2}
+                  />
                 </div>
 
-                {/* Evidencias fotográficas */}
-                <div className="space-y-4">
-                  <h3 className="font-medium flex items-center gap-2">
-                    <Camera className="w-4 h-4" />
-                    Evidencias fotográficas
-                  </h3>
-                  
-                  <div className="grid grid-cols-2 gap-2">
-                    <EvidenciaCapture
-                      tipo="sello"
-                      onCapture={(file) => handleEvidenciaCapture("sello", file)}
-                    />
-                    <EvidenciaCapture
-                      tipo="identificacion"
-                      onCapture={(file) => handleEvidenciaCapture("identificacion", file)}
-                    />
-                    <EvidenciaCapture
-                      tipo="documento"
-                      onCapture={(file) => handleEvidenciaCapture("documento", file)}
-                    />
-                    <EvidenciaCapture
-                      tipo="vehiculo"
-                      onCapture={(file) => handleEvidenciaCapture("vehiculo", file)}
-                    />
-                  </div>
+                {/* Evidencias fotográficas (solo las necesarias en Fase 2) */}
+                {hayDiferencias && (
+                  <div className="space-y-4">
+                    <h3 className="font-medium flex items-center gap-2">
+                      <Camera className="w-4 h-4" />
+                      Fotos de evidencia (diferencias)
+                    </h3>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <EvidenciaCapture
+                        tipo="producto_danado"
+                        onCapture={(file) => handleEvidenciaCapture("producto_danado", file)}
+                      />
+                      <EvidenciaCapture
+                        tipo="documento"
+                        onCapture={(file) => handleEvidenciaCapture("documento", file)}
+                      />
+                    </div>
 
-                  {evidencias.length > 0 && (
-                    <EvidenciasPreviewGrid
-                      evidencias={evidencias.map((e) => ({
-                        tipo: e.tipo as any,
-                        file: e.file,
-                        preview: e.preview
-                      }))}
-                      onRemove={handleRemoveEvidencia}
-                    />
-                  )}
-                </div>
+                    {evidencias.length > 0 && (
+                      <EvidenciasPreviewGrid
+                        evidencias={evidencias.map((e) => ({
+                          tipo: e.tipo as any,
+                          file: e.file,
+                          preview: e.preview
+                        }))}
+                        onRemove={handleRemoveEvidencia}
+                      />
+                    )}
+                  </div>
+                )}
 
                 {/* Indicador de firma requerida */}
                 {hayDiferencias && (
@@ -942,7 +895,7 @@ export const AlmacenRecepcionSheet = ({
         open={showFirmaDialog}
         onOpenChange={setShowFirmaDialog}
         onConfirm={handleFirmaConfirmada}
-        titulo={`Firma de ${nombreEntrega || "transportista"} - Confirma que entregó ${totalDiferencias} unidades menos de lo ordenado`}
+        titulo={`Firma de ${entrega.nombre_chofer_proveedor || "transportista"} - Confirma que entregó ${totalDiferencias} unidades menos de lo ordenado`}
         loading={saving}
       />
 
@@ -954,7 +907,7 @@ export const AlmacenRecepcionSheet = ({
         ordenCompraFolio={entrega.orden_compra?.folio}
         entregaId={entrega.id}
         productosDevolucion={getProductosParaDevolucion()}
-        nombreChofer={nombreEntrega}
+        nombreChofer={entrega.nombre_chofer_proveedor || ""}
         onDevolucionCompletada={handleDevolucionCompletada}
       />
     </>
