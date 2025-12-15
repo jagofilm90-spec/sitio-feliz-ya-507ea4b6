@@ -304,30 +304,133 @@ export const RutaCargaSheet = ({
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
-      const { error } = await supabase
-        .from("carga_productos")
-        .update({
-          cargado,
-          cantidad_cargada: cantidadCargada,
-          lote_id: loteId,
-          cargado_por: cargado ? user?.id : null,
-          cargado_en: cargado ? new Date().toISOString() : null,
-        })
-        .eq("id", cargaId);
+      // Buscar el producto actual para obtener info necesaria
+      const productoActual = entregas
+        .flatMap(e => e.productos)
+        .find(p => p.id === cargaId);
 
-      if (error) throw error;
+      if (!productoActual) {
+        throw new Error("Producto no encontrado");
+      }
 
-      // Actualizar estado local
-      setEntregas((prev) =>
-        prev.map((e) => ({
-          ...e,
-          productos: e.productos.map((p) =>
-            p.id === cargaId
-              ? { ...p, cargado, cantidad_cargada: cantidadCargada, lote_id: loteId }
-              : p
-          ),
-        }))
-      );
+      // ===== MARCAR COMO CARGADO =====
+      if (cargado && loteId) {
+        // 1. Validar stock disponible en el lote
+        const { data: lote, error: loteError } = await supabase
+          .from("inventario_lotes")
+          .select("cantidad_disponible")
+          .eq("id", loteId)
+          .single();
+
+        if (loteError) throw loteError;
+
+        if (!lote || lote.cantidad_disponible < cantidadCargada) {
+          toast({
+            title: "Stock insuficiente",
+            description: `Disponible: ${lote?.cantidad_disponible || 0}, Solicitado: ${cantidadCargada}`,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // 2. Decrementar del lote usando RPC atómico
+        const { error: decrementError } = await supabase.rpc("decrementar_lote", {
+          p_lote_id: loteId,
+          p_cantidad: cantidadCargada,
+        });
+
+        if (decrementError) throw decrementError;
+
+        // 3. Crear movimiento de salida (trigger actualiza productos.stock_actual)
+        const { data: movimiento, error: movimientoError } = await supabase
+          .from("inventario_movimientos")
+          .insert({
+            producto_id: productoActual.producto.id,
+            tipo_movimiento: "salida",
+            cantidad: cantidadCargada,
+            referencia: `CARGA-${ruta.folio}`,
+            notas: `Cargado para ruta ${ruta.folio}`,
+            usuario_id: user?.id,
+            lote: loteId,
+          })
+          .select("id")
+          .single();
+
+        if (movimientoError) throw movimientoError;
+
+        // 4. Actualizar carga_productos con referencia al movimiento
+        const { error: updateError } = await supabase
+          .from("carga_productos")
+          .update({
+            cargado: true,
+            cantidad_cargada: cantidadCargada,
+            lote_id: loteId,
+            cargado_por: user?.id,
+            cargado_en: new Date().toISOString(),
+            movimiento_inventario_id: movimiento.id,
+          })
+          .eq("id", cargaId);
+
+        if (updateError) throw updateError;
+
+        toast({
+          title: "Producto cargado",
+          description: `Stock descontado del lote`,
+        });
+      }
+      // ===== DESMARCAR (REVERTIR) =====
+      else if (!cargado) {
+        // 1. Obtener datos previos del producto cargado
+        const { data: cargaPrevia, error: previaError } = await supabase
+          .from("carga_productos")
+          .select("lote_id, cantidad_cargada, movimiento_inventario_id")
+          .eq("id", cargaId)
+          .single();
+
+        if (previaError) throw previaError;
+
+        // 2. Revertir si hay lote y cantidad previa
+        if (cargaPrevia?.lote_id && cargaPrevia?.cantidad_cargada) {
+          // Incrementar lote usando RPC atómico
+          const { error: incrementError } = await supabase.rpc("incrementar_lote", {
+            p_lote_id: cargaPrevia.lote_id,
+            p_cantidad: cargaPrevia.cantidad_cargada,
+          });
+
+          if (incrementError) throw incrementError;
+
+          // Eliminar movimiento (trigger restaura stock automáticamente)
+          if (cargaPrevia.movimiento_inventario_id) {
+            await supabase
+              .from("inventario_movimientos")
+              .delete()
+              .eq("id", cargaPrevia.movimiento_inventario_id);
+          }
+        }
+
+        // 3. Actualizar carga_productos
+        const { error: updateError } = await supabase
+          .from("carga_productos")
+          .update({
+            cargado: false,
+            cantidad_cargada: 0,
+            lote_id: null,
+            cargado_por: null,
+            cargado_en: null,
+            movimiento_inventario_id: null,
+          })
+          .eq("id", cargaId);
+
+        if (updateError) throw updateError;
+
+        toast({
+          title: "Producto desmarcado",
+          description: "Stock restaurado al lote",
+        });
+      }
+
+      // Actualizar estado local y refrescar lotes disponibles
+      await loadEntregasYProductos();
     } catch (error) {
       console.error("Error actualizando producto:", error);
       toast({

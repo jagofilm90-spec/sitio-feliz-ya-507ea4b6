@@ -129,6 +129,7 @@ export type Database = {
           entrega_id: string
           id: string
           lote_id: string | null
+          movimiento_inventario_id: string | null
           notas: string | null
           pedido_detalle_id: string
           updated_at: string | null
@@ -143,6 +144,7 @@ export type Database = {
           entrega_id: string
           id?: string
           lote_id?: string | null
+          movimiento_inventario_id?: string | null
           notas?: string | null
           pedido_detalle_id: string
           updated_at?: string | null
@@ -157,6 +159,7 @@ export type Database = {
           entrega_id?: string
           id?: string
           lote_id?: string | null
+          movimiento_inventario_id?: string | null
           notas?: string | null
           pedido_detalle_id?: string
           updated_at?: string | null
@@ -188,6 +191,13 @@ export type Database = {
             columns: ["lote_id"]
             isOneToOne: false
             referencedRelation: "inventario_lotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "carga_productos_movimiento_inventario_id_fkey"
+            columns: ["movimiento_inventario_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_movimientos"
             referencedColumns: ["id"]
           },
           {
@@ -3671,6 +3681,10 @@ export type Database = {
         Args: { p_pedido_cliente_id: string; p_user_id: string }
         Returns: boolean
       }
+      decrementar_lote: {
+        Args: { p_cantidad: number; p_lote_id: string }
+        Returns: undefined
+      }
       es_participante_conversacion: {
         Args: { _conversacion_id: string; _user_id: string }
         Returns: boolean
@@ -3697,6 +3711,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      incrementar_lote: {
+        Args: { p_cantidad: number; p_lote_id: string }
+        Returns: undefined
       }
       obtener_termino_credito: {
         Args: { p_cliente_id: string; p_producto_id: string }
