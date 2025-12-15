@@ -36,6 +36,9 @@ verify_jwt = true
 [functions.confirmar-oc]
 verify_jwt = false
 
+[functions.generate-oc-confirmation-url]
+verify_jwt = true
+
 [functions.auto-reschedule-deliveries]
 verify_jwt = true
 
