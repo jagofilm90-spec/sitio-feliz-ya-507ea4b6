@@ -1,9 +1,9 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Camera, CreditCard, FileText, Truck, Package, X, Loader2 } from "lucide-react";
+import { Camera, CreditCard, FileText, Truck, Package, X, Loader2, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type TipoEvidencia = 'sello' | 'identificacion' | 'documento' | 'vehiculo' | 'otro';
+type TipoEvidencia = 'sello' | 'identificacion' | 'documento' | 'vehiculo' | 'caducidad' | 'otro';
 
 interface EvidenciaCaptureProps {
   tipo: TipoEvidencia;
@@ -17,6 +17,7 @@ const tipoConfig: Record<TipoEvidencia, { label: string; icon: typeof Camera }> 
   identificacion: { label: "Escanear INE", icon: CreditCard },
   documento: { label: "Escanear documento", icon: FileText },
   vehiculo: { label: "Foto del vehículo", icon: Truck },
+  caducidad: { label: "Foto caducidad", icon: CalendarDays },
   otro: { label: "Otra evidencia", icon: Package },
 };
 

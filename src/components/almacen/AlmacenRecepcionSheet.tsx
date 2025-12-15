@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import {
   Sheet,
   SheetContent,
@@ -16,6 +18,12 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -32,7 +40,8 @@ import {
   Truck,
   Hash,
   Warehouse,
-  Calendar
+  CalendarIcon,
+  X,
 } from "lucide-react";
 import { EvidenciaCapture, EvidenciasPreviewGrid } from "@/components/compras/EvidenciaCapture";
 
@@ -99,6 +108,7 @@ export const AlmacenRecepcionSheet = ({
   const [cantidadesRecibidas, setCantidadesRecibidas] = useState<Record<string, number>>({});
   const [fechasCaducidad, setFechasCaducidad] = useState<Record<string, string>>({});
   const [evidencias, setEvidencias] = useState<Evidencia[]>([]);
+  const [fotosCaducidad, setFotosCaducidad] = useState<Record<string, { file: File; preview: string } | null>>({});
   const [nombreEntrega, setNombreEntrega] = useState("");
   const [numeroSello, setNumeroSello] = useState("");
   const [notas, setNotas] = useState("");
@@ -196,6 +206,22 @@ export const AlmacenRecepcionSheet = ({
       URL.revokeObjectURL(newEvidencias[index].preview);
       newEvidencias.splice(index, 1);
       return newEvidencias;
+    });
+  };
+
+  const handleFotoCaducidadCapture = (productoId: string, file: File, preview: string) => {
+    setFotosCaducidad(prev => ({
+      ...prev,
+      [productoId]: { file, preview }
+    }));
+  };
+
+  const handleRemoveFotoCaducidad = (productoId: string) => {
+    setFotosCaducidad(prev => {
+      if (prev[productoId]) {
+        URL.revokeObjectURL(prev[productoId]!.preview);
+      }
+      return { ...prev, [productoId]: null };
     });
   };
 
@@ -400,16 +426,59 @@ export const AlmacenRecepcionSheet = ({
                               />
                             </div>
                           </div>
-                          {/* Fecha de caducidad opcional */}
+                          {/* Fecha de caducidad con Calendar Popover */}
                           <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
-                            <Input
-                              type="date"
-                              value={fechasCaducidad[producto.id] || ""}
-                              onChange={(e) => handleFechaCaducidadChange(producto.id, e.target.value)}
-                              className="flex-1"
-                              placeholder="Fecha caducidad (opcional)"
-                            />
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "flex-1 justify-start text-left font-normal",
+                                    !fechasCaducidad[producto.id] && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {fechasCaducidad[producto.id] 
+                                    ? format(new Date(fechasCaducidad[producto.id]), "PPP", { locale: es })
+                                    : "Fecha caducidad (opcional)"}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0 z-50" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={fechasCaducidad[producto.id] ? new Date(fechasCaducidad[producto.id]) : undefined}
+                                  onSelect={(date) => handleFechaCaducidadChange(producto.id, date ? format(date, "yyyy-MM-dd") : "")}
+                                  initialFocus
+                                  className="pointer-events-auto"
+                                  locale={es}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                          {/* Foto de caducidad */}
+                          <div className="flex items-center gap-2">
+                            {fotosCaducidad[producto.id] ? (
+                              <div className="relative flex items-center gap-2">
+                                <img 
+                                  src={fotosCaducidad[producto.id]!.preview} 
+                                  alt="Foto caducidad" 
+                                  className="h-12 w-16 object-cover rounded border"
+                                />
+                                <span className="text-xs text-muted-foreground">Foto caducidad</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveFotoCaducidad(producto.id)}
+                                  className="p-1 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <EvidenciaCapture
+                                tipo="caducidad"
+                                onCapture={(file, preview) => handleFotoCaducidadCapture(producto.id, file, preview)}
+                              />
+                            )}
                           </div>
                         </CardContent>
                       </Card>
