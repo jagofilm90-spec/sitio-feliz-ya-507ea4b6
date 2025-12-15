@@ -14,7 +14,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import ProgramarEntregasDialog from "./ProgramarEntregasDialog";
 import RegistrarRecepcionDialog from "./RegistrarRecepcionDialog";
@@ -1757,11 +1760,31 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
           <div className="space-y-4">
             <div>
               <Label>Nueva Fecha de Entrega</Label>
-              <Input
-                type="date"
-                value={nuevaFecha}
-                onChange={(e) => setNuevaFecha(e.target.value)}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !nuevaFecha && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {nuevaFecha 
+                      ? format(new Date(nuevaFecha), "dd/MM/yyyy") 
+                      : "Seleccionar fecha"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={nuevaFecha ? new Date(nuevaFecha) : undefined}
+                    onSelect={(date) => setNuevaFecha(date ? format(date, "yyyy-MM-dd") : "")}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
               <p className="text-sm text-muted-foreground mt-1">
                 Fecha actual: {orden?.fecha_entrega_programada
                   ? format(new Date(orden.fecha_entrega_programada), "dd/MM/yyyy")
