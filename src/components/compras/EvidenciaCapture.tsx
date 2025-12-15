@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Camera, CreditCard, FileText, Truck, Package, X, Loader2, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type TipoEvidencia = 'sello' | 'identificacion' | 'documento' | 'vehiculo' | 'caducidad' | 'otro';
+export type TipoEvidencia = 'sello' | 'identificacion' | 'documento' | 'vehiculo' | 'caducidad' | 'producto_danado' | 'otro';
 
 interface EvidenciaCaptureProps {
   tipo: TipoEvidencia;
@@ -18,6 +18,7 @@ const tipoConfig: Record<TipoEvidencia, { label: string; icon: typeof Camera }> 
   documento: { label: "Escanear documento", icon: FileText },
   vehiculo: { label: "Foto del vehículo", icon: Truck },
   caducidad: { label: "Foto caducidad", icon: CalendarDays },
+  producto_danado: { label: "Foto producto dañado", icon: Package },
   otro: { label: "Otra evidencia", icon: Package },
 };
 

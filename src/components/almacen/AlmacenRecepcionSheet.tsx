@@ -19,6 +19,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
   PopoverContent,
@@ -42,8 +43,12 @@ import {
   Warehouse,
   CalendarIcon,
   X,
+  AlertTriangle,
+  PenLine,
 } from "lucide-react";
 import { EvidenciaCapture, EvidenciasPreviewGrid } from "@/components/compras/EvidenciaCapture";
+import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
+import { DevolucionProveedorDialog } from "./DevolucionProveedorDialog";
 
 // Razones de diferencia para cuando la cantidad recibida no coincide con la ordenada
 const RAZONES_DIFERENCIA = [
@@ -53,6 +58,9 @@ const RAZONES_DIFERENCIA = [
   { value: "rechazado_calidad", label: "Rechazado por calidad" },
   { value: "otro", label: "Otro" },
 ];
+
+// Razones que requieren devolución física al chofer
+const RAZONES_REQUIEREN_DEVOLUCION = ["roto", "rechazado_calidad"];
 
 interface EntregaCompra {
   id: string;
@@ -65,10 +73,12 @@ interface EntregaCompra {
   orden_compra: {
     id: string;
     folio: string;
+    proveedor_id: string | null;
+    proveedor_nombre_manual: string | null;
     proveedor: {
       id: string;
       nombre: string;
-    };
+    } | null;
   };
 }
 
@@ -77,8 +87,6 @@ interface ProductoEntrega {
   producto_id: string;
   cantidad_ordenada: number;
   cantidad_recibida: number;
-  // NOTA: precio_unitario_compra REMOVIDO intencionalmente
-  // Los almacenistas NO deben ver precios - se consulta solo al guardar
   producto: {
     id: string;
     codigo: string;
@@ -119,6 +127,7 @@ export const AlmacenRecepcionSheet = ({
   const [fechasCaducidad, setFechasCaducidad] = useState<Record<string, string>>({});
   const [razonesDiferencia, setRazonesDiferencia] = useState<Record<string, string>>({});
   const [notasDiferencia, setNotasDiferencia] = useState<Record<string, string>>({});
+  const [devolucionAlChofer, setDevolucionAlChofer] = useState<Record<string, boolean>>({});
   const [evidencias, setEvidencias] = useState<Evidencia[]>([]);
   const [fotosCaducidad, setFotosCaducidad] = useState<Record<string, { file: File; preview: string } | null>>({});
   const [nombreEntrega, setNombreEntrega] = useState("");
@@ -126,6 +135,12 @@ export const AlmacenRecepcionSheet = ({
   const [notas, setNotas] = useState("");
   const [bodegas, setBodegas] = useState<Bodega[]>([]);
   const [bodegaSeleccionada, setBodegaSeleccionada] = useState<string>("");
+  
+  // Estados para firma y devolución
+  const [showFirmaDialog, setShowFirmaDialog] = useState(false);
+  const [showDevolucionDialog, setShowDevolucionDialog] = useState(false);
+  const [firmaChoferDiferencia, setFirmaChoferDiferencia] = useState<string | null>(null);
+  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -251,14 +266,56 @@ export const AlmacenRecepcionSheet = ({
     });
   };
 
-  const handleGuardarRecepcion = async () => {
+  const handleDevolucionChange = (detalleId: string, checked: boolean) => {
+    setDevolucionAlChofer(prev => ({
+      ...prev,
+      [detalleId]: checked
+    }));
+  };
+
+  // Calcular productos con diferencia
+  const getProductosConDiferencia = () => {
+    return productos.filter(p => {
+      const faltante = p.cantidad_ordenada - p.cantidad_recibida;
+      const recibiendo = cantidadesRecibidas[p.id] || 0;
+      return recibiendo < faltante;
+    });
+  };
+
+  // Calcular productos para devolución física
+  const getProductosParaDevolucion = () => {
+    return productos.filter(p => {
+      const faltante = p.cantidad_ordenada - p.cantidad_recibida;
+      const recibiendo = cantidadesRecibidas[p.id] || 0;
+      const razon = razonesDiferencia[p.id];
+      return recibiendo < faltante && 
+             RAZONES_REQUIEREN_DEVOLUCION.includes(razon) && 
+             devolucionAlChofer[p.id];
+    }).map(p => {
+      const faltante = p.cantidad_ordenada - p.cantidad_recibida;
+      const recibiendo = cantidadesRecibidas[p.id] || 0;
+      const razon = razonesDiferencia[p.id];
+      return {
+        detalleId: p.id,
+        productoId: p.producto_id,
+        productoNombre: p.producto?.nombre || "",
+        productoCodigo: p.producto?.codigo || "",
+        cantidadDevuelta: faltante - recibiendo,
+        razon: razon,
+        razonLabel: RAZONES_DIFERENCIA.find(r => r.value === razon)?.label || razon
+      };
+    });
+  };
+
+  // Validar antes de guardar
+  const validarRecepcion = (): boolean => {
     if (!nombreEntrega.trim()) {
       toast({
         title: "Datos incompletos",
         description: "Ingresa el nombre de quien entrega",
         variant: "destructive"
       });
-      return;
+      return false;
     }
 
     if (!bodegaSeleccionada) {
@@ -267,7 +324,7 @@ export const AlmacenRecepcionSheet = ({
         description: "Selecciona la bodega de destino",
         variant: "destructive"
       });
-      return;
+      return false;
     }
 
     // Validar productos que requieren caducidad
@@ -282,7 +339,7 @@ export const AlmacenRecepcionSheet = ({
         description: `El producto "${faltaFecha.producto?.nombre}" requiere fecha de caducidad`,
         variant: "destructive"
       });
-      return;
+      return false;
     }
     
     const faltaFoto = productosConCaducidad.find(p => !fotosCaducidad[p.id]);
@@ -292,36 +349,84 @@ export const AlmacenRecepcionSheet = ({
         description: `El producto "${faltaFoto.producto?.nombre}" requiere foto de la etiqueta de caducidad`,
         variant: "destructive"
       });
-      return;
+      return false;
     }
 
     // Validar que productos con diferencia tengan razón
-    const productosConDiferencia = productos.filter(p => {
-      const faltante = p.cantidad_ordenada - p.cantidad_recibida;
-      const recibiendo = cantidadesRecibidas[p.id] || 0;
-      return recibiendo < faltante && recibiendo >= 0;
-    });
-    
+    const productosConDiferencia = getProductosConDiferencia();
     const faltaRazon = productosConDiferencia.find(p => !razonesDiferencia[p.id]);
     if (faltaRazon) {
       const faltante = faltaRazon.cantidad_ordenada - faltaRazon.cantidad_recibida;
       const recibiendo = cantidadesRecibidas[faltaRazon.id] || 0;
-      if (recibiendo < faltante) {
-        toast({
-          title: "Razón de diferencia requerida",
-          description: `Indica por qué "${faltaRazon.producto?.nombre}" tiene diferencia (esperado: ${faltante}, recibido: ${recibiendo})`,
-          variant: "destructive"
-        });
-        return;
-      }
+      toast({
+        title: "Razón de diferencia requerida",
+        description: `Indica por qué "${faltaRazon.producto?.nombre}" tiene diferencia (esperado: ${faltante}, recibido: ${recibiendo})`,
+        variant: "destructive"
+      });
+      return false;
     }
 
+    return true;
+  };
+
+  // Manejar clic en confirmar recepción
+  const handleConfirmarRecepcion = () => {
+    if (!validarRecepcion()) return;
+
+    const productosConDiferencia = getProductosConDiferencia();
+    const productosParaDevolucion = getProductosParaDevolucion();
+
+    // Si hay productos para devolver físicamente, abrir ese diálogo primero
+    if (productosParaDevolucion.length > 0) {
+      setShowDevolucionDialog(true);
+      return;
+    }
+
+    // Si hay diferencias pero no devolución física, pedir firma del chofer
+    if (productosConDiferencia.length > 0 && !firmaChoferDiferencia) {
+      setShowFirmaDialog(true);
+      return;
+    }
+
+    // Si no hay diferencias o ya tenemos firma, guardar
+    handleGuardarRecepcion();
+  };
+
+  // Cuando se completa la firma del chofer
+  const handleFirmaConfirmada = (firmaBase64: string) => {
+    setFirmaChoferDiferencia(firmaBase64);
+    setShowFirmaDialog(false);
+    // Proceder a guardar con la firma
+    handleGuardarRecepcionConFirma(firmaBase64);
+  };
+
+  // Cuando se completa la devolución
+  const handleDevolucionCompletada = () => {
+    setShowDevolucionDialog(false);
+    // Después de registrar devolución, continuar con la recepción normal
+    // Las cantidades ya se ajustaron, proceder a pedir firma si hay más diferencias
+    const productosConDiferencia = getProductosConDiferencia();
+    if (productosConDiferencia.length > 0 && !firmaChoferDiferencia) {
+      setShowFirmaDialog(true);
+    } else {
+      handleGuardarRecepcion();
+    }
+  };
+
+  const handleGuardarRecepcion = () => {
+    handleGuardarRecepcionConFirma(firmaChoferDiferencia);
+  };
+
+  const handleGuardarRecepcionConFirma = async (firma: string | null) => {
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No autenticado");
 
       const loteReferencia = `REC-${entrega.orden_compra.folio}-${entrega.numero_entrega}`;
+      const proveedorNombre = entrega.orden_compra?.proveedor?.nombre || 
+                              entrega.orden_compra?.proveedor_nombre_manual || 
+                              'proveedor';
 
       // 1. Actualizar cantidades recibidas y crear lotes en inventario
       for (const [detalleId, cantidad] of Object.entries(cantidadesRecibidas)) {
@@ -346,7 +451,6 @@ export const AlmacenRecepcionSheet = ({
           // Solo crear lote si cantidad > 0
           if (cantidad > 0) {
             // CONSULTAR PRECIO SOLO AL MOMENTO DE GUARDAR
-            // Esto asegura que el precio nunca esté en el estado del componente React
             const { data: detalleConPrecio } = await supabase
               .from("ordenes_compra_detalles")
               .select("precio_unitario_compra")
@@ -369,7 +473,7 @@ export const AlmacenRecepcionSheet = ({
                 orden_compra_id: entrega.orden_compra.id,
                 bodega_id: bodegaSeleccionada,
                 recibido_por: user.id,
-                notas: `Recibido de ${entrega.orden_compra.proveedor?.nombre || 'proveedor'} por ${nombreEntrega}`
+                notas: `Recibido de ${proveedorNombre} por ${nombreEntrega}`
               });
 
             if (loteError) {
@@ -393,15 +497,23 @@ export const AlmacenRecepcionSheet = ({
         }
       }
 
-      // 2. Actualizar status de la entrega
+      // 2. Actualizar status de la entrega (incluir firma si hay diferencias)
+      const updateEntrega: any = {
+        status: "recibida",
+        fecha_entrega_real: new Date().toISOString().split("T")[0],
+        recibido_por: user.id,
+        notas: `Recibido por: ${nombreEntrega}${numeroSello ? `. Sello: ${numeroSello}` : ""}${notas ? `. ${notas}` : ""}`
+      };
+
+      // Guardar firma del chofer si hay diferencias
+      if (firma) {
+        updateEntrega.firma_chofer_diferencia = firma;
+        updateEntrega.firma_chofer_diferencia_fecha = new Date().toISOString();
+      }
+
       await supabase
         .from("ordenes_compra_entregas")
-        .update({
-          status: "recibida",
-          fecha_entrega_real: new Date().toISOString().split("T")[0],
-          recibido_por: user.id,
-          notas: `Recibido por: ${nombreEntrega}${numeroSello ? `. Sello: ${numeroSello}` : ""}${notas ? `. ${notas}` : ""}`
-        })
+        .update(updateEntrega)
         .eq("id", entrega.id);
 
       // 3. Subir evidencias y registrar en tabla recepciones_evidencias
@@ -415,7 +527,6 @@ export const AlmacenRecepcionSheet = ({
         if (uploadError) {
           console.error("Error subiendo evidencia:", uploadError);
         } else {
-          // Registrar en tabla recepciones_evidencias
           await supabase
             .from("recepciones_evidencias")
             .insert({
@@ -447,310 +558,382 @@ export const AlmacenRecepcionSheet = ({
     }
   };
 
+  // Calcular si hay diferencias para mostrar indicador
+  const hayDiferencias = getProductosConDiferencia().length > 0;
+  const totalDiferencias = getProductosConDiferencia().reduce((sum, p) => {
+    const faltante = p.cantidad_ordenada - p.cantidad_recibida;
+    const recibiendo = cantidadesRecibidas[p.id] || 0;
+    return sum + (faltante - recibiendo);
+  }, 0);
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-xl">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            Recepción: {entrega.orden_compra?.folio}
-          </SheetTitle>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Truck className="w-4 h-4" />
-            {entrega.orden_compra?.proveedor?.nombre}
-            <Badge variant="outline">Entrega #{entrega.numero_entrega}</Badge>
-          </div>
-        </SheetHeader>
-
-        <ScrollArea className="h-[calc(100vh-180px)] mt-4 pr-4">
-          {loading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full" />)}
+    <>
+      <Sheet open={open && !showFirmaDialog && !showDevolucionDialog} onOpenChange={onOpenChange}>
+        <SheetContent side="right" className="w-full sm:max-w-xl">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Recepción: {entrega.orden_compra?.folio}
+            </SheetTitle>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Truck className="w-4 h-4" />
+              {entrega.orden_compra?.proveedor?.nombre || entrega.orden_compra?.proveedor_nombre_manual}
+              <Badge variant="outline">Entrega #{entrega.numero_entrega}</Badge>
             </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Bodega destino */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Warehouse className="w-4 h-4" />
-                  Bodega destino *
-                </Label>
-                <Select value={bodegaSeleccionada} onValueChange={setBodegaSeleccionada}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona bodega" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {bodegas.map(bodega => (
-                      <SelectItem key={bodega.id} value={bodega.id}>
-                        {bodega.nombre} {bodega.es_externa && "(Externa)"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          </SheetHeader>
 
-              {/* Productos a recibir - CON FECHA CADUCIDAD */}
-              <div>
-                <h3 className="font-medium mb-3">Productos a recibir</h3>
-                <div className="space-y-3">
+          <ScrollArea className="h-[calc(100vh-180px)] mt-4 pr-4">
+            {loading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full" />)}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Bodega destino */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Warehouse className="w-4 h-4" />
+                    Bodega destino *
+                  </Label>
+                  <Select value={bodegaSeleccionada} onValueChange={setBodegaSeleccionada}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona bodega" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bodegas.map(bodega => (
+                        <SelectItem key={bodega.id} value={bodega.id}>
+                          {bodega.nombre} {bodega.es_externa && "(Externa)"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Productos a recibir */}
+                <div>
+                  <h3 className="font-medium mb-3">Productos a recibir</h3>
+                  <div className="space-y-3">
                     {productos.map((producto) => {
-                    const faltante = producto.cantidad_ordenada - producto.cantidad_recibida;
-                    const requiereCaducidad = producto.producto?.maneja_caducidad;
-                    const cantidadActual = cantidadesRecibidas[producto.id] || 0;
-                    const faltaFechaCaducidad = requiereCaducidad && cantidadActual > 0 && !fechasCaducidad[producto.id];
-                    const faltaFotoCaducidad = requiereCaducidad && cantidadActual > 0 && !fotosCaducidad[producto.id];
-                    const tieneDiferencia = cantidadActual < faltante;
-                    const faltaRazonDiferencia = tieneDiferencia && !razonesDiferencia[producto.id];
-                    
-                    return (
-                      <Card key={producto.id} className={cn(
-                        (faltaFechaCaducidad || faltaFotoCaducidad || faltaRazonDiferencia) && "border-destructive"
-                      )}>
-                        <CardContent className="p-3 space-y-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-medium truncate">{producto.producto?.nombre}</p>
-                                {requiereCaducidad && (
-                                  <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
-                                    <CalendarIcon className="h-3 w-3 mr-1" />
-                                    Requiere caducidad
-                                  </Badge>
+                      const faltante = producto.cantidad_ordenada - producto.cantidad_recibida;
+                      const requiereCaducidad = producto.producto?.maneja_caducidad;
+                      const cantidadActual = cantidadesRecibidas[producto.id] || 0;
+                      const faltaFechaCaducidad = requiereCaducidad && cantidadActual > 0 && !fechasCaducidad[producto.id];
+                      const faltaFotoCaducidad = requiereCaducidad && cantidadActual > 0 && !fotosCaducidad[producto.id];
+                      const tieneDiferencia = cantidadActual < faltante;
+                      const faltaRazonDiferencia = tieneDiferencia && !razonesDiferencia[producto.id];
+                      const razonActual = razonesDiferencia[producto.id];
+                      const esRazonDevolucion = RAZONES_REQUIEREN_DEVOLUCION.includes(razonActual);
+                      
+                      return (
+                        <Card key={producto.id} className={cn(
+                          (faltaFechaCaducidad || faltaFotoCaducidad || faltaRazonDiferencia) && "border-destructive"
+                        )}>
+                          <CardContent className="p-3 space-y-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="font-medium truncate">{producto.producto?.nombre}</p>
+                                  {requiereCaducidad && (
+                                    <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
+                                      <CalendarIcon className="h-3 w-3 mr-1" />
+                                      Requiere caducidad
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  Código: {producto.producto?.codigo}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  Ordenado: {producto.cantidad_ordenada} | 
+                                  Recibido: {producto.cantidad_recibida} | 
+                                  Faltante: {faltante}
+                                </p>
+                              </div>
+                              <div className="w-24">
+                                <Label className="text-xs text-muted-foreground">Cantidad</Label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={faltante}
+                                  value={cantidadesRecibidas[producto.id] || 0}
+                                  onChange={(e) => handleCantidadChange(producto.id, Number(e.target.value))}
+                                  className="text-center"
+                                />
+                              </div>
+                            </div>
+                            
+                            {/* Razón de diferencia */}
+                            {tieneDiferencia && (
+                              <div className="space-y-2 p-2 bg-amber-50 dark:bg-amber-950/20 rounded-md border border-amber-200 dark:border-amber-800">
+                                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-sm font-medium">
+                                  <AlertTriangle className="w-4 h-4" />
+                                  Diferencia de {faltante - cantidadActual} unidades
+                                </div>
+                                <Select 
+                                  value={razonesDiferencia[producto.id] || ""} 
+                                  onValueChange={(v) => handleRazonDiferenciaChange(producto.id, v)}
+                                >
+                                  <SelectTrigger className={cn(
+                                    "bg-background",
+                                    faltaRazonDiferencia && "border-destructive"
+                                  )}>
+                                    <SelectValue placeholder="Selecciona razón *" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {RAZONES_DIFERENCIA.map(r => (
+                                      <SelectItem key={r.value} value={r.value}>
+                                        {r.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                
+                                {razonActual === "otro" && (
+                                  <Input
+                                    placeholder="Describe la razón..."
+                                    value={notasDiferencia[producto.id] || ""}
+                                    onChange={(e) => handleNotaDiferenciaChange(producto.id, e.target.value)}
+                                    className="bg-background"
+                                  />
+                                )}
+                                
+                                {/* Checkbox para devolución física si es producto dañado */}
+                                {esRazonDevolucion && (
+                                  <div className="flex items-center space-x-2 p-2 bg-destructive/10 rounded border border-destructive/20">
+                                    <Checkbox
+                                      id={`devolucion-${producto.id}`}
+                                      checked={devolucionAlChofer[producto.id] || false}
+                                      onCheckedChange={(checked) => handleDevolucionChange(producto.id, !!checked)}
+                                    />
+                                    <label 
+                                      htmlFor={`devolucion-${producto.id}`}
+                                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                    >
+                                      Los {faltante - cantidadActual} bultos se devuelven al chofer
+                                    </label>
+                                  </div>
+                                )}
+                                
+                                {faltaRazonDiferencia && (
+                                  <span className="text-xs text-destructive">* Indica la razón de la diferencia</span>
                                 )}
                               </div>
-                              <p className="text-sm text-muted-foreground">
-                                Código: {producto.producto?.codigo}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                Ordenado: {producto.cantidad_ordenada} | 
-                                Recibido: {producto.cantidad_recibida} | 
-                                Faltante: {faltante}
-                              </p>
-                            </div>
-                            <div className="w-24">
-                              <Label className="text-xs text-muted-foreground">Cantidad</Label>
-                              <Input
-                                type="number"
-                                min={0}
-                                max={faltante}
-                                value={cantidadesRecibidas[producto.id] || 0}
-                                onChange={(e) => handleCantidadChange(producto.id, Number(e.target.value))}
-                                className="text-center"
-                              />
-                            </div>
-                          </div>
-                          
-                          {/* Razón de diferencia - aparece cuando la cantidad es menor a lo esperado */}
-                          {tieneDiferencia && (
-                            <div className="space-y-2 p-2 bg-amber-50 dark:bg-amber-950/20 rounded-md border border-amber-200 dark:border-amber-800">
-                              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-sm font-medium">
-                                <Package className="w-4 h-4" />
-                                Diferencia de {faltante - cantidadActual} unidades
-                              </div>
-                              <Select 
-                                value={razonesDiferencia[producto.id] || ""} 
-                                onValueChange={(v) => handleRazonDiferenciaChange(producto.id, v)}
-                              >
-                                <SelectTrigger className={cn(
-                                  "bg-background",
-                                  faltaRazonDiferencia && "border-destructive"
-                                )}>
-                                  <SelectValue placeholder="Selecciona razón *" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {RAZONES_DIFERENCIA.map(r => (
-                                    <SelectItem key={r.value} value={r.value}>
-                                      {r.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              {razonesDiferencia[producto.id] === "otro" && (
-                                <Input
-                                  placeholder="Describe la razón..."
-                                  value={notasDiferencia[producto.id] || ""}
-                                  onChange={(e) => handleNotaDiferenciaChange(producto.id, e.target.value)}
-                                  className="bg-background"
-                                />
-                              )}
-                              {faltaRazonDiferencia && (
-                                <span className="text-xs text-destructive">* Indica la razón de la diferencia</span>
-                              )}
-                            </div>
-                          )}
-                          {/* Fecha de caducidad con Calendar Popover */}
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    className={cn(
-                                      "flex-1 justify-start text-left font-normal",
-                                      !fechasCaducidad[producto.id] && "text-muted-foreground",
-                                      faltaFechaCaducidad && "border-destructive"
-                                    )}
-                                  >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {fechasCaducidad[producto.id] 
-                                      ? format(new Date(fechasCaducidad[producto.id]), "PPP", { locale: es })
-                                      : requiereCaducidad ? "Fecha caducidad *" : "Fecha caducidad (opcional)"}
-                                  </Button>
-                                </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0 z-50" align="start">
-                                <Calendar
-                                  mode="single"
-                                  selected={fechasCaducidad[producto.id] ? new Date(fechasCaducidad[producto.id]) : undefined}
-                                  onSelect={(date) => handleFechaCaducidadChange(producto.id, date ? format(date, "yyyy-MM-dd") : "")}
-                                  initialFocus
-                                  className="pointer-events-auto"
-                                  locale={es}
-                                />
-                                </PopoverContent>
-                              </Popover>
-                            </div>
-                            {faltaFechaCaducidad && (
-                              <span className="text-xs text-destructive">* Fecha requerida</span>
                             )}
-                          </div>
-                          {/* Foto de caducidad */}
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              {fotosCaducidad[producto.id] ? (
-                              <div className="relative flex items-center gap-2">
-                                <img 
-                                  src={fotosCaducidad[producto.id]!.preview} 
-                                  alt="Foto caducidad" 
-                                  className="h-12 w-16 object-cover rounded border"
-                                />
-                                <span className="text-xs text-muted-foreground">Foto caducidad</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveFotoCaducidad(producto.id)}
-                                  className="p-1 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
+                            
+                            {/* Fecha de caducidad */}
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      className={cn(
+                                        "flex-1 justify-start text-left font-normal",
+                                        !fechasCaducidad[producto.id] && "text-muted-foreground",
+                                        faltaFechaCaducidad && "border-destructive"
+                                      )}
+                                    >
+                                      <CalendarIcon className="mr-2 h-4 w-4" />
+                                      {fechasCaducidad[producto.id] 
+                                        ? format(new Date(fechasCaducidad[producto.id]), "PPP", { locale: es })
+                                        : requiereCaducidad ? "Fecha caducidad *" : "Fecha caducidad (opcional)"}
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0 z-50" align="start">
+                                    <Calendar
+                                      mode="single"
+                                      selected={fechasCaducidad[producto.id] ? new Date(fechasCaducidad[producto.id]) : undefined}
+                                      onSelect={(date) => handleFechaCaducidadChange(producto.id, date ? format(date, "yyyy-MM-dd") : "")}
+                                      initialFocus
+                                      className="pointer-events-auto"
+                                      locale={es}
+                                    />
+                                  </PopoverContent>
+                                </Popover>
                               </div>
-                              ) : (
-                                <EvidenciaCapture
-                                  tipo="caducidad"
-                                  onCapture={(file, preview) => handleFotoCaducidadCapture(producto.id, file, preview)}
-                                  className={cn(faltaFotoCaducidad && "border-destructive")}
-                                />
+                              {faltaFechaCaducidad && (
+                                <span className="text-xs text-destructive">* Fecha requerida</span>
                               )}
                             </div>
-                            {faltaFotoCaducidad && (
-                              <span className="text-xs text-destructive">* Foto requerida</span>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Datos de control */}
-              <div className="space-y-4">
-                <h3 className="font-medium">Datos de control</h3>
-                
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    Nombre de quien entrega *
-                  </Label>
-                  <Input
-                    value={nombreEntrega}
-                    onChange={(e) => setNombreEntrega(e.target.value)}
-                    placeholder="Nombre del transportista o representante"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Hash className="w-4 h-4" />
-                    Número de sello
-                  </Label>
-                  <Input
-                    value={numeroSello}
-                    onChange={(e) => setNumeroSello(e.target.value)}
-                    placeholder="Número del sello de seguridad"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    Notas adicionales
-                  </Label>
-                  <Textarea
-                    value={notas}
-                    onChange={(e) => setNotas(e.target.value)}
-                    placeholder="Observaciones de la recepción"
-                    rows={2}
-                  />
-                </div>
-              </div>
-
-              {/* Evidencias fotográficas */}
-              <div className="space-y-4">
-                <h3 className="font-medium flex items-center gap-2">
-                  <Camera className="w-4 h-4" />
-                  Evidencias fotográficas
-                </h3>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <EvidenciaCapture
-                    tipo="sello"
-                    onCapture={(file) => handleEvidenciaCapture("sello", file)}
-                  />
-                  <EvidenciaCapture
-                    tipo="identificacion"
-                    onCapture={(file) => handleEvidenciaCapture("identificacion", file)}
-                  />
-                  <EvidenciaCapture
-                    tipo="documento"
-                    onCapture={(file) => handleEvidenciaCapture("documento", file)}
-                  />
-                  <EvidenciaCapture
-                    tipo="vehiculo"
-                    onCapture={(file) => handleEvidenciaCapture("vehiculo", file)}
-                  />
+                            
+                            {/* Foto de caducidad */}
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                {fotosCaducidad[producto.id] ? (
+                                  <div className="relative flex items-center gap-2">
+                                    <img 
+                                      src={fotosCaducidad[producto.id]!.preview} 
+                                      alt="Foto caducidad" 
+                                      className="h-12 w-16 object-cover rounded border"
+                                    />
+                                    <span className="text-xs text-muted-foreground">Foto caducidad</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveFotoCaducidad(producto.id)}
+                                      className="p-1 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <EvidenciaCapture
+                                    tipo="caducidad"
+                                    onCapture={(file, preview) => handleFotoCaducidadCapture(producto.id, file, preview)}
+                                    className={cn(faltaFotoCaducidad && "border-destructive")}
+                                  />
+                                )}
+                              </div>
+                              {faltaFotoCaducidad && (
+                                <span className="text-xs text-destructive">* Foto requerida</span>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                {evidencias.length > 0 && (
-                  <EvidenciasPreviewGrid
-                    evidencias={evidencias.map((e) => ({
-                      tipo: e.tipo as any,
-                      file: e.file,
-                      preview: e.preview
-                    }))}
-                    onRemove={handleRemoveEvidencia}
-                  />
+                {/* Datos de control */}
+                <div className="space-y-4">
+                  <h3 className="font-medium">Datos de control</h3>
+                  
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      Nombre de quien entrega *
+                    </Label>
+                    <Input
+                      value={nombreEntrega}
+                      onChange={(e) => setNombreEntrega(e.target.value)}
+                      placeholder="Nombre del transportista o representante"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Hash className="w-4 h-4" />
+                      Número de sello
+                    </Label>
+                    <Input
+                      value={numeroSello}
+                      onChange={(e) => setNumeroSello(e.target.value)}
+                      placeholder="Número del sello de seguridad"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Notas adicionales
+                    </Label>
+                    <Textarea
+                      value={notas}
+                      onChange={(e) => setNotas(e.target.value)}
+                      placeholder="Observaciones de la recepción"
+                      rows={2}
+                    />
+                  </div>
+                </div>
+
+                {/* Evidencias fotográficas */}
+                <div className="space-y-4">
+                  <h3 className="font-medium flex items-center gap-2">
+                    <Camera className="w-4 h-4" />
+                    Evidencias fotográficas
+                  </h3>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <EvidenciaCapture
+                      tipo="sello"
+                      onCapture={(file) => handleEvidenciaCapture("sello", file)}
+                    />
+                    <EvidenciaCapture
+                      tipo="identificacion"
+                      onCapture={(file) => handleEvidenciaCapture("identificacion", file)}
+                    />
+                    <EvidenciaCapture
+                      tipo="documento"
+                      onCapture={(file) => handleEvidenciaCapture("documento", file)}
+                    />
+                    <EvidenciaCapture
+                      tipo="vehiculo"
+                      onCapture={(file) => handleEvidenciaCapture("vehiculo", file)}
+                    />
+                  </div>
+
+                  {evidencias.length > 0 && (
+                    <EvidenciasPreviewGrid
+                      evidencias={evidencias.map((e) => ({
+                        tipo: e.tipo as any,
+                        file: e.file,
+                        preview: e.preview
+                      }))}
+                      onRemove={handleRemoveEvidencia}
+                    />
+                  )}
+                </div>
+
+                {/* Indicador de firma requerida */}
+                {hayDiferencias && (
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                      <PenLine className="w-5 h-5" />
+                      <span className="font-medium">Firma del chofer requerida</span>
+                    </div>
+                    <p className="text-sm text-amber-600 dark:text-amber-500 mt-1">
+                      Hay {totalDiferencias} unidades de diferencia. El chofer firmará confirmando que entregó menos de lo ordenado.
+                    </p>
+                  </div>
                 )}
-              </div>
 
-              {/* Botón guardar */}
-              <Button
-                onClick={handleGuardarRecepcion}
-                disabled={saving}
-                className="w-full h-14 text-lg"
-                size="lg"
-              >
-                {saving ? (
-                  "Guardando..."
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-5 h-5 mr-2" />
-                    Confirmar recepción
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-        </ScrollArea>
-      </SheetContent>
-    </Sheet>
+                {/* Botón guardar */}
+                <Button
+                  onClick={handleConfirmarRecepcion}
+                  disabled={saving}
+                  className="w-full h-14 text-lg"
+                  size="lg"
+                >
+                  {saving ? (
+                    "Guardando..."
+                  ) : hayDiferencias ? (
+                    <>
+                      <PenLine className="w-5 h-5 mr-2" />
+                      Continuar a firma
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-5 h-5 mr-2" />
+                      Confirmar recepción
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
+      {/* Diálogo de firma para diferencias */}
+      <FirmaDigitalDialog
+        open={showFirmaDialog}
+        onOpenChange={setShowFirmaDialog}
+        onConfirm={handleFirmaConfirmada}
+        titulo={`Firma de ${nombreEntrega || "transportista"} - Confirma que entregó ${totalDiferencias} unidades menos de lo ordenado`}
+        loading={saving}
+      />
+
+      {/* Diálogo de devolución de mercancía dañada */}
+      <DevolucionProveedorDialog
+        open={showDevolucionDialog}
+        onOpenChange={setShowDevolucionDialog}
+        ordenCompraId={entrega.orden_compra?.id}
+        ordenCompraFolio={entrega.orden_compra?.folio}
+        entregaId={entrega.id}
+        productosDevolucion={getProductosParaDevolucion()}
+        nombreChofer={nombreEntrega}
+        onDevolucionCompletada={handleDevolucionCompletada}
+      />
+    </>
   );
 };

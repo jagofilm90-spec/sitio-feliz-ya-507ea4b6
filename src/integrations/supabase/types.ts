@@ -1178,6 +1178,7 @@ export type Database = {
           cantidad_devuelta: number
           created_at: string
           fecha_resolucion: string | null
+          firma_chofer: string | null
           id: string
           lote_id: string | null
           motivo: string
@@ -1194,6 +1195,7 @@ export type Database = {
           cantidad_devuelta: number
           created_at?: string
           fecha_resolucion?: string | null
+          firma_chofer?: string | null
           id?: string
           lote_id?: string | null
           motivo: string
@@ -1210,6 +1212,7 @@ export type Database = {
           cantidad_devuelta?: number
           created_at?: string
           fecha_resolucion?: string | null
+          firma_chofer?: string | null
           id?: string
           lote_id?: string | null
           motivo?: string
@@ -2525,6 +2528,8 @@ export type Database = {
           created_at: string
           fecha_entrega_real: string | null
           fecha_programada: string | null
+          firma_chofer_diferencia: string | null
+          firma_chofer_diferencia_fecha: string | null
           id: string
           notas: string | null
           numero_entrega: number
@@ -2538,6 +2543,8 @@ export type Database = {
           created_at?: string
           fecha_entrega_real?: string | null
           fecha_programada?: string | null
+          firma_chofer_diferencia?: string | null
+          firma_chofer_diferencia_fecha?: string | null
           id?: string
           notas?: string | null
           numero_entrega: number
@@ -2551,6 +2558,8 @@ export type Database = {
           created_at?: string
           fecha_entrega_real?: string | null
           fecha_programada?: string | null
+          firma_chofer_diferencia?: string | null
+          firma_chofer_diferencia_fecha?: string | null
           id?: string
           notas?: string | null
           numero_entrega?: number
