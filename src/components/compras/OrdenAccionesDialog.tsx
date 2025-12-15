@@ -1036,9 +1036,21 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       // Convert HTML to base64 for attachment
       const pdfBase64 = btoa(unescape(encodeURIComponent(pdfContent)));
 
-      // Confirmation URL for supplier
-      const confirmUrl = `https://vrcyjmfpteoccqdmdmqn.supabase.co/functions/v1/confirmar-oc?id=${orden.id}&action=confirm`;
-      const trackingPixelUrl = `https://vrcyjmfpteoccqdmdmqn.supabase.co/functions/v1/confirmar-oc?id=${orden.id}&action=track`;
+      // Generate signed confirmation URL via edge function
+      const { data: urlData, error: urlError } = await supabase.functions.invoke("generate-oc-confirmation-url", {
+        body: {
+          ordenId: orden.id,
+          action: "confirm",
+        },
+      });
+
+      if (urlError || !urlData?.url) {
+        console.error("Error generating signed URL:", urlError);
+        throw new Error("No se pudo generar URL de confirmación");
+      }
+
+      const confirmUrl = urlData.url;
+      const trackingPixelUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/confirmar-oc?id=${orden.id}&action=track`;
 
       // Simple email body with reference to attachment and confirmation button
       const htmlBody = `

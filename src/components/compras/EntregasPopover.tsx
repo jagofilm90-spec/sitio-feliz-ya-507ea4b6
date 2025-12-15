@@ -100,7 +100,21 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
         `;
       }
 
-      const confirmUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/confirmar-oc?id=${orden.id}&action=confirm-entregas&entregas=${scheduledEntregas.map(e => e.id).join(",")}`;
+      // Generate signed confirmation URL via edge function
+      const { data: urlData, error: urlError } = await supabase.functions.invoke("generate-oc-confirmation-url", {
+        body: {
+          ordenId: orden.id,
+          action: "confirm-entregas",
+          entregas: scheduledEntregas.map(e => e.id),
+        },
+      });
+
+      if (urlError || !urlData?.url) {
+        console.error("Error generating signed URL:", urlError);
+        throw new Error("No se pudo generar URL de confirmación");
+      }
+
+      const confirmUrl = urlData.url;
 
       const htmlBody = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

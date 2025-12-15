@@ -6,6 +6,27 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// HMAC-SHA256 verification
+async function verifyHmac(secret: string, message: string, providedSignature: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secret);
+  const messageData = encoder.encode(message);
+  
+  const key = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const signature = await crypto.subtle.sign('HMAC', key, messageData);
+  const hashArray = Array.from(new Uint8Array(signature));
+  const expectedSignature = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  return expectedSignature === providedSignature;
+}
+
 serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -17,6 +38,8 @@ serve(async (req: Request) => {
     const ordenId = url.searchParams.get("id");
     const action = url.searchParams.get("action"); // "confirm", "track", or "confirm-entregas"
     const entregaIds = url.searchParams.get("entregas"); // comma-separated entrega IDs
+    const expiresAt = url.searchParams.get("exp"); // Expiration timestamp
+    const signature = url.searchParams.get("sig"); // HMAC signature
     
     if (!ordenId) {
       return new Response("ID de orden no proporcionado", { status: 400 });
@@ -24,13 +47,14 @@ serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const confirmationSecret = Deno.env.get("OC_CONFIRMATION_SECRET");
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
     const userAgent = req.headers.get("user-agent") || "unknown";
 
+    // Tracking pixel - no signature required (low risk, read-only)
     if (action === "track") {
-      // Tracking pixel - update email_leido_en
       console.log(`Tracking pixel accessed for OC: ${ordenId}`);
       
       await supabase
@@ -54,6 +78,59 @@ serve(async (req: Request) => {
           "Cache-Control": "no-cache, no-store, must-revalidate",
         },
       });
+    }
+
+    // For confirmation actions, verify signature if secret is configured
+    if (confirmationSecret && (action === "confirm" || action === "confirm-entregas")) {
+      // Validate required parameters
+      if (!expiresAt || !signature) {
+        console.log(`Missing security parameters for OC: ${ordenId}`);
+        return new Response(generateHtmlPage(
+          "Enlace Inválido",
+          "El enlace de confirmación no es válido.",
+          "Por favor solicite un nuevo enlace al proveedor.",
+          "#ef4444"
+        ), {
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
+      }
+
+      // Check expiration
+      const expirationTime = parseInt(expiresAt);
+      const currentTime = Math.floor(Date.now() / 1000);
+      if (currentTime > expirationTime) {
+        console.log(`Expired link for OC: ${ordenId}, expired at: ${expirationTime}, current: ${currentTime}`);
+        return new Response(generateHtmlPage(
+          "Enlace Expirado",
+          "Este enlace de confirmación ha expirado.",
+          "Por favor solicite un nuevo enlace al proveedor.",
+          "#f59e0b"
+        ), {
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
+      }
+
+      // Build message to verify
+      let messageToVerify = `${ordenId}:${action}:${expiresAt}`;
+      if (action === "confirm-entregas" && entregaIds) {
+        messageToVerify += `:${entregaIds}`;
+      }
+
+      // Verify HMAC signature
+      const isValid = await verifyHmac(confirmationSecret, messageToVerify, signature);
+      if (!isValid) {
+        console.log(`Invalid signature for OC: ${ordenId}`);
+        return new Response(generateHtmlPage(
+          "Enlace Inválido",
+          "El enlace de confirmación no es válido.",
+          "Por favor solicite un nuevo enlace al proveedor.",
+          "#ef4444"
+        ), {
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
+      }
+
+      console.log(`Valid signature verified for OC: ${ordenId}, action: ${action}`);
     }
 
     // Get order details
