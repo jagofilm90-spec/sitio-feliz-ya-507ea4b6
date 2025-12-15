@@ -36,12 +36,12 @@ export const AyudantesMultiSelect = ({
 
   const loadAyudantes = async () => {
     try {
-      // Load from empleados table filtering by puesto containing 'Ayudante'
+      // Load from empleados table filtering by puesto exacto "Ayudante de Chofer"
       const { data, error } = await supabase
         .from("empleados")
         .select("id, nombre_completo")
         .eq("activo", true)
-        .or("puesto.ilike.%Ayudante%,puesto.ilike.%ayudante%")
+        .eq("puesto", "Ayudante de Chofer")
         .order("nombre_completo");
 
       if (!error && data) {
