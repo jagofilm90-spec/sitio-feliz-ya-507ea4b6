@@ -29,6 +29,17 @@ export const FirmaDigitalDialog = ({
   const [hasSignature, setHasSignature] = useState(false);
   const [context, setContext] = useState<CanvasRenderingContext2D | null>(null);
 
+  // Forzar pointer-events en el body cuando el dialog está abierto
+  // Esto soluciona el problema de modales anidados en Radix UI
+  useEffect(() => {
+    if (open) {
+      const timer = setTimeout(() => {
+        document.body.style.pointerEvents = 'auto';
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
+
   useEffect(() => {
     if (open && canvasRef.current) {
       const canvas = canvasRef.current;
@@ -146,7 +157,11 @@ export const FirmaDigitalDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent 
+        className="sm:max-w-lg"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{titulo}</DialogTitle>
         </DialogHeader>
@@ -156,7 +171,7 @@ export const FirmaDigitalDialog = ({
             Dibuja tu firma para confirmar que la carga está completa
           </p>
 
-          <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg overflow-hidden bg-white pointer-events-auto">
+          <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg overflow-hidden bg-white pointer-events-auto relative z-50">
             <canvas
               ref={canvasRef}
               width={400}
