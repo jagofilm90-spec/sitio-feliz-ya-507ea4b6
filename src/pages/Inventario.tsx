@@ -43,11 +43,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, ArrowUp, ArrowDown, Minus, Package, List, AlertTriangle, Warehouse, Calendar, Boxes } from "lucide-react";
+import { Plus, Search, ArrowUp, ArrowDown, Minus, Package, List, AlertTriangle, Warehouse, Calendar, Boxes, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { NotificacionesSistema } from "@/components/NotificacionesSistema";
 import { InventarioPorCategoria } from "@/components/inventario/InventarioPorCategoria";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { RecepcionDetalleDialog } from "@/components/compras/RecepcionDetalleDialog";
 
 const InventarioContent = () => {
   const [lotes, setLotes] = useState<any[]>([]);
@@ -65,6 +66,9 @@ const InventarioContent = () => {
   const [filterFechaInicio, setFilterFechaInicio] = useState("");
   const [filterFechaFin, setFilterFechaFin] = useState("");
   const [filterBodega, setFilterBodega] = useState<string>("todas");
+  const [recepcionDialogOpen, setRecepcionDialogOpen] = useState(false);
+  const [selectedEntregaId, setSelectedEntregaId] = useState<string | null>(null);
+  const [entregasPorOrden, setEntregasPorOrden] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -84,7 +88,7 @@ const InventarioContent = () => {
 
   const loadData = async () => {
     try {
-      const [lotesData, movimientosData, productosData, bodegasData] = await Promise.all([
+      const [lotesData, movimientosData, productosData, bodegasData, entregasData] = await Promise.all([
         // Cargar lotes (entradas desde recepciones de compras)
         supabase
           .from("inventario_lotes")
@@ -117,6 +121,11 @@ const InventarioContent = () => {
           .select("id, nombre")
           .eq("activo", true)
           .order("nombre"),
+        // Cargar entregas recibidas para poder abrir el detalle de recepción
+        supabase
+          .from("ordenes_compra_entregas")
+          .select("id, orden_compra_id")
+          .eq("status", "recibida"),
       ]);
 
       if (lotesData.error) throw lotesData.error;
@@ -128,6 +137,18 @@ const InventarioContent = () => {
       setMovimientos(movimientosData.data || []);
       setProductos(productosData.data || []);
       setBodegas(bodegasData.data || []);
+
+      // Crear mapa orden_compra_id -> entrega_id para poder abrir recepción
+      if (entregasData.data) {
+        const mapa: Record<string, string> = {};
+        for (const entrega of entregasData.data) {
+          // Si hay múltiples entregas por orden, tomamos la primera
+          if (!mapa[entrega.orden_compra_id]) {
+            mapa[entrega.orden_compra_id] = entrega.id;
+          }
+        }
+        setEntregasPorOrden(mapa);
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -696,83 +717,111 @@ const InventarioContent = () => {
                     <TableHead>Caducidad</TableHead>
                     <TableHead>Orden Compra</TableHead>
                     <TableHead>Recibido por</TableHead>
+                    <TableHead className="w-[80px]">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center">
+                      <TableCell colSpan={9} className="text-center">
                         Cargando...
                       </TableCell>
                     </TableRow>
                   ) : filteredLotes.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center">
+                      <TableCell colSpan={9} className="text-center">
                         No hay lotes registrados. Las entradas se crean desde Recepción en el módulo de Almacén.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredLotes.map((lote) => (
-                      <TableRow key={lote.id} className={lote.cantidad_disponible === 0 ? "opacity-50" : ""}>
-                        <TableCell className="font-mono text-xs">
-                          <div>{new Date(lote.fecha_entrada).toLocaleDateString('es-MX')}</div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium">{lote.productos?.codigo}</div>
-                          <div className="text-sm text-muted-foreground">{lote.productos?.nombre}</div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <span className={`font-semibold ${lote.cantidad_disponible === 0 ? 'text-muted-foreground' : ''}`}>
-                              {lote.cantidad_disponible}
-                            </span>
-                            <span className="text-sm text-muted-foreground">
-                              {lote.productos?.unidad || 'uds'}
-                            </span>
-                            {lote.cantidad_disponible === 0 && (
-                              <Badge variant="secondary">Agotado</Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Warehouse className="h-3 w-3 text-muted-foreground" />
-                            <span>{lote.bodegas?.nombre || "Sin asignar"}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-mono text-xs">{lote.lote_referencia || "—"}</span>
-                        </TableCell>
-                        <TableCell>
-                          {lote.fecha_caducidad ? (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3 text-muted-foreground" />
-                              {getCaducidadBadge(lote.fecha_caducidad)}
+                    filteredLotes.map((lote) => {
+                      const entregaId = lote.orden_compra_id ? entregasPorOrden[lote.orden_compra_id] : null;
+                      return (
+                        <TableRow key={lote.id} className={lote.cantidad_disponible === 0 ? "opacity-50" : ""}>
+                          <TableCell className="font-mono text-xs">
+                            <div>{new Date(lote.fecha_entrada).toLocaleDateString('es-MX')}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium">{lote.productos?.codigo}</div>
+                            <div className="text-sm text-muted-foreground">{lote.productos?.nombre}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className={`font-semibold ${lote.cantidad_disponible === 0 ? 'text-muted-foreground' : ''}`}>
+                                {lote.cantidad_disponible}
+                              </span>
+                              <span className="text-sm text-muted-foreground">
+                                {lote.productos?.unidad || 'uds'}
+                              </span>
+                              {lote.cantidad_disponible === 0 && (
+                                <Badge variant="secondary">Agotado</Badge>
+                              )}
                             </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {lote.ordenes_compra?.folio ? (
-                            <Badge variant="outline">{lote.ordenes_compra.folio}</Badge>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {lote.recibido_por?.full_name ? (
-                            <span className="text-sm">{lote.recibido_por.full_name}</span>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">—</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Warehouse className="h-3 w-3 text-muted-foreground" />
+                              <span>{lote.bodegas?.nombre || "Sin asignar"}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-mono text-xs">{lote.lote_referencia || "—"}</span>
+                          </TableCell>
+                          <TableCell>
+                            {lote.fecha_caducidad ? (
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3 text-muted-foreground" />
+                                {getCaducidadBadge(lote.fecha_caducidad)}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {lote.ordenes_compra?.folio ? (
+                              <Badge variant="outline">{lote.ordenes_compra.folio}</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {lote.recibido_por?.full_name ? (
+                              <span className="text-sm">{lote.recibido_por.full_name}</span>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {entregaId ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedEntregaId(entregaId);
+                                  setRecepcionDialogOpen(true);
+                                }}
+                                title="Ver detalle de recepción"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
             </div>
+
+            {/* Diálogo de detalle de recepción */}
+            <RecepcionDetalleDialog
+              entregaId={selectedEntregaId}
+              open={recepcionDialogOpen}
+              onOpenChange={setRecepcionDialogOpen}
+            />
           </TabsContent>
 
           {/* PESTAÑA MOVIMIENTOS MANUALES */}
