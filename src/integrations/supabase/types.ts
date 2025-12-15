@@ -1909,6 +1909,20 @@ export type Database = {
             referencedRelation: "productos_stock_bajo"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "inventario_lotes_recibido_por_fkey"
+            columns: ["recibido_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventario_lotes_recibido_por_fkey"
+            columns: ["recibido_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
         ]
       }
       inventario_movimientos: {
@@ -2420,6 +2434,20 @@ export type Database = {
             columns: ["orden_compra_id"]
             isOneToOne: false
             referencedRelation: "ordenes_compra"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordenes_compra_entregas_recibido_por_fkey"
+            columns: ["recibido_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordenes_compra_entregas_recibido_por_fkey"
+            columns: ["recibido_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
             referencedColumns: ["id"]
           },
         ]

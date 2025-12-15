@@ -93,7 +93,7 @@ const InventarioContent = () => {
             productos (nombre, codigo, unidad),
             bodegas (nombre),
             ordenes_compra (folio),
-            recibido_por_profile:recibido_por (full_name)
+            recibido_por:profiles!recibido_por(full_name)
           `)
           .order("fecha_entrada", { ascending: false })
           .limit(200),
@@ -761,8 +761,8 @@ const InventarioContent = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          {lote.recibido_por_profile?.full_name ? (
-                            <span className="text-sm">{lote.recibido_por_profile.full_name}</span>
+                          {lote.recibido_por?.full_name ? (
+                            <span className="text-sm">{lote.recibido_por.full_name}</span>
                           ) : (
                             <span className="text-muted-foreground text-sm">—</span>
                           )}
