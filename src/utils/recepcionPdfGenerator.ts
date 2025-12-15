@@ -35,8 +35,27 @@ interface RecepcionData {
   evidenciasUrls?: string[];
 }
 
+// Helper function to load image as base64
+const loadImageAsBase64 = async (url: string): Promise<string | null> => {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error("Error loading image:", error);
+    return null;
+  }
+};
+
 export const generarRecepcionPDF = async (data: RecepcionData) => {
-  const { recepcion, productos } = data;
+  const { recepcion, productos, evidenciasUrls = [] } = data;
   const doc = new jsPDF();
   
   const proveedorNombre = recepcion.orden_compra?.proveedor?.nombre || 
@@ -177,6 +196,80 @@ export const generarRecepcionPDF = async (data: RecepcionData) => {
       doc.text(line, 15, yPos);
       yPos += 5;
     });
+  }
+  
+  // Evidencias fotográficas section
+  if (evidenciasUrls && evidenciasUrls.length > 0) {
+    doc.addPage();
+    yPos = 20;
+    
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("EVIDENCIAS FOTOGRÁFICAS", 105, yPos, { align: "center" });
+    yPos += 15;
+    
+    const imgWidth = 85;
+    const imgHeight = 65;
+    const margin = 15;
+    const colWidth = imgWidth + 5;
+    
+    let col = 0;
+    let startY = yPos;
+    
+    for (let i = 0; i < evidenciasUrls.length; i++) {
+      const url = evidenciasUrls[i];
+      
+      // Check if we need a new page
+      if (startY + imgHeight > 280) {
+        doc.addPage();
+        startY = 20;
+        yPos = 20;
+        col = 0;
+      }
+      
+      const xPos = margin + (col * colWidth);
+      
+      try {
+        const base64Image = await loadImageAsBase64(url);
+        
+        if (base64Image) {
+          // Draw border
+          doc.setDrawColor(200, 200, 200);
+          doc.rect(xPos - 2, startY - 2, imgWidth + 4, imgHeight + 4);
+          
+          // Add image
+          doc.addImage(base64Image, "JPEG", xPos, startY, imgWidth, imgHeight);
+          
+          // Add label
+          doc.setFontSize(8);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(100, 100, 100);
+          doc.text(`Evidencia ${i + 1}`, xPos + (imgWidth / 2), startY + imgHeight + 8, { align: "center" });
+          doc.setTextColor(0, 0, 0);
+        } else {
+          // Draw placeholder if image failed to load
+          doc.setFillColor(240, 240, 240);
+          doc.rect(xPos, startY, imgWidth, imgHeight, "F");
+          doc.setFontSize(8);
+          doc.text("Imagen no disponible", xPos + (imgWidth / 2), startY + (imgHeight / 2), { align: "center" });
+        }
+      } catch (error) {
+        console.error("Error adding image to PDF:", error);
+        // Draw placeholder
+        doc.setFillColor(240, 240, 240);
+        doc.rect(xPos, startY, imgWidth, imgHeight, "F");
+        doc.setFontSize(8);
+        doc.text("Error cargando imagen", xPos + (imgWidth / 2), startY + (imgHeight / 2), { align: "center" });
+      }
+      
+      col++;
+      if (col >= 2) {
+        col = 0;
+        startY += imgHeight + 20;
+      }
+    }
+    
+    yPos = startY + imgHeight + 25;
   }
   
   // Footer signature area
