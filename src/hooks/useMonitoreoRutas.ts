@@ -212,13 +212,13 @@ export const useMonitoreoRutas = () => {
     try {
       const hoy = format(new Date(), 'yyyy-MM-dd');
 
+      // Cargar rutas sin JOIN de chofer/ayudante (IDs son de empleados, no profiles)
       const { data: rutasData, error: rutasError } = await supabase
         .from('rutas')
         .select(`
           id, folio, fecha_ruta, status, tipo_ruta, peso_total_kg,
           carga_completada, fecha_hora_inicio, fecha_hora_fin, updated_at,
-          chofer:profiles!rutas_chofer_id_fkey (id, full_name),
-          ayudante:profiles!rutas_ayudante_id_fkey (id, full_name),
+          chofer_id, ayudante_id,
           vehiculo:vehiculos!rutas_vehiculo_id_fkey (id, nombre)
         `)
         .eq('fecha_ruta', hoy)
@@ -226,6 +226,25 @@ export const useMonitoreoRutas = () => {
         .order('created_at', { ascending: true });
 
       if (rutasError) throw rutasError;
+
+      // Obtener IDs únicos de choferes y ayudantes
+      const empleadoIds = [...new Set([
+        ...(rutasData || []).map(r => r.chofer_id).filter(Boolean),
+        ...(rutasData || []).map(r => r.ayudante_id).filter(Boolean)
+      ])];
+
+      // Cargar nombres de empleados
+      let empleadosMap: Record<string, string> = {};
+      if (empleadoIds.length > 0) {
+        const { data: empleados } = await supabase
+          .from('empleados')
+          .select('id, nombre_completo')
+          .in('id', empleadoIds);
+        
+        empleados?.forEach(emp => {
+          empleadosMap[emp.id] = emp.nombre_completo;
+        });
+      }
 
       // Cargar entregas y carga para cada ruta
       const rutasConDetalles: RutaMonitoreo[] = await Promise.all(
@@ -256,8 +275,8 @@ export const useMonitoreoRutas = () => {
 
           return {
             ...ruta,
-            chofer: ruta.chofer as { id: string; full_name: string } | null,
-            ayudante: ruta.ayudante as { id: string; full_name: string } | null,
+            chofer: ruta.chofer_id ? { id: ruta.chofer_id, full_name: empleadosMap[ruta.chofer_id] || 'Chofer desconocido' } : null,
+            ayudante: ruta.ayudante_id ? { id: ruta.ayudante_id, full_name: empleadosMap[ruta.ayudante_id] || 'Ayudante desconocido' } : null,
             vehiculo: ruta.vehiculo as { id: string; nombre: string } | null,
             entregas: (entregas || []).map((e: any) => ({
               id: e.id,

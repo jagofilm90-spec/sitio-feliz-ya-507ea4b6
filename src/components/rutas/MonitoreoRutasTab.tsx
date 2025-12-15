@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,9 +9,10 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useMonitoreoRutas } from '@/hooks/useMonitoreoRutas';
+import { useMonitoreoRutas, type RutaMonitoreo } from '@/hooks/useMonitoreoRutas';
 import { RutaMonitorCard } from './RutaMonitorCard';
 import { AlertasPanel } from './AlertasPanel';
+import { RutaDetalleSheet } from './RutaDetalleSheet';
 
 const StatCard = ({ 
   icon: Icon, 
@@ -59,6 +61,7 @@ const StatCard = ({
 
 export const MonitoreoRutasTab = () => {
   const { rutas, alertas, estadisticas, loading, lastUpdate, refetch } = useMonitoreoRutas();
+  const [selectedRuta, setSelectedRuta] = useState<RutaMonitoreo | null>(null);
 
   if (loading) {
     return (
@@ -158,7 +161,7 @@ export const MonitoreoRutasTab = () => {
                   </h3>
                   <div className="grid gap-4 md:grid-cols-2">
                     {rutasPorEstado.enCurso.map((ruta) => (
-                      <RutaMonitorCard key={ruta.id} ruta={ruta} />
+                      <RutaMonitorCard key={ruta.id} ruta={ruta} onVerDetalles={setSelectedRuta} />
                     ))}
                   </div>
                 </div>
@@ -173,7 +176,7 @@ export const MonitoreoRutasTab = () => {
                   </h3>
                   <div className="grid gap-4 md:grid-cols-2">
                     {rutasPorEstado.programadas.map((ruta) => (
-                      <RutaMonitorCard key={ruta.id} ruta={ruta} />
+                      <RutaMonitorCard key={ruta.id} ruta={ruta} onVerDetalles={setSelectedRuta} />
                     ))}
                   </div>
                 </div>
@@ -188,7 +191,7 @@ export const MonitoreoRutasTab = () => {
                   </h3>
                   <div className="grid gap-4 md:grid-cols-2">
                     {rutasPorEstado.completadas.map((ruta) => (
-                      <RutaMonitorCard key={ruta.id} ruta={ruta} />
+                      <RutaMonitorCard key={ruta.id} ruta={ruta} onVerDetalles={setSelectedRuta} />
                     ))}
                   </div>
                 </div>
@@ -202,6 +205,13 @@ export const MonitoreoRutasTab = () => {
           <AlertasPanel alertas={alertas} />
         </div>
       </div>
+
+      {/* Sheet de detalles */}
+      <RutaDetalleSheet 
+        ruta={selectedRuta} 
+        open={!!selectedRuta} 
+        onOpenChange={(open) => !open && setSelectedRuta(null)} 
+      />
     </div>
   );
 };
