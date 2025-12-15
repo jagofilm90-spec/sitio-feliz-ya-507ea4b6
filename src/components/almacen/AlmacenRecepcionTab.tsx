@@ -30,10 +30,12 @@ interface EntregaCompra {
   orden_compra: {
     id: string;
     folio: string;
+    proveedor_id: string | null;
+    proveedor_nombre_manual: string | null;
     proveedor: {
       id: string;
       nombre: string;
-    };
+    } | null;
   };
 }
 
@@ -65,6 +67,8 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
           orden_compra:ordenes_compra(
             id,
             folio,
+            proveedor_id,
+            proveedor_nombre_manual,
             proveedor:proveedores(id, nombre)
           )
         `)
@@ -160,7 +164,9 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                       {/* LÍNEA 1: Proveedor + Cantidad (prominente) */}
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="font-semibold text-lg truncate">
-                          {entrega.orden_compra?.proveedor?.nombre || "Sin proveedor"}
+                          {entrega.orden_compra?.proveedor_id 
+                            ? (entrega.orden_compra?.proveedor?.nombre || "Sin proveedor")
+                            : (entrega.orden_compra?.proveedor_nombre_manual || "Sin proveedor")}
                         </span>
                         <Badge className="text-base font-bold bg-primary text-primary-foreground flex-shrink-0">
                           {entrega.cantidad_bultos.toLocaleString()} bultos
