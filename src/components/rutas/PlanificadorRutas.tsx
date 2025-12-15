@@ -313,15 +313,15 @@ const PlanificadorRutas = () => {
         : 0;
       const newFolio = `RUT-${String(lastNumber + 1).padStart(4, "0")}`;
 
-      // Create route with ayudantes_ids array
+      // Create route with ayudantes_ids array (no usar ayudante_id por foreign key a profiles)
       const { data: rutaData, error: rutaError } = await supabase
         .from("rutas")
         .insert([{
           folio: newFolio,
           fecha_ruta: fechaRuta,
           chofer_id: selectedChofer,
-          ayudante_id: selectedAyudantes[0] || null, // Keep first for backwards compatibility
-          ayudantes_ids: selectedAyudantes.length > 0 ? selectedAyudantes : [],
+          // ayudante_id eliminado - tiene FK a profiles(id) pero guardamos empleados(id)
+          ayudantes_ids: selectedAyudantes.length > 0 ? selectedAyudantes : null,
           vehiculo_id: selectedVehiculo,
           almacenista_id: selectedAlmacenista || null,
           hora_salida_sugerida: horaSalida,
