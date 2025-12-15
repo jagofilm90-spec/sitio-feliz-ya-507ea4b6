@@ -418,8 +418,8 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
                 ) : (
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-sm text-muted-foreground">
-                      {orden.fecha_entrega_programada 
-                        ? format(new Date(orden.fecha_entrega_programada), "dd MMM yyyy", { locale: es })
+                    {orden.fecha_entrega_programada 
+                        ? format(new Date(orden.fecha_entrega_programada), "dd/MM/yyyy")
                         : "Sin fecha"}
                     </span>
                     <Button

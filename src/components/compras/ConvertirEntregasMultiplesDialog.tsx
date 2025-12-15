@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -165,12 +166,7 @@ const ConvertirEntregasMultiplesDialog = ({ open, onOpenChange, orden }: Convert
             // Parse date without timezone conversion to avoid shifting dates
             const [year, month, day] = e.fecha_programada.split('-').map(Number);
             const fechaLocal = new Date(year, month - 1, day);
-            const fecha = fechaLocal.toLocaleDateString("es-MX", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            });
+            const fecha = format(fechaLocal, "dd/MM/yyyy");
             return `<li><strong>Entrega ${i + 1}:</strong> ${e.cantidad_bultos.toLocaleString()} bultos - ${fecha}</li>`;
           }).join("");
 

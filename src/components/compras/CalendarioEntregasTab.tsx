@@ -173,15 +173,7 @@ const CalendarioEntregasTab = () => {
         const dateStr = entrega.fecha.split('T')[0];
         const [year, month, day] = dateStr.split('-').map(Number);
         const fechaLocal = new Date(year, month - 1, day);
-        const fecha = fechaLocal.toLocaleDateString(
-          "es-MX",
-          {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          }
-        );
+        const fecha = format(fechaLocal, "dd/MM/yyyy");
         if (!grupos[fecha]) {
           grupos[fecha] = [];
         }
