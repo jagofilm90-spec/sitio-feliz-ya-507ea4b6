@@ -22,6 +22,7 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Truck, User, Users, RefreshCw, Bell, Loader2, DollarSign, UserPlus } from "lucide-react";
+import { AyudantesMultiSelect } from "./AyudantesMultiSelect";
 
 interface Vehiculo {
   id: string;
@@ -31,7 +32,7 @@ interface Vehiculo {
 
 interface Chofer {
   id: string;
-  full_name: string;
+  nombre_completo: string;
 }
 
 interface AyudanteExterno {
@@ -44,12 +45,12 @@ interface Ruta {
   id: string;
   folio: string;
   chofer_id: string;
-  ayudante_id: string | null;
+  ayudantes_ids?: string[] | null;
   vehiculo_id: string | null;
   ayudante_externo_id?: string | null;
   costo_ayudante_externo?: number | null;
-  chofer?: { full_name: string };
-  ayudante?: { full_name: string };
+  chofer_nombre?: string;
+  ayudantes_nombres?: string[];
   vehiculo?: { nombre: string };
   ayudante_externo?: { nombre_completo: string; tarifa_por_viaje: number };
 }
@@ -75,7 +76,7 @@ const ReasignarPersonalDialog = ({
   const { toast } = useToast();
 
   const [selectedChofer, setSelectedChofer] = useState<string>("");
-  const [selectedAyudante, setSelectedAyudante] = useState<string>("");
+  const [selectedAyudantes, setSelectedAyudantes] = useState<string[]>([]);
   const [selectedAyudanteExterno, setSelectedAyudanteExterno] = useState<string>("");
   const [usarExterno, setUsarExterno] = useState(false);
   const [selectedVehiculo, setSelectedVehiculo] = useState<string>("");
@@ -85,7 +86,7 @@ const ReasignarPersonalDialog = ({
     if (open && ruta) {
       loadData();
       setSelectedChofer(ruta.chofer_id);
-      setSelectedAyudante(ruta.ayudante_id || "");
+      setSelectedAyudantes(ruta.ayudantes_ids || []);
       setSelectedVehiculo(ruta.vehiculo_id || "");
       setSelectedAyudanteExterno(ruta.ayudante_externo_id || "");
       setUsarExterno(!!ruta.ayudante_externo_id);
@@ -106,24 +107,16 @@ const ReasignarPersonalDialog = ({
       if (vehiculosError) throw vehiculosError;
       setVehiculos(vehiculosData || []);
 
-      // Load drivers
+      // Load drivers from empleados table
       const { data: choferesData, error: choferesError } = await supabase
-        .from("user_roles")
-        .select(`
-          user_id,
-          profiles:user_id (id, full_name)
-        `)
-        .eq("role", "chofer");
+        .from("empleados")
+        .select("id, nombre_completo")
+        .eq("activo", true)
+        .eq("puesto", "Chofer")
+        .order("nombre_completo");
 
       if (choferesError) throw choferesError;
-      
-      const transformedChoferes = (choferesData || [])
-        .filter((c: any) => c.profiles)
-        .map((c: any) => ({
-          id: c.profiles.id,
-          full_name: c.profiles.full_name,
-        }));
-      setChoferes(transformedChoferes);
+      setChoferes(choferesData || []);
 
       // Load external helpers
       const { data: externosData, error: externosError } = await supabase
@@ -175,12 +168,12 @@ const ReasignarPersonalDialog = ({
       // Get external helper tariff if selected
       const externoSeleccionado = ayudantesExternos.find(e => e.id === selectedAyudanteExterno);
 
-      // Update route
+      // Update route - usar ayudantes_ids en lugar de ayudante_id
       const { error } = await supabase
         .from("rutas")
         .update({
           chofer_id: selectedChofer,
-          ayudante_id: usarExterno ? null : (selectedAyudante || null),
+          ayudantes_ids: usarExterno ? null : (selectedAyudantes.length > 0 ? selectedAyudantes : null),
           vehiculo_id: selectedVehiculo || null,
           ayudante_externo_id: usarExterno ? (selectedAyudanteExterno || null) : null,
           costo_ayudante_externo: usarExterno && externoSeleccionado ? externoSeleccionado.tarifa_por_viaje : null,
@@ -202,18 +195,19 @@ const ReasignarPersonalDialog = ({
           });
         } catch (notifError) {
           console.error("Error sending notification:", notifError);
-          // Don't fail the whole operation for notification error
         }
       }
 
       toast({ title: "Personal reasignado correctamente" });
       
-      // Also notify if helper changed
-      if (notificarChofer && selectedAyudante && selectedAyudante !== ruta.ayudante_id) {
+      // Notify new helpers
+      const previousAyudantes = ruta.ayudantes_ids || [];
+      const newAyudantes = selectedAyudantes.filter(id => !previousAyudantes.includes(id));
+      if (notificarChofer && newAyudantes.length > 0) {
         try {
           await supabase.functions.invoke("send-push-notification", {
             body: {
-              user_ids: [selectedAyudante],
+              user_ids: newAyudantes,
               title: "Asignación como ayudante",
               body: `Te han asignado como ayudante en la ruta ${ruta.folio}`,
               data: { type: "ruta", ruta_id: ruta.id }
@@ -239,12 +233,12 @@ const ReasignarPersonalDialog = ({
 
   const ayudantesDisponibles = choferes.filter(c => c.id !== selectedChofer);
   const choferCambiado = ruta?.chofer_id !== selectedChofer;
-  const ayudanteCambiado = usarExterno 
+  const ayudantesCambiado = usarExterno 
     ? ruta?.ayudante_externo_id !== selectedAyudanteExterno
-    : ruta?.ayudante_id !== selectedAyudante;
+    : JSON.stringify(ruta?.ayudantes_ids || []) !== JSON.stringify(selectedAyudantes);
   const vehiculoCambiado = ruta?.vehiculo_id !== selectedVehiculo;
   const modoAyudanteCambiado = !!ruta?.ayudante_externo_id !== usarExterno;
-  const hayCambios = choferCambiado || ayudanteCambiado || vehiculoCambiado || modoAyudanteCambiado;
+  const hayCambios = choferCambiado || ayudantesCambiado || vehiculoCambiado || modoAyudanteCambiado;
   
   const externoSeleccionado = ayudantesExternos.find(e => e.id === selectedAyudanteExterno);
 
@@ -279,12 +273,12 @@ const ReasignarPersonalDialog = ({
                 </Badge>
                 <Badge variant="outline">
                   <User className="h-3 w-3 mr-1" />
-                  {ruta.chofer?.full_name || "Sin chofer"}
+                  {ruta.chofer_nombre || "Sin chofer"}
                 </Badge>
-                {ruta.ayudante && (
+                {ruta.ayudantes_nombres && ruta.ayudantes_nombres.length > 0 && (
                   <Badge variant="outline">
                     <Users className="h-3 w-3 mr-1" />
-                    {ruta.ayudante.full_name}
+                    {ruta.ayudantes_nombres.join(", ")}
                   </Badge>
                 )}
               </div>
@@ -328,7 +322,7 @@ const ReasignarPersonalDialog = ({
                     {choferes.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
                         <div className="flex items-center gap-2">
-                          {c.full_name}
+                          {c.nombre_completo}
                           {c.id === ruta.chofer_id && (
                             <Badge variant="secondary" className="text-xs">Actual</Badge>
                           )}
@@ -369,19 +363,11 @@ const ReasignarPersonalDialog = ({
                 </div>
 
                 {!usarExterno ? (
-                  <Select value={selectedAyudante} onValueChange={setSelectedAyudante}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sin ayudante" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Sin ayudante</SelectItem>
-                      {ayudantesDisponibles.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.full_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <AyudantesMultiSelect
+                    selectedAyudantes={selectedAyudantes}
+                    onSelectionChange={setSelectedAyudantes}
+                    excludeIds={[selectedChofer]}
+                  />
                 ) : (
                   <Select value={selectedAyudanteExterno} onValueChange={setSelectedAyudanteExterno}>
                     <SelectTrigger>
