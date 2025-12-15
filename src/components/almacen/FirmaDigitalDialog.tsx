@@ -1,13 +1,7 @@
 import { useRef, useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Eraser, Check } from "lucide-react";
+import { Loader2, Eraser, Check, X } from "lucide-react";
 
 interface FirmaDigitalDialogProps {
   open: boolean;
@@ -28,17 +22,6 @@ export const FirmaDigitalDialog = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
   const [context, setContext] = useState<CanvasRenderingContext2D | null>(null);
-
-  // Forzar pointer-events en el body cuando el dialog está abierto
-  // Esto soluciona el problema de modales anidados en Radix UI
-  useEffect(() => {
-    if (open) {
-      const timer = setTimeout(() => {
-        document.body.style.pointerEvents = 'auto';
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [open]);
 
   useEffect(() => {
     if (open && canvasRef.current) {
@@ -156,78 +139,95 @@ export const FirmaDigitalDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="sm:max-w-lg"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onPointerDownOutside={(e) => e.preventDefault()}
-      >
-        <DialogHeader>
-          <DialogTitle>{titulo}</DialogTitle>
-        </DialogHeader>
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange} modal={false}>
+      <DialogPrimitive.Portal>
+        {/* Overlay personalizado que permite cerrar pero no bloquea eventos del canvas */}
+        <div 
+          className="fixed inset-0 z-50 bg-black/80"
+          onClick={() => onOpenChange(false)}
+        />
+        <DialogPrimitive.Content
+          className="fixed left-[50%] top-[50%] z-[51] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          {/* Botón de cerrar */}
+          <button
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+            onClick={() => onOpenChange(false)}
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Cerrar</span>
+          </button>
 
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Dibuja tu firma para confirmar que la carga está completa
-          </p>
-
-          <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg overflow-hidden bg-white pointer-events-auto relative z-50">
-            <canvas
-              ref={canvasRef}
-              width={400}
-              height={200}
-              className="w-full cursor-crosshair pointer-events-auto"
-              style={{ touchAction: 'none' }}
-              // Pointer events (stylus, touch, mouse)
-              onPointerDown={startDrawing}
-              onPointerMove={draw}
-              onPointerUp={stopDrawing}
-              onPointerLeave={stopDrawing}
-              onPointerCancel={stopDrawing}
-              // Fallback para dispositivos sin Pointer API
-              onMouseDown={startDrawing}
-              onMouseMove={draw}
-              onMouseUp={stopDrawing}
-              onMouseLeave={stopDrawing}
-              onTouchStart={startDrawing}
-              onTouchMove={draw}
-              onTouchEnd={stopDrawing}
-            />
+          {/* Header */}
+          <div className="flex flex-col space-y-1.5 text-center sm:text-left">
+            <h2 className="text-lg font-semibold leading-none tracking-tight">{titulo}</h2>
           </div>
 
-          <Button
-            variant="outline"
-            onClick={clearCanvas}
-            disabled={!hasSignature || loading}
-            className="w-full"
-          >
-            <Eraser className="w-4 h-4 mr-2" />
-            Limpiar firma
-          </Button>
-        </div>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Dibuja tu firma para confirmar que la carga está completa
+            </p>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={loading}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleConfirm}
-            disabled={!hasSignature || loading}
-            className="min-w-32"
-          >
-            {loading ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Check className="w-4 h-4 mr-2" />
-            )}
-            Confirmar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg overflow-hidden bg-white">
+              <canvas
+                ref={canvasRef}
+                width={400}
+                height={200}
+                className="w-full cursor-crosshair"
+                style={{ touchAction: 'none' }}
+                // Pointer events (stylus, touch, mouse)
+                onPointerDown={startDrawing}
+                onPointerMove={draw}
+                onPointerUp={stopDrawing}
+                onPointerLeave={stopDrawing}
+                onPointerCancel={stopDrawing}
+                // Fallback para dispositivos sin Pointer API
+                onMouseDown={startDrawing}
+                onMouseMove={draw}
+                onMouseUp={stopDrawing}
+                onMouseLeave={stopDrawing}
+                onTouchStart={startDrawing}
+                onTouchMove={draw}
+                onTouchEnd={stopDrawing}
+              />
+            </div>
+
+            <Button
+              variant="outline"
+              onClick={clearCanvas}
+              disabled={!hasSignature || loading}
+              className="w-full"
+            >
+              <Eraser className="w-4 h-4 mr-2" />
+              Limpiar firma
+            </Button>
+          </div>
+
+          {/* Footer */}
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirm}
+              disabled={!hasSignature || loading}
+              className="min-w-32"
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Check className="w-4 h-4 mr-2" />
+              )}
+              Confirmar
+            </Button>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 };
