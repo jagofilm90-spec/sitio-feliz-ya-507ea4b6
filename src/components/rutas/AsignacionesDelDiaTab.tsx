@@ -42,13 +42,13 @@ interface Ruta {
   tipo_ruta: string;
   peso_total_kg: number | null;
   chofer_id: string;
-  ayudante_id: string | null;
+  ayudantes_ids: string[] | null;
   vehiculo_id: string | null;
   ayudante_externo_id: string | null;
   costo_ayudante_externo: number | null;
   notas: string | null;
-  chofer?: { full_name: string };
-  ayudante?: { full_name: string };
+  chofer_nombre?: string;
+  ayudantes_nombres?: string[];
   vehiculo?: { nombre: string; tipo: string };
   ayudante_externo?: { nombre_completo: string; tarifa_por_viaje: number };
   entregas?: { id: string; pedido_id: string }[];
@@ -83,13 +83,13 @@ const AsignacionesDelDiaTab = () => {
     try {
       const fechaStr = format(fecha, "yyyy-MM-dd");
       
-      // Load routes for selected date
+      // Load routes for selected date (sin JOIN a profiles, cargaremos empleados aparte)
       const { data: rutasData, error: rutasError } = await supabase
         .from("rutas")
         .select(`
-          *,
-          chofer:profiles!rutas_chofer_id_fkey (full_name),
-          ayudante:profiles!rutas_ayudante_id_fkey (full_name),
+          id, folio, fecha_ruta, status, tipo_ruta, peso_total_kg,
+          chofer_id, ayudantes_ids, vehiculo_id,
+          ayudante_externo_id, costo_ayudante_externo, notas,
           vehiculo:vehiculo_id (nombre, tipo),
           ayudante_externo:ayudante_externo_id (nombre_completo, tarifa_por_viaje),
           entregas (id, pedido_id)
@@ -99,9 +99,8 @@ const AsignacionesDelDiaTab = () => {
         .order("created_at");
 
       if (rutasError) throw rutasError;
-      setRutas((rutasData as Ruta[]) || []);
 
-      // Load all drivers and helpers
+      // Load all drivers and helpers from empleados
       const { data: empleadosData, error: empleadosError } = await supabase
         .from("empleados")
         .select("id, nombre_completo, puesto")
@@ -111,6 +110,19 @@ const AsignacionesDelDiaTab = () => {
 
       if (empleadosError) throw empleadosError;
       setEmpleados(empleadosData || []);
+
+      // Mapear nombres de chofer y ayudantes a las rutas
+      const empleadosMap = new Map((empleadosData || []).map(e => [e.id, e.nombre_completo]));
+      
+      const rutasConNombres = (rutasData || []).map((ruta: any) => ({
+        ...ruta,
+        chofer_nombre: empleadosMap.get(ruta.chofer_id) || "Desconocido",
+        ayudantes_nombres: (ruta.ayudantes_ids || []).map((id: string) => 
+          empleadosMap.get(id) || "Desconocido"
+        ),
+      }));
+
+      setRutas(rutasConNombres as Ruta[]);
 
       // Load all vehicles
       const { data: vehiculosData, error: vehiculosError } = await supabase
@@ -134,9 +146,11 @@ const AsignacionesDelDiaTab = () => {
     }
   };
 
-  // Calculate assigned and unassigned resources
+  // Calculate assigned and unassigned resources usando ayudantes_ids (array)
   const choferesAsignados = new Set(rutas.map(r => r.chofer_id));
-  const ayudantesAsignados = new Set(rutas.filter(r => r.ayudante_id).map(r => r.ayudante_id));
+  const ayudantesAsignados = new Set(
+    rutas.flatMap(r => r.ayudantes_ids || [])
+  );
   const vehiculosAsignados = new Set(rutas.filter(r => r.vehiculo_id).map(r => r.vehiculo_id));
 
   const choferes = empleados.filter(e => 
@@ -357,11 +371,11 @@ const AsignacionesDelDiaTab = () => {
                             </div>
                             <div>
                               <p className="text-muted-foreground">Chofer</p>
-                              <p className="font-medium">{ruta.chofer?.full_name || "—"}</p>
+                              <p className="font-medium">{ruta.chofer_nombre || "—"}</p>
                             </div>
                             <div>
-                              <p className="text-muted-foreground">Ayudante</p>
-                              <p className="font-medium flex items-center gap-1">
+                              <p className="text-muted-foreground">Ayudantes</p>
+                              <p className="font-medium flex items-center gap-1 flex-wrap">
                                 {ruta.ayudante_externo ? (
                                   <>
                                     <UserPlus className="h-3 w-3 text-amber-600" />
@@ -370,7 +384,9 @@ const AsignacionesDelDiaTab = () => {
                                       ${ruta.costo_ayudante_externo?.toLocaleString()}
                                     </Badge>
                                   </>
-                                ) : ruta.ayudante?.full_name || "Sin ayudante"}
+                                ) : ruta.ayudantes_nombres && ruta.ayudantes_nombres.length > 0 
+                                  ? ruta.ayudantes_nombres.join(", ")
+                                  : "Sin ayudante"}
                               </p>
                             </div>
                             <div>
