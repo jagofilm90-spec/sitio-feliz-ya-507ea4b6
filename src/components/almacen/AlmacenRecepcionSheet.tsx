@@ -45,6 +45,15 @@ import {
 } from "lucide-react";
 import { EvidenciaCapture, EvidenciasPreviewGrid } from "@/components/compras/EvidenciaCapture";
 
+// Razones de diferencia para cuando la cantidad recibida no coincide con la ordenada
+const RAZONES_DIFERENCIA = [
+  { value: "roto", label: "Producto roto/dañado" },
+  { value: "no_llego", label: "No llegó completo" },
+  { value: "error_cantidad", label: "Error del proveedor" },
+  { value: "rechazado_calidad", label: "Rechazado por calidad" },
+  { value: "otro", label: "Otro" },
+];
+
 interface EntregaCompra {
   id: string;
   numero_entrega: number;
@@ -108,6 +117,8 @@ export const AlmacenRecepcionSheet = ({
   const [productos, setProductos] = useState<ProductoEntrega[]>([]);
   const [cantidadesRecibidas, setCantidadesRecibidas] = useState<Record<string, number>>({});
   const [fechasCaducidad, setFechasCaducidad] = useState<Record<string, string>>({});
+  const [razonesDiferencia, setRazonesDiferencia] = useState<Record<string, string>>({});
+  const [notasDiferencia, setNotasDiferencia] = useState<Record<string, string>>({});
   const [evidencias, setEvidencias] = useState<Evidencia[]>([]);
   const [fotosCaducidad, setFotosCaducidad] = useState<Record<string, { file: File; preview: string } | null>>({});
   const [nombreEntrega, setNombreEntrega] = useState("");
@@ -196,6 +207,20 @@ export const AlmacenRecepcionSheet = ({
     }));
   };
 
+  const handleRazonDiferenciaChange = (detalleId: string, razon: string) => {
+    setRazonesDiferencia(prev => ({
+      ...prev,
+      [detalleId]: razon
+    }));
+  };
+
+  const handleNotaDiferenciaChange = (detalleId: string, nota: string) => {
+    setNotasDiferencia(prev => ({
+      ...prev,
+      [detalleId]: nota
+    }));
+  };
+
   const handleEvidenciaCapture = (tipo: string, file: File) => {
     const preview = URL.createObjectURL(file);
     setEvidencias(prev => [...prev, { tipo, file, preview }]);
@@ -270,6 +295,27 @@ export const AlmacenRecepcionSheet = ({
       return;
     }
 
+    // Validar que productos con diferencia tengan razón
+    const productosConDiferencia = productos.filter(p => {
+      const faltante = p.cantidad_ordenada - p.cantidad_recibida;
+      const recibiendo = cantidadesRecibidas[p.id] || 0;
+      return recibiendo < faltante && recibiendo >= 0;
+    });
+    
+    const faltaRazon = productosConDiferencia.find(p => !razonesDiferencia[p.id]);
+    if (faltaRazon) {
+      const faltante = faltaRazon.cantidad_ordenada - faltaRazon.cantidad_recibida;
+      const recibiendo = cantidadesRecibidas[faltaRazon.id] || 0;
+      if (recibiendo < faltante) {
+        toast({
+          title: "Razón de diferencia requerida",
+          description: `Indica por qué "${faltaRazon.producto?.nombre}" tiene diferencia (esperado: ${faltante}, recibido: ${recibiendo})`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -279,16 +325,26 @@ export const AlmacenRecepcionSheet = ({
 
       // 1. Actualizar cantidades recibidas y crear lotes en inventario
       for (const [detalleId, cantidad] of Object.entries(cantidadesRecibidas)) {
-        if (cantidad > 0) {
-          const producto = productos.find(p => p.id === detalleId);
-          if (producto) {
-            // Actualizar cantidad recibida en orden de compra
-            const nuevaCantidadRecibida = producto.cantidad_recibida + cantidad;
-            await supabase
-              .from("ordenes_compra_detalles")
-              .update({ cantidad_recibida: nuevaCantidadRecibida })
-              .eq("id", detalleId);
+        const producto = productos.find(p => p.id === detalleId);
+        if (producto) {
+          // Actualizar cantidad recibida y razón de diferencia
+          const nuevaCantidadRecibida = producto.cantidad_recibida + cantidad;
+          const updateData: any = { cantidad_recibida: nuevaCantidadRecibida };
+          
+          // Si hay diferencia, guardar razón y notas
+          const faltante = producto.cantidad_ordenada - producto.cantidad_recibida;
+          if (cantidad < faltante && razonesDiferencia[detalleId]) {
+            updateData.razon_diferencia = razonesDiferencia[detalleId];
+            updateData.notas_diferencia = notasDiferencia[detalleId] || null;
+          }
+          
+          await supabase
+            .from("ordenes_compra_detalles")
+            .update(updateData)
+            .eq("id", detalleId);
 
+          // Solo crear lote si cantidad > 0
+          if (cantidad > 0) {
             // CONSULTAR PRECIO SOLO AL MOMENTO DE GUARDAR
             // Esto asegura que el precio nunca esté en el estado del componente React
             const { data: detalleConPrecio } = await supabase
@@ -443,10 +499,12 @@ export const AlmacenRecepcionSheet = ({
                     const cantidadActual = cantidadesRecibidas[producto.id] || 0;
                     const faltaFechaCaducidad = requiereCaducidad && cantidadActual > 0 && !fechasCaducidad[producto.id];
                     const faltaFotoCaducidad = requiereCaducidad && cantidadActual > 0 && !fotosCaducidad[producto.id];
+                    const tieneDiferencia = cantidadActual < faltante;
+                    const faltaRazonDiferencia = tieneDiferencia && !razonesDiferencia[producto.id];
                     
                     return (
                       <Card key={producto.id} className={cn(
-                        (faltaFechaCaducidad || faltaFotoCaducidad) && "border-destructive"
+                        (faltaFechaCaducidad || faltaFotoCaducidad || faltaRazonDiferencia) && "border-destructive"
                       )}>
                         <CardContent className="p-3 space-y-3">
                           <div className="flex items-start justify-between gap-3">
@@ -481,6 +539,45 @@ export const AlmacenRecepcionSheet = ({
                               />
                             </div>
                           </div>
+                          
+                          {/* Razón de diferencia - aparece cuando la cantidad es menor a lo esperado */}
+                          {tieneDiferencia && (
+                            <div className="space-y-2 p-2 bg-amber-50 dark:bg-amber-950/20 rounded-md border border-amber-200 dark:border-amber-800">
+                              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-sm font-medium">
+                                <Package className="w-4 h-4" />
+                                Diferencia de {faltante - cantidadActual} unidades
+                              </div>
+                              <Select 
+                                value={razonesDiferencia[producto.id] || ""} 
+                                onValueChange={(v) => handleRazonDiferenciaChange(producto.id, v)}
+                              >
+                                <SelectTrigger className={cn(
+                                  "bg-background",
+                                  faltaRazonDiferencia && "border-destructive"
+                                )}>
+                                  <SelectValue placeholder="Selecciona razón *" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {RAZONES_DIFERENCIA.map(r => (
+                                    <SelectItem key={r.value} value={r.value}>
+                                      {r.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {razonesDiferencia[producto.id] === "otro" && (
+                                <Input
+                                  placeholder="Describe la razón..."
+                                  value={notasDiferencia[producto.id] || ""}
+                                  onChange={(e) => handleNotaDiferenciaChange(producto.id, e.target.value)}
+                                  className="bg-background"
+                                />
+                              )}
+                              {faltaRazonDiferencia && (
+                                <span className="text-xs text-destructive">* Indica la razón de la diferencia</span>
+                              )}
+                            </div>
+                          )}
                           {/* Fecha de caducidad con Calendar Popover */}
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">

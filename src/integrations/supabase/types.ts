@@ -1173,6 +1173,131 @@ export type Database = {
           },
         ]
       }
+      devoluciones_proveedor: {
+        Row: {
+          cantidad_devuelta: number
+          created_at: string
+          fecha_resolucion: string | null
+          id: string
+          lote_id: string | null
+          motivo: string
+          notas: string | null
+          orden_compra_entrega_id: string | null
+          orden_compra_id: string
+          producto_id: string
+          registrado_por: string | null
+          resolucion_notas: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          cantidad_devuelta: number
+          created_at?: string
+          fecha_resolucion?: string | null
+          id?: string
+          lote_id?: string | null
+          motivo: string
+          notas?: string | null
+          orden_compra_entrega_id?: string | null
+          orden_compra_id: string
+          producto_id: string
+          registrado_por?: string | null
+          resolucion_notas?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          cantidad_devuelta?: number
+          created_at?: string
+          fecha_resolucion?: string | null
+          id?: string
+          lote_id?: string | null
+          motivo?: string
+          notas?: string | null
+          orden_compra_entrega_id?: string | null
+          orden_compra_id?: string
+          producto_id?: string
+          registrado_por?: string | null
+          resolucion_notas?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devoluciones_proveedor_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_lotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_proveedor_orden_compra_entrega_id_fkey"
+            columns: ["orden_compra_entrega_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_compra_entregas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_proveedor_orden_compra_id_fkey"
+            columns: ["orden_compra_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_compra"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_proveedor_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_proveedor_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      devoluciones_proveedor_evidencias: {
+        Row: {
+          capturado_por: string | null
+          created_at: string
+          devolucion_id: string
+          id: string
+          nombre_archivo: string | null
+          ruta_storage: string
+          tipo_evidencia: string
+        }
+        Insert: {
+          capturado_por?: string | null
+          created_at?: string
+          devolucion_id: string
+          id?: string
+          nombre_archivo?: string | null
+          ruta_storage: string
+          tipo_evidencia: string
+        }
+        Update: {
+          capturado_por?: string | null
+          created_at?: string
+          devolucion_id?: string
+          id?: string
+          nombre_archivo?: string | null
+          ruta_storage?: string
+          tipo_evidencia?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devoluciones_proveedor_evidencias_devolucion_id_fkey"
+            columns: ["devolucion_id"]
+            isOneToOne: false
+            referencedRelation: "devoluciones_proveedor"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       disponibilidad_personal: {
         Row: {
           created_at: string
@@ -2339,9 +2464,11 @@ export type Database = {
           cantidad_recibida: number
           created_at: string
           id: string
+          notas_diferencia: string | null
           orden_compra_id: string
           precio_unitario_compra: number
           producto_id: string
+          razon_diferencia: string | null
           subtotal: number
         }
         Insert: {
@@ -2349,9 +2476,11 @@ export type Database = {
           cantidad_recibida?: number
           created_at?: string
           id?: string
+          notas_diferencia?: string | null
           orden_compra_id: string
           precio_unitario_compra: number
           producto_id: string
+          razon_diferencia?: string | null
           subtotal: number
         }
         Update: {
@@ -2359,9 +2488,11 @@ export type Database = {
           cantidad_recibida?: number
           created_at?: string
           id?: string
+          notas_diferencia?: string | null
           orden_compra_id?: string
           precio_unitario_compra?: number
           producto_id?: string
+          razon_diferencia?: string | null
           subtotal?: number
         }
         Relationships: [
