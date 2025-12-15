@@ -74,6 +74,7 @@ interface ProductoEntrega {
     id: string;
     codigo: string;
     nombre: string;
+    maneja_caducidad: boolean;
   };
 }
 
@@ -150,7 +151,7 @@ export const AlmacenRecepcionSheet = ({
           producto_id,
           cantidad_ordenada,
           cantidad_recibida,
-          producto:productos(id, codigo, nombre)
+          producto:productos(id, codigo, nombre, maneja_caducidad)
         `)
         .eq("orden_compra_id", entrega.orden_compra.id);
 
@@ -239,6 +240,31 @@ export const AlmacenRecepcionSheet = ({
       toast({
         title: "Datos incompletos",
         description: "Selecciona la bodega de destino",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validar productos que requieren caducidad
+    const productosConCaducidad = productos.filter(p => 
+      p.producto?.maneja_caducidad && (cantidadesRecibidas[p.id] || 0) > 0
+    );
+    
+    const faltaFecha = productosConCaducidad.find(p => !fechasCaducidad[p.id]);
+    if (faltaFecha) {
+      toast({
+        title: "Fecha obligatoria",
+        description: `El producto "${faltaFecha.producto?.nombre}" requiere fecha de caducidad`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const faltaFoto = productosConCaducidad.find(p => !fotosCaducidad[p.id]);
+    if (faltaFoto) {
+      toast({
+        title: "Foto obligatoria", 
+        description: `El producto "${faltaFoto.producto?.nombre}" requiere foto de la etiqueta de caducidad`,
         variant: "destructive"
       });
       return;
@@ -397,14 +423,29 @@ export const AlmacenRecepcionSheet = ({
               <div>
                 <h3 className="font-medium mb-3">Productos a recibir</h3>
                 <div className="space-y-3">
-                  {productos.map((producto) => {
+                    {productos.map((producto) => {
                     const faltante = producto.cantidad_ordenada - producto.cantidad_recibida;
+                    const requiereCaducidad = producto.producto?.maneja_caducidad;
+                    const cantidadActual = cantidadesRecibidas[producto.id] || 0;
+                    const faltaFechaCaducidad = requiereCaducidad && cantidadActual > 0 && !fechasCaducidad[producto.id];
+                    const faltaFotoCaducidad = requiereCaducidad && cantidadActual > 0 && !fotosCaducidad[producto.id];
+                    
                     return (
-                      <Card key={producto.id}>
+                      <Card key={producto.id} className={cn(
+                        (faltaFechaCaducidad || faltaFotoCaducidad) && "border-destructive"
+                      )}>
                         <CardContent className="p-3 space-y-3">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{producto.producto?.nombre}</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-medium truncate">{producto.producto?.nombre}</p>
+                                {requiereCaducidad && (
+                                  <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
+                                    <CalendarIcon className="h-3 w-3 mr-1" />
+                                    Requiere caducidad
+                                  </Badge>
+                                )}
+                              </div>
                               <p className="text-sm text-muted-foreground">
                                 Código: {producto.producto?.codigo}
                               </p>
@@ -427,22 +468,24 @@ export const AlmacenRecepcionSheet = ({
                             </div>
                           </div>
                           {/* Fecha de caducidad con Calendar Popover */}
-                          <div className="flex items-center gap-2">
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  className={cn(
-                                    "flex-1 justify-start text-left font-normal",
-                                    !fechasCaducidad[producto.id] && "text-muted-foreground"
-                                  )}
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {fechasCaducidad[producto.id] 
-                                    ? format(new Date(fechasCaducidad[producto.id]), "PPP", { locale: es })
-                                    : "Fecha caducidad (opcional)"}
-                                </Button>
-                              </PopoverTrigger>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "flex-1 justify-start text-left font-normal",
+                                      !fechasCaducidad[producto.id] && "text-muted-foreground",
+                                      faltaFechaCaducidad && "border-destructive"
+                                    )}
+                                  >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {fechasCaducidad[producto.id] 
+                                      ? format(new Date(fechasCaducidad[producto.id]), "PPP", { locale: es })
+                                      : requiereCaducidad ? "Fecha caducidad *" : "Fecha caducidad (opcional)"}
+                                  </Button>
+                                </PopoverTrigger>
                               <PopoverContent className="w-auto p-0 z-50" align="start">
                                 <Calendar
                                   mode="single"
@@ -452,12 +495,17 @@ export const AlmacenRecepcionSheet = ({
                                   className="pointer-events-auto"
                                   locale={es}
                                 />
-                              </PopoverContent>
-                            </Popover>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                            {faltaFechaCaducidad && (
+                              <span className="text-xs text-destructive">* Fecha requerida</span>
+                            )}
                           </div>
                           {/* Foto de caducidad */}
-                          <div className="flex items-center gap-2">
-                            {fotosCaducidad[producto.id] ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              {fotosCaducidad[producto.id] ? (
                               <div className="relative flex items-center gap-2">
                                 <img 
                                   src={fotosCaducidad[producto.id]!.preview} 
@@ -473,11 +521,16 @@ export const AlmacenRecepcionSheet = ({
                                   <X className="h-3 w-3" />
                                 </button>
                               </div>
-                            ) : (
-                              <EvidenciaCapture
-                                tipo="caducidad"
-                                onCapture={(file, preview) => handleFotoCaducidadCapture(producto.id, file, preview)}
-                              />
+                              ) : (
+                                <EvidenciaCapture
+                                  tipo="caducidad"
+                                  onCapture={(file, preview) => handleFotoCaducidadCapture(producto.id, file, preview)}
+                                  className={cn(faltaFotoCaducidad && "border-destructive")}
+                                />
+                              )}
+                            </div>
+                            {faltaFotoCaducidad && (
+                              <span className="text-xs text-destructive">* Foto requerida</span>
                             )}
                           </div>
                         </CardContent>
