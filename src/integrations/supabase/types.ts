@@ -3893,7 +3893,7 @@ export type Database = {
           nombre?: string | null
           proposito?: string | null
           refresh_token?: never
-          token_expires_at?: never
+          token_expires_at?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -3905,7 +3905,7 @@ export type Database = {
           nombre?: string | null
           proposito?: string | null
           refresh_token?: never
-          token_expires_at?: never
+          token_expires_at?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -3945,18 +3945,18 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          email?: never
+          email?: string | null
           full_name?: string | null
           id?: string | null
-          phone?: never
+          phone?: string | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
-          email?: never
+          email?: string | null
           full_name?: string | null
           id?: string | null
-          phone?: never
+          phone?: string | null
           updated_at?: string | null
         }
         Relationships: []
