@@ -55,6 +55,8 @@ import {
   ShieldAlert,
   Eye,
   User,
+  Receipt,
+  PackageOpen,
 } from "lucide-react";
 import { EvidenciaCapture, EvidenciasPreviewGrid } from "@/components/compras/EvidenciaCapture";
 import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
@@ -170,6 +172,15 @@ export const AlmacenRecepcionSheet = ({
   const [showFirmaDialog, setShowFirmaDialog] = useState(false);
   const [showDevolucionDialog, setShowDevolucionDialog] = useState(false);
   const [firmaChoferDiferencia, setFirmaChoferDiferencia] = useState<string | null>(null);
+  
+  // Nuevos campos: remisión proveedor, foto caja vacía, firmas conformidad
+  const [numeroRemisionProveedor, setNumeroRemisionProveedor] = useState("");
+  const [fotoRemisionProveedor, setFotoRemisionProveedor] = useState<{ file: File; preview: string } | null>(null);
+  const [fotoCajaVacia, setFotoCajaVacia] = useState<{ file: File; preview: string } | null>(null);
+  const [showFirmaChoferConformidadDialog, setShowFirmaChoferConformidadDialog] = useState(false);
+  const [showFirmaAlmacenistaDialog, setShowFirmaAlmacenistaDialog] = useState(false);
+  const [firmaChoferConformidad, setFirmaChoferConformidad] = useState<string | null>(null);
+  const [firmaAlmacenista, setFirmaAlmacenista] = useState<string | null>(null);
   
   const { toast } = useToast();
 
@@ -376,11 +387,50 @@ export const AlmacenRecepcionSheet = ({
     });
   };
 
+  // Verificar si descarga completa (sin diferencias)
+  const esDescargaCompleta = (): boolean => {
+    return productos.every(p => {
+      const faltante = p.cantidad_ordenada - p.cantidad_recibida;
+      const recibiendo = cantidadesRecibidas[p.id] || 0;
+      return recibiendo >= faltante;
+    });
+  };
+
   const validarRecepcion = (): boolean => {
     if (!bodegaSeleccionada) {
       toast({
         title: "Datos incompletos",
         description: "Selecciona la bodega de destino",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    // Validar número de remisión proveedor
+    if (!numeroRemisionProveedor.trim()) {
+      toast({
+        title: "Número de remisión requerido",
+        description: "Ingresa el número de remisión del proveedor",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    // Validar foto de remisión proveedor
+    if (!fotoRemisionProveedor) {
+      toast({
+        title: "Foto de remisión requerida",
+        description: "Captura una foto del documento de remisión del proveedor",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    // Si descarga completa, validar foto de caja vacía
+    if (esDescargaCompleta() && !fotoCajaVacia) {
+      toast({
+        title: "Foto de caja vacía requerida",
+        description: "Al recibir toda la mercancía, captura foto de la caja vacía del camión",
         variant: "destructive"
       });
       return false;
@@ -440,13 +490,29 @@ export const AlmacenRecepcionSheet = ({
       return;
     }
 
-    handleGuardarRecepcion();
+    // Iniciar flujo de firmas de conformidad (chofer primero)
+    setShowFirmaChoferConformidadDialog(true);
   };
 
   const handleFirmaConfirmada = (firmaBase64: string) => {
     setFirmaChoferDiferencia(firmaBase64);
     setShowFirmaDialog(false);
-    handleGuardarRecepcionConFirma(firmaBase64);
+    // Continuar con firma de conformidad del chofer
+    setShowFirmaChoferConformidadDialog(true);
+  };
+
+  const handleFirmaChoferConformidadConfirmada = (firmaBase64: string) => {
+    setFirmaChoferConformidad(firmaBase64);
+    setShowFirmaChoferConformidadDialog(false);
+    // Ahora pedir firma del almacenista
+    setShowFirmaAlmacenistaDialog(true);
+  };
+
+  const handleFirmaAlmacenistaConfirmada = (firmaBase64: string) => {
+    setFirmaAlmacenista(firmaBase64);
+    setShowFirmaAlmacenistaDialog(false);
+    // Guardar con todas las firmas
+    handleGuardarRecepcionCompleta(firmaBase64);
   };
 
   const handleDevolucionCompletada = () => {
@@ -455,15 +521,20 @@ export const AlmacenRecepcionSheet = ({
     if (productosConDiferencia.length > 0 && !firmaChoferDiferencia) {
       setShowFirmaDialog(true);
     } else {
-      handleGuardarRecepcion();
+      // Iniciar flujo de firmas de conformidad
+      setShowFirmaChoferConformidadDialog(true);
     }
   };
 
-  const handleGuardarRecepcion = () => {
-    handleGuardarRecepcionConFirma(firmaChoferDiferencia);
+  const handleGuardarRecepcionCompleta = async (firmaAlmacenistaBase64: string) => {
+    handleGuardarRecepcionConFirmas(firmaChoferDiferencia, firmaChoferConformidad, firmaAlmacenistaBase64);
   };
 
-  const handleGuardarRecepcionConFirma = async (firma: string | null) => {
+  const handleGuardarRecepcionConFirmas = async (
+    firmaDiferencia: string | null,
+    firmaConformidadChofer: string | null,
+    firmaConformidadAlmacenista: string
+  ) => {
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -543,7 +614,7 @@ export const AlmacenRecepcionSheet = ({
         }
       }
 
-      // Actualizar status de la entrega con hora de finalización
+      // Actualizar status de la entrega con TODOS los nuevos campos
       const updateEntrega: any = {
         status: "recibida",
         fecha_entrega_real: new Date().toISOString().split("T")[0],
@@ -552,10 +623,16 @@ export const AlmacenRecepcionSheet = ({
         notas: notas || null,
         trabajando_por: null,
         trabajando_desde: null,
+        // Nuevos campos
+        numero_remision_proveedor: numeroRemisionProveedor.trim(),
+        firma_chofer_conformidad: firmaConformidadChofer,
+        firma_chofer_conformidad_fecha: firmaConformidadChofer ? new Date().toISOString() : null,
+        firma_almacenista: firmaConformidadAlmacenista,
+        firma_almacenista_fecha: new Date().toISOString(),
       };
 
-      if (firma) {
-        updateEntrega.firma_chofer_diferencia = firma;
+      if (firmaDiferencia) {
+        updateEntrega.firma_chofer_diferencia = firmaDiferencia;
         updateEntrega.firma_chofer_diferencia_fecha = new Date().toISOString();
       }
 
@@ -571,6 +648,7 @@ export const AlmacenRecepcionSheet = ({
         notas: `Completó recepción. Tiempo de descarga: ${tiempoDescarga}`
       });
 
+      // Subir evidencias regulares
       for (const evidencia of evidencias) {
         const fileName = `${entrega.orden_compra.id}/${entrega.id}/${Date.now()}-${evidencia.tipo}.jpg`;
         
@@ -580,13 +658,55 @@ export const AlmacenRecepcionSheet = ({
 
         if (!uploadError) {
           await supabase
-            .from("recepciones_evidencias")
+            .from("ordenes_compra_entregas_evidencias" as any)
             .insert({
-              orden_compra_id: entrega.orden_compra.id,
-              orden_compra_entrega_id: entrega.id,
+              entrega_id: entrega.id,
               tipo_evidencia: evidencia.tipo,
+              fase: "recepcion",
               ruta_storage: fileName,
               nombre_archivo: evidencia.file.name,
+              capturado_por: user.id
+            });
+        }
+      }
+
+      // Subir foto de remisión del proveedor
+      if (fotoRemisionProveedor) {
+        const fileNameRemision = `${entrega.orden_compra.id}/${entrega.id}/${Date.now()}-remision_proveedor.jpg`;
+        const { error: uploadErrorRemision } = await supabase.storage
+          .from("recepciones-evidencias")
+          .upload(fileNameRemision, fotoRemisionProveedor.file);
+
+        if (!uploadErrorRemision) {
+          await supabase
+            .from("ordenes_compra_entregas_evidencias" as any)
+            .insert({
+              entrega_id: entrega.id,
+              tipo_evidencia: "remision_proveedor",
+              fase: "recepcion",
+              ruta_storage: fileNameRemision,
+              nombre_archivo: fotoRemisionProveedor.file.name,
+              capturado_por: user.id
+            });
+        }
+      }
+
+      // Subir foto de caja vacía (si existe)
+      if (fotoCajaVacia) {
+        const fileNameCaja = `${entrega.orden_compra.id}/${entrega.id}/${Date.now()}-caja_vacia.jpg`;
+        const { error: uploadErrorCaja } = await supabase.storage
+          .from("recepciones-evidencias")
+          .upload(fileNameCaja, fotoCajaVacia.file);
+
+        if (!uploadErrorCaja) {
+          await supabase
+            .from("ordenes_compra_entregas_evidencias" as any)
+            .insert({
+              entrega_id: entrega.id,
+              tipo_evidencia: "caja_vacia",
+              fase: "recepcion",
+              ruta_storage: fileNameCaja,
+              nombre_archivo: fotoCajaVacia.file.name,
               capturado_por: user.id
             });
         }
@@ -619,7 +739,7 @@ export const AlmacenRecepcionSheet = ({
 
   return (
     <>
-      <Sheet open={open && !showFirmaDialog && !showDevolucionDialog} onOpenChange={onOpenChange}>
+      <Sheet open={open && !showFirmaDialog && !showDevolucionDialog && !showFirmaChoferConformidadDialog && !showFirmaAlmacenistaDialog} onOpenChange={onOpenChange}>
         <SheetContent side="right" className="w-full sm:max-w-xl">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
@@ -761,6 +881,107 @@ export const AlmacenRecepcionSheet = ({
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Documento del Proveedor */}
+                <div className="space-y-3 p-4 border rounded-lg bg-blue-50/50 dark:bg-blue-950/20">
+                  <h3 className="font-medium flex items-center gap-2 text-blue-700 dark:text-blue-400">
+                    <Receipt className="w-4 h-4" />
+                    Documento del Proveedor
+                  </h3>
+                  
+                  <div className="space-y-2">
+                    <Label>Número de remisión *</Label>
+                    <Input
+                      value={numeroRemisionProveedor}
+                      onChange={(e) => setNumeroRemisionProveedor(e.target.value)}
+                      placeholder="Ej: REM-12345"
+                      className={cn(!numeroRemisionProveedor && "border-destructive")}
+                    />
+                    {!numeroRemisionProveedor && (
+                      <span className="text-xs text-destructive">* Campo obligatorio</span>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Foto del documento *</Label>
+                    {fotoRemisionProveedor ? (
+                      <div className="flex items-center gap-3">
+                        <img 
+                          src={fotoRemisionProveedor.preview} 
+                          alt="Remisión proveedor" 
+                          className="h-16 w-20 object-cover rounded border"
+                        />
+                        <span className="text-sm text-muted-foreground flex-1">Documento capturado</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            URL.revokeObjectURL(fotoRemisionProveedor.preview);
+                            setFotoRemisionProveedor(null);
+                          }}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div>
+                        <EvidenciaCapture
+                          tipo="documento"
+                          onCapture={(file, preview) => setFotoRemisionProveedor({ file, preview })}
+                          className={cn(!fotoRemisionProveedor && "border-destructive")}
+                        />
+                        {!fotoRemisionProveedor && (
+                          <span className="text-xs text-destructive">* Foto obligatoria</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Foto de Caja Vacía - Solo si descarga completa */}
+                {esDescargaCompleta() && (
+                  <div className="space-y-3 p-4 border rounded-lg bg-green-50/50 dark:bg-green-950/20">
+                    <h3 className="font-medium flex items-center gap-2 text-green-700 dark:text-green-400">
+                      <PackageOpen className="w-4 h-4" />
+                      Evidencia de Descarga Completa
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Captura foto de la caja vacía del camión para confirmar el vaciado total.
+                    </p>
+                    
+                    {fotoCajaVacia ? (
+                      <div className="flex items-center gap-3">
+                        <img 
+                          src={fotoCajaVacia.preview} 
+                          alt="Caja vacía" 
+                          className="h-16 w-20 object-cover rounded border"
+                        />
+                        <span className="text-sm text-muted-foreground flex-1">Caja vacía verificada</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            URL.revokeObjectURL(fotoCajaVacia.preview);
+                            setFotoCajaVacia(null);
+                          }}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div>
+                        <EvidenciaCapture
+                          tipo="caja_vacia"
+                          onCapture={(file, preview) => setFotoCajaVacia({ file, preview })}
+                          className={cn(!fotoCajaVacia && "border-destructive")}
+                        />
+                        {!fotoCajaVacia && (
+                          <span className="text-xs text-destructive">* Foto obligatoria para descarga completa</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Productos a recibir */}
                 <div>
@@ -986,12 +1207,23 @@ export const AlmacenRecepcionSheet = ({
                   </div>
                 )}
 
-                {/* Indicador de firma requerida */}
+                {/* Indicador de firmas requeridas */}
+                <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
+                    <PenLine className="w-5 h-5" />
+                    <span className="font-medium">Firmas de conformidad requeridas</span>
+                  </div>
+                  <p className="text-sm text-blue-600 dark:text-blue-500 mt-1">
+                    El chofer del proveedor y el almacenista firmarán confirmando la recepción.
+                  </p>
+                </div>
+
+                {/* Indicador adicional si hay diferencias */}
                 {hayDiferencias && (
                   <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
                     <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-                      <PenLine className="w-5 h-5" />
-                      <span className="font-medium">Firma del chofer requerida</span>
+                      <AlertTriangle className="w-5 h-5" />
+                      <span className="font-medium">Hay diferencias en la entrega</span>
                     </div>
                     <p className="text-sm text-amber-600 dark:text-amber-500 mt-1">
                       Hay {totalDiferencias} unidades de diferencia. El chofer firmará confirmando que entregó menos de lo ordenado.
@@ -1008,15 +1240,10 @@ export const AlmacenRecepcionSheet = ({
                 >
                   {saving ? (
                     "Guardando..."
-                  ) : hayDiferencias ? (
-                    <>
-                      <PenLine className="w-5 h-5 mr-2" />
-                      Continuar a firma
-                    </>
                   ) : (
                     <>
-                      <CheckCircle2 className="w-5 h-5 mr-2" />
-                      Confirmar recepción
+                      <PenLine className="w-5 h-5 mr-2" />
+                      Continuar a firmas
                     </>
                   )}
                 </Button>
@@ -1045,6 +1272,24 @@ export const AlmacenRecepcionSheet = ({
         productosDevolucion={getProductosParaDevolucion()}
         nombreChofer={entrega.nombre_chofer_proveedor || ""}
         onDevolucionCompletada={handleDevolucionCompletada}
+      />
+
+      {/* Diálogo de firma de conformidad del chofer */}
+      <FirmaDigitalDialog
+        open={showFirmaChoferConformidadDialog}
+        onOpenChange={setShowFirmaChoferConformidadDialog}
+        onConfirm={handleFirmaChoferConformidadConfirmada}
+        titulo={`Firma de conformidad - ${entrega.nombre_chofer_proveedor || "Chofer del proveedor"}`}
+        loading={saving}
+      />
+
+      {/* Diálogo de firma del almacenista */}
+      <FirmaDigitalDialog
+        open={showFirmaAlmacenistaDialog}
+        onOpenChange={setShowFirmaAlmacenistaDialog}
+        onConfirm={handleFirmaAlmacenistaConfirmada}
+        titulo="Firma del almacenista - Confirmo haber recibido la mercancía"
+        loading={saving}
       />
 
       {/* Diálogo para ver fotos de llegada */}

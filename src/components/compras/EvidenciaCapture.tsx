@@ -1,10 +1,10 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Camera, CreditCard, FileText, Truck, Package, X, Loader2, CalendarDays } from "lucide-react";
+import { Camera, CreditCard, FileText, Truck, Package, X, Loader2, CalendarDays, PackageOpen, Receipt } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { compressImageForUpload, type ImageCompressionProfile } from "@/lib/imageUtils";
 
-export type TipoEvidencia = 'sello' | 'identificacion' | 'documento' | 'vehiculo' | 'placas' | 'caducidad' | 'producto_danado' | 'otro';
+export type TipoEvidencia = 'sello' | 'identificacion' | 'documento' | 'vehiculo' | 'placas' | 'caducidad' | 'producto_danado' | 'caja_vacia' | 'remision_proveedor' | 'otro';
 
 interface EvidenciaCaptureProps {
   tipo: TipoEvidencia;
@@ -21,6 +21,8 @@ const tipoConfig: Record<TipoEvidencia, { label: string; icon: typeof Camera }> 
   placas: { label: "Foto placas/camión", icon: Truck },
   caducidad: { label: "Foto caducidad", icon: CalendarDays },
   producto_danado: { label: "Foto producto dañado", icon: Package },
+  caja_vacia: { label: "Foto caja vacía", icon: PackageOpen },
+  remision_proveedor: { label: "Foto remisión", icon: Receipt },
   otro: { label: "Otra evidencia", icon: Package },
 };
 
@@ -33,6 +35,8 @@ const TIPO_TO_PROFILE: Record<TipoEvidencia, ImageCompressionProfile> = {
   placas: 'ocr', // Placas necesitan OCR
   caducidad: 'ocr', // Fechas necesitan OCR
   producto_danado: 'evidence',
+  caja_vacia: 'evidence',
+  remision_proveedor: 'ocr', // Documento del proveedor puede necesitar OCR
   otro: 'evidence',
 };
 
