@@ -59,7 +59,8 @@ interface ProductoEntrega {
   producto_id: string;
   cantidad_ordenada: number;
   cantidad_recibida: number;
-  precio_unitario_compra: number;
+  // NOTA: precio_unitario_compra REMOVIDO intencionalmente
+  // Los almacenistas NO deben ver precios - se consulta solo al guardar
   producto: {
     id: string;
     codigo: string;
@@ -130,6 +131,8 @@ export const AlmacenRecepcionSheet = ({
   const loadProductos = async () => {
     setLoading(true);
     try {
+      // NOTA: NO consultamos precio_unitario_compra aquí
+      // Los almacenistas no deben ver precios - se consulta solo al guardar
       const { data, error } = await supabase
         .from("ordenes_compra_detalles")
         .select(`
@@ -137,7 +140,6 @@ export const AlmacenRecepcionSheet = ({
           producto_id,
           cantidad_ordenada,
           cantidad_recibida,
-          precio_unitario_compra,
           producto:productos(id, codigo, nombre)
         `)
         .eq("orden_compra_id", entrega.orden_compra.id);
@@ -235,6 +237,16 @@ export const AlmacenRecepcionSheet = ({
               .update({ cantidad_recibida: nuevaCantidadRecibida })
               .eq("id", detalleId);
 
+            // CONSULTAR PRECIO SOLO AL MOMENTO DE GUARDAR
+            // Esto asegura que el precio nunca esté en el estado del componente React
+            const { data: detalleConPrecio } = await supabase
+              .from("ordenes_compra_detalles")
+              .select("precio_unitario_compra")
+              .eq("id", detalleId)
+              .single();
+            
+            const precioCompra = detalleConPrecio?.precio_unitario_compra || 0;
+
             // CREAR LOTE EN INVENTARIO
             const fechaCaducidad = fechasCaducidad[detalleId] || null;
             const { error: loteError } = await supabase
@@ -242,7 +254,7 @@ export const AlmacenRecepcionSheet = ({
               .insert({
                 producto_id: producto.producto_id,
                 cantidad_disponible: cantidad,
-                precio_compra: producto.precio_unitario_compra || 0,
+                precio_compra: precioCompra,
                 fecha_entrada: new Date().toISOString(),
                 fecha_caducidad: fechaCaducidad || null,
                 lote_referencia: loteReferencia,
