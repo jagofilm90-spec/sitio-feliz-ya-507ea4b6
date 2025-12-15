@@ -153,12 +153,12 @@ const PlanificadorRutas = () => {
       if (vehiculosError) throw vehiculosError;
       setVehiculos(vehiculosData || []);
 
-      // Load drivers from empleados table by puesto
+      // Load drivers from empleados table by puesto exacto "Chofer" (no incluye "Ayudante de Chofer")
       const { data: choferesData, error: choferesError } = await supabase
         .from("empleados")
         .select("id, nombre_completo, user_id")
         .eq("activo", true)
-        .or("puesto.ilike.%Chofer%,puesto.ilike.%chofer%")
+        .eq("puesto", "Chofer")
         .order("nombre_completo");
 
       if (!choferesError && choferesData) {
