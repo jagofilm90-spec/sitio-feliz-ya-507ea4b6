@@ -2528,6 +2528,10 @@ export type Database = {
           created_at: string
           fecha_entrega_real: string | null
           fecha_programada: string | null
+          firma_almacenista: string | null
+          firma_almacenista_fecha: string | null
+          firma_chofer_conformidad: string | null
+          firma_chofer_conformidad_fecha: string | null
           firma_chofer_diferencia: string | null
           firma_chofer_diferencia_fecha: string | null
           id: string
@@ -2536,6 +2540,7 @@ export type Database = {
           nombre_chofer_proveedor: string | null
           notas: string | null
           numero_entrega: number
+          numero_remision_proveedor: string | null
           numero_sello_llegada: string | null
           orden_compra_id: string
           placas_vehiculo: string | null
@@ -2551,6 +2556,10 @@ export type Database = {
           created_at?: string
           fecha_entrega_real?: string | null
           fecha_programada?: string | null
+          firma_almacenista?: string | null
+          firma_almacenista_fecha?: string | null
+          firma_chofer_conformidad?: string | null
+          firma_chofer_conformidad_fecha?: string | null
           firma_chofer_diferencia?: string | null
           firma_chofer_diferencia_fecha?: string | null
           id?: string
@@ -2559,6 +2568,7 @@ export type Database = {
           nombre_chofer_proveedor?: string | null
           notas?: string | null
           numero_entrega: number
+          numero_remision_proveedor?: string | null
           numero_sello_llegada?: string | null
           orden_compra_id: string
           placas_vehiculo?: string | null
@@ -2574,6 +2584,10 @@ export type Database = {
           created_at?: string
           fecha_entrega_real?: string | null
           fecha_programada?: string | null
+          firma_almacenista?: string | null
+          firma_almacenista_fecha?: string | null
+          firma_chofer_conformidad?: string | null
+          firma_chofer_conformidad_fecha?: string | null
           firma_chofer_diferencia?: string | null
           firma_chofer_diferencia_fecha?: string | null
           id?: string
@@ -2582,6 +2596,7 @@ export type Database = {
           nombre_chofer_proveedor?: string | null
           notas?: string | null
           numero_entrega?: number
+          numero_remision_proveedor?: string | null
           numero_sello_llegada?: string | null
           orden_compra_id?: string
           placas_vehiculo?: string | null
