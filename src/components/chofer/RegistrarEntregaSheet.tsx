@@ -85,27 +85,48 @@ export function RegistrarEntregaSheet({
     }
   };
 
-  const getCoordinates = (e: React.MouseEvent | React.TouchEvent) => {
+  const getCoordinates = (
+    e: React.PointerEvent | React.TouchEvent | React.MouseEvent
+  ): { x: number; y: number } => {
     if (!canvasRef.current) return { x: 0, y: 0 };
     
     const rect = canvasRef.current.getBoundingClientRect();
     const scaleX = canvasRef.current.width / rect.width;
     const scaleY = canvasRef.current.height / rect.height;
     
-    if ("touches" in e) {
+    // Pointer events (stylus, touch, mouse todos usan esto)
+    if ("pointerId" in e) {
       return {
-        x: (e.touches[0].clientX - rect.left) * scaleX,
-        y: (e.touches[0].clientY - rect.top) * scaleY
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY,
       };
     }
+    
+    // Touch events (fallback)
+    if ("touches" in e) {
+      const touch = e.touches[0];
+      if (!touch) return { x: 0, y: 0 };
+      return {
+        x: (touch.clientX - rect.left) * scaleX,
+        y: (touch.clientY - rect.top) * scaleY
+      };
+    }
+    
+    // Mouse events (fallback)
     return {
       x: (e.clientX - rect.left) * scaleX,
       y: (e.clientY - rect.top) * scaleY
     };
   };
 
-  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+  const startDrawing = (e: React.PointerEvent | React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
+    
+    // Capturar pointer para seguimiento continuo
+    if ("pointerId" in e && canvasRef.current) {
+      canvasRef.current.setPointerCapture(e.pointerId);
+    }
+    
     if (!ctx) return;
     const { x, y } = getCoordinates(e);
     ctx.beginPath();
@@ -113,7 +134,7 @@ export function RegistrarEntregaSheet({
     setIsDrawing(true);
   };
 
-  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+  const draw = (e: React.PointerEvent | React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
     if (!isDrawing || !ctx) return;
     const { x, y } = getCoordinates(e);
@@ -122,8 +143,17 @@ export function RegistrarEntregaSheet({
     setHasFirma(true);
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = (e?: React.PointerEvent | React.TouchEvent | React.MouseEvent) => {
     setIsDrawing(false);
+    
+    // Liberar pointer capture
+    if (e && "pointerId" in e && canvasRef.current) {
+      try {
+        canvasRef.current.releasePointerCapture(e.pointerId);
+      } catch {
+        // Ignorar si ya fue liberado
+      }
+    }
   };
 
   const handleSubmit = async () => {
@@ -319,7 +349,15 @@ export function RegistrarEntregaSheet({
                   ref={canvasRef}
                   width={350}
                   height={150}
-                  className="w-full touch-none"
+                  className="w-full cursor-crosshair"
+                  style={{ touchAction: 'none' }}
+                  // Pointer events (stylus, touch, mouse)
+                  onPointerDown={startDrawing}
+                  onPointerMove={draw}
+                  onPointerUp={stopDrawing}
+                  onPointerLeave={stopDrawing}
+                  onPointerCancel={stopDrawing}
+                  // Fallback para dispositivos sin Pointer API
                   onMouseDown={startDrawing}
                   onMouseMove={draw}
                   onMouseUp={stopDrawing}
