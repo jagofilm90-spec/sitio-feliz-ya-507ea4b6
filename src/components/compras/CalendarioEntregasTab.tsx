@@ -396,7 +396,7 @@ const CalendarioEntregasTab = () => {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
-                              {entrega.status === "recibida" && entrega.esMultiple && (
+                              {entrega.status === "recibida" && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -480,7 +480,7 @@ const CalendarioEntregasTab = () => {
                   <p className="text-sm font-medium mt-1">{entrega.cantidadBultos.toLocaleString()} bultos</p>
                 )}
                 <div className="flex gap-2 mt-3">
-                  {entrega.status === "recibida" && entrega.esMultiple && (
+                  {entrega.status === "recibida" && (
                     <Button
                       variant="outline"
                       size="sm"
