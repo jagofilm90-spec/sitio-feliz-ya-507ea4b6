@@ -156,12 +156,12 @@ export const FirmaDigitalDialog = ({
             Dibuja tu firma para confirmar que la carga está completa
           </p>
 
-          <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg overflow-hidden bg-white">
+          <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg overflow-hidden bg-white pointer-events-auto">
             <canvas
               ref={canvasRef}
               width={400}
               height={200}
-              className="w-full cursor-crosshair"
+              className="w-full cursor-crosshair pointer-events-auto"
               style={{ touchAction: 'none' }}
               // Pointer events (stylus, touch, mouse)
               onPointerDown={startDrawing}
