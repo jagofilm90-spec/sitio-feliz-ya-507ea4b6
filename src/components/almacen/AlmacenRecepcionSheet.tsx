@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +10,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,6 +51,10 @@ import {
   PenLine,
   Clock,
   Timer,
+  Shield,
+  ShieldAlert,
+  Eye,
+  User,
 } from "lucide-react";
 import { EvidenciaCapture, EvidenciasPreviewGrid } from "@/components/compras/EvidenciaCapture";
 import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
@@ -73,6 +83,9 @@ interface EntregaCompra {
   llegada_registrada_en: string | null;
   nombre_chofer_proveedor: string | null;
   placas_vehiculo: string | null;
+  numero_sello_llegada: string | null;
+  llegada_registrada_por: string | null;
+  llegada_registrada_por_profile?: { id: string; full_name: string } | null;
   orden_compra: {
     id: string;
     folio: string;
@@ -83,6 +96,13 @@ interface EntregaCompra {
       nombre: string;
     } | null;
   };
+}
+
+interface FotoLlegada {
+  id: string;
+  tipo_evidencia: string;
+  ruta_storage: string;
+  url?: string;
 }
 
 interface ProductoEntrega {
@@ -139,6 +159,12 @@ export const AlmacenRecepcionSheet = ({
   
   // Timer para tiempo de descarga
   const [tiempoDescarga, setTiempoDescarga] = useState<string>("");
+  const [minutosDescarga, setMinutosDescarga] = useState<number>(0);
+  
+  // Fotos de llegada
+  const [fotosLlegada, setFotosLlegada] = useState<FotoLlegada[]>([]);
+  const [showFotosLlegadaDialog, setShowFotosLlegadaDialog] = useState(false);
+  const [loadingFotos, setLoadingFotos] = useState(false);
   
   // Estados para firma y devolución
   const [showFirmaDialog, setShowFirmaDialog] = useState(false);
@@ -147,14 +173,27 @@ export const AlmacenRecepcionSheet = ({
   
   const { toast } = useToast();
 
-  // Timer effect - actualizar cada minuto
+  // Función para formatear tiempo exacto "2h 34min"
+  const formatTiempoExacto = (fechaInicio: Date): string => {
+    const minutos = differenceInMinutes(new Date(), fechaInicio);
+    if (minutos < 60) {
+      return `${minutos}min`;
+    }
+    const horas = Math.floor(minutos / 60);
+    const mins = minutos % 60;
+    return mins > 0 ? `${horas}h ${mins}min` : `${horas}h`;
+  };
+
+  // Timer effect - actualizar cada minuto con formato exacto
   useEffect(() => {
     if (!open || !entrega?.llegada_registrada_en) return;
     
     const updateTimer = () => {
       const llegada = new Date(entrega.llegada_registrada_en!);
-      const tiempo = formatDistanceToNow(llegada, { locale: es, addSuffix: false });
+      const tiempo = formatTiempoExacto(llegada);
+      const mins = differenceInMinutes(new Date(), llegada);
       setTiempoDescarga(tiempo);
+      setMinutosDescarga(mins);
     };
     
     updateTimer();
@@ -167,6 +206,7 @@ export const AlmacenRecepcionSheet = ({
     if (open && entrega) {
       loadProductos();
       loadBodegas();
+      loadFotosLlegada();
     }
   }, [open, entrega]);
 
@@ -181,6 +221,41 @@ export const AlmacenRecepcionSheet = ({
       setBodegas(data);
       const bodega1 = data.find(b => b.nombre === "Bodega 1");
       if (bodega1) setBodegaSeleccionada(bodega1.id);
+    }
+  };
+
+  const loadFotosLlegada = async () => {
+    if (!entrega?.id) return;
+    setLoadingFotos(true);
+    try {
+      const { data: evidencias, error } = await supabase
+        .from("ordenes_compra_entregas_evidencias" as any)
+        .select("id, tipo_evidencia, ruta_storage")
+        .eq("orden_compra_entrega_id", entrega.id)
+        .eq("fase", "llegada");
+      
+      if (error) throw error;
+      
+      // Obtener URLs firmadas para las fotos
+      const fotosConUrl: FotoLlegada[] = [];
+      for (const evidencia of (evidencias as any[]) || []) {
+        const { data: signedData } = await supabase.storage
+          .from("recepciones-evidencias")
+          .createSignedUrl(evidencia.ruta_storage, 3600);
+        
+        fotosConUrl.push({
+          id: evidencia.id,
+          tipo_evidencia: evidencia.tipo_evidencia,
+          ruta_storage: evidencia.ruta_storage,
+          url: signedData?.signedUrl || undefined
+        });
+      }
+      
+      setFotosLlegada(fotosConUrl);
+    } catch (error) {
+      console.error("Error cargando fotos de llegada:", error);
+    } finally {
+      setLoadingFotos(false);
     }
   };
 
@@ -566,10 +641,23 @@ export const AlmacenRecepcionSheet = ({
             ) : (
               <div className="space-y-6">
                 {/* Info de llegada - datos ya capturados en Fase 1 */}
-                <div className="p-3 bg-muted/50 border rounded-lg space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Clock className="w-4 h-4" />
-                    Datos de llegada (Fase 1)
+                <div className="p-3 bg-muted/50 border rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Clock className="w-4 h-4" />
+                      Datos de llegada (Fase 1)
+                    </div>
+                    {fotosLlegada.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowFotosLlegadaDialog(true)}
+                        className="gap-1"
+                      >
+                        <Eye className="w-4 h-4" />
+                        Ver fotos ({fotosLlegada.length})
+                      </Button>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
@@ -581,11 +669,40 @@ export const AlmacenRecepcionSheet = ({
                       <span className="font-medium">{entrega.placas_vehiculo || "-"}</span>
                     </div>
                     {entrega.llegada_registrada_en && (
-                      <div className="col-span-2">
+                      <div>
                         <span className="text-muted-foreground">Llegó:</span>{" "}
                         <span className="font-medium">
                           {format(new Date(entrega.llegada_registrada_en), "HH:mm 'del' dd/MM", { locale: es })}
                         </span>
+                      </div>
+                    )}
+                    {entrega.llegada_registrada_por_profile && (
+                      <div>
+                        <span className="text-muted-foreground">Registró:</span>{" "}
+                        <span className="font-medium flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          {entrega.llegada_registrada_por_profile.full_name}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Status de sellos */}
+                  <div className="pt-2 border-t">
+                    {entrega.numero_sello_llegada === "SIN SELLOS - FIRMADO" ? (
+                      <div className="flex items-center gap-2 text-amber-600">
+                        <ShieldAlert className="w-4 h-4" />
+                        <span className="text-sm font-medium">Sin sellos - Chofer firmó responsiva</span>
+                      </div>
+                    ) : entrega.numero_sello_llegada ? (
+                      <div className="flex items-center gap-2 text-green-600">
+                        <Shield className="w-4 h-4" />
+                        <span className="text-sm font-medium">Sellos verificados: {entrega.numero_sello_llegada}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Shield className="w-4 h-4" />
+                        <span className="text-sm">Sin información de sellos</span>
                       </div>
                     )}
                   </div>
@@ -593,15 +710,34 @@ export const AlmacenRecepcionSheet = ({
 
                 {/* Timer de tiempo de descarga */}
                 {entrega.llegada_registrada_en && (
-                  <div className="p-4 bg-primary/10 border border-primary/30 rounded-lg">
+                  <div className={cn(
+                    "p-4 border rounded-lg",
+                    minutosDescarga > 180 
+                      ? "bg-amber-100 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800" 
+                      : "bg-primary/10 border-primary/30"
+                  )}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Timer className="w-5 h-5 text-primary" />
+                        <Timer className={cn(
+                          "w-5 h-5",
+                          minutosDescarga > 180 ? "text-amber-600" : "text-primary"
+                        )} />
                         <span className="font-medium">Tiempo de descarga</span>
                       </div>
-                      <Badge variant="secondary" className="text-lg font-mono">
-                        {tiempoDescarga || "calculando..."}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          variant={minutosDescarga > 180 ? "destructive" : "secondary"} 
+                          className="text-lg font-mono"
+                        >
+                          {tiempoDescarga || "calculando..."}
+                        </Badge>
+                        {minutosDescarga > 180 && (
+                          <Badge variant="outline" className="text-amber-600 border-amber-400">
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                            Excedido
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -910,6 +1046,57 @@ export const AlmacenRecepcionSheet = ({
         nombreChofer={entrega.nombre_chofer_proveedor || ""}
         onDevolucionCompletada={handleDevolucionCompletada}
       />
+
+      {/* Diálogo para ver fotos de llegada */}
+      <Dialog open={showFotosLlegadaDialog} onOpenChange={setShowFotosLlegadaDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Camera className="w-5 h-5" />
+              Fotos de llegada (Fase 1)
+            </DialogTitle>
+          </DialogHeader>
+          
+          {loadingFotos ? (
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 w-full rounded-lg" />)}
+            </div>
+          ) : fotosLlegada.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              No hay fotos de llegada registradas
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {fotosLlegada.map((foto) => (
+                <div key={foto.id} className="space-y-1">
+                  <div className="relative aspect-[4/3] overflow-hidden rounded-lg border bg-muted">
+                    {foto.url ? (
+                      <img
+                        src={foto.url}
+                        alt={foto.tipo_evidencia}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        <Camera className="w-8 h-8" />
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-center text-muted-foreground capitalize">
+                    {foto.tipo_evidencia.replace(/_/g, " ")}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <div className="flex justify-end pt-2">
+            <Button variant="outline" onClick={() => setShowFotosLlegadaDialog(false)}>
+              Cerrar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
