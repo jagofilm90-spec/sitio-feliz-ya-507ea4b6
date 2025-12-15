@@ -312,6 +312,7 @@ export const AlmacenRecepcionSheet = ({
                 lote_referencia: loteReferencia,
                 orden_compra_id: entrega.orden_compra.id,
                 bodega_id: bodegaSeleccionada,
+                recibido_por: user.id,
                 notas: `Recibido de ${entrega.orden_compra.proveedor?.nombre || 'proveedor'} por ${nombreEntrega}`
               });
 
@@ -342,6 +343,7 @@ export const AlmacenRecepcionSheet = ({
         .update({
           status: "recibida",
           fecha_entrega_real: new Date().toISOString().split("T")[0],
+          recibido_por: user.id,
           notas: `Recibido por: ${nombreEntrega}${numeroSello ? `. Sello: ${numeroSello}` : ""}${notas ? `. ${notas}` : ""}`
         })
         .eq("id", entrega.id);
