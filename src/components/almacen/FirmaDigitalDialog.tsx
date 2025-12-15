@@ -51,7 +51,7 @@ export const FirmaDigitalDialog = ({
   }, [open]);
 
   const getCoordinates = (
-    e: React.TouchEvent | React.MouseEvent
+    e: React.PointerEvent | React.TouchEvent | React.MouseEvent
   ): { x: number; y: number } | null => {
     if (!canvasRef.current) return null;
 
@@ -60,22 +60,39 @@ export const FirmaDigitalDialog = ({
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
 
-    if ("touches" in e) {
-      const touch = e.touches[0];
-      return {
-        x: (touch.clientX - rect.left) * scaleX,
-        y: (touch.clientY - rect.top) * scaleY,
-      };
-    } else {
+    // Pointer events (stylus, touch, mouse todos usan esto)
+    if ("pointerId" in e) {
       return {
         x: (e.clientX - rect.left) * scaleX,
         y: (e.clientY - rect.top) * scaleY,
       };
     }
+
+    // Touch events (fallback)
+    if ("touches" in e) {
+      const touch = e.touches[0];
+      if (!touch) return null;
+      return {
+        x: (touch.clientX - rect.left) * scaleX,
+        y: (touch.clientY - rect.top) * scaleY,
+      };
+    }
+
+    // Mouse events (fallback)
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
   };
 
-  const startDrawing = (e: React.TouchEvent | React.MouseEvent) => {
+  const startDrawing = (e: React.PointerEvent | React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
+    
+    // Capturar pointer para seguimiento continuo del stylus
+    if ("pointerId" in e && canvasRef.current) {
+      canvasRef.current.setPointerCapture(e.pointerId);
+    }
+    
     const coords = getCoordinates(e);
     if (!coords || !context) return;
 
@@ -84,7 +101,7 @@ export const FirmaDigitalDialog = ({
     context.moveTo(coords.x, coords.y);
   };
 
-  const draw = (e: React.TouchEvent | React.MouseEvent) => {
+  const draw = (e: React.PointerEvent | React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
     if (!isDrawing || !context) return;
 
@@ -96,8 +113,18 @@ export const FirmaDigitalDialog = ({
     setHasSignature(true);
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = (e?: React.PointerEvent | React.TouchEvent | React.MouseEvent) => {
     setIsDrawing(false);
+    
+    // Liberar pointer capture
+    if (e && "pointerId" in e && canvasRef.current) {
+      try {
+        canvasRef.current.releasePointerCapture(e.pointerId);
+      } catch {
+        // Ignorar si ya fue liberado
+      }
+    }
+    
     if (context) {
       context.closePath();
     }
@@ -134,7 +161,15 @@ export const FirmaDigitalDialog = ({
               ref={canvasRef}
               width={400}
               height={200}
-              className="w-full touch-none cursor-crosshair"
+              className="w-full cursor-crosshair"
+              style={{ touchAction: 'none' }}
+              // Pointer events (stylus, touch, mouse)
+              onPointerDown={startDrawing}
+              onPointerMove={draw}
+              onPointerUp={stopDrawing}
+              onPointerLeave={stopDrawing}
+              onPointerCancel={stopDrawing}
+              // Fallback para dispositivos sin Pointer API
               onMouseDown={startDrawing}
               onMouseMove={draw}
               onMouseUp={stopDrawing}
