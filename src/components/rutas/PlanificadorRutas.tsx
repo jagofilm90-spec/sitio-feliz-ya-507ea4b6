@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Truck, Package, AlertTriangle, Check, X, MapPin, Calendar, User, Sparkles, Search, Filter, Globe, Home } from "lucide-react";
+import { Plus, Truck, Package, AlertTriangle, Check, X, MapPin, Calendar, User, Sparkles, Search, Filter, Globe, Home, Eye } from "lucide-react";
 import { SugerirRutasAIDialog } from "./SugerirRutasAIDialog";
 import { PedidoPreviewPopover } from "./PedidoPreviewPopover";
 import { AyudantesMultiSelect } from "./AyudantesMultiSelect";
@@ -64,13 +64,21 @@ interface Pedido {
     direccion: string | null;
     zona: { id: string; nombre: string; es_foranea: boolean; region: string | null } | null;
   };
-  sucursal: { nombre: string } | null;
+  sucursal: { 
+    nombre: string;
+    zona: { id: string; nombre: string; es_foranea: boolean; region: string | null } | null;
+  } | null;
   total: number;
   peso_total_kg: number;
   fecha_pedido: string;
   fecha_entrega_estimada: string | null;
   prioridad_entrega: string | null;
 }
+
+// Helper to get effective delivery zone (sucursal zone > cliente zone)
+const getZonaEntrega = (pedido: Pedido) => {
+  return pedido.sucursal?.zona || pedido.cliente.zona;
+};
 
 interface PedidoSeleccionado extends Pedido {
   orden: number;
@@ -174,7 +182,7 @@ const PlanificadorRutas = () => {
         setAlmacenistas(almacenistasData);
       }
 
-      // Load pending orders with sucursal and zone info
+      // Load pending orders with sucursal zone info (priority) and client zone as fallback
       const { data: pedidosData, error: pedidosError } = await supabase
         .from("pedidos")
         .select(`
@@ -185,7 +193,10 @@ const PlanificadorRutas = () => {
           fecha_pedido,
           fecha_entrega_estimada,
           prioridad_entrega,
-          sucursal:sucursal_id (nombre),
+          sucursal:sucursal_id (
+            nombre,
+            zona:zona_id (id, nombre, es_foranea, region)
+          ),
           cliente:cliente_id (
             nombre,
             direccion,
@@ -239,21 +250,24 @@ const PlanificadorRutas = () => {
   const porcentajeCapacidad = capacidadMaxima > 0 ? (pesoTotal / capacidadMaxima) * 100 : 0;
   const excedido = pesoTotal > capacidadMaxima;
 
-  // Check zone consistency and auto-detect route type
+  // Check zone consistency and auto-detect route type using effective delivery zone
   const zonasUnicas = [...new Set(pedidosSeleccionados
-    .map(p => p.cliente.zona?.nombre)
+    .map(p => getZonaEntrega(p)?.nombre)
     .filter(Boolean))];
   const zonasMultiples = zonasUnicas.length > 1;
 
   const agregarPedido = (pedido: Pedido) => {
     if (pedidosSeleccionados.some(p => p.id === pedido.id)) return;
     
-    // Auto-detect foranea if any order has es_foranea zone
-    if (pedido.cliente.zona?.es_foranea && tipoRuta === "local") {
+    // Use sucursal zone if available, otherwise client zone
+    const zonaEntrega = getZonaEntrega(pedido);
+    
+    // Auto-detect foranea if delivery zone is foranea
+    if (zonaEntrega?.es_foranea && tipoRuta === "local") {
       setTipoRuta("foranea");
       toast({
-        title: "Tipo de ruta actualizado",
-        description: `Se detectó zona foránea (${pedido.cliente.zona.nombre}). Tipo cambiado a Foránea.`,
+        title: "Tipo de ruta actualizado automáticamente",
+        description: `Zona de entrega "${zonaEntrega.nombre}" es foránea.`,
       });
     }
     
@@ -269,8 +283,8 @@ const PlanificadorRutas = () => {
       .map((p, idx) => ({ ...p, orden: idx + 1 }));
     setPedidosSeleccionados(nuevos);
     
-    // Re-evaluate route type if no foranea zones remain
-    const remainingForanea = nuevos.some(p => p.cliente.zona?.es_foranea);
+    // Re-evaluate route type if no foranea zones remain (using effective delivery zone)
+    const remainingForanea = nuevos.some(p => getZonaEntrega(p)?.es_foranea);
     if (!remainingForanea && tipoRuta === "foranea") {
       setTipoRuta("local");
     }
@@ -412,28 +426,30 @@ const PlanificadorRutas = () => {
         if (!matchesFolio && !matchesCliente && !matchesSucursal) return false;
       }
       
-      // Type filter
-      if (filterTipo === "local" && p.cliente.zona?.es_foranea) return false;
-      if (filterTipo === "foranea" && !p.cliente.zona?.es_foranea) return false;
+      // Type filter using effective delivery zone
+      const zona = getZonaEntrega(p);
+      if (filterTipo === "local" && zona?.es_foranea) return false;
+      if (filterTipo === "foranea" && !zona?.es_foranea) return false;
       
       return true;
     });
   }, [pedidosPendientes, pedidosSeleccionados, searchTerm, filterTipo]);
 
-  // Group by region
+  // Group by region using effective delivery zone
   const pedidosAgrupados = useMemo(() => {
     const groups: Record<string, Pedido[]> = {};
     
     pedidosDisponibles.forEach(pedido => {
-      const region = pedido.cliente.zona?.region || "otro";
+      const zona = getZonaEntrega(pedido);
+      const region = zona?.region || "otro";
       if (!groups[region]) groups[region] = [];
       groups[region].push(pedido);
     });
     
     // Sort regions: foranea regions at end
     const sortedKeys = Object.keys(groups).sort((a, b) => {
-      const aForanea = groups[a].some(p => p.cliente.zona?.es_foranea);
-      const bForanea = groups[b].some(p => p.cliente.zona?.es_foranea);
+      const aForanea = groups[a].some(p => getZonaEntrega(p)?.es_foranea);
+      const bForanea = groups[b].some(p => getZonaEntrega(p)?.es_foranea);
       if (aForanea && !bForanea) return 1;
       if (!aForanea && bForanea) return -1;
       return a.localeCompare(b);
@@ -444,7 +460,7 @@ const PlanificadorRutas = () => {
 
   const getRegionStats = (pedidos: Pedido[]) => {
     const totalPeso = pedidos.reduce((sum, p) => sum + (p.peso_total_kg || 0), 0);
-    const esForanea = pedidos.some(p => p.cliente.zona?.es_foranea);
+    const esForanea = pedidos.some(p => getZonaEntrega(p)?.es_foranea);
     return { count: pedidos.length, peso: totalPeso, esForanea };
   };
 
@@ -788,35 +804,58 @@ const PlanificadorRutas = () => {
                           </AccordionTrigger>
                           <AccordionContent className="pb-0">
                             <div className="divide-y">
-                              {pedidos.map((pedido) => (
-                                <div
-                                  key={pedido.id}
-                                  className="px-3 py-2 hover:bg-muted/50 cursor-pointer"
-                                  onClick={() => agregarPedido(pedido)}
-                                >
-                                  <div className="flex justify-between items-start">
-                                    <div className="flex-1 min-w-0">
-                                      <PedidoPreviewPopover pedidoId={pedido.id} folio={pedido.folio}>
-                                        <div className="flex items-center gap-2">
-                                          <Package className="h-4 w-4 text-muted-foreground shrink-0" />
-                                          <span className="font-medium">{pedido.folio}</span>
-                                          {getPrioridadBadge(pedido.prioridad_entrega)}
-                                        </div>
-                                      </PedidoPreviewPopover>
-                                      <p className="text-sm mt-1 truncate">
+                              {pedidos.map((pedido) => {
+                                const zonaEntrega = getZonaEntrega(pedido);
+                                return (
+                                  <div
+                                    key={pedido.id}
+                                    className="px-3 py-2 hover:bg-muted/50 flex items-center gap-2"
+                                  >
+                                    {/* Visible eye button for product preview */}
+                                    <PedidoPreviewPopover pedidoId={pedido.id} folio={pedido.folio}>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-7 w-7 shrink-0"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <Eye className="h-4 w-4 text-muted-foreground" />
+                                      </Button>
+                                    </PedidoPreviewPopover>
+                                    
+                                    {/* Clickable area to add order */}
+                                    <div
+                                      className="flex-1 min-w-0 cursor-pointer"
+                                      onClick={() => agregarPedido(pedido)}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium">{pedido.folio}</span>
+                                        {getPrioridadBadge(pedido.prioridad_entrega)}
+                                        {zonaEntrega?.es_foranea && (
+                                          <Badge variant="outline" className="text-xs border-orange-500 text-orange-600">
+                                            <Globe className="h-3 w-3" />
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <p className="text-sm truncate">
                                         {pedido.cliente.nombre}
                                         {pedido.sucursal?.nombre && (
                                           <span className="text-muted-foreground"> - {pedido.sucursal.nombre}</span>
                                         )}
                                       </p>
-                                      {pedido.cliente.zona && (
+                                      {zonaEntrega && (
                                         <Badge variant="secondary" className="mt-1 text-xs">
                                           <MapPin className="h-3 w-3 mr-1" />
-                                          {pedido.cliente.zona.nombre}
+                                          {zonaEntrega.nombre}
                                         </Badge>
                                       )}
                                     </div>
-                                    <div className="text-right shrink-0 ml-2">
+                                    
+                                    {/* Weight and total */}
+                                    <div 
+                                      className="text-right shrink-0 cursor-pointer"
+                                      onClick={() => agregarPedido(pedido)}
+                                    >
                                       <p className="text-sm font-medium">
                                         {formatKg(pedido.peso_total_kg)} kg
                                       </p>
@@ -825,8 +864,8 @@ const PlanificadorRutas = () => {
                                       </p>
                                     </div>
                                   </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </AccordionContent>
                         </AccordionItem>
