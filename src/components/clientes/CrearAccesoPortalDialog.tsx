@@ -12,6 +12,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Eye, EyeOff, Copy, Check } from "lucide-react";
+import { validateStrongPassword, generateSecurePassword } from "@/lib/utils";
 
 interface CrearAccesoPortalDialogProps {
   open: boolean;
@@ -37,22 +38,21 @@ export function CrearAccesoPortalDialog({
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
-  // Generate random password
-  const generatePassword = () => {
-    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    let pass = "";
-    for (let i = 0; i < 10; i++) {
-      pass += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setPassword(pass);
+  // Generate secure password
+  const handleGeneratePassword = () => {
+    setPassword(generateSecurePassword(14));
     setShowPassword(true);
   };
+
+  // Get password validation status
+  const passwordValidation = password ? validateStrongPassword(password) : { valid: false, errors: [] };
 
   // Reset form when dialog opens
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen && cliente) {
       setEmail(cliente.email || "");
-      generatePassword();
+      setPassword(generateSecurePassword(14));
+      setShowPassword(true);
       setCopied(false);
     }
     onOpenChange(newOpen);
@@ -72,6 +72,16 @@ export function CrearAccesoPortalDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cliente || !email || !password) return;
+
+    // Validar contraseña fuerte
+    if (!passwordValidation.valid) {
+      toast({
+        title: "Contraseña débil",
+        description: passwordValidation.errors.join(", "),
+        variant: "destructive",
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -144,9 +154,10 @@ export function CrearAccesoPortalDialog({
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Contraseña"
+                  placeholder="Contraseña segura"
                   required
-                  minLength={6}
+                  minLength={12}
+                  className={password && !passwordValidation.valid ? "border-destructive" : ""}
                 />
                 <Button
                   type="button"
@@ -158,10 +169,15 @@ export function CrearAccesoPortalDialog({
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
-              <Button type="button" variant="outline" onClick={generatePassword}>
+              <Button type="button" variant="outline" onClick={handleGeneratePassword}>
                 Generar
               </Button>
             </div>
+            {password && !passwordValidation.valid && (
+              <p className="text-xs text-destructive mt-1">
+                {passwordValidation.errors.join(" • ")}
+              </p>
+            )}
           </div>
 
           <div className="bg-muted p-3 rounded-lg">

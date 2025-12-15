@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { User, Key, Copy, RefreshCw, Check, Eye, EyeOff, UserPlus, Loader2, UserMinus } from "lucide-react";
+import { validateStrongPassword, generateSecurePassword } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,14 +43,9 @@ export function ClienteUsuarioTab({ cliente, onUserCreated }: ClienteUsuarioTabP
   const [newPassword, setNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
 
-  const generatePassword = () => {
-    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
-    let pwd = "";
-    for (let i = 0; i < 10; i++) {
-      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return pwd;
-  };
+  // Get validation for current passwords
+  const passwordValidation = password ? validateStrongPassword(password) : { valid: false, errors: [] };
+  const newPasswordValidation = newPassword ? validateStrongPassword(newPassword) : { valid: false, errors: [] };
 
   const handleCopyCredentials = async (emailToCopy: string, passwordToCopy: string) => {
     const credentials = `Email: ${emailToCopy}\nContraseña: ${passwordToCopy}`;
@@ -64,6 +60,16 @@ export function ClienteUsuarioTab({ cliente, onUserCreated }: ClienteUsuarioTabP
       toast({
         title: "Error",
         description: "Email y contraseña son requeridos",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validar contraseña fuerte
+    if (!passwordValidation.valid) {
+      toast({
+        title: "Contraseña débil",
+        description: passwordValidation.errors.join(", "),
         variant: "destructive",
       });
       return;
@@ -101,10 +107,13 @@ export function ClienteUsuarioTab({ cliente, onUserCreated }: ClienteUsuarioTabP
   };
 
   const handleResetPassword = async () => {
-    if (!newPassword || newPassword.length < 6) {
+    // Validar contraseña fuerte
+    if (!newPassword || !newPasswordValidation.valid) {
       toast({
-        title: "Error",
-        description: "La contraseña debe tener al menos 6 caracteres",
+        title: "Contraseña débil",
+        description: newPasswordValidation.errors.length > 0 
+          ? newPasswordValidation.errors.join(", ") 
+          : "Ingresa una contraseña",
         variant: "destructive",
       });
       return;
@@ -226,7 +235,7 @@ export function ClienteUsuarioTab({ cliente, onUserCreated }: ClienteUsuarioTabP
                 variant="ghost"
                 size="sm"
                 className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                onClick={() => setNewPassword(generatePassword())}
+                onClick={() => setNewPassword(generateSecurePassword(14))}
                 title="Generar contraseña"
               >
                 <RefreshCw className="h-4 w-4" />
@@ -234,11 +243,16 @@ export function ClienteUsuarioTab({ cliente, onUserCreated }: ClienteUsuarioTabP
             </div>
             <Button
               onClick={handleResetPassword}
-              disabled={loading || !newPassword}
+              disabled={loading || !newPassword || !newPasswordValidation.valid}
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Actualizar"}
             </Button>
           </div>
+          {newPassword && !newPasswordValidation.valid && (
+            <p className="text-xs text-destructive">
+              {newPasswordValidation.errors.join(" • ")}
+            </p>
+          )}
 
           {newPassword && (
             <Button
@@ -349,11 +363,16 @@ export function ClienteUsuarioTab({ cliente, onUserCreated }: ClienteUsuarioTabP
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setPassword(generatePassword())}
+                onClick={() => setPassword(generateSecurePassword(14))}
               >
                 <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
+            {password && !passwordValidation.valid && (
+              <p className="text-xs text-destructive">
+                {passwordValidation.errors.join(" • ")}
+              </p>
+            )}
           </div>
 
           {email && password && (
@@ -370,7 +389,7 @@ export function ClienteUsuarioTab({ cliente, onUserCreated }: ClienteUsuarioTabP
 
           <Button
             onClick={handleCreateUser}
-            disabled={loading || !email || !password}
+            disabled={loading || !email || !password || !passwordValidation.valid}
             className="w-full"
           >
             {loading ? (
