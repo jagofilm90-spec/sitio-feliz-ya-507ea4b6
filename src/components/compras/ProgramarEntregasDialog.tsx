@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { format } from "date-fns";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -245,11 +246,7 @@ const ProgramarEntregasDialog = ({ open, onOpenChange, orden }: ProgramarEntrega
                           {entrega.cantidad_bultos?.toLocaleString()} bultos
                         </span>
                         <span className="text-sm font-medium">
-                          {new Date(entrega.fecha_programada).toLocaleDateString("es-MX", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric"
-                          })}
+                          {format(new Date(entrega.fecha_programada), "dd/MM/yyyy")}
                         </span>
                       </div>
                     ))}
