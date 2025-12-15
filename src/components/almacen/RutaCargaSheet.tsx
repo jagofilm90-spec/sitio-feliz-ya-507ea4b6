@@ -84,7 +84,7 @@ interface ProductoCarga {
     id: string;
     codigo: string;
     nombre: string;
-    unidad_comercial: string;
+    unidad: string;
   };
   lotes_disponibles: LoteDisponible[];
 }
@@ -203,11 +203,11 @@ export const RutaCargaSheet = ({
             .from("pedidos_detalles")
             .select(`
               es_cortesia,
-              producto:productos(
+            producto:productos(
                 id,
                 codigo,
                 nombre,
-                unidad_comercial
+                unidad
               )
             `)
             .eq("id", cp.pedido_detalle_id)
@@ -233,7 +233,7 @@ export const RutaCargaSheet = ({
               id: "",
               codigo: "N/A",
               nombre: "Producto no encontrado",
-              unidad_comercial: "unidad",
+              unidad: "unidad",
             },
             lotes_disponibles: lotes || [],
           });

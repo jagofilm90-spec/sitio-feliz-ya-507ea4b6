@@ -37,7 +37,7 @@ interface ProductoCarga {
     id: string;
     codigo: string;
     nombre: string;
-    unidad_comercial: string;
+    unidad: string;
   };
   lotes_disponibles: LoteDisponible[];
 }
@@ -146,7 +146,7 @@ const ProductoItem = ({
             <div className="flex items-center gap-2">
               {isCortesia && <Gift className="w-4 h-4 text-amber-600" />}
               <span className="font-medium text-base">
-                {producto.cantidad_solicitada} {producto.producto.unidad_comercial}
+                {producto.cantidad_solicitada} {producto.producto.unidad}
               </span>
               <span className="text-sm text-muted-foreground">
                 {producto.producto.codigo}

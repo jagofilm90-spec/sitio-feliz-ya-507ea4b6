@@ -11,8 +11,9 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, List, MoreVertical, Truck, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { Calendar as CalendarIcon, List, MoreVertical, Truck, ChevronLeft, ChevronRight, RotateCcw, Eye } from "lucide-react";
 import OrdenAccionesDialog from "./OrdenAccionesDialog";
+import { RecepcionDetalleDialog } from "./RecepcionDetalleDialog";
 import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
@@ -26,6 +27,8 @@ const CalendarioEntregasTab = () => {
   const [mesActual, setMesActual] = useState(new Date());
   const [diaSeleccionado, setDiaSeleccionado] = useState<Date | null>(null);
   const [dialogDiaOpen, setDialogDiaOpen] = useState(false);
+  const [recepcionDetalleId, setRecepcionDetalleId] = useState<string | null>(null);
+  const [recepcionDialogOpen, setRecepcionDialogOpen] = useState(false);
 
   // Fetch scheduled deliveries from ordenes_compra_entregas
   const { data: entregasProgramadas = [] } = useQuery({
@@ -392,16 +395,31 @@ const CalendarioEntregasTab = () => {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setOrdenSeleccionada(entrega.orden);
-                                setAccionesDialogOpen(true);
-                              }}
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              {entrega.status === "recibida" && entrega.esMultiple && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setRecepcionDetalleId(entrega.id);
+                                    setRecepcionDialogOpen(true);
+                                  }}
+                                  title="Ver detalle de recepción"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setOrdenSeleccionada(entrega.orden);
+                                  setAccionesDialogOpen(true);
+                                }}
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -426,12 +444,7 @@ const CalendarioEntregasTab = () => {
             {entregasDelDiaSeleccionado.map((entrega) => (
               <div
                 key={entrega.id}
-                className="p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
-                onClick={() => {
-                  setOrdenSeleccionada(entrega.orden);
-                  setAccionesDialogOpen(true);
-                  setDialogDiaOpen(false);
-                }}
+                className="p-4 border rounded-lg hover:bg-accent/50 transition-colors"
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -466,6 +479,35 @@ const CalendarioEntregasTab = () => {
                 {entrega.cantidadBultos && (
                   <p className="text-sm font-medium mt-1">{entrega.cantidadBultos.toLocaleString()} bultos</p>
                 )}
+                <div className="flex gap-2 mt-3">
+                  {entrega.status === "recibida" && entrega.esMultiple && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRecepcionDetalleId(entrega.id);
+                        setRecepcionDialogOpen(true);
+                        setDialogDiaOpen(false);
+                      }}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      Ver Recepción
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setOrdenSeleccionada(entrega.orden);
+                      setAccionesDialogOpen(true);
+                      setDialogDiaOpen(false);
+                    }}
+                  >
+                    <MoreVertical className="h-4 w-4 mr-1" />
+                    Acciones
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -476,6 +518,12 @@ const CalendarioEntregasTab = () => {
         open={accionesDialogOpen}
         onOpenChange={setAccionesDialogOpen}
         orden={ordenSeleccionada}
+      />
+
+      <RecepcionDetalleDialog
+        entregaId={recepcionDetalleId}
+        open={recepcionDialogOpen}
+        onOpenChange={setRecepcionDialogOpen}
       />
     </Card>
   );

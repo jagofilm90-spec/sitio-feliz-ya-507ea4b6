@@ -84,7 +84,7 @@ export default function ChoferPanel() {
           pedido:pedidos(id, folio, peso_total_kg, notas,
             cliente:clientes(id, nombre),
             sucursal:cliente_sucursales(id, nombre, direccion, latitud, longitud, telefono, contacto, horario_entrega),
-            detalles:pedidos_detalles(id, cantidad, es_cortesia, producto:productos(id, nombre, unidad_comercial)))`)
+            detalles:pedidos_detalles(id, cantidad, es_cortesia, producto:productos(id, nombre, unidad)))`)
         .eq("ruta_id", rutaData.id)
         .order("orden_entrega", { ascending: true });
 

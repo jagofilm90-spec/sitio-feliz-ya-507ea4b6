@@ -2975,7 +2975,8 @@ export type Database = {
           id: string
           nombre_archivo: string
           notas: string | null
-          orden_compra_id: string
+          orden_compra_entrega_id: string | null
+          orden_compra_id: string | null
           ruta_storage: string
           tipo_evidencia: string
         }
@@ -2985,7 +2986,8 @@ export type Database = {
           id?: string
           nombre_archivo: string
           notas?: string | null
-          orden_compra_id: string
+          orden_compra_entrega_id?: string | null
+          orden_compra_id?: string | null
           ruta_storage: string
           tipo_evidencia: string
         }
@@ -2995,11 +2997,19 @@ export type Database = {
           id?: string
           nombre_archivo?: string
           notas?: string | null
-          orden_compra_id?: string
+          orden_compra_entrega_id?: string | null
+          orden_compra_id?: string | null
           ruta_storage?: string
           tipo_evidencia?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "recepciones_evidencias_orden_compra_entrega_id_fkey"
+            columns: ["orden_compra_entrega_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_compra_entregas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "recepciones_evidencias_orden_compra_id_fkey"
             columns: ["orden_compra_id"]
