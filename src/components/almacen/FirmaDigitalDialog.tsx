@@ -148,6 +148,7 @@ export const FirmaDigitalDialog = ({
         />
         <DialogPrimitive.Content
           className="fixed left-[50%] top-[50%] z-[51] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg"
+          style={{ pointerEvents: "auto" }}
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
           {/* Botón de cerrar */}
