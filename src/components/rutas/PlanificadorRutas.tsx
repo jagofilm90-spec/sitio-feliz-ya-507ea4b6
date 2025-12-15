@@ -36,9 +36,10 @@ import { es } from "date-fns/locale";
 import { useRouteNotifications } from "@/hooks/useRouteNotifications";
 
 interface Chofer {
-  id: string;
+  id: string; // empleado_id - usado para guardar en rutas.chofer_id
   nombre_completo: string;
   empleado_id: string;
+  user_id?: string | null; // para notificaciones push
 }
 
 interface Almacenista {
@@ -154,6 +155,7 @@ const PlanificadorRutas = () => {
       setVehiculos(vehiculosData || []);
 
       // Load drivers from empleados table by puesto exacto "Chofer" (no incluye "Ayudante de Chofer")
+      // IMPORTANTE: Guardamos empleado_id en rutas.chofer_id, NO user_id
       const { data: choferesData, error: choferesError } = await supabase
         .from("empleados")
         .select("id, nombre_completo, user_id")
@@ -163,9 +165,10 @@ const PlanificadorRutas = () => {
 
       if (!choferesError && choferesData) {
         const transformedChoferes = choferesData.map((c) => ({
-          id: c.user_id || c.id, // Use user_id if available for notifications
+          id: c.id, // SIEMPRE usar empleado_id para guardar en rutas.chofer_id
           nombre_completo: c.nombre_completo,
           empleado_id: c.id,
+          user_id: c.user_id, // Guardar user_id por separado para notificaciones
         }));
         setChoferes(transformedChoferes);
       }
@@ -364,9 +367,10 @@ const PlanificadorRutas = () => {
 
       toast({ title: `Ruta ${newFolio} creada correctamente` });
 
-      // Send notifications
+      // Send notifications usando user_id para push (no empleado_id)
+      const choferSeleccionado = choferes.find(c => c.id === selectedChofer);
       await notifyRouteAssignment({
-        choferId: selectedChofer,
+        choferId: choferSeleccionado?.user_id || selectedChofer, // Usar user_id si disponible
         ayudanteId: selectedAyudantes[0] || null,
         rutaFolio: newFolio,
         rutaId: rutaData.id,
