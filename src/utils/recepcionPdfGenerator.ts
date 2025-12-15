@@ -11,6 +11,8 @@ interface RecepcionData {
     fecha_entrega_real: string | null;
     status: string;
     notas: string | null;
+    firma_chofer_conformidad?: string | null;
+    firma_almacenista?: string | null;
     recibido_por_profile: {
       full_name: string;
     } | null;
@@ -33,6 +35,8 @@ interface RecepcionData {
     };
   }>;
   evidenciasUrls?: string[];
+  firmaChofer?: string | null;
+  firmaAlmacenista?: string | null;
 }
 
 // Helper function to load image as base64
@@ -55,7 +59,7 @@ const loadImageAsBase64 = async (url: string): Promise<string | null> => {
 };
 
 export const generarRecepcionPDF = async (data: RecepcionData) => {
-  const { recepcion, productos, evidenciasUrls = [] } = data;
+  const { recepcion, productos, evidenciasUrls = [], firmaChofer, firmaAlmacenista } = data;
   const doc = new jsPDF();
   
   const proveedorNombre = recepcion.orden_compra?.proveedor?.nombre || 
@@ -274,19 +278,38 @@ export const generarRecepcionPDF = async (data: RecepcionData) => {
   
   // Footer signature area
   yPos += 20;
-  if (yPos > 250) {
+  if (yPos > 220) {
     doc.addPage();
     yPos = 20;
   }
   
-  doc.setDrawColor(150, 150, 150);
-  doc.line(20, yPos + 15, 80, yPos + 15);
-  doc.line(120, yPos + 15, 180, yPos + 15);
+  const signatureWidth = 60;
+  const signatureHeight = 30;
   
+  // Firma Almacenista
+  if (firmaAlmacenista) {
+    try {
+      doc.addImage(firmaAlmacenista, "PNG", 20, yPos, signatureWidth, signatureHeight);
+    } catch (e) {
+      console.error("Error adding almacenista signature:", e);
+    }
+  }
+  doc.setDrawColor(150, 150, 150);
+  doc.line(20, yPos + signatureHeight + 5, 80, yPos + signatureHeight + 5);
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
-  doc.text("Firma Almacenista", 50, yPos + 22, { align: "center" });
-  doc.text("Firma Proveedor/Transportista", 150, yPos + 22, { align: "center" });
+  doc.text("Firma Almacenista", 50, yPos + signatureHeight + 12, { align: "center" });
+  
+  // Firma Proveedor/Transportista
+  if (firmaChofer) {
+    try {
+      doc.addImage(firmaChofer, "PNG", 120, yPos, signatureWidth, signatureHeight);
+    } catch (e) {
+      console.error("Error adding driver signature:", e);
+    }
+  }
+  doc.line(120, yPos + signatureHeight + 5, 180, yPos + signatureHeight + 5);
+  doc.text("Firma Proveedor/Transportista", 150, yPos + signatureHeight + 12, { align: "center" });
   
   // Generate filename
   const fileName = `Recepcion_${recepcion.orden_compra.folio}_E${recepcion.numero_entrega}_${format(new Date(), "yyyyMMdd")}.pdf`;

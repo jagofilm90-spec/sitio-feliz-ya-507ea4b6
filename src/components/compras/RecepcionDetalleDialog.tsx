@@ -53,6 +53,8 @@ interface RecepcionDetalle {
   fecha_entrega_real: string | null;
   status: string;
   notas: string | null;
+  firma_chofer_conformidad: string | null;
+  firma_almacenista: string | null;
   recibido_por_profile: {
     full_name: string;
   } | null;
@@ -105,6 +107,7 @@ export const RecepcionDetalleDialog = ({
         .from("ordenes_compra_entregas")
         .select(`
           id, numero_entrega, cantidad_bultos, fecha_programada, fecha_entrega_real, status, notas,
+          firma_chofer_conformidad, firma_almacenista,
           recibido_por_profile:recibido_por(full_name),
           orden_compra:ordenes_compra(
             id, folio, proveedor_nombre_manual,
@@ -128,14 +131,14 @@ export const RecepcionDetalleDialog = ({
 
       setProductos((productosData as unknown as ProductoRecibido[]) || []);
 
-      // Load evidences
+      // Load evidences from correct table
       const { data: evidenciasData } = await supabase
-        .from("recepciones_evidencias")
+        .from("ordenes_compra_entregas_evidencias")
         .select(`
           id, tipo_evidencia, ruta_storage, nombre_archivo, created_at,
           capturado_por_profile:capturado_por(full_name)
         `)
-        .eq("orden_compra_entrega_id", entregaId)
+        .eq("entrega_id", entregaId)
         .order("created_at", { ascending: false });
 
       setEvidencias((evidenciasData as unknown as EvidenciaRecepcion[]) || []);
@@ -167,6 +170,8 @@ export const RecepcionDetalleDialog = ({
         recepcion,
         productos,
         evidenciasUrls: Object.values(evidenciasUrls),
+        firmaChofer: recepcion.firma_chofer_conformidad,
+        firmaAlmacenista: recepcion.firma_almacenista,
       });
     } catch (error) {
       console.error("Error generando PDF:", error);
