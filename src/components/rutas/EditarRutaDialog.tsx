@@ -23,6 +23,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Truck, User, Users, AlertTriangle, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useRouteNotifications } from "@/hooks/useRouteNotifications";
+import { AyudantesMultiSelect } from "./AyudantesMultiSelect";
+
 interface Vehiculo {
   id: string;
   nombre: string;
@@ -34,7 +36,7 @@ interface Vehiculo {
 
 interface Chofer {
   id: string;
-  full_name: string;
+  nombre_completo: string;
 }
 
 interface Ruta {
@@ -45,7 +47,7 @@ interface Ruta {
   tipo_ruta: string;
   peso_total_kg: number | null;
   chofer_id: string;
-  ayudante_id: string | null;
+  ayudantes_ids: string[] | null;
   vehiculo_id: string | null;
   notas: string | null;
   vehiculo?: {
@@ -53,7 +55,7 @@ interface Ruta {
     nombre: string;
   };
   chofer?: {
-    full_name: string;
+    nombre_completo: string;
   };
 }
 
@@ -78,7 +80,7 @@ const EditarRutaDialog = ({
   const { notifyDriverReassignment, notifyRouteChange } = useRouteNotifications();
 
   const [selectedChofer, setSelectedChofer] = useState<string>("");
-  const [selectedAyudante, setSelectedAyudante] = useState<string>("");
+  const [selectedAyudantes, setSelectedAyudantes] = useState<string[]>([]);
   const [selectedVehiculo, setSelectedVehiculo] = useState<string>("");
   const [notas, setNotas] = useState("");
 
@@ -86,7 +88,7 @@ const EditarRutaDialog = ({
     if (open && ruta) {
       loadData();
       setSelectedChofer(ruta.chofer_id);
-      setSelectedAyudante(ruta.ayudante_id || "");
+      setSelectedAyudantes(ruta.ayudantes_ids || []);
       setSelectedVehiculo(ruta.vehiculo_id || "");
       setNotas(ruta.notas || "");
     }
@@ -106,24 +108,16 @@ const EditarRutaDialog = ({
       if (vehiculosError) throw vehiculosError;
       setVehiculos(vehiculosData || []);
 
-      // Load drivers (choferes)
+      // Cargar choferes desde empleados (no desde profiles/user_roles)
       const { data: choferesData, error: choferesError } = await supabase
-        .from("user_roles")
-        .select(`
-          user_id,
-          profiles:user_id (id, full_name)
-        `)
-        .eq("role", "chofer");
+        .from("empleados")
+        .select("id, nombre_completo")
+        .eq("puesto", "Chofer")
+        .eq("activo", true)
+        .order("nombre_completo");
 
       if (choferesError) throw choferesError;
-      
-      const transformedChoferes = (choferesData || [])
-        .filter((c: any) => c.profiles)
-        .map((c: any) => ({
-          id: c.profiles.id,
-          full_name: c.profiles.full_name,
-        }));
-      setChoferes(transformedChoferes);
+      setChoferes(choferesData || []);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -161,11 +155,12 @@ const EditarRutaDialog = ({
           .eq("id", selectedVehiculo);
       }
 
+      // Guardar solo ayudantes_ids (no usar ayudante_id por FK a profiles)
       const { error } = await supabase
         .from("rutas")
         .update({
           chofer_id: selectedChofer,
-          ayudante_id: selectedAyudante || null,
+          ayudantes_ids: selectedAyudantes.length > 0 ? selectedAyudantes : null,
           vehiculo_id: selectedVehiculo,
           notas: notas || null,
         })
@@ -183,11 +178,13 @@ const EditarRutaDialog = ({
         });
       }
 
-      // Notificar cambio de ayudante
-      const ayudanteCambiado = ruta.ayudante_id !== (selectedAyudante || null);
-      if (ayudanteCambiado && selectedAyudante) {
+      // Notificar cambio de ayudantes (nuevos ayudantes agregados)
+      const ayudantesAnteriores = ruta.ayudantes_ids || [];
+      const nuevosAyudantes = selectedAyudantes.filter(id => !ayudantesAnteriores.includes(id));
+      
+      for (const ayudanteId of nuevosAyudantes) {
         await notifyRouteChange({
-          choferId: selectedAyudante,
+          choferId: ayudanteId,
           rutaFolio: ruta.folio,
           rutaId: ruta.id,
           mensaje: `Te asignaron como ayudante en ruta ${ruta.folio}`,
@@ -207,8 +204,6 @@ const EditarRutaDialog = ({
       setSaving(false);
     }
   };
-
-  const ayudantesDisponibles = choferes.filter(c => c.id !== selectedChofer);
 
   const vehiculoSeleccionado = vehiculos.find(v => v.id === selectedVehiculo);
   const capacidadMaxima = vehiculoSeleccionado 
@@ -296,49 +291,40 @@ const EditarRutaDialog = ({
               </Alert>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  <User className="h-4 w-4" />
-                  Chofer *
-                </Label>
-                <Select value={selectedChofer} onValueChange={setSelectedChofer}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un chofer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {choferes.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        <div className="flex items-center gap-2">
-                          {c.full_name}
-                          {c.id === ruta.chofer_id && (
-                            <Badge variant="outline" className="text-xs">Actual</Badge>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  <Users className="h-4 w-4" />
-                  Ayudante
-                </Label>
-                <Select value={selectedAyudante} onValueChange={setSelectedAyudante}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sin ayudante" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Sin ayudante</SelectItem>
-                    {ayudantesDisponibles.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.full_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                <User className="h-4 w-4" />
+                Chofer *
+              </Label>
+              <Select value={selectedChofer} onValueChange={setSelectedChofer}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un chofer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {choferes.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <div className="flex items-center gap-2">
+                        {c.nombre_completo}
+                        {c.id === ruta.chofer_id && (
+                          <Badge variant="outline" className="text-xs">Actual</Badge>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                <Users className="h-4 w-4" />
+                Ayudantes
+              </Label>
+              <AyudantesMultiSelect
+                selectedAyudantes={selectedAyudantes}
+                onSelectionChange={setSelectedAyudantes}
+                excludeIds={selectedChofer ? [selectedChofer] : []}
+              />
             </div>
 
             <div className="space-y-2">
