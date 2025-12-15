@@ -8,7 +8,7 @@
  * ⚠️ NO MODIFICAR sin validar en preview primero.
  * ⚠️ Contiene componentes de Google Maps - ver ARQUITECTURA.md
  * 
- * Última actualización: 2025-12-08
+ * Última actualización: 2025-12-15
  * ==========================================================
  */
 
@@ -28,9 +28,20 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Eye, Truck, MapPin, Route, Play, Square, Gauge, Pencil, Globe, Activity } from "lucide-react";
+import { Search, Eye, Truck, MapPin, Route, Play, Square, Gauge, Pencil, Globe, Activity, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import VehiculosTab from "@/components/rutas/VehiculosTab";
 import ZonasTab from "@/components/rutas/ZonasTab";
 import PlanificadorRutas from "@/components/rutas/PlanificadorRutas";
@@ -54,6 +65,9 @@ const RutasContent = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedRuta, setSelectedRuta] = useState<any>(null);
   const [kmMode, setKmMode] = useState<"iniciar" | "finalizar">("iniciar");
+  const [selectedRutas, setSelectedRutas] = useState<string[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
   
   // Hook de monitoreo para obtener alertas activas
@@ -70,13 +84,13 @@ const RutasContent = () => {
         .select(`
           *,
           chofer:chofer_id (full_name),
-          ayudante:ayudante_id (full_name),
           vehiculo:vehiculo_id (id, nombre, peso_maximo_local_kg, peso_maximo_foraneo_kg)
         `)
         .order("fecha_ruta", { ascending: false });
 
       if (error) throw error;
       setRutas(data || []);
+      setSelectedRutas([]);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -93,6 +107,11 @@ const RutasContent = () => {
       r.folio?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.chofer?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.vehiculo?.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Solo rutas que se pueden eliminar (programada o cancelada)
+  const deletableRutas = filteredRutas.filter(r => 
+    r.status === "programada" || r.status === "cancelada"
   );
 
   const getStatusBadge = (status: string) => {
@@ -133,6 +152,118 @@ const RutasContent = () => {
     setSelectedRuta(ruta);
     setEditDialogOpen(true);
   };
+
+  const handleSelectRuta = (rutaId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedRutas(prev => [...prev, rutaId]);
+    } else {
+      setSelectedRutas(prev => prev.filter(id => id !== rutaId));
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedRutas(deletableRutas.map(r => r.id));
+    } else {
+      setSelectedRutas([]);
+    }
+  };
+
+  const handleDeleteSingle = (rutaId: string) => {
+    setSelectedRutas([rutaId]);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedRutas.length === 0) return;
+    
+    setDeleting(true);
+    try {
+      // 1. Regresar pedidos a pendiente
+      const { data: entregas } = await supabase
+        .from("entregas")
+        .select("pedido_id")
+        .in("ruta_id", selectedRutas);
+      
+      if (entregas && entregas.length > 0) {
+        const pedidoIds = entregas.map(e => e.pedido_id);
+        await supabase
+          .from("pedidos")
+          .update({ status: "pendiente" })
+          .in("id", pedidoIds);
+      }
+
+      // 2. Eliminar carga_productos
+      await supabase
+        .from("carga_productos")
+        .delete()
+        .in("entrega_id", (await supabase
+          .from("entregas")
+          .select("id")
+          .in("ruta_id", selectedRutas)).data?.map(e => e.id) || []);
+
+      // 3. Eliminar entregas
+      await supabase
+        .from("entregas")
+        .delete()
+        .in("ruta_id", selectedRutas);
+
+      // 4. Eliminar evidencias
+      await supabase
+        .from("carga_evidencias")
+        .delete()
+        .in("ruta_id", selectedRutas);
+
+      // 5. Eliminar ubicaciones
+      await supabase
+        .from("chofer_ubicaciones")
+        .delete()
+        .in("ruta_id", selectedRutas);
+
+      // 6. Obtener vehículos para liberar
+      const { data: rutasData } = await supabase
+        .from("rutas")
+        .select("vehiculo_id")
+        .in("id", selectedRutas);
+
+      // 7. Eliminar rutas
+      const { error } = await supabase
+        .from("rutas")
+        .delete()
+        .in("id", selectedRutas);
+
+      if (error) throw error;
+
+      // 8. Liberar vehículos
+      if (rutasData) {
+        const vehiculoIds = rutasData.map(r => r.vehiculo_id).filter(Boolean);
+        if (vehiculoIds.length > 0) {
+          await supabase
+            .from("vehiculos")
+            .update({ status: "disponible" })
+            .in("id", vehiculoIds);
+        }
+      }
+
+      toast({
+        title: "Rutas eliminadas",
+        description: `Se eliminaron ${selectedRutas.length} ruta(s) correctamente`,
+      });
+
+      loadRutas();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudieron eliminar las rutas",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
+  const canDelete = (status: string) => status === "programada" || status === "cancelada";
 
   return (
     <Layout>
@@ -206,7 +337,7 @@ const RutasContent = () => {
           </TabsContent>
 
           <TabsContent value="rutas" className="space-y-4">
-        <div className="flex gap-4">
+            <div className="flex gap-4 items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -216,12 +347,29 @@ const RutasContent = () => {
                   className="pl-10"
                 />
               </div>
+              {selectedRutas.length > 0 && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Eliminar ({selectedRutas.length})
+                </Button>
+              )}
             </div>
 
             <div className="border rounded-lg">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={deletableRutas.length > 0 && selectedRutas.length === deletableRutas.length}
+                        onCheckedChange={handleSelectAll}
+                        disabled={deletableRutas.length === 0}
+                      />
+                    </TableHead>
                     <TableHead>Folio</TableHead>
                     <TableHead>Fecha</TableHead>
                     <TableHead>Tipo</TableHead>
@@ -236,19 +384,26 @@ const RutasContent = () => {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center">
+                      <TableCell colSpan={10} className="text-center">
                         Cargando...
                       </TableCell>
                     </TableRow>
                   ) : filteredRutas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center">
+                      <TableCell colSpan={10} className="text-center">
                         No hay rutas registradas
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredRutas.map((ruta) => (
                       <TableRow key={ruta.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedRutas.includes(ruta.id)}
+                            onCheckedChange={(checked) => handleSelectRuta(ruta.id, !!checked)}
+                            disabled={!canDelete(ruta.status)}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">{ruta.folio}</TableCell>
                         <TableCell>
                           {new Date(ruta.fecha_ruta).toLocaleDateString("es-MX")}
@@ -357,6 +512,23 @@ const RutasContent = () => {
                                 </Tooltip>
                               </TooltipProvider>
                             )}
+                            {canDelete(ruta.status) && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      onClick={() => handleDeleteSingle(ruta.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Eliminar ruta</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                             <Button variant="ghost" size="icon">
                               <Eye className="h-4 w-4" />
                             </Button>
@@ -401,6 +573,29 @@ const RutasContent = () => {
           onOpenChange={setEditDialogOpen}
           onSuccess={loadRutas}
         />
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar ruta(s)?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción eliminará {selectedRutas.length} ruta(s) y sus entregas asociadas.
+                Los pedidos volverán a estado "pendiente" para poder reprogramarse.
+                Esta acción no se puede deshacer.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteSelected}
+                disabled={deleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleting ? "Eliminando..." : "Eliminar"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );
