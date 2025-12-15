@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -1763,7 +1764,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
               />
               <p className="text-sm text-muted-foreground mt-1">
                 Fecha actual: {orden?.fecha_entrega_programada
-                  ? new Date(orden.fecha_entrega_programada).toLocaleDateString()
+                  ? format(new Date(orden.fecha_entrega_programada), "dd/MM/yyyy")
                   : "Sin programar"}
               </p>
             </div>
