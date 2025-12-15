@@ -49,6 +49,9 @@ interface EntregaCompra {
   llegada_registrada_en: string | null;
   nombre_chofer_proveedor: string | null;
   placas_vehiculo: string | null;
+  numero_sello_llegada: string | null;
+  llegada_registrada_por: string | null;
+  llegada_registrada_por_profile?: { id: string; full_name: string } | null;
   trabajando_por: string | null;
   trabajando_desde: string | null;
   trabajando_por_profile?: TrabajandoPor | null;
@@ -103,6 +106,9 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
           notas,
           llegada_registrada_en,
           nombre_chofer_proveedor,
+          placas_vehiculo,
+          numero_sello_llegada,
+          llegada_registrada_por,
           trabajando_por,
           trabajando_desde,
           orden_compra:ordenes_compra(
@@ -120,22 +126,29 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
 
       let entregasData = (data as any[]) || [];
       
-      // Cargar nombres de quienes están trabajando
+      // Cargar nombres de quienes están trabajando y quién registró llegada
       const trabajandoPorIds = entregasData
         .filter(e => e.trabajando_por)
         .map(e => e.trabajando_por);
       
-      if (trabajandoPorIds.length > 0) {
+      const llegadaRegistradaPorIds = entregasData
+        .filter(e => e.llegada_registrada_por)
+        .map(e => e.llegada_registrada_por);
+      
+      const allProfileIds = [...new Set([...trabajandoPorIds, ...llegadaRegistradaPorIds])];
+      
+      if (allProfileIds.length > 0) {
         const { data: profiles } = await supabase
           .from("profiles")
           .select("id, full_name")
-          .in("id", trabajandoPorIds);
+          .in("id", allProfileIds);
         
         if (profiles) {
           const profileMap = new Map(profiles.map(p => [p.id, p]));
           entregasData = entregasData.map(e => ({
             ...e,
-            trabajando_por_profile: e.trabajando_por ? profileMap.get(e.trabajando_por) : null
+            trabajando_por_profile: e.trabajando_por ? profileMap.get(e.trabajando_por) : null,
+            llegada_registrada_por_profile: e.llegada_registrada_por ? profileMap.get(e.llegada_registrada_por) : null
           }));
         }
       }
