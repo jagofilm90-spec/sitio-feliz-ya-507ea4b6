@@ -90,7 +90,7 @@ const InventarioContent = () => {
           .from("inventario_lotes")
           .select(`
             *,
-            productos (nombre, codigo, unidad_comercial),
+            productos (nombre, codigo, unidad),
             bodegas (nombre),
             ordenes_compra (folio)
           `)
