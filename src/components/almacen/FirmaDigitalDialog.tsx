@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Loader2, Eraser, Check, X } from "lucide-react";
 
@@ -23,20 +23,35 @@ export const FirmaDigitalDialog = ({
   const [hasSignature, setHasSignature] = useState(false);
   const [context, setContext] = useState<CanvasRenderingContext2D | null>(null);
 
+  // Forzar pointer-events en body mientras el dialog está abierto
+  useEffect(() => {
+    if (open) {
+      const originalPointerEvents = document.body.style.pointerEvents;
+      const originalOverflow = document.body.style.overflow;
+      
+      document.body.style.pointerEvents = 'auto';
+      document.body.style.overflow = 'hidden';
+      
+      return () => {
+        document.body.style.pointerEvents = originalPointerEvents;
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [open]);
+
+  // Inicializar canvas cuando se abre
   useEffect(() => {
     if (open && canvasRef.current) {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext("2d");
       
       if (ctx) {
-        // Configurar canvas
         ctx.strokeStyle = "hsl(220, 15%, 15%)";
         ctx.lineWidth = 3;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
         setContext(ctx);
         
-        // Limpiar canvas
         ctx.fillStyle = "white";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
@@ -54,7 +69,6 @@ export const FirmaDigitalDialog = ({
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
 
-    // Pointer events (stylus, touch, mouse todos usan esto)
     if ("pointerId" in e) {
       return {
         x: (e.clientX - rect.left) * scaleX,
@@ -62,7 +76,6 @@ export const FirmaDigitalDialog = ({
       };
     }
 
-    // Touch events (fallback)
     if ("touches" in e) {
       const touch = e.touches[0];
       if (!touch) return null;
@@ -72,7 +85,6 @@ export const FirmaDigitalDialog = ({
       };
     }
 
-    // Mouse events (fallback)
     return {
       x: (e.clientX - rect.left) * scaleX,
       y: (e.clientY - rect.top) * scaleY,
@@ -81,8 +93,8 @@ export const FirmaDigitalDialog = ({
 
   const startDrawing = (e: React.PointerEvent | React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     
-    // Capturar pointer para seguimiento continuo del stylus
     if ("pointerId" in e && canvasRef.current) {
       canvasRef.current.setPointerCapture(e.pointerId);
     }
@@ -97,6 +109,7 @@ export const FirmaDigitalDialog = ({
 
   const draw = (e: React.PointerEvent | React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!isDrawing || !context) return;
 
     const coords = getCoordinates(e);
@@ -108,9 +121,13 @@ export const FirmaDigitalDialog = ({
   };
 
   const stopDrawing = (e?: React.PointerEvent | React.TouchEvent | React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     setIsDrawing(false);
     
-    // Liberar pointer capture
     if (e && "pointerId" in e && canvasRef.current) {
       try {
         canvasRef.current.releasePointerCapture(e.pointerId);
@@ -138,97 +155,123 @@ export const FirmaDigitalDialog = ({
     onConfirm(firmaBase64);
   };
 
-  return (
-    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange} modal={false}>
-      <DialogPrimitive.Portal>
-        {/* Overlay personalizado que permite cerrar pero no bloquea eventos del canvas */}
-        <div 
-          className="fixed inset-0 z-50 bg-black/80"
-          onClick={() => onOpenChange(false)}
-        />
-        <DialogPrimitive.Content
-          className="fixed left-[50%] top-[50%] z-[51] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg"
-          style={{ pointerEvents: "auto" }}
-          onOpenAutoFocus={(e) => e.preventDefault()}
+  const handleClose = () => {
+    if (!loading) {
+      onOpenChange(false);
+    }
+  };
+
+  // No renderizar si no está abierto
+  if (!open) return null;
+
+  // Usar createPortal para renderizar directamente en document.body
+  // Esto evita cualquier interferencia de Radix UI Sheets/Dialogs padres
+  return createPortal(
+    <>
+      {/* Overlay - z-index muy alto para estar encima de todo */}
+      <div 
+        className="fixed inset-0 bg-black/80"
+        style={{ 
+          zIndex: 99999,
+          pointerEvents: 'auto'
+        }}
+        onClick={handleClose}
+      />
+      
+      {/* Content - z-index aún más alto */}
+      <div
+        className="fixed left-1/2 top-1/2 w-full max-w-lg border bg-background p-6 shadow-lg rounded-lg"
+        style={{ 
+          zIndex: 100000,
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'auto'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Botón cerrar */}
+        <button
+          className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100 focus:outline-none disabled:pointer-events-none"
+          onClick={handleClose}
+          disabled={loading}
         >
-          {/* Botón de cerrar */}
-          <button
-            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
-            onClick={() => onOpenChange(false)}
+          <X className="h-4 w-4" />
+          <span className="sr-only">Cerrar</span>
+        </button>
+
+        {/* Header */}
+        <div className="flex flex-col space-y-1.5 text-center sm:text-left mb-4">
+          <h2 className="text-lg font-semibold leading-none tracking-tight">{titulo}</h2>
+        </div>
+
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Dibuja tu firma para confirmar
+          </p>
+
+          {/* Canvas de firma */}
+          <div 
+            className="border-2 border-dashed border-muted-foreground/30 rounded-lg overflow-hidden bg-white"
+            style={{ touchAction: 'none' }}
           >
-            <X className="h-4 w-4" />
-            <span className="sr-only">Cerrar</span>
-          </button>
-
-          {/* Header */}
-          <div className="flex flex-col space-y-1.5 text-center sm:text-left">
-            <h2 className="text-lg font-semibold leading-none tracking-tight">{titulo}</h2>
+            <canvas
+              ref={canvasRef}
+              width={400}
+              height={200}
+              className="w-full cursor-crosshair"
+              style={{ 
+                touchAction: 'none',
+                pointerEvents: 'auto'
+              }}
+              onPointerDown={startDrawing}
+              onPointerMove={draw}
+              onPointerUp={stopDrawing}
+              onPointerLeave={stopDrawing}
+              onPointerCancel={stopDrawing}
+              onMouseDown={startDrawing}
+              onMouseMove={draw}
+              onMouseUp={stopDrawing}
+              onMouseLeave={stopDrawing}
+              onTouchStart={startDrawing}
+              onTouchMove={draw}
+              onTouchEnd={stopDrawing}
+            />
           </div>
 
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Dibuja tu firma para confirmar que la carga está completa
-            </p>
+          <Button
+            variant="outline"
+            onClick={clearCanvas}
+            disabled={!hasSignature || loading}
+            className="w-full"
+          >
+            <Eraser className="w-4 h-4 mr-2" />
+            Limpiar firma
+          </Button>
+        </div>
 
-            <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg overflow-hidden bg-white">
-              <canvas
-                ref={canvasRef}
-                width={400}
-                height={200}
-                className="w-full cursor-crosshair"
-                style={{ touchAction: 'none' }}
-                // Pointer events (stylus, touch, mouse)
-                onPointerDown={startDrawing}
-                onPointerMove={draw}
-                onPointerUp={stopDrawing}
-                onPointerLeave={stopDrawing}
-                onPointerCancel={stopDrawing}
-                // Fallback para dispositivos sin Pointer API
-                onMouseDown={startDrawing}
-                onMouseMove={draw}
-                onMouseUp={stopDrawing}
-                onMouseLeave={stopDrawing}
-                onTouchStart={startDrawing}
-                onTouchMove={draw}
-                onTouchEnd={stopDrawing}
-              />
-            </div>
-
-            <Button
-              variant="outline"
-              onClick={clearCanvas}
-              disabled={!hasSignature || loading}
-              className="w-full"
-            >
-              <Eraser className="w-4 h-4 mr-2" />
-              Limpiar firma
-            </Button>
-          </div>
-
-          {/* Footer */}
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleConfirm}
-              disabled={!hasSignature || loading}
-              className="min-w-32"
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Check className="w-4 h-4 mr-2" />
-              )}
-              Confirmar
-            </Button>
-          </div>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
+        {/* Footer */}
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2 sm:gap-0 mt-4">
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            disabled={loading}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={!hasSignature || loading}
+            className="min-w-32"
+          >
+            {loading ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Check className="w-4 h-4 mr-2" />
+            )}
+            Confirmar
+          </Button>
+        </div>
+      </div>
+    </>,
+    document.body
   );
 };
