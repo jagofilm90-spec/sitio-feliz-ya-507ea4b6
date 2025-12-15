@@ -3032,6 +3032,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "recepciones_evidencias_capturado_por_fkey"
+            columns: ["capturado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recepciones_evidencias_capturado_por_fkey"
+            columns: ["capturado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "recepciones_evidencias_orden_compra_entrega_id_fkey"
             columns: ["orden_compra_entrega_id"]
             isOneToOne: false
