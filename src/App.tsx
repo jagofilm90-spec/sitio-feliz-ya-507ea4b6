@@ -32,6 +32,7 @@ import Respaldos from "./pages/Respaldos";
 import AlmacenTablet from "./pages/AlmacenTablet";
 import ChoferPanel from "./pages/ChoferPanel";
 import AppMobileGuide from "./pages/AppMobileGuide";
+import TestFirma from "./pages/TestFirma";
 
 import PushNotificationSetup from "./components/PushNotificationSetup";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -113,6 +114,7 @@ const App = () => (
               <Route path="/almacen-tablet" element={<AlmacenTablet />} />
               <Route path="/chofer" element={<ChoferPanel />} />
               <Route path="/app-mobile" element={<AppMobileGuide />} />
+              <Route path="/test-firma" element={<TestFirma />} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
