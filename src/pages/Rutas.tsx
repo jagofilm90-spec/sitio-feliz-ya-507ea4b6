@@ -79,17 +79,40 @@ const RutasContent = () => {
 
   const loadRutas = async () => {
     try {
-      const { data, error } = await supabase
+      // Cargar rutas sin JOIN de chofer (chofer_id es UUID de empleados, no profiles)
+      const { data: rutasData, error } = await supabase
         .from("rutas")
         .select(`
           *,
-          chofer:chofer_id (full_name),
           vehiculo:vehiculo_id (id, nombre, peso_maximo_local_kg, peso_maximo_foraneo_kg)
         `)
         .order("fecha_ruta", { ascending: false });
 
       if (error) throw error;
-      setRutas(data || []);
+
+      // Obtener IDs de choferes únicos
+      const choferIds = [...new Set((rutasData || []).map(r => r.chofer_id).filter(Boolean))];
+      
+      // Cargar nombres de choferes desde empleados
+      let choferesMap: Record<string, string> = {};
+      if (choferIds.length > 0) {
+        const { data: empleados } = await supabase
+          .from("empleados")
+          .select("id, nombre_completo")
+          .in("id", choferIds);
+        
+        empleados?.forEach(emp => {
+          choferesMap[emp.id] = emp.nombre_completo;
+        });
+      }
+
+      // Mapear nombres a rutas
+      const rutasConChofer = (rutasData || []).map(ruta => ({
+        ...ruta,
+        chofer: ruta.chofer_id ? { full_name: choferesMap[ruta.chofer_id] || 'Chofer desconocido' } : null
+      }));
+
+      setRutas(rutasConChofer);
       setSelectedRutas([]);
     } catch (error: any) {
       toast({
