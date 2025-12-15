@@ -2531,9 +2531,14 @@ export type Database = {
           firma_chofer_diferencia: string | null
           firma_chofer_diferencia_fecha: string | null
           id: string
+          llegada_registrada_en: string | null
+          llegada_registrada_por: string | null
+          nombre_chofer_proveedor: string | null
           notas: string | null
           numero_entrega: number
+          numero_sello_llegada: string | null
           orden_compra_id: string
+          placas_vehiculo: string | null
           recibido_por: string | null
           status: string
           updated_at: string
@@ -2546,9 +2551,14 @@ export type Database = {
           firma_chofer_diferencia?: string | null
           firma_chofer_diferencia_fecha?: string | null
           id?: string
+          llegada_registrada_en?: string | null
+          llegada_registrada_por?: string | null
+          nombre_chofer_proveedor?: string | null
           notas?: string | null
           numero_entrega: number
+          numero_sello_llegada?: string | null
           orden_compra_id: string
+          placas_vehiculo?: string | null
           recibido_por?: string | null
           status?: string
           updated_at?: string
@@ -2561,9 +2571,14 @@ export type Database = {
           firma_chofer_diferencia?: string | null
           firma_chofer_diferencia_fecha?: string | null
           id?: string
+          llegada_registrada_en?: string | null
+          llegada_registrada_por?: string | null
+          nombre_chofer_proveedor?: string | null
           notas?: string | null
           numero_entrega?: number
+          numero_sello_llegada?: string | null
           orden_compra_id?: string
+          placas_vehiculo?: string | null
           recibido_por?: string | null
           status?: string
           updated_at?: string
@@ -2588,6 +2603,47 @@ export type Database = {
             columns: ["recibido_por"]
             isOneToOne: false
             referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ordenes_compra_entregas_evidencias: {
+        Row: {
+          capturado_por: string | null
+          created_at: string | null
+          entrega_id: string
+          fase: string
+          id: string
+          nombre_archivo: string | null
+          ruta_storage: string
+          tipo_evidencia: string
+        }
+        Insert: {
+          capturado_por?: string | null
+          created_at?: string | null
+          entrega_id: string
+          fase: string
+          id?: string
+          nombre_archivo?: string | null
+          ruta_storage: string
+          tipo_evidencia: string
+        }
+        Update: {
+          capturado_por?: string | null
+          created_at?: string | null
+          entrega_id?: string
+          fase?: string
+          id?: string
+          nombre_archivo?: string | null
+          ruta_storage?: string
+          tipo_evidencia?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordenes_compra_entregas_evidencias_entrega_id_fkey"
+            columns: ["entrega_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_compra_entregas"
             referencedColumns: ["id"]
           },
         ]

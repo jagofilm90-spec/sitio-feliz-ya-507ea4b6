@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -11,12 +11,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Package, 
   ChevronRight,
-  CheckCircle2,
-  Clock,
   Truck,
   Calendar,
-  Camera
+  Clock,
+  CheckCircle2,
+  PackageCheck,
 } from "lucide-react";
+import { RegistrarLlegadaSheet } from "./RegistrarLlegadaSheet";
 import { AlmacenRecepcionSheet } from "./AlmacenRecepcionSheet";
 
 interface EntregaCompra {
@@ -27,6 +28,8 @@ interface EntregaCompra {
   fecha_entrega_real: string | null;
   status: string;
   notas: string | null;
+  llegada_registrada_en: string | null;
+  nombre_chofer_proveedor: string | null;
   orden_compra: {
     id: string;
     folio: string;
@@ -47,13 +50,13 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
   const [entregas, setEntregas] = useState<EntregaCompra[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEntrega, setSelectedEntrega] = useState<EntregaCompra | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [llegadaSheetOpen, setLlegadaSheetOpen] = useState(false);
+  const [recepcionSheetOpen, setRecepcionSheetOpen] = useState(false);
   const { toast } = useToast();
 
   const loadEntregas = async () => {
     setLoading(true);
     try {
-      // Obtener entregas programadas para hoy o pendientes
       const { data, error } = await supabase
         .from("ordenes_compra_entregas")
         .select(`
@@ -64,6 +67,8 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
           fecha_entrega_real,
           status,
           notas,
+          llegada_registrada_en,
+          nombre_chofer_proveedor,
           orden_compra:ordenes_compra(
             id,
             folio,
@@ -72,7 +77,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
             proveedor:proveedores(id, nombre)
           )
         `)
-        .in("status", ["programada", "en_transito"])
+        .in("status", ["programada", "en_transito", "en_descarga"])
         .order("fecha_programada", { ascending: true });
 
       if (error) throw error;
@@ -80,11 +85,12 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
       const entregasData = (data as any[]) || [];
       setEntregas(entregasData);
       
-      const pendientes = entregasData.filter(e => e.status === "programada");
-      const recibidas = entregasData.filter(e => e.status === "recibida");
+      // Estadísticas para el padre
+      const pendientes = entregasData.filter(e => e.status === "programada" || e.status === "en_transito");
+      const enDescarga = entregasData.filter(e => e.status === "en_descarga");
       onStatsUpdate({
-        pendientes: pendientes.length,
-        recibidas: recibidas.length
+        pendientes: pendientes.length + enDescarga.length,
+        recibidas: 0 // Solo contamos las activas aquí
       });
     } catch (error) {
       console.error("Error cargando entregas:", error);
@@ -102,27 +108,47 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
     loadEntregas();
   }, []);
 
-  const getEstadoEntrega = (status: string) => {
-    switch (status) {
-      case "recibida":
-        return { label: "Recibida", color: "bg-green-500", variant: "default" as const };
-      case "en_transito":
-        return { label: "En tránsito", color: "bg-blue-500", variant: "secondary" as const };
-      default:
-        return { label: "Programada", color: "bg-yellow-500", variant: "outline" as const };
-    }
+  const handleRegistrarLlegada = (entrega: EntregaCompra) => {
+    setSelectedEntrega(entrega);
+    setLlegadaSheetOpen(true);
   };
 
-  const handleSelectEntrega = (entrega: EntregaCompra) => {
+  const handleCompletarRecepcion = (entrega: EntregaCompra) => {
     setSelectedEntrega(entrega);
-    setSheetOpen(true);
+    setRecepcionSheetOpen(true);
+  };
+
+  const getEstadoConfig = (status: string) => {
+    switch (status) {
+      case "en_descarga":
+        return { 
+          label: "En descarga", 
+          color: "bg-amber-500", 
+          variant: "secondary" as const,
+          icon: Clock
+        };
+      case "en_transito":
+        return { 
+          label: "En tránsito", 
+          color: "bg-blue-500", 
+          variant: "secondary" as const,
+          icon: Truck
+        };
+      default:
+        return { 
+          label: "Programada", 
+          color: "bg-slate-400", 
+          variant: "outline" as const,
+          icon: Calendar
+        };
+    }
   };
 
   if (loading) {
     return (
       <div className="p-4 space-y-4">
         {[1, 2, 3].map(i => (
-          <Skeleton key={i} className="h-24 w-full" />
+          <Skeleton key={i} className="h-28 w-full" />
         ))}
       </div>
     );
@@ -137,6 +163,10 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
     );
   }
 
+  // Separar por status para mostrar en grupos
+  const entregasEnDescarga = entregas.filter(e => e.status === "en_descarga");
+  const entregasPendientes = entregas.filter(e => e.status === "programada" || e.status === "en_transito");
+
   return (
     <>
       <Card>
@@ -149,70 +179,185 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
         <CardContent className="p-0">
           <ScrollArea className="h-[calc(100vh-320px)] min-h-[300px]">
             <div className="divide-y divide-border">
-              {entregas.map((entrega) => {
-                const estado = getEstadoEntrega(entrega.status);
-                
-                return (
-                  <button
-                    key={entrega.id}
-                    onClick={() => handleSelectEntrega(entrega)}
-                    className="w-full p-4 hover:bg-muted/50 transition-colors text-left flex items-center gap-4"
-                  >
-                    <div className={`w-3 h-3 rounded-full ${estado.color} flex-shrink-0`} />
-                    
-                    <div className="flex-1 min-w-0">
-                      {/* LÍNEA 1: Proveedor + Cantidad (prominente) */}
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="font-semibold text-lg truncate">
-                          {entrega.orden_compra?.proveedor_id 
-                            ? (entrega.orden_compra?.proveedor?.nombre || "Sin proveedor")
-                            : (entrega.orden_compra?.proveedor_nombre_manual || "Sin proveedor")}
-                        </span>
-                        <Badge className="text-base font-bold bg-primary text-primary-foreground flex-shrink-0">
-                          {entrega.cantidad_bultos.toLocaleString()} bultos
-                        </Badge>
-                      </div>
-                      
-                      {/* LÍNEA 2: Fecha + OC (secundario) */}
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        {entrega.fecha_programada && (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            {format(new Date(entrega.fecha_programada + "T12:00:00"), "dd/MM/yyyy", { locale: es })}
-                          </span>
-                        )}
-                        <span>•</span>
-                        <span className="truncate">
-                          {entrega.orden_compra?.folio} - Entrega #{entrega.numero_entrega}
-                        </span>
-                      </div>
-                    </div>
+              {/* Entregas en descarga (prioritarias) */}
+              {entregasEnDescarga.length > 0 && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/20">
+                  <div className="text-sm font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2 mb-2">
+                    <Clock className="w-4 h-4" />
+                    En descarga ({entregasEnDescarga.length})
+                  </div>
+                  <div className="space-y-2">
+                    {entregasEnDescarga.map((entrega) => (
+                      <EntregaCard 
+                        key={entrega.id}
+                        entrega={entrega}
+                        onRegistrarLlegada={handleRegistrarLlegada}
+                        onCompletarRecepcion={handleCompletarRecepcion}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <Badge variant={estado.variant}>
-                        {estado.label}
-                      </Badge>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                    </div>
-                  </button>
-                );
-              })}
+              {/* Entregas pendientes */}
+              {entregasPendientes.map((entrega) => (
+                <EntregaCard 
+                  key={entrega.id}
+                  entrega={entrega}
+                  onRegistrarLlegada={handleRegistrarLlegada}
+                  onCompletarRecepcion={handleCompletarRecepcion}
+                />
+              ))}
             </div>
           </ScrollArea>
         </CardContent>
       </Card>
 
+      {/* Sheet para registrar llegada (Fase 1) */}
+      {selectedEntrega && (
+        <RegistrarLlegadaSheet
+          entrega={selectedEntrega}
+          open={llegadaSheetOpen}
+          onOpenChange={setLlegadaSheetOpen}
+          onLlegadaRegistrada={() => {
+            loadEntregas();
+            setLlegadaSheetOpen(false);
+          }}
+        />
+      )}
+
+      {/* Sheet para completar recepción (Fase 2) */}
       {selectedEntrega && (
         <AlmacenRecepcionSheet
           entrega={selectedEntrega}
-          open={sheetOpen}
-          onOpenChange={setSheetOpen}
+          open={recepcionSheetOpen}
+          onOpenChange={setRecepcionSheetOpen}
           onRecepcionCompletada={() => {
             loadEntregas();
-            setSheetOpen(false);
+            setRecepcionSheetOpen(false);
           }}
         />
       )}
     </>
   );
+};
+
+// Componente interno para cada entrega
+interface EntregaCardProps {
+  entrega: EntregaCompra;
+  onRegistrarLlegada: (entrega: EntregaCompra) => void;
+  onCompletarRecepcion: (entrega: EntregaCompra) => void;
+}
+
+const EntregaCard = ({ entrega, onRegistrarLlegada, onCompletarRecepcion }: EntregaCardProps) => {
+  const estado = getEstadoConfigStatic(entrega.status);
+  const esEnDescarga = entrega.status === "en_descarga";
+  const Icon = estado.icon;
+
+  const proveedorNombre = entrega.orden_compra?.proveedor_id 
+    ? (entrega.orden_compra?.proveedor?.nombre || "Sin proveedor")
+    : (entrega.orden_compra?.proveedor_nombre_manual || "Sin proveedor");
+
+  return (
+    <div className="p-4 hover:bg-muted/50 transition-colors">
+      <div className="flex items-start gap-4">
+        <div className={`w-3 h-3 rounded-full ${estado.color} flex-shrink-0 mt-2`} />
+        
+        <div className="flex-1 min-w-0 space-y-2">
+          {/* Línea 1: Proveedor + Cantidad */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-semibold text-lg truncate">
+              {proveedorNombre}
+            </span>
+            <Badge className="text-base font-bold bg-primary text-primary-foreground flex-shrink-0">
+              {entrega.cantidad_bultos.toLocaleString()} bultos
+            </Badge>
+          </div>
+          
+          {/* Línea 2: Info adicional */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
+            {entrega.fecha_programada && (
+              <span className="flex items-center gap-1">
+                <Calendar className="w-4 h-4" />
+                {format(new Date(entrega.fecha_programada + "T12:00:00"), "dd/MM/yyyy", { locale: es })}
+              </span>
+            )}
+            <span>•</span>
+            <span className="truncate">
+              {entrega.orden_compra?.folio} - Entrega #{entrega.numero_entrega}
+            </span>
+          </div>
+
+          {/* Info de descarga en curso */}
+          {esEnDescarga && entrega.llegada_registrada_en && (
+            <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+              <Clock className="w-4 h-4" />
+              Descargando desde hace {formatDistanceToNow(new Date(entrega.llegada_registrada_en), { locale: es })}
+              {entrega.nombre_chofer_proveedor && (
+                <span className="text-muted-foreground">• Chofer: {entrega.nombre_chofer_proveedor}</span>
+              )}
+            </div>
+          )}
+
+          {/* Botones de acción */}
+          <div className="flex gap-2 pt-1">
+            {esEnDescarga ? (
+              <Button 
+                size="sm" 
+                onClick={() => onCompletarRecepcion(entrega)}
+                className="gap-2"
+              >
+                <PackageCheck className="w-4 h-4" />
+                Completar Recepción
+              </Button>
+            ) : (
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => onRegistrarLlegada(entrega)}
+                className="gap-2"
+              >
+                <Truck className="w-4 h-4" />
+                Registrar Llegada
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Badge variant={estado.variant} className="gap-1">
+            <Icon className="w-3 h-3" />
+            {estado.label}
+          </Badge>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Helper function para el componente EntregaCard
+const getEstadoConfigStatic = (status: string) => {
+  switch (status) {
+    case "en_descarga":
+      return { 
+        label: "En descarga", 
+        color: "bg-amber-500", 
+        variant: "secondary" as const,
+        icon: Clock
+      };
+    case "en_transito":
+      return { 
+        label: "En tránsito", 
+        color: "bg-blue-500", 
+        variant: "secondary" as const,
+        icon: Truck
+      };
+    default:
+      return { 
+        label: "Programada", 
+        color: "bg-slate-400", 
+        variant: "outline" as const,
+        icon: Calendar
+      };
+  }
 };

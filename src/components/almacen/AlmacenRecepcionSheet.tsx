@@ -70,6 +70,8 @@ interface EntregaCompra {
   fecha_entrega_real: string | null;
   status: string;
   notas: string | null;
+  llegada_registrada_en: string | null;
+  nombre_chofer_proveedor: string | null;
   orden_compra: {
     id: string;
     folio: string;
@@ -573,12 +575,15 @@ export const AlmacenRecepcionSheet = ({
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
               <Package className="w-5 h-5" />
-              Recepción: {entrega.orden_compra?.folio}
+              Completar Recepción: {entrega.orden_compra?.folio}
             </SheetTitle>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <Truck className="w-4 h-4" />
               {entrega.orden_compra?.proveedor?.nombre || entrega.orden_compra?.proveedor_nombre_manual}
               <Badge variant="outline">Entrega #{entrega.numero_entrega}</Badge>
+              {entrega.nombre_chofer_proveedor && (
+                <Badge variant="secondary">Chofer: {entrega.nombre_chofer_proveedor}</Badge>
+              )}
             </div>
           </SheetHeader>
 
