@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +43,7 @@ import AutorizacionOCDialog from "./AutorizacionOCDialog";
 import OCAutorizadaAlert from "./OCAutorizadaAlert";
 import EntregasPopover from "./EntregasPopover";
 import { formatCurrency } from "@/lib/utils";
+import { sendPushNotification } from "@/services/pushNotifications";
 
 interface ProductoEnOrden {
   producto_id: string;
@@ -419,7 +421,7 @@ const OrdenesCompraTab = () => {
 
       return orden;
     },
-    onSuccess: () => {
+    onSuccess: async (orden) => {
       queryClient.invalidateQueries({ queryKey: ["ordenes_compra"] });
       queryClient.invalidateQueries({ queryKey: ["ordenes_calendario"] });
       queryClient.invalidateQueries({ queryKey: ["productos"] });
@@ -429,6 +431,32 @@ const OrdenesCompraTab = () => {
           ? `Orden creada con ${entregasProgramadas.length} entregas programadas`
           : "La orden de compra se ha creado exitosamente",
       });
+      
+      // Send push notification to almacenistas if there's a scheduled delivery
+      const tieneEntregaProgramada = fechaEntrega || entregasProgramadas.some(e => e.fecha_programada);
+      if (tieneEntregaProgramada) {
+        const proveedorNombreNotif = tipoProveedor === 'catalogo' 
+          ? proveedores.find(p => p.id === proveedorId)?.nombre || 'Proveedor'
+          : proveedorNombreManual || 'Proveedor';
+        
+        const fechaNotif = fechaEntrega 
+          ? format(new Date(fechaEntrega), "dd/MM/yyyy", { locale: es })
+          : entregasProgramadas[0]?.fecha_programada 
+            ? format(new Date(entregasProgramadas[0].fecha_programada), "dd/MM/yyyy", { locale: es })
+            : '';
+        
+        sendPushNotification({
+          roles: ['almacen'],
+          title: '🚚 Nueva entrega programada',
+          body: `${orden.folio} - ${proveedorNombreNotif}${fechaNotif ? ` - ${fechaNotif}` : ''}`,
+          data: {
+            type: 'recepcion_programada',
+            orden_id: orden.id,
+            folio: orden.folio
+          }
+        });
+      }
+      
       resetForm();
       setDialogOpen(false);
     },

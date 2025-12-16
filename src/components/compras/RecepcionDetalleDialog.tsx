@@ -55,6 +55,11 @@ interface RecepcionDetalle {
   notas: string | null;
   firma_chofer_conformidad: string | null;
   firma_almacenista: string | null;
+  llegada_registrada_en: string | null;
+  recepcion_finalizada_en: string | null;
+  placas_vehiculo: string | null;
+  nombre_chofer_proveedor: string | null;
+  numero_remision_proveedor: string | null;
   recibido_por_profile: {
     full_name: string;
   } | null;
@@ -108,6 +113,7 @@ export const RecepcionDetalleDialog = ({
         .select(`
           id, numero_entrega, cantidad_bultos, fecha_programada, fecha_entrega_real, status, notas,
           firma_chofer_conformidad, firma_almacenista,
+          llegada_registrada_en, recepcion_finalizada_en, placas_vehiculo, nombre_chofer_proveedor, numero_remision_proveedor,
           recibido_por_profile:recibido_por(full_name),
           orden_compra:ordenes_compra(
             id, folio, proveedor_nombre_manual,
@@ -172,6 +178,11 @@ export const RecepcionDetalleDialog = ({
         evidenciasUrls: Object.values(evidenciasUrls),
         firmaChofer: recepcion.firma_chofer_conformidad,
         firmaAlmacenista: recepcion.firma_almacenista,
+        llegadaRegistradaEn: recepcion.llegada_registrada_en,
+        recepcionFinalizadaEn: recepcion.recepcion_finalizada_en,
+        placasVehiculo: recepcion.placas_vehiculo,
+        nombreChoferProveedor: recepcion.nombre_chofer_proveedor,
+        numeroRemisionProveedor: recepcion.numero_remision_proveedor,
       });
     } catch (error) {
       console.error("Error generando PDF:", error);
