@@ -72,7 +72,7 @@ const TIPO_EVIDENCIA_LABELS: Record<string, string> = {
 const RAZON_LABELS: Record<string, string> = {
   roto: "Dañado",
   no_llego: "Faltante",
-  calidad: "Calidad",
+  rechazado_calidad: "Calidad",
   otro: "Otro",
 };
 
@@ -106,6 +106,12 @@ const formatDuration = (minutes: number): string => {
 };
 
 export const generarRecepcionPDF = async (data: RecepcionData) => {
+  console.log("Iniciando generación de PDF de recepción...", { 
+    recepcionId: data.recepcion?.id, 
+    productosCount: data.productos?.length,
+    evidenciasCount: data.evidenciasConTipos?.length 
+  });
+  
   const { 
     recepcion, 
     productos, 
@@ -462,8 +468,14 @@ export const generarRecepcionPDF = async (data: RecepcionData) => {
   // Generate filename
   const fileName = `Recepcion_${recepcion.orden_compra.folio}_E${recepcion.numero_entrega}_${format(new Date(), "yyyyMMdd")}.pdf`;
   
-  // Download
-  doc.save(fileName);
+  // Download with error handling
+  try {
+    doc.save(fileName);
+    console.log("PDF generado exitosamente:", fileName);
+  } catch (saveError) {
+    console.error("Error al guardar/descargar PDF:", saveError);
+    throw saveError;
+  }
   
   return fileName;
 };

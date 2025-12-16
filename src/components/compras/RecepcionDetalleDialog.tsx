@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { format, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -100,7 +101,7 @@ const formatDuration = (minutes: number): string => {
 const RAZON_LABELS: Record<string, string> = {
   "roto": "Producto roto/dañado",
   "no_llego": "No llegó completo",
-  "calidad": "Rechazado por calidad",
+  "rechazado_calidad": "Rechazado por calidad",
   "otro": "Otro",
 };
 
@@ -211,8 +212,10 @@ export const RecepcionDetalleDialog = ({
         nombreChoferProveedor: recepcion.nombre_chofer_proveedor,
         numeroRemisionProveedor: recepcion.numero_remision_proveedor,
       });
+      toast.success("PDF generado exitosamente");
     } catch (error) {
       console.error("Error generando PDF:", error);
+      toast.error("Error al generar PDF. Revisa la consola para más detalles.");
     } finally {
       setGenerandoPdf(false);
     }
