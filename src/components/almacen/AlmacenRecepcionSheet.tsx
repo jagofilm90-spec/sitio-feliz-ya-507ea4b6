@@ -150,7 +150,7 @@ export const AlmacenRecepcionSheet = ({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [productos, setProductos] = useState<ProductoEntrega[]>([]);
-  const [cantidadesRecibidas, setCantidadesRecibidas] = useState<Record<string, number>>({});
+  const [cantidadesRecibidas, setCantidadesRecibidas] = useState<Record<string, number | string>>({});
   const [fechasCaducidad, setFechasCaducidad] = useState<Record<string, string>>({});
   const [razonesDiferencia, setRazonesDiferencia] = useState<Record<string, string>>({});
   const [notasDiferencia, setNotasDiferencia] = useState<Record<string, string>>({});
@@ -313,8 +313,17 @@ export const AlmacenRecepcionSheet = ({
     }
   };
 
-  const handleCantidadChange = (detalleId: string, cantidad: number) => {
+  const handleCantidadChange = (detalleId: string, valor: string) => {
+    // Permitir campo vacío para mejor UX al escribir
+    const cantidad = valor === "" ? "" : Number(valor);
     setCantidadesRecibidas(prev => ({ ...prev, [detalleId]: cantidad }));
+  };
+
+  // Helper para obtener valor numérico (trata string vacío como 0)
+  const getCantidadNumerica = (detalleId: string): number => {
+    const valor = cantidadesRecibidas[detalleId];
+    if (typeof valor === "number") return valor;
+    return valor === "" || valor === undefined ? 0 : Number(valor);
   };
 
   const handleFechaCaducidadChange = (detalleId: string, fecha: string) => {
@@ -372,7 +381,7 @@ export const AlmacenRecepcionSheet = ({
   const getProductosConDiferencia = () => {
     return productos.filter(p => {
       const faltante = p.cantidad_ordenada - p.cantidad_recibida;
-      const recibiendo = cantidadesRecibidas[p.id] || 0;
+      const recibiendo = getCantidadNumerica(p.id);
       return recibiendo < faltante;
     });
   };
@@ -380,14 +389,14 @@ export const AlmacenRecepcionSheet = ({
   const getProductosParaDevolucion = () => {
     return productos.filter(p => {
       const faltante = p.cantidad_ordenada - p.cantidad_recibida;
-      const recibiendo = cantidadesRecibidas[p.id] || 0;
+      const recibiendo = getCantidadNumerica(p.id);
       const razon = razonesDiferencia[p.id];
       return recibiendo < faltante && 
              RAZONES_REQUIEREN_DEVOLUCION.includes(razon) && 
              devolucionAlChofer[p.id];
     }).map(p => {
       const faltante = p.cantidad_ordenada - p.cantidad_recibida;
-      const recibiendo = cantidadesRecibidas[p.id] || 0;
+      const recibiendo = getCantidadNumerica(p.id);
       const razon = razonesDiferencia[p.id];
       return {
         detalleId: p.id,
@@ -405,7 +414,7 @@ export const AlmacenRecepcionSheet = ({
   const esDescargaCompleta = (): boolean => {
     return productos.every(p => {
       const faltante = p.cantidad_ordenada - p.cantidad_recibida;
-      const recibiendo = cantidadesRecibidas[p.id] || 0;
+      const recibiendo = getCantidadNumerica(p.id);
       return recibiendo >= faltante;
     });
   };
@@ -451,7 +460,7 @@ export const AlmacenRecepcionSheet = ({
     }
 
     const productosConCaducidad = productos.filter(p => 
-      p.producto?.maneja_caducidad && (cantidadesRecibidas[p.id] || 0) > 0
+      p.producto?.maneja_caducidad && getCantidadNumerica(p.id) > 0
     );
     
     const faltaFecha = productosConCaducidad.find(p => !fechasCaducidad[p.id]);
@@ -579,33 +588,33 @@ export const AlmacenRecepcionSheet = ({
         notas: `Inició completar recepción`
       });
 
-      for (const [detalleId, cantidad] of Object.entries(cantidadesRecibidas)) {
-        const producto = productos.find(p => p.id === detalleId);
+      for (const producto of productos) {
+        const cantidad = getCantidadNumerica(producto.id);
         if (producto) {
           const nuevaCantidadRecibida = producto.cantidad_recibida + cantidad;
           const updateData: any = { cantidad_recibida: nuevaCantidadRecibida };
           
           const faltante = producto.cantidad_ordenada - producto.cantidad_recibida;
-          if (cantidad < faltante && razonesDiferencia[detalleId]) {
-            updateData.razon_diferencia = razonesDiferencia[detalleId];
-            updateData.notas_diferencia = notasDiferencia[detalleId] || null;
+          if (cantidad < faltante && razonesDiferencia[producto.id]) {
+            updateData.razon_diferencia = razonesDiferencia[producto.id];
+            updateData.notas_diferencia = notasDiferencia[producto.id] || null;
           }
           
           await supabase
             .from("ordenes_compra_detalles")
             .update(updateData)
-            .eq("id", detalleId);
+            .eq("id", producto.id);
 
           if (cantidad > 0) {
             const { data: detalleConPrecio } = await supabase
               .from("ordenes_compra_detalles")
               .select("precio_unitario_compra")
-              .eq("id", detalleId)
+              .eq("id", producto.id)
               .single();
             
             const precioCompra = detalleConPrecio?.precio_unitario_compra || 0;
 
-            const fechaCaducidad = fechasCaducidad[detalleId] || null;
+            const fechaCaducidad = fechasCaducidad[producto.id] || null;
             const { error: loteError } = await supabase
               .from("inventario_lotes")
               .insert({
@@ -760,7 +769,7 @@ export const AlmacenRecepcionSheet = ({
   const hayDiferencias = getProductosConDiferencia().length > 0;
   const totalDiferencias = getProductosConDiferencia().reduce((sum, p) => {
     const faltante = p.cantidad_ordenada - p.cantidad_recibida;
-    const recibiendo = cantidadesRecibidas[p.id] || 0;
+    const recibiendo = getCantidadNumerica(p.id);
     return sum + (faltante - recibiendo);
   }, 0);
 
@@ -899,7 +908,7 @@ export const AlmacenRecepcionSheet = ({
                     {productos.map((producto) => {
                       const faltante = producto.cantidad_ordenada - producto.cantidad_recibida;
                       const requiereCaducidad = producto.producto?.maneja_caducidad;
-                      const cantidadActual = cantidadesRecibidas[producto.id] || 0;
+                      const cantidadActual = getCantidadNumerica(producto.id);
                       const faltaFechaCaducidad = requiereCaducidad && cantidadActual > 0 && !fechasCaducidad[producto.id];
                       const faltaFotoCaducidad = requiereCaducidad && cantidadActual > 0 && !fotosCaducidad[producto.id];
                       const tieneDiferencia = cantidadActual < faltante;
@@ -936,8 +945,8 @@ export const AlmacenRecepcionSheet = ({
                                   type="number"
                                   min={0}
                                   max={faltante}
-                                  value={cantidadesRecibidas[producto.id] || 0}
-                                  onChange={(e) => handleCantidadChange(producto.id, Number(e.target.value))}
+                                  value={cantidadesRecibidas[producto.id] ?? ""}
+                                  onChange={(e) => handleCantidadChange(producto.id, e.target.value)}
                                   className="text-center"
                                 />
                               </div>
@@ -1022,7 +1031,7 @@ export const AlmacenRecepcionSheet = ({
                                       htmlFor={`devolucion-${producto.id}`}
                                       className="text-sm font-medium leading-none"
                                     >
-                                      Los {faltante - cantidadActual} bultos se devuelven al chofer
+                                      Los {faltante - getCantidadNumerica(producto.id)} bultos se devuelven al chofer
                                     </label>
                                   </div>
                                 )}
