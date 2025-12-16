@@ -234,6 +234,47 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
     loadEntregas();
   }, []);
 
+  // Suscripción a Realtime para actualizaciones instantáneas
+  useEffect(() => {
+    const channel = supabase
+      .channel('entregas-almacen-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'ordenes_compra_entregas'
+        },
+        async (payload) => {
+          console.log('Nueva entrega detectada via Realtime:', payload);
+          const newEntrega = payload.new as any;
+          if (['programada', 'en_transito', 'en_descarga'].includes(newEntrega.status)) {
+            await loadEntregas();
+            toast({
+              title: "🚚 Nueva entrega programada",
+              description: "Se ha agregado una nueva entrega a la lista",
+            });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'ordenes_compra_entregas'
+        },
+        async () => {
+          await loadEntregas();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const handleRegistrarLlegada = (entrega: EntregaCompra) => {
     setSelectedEntrega(entrega);
     setLlegadaSheetOpen(true);

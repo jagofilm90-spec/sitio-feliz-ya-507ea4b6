@@ -439,15 +439,17 @@ const OrdenesCompraTab = () => {
           ? proveedores.find(p => p.id === proveedorId)?.nombre || 'Proveedor'
           : proveedorNombreManual || 'Proveedor';
         
-        const fechaNotif = fechaEntrega 
-          ? format(new Date(fechaEntrega), "dd/MM/yyyy", { locale: es })
-          : entregasProgramadas[0]?.fecha_programada 
-            ? format(new Date(entregasProgramadas[0].fecha_programada), "dd/MM/yyyy", { locale: es })
-            : '';
+        const fechaEntregaReal = fechaEntrega || entregasProgramadas[0]?.fecha_programada;
+        const esParaHoy = fechaEntregaReal && 
+          format(new Date(fechaEntregaReal), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+        
+        const fechaNotif = fechaEntregaReal 
+          ? format(new Date(fechaEntregaReal), "dd/MM/yyyy", { locale: es })
+          : '';
         
         sendPushNotification({
           roles: ['almacen'],
-          title: '🚚 Nueva entrega programada',
+          title: esParaHoy ? '🔴 ENTREGA HOY' : '🚚 Nueva entrega programada',
           body: `${orden.folio} - ${proveedorNombreNotif}${fechaNotif ? ` - ${fechaNotif}` : ''}`,
           data: {
             type: 'recepcion_programada',
