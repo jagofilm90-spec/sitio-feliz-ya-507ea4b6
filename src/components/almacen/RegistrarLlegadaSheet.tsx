@@ -28,9 +28,23 @@ import {
   Loader2,
   PenLine,
   ShieldX,
+  Ban,
 } from "lucide-react";
-import { EvidenciaCapture, TipoEvidencia } from "@/components/compras/EvidenciaCapture";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { EvidenciaCapture, EvidenciasPreviewGrid, TipoEvidencia } from "@/components/compras/EvidenciaCapture";
 import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
+
+// Motivos para rechazo total de la entrega en Fase 1
+const MOTIVOS_RECHAZO_TOTAL = [
+  { value: "mal_estado", label: "Todo el producto viene en mal estado" },
+  { value: "producto_incorrecto", label: "Llegó producto diferente al ordenado" },
+];
 
 interface EntregaCompra {
   id: string;
@@ -85,6 +99,13 @@ export const RegistrarLlegadaSheet = ({
   const [sinSellos, setSinSellos] = useState(false);
   const [firmaChoferSinSellos, setFirmaChoferSinSellos] = useState<string | null>(null);
   const [showFirmaDialog, setShowFirmaDialog] = useState(false);
+  
+  // Rechazo total
+  const [rechazoTotal, setRechazoTotal] = useState(false);
+  const [motivoRechazo, setMotivoRechazo] = useState("");
+  const [fotosRechazo, setFotosRechazo] = useState<EvidenciaLlegada[]>([]);
+  const [firmaChoferRechazo, setFirmaChoferRechazo] = useState<string | null>(null);
+  const [showFirmaRechazoDialog, setShowFirmaRechazoDialog] = useState(false);
   
   const { toast } = useToast();
 
@@ -182,6 +203,34 @@ export const RegistrarLlegadaSheet = ({
     setShowFirmaDialog(false);
   };
 
+  // Handle rechazo total
+  const handleRechazoTotalChange = (checked: boolean) => {
+    setRechazoTotal(checked);
+    if (!checked) {
+      setMotivoRechazo("");
+      setFotosRechazo([]);
+      setFirmaChoferRechazo(null);
+    }
+  };
+
+  const handleFotoRechazoCapture = (tipo: TipoEvidencia, file: File, preview: string) => {
+    setFotosRechazo(prev => [...prev, { tipo, file, preview }]);
+  };
+
+  const handleRemoveFotoRechazo = (index: number) => {
+    setFotosRechazo(prev => {
+      const newFotos = [...prev];
+      URL.revokeObjectURL(newFotos[index].preview);
+      newFotos.splice(index, 1);
+      return newFotos;
+    });
+  };
+
+  const handleFirmaRechazoConfirmada = (firma: string) => {
+    setFirmaChoferRechazo(firma);
+    setShowFirmaRechazoDialog(false);
+  };
+
   const validarFormulario = (): boolean => {
     if (!nombreChofer.trim()) {
       toast({
@@ -222,6 +271,35 @@ export const RegistrarLlegadaSheet = ({
       return false;
     }
 
+    // Si es rechazo total, validar diferente
+    if (rechazoTotal) {
+      if (!motivoRechazo) {
+        toast({
+          title: "Motivo requerido",
+          description: "Selecciona el motivo del rechazo total",
+          variant: "destructive"
+        });
+        return false;
+      }
+      if (fotosRechazo.length === 0) {
+        toast({
+          title: "Fotos requeridas",
+          description: "Captura al menos una foto de evidencia del problema",
+          variant: "destructive"
+        });
+        return false;
+      }
+      if (!firmaChoferRechazo) {
+        toast({
+          title: "Firma requerida",
+          description: "El chofer debe firmar confirmando el rechazo de la entrega",
+          variant: "destructive"
+        });
+        return false;
+      }
+      return true; // Si es rechazo, no validar sellos
+    }
+
     // Verificar: foto de sello puerta 1 (obligatorio) O (checkbox sin sellos + firma)
     const tieneSelloPuerta1 = getEvidenciaPorTipo("sello_1");
     if (!tieneSelloPuerta1 && !sinSellos) {
@@ -253,6 +331,124 @@ export const RegistrarLlegadaSheet = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No autenticado");
 
+      // Flujo de RECHAZO TOTAL
+      if (rechazoTotal) {
+        // 1. Actualizar entrega como rechazada
+        const { error: updateError } = await supabase
+          .from("ordenes_compra_entregas")
+          .update({
+            status: "rechazada",
+            llegada_registrada_en: new Date().toISOString(),
+            llegada_registrada_por: user.id,
+            nombre_chofer_proveedor: nombreChofer.trim(),
+            placas_vehiculo: placasManual.trim(),
+            motivo_rechazo: motivoRechazo,
+            rechazada_en: new Date().toISOString(),
+            rechazada_por: user.id,
+            firma_chofer_rechazo: firmaChoferRechazo,
+          })
+          .eq("id", entrega.id);
+
+        if (updateError) throw updateError;
+
+        // 2. Registrar en historial
+        const motivoLabel = MOTIVOS_RECHAZO_TOTAL.find(m => m.value === motivoRechazo)?.label || motivoRechazo;
+        await supabase.from("recepciones_participantes").insert({
+          entrega_id: entrega.id,
+          user_id: user.id,
+          accion: "rechazo_total",
+          notas: `Rechazó entrega completa. Motivo: ${motivoLabel}. Chofer: ${nombreChofer.trim()}`
+        });
+
+        // 3. Subir evidencias básicas (placas, identificación)
+        for (const evidencia of evidencias) {
+          const fileName = `rechazos/${entrega.orden_compra.id}/${entrega.id}/${Date.now()}-${evidencia.tipo}.jpg`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from("recepciones-evidencias")
+            .upload(fileName, evidencia.file);
+
+          if (!uploadError) {
+            await supabase
+              .from("ordenes_compra_entregas_evidencias")
+              .insert({
+                entrega_id: entrega.id,
+                tipo_evidencia: evidencia.tipo,
+                fase: "rechazo",
+                ruta_storage: fileName,
+                nombre_archivo: evidencia.file.name,
+                capturado_por: user.id
+              });
+          }
+        }
+
+        // 4. Subir fotos de rechazo
+        for (const foto of fotosRechazo) {
+          const fileName = `rechazos/${entrega.orden_compra.id}/${entrega.id}/${Date.now()}-rechazo-${foto.tipo}.jpg`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from("recepciones-evidencias")
+            .upload(fileName, foto.file);
+
+          if (!uploadError) {
+            await supabase
+              .from("ordenes_compra_entregas_evidencias")
+              .insert({
+                entrega_id: entrega.id,
+                tipo_evidencia: "rechazo_" + foto.tipo,
+                fase: "rechazo",
+                ruta_storage: fileName,
+                nombre_archivo: foto.file.name,
+                capturado_por: user.id
+              });
+          }
+        }
+
+        // 5. Subir firma de rechazo
+        if (firmaChoferRechazo) {
+          const firmaBlob = await fetch(firmaChoferRechazo).then(r => r.blob());
+          const firmaFile = new File([firmaBlob], "firma-rechazo.png", { type: "image/png" });
+          const firmaFileName = `rechazos/${entrega.orden_compra.id}/${entrega.id}/${Date.now()}-firma-rechazo.png`;
+          
+          const { error: firmaUploadError } = await supabase.storage
+            .from("recepciones-evidencias")
+            .upload(firmaFileName, firmaFile);
+
+          if (!firmaUploadError) {
+            await supabase
+              .from("ordenes_compra_entregas_evidencias")
+              .insert({
+                entrega_id: entrega.id,
+                tipo_evidencia: "firma_rechazo",
+                fase: "rechazo",
+                ruta_storage: firmaFileName,
+                nombre_archivo: "firma-rechazo.png",
+                capturado_por: user.id
+              });
+          }
+        }
+
+        toast({
+          title: "Entrega rechazada",
+          description: "Se registró el rechazo total de la entrega. El proveedor debe ser notificado."
+        });
+
+        // Limpiar estado
+        setNombreChofer("");
+        setPlacasDetectadas(null);
+        setPlacasManual("");
+        setDeteccionFallida(false);
+        setRechazoTotal(false);
+        setMotivoRechazo("");
+        setFotosRechazo([]);
+        setFirmaChoferRechazo(null);
+        setEvidencias([]);
+        
+        onLlegadaRegistrada();
+        return;
+      }
+
+      // Flujo NORMAL (llegada para descarga)
       // 1. Actualizar entrega con datos de llegada
       const { error: updateError } = await supabase
         .from("ordenes_compra_entregas")
@@ -369,7 +565,7 @@ export const RegistrarLlegadaSheet = ({
 
   return (
     <>
-      <Sheet open={open && !showFirmaDialog} onOpenChange={onOpenChange}>
+      <Sheet open={open && !showFirmaDialog && !showFirmaRechazoDialog} onOpenChange={onOpenChange}>
         <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
@@ -666,19 +862,100 @@ export const RegistrarLlegadaSheet = ({
                 </div>
               </div>
 
+              {/* RECHAZO TOTAL */}
+              <div className={cn(
+                "p-4 border rounded-lg",
+                rechazoTotal ? "border-red-500 bg-red-50 dark:bg-red-950/20" : "border-border"
+              )}>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="rechazo-total"
+                    checked={rechazoTotal}
+                    onCheckedChange={(checked) => handleRechazoTotalChange(!!checked)}
+                    disabled={sinSellos || !!fotoSelloPuerta1}
+                  />
+                  <label 
+                    htmlFor="rechazo-total"
+                    className="text-sm font-medium leading-none flex items-center gap-2 text-red-700 dark:text-red-400"
+                  >
+                    <Ban className="w-4 h-4" />
+                    Rechazar entrega completa
+                  </label>
+                </div>
+                
+                {rechazoTotal && (
+                  <div className="mt-4 space-y-4">
+                    <Select value={motivoRechazo} onValueChange={setMotivoRechazo}>
+                      <SelectTrigger className={cn(!motivoRechazo && "border-destructive")}>
+                        <SelectValue placeholder="Selecciona motivo del rechazo *" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MOTIVOS_RECHAZO_TOTAL.map(m => (
+                          <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm">Fotos de evidencia * (mínimo 1)</Label>
+                      <EvidenciaCapture
+                        tipo="rechazo_total"
+                        onCapture={(file, preview) => handleFotoRechazoCapture("rechazo_total", file, preview)}
+                      />
+                      {fotosRechazo.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2 mt-2">
+                          {fotosRechazo.map((foto, idx) => (
+                            <div key={idx} className="relative">
+                              <img src={foto.preview} alt="Evidencia" className="h-16 w-full object-cover rounded border" />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFotoRechazo(idx)}
+                                className="absolute -top-1 -right-1 p-0.5 rounded-full bg-destructive text-destructive-foreground"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {firmaChoferRechazo ? (
+                      <div className="flex items-center gap-3 p-2 bg-green-100 dark:bg-green-900/30 rounded">
+                        <img src={firmaChoferRechazo} alt="Firma" className="h-12 border rounded bg-white" />
+                        <div className="flex items-center gap-1 text-green-700 dark:text-green-400 text-sm">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Chofer firmó rechazo
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => setFirmaChoferRechazo(null)}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button variant="outline" onClick={() => setShowFirmaRechazoDialog(true)} className="w-full">
+                        <PenLine className="w-4 h-4 mr-2" />
+                        Firma del chofer (confirma rechazo) *
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Aviso */}
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
-                <div className="flex items-start gap-2 text-amber-700 dark:text-amber-400">
-                  <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0" />
-                  <div className="text-sm">
-                    <p className="font-medium">Después de confirmar:</p>
-                    <p className="text-amber-600 dark:text-amber-300">
-                      La entrega pasará a estado "En descarga". Cuando termines de descargar, 
-                      regresa para completar la recepción con las cantidades recibidas.
-                    </p>
+              {!rechazoTotal && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="flex items-start gap-2 text-amber-700 dark:text-amber-400">
+                    <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium">Después de confirmar:</p>
+                      <p className="text-amber-600 dark:text-amber-300">
+                        La entrega pasará a estado "En descarga". Cuando termines de descargar, 
+                        regresa para completar la recepción con las cantidades recibidas.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </ScrollArea>
 
@@ -686,11 +963,16 @@ export const RegistrarLlegadaSheet = ({
             <Button
               onClick={handleConfirmarLlegada}
               disabled={saving || detectandoPlacas}
-              className="w-full"
+              className={cn("w-full", rechazoTotal && "bg-destructive hover:bg-destructive/90")}
               size="lg"
             >
               {saving ? (
                 "Guardando..."
+              ) : rechazoTotal ? (
+                <>
+                  <Ban className="w-5 h-5 mr-2" />
+                  Confirmar Rechazo Total
+                </>
               ) : (
                 <>
                   <CheckCircle2 className="w-5 h-5 mr-2" />
@@ -708,6 +990,14 @@ export const RegistrarLlegadaSheet = ({
         onOpenChange={setShowFirmaDialog}
         onConfirm={handleFirmaSinSellosConfirmada}
         titulo={`Firma de ${nombreChofer || "chofer"} - Confirma que entrega SIN SELLOS de seguridad`}
+      />
+
+      {/* Diálogo de firma para rechazo total */}
+      <FirmaDigitalDialog
+        open={showFirmaRechazoDialog}
+        onOpenChange={setShowFirmaRechazoDialog}
+        onConfirm={handleFirmaRechazoConfirmada}
+        titulo={`Firma de ${nombreChofer || "chofer"} - Confirma RECHAZO TOTAL de la entrega`}
       />
     </>
   );

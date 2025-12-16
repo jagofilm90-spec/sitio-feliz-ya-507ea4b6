@@ -66,13 +66,15 @@ import { DevolucionProveedorDialog } from "./DevolucionProveedorDialog";
 const RAZONES_DIFERENCIA = [
   { value: "roto", label: "Producto roto/dañado" },
   { value: "no_llego", label: "No llegó completo" },
-  { value: "error_cantidad", label: "Error del proveedor" },
   { value: "rechazado_calidad", label: "Rechazado por calidad" },
   { value: "otro", label: "Otro" },
 ];
 
 // Razones que requieren devolución física al chofer
 const RAZONES_REQUIEREN_DEVOLUCION = ["roto", "rechazado_calidad"];
+
+// Razones que requieren foto obligatoria del producto
+const RAZONES_REQUIEREN_FOTO = ["roto"];
 
 interface EntregaCompra {
   id: string;
@@ -155,6 +157,7 @@ export const AlmacenRecepcionSheet = ({
   const [devolucionAlChofer, setDevolucionAlChofer] = useState<Record<string, boolean>>({});
   const [evidencias, setEvidencias] = useState<Evidencia[]>([]);
   const [fotosCaducidad, setFotosCaducidad] = useState<Record<string, { file: File; preview: string } | null>>({});
+  const [fotosDiferencia, setFotosDiferencia] = useState<Record<string, { file: File; preview: string } | null>>({});
   const [notas, setNotas] = useState("");
   const [bodegas, setBodegas] = useState<Bodega[]>([]);
   const [bodegaSeleccionada, setBodegaSeleccionada] = useState<string>("");
@@ -351,6 +354,17 @@ export const AlmacenRecepcionSheet = ({
     });
   };
 
+  const handleFotoDiferenciaCapture = (productoId: string, file: File, preview: string) => {
+    setFotosDiferencia(prev => ({ ...prev, [productoId]: { file, preview } }));
+  };
+
+  const handleRemoveFotoDiferencia = (productoId: string) => {
+    setFotosDiferencia(prev => {
+      if (prev[productoId]) URL.revokeObjectURL(prev[productoId]!.preview);
+      return { ...prev, [productoId]: null };
+    });
+  };
+
   const handleDevolucionChange = (detalleId: string, checked: boolean) => {
     setDevolucionAlChofer(prev => ({ ...prev, [detalleId]: checked }));
   };
@@ -466,6 +480,19 @@ export const AlmacenRecepcionSheet = ({
       toast({
         title: "Razón de diferencia requerida",
         description: `Indica por qué "${faltaRazon.producto?.nombre}" tiene diferencia`,
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    // Validar foto obligatoria para productos rotos/dañados
+    const productosRotos = productosConDiferencia.filter(p => 
+      RAZONES_REQUIEREN_FOTO.includes(razonesDiferencia[p.id]) && !fotosDiferencia[p.id]
+    );
+    if (productosRotos.length > 0) {
+      toast({
+        title: "Foto de producto dañado requerida",
+        description: `Captura foto del producto "${productosRotos[0].producto?.nombre}" que está roto/dañado`,
         variant: "destructive"
       });
       return false;
@@ -949,6 +976,39 @@ export const AlmacenRecepcionSheet = ({
                                     onChange={(e) => handleNotaDiferenciaChange(producto.id, e.target.value)}
                                     className="bg-background"
                                   />
+                                )}
+                                
+                                {/* Foto obligatoria para producto roto/dañado */}
+                                {RAZONES_REQUIEREN_FOTO.includes(razonActual) && (
+                                  <div className="space-y-2 p-2 bg-amber-100 dark:bg-amber-950/30 rounded border border-amber-300 dark:border-amber-700">
+                                    <Label className="text-sm text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1">
+                                      <Camera className="w-4 h-4" />
+                                      Foto del producto dañado *
+                                    </Label>
+                                    {fotosDiferencia[producto.id] ? (
+                                      <div className="flex items-center gap-2">
+                                        <img 
+                                          src={fotosDiferencia[producto.id]!.preview} 
+                                          alt="Producto dañado"
+                                          className="h-14 w-20 object-cover rounded border"
+                                        />
+                                        <span className="text-xs text-muted-foreground flex-1">Foto capturada</span>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleRemoveFotoDiferencia(producto.id)}
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <EvidenciaCapture
+                                        tipo="producto_danado"
+                                        onCapture={(file, preview) => handleFotoDiferenciaCapture(producto.id, file, preview)}
+                                        className="border-amber-400"
+                                      />
+                                    )}
+                                  </div>
                                 )}
                                 
                                 {esRazonDevolucion && (
