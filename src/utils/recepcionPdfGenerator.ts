@@ -2,6 +2,11 @@ import jsPDF from "jspdf";
 import { format, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 
+interface EvidenciaConTipo {
+  url: string;
+  tipo: string;
+}
+
 interface RecepcionData {
   recepcion: {
     id: string;
@@ -29,12 +34,14 @@ interface RecepcionData {
     id: string;
     cantidad_ordenada: number;
     cantidad_recibida: number;
+    razon_diferencia?: string | null;
+    notas_diferencia?: string | null;
     producto: {
       codigo: string;
       nombre: string;
     };
   }>;
-  evidenciasUrls?: string[];
+  evidenciasConTipos?: EvidenciaConTipo[];
   firmaChofer?: string | null;
   firmaAlmacenista?: string | null;
   llegadaRegistradaEn?: string | null;
@@ -43,6 +50,31 @@ interface RecepcionData {
   nombreChoferProveedor?: string | null;
   numeroRemisionProveedor?: string | null;
 }
+
+// Map tipo codes to descriptive labels
+const TIPO_EVIDENCIA_LABELS: Record<string, string> = {
+  sello_1: "Sello Puerta 1",
+  sello_2: "Sello Puerta 2",
+  sello: "Sello",
+  identificacion: "Identificación Chofer",
+  placas: "Placas Vehículo",
+  remision_proveedor: "Remisión Proveedor",
+  caja_vacia: "Caja Vacía",
+  producto_danado: "Producto Dañado",
+  producto_rechazado: "Producto Rechazado",
+  documento: "Documento",
+  vehiculo: "Vehículo",
+  producto: "Producto",
+  otro: "Otro",
+};
+
+// Map razón codes to labels
+const RAZON_LABELS: Record<string, string> = {
+  roto: "Dañado",
+  no_llego: "Faltante",
+  calidad: "Calidad",
+  otro: "Otro",
+};
 
 // Helper function to load image as base64
 const loadImageAsBase64 = async (url: string): Promise<string | null> => {
@@ -77,7 +109,7 @@ export const generarRecepcionPDF = async (data: RecepcionData) => {
   const { 
     recepcion, 
     productos, 
-    evidenciasUrls = [], 
+    evidenciasConTipos = [], 
     firmaChofer, 
     firmaAlmacenista,
     llegadaRegistradaEn,
@@ -246,24 +278,44 @@ export const generarRecepcionPDF = async (data: RecepcionData) => {
       yPos = 20;
     }
     
-    // Alternating row colors
-    if (index % 2 === 0) {
+    const hasDiferencia = p.cantidad_recibida < p.cantidad_ordenada;
+    
+    // Alternating row colors - highlight differences in red
+    if (hasDiferencia) {
+      doc.setFillColor(255, 235, 235);
+    } else if (index % 2 === 0) {
       doc.setFillColor(248, 248, 248);
-      doc.rect(15, yPos - 4, 180, 7, "F");
+    } else {
+      doc.setFillColor(255, 255, 255);
     }
+    doc.rect(15, yPos - 4, 180, 7, "F");
     
     doc.setFontSize(8);
     doc.text(p.producto?.codigo || "", 17, yPos);
     
     // Truncate product name if too long
     const nombreProducto = p.producto?.nombre || "";
-    const nombreTruncado = nombreProducto.length > 50 
-      ? nombreProducto.substring(0, 47) + "..." 
+    const nombreTruncado = nombreProducto.length > 40 
+      ? nombreProducto.substring(0, 37) + "..." 
       : nombreProducto;
     doc.text(nombreTruncado, 45, yPos);
     
-    doc.text(String(p.cantidad_ordenada), 140, yPos, { align: "right" });
-    doc.text(String(p.cantidad_recibida), 175, yPos, { align: "right" });
+    doc.text(String(p.cantidad_ordenada), 130, yPos, { align: "right" });
+    
+    // Show received with color if different
+    if (hasDiferencia) {
+      doc.setTextColor(200, 0, 0);
+    }
+    doc.text(String(p.cantidad_recibida), 150, yPos, { align: "right" });
+    doc.setTextColor(0, 0, 0);
+    
+    // Show razón if exists
+    if (p.razon_diferencia) {
+      doc.setFontSize(7);
+      doc.setTextColor(150, 100, 0);
+      doc.text(RAZON_LABELS[p.razon_diferencia] || p.razon_diferencia, 160, yPos);
+      doc.setTextColor(0, 0, 0);
+    }
     
     yPos += 7;
   });
@@ -297,7 +349,7 @@ export const generarRecepcionPDF = async (data: RecepcionData) => {
   }
   
   // Evidencias fotográficas section
-  if (evidenciasUrls && evidenciasUrls.length > 0) {
+  if (evidenciasConTipos && evidenciasConTipos.length > 0) {
     doc.addPage();
     yPos = 20;
     
@@ -314,8 +366,8 @@ export const generarRecepcionPDF = async (data: RecepcionData) => {
     let col = 0;
     let startY = yPos;
     
-    for (let i = 0; i < evidenciasUrls.length; i++) {
-      const url = evidenciasUrls[i];
+    for (let i = 0; i < evidenciasConTipos.length; i++) {
+      const { url, tipo } = evidenciasConTipos[i];
       
       // Check if we need a new page
       if (startY + imgHeight > 280) {
@@ -338,12 +390,14 @@ export const generarRecepcionPDF = async (data: RecepcionData) => {
           // Add image
           doc.addImage(base64Image, "JPEG", xPos, startY, imgWidth, imgHeight);
           
-          // Add label
+          // Add descriptive label
           doc.setFontSize(8);
-          doc.setFont("helvetica", "normal");
-          doc.setTextColor(100, 100, 100);
-          doc.text(`Evidencia ${i + 1}`, xPos + (imgWidth / 2), startY + imgHeight + 8, { align: "center" });
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(60, 60, 60);
+          const label = TIPO_EVIDENCIA_LABELS[tipo] || tipo;
+          doc.text(label, xPos + (imgWidth / 2), startY + imgHeight + 8, { align: "center" });
           doc.setTextColor(0, 0, 0);
+          doc.setFont("helvetica", "normal");
         } else {
           // Draw placeholder if image failed to load
           doc.setFillColor(240, 240, 240);
