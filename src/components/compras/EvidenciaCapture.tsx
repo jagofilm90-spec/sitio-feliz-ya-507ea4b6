@@ -4,7 +4,7 @@ import { Camera, CreditCard, FileText, Truck, Package, X, Loader2, CalendarDays,
 import { cn } from "@/lib/utils";
 import { compressImageForUpload, type ImageCompressionProfile } from "@/lib/imageUtils";
 
-export type TipoEvidencia = 'sello' | 'identificacion' | 'documento' | 'vehiculo' | 'placas' | 'caducidad' | 'producto_danado' | 'caja_vacia' | 'remision_proveedor' | 'otro';
+export type TipoEvidencia = 'sello' | 'sello_1' | 'sello_2' | 'identificacion' | 'documento' | 'vehiculo' | 'placas' | 'caducidad' | 'producto_danado' | 'caja_vacia' | 'remision_proveedor' | 'otro';
 
 interface EvidenciaCaptureProps {
   tipo: TipoEvidencia;
@@ -15,6 +15,8 @@ interface EvidenciaCaptureProps {
 
 const tipoConfig: Record<TipoEvidencia, { label: string; icon: typeof Camera }> = {
   sello: { label: "Foto de sellos", icon: Camera },
+  sello_1: { label: "Sello Puerta 1", icon: Camera },
+  sello_2: { label: "Sello Puerta 2", icon: Camera },
   identificacion: { label: "Escanear INE", icon: CreditCard },
   documento: { label: "Escanear documento", icon: FileText },
   vehiculo: { label: "Foto del vehículo", icon: Truck },
@@ -29,6 +31,8 @@ const tipoConfig: Record<TipoEvidencia, { label: string; icon: typeof Camera }> 
 // Mapeo de tipo de evidencia a perfil de compresión centralizado
 const TIPO_TO_PROFILE: Record<TipoEvidencia, ImageCompressionProfile> = {
   sello: 'evidence',
+  sello_1: 'evidence',
+  sello_2: 'evidence',
   identificacion: 'ocr', // INE necesita OCR
   documento: 'ocr',
   vehiculo: 'evidence',
