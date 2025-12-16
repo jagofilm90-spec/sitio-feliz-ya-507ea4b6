@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -18,13 +18,14 @@ import {
   Truck,
   User,
   FileText,
-  Warehouse,
   Calendar,
   Camera,
   Download,
-  Hash,
   X,
   Image as ImageIcon,
+  Clock,
+  PenTool,
+  AlertTriangle,
 } from "lucide-react";
 import { generarRecepcionPDF } from "@/utils/recepcionPdfGenerator";
 
@@ -77,11 +78,31 @@ interface ProductoRecibido {
   id: string;
   cantidad_ordenada: number;
   cantidad_recibida: number;
+  razon_diferencia: string | null;
+  notas_diferencia: string | null;
   producto: {
     codigo: string;
     nombre: string;
   };
 }
+
+// Helper to format duration
+const formatDuration = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours > 0) {
+    return `${hours}h ${mins}min`;
+  }
+  return `${mins} minutos`;
+};
+
+// Map razón codes to labels
+const RAZON_LABELS: Record<string, string> = {
+  "roto": "Producto roto/dañado",
+  "no_llego": "No llegó completo",
+  "calidad": "Rechazado por calidad",
+  "otro": "Otro",
+};
 
 export const RecepcionDetalleDialog = ({
   entregaId,
@@ -130,7 +151,7 @@ export const RecepcionDetalleDialog = ({
       const { data: productosData } = await supabase
         .from("ordenes_compra_detalles")
         .select(`
-          id, cantidad_ordenada, cantidad_recibida,
+          id, cantidad_ordenada, cantidad_recibida, razon_diferencia, notas_diferencia,
           producto:productos(codigo, nombre)
         `)
         .eq("orden_compra_id", (entrega as any).orden_compra.id);
@@ -172,10 +193,16 @@ export const RecepcionDetalleDialog = ({
     if (!recepcion) return;
     setGenerandoPdf(true);
     try {
+      // Build evidencias with types for PDF
+      const evidenciasConTipos = evidencias.map(ev => ({
+        url: evidenciasUrls[ev.id] || "",
+        tipo: ev.tipo_evidencia,
+      })).filter(e => e.url);
+      
       await generarRecepcionPDF({
         recepcion,
         productos,
-        evidenciasUrls: Object.values(evidenciasUrls),
+        evidenciasConTipos,
         firmaChofer: recepcion.firma_chofer_conformidad,
         firmaAlmacenista: recepcion.firma_almacenista,
         llegadaRegistradaEn: recepcion.llegada_registrada_en,
@@ -193,8 +220,15 @@ export const RecepcionDetalleDialog = ({
 
   const getTipoEvidenciaLabel = (tipo: string) => {
     const labels: Record<string, string> = {
+      sello_1: "Sello Puerta 1",
+      sello_2: "Sello Puerta 2",
       sello: "Sello",
-      identificacion: "Identificación",
+      identificacion: "Identificación Chofer",
+      placas: "Placas Vehículo",
+      remision_proveedor: "Remisión Proveedor",
+      caja_vacia: "Caja Vacía",
+      producto_danado: "Producto Dañado",
+      producto_rechazado: "Producto Rechazado",
       documento: "Documento",
       vehiculo: "Vehículo",
       producto: "Producto",
@@ -274,6 +308,59 @@ export const RecepcionDetalleDialog = ({
                   </div>
                 </div>
 
+                {/* Timing and vehicle data */}
+                {(recepcion.llegada_registrada_en || recepcion.placas_vehiculo || recepcion.nombre_chofer_proveedor) && (
+                  <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
+                    <h3 className="font-medium mb-3 flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                      <Clock className="w-4 h-4" />
+                      Datos de Llegada y Descarga
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                      {recepcion.llegada_registrada_en && (
+                        <div>
+                          <p className="text-muted-foreground">Hora llegada</p>
+                          <p className="font-medium">{format(new Date(recepcion.llegada_registrada_en), "dd/MM/yyyy HH:mm")}</p>
+                        </div>
+                      )}
+                      {recepcion.recepcion_finalizada_en && (
+                        <div>
+                          <p className="text-muted-foreground">Hora finalización</p>
+                          <p className="font-medium">{format(new Date(recepcion.recepcion_finalizada_en), "dd/MM/yyyy HH:mm")}</p>
+                        </div>
+                      )}
+                      {recepcion.llegada_registrada_en && recepcion.recepcion_finalizada_en && (
+                        <div>
+                          <p className="text-muted-foreground">Duración descarga</p>
+                          <p className="font-medium">
+                            {formatDuration(differenceInMinutes(
+                              new Date(recepcion.recepcion_finalizada_en),
+                              new Date(recepcion.llegada_registrada_en)
+                            ))}
+                          </p>
+                        </div>
+                      )}
+                      {recepcion.placas_vehiculo && (
+                        <div>
+                          <p className="text-muted-foreground">Placas vehículo</p>
+                          <p className="font-medium">{recepcion.placas_vehiculo}</p>
+                        </div>
+                      )}
+                      {recepcion.nombre_chofer_proveedor && (
+                        <div>
+                          <p className="text-muted-foreground">Chofer proveedor</p>
+                          <p className="font-medium">{recepcion.nombre_chofer_proveedor}</p>
+                        </div>
+                      )}
+                      {recepcion.numero_remision_proveedor && (
+                        <div>
+                          <p className="text-muted-foreground">No. remisión</p>
+                          <p className="font-medium">{recepcion.numero_remision_proveedor}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {recepcion.notas && (
                   <div className="bg-muted/50 rounded-lg p-3">
                     <p className="text-sm font-medium mb-1">Notas de recepción</p>
@@ -297,17 +384,40 @@ export const RecepcionDetalleDialog = ({
                           <th className="text-left p-2">Producto</th>
                           <th className="text-right p-2">Ordenado</th>
                           <th className="text-right p-2">Recibido</th>
+                          <th className="text-left p-2">Diferencia</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {productos.map((p) => (
-                          <tr key={p.id} className="border-t">
-                            <td className="p-2 font-mono text-xs">{p.producto?.codigo}</td>
-                            <td className="p-2">{p.producto?.nombre}</td>
-                            <td className="p-2 text-right">{p.cantidad_ordenada}</td>
-                            <td className="p-2 text-right font-medium">{p.cantidad_recibida}</td>
-                          </tr>
-                        ))}
+                        {productos.map((p) => {
+                          const hasDiferencia = p.cantidad_recibida < p.cantidad_ordenada;
+                          return (
+                            <tr 
+                              key={p.id} 
+                              className={`border-t ${hasDiferencia ? "bg-destructive/10" : ""}`}
+                            >
+                              <td className="p-2 font-mono text-xs">{p.producto?.codigo}</td>
+                              <td className="p-2">{p.producto?.nombre}</td>
+                              <td className="p-2 text-right">{p.cantidad_ordenada}</td>
+                              <td className={`p-2 text-right font-medium ${hasDiferencia ? "text-destructive" : ""}`}>
+                                {p.cantidad_recibida}
+                              </td>
+                              <td className="p-2">
+                                {hasDiferencia && (
+                                  <div className="flex flex-col gap-1">
+                                    <Badge variant="destructive" className="text-xs w-fit">
+                                      -{p.cantidad_ordenada - p.cantidad_recibida}
+                                    </Badge>
+                                    {p.razon_diferencia && (
+                                      <span className="text-xs text-muted-foreground">
+                                        {RAZON_LABELS[p.razon_diferencia] || p.razon_diferencia}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -356,6 +466,41 @@ export const RecepcionDetalleDialog = ({
                     </div>
                   )}
                 </div>
+
+                {/* Digital signatures */}
+                {(recepcion.firma_almacenista || recepcion.firma_chofer_conformidad) && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h3 className="font-medium mb-3 flex items-center gap-2">
+                        <PenTool className="w-4 h-4" />
+                        Firmas de Conformidad
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        {recepcion.firma_almacenista && (
+                          <div className="border rounded-lg p-3 text-center bg-muted/30">
+                            <img 
+                              src={recepcion.firma_almacenista} 
+                              alt="Firma Almacenista"
+                              className="max-h-24 mx-auto mb-2"
+                            />
+                            <p className="text-xs text-muted-foreground">Firma Almacenista</p>
+                          </div>
+                        )}
+                        {recepcion.firma_chofer_conformidad && (
+                          <div className="border rounded-lg p-3 text-center bg-muted/30">
+                            <img 
+                              src={recepcion.firma_chofer_conformidad} 
+                              alt="Firma Chofer/Proveedor"
+                              className="max-h-24 mx-auto mb-2"
+                            />
+                            <p className="text-xs text-muted-foreground">Firma Chofer/Proveedor</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Actions */}
                 <div className="flex justify-end gap-2 pt-4 border-t">
