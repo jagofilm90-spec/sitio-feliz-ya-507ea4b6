@@ -67,14 +67,13 @@ const RAZONES_DIFERENCIA = [
   { value: "roto", label: "Producto roto/dañado" },
   { value: "no_llego", label: "No llegó completo" },
   { value: "rechazado_calidad", label: "Rechazado por calidad" },
-  { value: "otro", label: "Otro" },
 ];
 
 // Razones que requieren devolución física al chofer
 const RAZONES_REQUIEREN_DEVOLUCION = ["roto", "rechazado_calidad"];
 
 // Razones que requieren foto obligatoria del producto
-const RAZONES_REQUIEREN_FOTO = ["roto"];
+const RAZONES_REQUIEREN_FOTO = ["roto", "rechazado_calidad"];
 
 interface EntregaCompra {
   id: string;
@@ -978,21 +977,12 @@ export const AlmacenRecepcionSheet = ({
                                   </SelectContent>
                                 </Select>
                                 
-                                {razonActual === "otro" && (
-                                  <Input
-                                    placeholder="Describe la razón..."
-                                    value={notasDiferencia[producto.id] || ""}
-                                    onChange={(e) => handleNotaDiferenciaChange(producto.id, e.target.value)}
-                                    className="bg-background"
-                                  />
-                                )}
-                                
-                                {/* Foto obligatoria para producto roto/dañado */}
+                                {/* Foto obligatoria para producto dañado o rechazado por calidad */}
                                 {RAZONES_REQUIEREN_FOTO.includes(razonActual) && (
                                   <div className="space-y-2 p-2 bg-amber-100 dark:bg-amber-950/30 rounded border border-amber-300 dark:border-amber-700">
                                     <Label className="text-sm text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1">
                                       <Camera className="w-4 h-4" />
-                                      Foto del producto dañado *
+                                      {razonActual === "roto" ? "Foto del producto dañado *" : "Foto del producto rechazado *"}
                                     </Label>
                                     {fotosDiferencia[producto.id] ? (
                                       <div className="flex items-center gap-2">
@@ -1246,38 +1236,6 @@ export const AlmacenRecepcionSheet = ({
                     rows={2}
                   />
                 </div>
-
-                {/* Evidencias fotográficas (solo las necesarias en Fase 2) */}
-                {hayDiferencias && (
-                  <div className="space-y-4">
-                    <h3 className="font-medium flex items-center gap-2">
-                      <Camera className="w-4 h-4" />
-                      Fotos de evidencia (diferencias)
-                    </h3>
-                    
-                    <div className="grid grid-cols-2 gap-2">
-                      <EvidenciaCapture
-                        tipo="producto_danado"
-                        onCapture={(file) => handleEvidenciaCapture("producto_danado", file)}
-                      />
-                      <EvidenciaCapture
-                        tipo="documento"
-                        onCapture={(file) => handleEvidenciaCapture("documento", file)}
-                      />
-                    </div>
-
-                    {evidencias.length > 0 && (
-                      <EvidenciasPreviewGrid
-                        evidencias={evidencias.map((e) => ({
-                          tipo: e.tipo as any,
-                          file: e.file,
-                          preview: e.preview
-                        }))}
-                        onRemove={handleRemoveEvidencia}
-                      />
-                    )}
-                  </div>
-                )}
 
                 {/* Indicador de firmas requeridas */}
                 <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
