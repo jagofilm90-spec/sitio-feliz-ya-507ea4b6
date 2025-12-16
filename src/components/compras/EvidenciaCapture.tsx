@@ -4,7 +4,7 @@ import { Camera, CreditCard, FileText, Truck, Package, X, Loader2, CalendarDays,
 import { cn } from "@/lib/utils";
 import { compressImageForUpload, type ImageCompressionProfile } from "@/lib/imageUtils";
 
-export type TipoEvidencia = 'sello' | 'sello_1' | 'sello_2' | 'identificacion' | 'documento' | 'vehiculo' | 'placas' | 'caducidad' | 'producto_danado' | 'caja_vacia' | 'remision_proveedor' | 'otro';
+export type TipoEvidencia = 'sello' | 'sello_1' | 'sello_2' | 'identificacion' | 'documento' | 'vehiculo' | 'placas' | 'caducidad' | 'producto_danado' | 'caja_vacia' | 'remision_proveedor' | 'rechazo_total' | 'otro';
 
 interface EvidenciaCaptureProps {
   tipo: TipoEvidencia;
@@ -25,6 +25,7 @@ const tipoConfig: Record<TipoEvidencia, { label: string; icon: typeof Camera }> 
   producto_danado: { label: "Foto producto dañado", icon: Package },
   caja_vacia: { label: "Foto caja vacía", icon: PackageOpen },
   remision_proveedor: { label: "Foto remisión", icon: Receipt },
+  rechazo_total: { label: "Evidencia rechazo", icon: Camera },
   otro: { label: "Otra evidencia", icon: Package },
 };
 
@@ -41,6 +42,7 @@ const TIPO_TO_PROFILE: Record<TipoEvidencia, ImageCompressionProfile> = {
   producto_danado: 'evidence',
   caja_vacia: 'evidence',
   remision_proveedor: 'ocr', // Documento del proveedor puede necesitar OCR
+  rechazo_total: 'evidence', // Fotos de evidencia de rechazo
   otro: 'evidence',
 };
 

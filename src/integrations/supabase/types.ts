@@ -2534,9 +2534,11 @@ export type Database = {
           firma_chofer_conformidad_fecha: string | null
           firma_chofer_diferencia: string | null
           firma_chofer_diferencia_fecha: string | null
+          firma_chofer_rechazo: string | null
           id: string
           llegada_registrada_en: string | null
           llegada_registrada_por: string | null
+          motivo_rechazo: string | null
           nombre_chofer_proveedor: string | null
           notas: string | null
           numero_entrega: number
@@ -2545,6 +2547,8 @@ export type Database = {
           orden_compra_id: string
           placas_vehiculo: string | null
           recepcion_finalizada_en: string | null
+          rechazada_en: string | null
+          rechazada_por: string | null
           recibido_por: string | null
           status: string
           trabajando_desde: string | null
@@ -2562,9 +2566,11 @@ export type Database = {
           firma_chofer_conformidad_fecha?: string | null
           firma_chofer_diferencia?: string | null
           firma_chofer_diferencia_fecha?: string | null
+          firma_chofer_rechazo?: string | null
           id?: string
           llegada_registrada_en?: string | null
           llegada_registrada_por?: string | null
+          motivo_rechazo?: string | null
           nombre_chofer_proveedor?: string | null
           notas?: string | null
           numero_entrega: number
@@ -2573,6 +2579,8 @@ export type Database = {
           orden_compra_id: string
           placas_vehiculo?: string | null
           recepcion_finalizada_en?: string | null
+          rechazada_en?: string | null
+          rechazada_por?: string | null
           recibido_por?: string | null
           status?: string
           trabajando_desde?: string | null
@@ -2590,9 +2598,11 @@ export type Database = {
           firma_chofer_conformidad_fecha?: string | null
           firma_chofer_diferencia?: string | null
           firma_chofer_diferencia_fecha?: string | null
+          firma_chofer_rechazo?: string | null
           id?: string
           llegada_registrada_en?: string | null
           llegada_registrada_por?: string | null
+          motivo_rechazo?: string | null
           nombre_chofer_proveedor?: string | null
           notas?: string | null
           numero_entrega?: number
@@ -2601,6 +2611,8 @@ export type Database = {
           orden_compra_id?: string
           placas_vehiculo?: string | null
           recepcion_finalizada_en?: string | null
+          rechazada_en?: string | null
+          rechazada_por?: string | null
           recibido_por?: string | null
           status?: string
           trabajando_desde?: string | null
