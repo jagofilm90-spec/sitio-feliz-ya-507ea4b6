@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import { format } from "date-fns";
+import { format, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 
 interface RecepcionData {
@@ -37,6 +37,11 @@ interface RecepcionData {
   evidenciasUrls?: string[];
   firmaChofer?: string | null;
   firmaAlmacenista?: string | null;
+  llegadaRegistradaEn?: string | null;
+  recepcionFinalizadaEn?: string | null;
+  placasVehiculo?: string | null;
+  nombreChoferProveedor?: string | null;
+  numeroRemisionProveedor?: string | null;
 }
 
 // Helper function to load image as base64
@@ -58,8 +63,29 @@ const loadImageAsBase64 = async (url: string): Promise<string | null> => {
   }
 };
 
+// Helper to format duration in hours and minutes
+const formatDuration = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours > 0) {
+    return `${hours}h ${mins}min`;
+  }
+  return `${mins} minutos`;
+};
+
 export const generarRecepcionPDF = async (data: RecepcionData) => {
-  const { recepcion, productos, evidenciasUrls = [], firmaChofer, firmaAlmacenista } = data;
+  const { 
+    recepcion, 
+    productos, 
+    evidenciasUrls = [], 
+    firmaChofer, 
+    firmaAlmacenista,
+    llegadaRegistradaEn,
+    recepcionFinalizadaEn,
+    placasVehiculo,
+    nombreChoferProveedor,
+    numeroRemisionProveedor
+  } = data;
   const doc = new jsPDF();
   
   const proveedorNombre = recepcion.orden_compra?.proveedor?.nombre || 
@@ -122,8 +148,76 @@ export const generarRecepcionPDF = async (data: RecepcionData) => {
   doc.setFont("helvetica", "normal");
   doc.text(recepcion.recibido_por_profile?.full_name || "No registrado", 150, 77);
   
-  // Products table
+  // Arrival and timing data section
   let yPos = 95;
+  
+  const hasTimingData = llegadaRegistradaEn || recepcionFinalizadaEn || placasVehiculo || nombreChoferProveedor || numeroRemisionProveedor;
+  
+  if (hasTimingData) {
+    doc.setFillColor(255, 250, 240);
+    doc.roundedRect(15, yPos - 5, 180, 40, 3, 3, "FD");
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(180, 100, 0);
+    doc.text("DATOS DE LLEGADA Y DESCARGA", 20, yPos + 2);
+    doc.setTextColor(0, 0, 0);
+    
+    yPos += 10;
+    doc.setFontSize(9);
+    
+    // Left column
+    if (llegadaRegistradaEn) {
+      doc.setFont("helvetica", "bold");
+      doc.text("Hora llegada:", 20, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text(format(new Date(llegadaRegistradaEn), "dd/MM/yyyy HH:mm", { locale: es }), 55, yPos);
+    }
+    
+    if (recepcionFinalizadaEn) {
+      doc.setFont("helvetica", "bold");
+      doc.text("Hora finalización:", 20, yPos + 7);
+      doc.setFont("helvetica", "normal");
+      doc.text(format(new Date(recepcionFinalizadaEn), "dd/MM/yyyy HH:mm", { locale: es }), 55, yPos + 7);
+    }
+    
+    if (llegadaRegistradaEn && recepcionFinalizadaEn) {
+      const duracionMin = differenceInMinutes(new Date(recepcionFinalizadaEn), new Date(llegadaRegistradaEn));
+      doc.setFont("helvetica", "bold");
+      doc.text("Tiempo descarga:", 20, yPos + 14);
+      doc.setFont("helvetica", "normal");
+      doc.text(formatDuration(duracionMin), 55, yPos + 14);
+    }
+    
+    // Right column
+    if (placasVehiculo) {
+      doc.setFont("helvetica", "bold");
+      doc.text("Placas:", 110, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text(placasVehiculo, 135, yPos);
+    }
+    
+    if (nombreChoferProveedor) {
+      doc.setFont("helvetica", "bold");
+      doc.text("Chofer:", 110, yPos + 7);
+      doc.setFont("helvetica", "normal");
+      const nombreTruncado = nombreChoferProveedor.length > 25 
+        ? nombreChoferProveedor.substring(0, 22) + "..." 
+        : nombreChoferProveedor;
+      doc.text(nombreTruncado, 135, yPos + 7);
+    }
+    
+    if (numeroRemisionProveedor) {
+      doc.setFont("helvetica", "bold");
+      doc.text("Remisión:", 110, yPos + 14);
+      doc.setFont("helvetica", "normal");
+      doc.text(numeroRemisionProveedor, 135, yPos + 14);
+    }
+    
+    yPos += 35;
+  }
+  
+  // Products table
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.text("PRODUCTOS RECIBIDOS", 15, yPos);
