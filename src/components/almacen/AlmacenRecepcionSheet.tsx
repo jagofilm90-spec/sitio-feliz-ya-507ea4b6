@@ -153,7 +153,6 @@ export const AlmacenRecepcionSheet = ({
   const [fechasCaducidad, setFechasCaducidad] = useState<Record<string, string>>({});
   const [razonesDiferencia, setRazonesDiferencia] = useState<Record<string, string>>({});
   const [notasDiferencia, setNotasDiferencia] = useState<Record<string, string>>({});
-  const [devolucionAlChofer, setDevolucionAlChofer] = useState<Record<string, boolean>>({});
   const [evidencias, setEvidencias] = useState<Evidencia[]>([]);
   const [fotosCaducidad, setFotosCaducidad] = useState<Record<string, { file: File; preview: string } | null>>({});
   const [fotosDiferencia, setFotosDiferencia] = useState<Record<string, { file: File; preview: string } | null>>({});
@@ -373,10 +372,6 @@ export const AlmacenRecepcionSheet = ({
     });
   };
 
-  const handleDevolucionChange = (detalleId: string, checked: boolean) => {
-    setDevolucionAlChofer(prev => ({ ...prev, [detalleId]: checked }));
-  };
-
   const getProductosConDiferencia = () => {
     return productos.filter(p => {
       const faltante = p.cantidad_ordenada - p.cantidad_recibida;
@@ -391,8 +386,7 @@ export const AlmacenRecepcionSheet = ({
       const recibiendo = getCantidadNumerica(p.id);
       const razon = razonesDiferencia[p.id];
       return recibiendo < faltante && 
-             RAZONES_REQUIEREN_DEVOLUCION.includes(razon) && 
-             devolucionAlChofer[p.id];
+             RAZONES_REQUIEREN_DEVOLUCION.includes(razon);
     }).map(p => {
       const faltante = p.cantidad_ordenada - p.cantidad_recibida;
       const recibiendo = getCantidadNumerica(p.id);
@@ -1011,18 +1005,11 @@ export const AlmacenRecepcionSheet = ({
                                 )}
                                 
                                 {esRazonDevolucion && (
-                                  <div className="flex items-center space-x-2 p-2 bg-destructive/10 rounded border border-destructive/20">
-                                    <Checkbox
-                                      id={`devolucion-${producto.id}`}
-                                      checked={devolucionAlChofer[producto.id] || false}
-                                      onCheckedChange={(checked) => handleDevolucionChange(producto.id, !!checked)}
-                                    />
-                                    <label 
-                                      htmlFor={`devolucion-${producto.id}`}
-                                      className="text-sm font-medium leading-none"
-                                    >
-                                      Los {faltante - getCantidadNumerica(producto.id)} bultos se devuelven al chofer
-                                    </label>
+                                  <div className="flex items-center gap-2 p-2 bg-amber-100 dark:bg-amber-950/30 rounded border border-amber-300 dark:border-amber-700">
+                                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                                    <span className="text-sm text-amber-700 dark:text-amber-400">
+                                      Los {faltante - getCantidadNumerica(producto.id)} bultos serán devueltos al chofer
+                                    </span>
                                   </div>
                                 )}
                               </div>
