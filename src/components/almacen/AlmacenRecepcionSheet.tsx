@@ -242,7 +242,7 @@ export const AlmacenRecepcionSheet = ({
       const { data: evidencias, error } = await supabase
         .from("ordenes_compra_entregas_evidencias" as any)
         .select("id, tipo_evidencia, ruta_storage")
-        .eq("orden_compra_entrega_id", entrega.id)
+        .eq("entrega_id", entrega.id)
         .eq("fase", "llegada");
       
       if (error) throw error;
@@ -862,130 +862,12 @@ export const AlmacenRecepcionSheet = ({
                   </div>
                 )}
 
-                {/* Bodega destino */}
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Warehouse className="w-4 h-4" />
-                    Bodega destino *
-                  </Label>
-                  <Select value={bodegaSeleccionada} onValueChange={setBodegaSeleccionada}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona bodega" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {bodegas.map(bodega => (
-                        <SelectItem key={bodega.id} value={bodega.id}>
-                          {bodega.nombre} {bodega.es_externa && "(Externa)"}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Documento del Proveedor */}
-                <div className="space-y-3 p-4 border rounded-lg bg-blue-50/50 dark:bg-blue-950/20">
-                  <h3 className="font-medium flex items-center gap-2 text-blue-700 dark:text-blue-400">
-                    <Receipt className="w-4 h-4" />
-                    Documento del Proveedor
-                  </h3>
-                  
-                  <div className="space-y-2">
-                    <Label>Número de remisión *</Label>
-                    <Input
-                      value={numeroRemisionProveedor}
-                      onChange={(e) => setNumeroRemisionProveedor(e.target.value)}
-                      placeholder="Ej: REM-12345"
-                      className={cn(!numeroRemisionProveedor && "border-destructive")}
-                    />
-                    {!numeroRemisionProveedor && (
-                      <span className="text-xs text-destructive">* Campo obligatorio</span>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Foto del documento *</Label>
-                    {fotoRemisionProveedor ? (
-                      <div className="flex items-center gap-3">
-                        <img 
-                          src={fotoRemisionProveedor.preview} 
-                          alt="Remisión proveedor" 
-                          className="h-16 w-20 object-cover rounded border"
-                        />
-                        <span className="text-sm text-muted-foreground flex-1">Documento capturado</span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            URL.revokeObjectURL(fotoRemisionProveedor.preview);
-                            setFotoRemisionProveedor(null);
-                          }}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div>
-                        <EvidenciaCapture
-                          tipo="documento"
-                          onCapture={(file, preview) => setFotoRemisionProveedor({ file, preview })}
-                          className={cn(!fotoRemisionProveedor && "border-destructive")}
-                        />
-                        {!fotoRemisionProveedor && (
-                          <span className="text-xs text-destructive">* Foto obligatoria</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Foto de Caja Vacía - Solo si descarga completa */}
-                {esDescargaCompleta() && (
-                  <div className="space-y-3 p-4 border rounded-lg bg-green-50/50 dark:bg-green-950/20">
-                    <h3 className="font-medium flex items-center gap-2 text-green-700 dark:text-green-400">
-                      <PackageOpen className="w-4 h-4" />
-                      Evidencia de Descarga Completa
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Captura foto de la caja vacía del camión para confirmar el vaciado total.
-                    </p>
-                    
-                    {fotoCajaVacia ? (
-                      <div className="flex items-center gap-3">
-                        <img 
-                          src={fotoCajaVacia.preview} 
-                          alt="Caja vacía" 
-                          className="h-16 w-20 object-cover rounded border"
-                        />
-                        <span className="text-sm text-muted-foreground flex-1">Caja vacía verificada</span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            URL.revokeObjectURL(fotoCajaVacia.preview);
-                            setFotoCajaVacia(null);
-                          }}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div>
-                        <EvidenciaCapture
-                          tipo="caja_vacia"
-                          onCapture={(file, preview) => setFotoCajaVacia({ file, preview })}
-                          className={cn(!fotoCajaVacia && "border-destructive")}
-                        />
-                        {!fotoCajaVacia && (
-                          <span className="text-xs text-destructive">* Foto obligatoria para descarga completa</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Productos a recibir */}
+                {/* Productos a recibir - PRIMERA SECCIÓN DESPUÉS DEL TIMER */}
                 <div>
-                  <h3 className="font-medium mb-3">Productos a recibir</h3>
+                  <h3 className="font-medium mb-3 flex items-center gap-2">
+                    <Package className="w-4 h-4" />
+                    Productos a recibir
+                  </h3>
                   <div className="space-y-3">
                     {productos.map((producto) => {
                       const faltante = producto.cantidad_ordenada - producto.cantidad_recibida;
@@ -1160,6 +1042,127 @@ export const AlmacenRecepcionSheet = ({
                     })}
                   </div>
                 </div>
+
+                {/* Bodega destino */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Warehouse className="w-4 h-4" />
+                    Bodega destino *
+                  </Label>
+                  <Select value={bodegaSeleccionada} onValueChange={setBodegaSeleccionada}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona bodega" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bodegas.map(bodega => (
+                        <SelectItem key={bodega.id} value={bodega.id}>
+                          {bodega.nombre} {bodega.es_externa && "(Externa)"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Documento del Proveedor */}
+                <div className="space-y-3 p-4 border rounded-lg bg-blue-50/50 dark:bg-blue-950/20">
+                  <h3 className="font-medium flex items-center gap-2 text-blue-700 dark:text-blue-400">
+                    <Receipt className="w-4 h-4" />
+                    Documento del Proveedor
+                  </h3>
+                  
+                  <div className="space-y-2">
+                    <Label>Número de remisión *</Label>
+                    <Input
+                      value={numeroRemisionProveedor}
+                      onChange={(e) => setNumeroRemisionProveedor(e.target.value)}
+                      placeholder="Ej: REM-12345"
+                      className={cn(!numeroRemisionProveedor && "border-destructive")}
+                    />
+                    {!numeroRemisionProveedor && (
+                      <span className="text-xs text-destructive">* Campo obligatorio</span>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Foto del documento *</Label>
+                    {fotoRemisionProveedor ? (
+                      <div className="flex items-center gap-3">
+                        <img 
+                          src={fotoRemisionProveedor.preview} 
+                          alt="Remisión proveedor" 
+                          className="h-16 w-20 object-cover rounded border"
+                        />
+                        <span className="text-sm text-muted-foreground flex-1">Documento capturado</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            URL.revokeObjectURL(fotoRemisionProveedor.preview);
+                            setFotoRemisionProveedor(null);
+                          }}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div>
+                        <EvidenciaCapture
+                          tipo="documento"
+                          onCapture={(file, preview) => setFotoRemisionProveedor({ file, preview })}
+                          className={cn(!fotoRemisionProveedor && "border-destructive")}
+                        />
+                        {!fotoRemisionProveedor && (
+                          <span className="text-xs text-destructive">* Foto obligatoria</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Foto de Caja Vacía - Solo si descarga completa */}
+                {esDescargaCompleta() && (
+                  <div className="space-y-3 p-4 border rounded-lg bg-green-50/50 dark:bg-green-950/20">
+                    <h3 className="font-medium flex items-center gap-2 text-green-700 dark:text-green-400">
+                      <PackageOpen className="w-4 h-4" />
+                      Evidencia de Descarga Completa
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Captura foto de la caja vacía del camión para confirmar el vaciado total.
+                    </p>
+                    
+                    {fotoCajaVacia ? (
+                      <div className="flex items-center gap-3">
+                        <img 
+                          src={fotoCajaVacia.preview} 
+                          alt="Caja vacía" 
+                          className="h-16 w-20 object-cover rounded border"
+                        />
+                        <span className="text-sm text-muted-foreground flex-1">Caja vacía verificada</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            URL.revokeObjectURL(fotoCajaVacia.preview);
+                            setFotoCajaVacia(null);
+                          }}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div>
+                        <EvidenciaCapture
+                          tipo="caja_vacia"
+                          onCapture={(file, preview) => setFotoCajaVacia({ file, preview })}
+                          className={cn(!fotoCajaVacia && "border-destructive")}
+                        />
+                        {!fotoCajaVacia && (
+                          <span className="text-xs text-destructive">* Foto obligatoria para descarga completa</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Notas adicionales */}
                 <div className="space-y-2">
