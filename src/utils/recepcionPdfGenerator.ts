@@ -468,13 +468,33 @@ export const generarRecepcionPDF = async (data: RecepcionData) => {
   // Generate filename
   const fileName = `Recepcion_${recepcion.orden_compra.folio}_E${recepcion.numero_entrega}_${format(new Date(), "yyyyMMdd")}.pdf`;
   
-  // Download with error handling
+  // Download using blob method (works in iframes)
   try {
-    doc.save(fileName);
+    const pdfBlob = doc.output('blob');
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = fileName;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+    
     console.log("PDF generado exitosamente:", fileName);
   } catch (saveError) {
     console.error("Error al guardar/descargar PDF:", saveError);
-    throw saveError;
+    // Fallback: open in new tab
+    try {
+      const pdfDataUri = doc.output('datauristring');
+      window.open(pdfDataUri, '_blank');
+      console.log("PDF abierto en nueva pestaña como fallback");
+    } catch (fallbackError) {
+      console.error("Error en fallback:", fallbackError);
+      throw saveError;
+    }
   }
   
   return fileName;
