@@ -222,12 +222,12 @@ export const RegistrarLlegadaSheet = ({
       return false;
     }
 
-    // Verificar: foto de sellos O (checkbox sin sellos + firma)
-    const tieneSellos = getEvidenciaPorTipo("sello");
-    if (!tieneSellos && !sinSellos) {
+    // Verificar: foto de sello puerta 1 (obligatorio) O (checkbox sin sellos + firma)
+    const tieneSelloPuerta1 = getEvidenciaPorTipo("sello_1");
+    if (!tieneSelloPuerta1 && !sinSellos) {
       toast({
-        title: "Sellos requeridos",
-        description: "Captura foto de los sellos o marca 'Sin sellos' si el camión no trae",
+        title: "Sello Puerta 1 requerido",
+        description: "Captura foto del sello de la puerta 1 o marca 'Sin sellos' si el camión no trae",
         variant: "destructive"
       });
       return false;
@@ -262,7 +262,11 @@ export const RegistrarLlegadaSheet = ({
           llegada_registrada_por: user.id,
           nombre_chofer_proveedor: nombreChofer.trim(),
           placas_vehiculo: placasManual.trim(),
-          numero_sello_llegada: sinSellos ? "SIN SELLOS - FIRMADO" : null,
+          numero_sello_llegada: sinSellos 
+            ? "SIN SELLOS - FIRMADO" 
+            : getEvidenciaPorTipo("sello_2") 
+              ? "2 SELLOS REGISTRADOS"
+              : "1 SELLO REGISTRADO",
           trabajando_por: user.id,
           trabajando_desde: new Date().toISOString(),
         })
@@ -360,7 +364,8 @@ export const RegistrarLlegadaSheet = ({
 
   const fotoPlacas = getEvidenciaPorTipo("placas");
   const fotoIdentificacion = getEvidenciaPorTipo("identificacion");
-  const fotoSellos = getEvidenciaPorTipo("sello");
+  const fotoSelloPuerta1 = getEvidenciaPorTipo("sello_1");
+  const fotoSelloPuerta2 = getEvidenciaPorTipo("sello_2");
 
   return (
     <>
@@ -517,7 +522,7 @@ export const RegistrarLlegadaSheet = ({
                 )}
               </div>
 
-              {/* Foto de sellos O checkbox sin sellos */}
+              {/* Fotos de sellos (Puerta 1 obligatorio, Puerta 2 opcional) O checkbox sin sellos */}
               <div className="space-y-3">
                 <Label className="flex items-center gap-2">
                   <Hash className="w-4 h-4" />
@@ -525,38 +530,77 @@ export const RegistrarLlegadaSheet = ({
                 </Label>
                 
                 {!sinSellos && (
-                  <div className={cn(
-                    "flex items-center justify-between p-3 border rounded-lg",
-                    fotoSellos ? "border-green-500 bg-green-50 dark:bg-green-950/20" : "border-destructive bg-destructive/5"
-                  )}>
-                    <div className="flex items-center gap-2">
-                      <Hash className="w-4 h-4" />
-                      <span className="font-medium">Foto de sellos</span>
-                      {fotoSellos && <CheckCircle2 className="w-4 h-4 text-green-600" />}
-                    </div>
-                    
-                    {fotoSellos ? (
+                  <div className="space-y-2">
+                    {/* Sello Puerta 1 - OBLIGATORIO */}
+                    <div className={cn(
+                      "flex items-center justify-between p-3 border rounded-lg",
+                      fotoSelloPuerta1 ? "border-green-500 bg-green-50 dark:bg-green-950/20" : "border-destructive bg-destructive/5"
+                    )}>
                       <div className="flex items-center gap-2">
-                        <img 
-                          src={fotoSellos.preview} 
-                          alt="Sellos"
-                          className="h-10 w-14 object-cover rounded border"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleRemoveEvidencia("sello")}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        <Hash className="w-4 h-4" />
+                        <span className="font-medium">Sello Puerta 1 *</span>
+                        {fotoSelloPuerta1 && <CheckCircle2 className="w-4 h-4 text-green-600" />}
                       </div>
-                    ) : (
-                      <EvidenciaCapture
-                        tipo="sello"
-                        onCapture={(file, preview) => handleEvidenciaCapture("sello", file, preview)}
-                      />
-                    )}
+                      
+                      {fotoSelloPuerta1 ? (
+                        <div className="flex items-center gap-2">
+                          <img 
+                            src={fotoSelloPuerta1.preview} 
+                            alt="Sello Puerta 1"
+                            className="h-10 w-14 object-cover rounded border"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleRemoveEvidencia("sello_1")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <EvidenciaCapture
+                          tipo="sello_1"
+                          onCapture={(file, preview) => handleEvidenciaCapture("sello_1", file, preview)}
+                        />
+                      )}
+                    </div>
+
+                    {/* Sello Puerta 2 - OPCIONAL */}
+                    <div className={cn(
+                      "flex items-center justify-between p-3 border rounded-lg",
+                      fotoSelloPuerta2 ? "border-green-500 bg-green-50 dark:bg-green-950/20" : "border-border"
+                    )}>
+                      <div className="flex items-center gap-2">
+                        <Hash className="w-4 h-4" />
+                        <span className="font-medium">Sello Puerta 2</span>
+                        <span className="text-xs text-muted-foreground">(opcional)</span>
+                        {fotoSelloPuerta2 && <CheckCircle2 className="w-4 h-4 text-green-600" />}
+                      </div>
+                      
+                      {fotoSelloPuerta2 ? (
+                        <div className="flex items-center gap-2">
+                          <img 
+                            src={fotoSelloPuerta2.preview} 
+                            alt="Sello Puerta 2"
+                            className="h-10 w-14 object-cover rounded border"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleRemoveEvidencia("sello_2")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <EvidenciaCapture
+                          tipo="sello_2"
+                          onCapture={(file, preview) => handleEvidenciaCapture("sello_2", file, preview)}
+                        />
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -570,7 +614,7 @@ export const RegistrarLlegadaSheet = ({
                       id="sin-sellos"
                       checked={sinSellos}
                       onCheckedChange={(checked) => handleSinSellosChange(!!checked)}
-                      disabled={!!fotoSellos}
+                      disabled={!!fotoSelloPuerta1 || !!fotoSelloPuerta2}
                     />
                     <label 
                       htmlFor="sin-sellos"
