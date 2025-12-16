@@ -7,14 +7,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Camera, CreditCard, FileText, Truck, Package, Download, X, ImageOff } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-
-type TipoEvidencia = 'sello' | 'identificacion' | 'documento' | 'vehiculo' | 'otro';
+import { TipoEvidencia } from "./EvidenciaCapture";
 
 const tipoConfig: Record<TipoEvidencia, { label: string; icon: typeof Camera }> = {
   sello: { label: "Sellos", icon: Camera },
+  sello_1: { label: "Sello Puerta 1", icon: Camera },
+  sello_2: { label: "Sello Puerta 2", icon: Camera },
   identificacion: { label: "INE", icon: CreditCard },
   documento: { label: "Documento", icon: FileText },
   vehiculo: { label: "Vehículo", icon: Truck },
+  placas: { label: "Placas", icon: Truck },
+  caducidad: { label: "Caducidad", icon: Camera },
+  producto_danado: { label: "Producto dañado", icon: Package },
+  caja_vacia: { label: "Caja vacía", icon: Package },
+  remision_proveedor: { label: "Remisión proveedor", icon: FileText },
+  rechazo_total: { label: "Evidencia rechazo", icon: Camera },
   otro: { label: "Otro", icon: Package },
 };
 

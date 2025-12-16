@@ -35,9 +35,7 @@ import {
   Camera
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { EvidenciaCapture, EvidenciasPreviewGrid } from "./EvidenciaCapture";
-
-type TipoEvidencia = 'sello' | 'identificacion' | 'documento' | 'vehiculo' | 'otro';
+import { EvidenciaCapture, EvidenciasPreviewGrid, TipoEvidencia } from "./EvidenciaCapture";
 
 interface EvidenciaPreview {
   tipo: TipoEvidencia;
