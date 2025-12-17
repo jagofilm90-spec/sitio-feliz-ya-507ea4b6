@@ -17,13 +17,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Package, ChevronDown, AlertTriangle, Calendar, Gift } from "lucide-react";
+import { Package, ChevronDown, AlertTriangle, Calendar, Gift, Warehouse } from "lucide-react";
 
 interface LoteDisponible {
   id: string;
   lote_referencia: string | null;
   cantidad_disponible: number;
   fecha_caducidad: string | null;
+  bodega_id?: string | null;
+  bodega_nombre?: string | null;
 }
 
 interface ProductoCarga {
@@ -50,15 +52,19 @@ export interface CargaProductosChecklistProps {
     cantidadCargada: number,
     loteId: string | null
   ) => void;
+  onDesmarcar?: (producto: ProductoCarga) => void;
   disabled?: boolean;
   isCortesia?: boolean;
+  entregaConfirmada?: boolean;
 }
 
 export const CargaProductosChecklist = ({
   productos,
   onToggle,
+  onDesmarcar,
   disabled = false,
   isCortesia = false,
+  entregaConfirmada = false,
 }: CargaProductosChecklistProps) => {
   return (
     <div className="space-y-2">
@@ -67,7 +73,8 @@ export const CargaProductosChecklist = ({
           key={producto.id}
           producto={producto}
           onToggle={onToggle}
-          disabled={disabled}
+          onDesmarcar={onDesmarcar}
+          disabled={disabled || entregaConfirmada}
           isCortesia={isCortesia}
         />
       ))}
@@ -78,11 +85,13 @@ export const CargaProductosChecklist = ({
 const ProductoItem = ({
   producto,
   onToggle,
+  onDesmarcar,
   disabled,
   isCortesia = false,
 }: {
   producto: ProductoCarga;
   onToggle: CargaProductosChecklistProps["onToggle"];
+  onDesmarcar?: CargaProductosChecklistProps["onDesmarcar"];
   disabled: boolean;
   isCortesia?: boolean;
 }) => {
@@ -96,27 +105,31 @@ const ProductoItem = ({
 
   // Lote sugerido por FIFO (el primero que tiene fecha de caducidad más próxima)
   const loteFIFO = producto.lotes_disponibles[0];
+  
+  // Obtener bodega del lote seleccionado
+  const loteActual = producto.lotes_disponibles.find(
+    (l) => l.id === loteSeleccionado
+  );
+  const bodegaNombre = loteActual?.bodega_nombre || loteFIFO?.bodega_nombre;
 
   const handleCheckChange = (checked: boolean) => {
+    // Si está desmarcando y ya estaba cargado, usar callback especial
+    if (!checked && producto.cargado && onDesmarcar) {
+      onDesmarcar(producto);
+      return;
+    }
+    // Si está marcando, ejecutar toggle normal
     onToggle(producto.id, checked, cantidadCargada, loteSeleccionado);
   };
 
   const handleCantidadChange = (value: string) => {
     const cantidad = parseFloat(value) || 0;
     setCantidadCargada(cantidad);
-    // *** BUG FIX: NO re-ejecutar toggle cuando ya está cargado ***
-    // Los cambios de cantidad/lote en productos ya cargados requieren desmarcar primero
   };
 
   const handleLoteChange = (loteId: string) => {
     setLoteSeleccionado(loteId);
-    // *** BUG FIX: NO re-ejecutar toggle cuando ya está cargado ***
-    // Los cambios de lote en productos ya cargados requieren desmarcar primero
   };
-
-  const loteActual = producto.lotes_disponibles.find(
-    (l) => l.id === loteSeleccionado
-  );
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -141,7 +154,7 @@ const ProductoItem = ({
           />
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {isCortesia && <Gift className="w-4 h-4 text-amber-600" />}
               <span className="font-medium text-base">
                 {producto.cantidad_solicitada} {producto.producto.unidad}
@@ -151,6 +164,13 @@ const ProductoItem = ({
               </span>
               {isCortesia && (
                 <Badge className="bg-amber-500 text-white text-xs">CORTESÍA</Badge>
+              )}
+              {/* *** NUEVO: Indicador de bodega *** */}
+              {bodegaNombre && (
+                <Badge variant="outline" className="text-xs flex items-center gap-1">
+                  <Warehouse className="w-3 h-3" />
+                  {bodegaNombre}
+                </Badge>
               )}
             </div>
             <p className="text-sm text-muted-foreground truncate">
@@ -211,7 +231,7 @@ const ProductoItem = ({
               )}
             </div>
 
-            {/* Selector de lote FIFO */}
+            {/* Selector de lote FIFO con indicador de bodega */}
             {producto.lotes_disponibles.length > 0 && (
               <div className="space-y-2">
                 <label className="text-sm text-muted-foreground">
@@ -232,10 +252,15 @@ const ProductoItem = ({
                         value={lote.id}
                         className="py-3"
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {index === 0 && (
                             <Badge variant="secondary" className="text-xs">
                               FIFO
+                            </Badge>
+                          )}
+                          {lote.bodega_nombre && (
+                            <Badge variant="outline" className="text-xs">
+                              {lote.bodega_nombre}
                             </Badge>
                           )}
                           <span>{lote.lote_referencia || "Sin ref."}</span>
@@ -270,11 +295,20 @@ const ProductoItem = ({
             {/* Info del lote actual */}
             {loteActual && (
               <div className="bg-muted/50 rounded-lg p-3 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
+                <div className="flex items-center gap-2 text-muted-foreground flex-wrap">
                   <Package className="w-4 h-4" />
                   <span>
                     Lote: {loteActual.lote_referencia || "Sin referencia"}
                   </span>
+                  {loteActual.bodega_nombre && (
+                    <>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <Warehouse className="w-3 h-3" />
+                        {loteActual.bodega_nombre}
+                      </span>
+                    </>
+                  )}
                   <span>•</span>
                   <span>{loteActual.cantidad_disponible} disponibles</span>
                   {loteActual.fecha_caducidad && (

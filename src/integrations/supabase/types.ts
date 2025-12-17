@@ -125,10 +125,12 @@ export type Database = {
           cargado: boolean | null
           cargado_en: string | null
           cargado_por: string | null
+          corregido_en: string | null
           created_at: string | null
           entrega_id: string
           id: string
           lote_id: string | null
+          motivo_correccion: string | null
           movimiento_inventario_id: string | null
           notas: string | null
           pedido_detalle_id: string
@@ -140,10 +142,12 @@ export type Database = {
           cargado?: boolean | null
           cargado_en?: string | null
           cargado_por?: string | null
+          corregido_en?: string | null
           created_at?: string | null
           entrega_id: string
           id?: string
           lote_id?: string | null
+          motivo_correccion?: string | null
           movimiento_inventario_id?: string | null
           notas?: string | null
           pedido_detalle_id: string
@@ -155,10 +159,12 @@ export type Database = {
           cargado?: boolean | null
           cargado_en?: string | null
           cargado_por?: string | null
+          corregido_en?: string | null
           created_at?: string | null
           entrega_id?: string
           id?: string
           lote_id?: string | null
+          motivo_correccion?: string | null
           movimiento_inventario_id?: string | null
           notas?: string | null
           pedido_detalle_id?: string
@@ -1540,6 +1546,9 @@ export type Database = {
       }
       entregas: {
         Row: {
+          carga_confirmada: boolean | null
+          carga_confirmada_en: string | null
+          carga_confirmada_por: string | null
           created_at: string
           entregado: boolean | null
           fecha_entrega: string | null
@@ -1556,6 +1565,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          carga_confirmada?: boolean | null
+          carga_confirmada_en?: string | null
+          carga_confirmada_por?: string | null
           created_at?: string
           entregado?: boolean | null
           fecha_entrega?: string | null
@@ -1572,6 +1584,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          carga_confirmada?: boolean | null
+          carga_confirmada_en?: string | null
+          carga_confirmada_por?: string | null
           created_at?: string
           entregado?: boolean | null
           fecha_entrega?: string | null
@@ -1588,6 +1603,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "entregas_carga_confirmada_por_fkey"
+            columns: ["carga_confirmada_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_carga_confirmada_por_fkey"
+            columns: ["carga_confirmada_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "entregas_pedido_id_fkey"
             columns: ["pedido_id"]
@@ -3363,13 +3392,17 @@ export type Database = {
           fecha_hora_fin: string | null
           fecha_hora_inicio: string | null
           fecha_ruta: string
+          firma_chofer_carga: string | null
+          firma_chofer_carga_fecha: string | null
           folio: string
           hora_salida_sugerida: string | null
           id: string
           kilometraje_final: number | null
           kilometraje_inicial: number | null
           kilometros_recorridos: number | null
+          lleva_sellos: boolean | null
           notas: string | null
+          numero_sello_salida: string | null
           peso_total_kg: number | null
           status: string | null
           tiempo_estimado_minutos: number | null
@@ -3394,13 +3427,17 @@ export type Database = {
           fecha_hora_fin?: string | null
           fecha_hora_inicio?: string | null
           fecha_ruta: string
+          firma_chofer_carga?: string | null
+          firma_chofer_carga_fecha?: string | null
           folio: string
           hora_salida_sugerida?: string | null
           id?: string
           kilometraje_final?: number | null
           kilometraje_inicial?: number | null
           kilometros_recorridos?: number | null
+          lleva_sellos?: boolean | null
           notas?: string | null
+          numero_sello_salida?: string | null
           peso_total_kg?: number | null
           status?: string | null
           tiempo_estimado_minutos?: number | null
@@ -3425,13 +3462,17 @@ export type Database = {
           fecha_hora_fin?: string | null
           fecha_hora_inicio?: string | null
           fecha_ruta?: string
+          firma_chofer_carga?: string | null
+          firma_chofer_carga_fecha?: string | null
           folio?: string
           hora_salida_sugerida?: string | null
           id?: string
           kilometraje_final?: number | null
           kilometraje_inicial?: number | null
           kilometros_recorridos?: number | null
+          lleva_sellos?: boolean | null
           notas?: string | null
+          numero_sello_salida?: string | null
           peso_total_kg?: number | null
           status?: string | null
           tiempo_estimado_minutos?: number | null

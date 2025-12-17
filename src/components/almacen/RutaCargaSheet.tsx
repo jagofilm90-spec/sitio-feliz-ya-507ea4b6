@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Package,
@@ -29,10 +28,15 @@ import {
   Users,
   AlertCircle,
   Timer,
+  Lock,
+  CheckCheck,
 } from "lucide-react";
 import { CargaProductosChecklist } from "./CargaProductosChecklist";
 import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
+import { FirmaChoferDialog } from "./FirmaChoferDialog";
 import { CargaEvidenciasSection } from "./CargaEvidenciasSection";
+import { SellosSection } from "./SellosSection";
+import { MotivoCorreccionDialog } from "./MotivoCorreccionDialog";
 
 interface CargaEvidencia {
   id: string;
@@ -52,6 +56,9 @@ interface Ruta {
   carga_iniciada_en?: string | null;
   carga_iniciada_por?: string | null;
   ayudantes_ids?: string[] | null;
+  lleva_sellos?: boolean | null;
+  numero_sello_salida?: string | null;
+  firma_chofer_carga?: string | null;
   vehiculo: {
     id: string;
     nombre: string;
@@ -78,22 +85,13 @@ interface SucursalInfo {
   razon_social: string | null;
 }
 
-interface EntregaConProductos {
+interface LoteDisponible {
   id: string;
-  orden_entrega: number;
-  pedido: {
-    id: string;
-    folio: string;
-    notas: string | null;
-    cliente: {
-      nombre: string;
-      codigo: string;
-      direccion: string | null;
-      telefono: string | null;
-    };
-    sucursal: SucursalInfo | null;
-  };
-  productos: ProductoCarga[];
+  lote_referencia: string | null;
+  cantidad_disponible: number;
+  fecha_caducidad: string | null;
+  bodega_id?: string | null;
+  bodega_nombre?: string | null;
 }
 
 interface ProductoCarga {
@@ -113,11 +111,25 @@ interface ProductoCarga {
   lotes_disponibles: LoteDisponible[];
 }
 
-interface LoteDisponible {
+interface EntregaConProductos {
   id: string;
-  lote_referencia: string | null;
-  cantidad_disponible: number;
-  fecha_caducidad: string | null;
+  orden_entrega: number;
+  carga_confirmada: boolean;
+  carga_confirmada_por: string | null;
+  carga_confirmada_en: string | null;
+  pedido: {
+    id: string;
+    folio: string;
+    notas: string | null;
+    cliente: {
+      nombre: string;
+      codigo: string;
+      direccion: string | null;
+      telefono: string | null;
+    };
+    sucursal: SucursalInfo | null;
+  };
+  productos: ProductoCarga[];
 }
 
 interface AyudanteInfo {
@@ -143,18 +155,31 @@ export const RutaCargaSheet = ({
   const [ayudantes, setAyudantes] = useState<AyudanteInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [firmaDialogOpen, setFirmaDialogOpen] = useState(false);
+  const [firmaAlmacenistaOpen, setFirmaAlmacenistaOpen] = useState(false);
+  const [firmaChoferOpen, setFirmaChoferOpen] = useState(false);
   
-  // *** NUEVO: Estado para controlar inicio de carga ***
+  // Estado para controlar inicio de carga
   const [cargaIniciada, setCargaIniciada] = useState(false);
   const [tiempoTranscurrido, setTiempoTranscurrido] = useState(0);
   const [horaInicio, setHoraInicio] = useState<Date | null>(null);
   const [iniciandoCarga, setIniciandoCarga] = useState(false);
   
+  // Estado para sellos
+  const [llevaSellos, setLlevaSellos] = useState(ruta.lleva_sellos ?? true);
+  const [numeroSello, setNumeroSello] = useState(ruta.numero_sello_salida || "");
+  
+  // Estado para corrección
+  const [motivoDialogOpen, setMotivoDialogOpen] = useState(false);
+  const [productoADesmarcar, setProductoADesmarcar] = useState<ProductoCarga | null>(null);
+  const [desmarcando, setDesmarcando] = useState(false);
+  
+  // Estado para firma del chofer
+  const [firmaChoferBase64, setFirmaChoferBase64] = useState<string | null>(ruta.firma_chofer_carga || null);
+  
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
-  // *** Cargar nombres de ayudantes ***
+  // Cargar nombres de ayudantes
   const loadAyudantes = async () => {
     const ayudantesIds = ruta.ayudantes_ids || [];
     if (ayudantesIds.length === 0) {
@@ -183,12 +208,15 @@ export const RutaCargaSheet = ({
   const loadEntregasYProductos = async () => {
     setLoading(true);
     try {
-      // *** Query mejorada con info completa de sucursal y cliente ***
+      // Query mejorada con info completa de sucursal, cliente y confirmación
       const { data: entregasData, error: entregasError } = await supabase
         .from("entregas")
         .select(`
           id,
           orden_entrega,
+          carga_confirmada,
+          carga_confirmada_por,
+          carga_confirmada_en,
           pedido:pedidos(
             id,
             folio,
@@ -258,7 +286,7 @@ export const RutaCargaSheet = ({
           }
         }
 
-        // Cargar info de productos y lotes disponibles
+        // Cargar info de productos y lotes disponibles con bodega
         const productosConInfo: ProductoCarga[] = [];
 
         for (const cp of cargaProductos || []) {
@@ -267,7 +295,7 @@ export const RutaCargaSheet = ({
             .from("pedidos_detalles")
             .select(`
               es_cortesia,
-            producto:productos(
+              producto:productos(
                 id,
                 codigo,
                 nombre,
@@ -277,13 +305,30 @@ export const RutaCargaSheet = ({
             .eq("id", cp.pedido_detalle_id)
             .single();
 
-          // Obtener lotes disponibles para FIFO
+          // Obtener lotes disponibles para FIFO CON BODEGA
           const { data: lotes } = await supabase
             .from("inventario_lotes")
-            .select("id, lote_referencia, cantidad_disponible, fecha_caducidad")
+            .select(`
+              id, 
+              lote_referencia, 
+              cantidad_disponible, 
+              fecha_caducidad,
+              bodega_id,
+              bodega:bodegas(nombre)
+            `)
             .eq("producto_id", (detalle?.producto as any)?.id)
             .gt("cantidad_disponible", 0)
             .order("fecha_caducidad", { ascending: true, nullsFirst: false });
+
+          // Mapear lotes con nombre de bodega
+          const lotesConBodega: LoteDisponible[] = (lotes || []).map(l => ({
+            id: l.id,
+            lote_referencia: l.lote_referencia,
+            cantidad_disponible: l.cantidad_disponible,
+            fecha_caducidad: l.fecha_caducidad,
+            bodega_id: l.bodega_id,
+            bodega_nombre: (l.bodega as any)?.nombre || null,
+          }));
 
           productosConInfo.push({
             id: cp.id,
@@ -299,13 +344,16 @@ export const RutaCargaSheet = ({
               nombre: "Producto no encontrado",
               unidad: "unidad",
             },
-            lotes_disponibles: lotes || [],
+            lotes_disponibles: lotesConBodega,
           });
         }
 
         entregasConProductos.push({
           id: entrega.id,
           orden_entrega: entrega.orden_entrega,
+          carga_confirmada: entrega.carga_confirmada || false,
+          carga_confirmada_por: entrega.carga_confirmada_por,
+          carga_confirmada_en: entrega.carga_confirmada_en,
           pedido: entrega.pedido as any,
           productos: productosConInfo,
         });
@@ -324,11 +372,11 @@ export const RutaCargaSheet = ({
     }
   };
 
-  // *** Verificar si ya se inició la carga anteriormente ***
+  // Verificar si ya se inició la carga anteriormente
   const verificarEstadoCarga = async () => {
     const { data } = await supabase
       .from("rutas")
-      .select("carga_iniciada_en, carga_iniciada_por, status")
+      .select("carga_iniciada_en, carga_iniciada_por, status, lleva_sellos, numero_sello_salida, firma_chofer_carga")
       .eq("id", ruta.id)
       .single();
 
@@ -336,7 +384,6 @@ export const RutaCargaSheet = ({
       setCargaIniciada(true);
       const inicio = new Date(data.carga_iniciada_en);
       setHoraInicio(inicio);
-      // Calcular tiempo transcurrido desde el inicio
       const ahora = new Date();
       const diferencia = Math.floor((ahora.getTime() - inicio.getTime()) / 1000);
       setTiempoTranscurrido(diferencia);
@@ -345,9 +392,14 @@ export const RutaCargaSheet = ({
       setHoraInicio(null);
       setTiempoTranscurrido(0);
     }
+    
+    // Cargar estado de sellos y firma
+    setLlevaSellos(data?.lleva_sellos ?? true);
+    setNumeroSello(data?.numero_sello_salida || "");
+    setFirmaChoferBase64(data?.firma_chofer_carga || null);
   };
 
-  // *** NUEVO: Función para iniciar carga (reemplaza auto-registro) ***
+  // Función para iniciar carga
   const handleIniciarCarga = async () => {
     setIniciandoCarga(true);
     try {
@@ -373,8 +425,6 @@ export const RutaCargaSheet = ({
         title: "Carga iniciada",
         description: "Ahora puedes marcar los productos como cargados",
       });
-
-      console.log("Inicio de carga registrado para ruta:", ruta.folio);
     } catch (error) {
       console.error("Error iniciando carga:", error);
       toast({
@@ -387,7 +437,7 @@ export const RutaCargaSheet = ({
     }
   };
 
-  // *** Timer effect ***
+  // Timer effect
   useEffect(() => {
     if (cargaIniciada && !ruta.carga_completada) {
       timerRef.current = setInterval(() => {
@@ -410,13 +460,89 @@ export const RutaCargaSheet = ({
       verificarEstadoCarga();
     }
 
-    // Cleanup timer when sheet closes
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
     };
   }, [open, ruta.id]);
+
+  // Manejar desmarcar producto - abre diálogo de motivo
+  const handleDesmarcarProducto = (producto: ProductoCarga) => {
+    setProductoADesmarcar(producto);
+    setMotivoDialogOpen(true);
+  };
+
+  // Confirmar corrección con motivo
+  const handleConfirmarCorreccion = async (motivo: string, motivoCompleto: string) => {
+    if (!productoADesmarcar) return;
+    
+    setDesmarcando(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Obtener datos previos del producto cargado
+      const { data: cargaPrevia, error: previaError } = await supabase
+        .from("carga_productos")
+        .select("lote_id, cantidad_cargada, movimiento_inventario_id")
+        .eq("id", productoADesmarcar.id)
+        .single();
+
+      if (previaError) throw previaError;
+
+      // Revertir si hay lote y cantidad previa
+      if (cargaPrevia?.lote_id && cargaPrevia?.cantidad_cargada) {
+        const { error: incrementError } = await supabase.rpc("incrementar_lote", {
+          p_lote_id: cargaPrevia.lote_id,
+          p_cantidad: cargaPrevia.cantidad_cargada,
+        });
+
+        if (incrementError) throw incrementError;
+
+        if (cargaPrevia.movimiento_inventario_id) {
+          await supabase
+            .from("inventario_movimientos")
+            .delete()
+            .eq("id", cargaPrevia.movimiento_inventario_id);
+        }
+      }
+
+      // Actualizar carga_productos con motivo de corrección
+      const { error: updateError } = await supabase
+        .from("carga_productos")
+        .update({
+          cargado: false,
+          cantidad_cargada: 0,
+          lote_id: null,
+          cargado_por: null,
+          cargado_en: null,
+          movimiento_inventario_id: null,
+          motivo_correccion: motivoCompleto,
+          corregido_en: new Date().toISOString(),
+        })
+        .eq("id", productoADesmarcar.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Producto desmarcado",
+        description: "Stock restaurado. Motivo registrado.",
+      });
+
+      await loadEntregasYProductos();
+    } catch (error) {
+      console.error("Error desmarcando producto:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo desmarcar el producto",
+        variant: "destructive",
+      });
+    } finally {
+      setDesmarcando(false);
+      setMotivoDialogOpen(false);
+      setProductoADesmarcar(null);
+    }
+  };
 
   const handleProductoToggle = async (
     cargaId: string,
@@ -427,7 +553,6 @@ export const RutaCargaSheet = ({
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Buscar el producto actual para obtener info necesaria
       const productoActual = entregas
         .flatMap(e => e.productos)
         .find(p => p.id === cargaId);
@@ -436,11 +561,9 @@ export const RutaCargaSheet = ({
         throw new Error("Producto no encontrado");
       }
 
-      // ===== MARCAR COMO CARGADO =====
+      // MARCAR COMO CARGADO
       if (cargado && loteId) {
-        // *** BUG FIX: Verificar si ya está cargado para evitar descuento duplicado ***
         if (productoActual.cargado) {
-          console.log("⚠️ Producto ya cargado, ignorando toggle duplicado");
           toast({
             title: "Producto ya cargado",
             description: "Use la opción de desmarcar para modificar",
@@ -448,7 +571,6 @@ export const RutaCargaSheet = ({
           return;
         }
 
-        // 1. Validar stock disponible en el lote
         const { data: lote, error: loteError } = await supabase
           .from("inventario_lotes")
           .select("cantidad_disponible")
@@ -466,7 +588,6 @@ export const RutaCargaSheet = ({
           return;
         }
 
-        // 2. Decrementar del lote usando RPC atómico
         const { error: decrementError } = await supabase.rpc("decrementar_lote", {
           p_lote_id: loteId,
           p_cantidad: cantidadCargada,
@@ -474,7 +595,6 @@ export const RutaCargaSheet = ({
 
         if (decrementError) throw decrementError;
 
-        // 3. Crear movimiento de salida (trigger actualiza productos.stock_actual)
         const { data: movimiento, error: movimientoError } = await supabase
           .from("inventario_movimientos")
           .insert({
@@ -491,7 +611,6 @@ export const RutaCargaSheet = ({
 
         if (movimientoError) throw movimientoError;
 
-        // 4. Actualizar carga_productos con referencia al movimiento
         const { error: updateError } = await supabase
           .from("carga_productos")
           .update({
@@ -501,6 +620,8 @@ export const RutaCargaSheet = ({
             cargado_por: user?.id,
             cargado_en: new Date().toISOString(),
             movimiento_inventario_id: movimiento.id,
+            motivo_correccion: null,
+            corregido_en: null,
           })
           .eq("id", cargaId);
 
@@ -511,58 +632,7 @@ export const RutaCargaSheet = ({
           description: `Stock descontado del lote`,
         });
       }
-      // ===== DESMARCAR (REVERTIR) =====
-      else if (!cargado) {
-        // 1. Obtener datos previos del producto cargado
-        const { data: cargaPrevia, error: previaError } = await supabase
-          .from("carga_productos")
-          .select("lote_id, cantidad_cargada, movimiento_inventario_id")
-          .eq("id", cargaId)
-          .single();
 
-        if (previaError) throw previaError;
-
-        // 2. Revertir si hay lote y cantidad previa
-        if (cargaPrevia?.lote_id && cargaPrevia?.cantidad_cargada) {
-          // Incrementar lote usando RPC atómico
-          const { error: incrementError } = await supabase.rpc("incrementar_lote", {
-            p_lote_id: cargaPrevia.lote_id,
-            p_cantidad: cargaPrevia.cantidad_cargada,
-          });
-
-          if (incrementError) throw incrementError;
-
-          // Eliminar movimiento (trigger restaura stock automáticamente)
-          if (cargaPrevia.movimiento_inventario_id) {
-            await supabase
-              .from("inventario_movimientos")
-              .delete()
-              .eq("id", cargaPrevia.movimiento_inventario_id);
-          }
-        }
-
-        // 3. Actualizar carga_productos
-        const { error: updateError } = await supabase
-          .from("carga_productos")
-          .update({
-            cargado: false,
-            cantidad_cargada: 0,
-            lote_id: null,
-            cargado_por: null,
-            cargado_en: null,
-            movimiento_inventario_id: null,
-          })
-          .eq("id", cargaId);
-
-        if (updateError) throw updateError;
-
-        toast({
-          title: "Producto desmarcado",
-          description: "Stock restaurado al lote",
-        });
-      }
-
-      // Actualizar estado local y refrescar lotes disponibles
       await loadEntregasYProductos();
     } catch (error) {
       console.error("Error actualizando producto:", error);
@@ -574,9 +644,99 @@ export const RutaCargaSheet = ({
     }
   };
 
+  // Confirmar entrega individual
+  const handleConfirmarEntrega = async (entregaId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { error } = await supabase
+        .from("entregas")
+        .update({
+          carga_confirmada: true,
+          carga_confirmada_por: user?.id,
+          carga_confirmada_en: new Date().toISOString(),
+        })
+        .eq("id", entregaId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Entrega confirmada",
+        description: "Los productos de esta entrega están bloqueados",
+      });
+
+      await loadEntregasYProductos();
+    } catch (error) {
+      console.error("Error confirmando entrega:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo confirmar la entrega",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Guardar firma del chofer
+  const handleFirmaChofer = async (firmaBase64: string) => {
+    try {
+      const { error } = await supabase
+        .from("rutas")
+        .update({
+          firma_chofer_carga: firmaBase64,
+          firma_chofer_carga_fecha: new Date().toISOString(),
+        })
+        .eq("id", ruta.id);
+
+      if (error) throw error;
+
+      setFirmaChoferBase64(firmaBase64);
+      setFirmaChoferOpen(false);
+      
+      toast({
+        title: "Firma del chofer guardada",
+        description: "El chofer ha confirmado la carga",
+      });
+    } catch (error) {
+      console.error("Error guardando firma:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo guardar la firma",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Guardar estado de sellos
+  const handleLlevaSellosChange = async (value: boolean) => {
+    setLlevaSellos(value);
+    await supabase
+      .from("rutas")
+      .update({ lleva_sellos: value })
+      .eq("id", ruta.id);
+  };
+
+  const handleNumeroSelloChange = async (value: string) => {
+    setNumeroSello(value);
+    await supabase
+      .from("rutas")
+      .update({ numero_sello_salida: value })
+      .eq("id", ruta.id);
+  };
+
+  // Validaciones para completar carga
   const todosLosProdutosCargados = entregas.every((e) =>
     e.productos.every((p) => p.cargado)
   );
+  
+  const todasEntregasConfirmadas = entregas.every(e => e.carga_confirmada);
+  
+  const selloEvidencia = evidencias.find(e => e.tipo_evidencia === "sello_salida_1");
+  const sellosValidos = !llevaSellos || (llevaSellos && selloEvidencia);
+  
+  const puedeCompletar = todosLosProdutosCargados && 
+                         todasEntregasConfirmadas && 
+                         sellosValidos && 
+                         firmaChoferBase64;
 
   const totalProductos = entregas.reduce((acc, e) => acc + e.productos.length, 0);
   const productosCargados = entregas.reduce(
@@ -587,7 +747,6 @@ export const RutaCargaSheet = ({
     ? Math.round((productosCargados / totalProductos) * 100) 
     : 0;
 
-  // *** Formatear tiempo transcurrido ***
   const formatearTiempo = (segundos: number) => {
     const horas = Math.floor(segundos / 3600);
     const minutos = Math.floor((segundos % 3600) / 60);
@@ -595,7 +754,6 @@ export const RutaCargaSheet = ({
     return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segs.toString().padStart(2, '0')}`;
   };
 
-  // *** Color del timer según duración ***
   const getTimerColor = () => {
     const minutos = tiempoTranscurrido / 60;
     if (minutos < 30) return "text-green-600 bg-green-50 border-green-200";
@@ -608,7 +766,6 @@ export const RutaCargaSheet = ({
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Actualizar ruta como carga completada
       const { error: rutaError } = await supabase
         .from("rutas")
         .update({
@@ -621,7 +778,7 @@ export const RutaCargaSheet = ({
 
       if (rutaError) throw rutaError;
 
-      // Enviar notificación push al chofer con duración
+      // Enviar notificación push al chofer
       if (ruta.chofer?.id) {
         const duracionMinutos = Math.round(tiempoTranscurrido / 60);
         await sendPushNotification({
@@ -651,7 +808,7 @@ export const RutaCargaSheet = ({
       });
     } finally {
       setSaving(false);
-      setFirmaDialogOpen(false);
+      setFirmaAlmacenistaOpen(false);
     }
   };
 
@@ -670,7 +827,6 @@ export const RutaCargaSheet = ({
               </Button>
               <div className="flex-1">
                 <SheetTitle className="text-xl">{ruta.folio}</SheetTitle>
-                {/* *** Info completa del vehículo y personal *** */}
                 <div className="flex flex-col gap-1 text-sm text-muted-foreground mt-1">
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1">
@@ -709,11 +865,10 @@ export const RutaCargaSheet = ({
             />
           </div>
 
-          {/* *** NUEVO: Panel de estado de carga con temporizador *** */}
+          {/* Panel de estado de carga con temporizador */}
           {!loading && (
             <div className="p-4 border-b">
               {!cargaIniciada && !ruta.carga_completada ? (
-                // *** Botón INICIAR CARGA ***
                 <div className="flex flex-col items-center gap-3 py-4">
                   <AlertCircle className="w-12 h-12 text-amber-500" />
                   <p className="text-center text-muted-foreground">
@@ -734,7 +889,6 @@ export const RutaCargaSheet = ({
                   </Button>
                 </div>
               ) : (
-                // *** Temporizador visible ***
                 <div className={`rounded-lg border p-4 ${getTimerColor()}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -762,7 +916,7 @@ export const RutaCargaSheet = ({
             </div>
           )}
 
-          <ScrollArea className="h-[calc(100vh-320px)]">
+          <ScrollArea className="h-[calc(100vh-400px)]">
             {loading ? (
               <div className="p-4 space-y-4">
                 {[1, 2, 3].map((i) => (
@@ -776,14 +930,14 @@ export const RutaCargaSheet = ({
                   const cortesias = entrega.productos.filter(p => p.es_cortesia);
                   const sucursal = entrega.pedido.sucursal;
                   const cliente = entrega.pedido.cliente;
-                  
-                  // Determinar dirección a mostrar (sucursal o cliente)
                   const direccionEntrega = sucursal?.direccion || cliente?.direccion;
                   const telefonoEntrega = sucursal?.telefono || cliente?.telefono;
                   
+                  const todosProductosCargadosEntrega = entrega.productos.every(p => p.cargado);
+                  
                   return (
-                    <Card key={entrega.id} className="overflow-hidden">
-                      {/* *** Header de entrega con info completa *** */}
+                    <Card key={entrega.id} className={`overflow-hidden ${entrega.carga_confirmada ? 'ring-2 ring-green-500' : ''}`}>
+                      {/* Header de entrega con info completa */}
                       <div className="bg-muted/50 p-4 border-b">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
@@ -794,9 +948,14 @@ export const RutaCargaSheet = ({
                               <span className="font-semibold text-lg truncate">
                                 {cliente.nombre}
                               </span>
+                              {entrega.carga_confirmada && (
+                                <Badge className="bg-green-600 text-xs">
+                                  <Lock className="w-3 h-3 mr-1" />
+                                  Confirmada
+                                </Badge>
+                              )}
                             </div>
                             
-                            {/* Sucursal */}
                             {sucursal && (
                               <div className="text-sm text-muted-foreground mb-2">
                                 <span className="font-medium">{sucursal.nombre}</span>
@@ -805,15 +964,9 @@ export const RutaCargaSheet = ({
                                     {sucursal.codigo_sucursal}
                                   </span>
                                 )}
-                                {sucursal.razon_social && sucursal.razon_social !== cliente.nombre && (
-                                  <div className="text-xs text-muted-foreground mt-0.5">
-                                    {sucursal.razon_social}
-                                  </div>
-                                )}
                               </div>
                             )}
                             
-                            {/* Dirección */}
                             {direccionEntrega && (
                               <div className="flex items-start gap-2 text-sm mb-1">
                                 <MapPin className="w-4 h-4 shrink-0 mt-0.5 text-muted-foreground" />
@@ -821,7 +974,6 @@ export const RutaCargaSheet = ({
                               </div>
                             )}
                             
-                            {/* Teléfono y contacto */}
                             <div className="flex flex-wrap gap-4 text-sm">
                               {telefonoEntrega && (
                                 <div className="flex items-center gap-1">
@@ -849,7 +1001,6 @@ export const RutaCargaSheet = ({
                           </Badge>
                         </div>
                         
-                        {/* Notas especiales */}
                         {(sucursal?.notas || entrega.pedido.notas) && (
                           <div className="mt-3 p-2 bg-amber-100 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 rounded-md">
                             <div className="flex items-start gap-2 text-sm text-amber-800 dark:text-amber-200">
@@ -861,16 +1012,16 @@ export const RutaCargaSheet = ({
                       </div>
                       
                       <CardContent className="p-4">
-                        {/* Productos normales */}
                         {productosNormales.length > 0 && (
                           <CargaProductosChecklist
                             productos={productosNormales}
                             onToggle={handleProductoToggle}
+                            onDesmarcar={handleDesmarcarProducto}
                             disabled={!cargaIniciada || ruta.carga_completada || false}
+                            entregaConfirmada={entrega.carga_confirmada}
                           />
                         )}
                         
-                        {/* Cortesías sin cargo */}
                         {cortesias.length > 0 && (
                           <div className="mt-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
                             <div className="flex items-center gap-2 mb-3">
@@ -881,15 +1032,82 @@ export const RutaCargaSheet = ({
                             <CargaProductosChecklist
                               productos={cortesias}
                               onToggle={handleProductoToggle}
+                              onDesmarcar={handleDesmarcarProducto}
                               disabled={!cargaIniciada || ruta.carga_completada || false}
+                              entregaConfirmada={entrega.carga_confirmada}
                               isCortesia
                             />
+                          </div>
+                        )}
+
+                        {/* Botón de confirmar entrega */}
+                        {cargaIniciada && !entrega.carga_confirmada && !ruta.carga_completada && (
+                          <div className="mt-4 pt-4 border-t">
+                            <Button
+                              className="w-full h-12"
+                              variant={todosProductosCargadosEntrega ? "default" : "outline"}
+                              disabled={!todosProductosCargadosEntrega}
+                              onClick={() => handleConfirmarEntrega(entrega.id)}
+                            >
+                              <CheckCheck className="w-5 h-5 mr-2" />
+                              {todosProductosCargadosEntrega 
+                                ? `Confirmar entrega #${entrega.orden_entrega}`
+                                : `Faltan productos por cargar`
+                              }
+                            </Button>
                           </div>
                         )}
                       </CardContent>
                     </Card>
                   );
                 })}
+
+                {/* Sección de sellos */}
+                {cargaIniciada && !ruta.carga_completada && (
+                  <SellosSection
+                    rutaId={ruta.id}
+                    evidencias={evidencias}
+                    onEvidenciaAdded={loadEvidencias}
+                    disabled={ruta.carga_completada || false}
+                    llevaSellos={llevaSellos}
+                    onLlevaSellosChange={handleLlevaSellosChange}
+                    numeroSello={numeroSello}
+                    onNumeroSelloChange={handleNumeroSelloChange}
+                  />
+                )}
+
+                {/* Sección de firma del chofer */}
+                {cargaIniciada && todasEntregasConfirmadas && !ruta.carga_completada && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Truck className="w-5 h-5 text-primary" />
+                          <span className="font-medium">Firma del Chofer</span>
+                        </div>
+                        {firmaChoferBase64 ? (
+                          <Badge className="bg-green-600">
+                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            Firmado
+                          </Badge>
+                        ) : (
+                          <Button onClick={() => setFirmaChoferOpen(true)}>
+                            Solicitar firma
+                          </Button>
+                        )}
+                      </div>
+                      {firmaChoferBase64 && (
+                        <div className="mt-3 p-2 bg-muted rounded-lg">
+                          <img 
+                            src={firmaChoferBase64} 
+                            alt="Firma del chofer" 
+                            className="h-16 object-contain"
+                          />
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Sección de evidencias fotográficas */}
                 <CargaEvidenciasSection
@@ -907,8 +1125,8 @@ export const RutaCargaSheet = ({
             <Button
               size="lg"
               className="w-full h-14 text-lg"
-              disabled={!cargaIniciada || !todosLosProdutosCargados || ruta.carga_completada || saving}
-              onClick={() => setFirmaDialogOpen(true)}
+              disabled={!puedeCompletar || ruta.carga_completada || saving}
+              onClick={() => setFirmaAlmacenistaOpen(true)}
             >
               {saving ? (
                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -919,23 +1137,64 @@ export const RutaCargaSheet = ({
                 ? "Carga completada"
                 : "Firmar y completar carga"}
             </Button>
+            
+            {/* Mensajes de validación */}
+            {cargaIniciada && !ruta.carga_completada && (
+              <div className="mt-2 space-y-1 text-center text-sm">
+                {!todasEntregasConfirmadas && (
+                  <p className="text-amber-600">
+                    ⚠️ Confirma todas las entregas para continuar
+                  </p>
+                )}
+                {todasEntregasConfirmadas && !firmaChoferBase64 && (
+                  <p className="text-amber-600">
+                    ⚠️ Falta la firma del chofer
+                  </p>
+                )}
+                {llevaSellos && !selloEvidencia && (
+                  <p className="text-amber-600">
+                    ⚠️ Falta foto del sello de salida
+                  </p>
+                )}
+              </div>
+            )}
+            
             {!cargaIniciada && !ruta.carga_completada && (
               <p className="text-center text-sm text-amber-600 mt-2">
                 ⚠️ Presiona "INICIAR CARGA" para habilitar los checkboxes
-              </p>
-            )}
-            {cargaIniciada && !todosLosProdutosCargados && !ruta.carga_completada && (
-              <p className="text-center text-sm text-muted-foreground mt-2">
-                Marca todos los productos como cargados para continuar
               </p>
             )}
           </div>
         </SheetContent>
       </Sheet>
 
+      {/* Diálogo de motivo de corrección */}
+      <MotivoCorreccionDialog
+        open={motivoDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setMotivoDialogOpen(false);
+            setProductoADesmarcar(null);
+          }
+        }}
+        onConfirm={handleConfirmarCorreccion}
+        productoNombre={productoADesmarcar?.producto.nombre || ""}
+        loading={desmarcando}
+      />
+
+      {/* Diálogo de firma del chofer */}
+      <FirmaChoferDialog
+        open={firmaChoferOpen}
+        onOpenChange={setFirmaChoferOpen}
+        onConfirm={handleFirmaChofer}
+        choferNombre={ruta.chofer?.nombre_completo || "Chofer"}
+        rutaFolio={ruta.folio}
+      />
+
+      {/* Diálogo de firma del almacenista */}
       <FirmaDigitalDialog
-        open={firmaDialogOpen}
-        onOpenChange={setFirmaDialogOpen}
+        open={firmaAlmacenistaOpen}
+        onOpenChange={setFirmaAlmacenistaOpen}
         onConfirm={handleCompletarCarga}
         titulo={`Confirmar carga de ${ruta.folio}`}
         loading={saving}
