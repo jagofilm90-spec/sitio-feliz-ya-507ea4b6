@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format, differenceInMinutes, parseISO, set } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -58,7 +58,8 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
 
   const fechaHoy = format(new Date(), "yyyy-MM-dd");
 
-  const loadRutas = async () => {
+  const loadRutas = useCallback(async () => {
+    console.log("🔄 loadRutas iniciando, empleadoId:", empleadoId, "fechaHoy:", fechaHoy);
     setLoading(true);
     try {
       // Sistema híbrido: primero buscar rutas asignadas al almacenista
@@ -85,7 +86,17 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
         .eq("fecha_ruta", fechaHoy)
         .order("hora_salida_sugerida", { ascending: true, nullsFirst: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Error en query de rutas:", {
+          message: error.message,
+          code: error.code,
+          hint: error.hint,
+          details: error.details
+        });
+        throw error;
+      }
+
+      console.log("✅ Rutas cargadas:", todasLasRutas?.length || 0, "rutas encontradas");
 
       const rutasData = (todasLasRutas as any[]) || [];
       
@@ -95,6 +106,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
       
       if (empleadoId) {
         const rutasAsignadas = rutasData.filter(r => r.almacenista_id === empleadoId);
+        console.log("🔍 Filtrando por empleadoId:", empleadoId, "- Rutas asignadas encontradas:", rutasAsignadas.length);
         if (rutasAsignadas.length > 0) {
           // Tiene rutas asignadas, mostrar solo esas
           rutasFiltradas = rutasAsignadas;
@@ -104,6 +116,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
       }
       
       setModoVisualizacion(modo);
+      console.log("📋 Modo visualización:", modo, "- Rutas a mostrar:", rutasFiltradas.length);
 
       // Ordenar: completadas al final, luego por hora de salida
       const sortedRutas = rutasFiltradas.sort((a, b) => {
@@ -130,21 +143,28 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
         completadas: completadas.length,
         entregas: sortedRutas.reduce((acc, r) => acc + r.entregas.length, 0)
       });
-    } catch (error) {
-      console.error("Error cargando rutas:", error);
+    } catch (error: any) {
+      console.error("❌ Error cargando rutas:", error);
+      console.error("Error details:", {
+        message: error?.message,
+        code: error?.code,
+        hint: error?.hint,
+        details: error?.details,
+        empleadoId: empleadoId
+      });
       toast({
         title: "Error",
-        description: "No se pudieron cargar las rutas",
+        description: `No se pudieron cargar las rutas: ${error?.message || 'Error desconocido'}`,
         variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [empleadoId, fechaHoy, onStatsUpdate, toast]);
 
   useEffect(() => {
     loadRutas();
-  }, [empleadoId]);
+  }, [loadRutas]);
 
   // Suscripción a Realtime para actualizaciones instantáneas de rutas
   useEffect(() => {
@@ -191,7 +211,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fechaHoy, empleadoId]);
+  }, [fechaHoy, loadRutas, toast]);
 
   // Calcular urgencia basada en hora de salida
   const getUrgencia = (horaSalida: string | null) => {
