@@ -86,6 +86,39 @@ const InventarioContent = () => {
     loadData();
   }, []);
 
+  // Suscripción Realtime para actualización automática cuando almacenista carga productos
+  useEffect(() => {
+    const channel = supabase
+      .channel('inventario-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'inventario_lotes' },
+        (payload) => {
+          console.log('📦 Cambio en inventario_lotes:', payload);
+          loadData();
+          if (payload.eventType === 'UPDATE') {
+            toast({
+              title: "Stock actualizado",
+              description: "Se ha actualizado el inventario",
+            });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'inventario_movimientos' },
+        (payload) => {
+          console.log('📝 Nuevo movimiento de inventario:', payload);
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const loadData = async () => {
     try {
       const [lotesData, movimientosData, productosData, bodegasData, entregasData] = await Promise.all([
