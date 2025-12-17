@@ -36,7 +36,6 @@ import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
 import { FirmaChoferDialog } from "./FirmaChoferDialog";
 import { CargaEvidenciasSection } from "./CargaEvidenciasSection";
 import { SellosSection } from "./SellosSection";
-import { MotivoCorreccionDialog } from "./MotivoCorreccionDialog";
 
 interface CargaEvidencia {
   id: string;
@@ -168,10 +167,6 @@ export const RutaCargaSheet = ({
   const [llevaSellos, setLlevaSellos] = useState(ruta.lleva_sellos ?? true);
   const [numeroSello, setNumeroSello] = useState(ruta.numero_sello_salida || "");
   
-  // Estado para corrección
-  const [motivoDialogOpen, setMotivoDialogOpen] = useState(false);
-  const [productoADesmarcar, setProductoADesmarcar] = useState<ProductoCarga | null>(null);
-  const [desmarcando, setDesmarcando] = useState(false);
   
   // Estado para firma del chofer
   const [firmaChoferBase64, setFirmaChoferBase64] = useState<string | null>(ruta.firma_chofer_carga || null);
@@ -467,82 +462,6 @@ export const RutaCargaSheet = ({
     };
   }, [open, ruta.id]);
 
-  // Manejar desmarcar producto - abre diálogo de motivo
-  const handleDesmarcarProducto = (producto: ProductoCarga) => {
-    setProductoADesmarcar(producto);
-    setMotivoDialogOpen(true);
-  };
-
-  // Confirmar corrección con motivo
-  const handleConfirmarCorreccion = async (motivo: string, motivoCompleto: string) => {
-    if (!productoADesmarcar) return;
-    
-    setDesmarcando(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      // Obtener datos previos del producto cargado
-      const { data: cargaPrevia, error: previaError } = await supabase
-        .from("carga_productos")
-        .select("lote_id, cantidad_cargada, movimiento_inventario_id")
-        .eq("id", productoADesmarcar.id)
-        .single();
-
-      if (previaError) throw previaError;
-
-      // Revertir si hay lote y cantidad previa
-      if (cargaPrevia?.lote_id && cargaPrevia?.cantidad_cargada) {
-        const { error: incrementError } = await supabase.rpc("incrementar_lote", {
-          p_lote_id: cargaPrevia.lote_id,
-          p_cantidad: cargaPrevia.cantidad_cargada,
-        });
-
-        if (incrementError) throw incrementError;
-
-        if (cargaPrevia.movimiento_inventario_id) {
-          await supabase
-            .from("inventario_movimientos")
-            .delete()
-            .eq("id", cargaPrevia.movimiento_inventario_id);
-        }
-      }
-
-      // Actualizar carga_productos con motivo de corrección
-      const { error: updateError } = await supabase
-        .from("carga_productos")
-        .update({
-          cargado: false,
-          cantidad_cargada: 0,
-          lote_id: null,
-          cargado_por: null,
-          cargado_en: null,
-          movimiento_inventario_id: null,
-          motivo_correccion: motivoCompleto,
-          corregido_en: new Date().toISOString(),
-        })
-        .eq("id", productoADesmarcar.id);
-
-      if (updateError) throw updateError;
-
-      toast({
-        title: "Producto desmarcado",
-        description: "Stock restaurado. Motivo registrado.",
-      });
-
-      await loadEntregasYProductos();
-    } catch (error) {
-      console.error("Error desmarcando producto:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo desmarcar el producto",
-        variant: "destructive",
-      });
-    } finally {
-      setDesmarcando(false);
-      setMotivoDialogOpen(false);
-      setProductoADesmarcar(null);
-    }
-  };
 
   const handleProductoToggle = async (
     cargaId: string,
@@ -566,7 +485,7 @@ export const RutaCargaSheet = ({
         if (productoActual.cargado) {
           toast({
             title: "Producto ya cargado",
-            description: "Use la opción de desmarcar para modificar",
+            description: "Desmarque primero para modificar",
           });
           return;
         }
@@ -620,8 +539,6 @@ export const RutaCargaSheet = ({
             cargado_por: user?.id,
             cargado_en: new Date().toISOString(),
             movimiento_inventario_id: movimiento.id,
-            motivo_correccion: null,
-            corregido_en: null,
           })
           .eq("id", cargaId);
 
@@ -630,6 +547,55 @@ export const RutaCargaSheet = ({
         toast({
           title: "Producto cargado",
           description: `Stock descontado del lote`,
+        });
+      } 
+      // DESMARCAR - Revertir inventario
+      else if (!cargado && productoActual.cargado) {
+        // Obtener datos previos del producto cargado
+        const { data: cargaPrevia, error: previaError } = await supabase
+          .from("carga_productos")
+          .select("lote_id, cantidad_cargada, movimiento_inventario_id")
+          .eq("id", cargaId)
+          .single();
+
+        if (previaError) throw previaError;
+
+        // Revertir si hay lote y cantidad previa
+        if (cargaPrevia?.lote_id && cargaPrevia?.cantidad_cargada) {
+          const { error: incrementError } = await supabase.rpc("incrementar_lote", {
+            p_lote_id: cargaPrevia.lote_id,
+            p_cantidad: cargaPrevia.cantidad_cargada,
+          });
+
+          if (incrementError) throw incrementError;
+
+          // Eliminar movimiento de inventario
+          if (cargaPrevia.movimiento_inventario_id) {
+            await supabase
+              .from("inventario_movimientos")
+              .delete()
+              .eq("id", cargaPrevia.movimiento_inventario_id);
+          }
+        }
+
+        // Actualizar carga_productos
+        const { error: updateError } = await supabase
+          .from("carga_productos")
+          .update({
+            cargado: false,
+            cantidad_cargada: 0,
+            lote_id: null,
+            cargado_por: null,
+            cargado_en: null,
+            movimiento_inventario_id: null,
+          })
+          .eq("id", cargaId);
+
+        if (updateError) throw updateError;
+
+        toast({
+          title: "Producto desmarcado",
+          description: "Stock restaurado al inventario",
         });
       }
 
@@ -1016,7 +982,6 @@ export const RutaCargaSheet = ({
                           <CargaProductosChecklist
                             productos={productosNormales}
                             onToggle={handleProductoToggle}
-                            onDesmarcar={handleDesmarcarProducto}
                             disabled={!cargaIniciada || ruta.carga_completada || false}
                             entregaConfirmada={entrega.carga_confirmada}
                           />
@@ -1032,7 +997,6 @@ export const RutaCargaSheet = ({
                             <CargaProductosChecklist
                               productos={cortesias}
                               onToggle={handleProductoToggle}
-                              onDesmarcar={handleDesmarcarProducto}
                               disabled={!cargaIniciada || ruta.carga_completada || false}
                               entregaConfirmada={entrega.carga_confirmada}
                               isCortesia
@@ -1168,19 +1132,6 @@ export const RutaCargaSheet = ({
         </SheetContent>
       </Sheet>
 
-      {/* Diálogo de motivo de corrección */}
-      <MotivoCorreccionDialog
-        open={motivoDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setMotivoDialogOpen(false);
-            setProductoADesmarcar(null);
-          }
-        }}
-        onConfirm={handleConfirmarCorreccion}
-        productoNombre={productoADesmarcar?.producto.nombre || ""}
-        loading={desmarcando}
-      />
 
       {/* Diálogo de firma del chofer */}
       <FirmaChoferDialog
