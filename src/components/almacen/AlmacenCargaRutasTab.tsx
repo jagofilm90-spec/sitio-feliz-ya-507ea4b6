@@ -79,7 +79,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
           hora_salida_sugerida,
           carga_iniciada_en,
           almacenista_id,
-          vehiculo:vehiculos(id, nombre, placas),
+          vehiculo:vehiculos(id, nombre, placa),
           chofer:empleados!rutas_chofer_id_fkey(id, nombre_completo),
           entregas(id, pedido_id)
         `)
