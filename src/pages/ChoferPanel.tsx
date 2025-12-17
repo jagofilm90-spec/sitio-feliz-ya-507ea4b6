@@ -65,7 +65,7 @@ export default function ChoferPanel() {
       let query = supabase
         .from("rutas")
         .select(`id, folio, fecha_ruta, status, tipo_ruta, distancia_total_km,
-          vehiculo:vehiculos(id, nombre, placas),
+          vehiculo:vehiculos(id, nombre, placa),
           ayudante:empleados!rutas_ayudante_id_fkey(id, nombre_completo),
           ayudante_externo:ayudantes_externos(id, nombre_completo)`)
         .eq("fecha_ruta", hoy)
