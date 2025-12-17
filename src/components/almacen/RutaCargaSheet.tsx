@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { sendPushNotification } from "@/services/pushNotifications";
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Package,
   Truck,
@@ -21,6 +22,13 @@ import {
   ArrowLeft,
   Loader2,
   Gift,
+  MapPin,
+  Phone,
+  Clock,
+  Play,
+  Users,
+  AlertCircle,
+  Timer,
 } from "lucide-react";
 import { CargaProductosChecklist } from "./CargaProductosChecklist";
 import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
@@ -41,6 +49,9 @@ interface Ruta {
   status: string;
   peso_total_kg: number | null;
   carga_completada: boolean | null;
+  carga_iniciada_en?: string | null;
+  carga_iniciada_por?: string | null;
+  ayudantes_ids?: string[] | null;
   vehiculo: {
     id: string;
     nombre: string;
@@ -56,18 +67,31 @@ interface Ruta {
   }[];
 }
 
+interface SucursalInfo {
+  nombre: string;
+  direccion: string | null;
+  telefono: string | null;
+  contacto: string | null;
+  notas: string | null;
+  codigo_sucursal: string | null;
+  horario_entrega: string | null;
+  razon_social: string | null;
+}
+
 interface EntregaConProductos {
   id: string;
   orden_entrega: number;
   pedido: {
     id: string;
     folio: string;
+    notas: string | null;
     cliente: {
       nombre: string;
+      codigo: string;
+      direccion: string | null;
+      telefono: string | null;
     };
-    sucursal: {
-      nombre: string;
-    } | null;
+    sucursal: SucursalInfo | null;
   };
   productos: ProductoCarga[];
 }
@@ -96,6 +120,11 @@ interface LoteDisponible {
   fecha_caducidad: string | null;
 }
 
+interface AyudanteInfo {
+  id: string;
+  nombre_completo: string;
+}
+
 interface RutaCargaSheetProps {
   ruta: Ruta;
   open: boolean;
@@ -111,10 +140,35 @@ export const RutaCargaSheet = ({
 }: RutaCargaSheetProps) => {
   const [entregas, setEntregas] = useState<EntregaConProductos[]>([]);
   const [evidencias, setEvidencias] = useState<CargaEvidencia[]>([]);
+  const [ayudantes, setAyudantes] = useState<AyudanteInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [firmaDialogOpen, setFirmaDialogOpen] = useState(false);
+  
+  // *** NUEVO: Estado para controlar inicio de carga ***
+  const [cargaIniciada, setCargaIniciada] = useState(false);
+  const [tiempoTranscurrido, setTiempoTranscurrido] = useState(0);
+  const [horaInicio, setHoraInicio] = useState<Date | null>(null);
+  const [iniciandoCarga, setIniciandoCarga] = useState(false);
+  
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
+
+  // *** Cargar nombres de ayudantes ***
+  const loadAyudantes = async () => {
+    const ayudantesIds = ruta.ayudantes_ids || [];
+    if (ayudantesIds.length === 0) {
+      setAyudantes([]);
+      return;
+    }
+
+    const { data } = await supabase
+      .from("empleados")
+      .select("id, nombre_completo")
+      .in("id", ayudantesIds);
+
+    setAyudantes(data || []);
+  };
 
   const loadEvidencias = async () => {
     const { data } = await supabase
@@ -129,7 +183,7 @@ export const RutaCargaSheet = ({
   const loadEntregasYProductos = async () => {
     setLoading(true);
     try {
-      // Cargar entregas de la ruta
+      // *** Query mejorada con info completa de sucursal y cliente ***
       const { data: entregasData, error: entregasError } = await supabase
         .from("entregas")
         .select(`
@@ -138,8 +192,18 @@ export const RutaCargaSheet = ({
           pedido:pedidos(
             id,
             folio,
-            cliente:clientes(nombre),
-            sucursal:cliente_sucursales(nombre)
+            notas,
+            cliente:clientes(nombre, codigo, direccion, telefono),
+            sucursal:cliente_sucursales(
+              nombre,
+              direccion,
+              telefono,
+              contacto,
+              notas,
+              codigo_sucursal,
+              horario_entrega,
+              razon_social
+            )
           )
         `)
         .eq("ruta_id", ruta.id)
@@ -260,39 +324,98 @@ export const RutaCargaSheet = ({
     }
   };
 
-  // Registrar inicio de carga cuando se abre el sheet
-  const registrarInicioCarga = async () => {
-    try {
-      const { data: rutaActual } = await supabase
-        .from("rutas")
-        .select("carga_iniciada_en")
-        .eq("id", ruta.id)
-        .single();
-      
-      // Solo registrar si no se ha iniciado antes
-      if (!rutaActual?.carga_iniciada_en) {
-        const { data: { user } } = await supabase.auth.getUser();
-        await supabase
-          .from("rutas")
-          .update({
-            carga_iniciada_en: new Date().toISOString(),
-            carga_iniciada_por: user?.id,
-            status: "cargando"
-          })
-          .eq("id", ruta.id);
-        console.log("Inicio de carga registrado para ruta:", ruta.folio);
-      }
-    } catch (error) {
-      console.error("Error registrando inicio de carga:", error);
+  // *** Verificar si ya se inició la carga anteriormente ***
+  const verificarEstadoCarga = async () => {
+    const { data } = await supabase
+      .from("rutas")
+      .select("carga_iniciada_en, carga_iniciada_por, status")
+      .eq("id", ruta.id)
+      .single();
+
+    if (data?.carga_iniciada_en) {
+      setCargaIniciada(true);
+      const inicio = new Date(data.carga_iniciada_en);
+      setHoraInicio(inicio);
+      // Calcular tiempo transcurrido desde el inicio
+      const ahora = new Date();
+      const diferencia = Math.floor((ahora.getTime() - inicio.getTime()) / 1000);
+      setTiempoTranscurrido(diferencia);
+    } else {
+      setCargaIniciada(false);
+      setHoraInicio(null);
+      setTiempoTranscurrido(0);
     }
   };
+
+  // *** NUEVO: Función para iniciar carga (reemplaza auto-registro) ***
+  const handleIniciarCarga = async () => {
+    setIniciandoCarga(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const ahora = new Date();
+
+      const { error } = await supabase
+        .from("rutas")
+        .update({
+          carga_iniciada_en: ahora.toISOString(),
+          carga_iniciada_por: user?.id,
+          status: "cargando"
+        })
+        .eq("id", ruta.id);
+
+      if (error) throw error;
+
+      setCargaIniciada(true);
+      setHoraInicio(ahora);
+      setTiempoTranscurrido(0);
+
+      toast({
+        title: "Carga iniciada",
+        description: "Ahora puedes marcar los productos como cargados",
+      });
+
+      console.log("Inicio de carga registrado para ruta:", ruta.folio);
+    } catch (error) {
+      console.error("Error iniciando carga:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo iniciar la carga",
+        variant: "destructive",
+      });
+    } finally {
+      setIniciandoCarga(false);
+    }
+  };
+
+  // *** Timer effect ***
+  useEffect(() => {
+    if (cargaIniciada && !ruta.carga_completada) {
+      timerRef.current = setInterval(() => {
+        setTiempoTranscurrido(prev => prev + 1);
+      }, 1000);
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [cargaIniciada, ruta.carga_completada]);
 
   useEffect(() => {
     if (open && ruta.id) {
       loadEntregasYProductos();
       loadEvidencias();
-      registrarInicioCarga();
+      loadAyudantes();
+      verificarEstadoCarga();
     }
+
+    // Cleanup timer when sheet closes
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
   }, [open, ruta.id]);
 
   const handleProductoToggle = async (
@@ -464,6 +587,22 @@ export const RutaCargaSheet = ({
     ? Math.round((productosCargados / totalProductos) * 100) 
     : 0;
 
+  // *** Formatear tiempo transcurrido ***
+  const formatearTiempo = (segundos: number) => {
+    const horas = Math.floor(segundos / 3600);
+    const minutos = Math.floor((segundos % 3600) / 60);
+    const segs = segundos % 60;
+    return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segs.toString().padStart(2, '0')}`;
+  };
+
+  // *** Color del timer según duración ***
+  const getTimerColor = () => {
+    const minutos = tiempoTranscurrido / 60;
+    if (minutos < 30) return "text-green-600 bg-green-50 border-green-200";
+    if (minutos < 60) return "text-amber-600 bg-amber-50 border-amber-200";
+    return "text-red-600 bg-red-50 border-red-200";
+  };
+
   const handleCompletarCarga = async (firmaBase64: string) => {
     setSaving(true);
     try {
@@ -482,12 +621,13 @@ export const RutaCargaSheet = ({
 
       if (rutaError) throw rutaError;
 
-      // Enviar notificación push al chofer
+      // Enviar notificación push al chofer con duración
       if (ruta.chofer?.id) {
+        const duracionMinutos = Math.round(tiempoTranscurrido / 60);
         await sendPushNotification({
           user_ids: [ruta.chofer.id],
           title: "🚚 Ruta lista para salir",
-          body: `La carga de la ruta ${ruta.folio} está completa. ¡Tu camión está listo!`,
+          body: `La carga de ${ruta.folio} está completa (${duracionMinutos} min). ¡Tu camión está listo!`,
           data: {
             type: "carga_completa",
             ruta_id: ruta.id,
@@ -498,7 +638,7 @@ export const RutaCargaSheet = ({
 
       toast({
         title: "Carga completada",
-        description: "El chofer ha sido notificado",
+        description: `El chofer ha sido notificado. Duración: ${formatearTiempo(tiempoTranscurrido)}`,
       });
 
       onCargaCompletada();
@@ -530,15 +670,29 @@ export const RutaCargaSheet = ({
               </Button>
               <div className="flex-1">
                 <SheetTitle className="text-xl">{ruta.folio}</SheetTitle>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                  <span className="flex items-center gap-1">
-                    <Truck className="w-4 h-4" />
-                    {ruta.vehiculo?.nombre}
-                  </span>
-                  <span className="flex items-center gap-1">
+                {/* *** Info completa del vehículo y personal *** */}
+                <div className="flex flex-col gap-1 text-sm text-muted-foreground mt-1">
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1">
+                      <Truck className="w-4 h-4" />
+                      {ruta.vehiculo?.nombre} 
+                      {ruta.vehiculo?.placas && (
+                        <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">
+                          {ruta.vehiculo.placas}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
                     <User className="w-4 h-4" />
-                    {ruta.chofer?.nombre_completo}
-                  </span>
+                    <span className="font-medium">{ruta.chofer?.nombre_completo || "Sin chofer"}</span>
+                  </div>
+                  {ayudantes.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Users className="w-4 h-4" />
+                      <span>Ayudantes: {ayudantes.map(a => a.nombre_completo).join(", ")}</span>
+                    </div>
+                  )}
                 </div>
               </div>
               <Badge variant={ruta.carga_completada ? "default" : "secondary"}>
@@ -555,7 +709,60 @@ export const RutaCargaSheet = ({
             />
           </div>
 
-          <ScrollArea className="h-[calc(100vh-200px)]">
+          {/* *** NUEVO: Panel de estado de carga con temporizador *** */}
+          {!loading && (
+            <div className="p-4 border-b">
+              {!cargaIniciada && !ruta.carga_completada ? (
+                // *** Botón INICIAR CARGA ***
+                <div className="flex flex-col items-center gap-3 py-4">
+                  <AlertCircle className="w-12 h-12 text-amber-500" />
+                  <p className="text-center text-muted-foreground">
+                    Los checkboxes están bloqueados hasta iniciar la carga
+                  </p>
+                  <Button
+                    size="lg"
+                    className="w-full h-16 text-xl bg-green-600 hover:bg-green-700"
+                    onClick={handleIniciarCarga}
+                    disabled={iniciandoCarga}
+                  >
+                    {iniciandoCarga ? (
+                      <Loader2 className="w-6 h-6 mr-2 animate-spin" />
+                    ) : (
+                      <Play className="w-6 h-6 mr-2" />
+                    )}
+                    INICIAR CARGA
+                  </Button>
+                </div>
+              ) : (
+                // *** Temporizador visible ***
+                <div className={`rounded-lg border p-4 ${getTimerColor()}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Timer className="w-5 h-5" />
+                      <span className="font-medium">
+                        {ruta.carga_completada ? "Carga finalizada" : "Carga en progreso"}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-mono font-bold">
+                        {formatearTiempo(tiempoTranscurrido)}
+                      </div>
+                      {horaInicio && (
+                        <div className="text-xs opacity-75">
+                          Iniciada: {horaInicio.toLocaleTimeString('es-MX', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <ScrollArea className="h-[calc(100vh-320px)]">
             {loading ? (
               <div className="p-4 space-y-4">
                 {[1, 2, 3].map((i) => (
@@ -567,51 +774,120 @@ export const RutaCargaSheet = ({
                 {entregas.map((entrega) => {
                   const productosNormales = entrega.productos.filter(p => !p.es_cortesia);
                   const cortesias = entrega.productos.filter(p => p.es_cortesia);
+                  const sucursal = entrega.pedido.sucursal;
+                  const cliente = entrega.pedido.cliente;
+                  
+                  // Determinar dirección a mostrar (sucursal o cliente)
+                  const direccionEntrega = sucursal?.direccion || cliente?.direccion;
+                  const telefonoEntrega = sucursal?.telefono || cliente?.telefono;
                   
                   return (
-                    <div key={entrega.id}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Badge variant="outline" className="text-xs">
-                          #{entrega.orden_entrega}
-                        </Badge>
-                        <span className="font-medium">
-                          {entrega.pedido.cliente.nombre}
-                        </span>
-                        {entrega.pedido.sucursal && (
-                          <span className="text-sm text-muted-foreground">
-                            - {entrega.pedido.sucursal.nombre}
-                          </span>
+                    <Card key={entrega.id} className="overflow-hidden">
+                      {/* *** Header de entrega con info completa *** */}
+                      <div className="bg-muted/50 p-4 border-b">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="outline" className="text-xs shrink-0">
+                                #{entrega.orden_entrega}
+                              </Badge>
+                              <span className="font-semibold text-lg truncate">
+                                {cliente.nombre}
+                              </span>
+                            </div>
+                            
+                            {/* Sucursal */}
+                            {sucursal && (
+                              <div className="text-sm text-muted-foreground mb-2">
+                                <span className="font-medium">{sucursal.nombre}</span>
+                                {sucursal.codigo_sucursal && (
+                                  <span className="ml-1 text-xs font-mono bg-muted px-1.5 py-0.5 rounded">
+                                    {sucursal.codigo_sucursal}
+                                  </span>
+                                )}
+                                {sucursal.razon_social && sucursal.razon_social !== cliente.nombre && (
+                                  <div className="text-xs text-muted-foreground mt-0.5">
+                                    {sucursal.razon_social}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* Dirección */}
+                            {direccionEntrega && (
+                              <div className="flex items-start gap-2 text-sm mb-1">
+                                <MapPin className="w-4 h-4 shrink-0 mt-0.5 text-muted-foreground" />
+                                <span className="text-muted-foreground">{direccionEntrega}</span>
+                              </div>
+                            )}
+                            
+                            {/* Teléfono y contacto */}
+                            <div className="flex flex-wrap gap-4 text-sm">
+                              {telefonoEntrega && (
+                                <div className="flex items-center gap-1">
+                                  <Phone className="w-4 h-4 text-muted-foreground" />
+                                  <span>{telefonoEntrega}</span>
+                                </div>
+                              )}
+                              {sucursal?.contacto && (
+                                <div className="flex items-center gap-1">
+                                  <User className="w-4 h-4 text-muted-foreground" />
+                                  <span>{sucursal.contacto}</span>
+                                </div>
+                              )}
+                              {sucursal?.horario_entrega && (
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-4 h-4 text-muted-foreground" />
+                                  <span>{sucursal.horario_entrega}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <Badge variant="secondary" className="shrink-0 text-xs">
+                            {entrega.pedido.folio}
+                          </Badge>
+                        </div>
+                        
+                        {/* Notas especiales */}
+                        {(sucursal?.notas || entrega.pedido.notas) && (
+                          <div className="mt-3 p-2 bg-amber-100 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 rounded-md">
+                            <div className="flex items-start gap-2 text-sm text-amber-800 dark:text-amber-200">
+                              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                              <span>{sucursal?.notas || entrega.pedido.notas}</span>
+                            </div>
+                          </div>
                         )}
                       </div>
                       
-                      {/* Productos normales */}
-                      {productosNormales.length > 0 && (
-                        <CargaProductosChecklist
-                          productos={productosNormales}
-                          onToggle={handleProductoToggle}
-                          disabled={ruta.carga_completada || false}
-                        />
-                      )}
-                      
-                      {/* Cortesías sin cargo */}
-                      {cortesias.length > 0 && (
-                        <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Gift className="h-5 w-5 text-amber-600" />
-                            <span className="font-semibold text-amber-800">CORTESÍAS A INCLUIR</span>
-                            <Badge className="bg-amber-500 text-white text-xs">Sin Cargo</Badge>
-                          </div>
+                      <CardContent className="p-4">
+                        {/* Productos normales */}
+                        {productosNormales.length > 0 && (
                           <CargaProductosChecklist
-                            productos={cortesias}
+                            productos={productosNormales}
                             onToggle={handleProductoToggle}
-                            disabled={ruta.carga_completada || false}
-                            isCortesia
+                            disabled={!cargaIniciada || ruta.carga_completada || false}
                           />
-                        </div>
-                      )}
-                      
-                      <Separator className="mt-4" />
-                    </div>
+                        )}
+                        
+                        {/* Cortesías sin cargo */}
+                        {cortesias.length > 0 && (
+                          <div className="mt-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Gift className="h-5 w-5 text-amber-600" />
+                              <span className="font-semibold text-amber-800 dark:text-amber-200">CORTESÍAS A INCLUIR</span>
+                              <Badge className="bg-amber-500 text-white text-xs">Sin Cargo</Badge>
+                            </div>
+                            <CargaProductosChecklist
+                              productos={cortesias}
+                              onToggle={handleProductoToggle}
+                              disabled={!cargaIniciada || ruta.carga_completada || false}
+                              isCortesia
+                            />
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
                   );
                 })}
 
@@ -620,7 +896,7 @@ export const RutaCargaSheet = ({
                   rutaId={ruta.id}
                   evidencias={evidencias}
                   onEvidenciaAdded={loadEvidencias}
-                  disabled={ruta.carga_completada || false}
+                  disabled={!cargaIniciada || ruta.carga_completada || false}
                 />
               </div>
             )}
@@ -631,7 +907,7 @@ export const RutaCargaSheet = ({
             <Button
               size="lg"
               className="w-full h-14 text-lg"
-              disabled={!todosLosProdutosCargados || ruta.carga_completada || saving}
+              disabled={!cargaIniciada || !todosLosProdutosCargados || ruta.carga_completada || saving}
               onClick={() => setFirmaDialogOpen(true)}
             >
               {saving ? (
@@ -643,7 +919,12 @@ export const RutaCargaSheet = ({
                 ? "Carga completada"
                 : "Firmar y completar carga"}
             </Button>
-            {!todosLosProdutosCargados && !ruta.carga_completada && (
+            {!cargaIniciada && !ruta.carga_completada && (
+              <p className="text-center text-sm text-amber-600 mt-2">
+                ⚠️ Presiona "INICIAR CARGA" para habilitar los checkboxes
+              </p>
+            )}
+            {cargaIniciada && !todosLosProdutosCargados && !ruta.carga_completada && (
               <p className="text-center text-sm text-muted-foreground mt-2">
                 Marca todos los productos como cargados para continuar
               </p>
