@@ -144,7 +144,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
 
   useEffect(() => {
     loadRutas();
-  }, []);
+  }, [empleadoId]);
 
   // Suscripción a Realtime para actualizaciones instantáneas de rutas
   useEffect(() => {
@@ -191,7 +191,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fechaHoy]);
+  }, [fechaHoy, empleadoId]);
 
   // Calcular urgencia basada en hora de salida
   const getUrgencia = (horaSalida: string | null) => {
