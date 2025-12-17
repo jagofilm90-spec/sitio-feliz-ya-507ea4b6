@@ -3462,6 +3462,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "rutas_ayudante_id_fkey"
+            columns: ["ayudante_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rutas_ayudante_id_fkey"
+            columns: ["ayudante_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "rutas_carga_completada_por_fkey"
             columns: ["carga_completada_por"]
             isOneToOne: false
@@ -3487,6 +3501,20 @@ export type Database = {
             columns: ["carga_iniciada_por"]
             isOneToOne: false
             referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rutas_chofer_id_fkey"
+            columns: ["chofer_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rutas_chofer_id_fkey"
+            columns: ["chofer_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
             referencedColumns: ["id"]
           },
           {
