@@ -104,16 +104,14 @@ const ProductoItem = ({
   const handleCantidadChange = (value: string) => {
     const cantidad = parseFloat(value) || 0;
     setCantidadCargada(cantidad);
-    if (producto.cargado) {
-      onToggle(producto.id, true, cantidad, loteSeleccionado);
-    }
+    // *** BUG FIX: NO re-ejecutar toggle cuando ya está cargado ***
+    // Los cambios de cantidad/lote en productos ya cargados requieren desmarcar primero
   };
 
   const handleLoteChange = (loteId: string) => {
     setLoteSeleccionado(loteId);
-    if (producto.cargado) {
-      onToggle(producto.id, true, cantidadCargada, loteId);
-    }
+    // *** BUG FIX: NO re-ejecutar toggle cuando ya está cargado ***
+    // Los cambios de lote en productos ya cargados requieren desmarcar primero
   };
 
   const loteActual = producto.lotes_disponibles.find(

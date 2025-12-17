@@ -315,6 +315,16 @@ export const RutaCargaSheet = ({
 
       // ===== MARCAR COMO CARGADO =====
       if (cargado && loteId) {
+        // *** BUG FIX: Verificar si ya está cargado para evitar descuento duplicado ***
+        if (productoActual.cargado) {
+          console.log("⚠️ Producto ya cargado, ignorando toggle duplicado");
+          toast({
+            title: "Producto ya cargado",
+            description: "Use la opción de desmarcar para modificar",
+          });
+          return;
+        }
+
         // 1. Validar stock disponible en el lote
         const { data: lote, error: loteError } = await supabase
           .from("inventario_lotes")
