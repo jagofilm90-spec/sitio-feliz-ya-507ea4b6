@@ -113,12 +113,7 @@ const ProductoItem = ({
   const bodegaNombre = loteActual?.bodega_nombre || loteFIFO?.bodega_nombre;
 
   const handleCheckChange = (checked: boolean) => {
-    // Si está desmarcando y ya estaba cargado, usar callback especial
-    if (!checked && producto.cargado && onDesmarcar) {
-      onDesmarcar(producto);
-      return;
-    }
-    // Si está marcando, ejecutar toggle normal
+    // Marcar o desmarcar - el toggle maneja ambos casos
     onToggle(producto.id, checked, cantidadCargada, loteSeleccionado);
   };
 
