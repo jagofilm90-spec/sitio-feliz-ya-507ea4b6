@@ -146,6 +146,53 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
     loadRutas();
   }, []);
 
+  // Suscripción a Realtime para actualizaciones instantáneas de rutas
+  useEffect(() => {
+    const channel = supabase
+      .channel('rutas-carga-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'rutas'
+        },
+        async (payload) => {
+          console.log('Nueva ruta detectada via Realtime:', payload);
+          const newRuta = payload.new as any;
+          
+          // Verificar si la ruta es para hoy
+          if (newRuta.fecha_ruta === fechaHoy) {
+            await loadRutas();
+            toast({
+              title: "🚛 Nueva ruta asignada",
+              description: `Ruta ${newRuta.folio} agregada a tu lista`,
+            });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'rutas'
+        },
+        async (payload) => {
+          const updatedRuta = payload.new as any;
+          // Solo recargar si es una ruta de hoy
+          if (updatedRuta.fecha_ruta === fechaHoy) {
+            await loadRutas();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fechaHoy]);
+
   // Calcular urgencia basada en hora de salida
   const getUrgencia = (horaSalida: string | null) => {
     if (!horaSalida) return null;
