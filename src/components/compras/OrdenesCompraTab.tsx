@@ -121,6 +121,7 @@ const OrdenesCompraTab = () => {
     id: string;
     folio: string;
     proveedor_nombre: string;
+    proveedor_email: string | null;
     total: number;
   } | null>(null);
 
@@ -1226,6 +1227,7 @@ const OrdenesCompraTab = () => {
                                   id: orden.id,
                                   folio: orden.folio,
                                   proveedor_nombre: orden.proveedor_id ? orden.proveedores?.nombre : orden.proveedor_nombre_manual,
+                                  proveedor_email: orden.proveedor_id ? orden.proveedores?.email : null,
                                   total: orden.total,
                                 });
                                 setMarcarPagadoDialogOpen(true);
