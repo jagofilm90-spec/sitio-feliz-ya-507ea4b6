@@ -753,6 +753,16 @@ const OrdenesCompraTab = () => {
       return;
     }
     
+    // Validar fecha de entrega cuando no hay entregas múltiples
+    if (!entregasMultiples && !fechaEntrega) {
+      toast({
+        title: "Fecha requerida",
+        description: "Selecciona una fecha de entrega programada",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (editingOrdenId) {
       updateOrden.mutate();
     } else {
@@ -1178,7 +1188,7 @@ const OrdenesCompraTab = () => {
               </div>
               {!entregasMultiples && (
                 <div>
-                  <Label>Fecha de Entrega Programada</Label>
+                  <Label>Fecha de Entrega Programada *</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
