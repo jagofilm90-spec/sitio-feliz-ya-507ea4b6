@@ -43,6 +43,7 @@ import AutorizacionOCDialog from "./AutorizacionOCDialog";
 import OCAutorizadaAlert from "./OCAutorizadaAlert";
 import EntregasPopover from "./EntregasPopover";
 import ProveedorFacturasDialog from "./ProveedorFacturasDialog";
+import { MarcarPagadoDialog } from "./MarcarPagadoDialog";
 import { formatCurrency } from "@/lib/utils";
 import { sendPushNotification } from "@/services/pushNotifications";
 
@@ -113,6 +114,15 @@ const OrdenesCompraTab = () => {
   // Estado para dialog de facturas del proveedor
   const [facturasDialogOpen, setFacturasDialogOpen] = useState(false);
   const [ordenParaFacturas, setOrdenParaFacturas] = useState<any>(null);
+
+  // Estado para dialog de marcar como pagado
+  const [marcarPagadoDialogOpen, setMarcarPagadoDialogOpen] = useState(false);
+  const [ordenParaPago, setOrdenParaPago] = useState<{
+    id: string;
+    folio: string;
+    proveedor_nombre: string;
+    total: number;
+  } | null>(null);
 
   // Estado para modo "Por Vehículos"
   const [modoCreacion, setModoCreacion] = useState<'manual' | 'vehiculos'>('manual');
@@ -1203,9 +1213,28 @@ const OrdenesCompraTab = () => {
                             💳 Anticipado ✓
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800">
-                            💳 Anticipado ⏳
-                          </Badge>
+                          <div className="flex items-center gap-1">
+                            <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800">
+                              💳 Pendiente
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-xs text-primary hover:text-primary"
+                              onClick={() => {
+                                setOrdenParaPago({
+                                  id: orden.id,
+                                  folio: orden.folio,
+                                  proveedor_nombre: orden.proveedor_id ? orden.proveedores?.nombre : orden.proveedor_nombre_manual,
+                                  total: orden.total,
+                                });
+                                setMarcarPagadoDialogOpen(true);
+                              }}
+                            >
+                              <CreditCard className="h-3 w-3 mr-1" />
+                              Pagar
+                            </Button>
+                          </div>
                         )
                       ) : (
                         <Badge variant="outline" className="text-muted-foreground">
@@ -2179,6 +2208,12 @@ const OrdenesCompraTab = () => {
         open={facturasDialogOpen}
         onOpenChange={setFacturasDialogOpen}
         ordenCompra={ordenParaFacturas}
+      />
+
+      <MarcarPagadoDialog
+        open={marcarPagadoDialogOpen}
+        onOpenChange={setMarcarPagadoDialogOpen}
+        orden={ordenParaPago}
       />
     </Card>
   );
