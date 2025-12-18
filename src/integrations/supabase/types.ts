@@ -2338,6 +2338,7 @@ export type Database = {
       ordenes_compra: {
         Row: {
           autorizado_por: string | null
+          comprobante_pago_url: string | null
           creado_por: string
           created_at: string
           email_enviado_en: string | null
@@ -2347,6 +2348,7 @@ export type Database = {
           fecha_entrega_programada: string | null
           fecha_entrega_real: string | null
           fecha_orden: string
+          fecha_pago: string | null
           fecha_rechazo: string | null
           folio: string
           id: string
@@ -2358,13 +2360,17 @@ export type Database = {
           proveedor_nombre_manual: string | null
           proveedor_telefono_manual: string | null
           rechazado_por: string | null
+          referencia_pago: string | null
           status: string
+          status_pago: string | null
           subtotal: number
+          tipo_pago: string | null
           total: number
           updated_at: string
         }
         Insert: {
           autorizado_por?: string | null
+          comprobante_pago_url?: string | null
           creado_por: string
           created_at?: string
           email_enviado_en?: string | null
@@ -2374,6 +2380,7 @@ export type Database = {
           fecha_entrega_programada?: string | null
           fecha_entrega_real?: string | null
           fecha_orden?: string
+          fecha_pago?: string | null
           fecha_rechazo?: string | null
           folio: string
           id?: string
@@ -2385,13 +2392,17 @@ export type Database = {
           proveedor_nombre_manual?: string | null
           proveedor_telefono_manual?: string | null
           rechazado_por?: string | null
+          referencia_pago?: string | null
           status?: string
+          status_pago?: string | null
           subtotal?: number
+          tipo_pago?: string | null
           total?: number
           updated_at?: string
         }
         Update: {
           autorizado_por?: string | null
+          comprobante_pago_url?: string | null
           creado_por?: string
           created_at?: string
           email_enviado_en?: string | null
@@ -2401,6 +2412,7 @@ export type Database = {
           fecha_entrega_programada?: string | null
           fecha_entrega_real?: string | null
           fecha_orden?: string
+          fecha_pago?: string | null
           fecha_rechazo?: string | null
           folio?: string
           id?: string
@@ -2412,8 +2424,11 @@ export type Database = {
           proveedor_nombre_manual?: string | null
           proveedor_telefono_manual?: string | null
           rechazado_por?: string | null
+          referencia_pago?: string | null
           status?: string
+          status_pago?: string | null
           subtotal?: number
+          tipo_pago?: string | null
           total?: number
           updated_at?: string
         }
