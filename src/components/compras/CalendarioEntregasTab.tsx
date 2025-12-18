@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, List, MoreVertical, Truck, ChevronLeft, ChevronRight, RotateCcw, Eye } from "lucide-react";
+import { Calendar as CalendarIcon, List, MoreVertical, Truck, ChevronLeft, ChevronRight, RotateCcw, Eye, Banknote } from "lucide-react";
 import OrdenAccionesDialog from "./OrdenAccionesDialog";
 import { RecepcionDetalleDialog } from "./RecepcionDetalleDialog";
 import { useState, useMemo } from "react";
@@ -61,6 +61,27 @@ const CalendarioEntregasTab = () => {
     },
   });
 
+  // Fetch facturas with anticipado payment linked to entregas
+  const { data: facturasAnticipadas = [] } = useQuery({
+    queryKey: ["facturas_anticipadas_calendario"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("proveedor_factura_entregas")
+        .select(`
+          entrega_id,
+          proveedor_facturas!inner (
+            tipo_pago,
+            status_pago
+          )
+        `)
+        .eq("proveedor_facturas.tipo_pago", "anticipado")
+        .eq("proveedor_facturas.status_pago", "pagado");
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   // Also fetch single-delivery orders (legacy or non-multiple)
   const { data: ordenesSimples = [] } = useQuery({
     queryKey: ["ordenes_calendario_simples"],
@@ -103,6 +124,17 @@ const CalendarioEntregasTab = () => {
     return notas?.includes("[AUTO]") || false;
   };
 
+  // Set of entrega IDs that have paid anticipado invoices
+  const entregasConAnticipo = useMemo(() => {
+    const set = new Set<string>();
+    facturasAnticipadas.forEach((fa: any) => {
+      if (fa.entrega_id) {
+        set.add(fa.entrega_id);
+      }
+    });
+    return set;
+  }, [facturasAnticipadas]);
+
   // Combine both data sources into unified format
   const todasLasEntregas = useMemo(() => [
     // Multiple delivery entries
@@ -122,6 +154,7 @@ const CalendarioEntregasTab = () => {
       cantidadBultos: entrega.cantidad_bultos,
       esMultiple: true,
       reprogramada: esReprogramada(entrega.notas),
+      tieneAnticipo: entregasConAnticipo.has(entrega.id),
     })),
     // Simple delivery entries
     ...ordenesSimples.map((orden: any) => ({
@@ -140,8 +173,9 @@ const CalendarioEntregasTab = () => {
       cantidadBultos: null,
       esMultiple: false,
       reprogramada: esReprogramada(orden.notas),
+      tieneAnticipo: false, // Simple orders don't have entregas linked
     })),
-  ], [entregasProgramadas, ordenesSimples]);
+  ], [entregasProgramadas, ordenesSimples, entregasConAnticipo]);
 
   // Helper to parse date string without timezone issues
   const parseDateLocal = (dateStr: string): Date => {
@@ -291,13 +325,16 @@ const CalendarioEntregasTab = () => {
                     {format(dia, "d")}
                   </span>
                   
-                  {/* Dots indicator */}
+                  {/* Dots indicator - green for anticipado, rose for contra entrega */}
                   {tieneEntregas && (
                     <div className="flex justify-center gap-1 mt-1">
-                      {entregas.slice(0, 3).map((_, idx) => (
+                      {entregas.slice(0, 3).map((entrega, idx) => (
                         <span
                           key={idx}
-                          className="w-2 h-2 rounded-full bg-primary"
+                          className={cn(
+                            "w-2 h-2 rounded-full",
+                            entrega.tieneAnticipo ? "bg-green-500" : "bg-rose-500"
+                          )}
                         />
                       ))}
                       {entregas.length > 3 && (
@@ -308,6 +345,18 @@ const CalendarioEntregasTab = () => {
                 </div>
               );
             })}
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center justify-center gap-6 pt-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-green-500" />
+              <span>Pago anticipado</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-rose-500" />
+              <span>Contra entrega</span>
+            </div>
           </div>
         </div>
       ) : (
@@ -348,6 +397,12 @@ const CalendarioEntregasTab = () => {
                                 <Badge variant="outline" className="text-xs">
                                   <Truck className="h-3 w-3 mr-1" />
                                   #{entrega.numeroEntrega}
+                                </Badge>
+                              )}
+                              {entrega.tieneAnticipo && (
+                                <Badge className="text-xs bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
+                                  <Banknote className="h-3 w-3 mr-1" />
+                                  Anticipado
                                 </Badge>
                               )}
                               {entrega.reprogramada && (
@@ -445,6 +500,12 @@ const CalendarioEntregasTab = () => {
                       <Badge variant="outline" className="text-xs">
                         <Truck className="h-3 w-3 mr-1" />
                         Entrega #{entrega.numeroEntrega}
+                      </Badge>
+                    )}
+                    {entrega.tieneAnticipo && (
+                      <Badge className="text-xs bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
+                        <Banknote className="h-3 w-3 mr-1" />
+                        Anticipado
                       </Badge>
                     )}
                     {entrega.reprogramada && (
