@@ -115,9 +115,10 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
                 className="flex items-center space-x-3 p-2 rounded hover:bg-muted/50 cursor-pointer"
                 onClick={() => toggleProducto.mutate({ productoId: producto.id, isSelected })}
               >
-                <Checkbox
+              <Checkbox
                   checked={isSelected}
                   onCheckedChange={() => toggleProducto.mutate({ productoId: producto.id, isSelected })}
+                  onClick={(e) => e.stopPropagation()}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
