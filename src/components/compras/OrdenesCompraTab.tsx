@@ -80,6 +80,8 @@ const OrdenesCompraTab = () => {
   const [proveedorId, setProveedorId] = useState("");
   const [proveedorNombreManual, setProveedorNombreManual] = useState("");
   const [proveedorTelefonoManual, setProveedorTelefonoManual] = useState("");
+  const [notasProveedorManual, setNotasProveedorManual] = useState("");
+  const [showProveedorSuggestions, setShowProveedorSuggestions] = useState(false);
   const [folio, setFolio] = useState("");
   const [fechaEntrega, setFechaEntrega] = useState("");
   const [notas, setNotas] = useState("");
@@ -239,6 +241,39 @@ const OrdenesCompraTab = () => {
     },
   });
 
+  // Fetch unique previous manual providers for autocomplete
+  const { data: proveedoresManuales = [] } = useQuery({
+    queryKey: ["proveedores-manuales-autocomplete"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ordenes_compra")
+        .select("proveedor_nombre_manual, proveedor_telefono_manual, notas_proveedor_manual")
+        .not("proveedor_nombre_manual", "is", null)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      
+      // Get unique providers by name
+      const uniqueProviders = new Map<string, { nombre: string; telefono: string; notas: string }>();
+      data.forEach(row => {
+        if (row.proveedor_nombre_manual && !uniqueProviders.has(row.proveedor_nombre_manual.toLowerCase())) {
+          uniqueProviders.set(row.proveedor_nombre_manual.toLowerCase(), {
+            nombre: row.proveedor_nombre_manual,
+            telefono: row.proveedor_telefono_manual || "",
+            notas: row.notas_proveedor_manual || "",
+          });
+        }
+      });
+      
+      return Array.from(uniqueProviders.values());
+    },
+  });
+
+  // Filter suggestions based on input
+  const proveedorSuggestions = proveedoresManuales.filter(p => 
+    p.nombre.toLowerCase().includes(proveedorNombreManual.toLowerCase()) && 
+    proveedorNombreManual.length > 0
+  );
+
   // Fetch confirmaciones separately to avoid RLS issues with embedded selects
   const { data: confirmaciones = [] } = useQuery({
     queryKey: ["ordenes_compra_confirmaciones"],
@@ -383,6 +418,7 @@ const OrdenesCompraTab = () => {
           proveedor_id: tipoProveedor === 'catalogo' ? proveedorId : null,
           proveedor_nombre_manual: tipoProveedor === 'manual' ? proveedorNombreManual : null,
           proveedor_telefono_manual: tipoProveedor === 'manual' ? proveedorTelefonoManual || null : null,
+          notas_proveedor_manual: tipoProveedor === 'manual' ? notasProveedorManual || null : null,
           fecha_entrega_programada: entregasMultiples ? null : (fechaEntrega || null),
           subtotal: subtotalBase,
           impuestos,
@@ -467,6 +503,7 @@ const OrdenesCompraTab = () => {
       queryClient.invalidateQueries({ queryKey: ["ordenes_compra"] });
       queryClient.invalidateQueries({ queryKey: ["ordenes_calendario"] });
       queryClient.invalidateQueries({ queryKey: ["productos"] });
+      queryClient.invalidateQueries({ queryKey: ["proveedores-manuales-autocomplete"] });
       toast({
         title: "Orden creada",
         description: entregasMultiples 
@@ -652,6 +689,8 @@ const OrdenesCompraTab = () => {
     setProveedorId("");
     setProveedorNombreManual("");
     setProveedorTelefonoManual("");
+    setNotasProveedorManual("");
+    setShowProveedorSuggestions(false);
     setFolio("");
     setFechaEntrega("");
     setNotas("");
@@ -717,6 +756,7 @@ const OrdenesCompraTab = () => {
           proveedor_id: tipoProveedor === 'catalogo' ? proveedorId : null,
           proveedor_nombre_manual: tipoProveedor === 'manual' ? proveedorNombreManual : null,
           proveedor_telefono_manual: tipoProveedor === 'manual' ? proveedorTelefonoManual || null : null,
+          notas_proveedor_manual: tipoProveedor === 'manual' ? notasProveedorManual || null : null,
           fecha_entrega_programada: entregasMultiples ? null : (fechaEntrega || null),
           subtotal: subtotalBase,
           impuestos,
@@ -787,6 +827,7 @@ const OrdenesCompraTab = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ordenes_compra"] });
       queryClient.invalidateQueries({ queryKey: ["ordenes_calendario"] });
+      queryClient.invalidateQueries({ queryKey: ["proveedores-manuales-autocomplete"] });
       toast({
         title: "Orden actualizada",
         description: "La orden de compra se ha actualizado exitosamente",
@@ -818,6 +859,7 @@ const OrdenesCompraTab = () => {
       setProveedorId("");
       setProveedorNombreManual(orden.proveedor_nombre_manual || "");
       setProveedorTelefonoManual(orden.proveedor_telefono_manual || "");
+      setNotasProveedorManual(orden.notas_proveedor_manual || "");
     }
     
     setFechaEntrega(orden.fecha_entrega_programada || "");
@@ -1344,15 +1386,51 @@ const OrdenesCompraTab = () => {
                     </Select>
                   ) : (
                     <div className="space-y-2">
-                      <Input
-                        value={proveedorNombreManual}
-                        onChange={(e) => setProveedorNombreManual(e.target.value)}
-                        placeholder="Nombre del proveedor *"
-                      />
+                      <div className="relative">
+                        <Input
+                          value={proveedorNombreManual}
+                          onChange={(e) => {
+                            setProveedorNombreManual(e.target.value);
+                            setShowProveedorSuggestions(true);
+                          }}
+                          onFocus={() => setShowProveedorSuggestions(true)}
+                          onBlur={() => setTimeout(() => setShowProveedorSuggestions(false), 200)}
+                          placeholder="Nombre del proveedor *"
+                          autoComplete="off"
+                        />
+                        {showProveedorSuggestions && proveedorSuggestions.length > 0 && (
+                          <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-48 overflow-auto">
+                            {proveedorSuggestions.map((p, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                className="w-full px-3 py-2 text-left hover:bg-accent text-sm flex items-center justify-between"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  setProveedorNombreManual(p.nombre);
+                                  setProveedorTelefonoManual(p.telefono);
+                                  setNotasProveedorManual(p.notas);
+                                  setShowProveedorSuggestions(false);
+                                }}
+                              >
+                                <span className="font-medium">{p.nombre}</span>
+                                {p.telefono && (
+                                  <span className="text-muted-foreground text-xs">{p.telefono}</span>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <Input
                         value={proveedorTelefonoManual}
                         onChange={(e) => setProveedorTelefonoManual(e.target.value)}
                         placeholder="Teléfono (opcional)"
+                      />
+                      <Input
+                        value={notasProveedorManual}
+                        onChange={(e) => setNotasProveedorManual(e.target.value)}
+                        placeholder="Notas del proveedor (ej: solo efectivo, viene los miércoles)"
                       />
                       <p className="text-xs text-muted-foreground">
                         Los proveedores manuales muestran todos los productos
