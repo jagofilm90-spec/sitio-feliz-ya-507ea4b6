@@ -106,6 +106,10 @@ const OrdenesCompraTab = () => {
   
   // Estado para envío de recordatorio
   const [enviandoRecordatorioId, setEnviandoRecordatorioId] = useState<string | null>(null);
+  
+  // Estado para modo "Por Vehículos"
+  const [modoCreacion, setModoCreacion] = useState<'manual' | 'vehiculos'>('manual');
+  const [numeroVehiculos, setNumeroVehiculos] = useState("");
 
   // Function to generate next folio
   const generateNextFolio = async () => {
@@ -160,19 +164,39 @@ const OrdenesCompraTab = () => {
     },
   });
 
-  // Fetch productos asociados al proveedor seleccionado
-  const { data: productosProveedor = [] } = useQuery({
-    queryKey: ["proveedor-productos", proveedorId],
+  // Fetch productos asociados al proveedor seleccionado con config de transporte
+  const { data: productosProveedorConfig = [] } = useQuery({
+    queryKey: ["proveedor-productos-config", proveedorId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("proveedor_productos")
-        .select("producto_id")
+        .select(`
+          producto_id,
+          tipo_vehiculo_estandar,
+          capacidad_vehiculo_bultos,
+          capacidad_vehiculo_kg,
+          permite_combinacion,
+          es_capacidad_fija
+        `)
         .eq("proveedor_id", proveedorId);
       if (error) throw error;
-      return data.map(p => p.producto_id);
+      return data;
     },
     enabled: !!proveedorId,
   });
+  
+  // Extract just product IDs for filtering
+  const productosProveedor = productosProveedorConfig.map(p => p.producto_id);
+  
+  // Check if proveedor has any product with transport config
+  const proveedorTieneTransportConfig = productosProveedorConfig.some(
+    p => p.capacidad_vehiculo_bultos && p.capacidad_vehiculo_bultos > 0
+  );
+  
+  // Get transport config for selected product
+  const configTransporteProducto = productosProveedorConfig.find(
+    p => p.producto_id === productoSeleccionado
+  );
 
   // Filter products: if proveedor has associated products, show only those; otherwise show all
   // For manual providers, show all products
@@ -471,7 +495,88 @@ const OrdenesCompraTab = () => {
     },
   });
 
+  // Agregar producto en modo "Por Vehículos"
+  const agregarProductoPorVehiculos = () => {
+    const precioFinal = usarPrecioPorKg ? precioUnitarioCalculado : precioUnitario;
+    
+    if (!productoSeleccionado || !numeroVehiculos || !precioFinal) {
+      toast({
+        title: "Campos incompletos",
+        description: "Selecciona un producto, número de vehículos y precio",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!configTransporteProducto?.capacidad_vehiculo_bultos) {
+      toast({
+        title: "Sin configuración de transporte",
+        description: "Este producto no tiene capacidad por vehículo configurada",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const producto = productosDisponibles.find((p) => p.id === productoSeleccionado);
+    if (!producto) return;
+
+    const numVehiculos = parseInt(numeroVehiculos);
+    const capacidad = configTransporteProducto.capacidad_vehiculo_bultos;
+    const cantidadTotal = capacidad * numVehiculos;
+    const precioNum = parseFloat(precioFinal);
+    const subtotal = cantidadTotal * precioNum;
+
+    // Agregar producto con cantidad total calculada
+    setProductosEnOrden([
+      ...productosEnOrden,
+      {
+        producto_id: producto.id,
+        nombre: producto.nombre,
+        cantidad: cantidadTotal,
+        precio_unitario: precioNum,
+        ultimo_costo: producto.ultimo_costo_compra,
+        subtotal,
+        aplica_iva: producto.aplica_iva ?? false,
+        aplica_ieps: producto.aplica_ieps ?? false,
+        precio_incluye_iva: precioIncluyeIva,
+      },
+    ]);
+
+    // Auto-activar entregas múltiples
+    setEntregasMultiples(true);
+    
+    // Auto-generar entregas (una por vehículo)
+    const tipoVehiculo = configTransporteProducto.tipo_vehiculo_estandar || 'trailer';
+    const entregas: EntregaProgramada[] = Array.from({ length: numVehiculos }, (_, i) => ({
+      numero_entrega: i + 1,
+      cantidad_bultos: capacidad,
+      fecha_programada: "",
+    }));
+    setEntregasProgramadas(entregas);
+    setBultosPorEntrega(capacidad.toString());
+
+    // Reset form
+    setProductoSeleccionado("");
+    setNumeroVehiculos("");
+    setPrecioUnitario("");
+    setPrecioIncluyeIva(false);
+    setUsarPrecioPorKg(false);
+    setPrecioPorKg("");
+    setKgPorUnidad("");
+    
+    toast({
+      title: "Producto agregado",
+      description: `${numVehiculos} ${tipoVehiculo === 'trailer' ? 'tráilers' : 'vehículos'} de ${producto.nombre} (${cantidadTotal.toLocaleString()} unidades)`,
+    });
+  };
+
   const agregarProducto = () => {
+    // Si está en modo vehículos, usar esa función
+    if (modoCreacion === 'vehiculos') {
+      agregarProductoPorVehiculos();
+      return;
+    }
+    
     const precioFinal = usarPrecioPorKg ? precioUnitarioCalculado : precioUnitario;
     
     if (!productoSeleccionado || !cantidad || !precioFinal) {
@@ -544,6 +649,8 @@ const OrdenesCompraTab = () => {
     setUsarPrecioPorKg(false);
     setPrecioPorKg("");
     setKgPorUnidad("");
+    setModoCreacion('manual');
+    setNumeroVehiculos("");
   };
 
   // Update orden de compra
@@ -1231,16 +1338,48 @@ const OrdenesCompraTab = () => {
             <div className="border rounded-lg p-4 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Agregar Productos</h3>
-                {proveedorId && productosProveedor.length > 0 && (
-                  <Badge variant="outline" className="text-xs">
-                    {productosDisponibles.length} productos de este proveedor
-                  </Badge>
-                )}
+                <div className="flex items-center gap-3">
+                  {proveedorId && productosProveedor.length > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      {productosDisponibles.length} productos de este proveedor
+                    </Badge>
+                  )}
+                </div>
               </div>
+              
+              {/* Modo de creación toggle - solo mostrar si hay config de transporte */}
+              {proveedorId && proveedorTieneTransportConfig && tipoProveedor === 'catalogo' && (
+                <div className="flex items-center gap-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                  <Truck className="h-5 w-5 text-primary" />
+                  <div className="flex items-center gap-4 text-sm">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="modoCreacion"
+                        checked={modoCreacion === 'vehiculos'}
+                        onChange={() => setModoCreacion('vehiculos')}
+                        className="accent-primary"
+                      />
+                      <span className="font-medium">Por Vehículos (rápido)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="modoCreacion"
+                        checked={modoCreacion === 'manual'}
+                        onChange={() => setModoCreacion('manual')}
+                        className="accent-primary"
+                      />
+                      <span>Manual (detallado)</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+              
               <div className="space-y-3">
-                {/* Row 1: Product and Quantity */}
+                {/* Row 1: Product and Quantity/Vehicles */}
                 <div className="grid grid-cols-12 gap-2">
-                  <div className="col-span-7">
+                  <div className={modoCreacion === 'vehiculos' ? "col-span-6" : "col-span-7"}>
                     <Label>Producto</Label>
                     <Select
                       value={productoSeleccionado}
@@ -1267,17 +1406,28 @@ const OrdenesCompraTab = () => {
                         } />
                       </SelectTrigger>
                       <SelectContent>
-                        {productosDisponibles.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.nombre}
-                            {p.marca && <span className="text-xs text-muted-foreground ml-1">({p.marca})</span>}
-                            {p.ultimo_costo_compra && (
-                              <span className="text-xs text-muted-foreground ml-2">
-                                - Último: ${p.ultimo_costo_compra}
-                              </span>
-                            )}
-                          </SelectItem>
-                        ))}
+                        {productosDisponibles.map((p) => {
+                          const config = productosProveedorConfig.find(c => c.producto_id === p.id);
+                          const tieneConfig = config?.capacidad_vehiculo_bultos && config.capacidad_vehiculo_bultos > 0;
+                          return (
+                            <SelectItem key={p.id} value={p.id}>
+                              <div className="flex items-center gap-2">
+                                {p.nombre}
+                                {p.marca && <span className="text-xs text-muted-foreground">({p.marca})</span>}
+                                {tieneConfig && modoCreacion === 'vehiculos' && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {config.capacidad_vehiculo_bultos} u/{config.tipo_vehiculo_estandar || 'tráiler'}
+                                  </Badge>
+                                )}
+                                {p.ultimo_costo_compra && (
+                                  <span className="text-xs text-muted-foreground">
+                                    - Último: ${p.ultimo_costo_compra}
+                                  </span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
                         {productosDisponibles.length === 0 && proveedorId && (
                           <div className="p-2 text-sm text-muted-foreground">
                             No hay productos asociados a este proveedor
@@ -1286,36 +1436,99 @@ const OrdenesCompraTab = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-3">
-                    <Label>Cantidad (unidades)</Label>
-                    <Input
-                      type="number"
-                      value={cantidad}
-                      onChange={(e) => setCantidad(e.target.value)}
-                      placeholder="0"
-                      min="1"
-                    />
-                  </div>
-                  <div className="col-span-2 flex flex-col gap-1">
-                    <Label className="text-xs">Precio por kg</Label>
-                    <div className="flex items-center gap-2 h-10">
-                      <Switch
-                        checked={usarPrecioPorKg}
-                        onCheckedChange={(checked) => {
-                          setUsarPrecioPorKg(checked);
-                          if (checked) {
-                            setPrecioUnitario("");
-                          } else {
-                            setPrecioPorKg("");
-                            setKgPorUnidad("");
-                          }
-                        }}
+                  
+                  {/* Config detected panel for vehicles mode */}
+                  {modoCreacion === 'vehiculos' && productoSeleccionado && configTransporteProducto?.capacidad_vehiculo_bultos ? (
+                    <div className="col-span-4 space-y-1">
+                      <div className="flex items-center gap-2 text-sm bg-green-50 dark:bg-green-900/20 p-2 rounded border border-green-200 dark:border-green-800">
+                        <Truck className="h-4 w-4 text-green-600" />
+                        <span className="text-green-700 dark:text-green-400 font-medium">
+                          {configTransporteProducto.tipo_vehiculo_estandar === 'trailer' ? 'Tráiler' : 
+                           configTransporteProducto.tipo_vehiculo_estandar === 'torton' ? 'Tortón' : 
+                           configTransporteProducto.tipo_vehiculo_estandar === 'rabon' ? 'Rabón' : 'Vehículo'} de {configTransporteProducto.capacidad_vehiculo_bultos.toLocaleString()} unidades
+                          {configTransporteProducto.es_capacidad_fija && (
+                            <span className="text-xs ml-1">(fija)</span>
+                          )}
+                        </span>
+                      </div>
+                      <Label>¿Cuántos vehículos?</Label>
+                      <Input
+                        type="number"
+                        value={numeroVehiculos}
+                        onChange={(e) => setNumeroVehiculos(e.target.value)}
+                        placeholder="5"
+                        min="1"
+                        className="font-bold text-lg"
                       />
-                      <span className="text-xs text-muted-foreground">
-                        {usarPrecioPorKg ? "Sí" : "No"}
-                      </span>
+                      {numeroVehiculos && (
+                        <p className="text-xs text-muted-foreground">
+                          Total: {(parseInt(numeroVehiculos) * configTransporteProducto.capacidad_vehiculo_bultos).toLocaleString()} unidades
+                        </p>
+                      )}
                     </div>
-                  </div>
+                  ) : modoCreacion === 'vehiculos' && productoSeleccionado ? (
+                    <div className="col-span-4 flex items-center">
+                      <div className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-200 dark:border-amber-800">
+                        ⚠️ Este producto no tiene configuración de transporte. Usa el modo manual.
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="col-span-3">
+                        <Label>Cantidad (unidades)</Label>
+                        <Input
+                          type="number"
+                          value={cantidad}
+                          onChange={(e) => setCantidad(e.target.value)}
+                          placeholder="0"
+                          min="1"
+                        />
+                      </div>
+                      <div className="col-span-2 flex flex-col gap-1">
+                        <Label className="text-xs">Precio por kg</Label>
+                        <div className="flex items-center gap-2 h-10">
+                          <Switch
+                            checked={usarPrecioPorKg}
+                            onCheckedChange={(checked) => {
+                              setUsarPrecioPorKg(checked);
+                              if (checked) {
+                                setPrecioUnitario("");
+                              } else {
+                                setPrecioPorKg("");
+                                setKgPorUnidad("");
+                              }
+                            }}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {usarPrecioPorKg ? "Sí" : "No"}
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  
+                  {modoCreacion === 'vehiculos' && (
+                    <div className="col-span-2 flex flex-col gap-1">
+                      <Label className="text-xs">Precio por kg</Label>
+                      <div className="flex items-center gap-2 h-10">
+                        <Switch
+                          checked={usarPrecioPorKg}
+                          onCheckedChange={(checked) => {
+                            setUsarPrecioPorKg(checked);
+                            if (checked) {
+                              setPrecioUnitario("");
+                            } else {
+                              setPrecioPorKg("");
+                              setKgPorUnidad("");
+                            }
+                          }}
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {usarPrecioPorKg ? "Sí" : "No"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Row 2: Pricing fields */}
