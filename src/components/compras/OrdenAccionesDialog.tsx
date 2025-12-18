@@ -1483,7 +1483,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
               className="w-full justify-start"
               onClick={() => setAccion("cambiar_fecha")}
             >
-              <Calendar className="mr-2 h-4 w-4" />
+              <CalendarIcon className="mr-2 h-4 w-4" />
               Cambiar Fecha de Entrega
             </Button>
             <Button
