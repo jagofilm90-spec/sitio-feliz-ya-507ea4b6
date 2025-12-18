@@ -3299,39 +3299,48 @@ export type Database = {
       }
       proveedor_productos: {
         Row: {
+          cantidad_lotes_default: number | null
           capacidad_vehiculo_bultos: number | null
           capacidad_vehiculo_kg: number | null
           created_at: string
+          dividir_en_lotes_recepcion: boolean | null
           es_capacidad_fija: boolean | null
           id: string
           permite_combinacion: boolean | null
           producto_id: string
           proveedor_id: string
           tipo_vehiculo_estandar: string | null
+          unidades_por_lote_default: number | null
           updated_at: string | null
         }
         Insert: {
+          cantidad_lotes_default?: number | null
           capacidad_vehiculo_bultos?: number | null
           capacidad_vehiculo_kg?: number | null
           created_at?: string
+          dividir_en_lotes_recepcion?: boolean | null
           es_capacidad_fija?: boolean | null
           id?: string
           permite_combinacion?: boolean | null
           producto_id: string
           proveedor_id: string
           tipo_vehiculo_estandar?: string | null
+          unidades_por_lote_default?: number | null
           updated_at?: string | null
         }
         Update: {
+          cantidad_lotes_default?: number | null
           capacidad_vehiculo_bultos?: number | null
           capacidad_vehiculo_kg?: number | null
           created_at?: string
+          dividir_en_lotes_recepcion?: boolean | null
           es_capacidad_fija?: boolean | null
           id?: string
           permite_combinacion?: boolean | null
           producto_id?: string
           proveedor_id?: string
           tipo_vehiculo_estandar?: string | null
+          unidades_por_lote_default?: number | null
           updated_at?: string | null
         }
         Relationships: [

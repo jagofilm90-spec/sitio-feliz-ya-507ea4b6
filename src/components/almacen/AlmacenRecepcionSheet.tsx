@@ -119,6 +119,19 @@ interface ProductoEntrega {
     nombre: string;
     maneja_caducidad: boolean;
   };
+  // Configuración de lotes del proveedor
+  lotesConfig?: {
+    dividir_en_lotes: boolean;
+    cantidad_lotes: number;
+    unidades_por_lote: number;
+  };
+}
+
+interface LoteInput {
+  id: string; // ID único para el input
+  numero_lote: string;
+  cantidad: number;
+  fecha_caducidad: string;
 }
 
 interface Evidencia {
@@ -159,6 +172,9 @@ export const AlmacenRecepcionSheet = ({
   const [notas, setNotas] = useState("");
   const [bodegas, setBodegas] = useState<Bodega[]>([]);
   const [bodegaSeleccionada, setBodegaSeleccionada] = useState<string>("");
+  
+  // Estado para múltiples lotes por producto
+  const [lotesInputs, setLotesInputs] = useState<Record<string, LoteInput[]>>({});
   
   // Timer para tiempo de descarga
   const [tiempoDescarga, setTiempoDescarga] = useState<string>("");
@@ -288,17 +304,73 @@ export const AlmacenRecepcionSheet = ({
       if (error) throw error;
 
       const productosData = (data as any[]) || [];
-      setProductos(productosData);
+      
+      // Obtener el proveedor_id de la orden de compra
+      const proveedorId = entrega.orden_compra?.proveedor?.id;
+      
+      // Si hay proveedor, buscar configuración de lotes
+      let lotesConfigMap: Record<string, { dividir: boolean; cantidad: number; unidades: number }> = {};
+      
+      if (proveedorId) {
+        const productIds = productosData.map(p => p.producto_id);
+        const { data: configData } = await supabase
+          .from("proveedor_productos")
+          .select("producto_id, dividir_en_lotes_recepcion, cantidad_lotes_default, unidades_por_lote_default")
+          .eq("proveedor_id", proveedorId)
+          .in("producto_id", productIds);
+        
+        if (configData) {
+          configData.forEach((config: any) => {
+            if (config.dividir_en_lotes_recepcion && config.cantidad_lotes_default && config.unidades_por_lote_default) {
+              lotesConfigMap[config.producto_id] = {
+                dividir: true,
+                cantidad: config.cantidad_lotes_default,
+                unidades: config.unidades_por_lote_default
+              };
+            }
+          });
+        }
+      }
+      
+      // Agregar configuración de lotes a cada producto
+      const productosConConfig = productosData.map(p => ({
+        ...p,
+        lotesConfig: lotesConfigMap[p.producto_id] ? {
+          dividir_en_lotes: lotesConfigMap[p.producto_id].dividir,
+          cantidad_lotes: lotesConfigMap[p.producto_id].cantidad,
+          unidades_por_lote: lotesConfigMap[p.producto_id].unidades
+        } : undefined
+      }));
+      
+      setProductos(productosConConfig);
       
       const cantidades: Record<string, number> = {};
       const fechas: Record<string, string> = {};
-      productosData.forEach(p => {
+      const lotesInit: Record<string, LoteInput[]> = {};
+      
+      productosConConfig.forEach(p => {
         const faltante = p.cantidad_ordenada - p.cantidad_recibida;
         cantidades[p.id] = Math.max(0, faltante);
         fechas[p.id] = "";
+        
+        // Si tiene configuración de lotes, pre-generar los inputs
+        if (p.lotesConfig?.dividir_en_lotes) {
+          const lotes: LoteInput[] = [];
+          for (let i = 0; i < p.lotesConfig.cantidad_lotes; i++) {
+            lotes.push({
+              id: `${p.id}-lote-${i}`,
+              numero_lote: "",
+              cantidad: p.lotesConfig.unidades_por_lote,
+              fecha_caducidad: ""
+            });
+          }
+          lotesInit[p.id] = lotes;
+        }
       });
+      
       setCantidadesRecibidas(cantidades);
       setFechasCaducidad(fechas);
+      setLotesInputs(lotesInit);
     } catch (error) {
       console.error("Error cargando productos:", error);
       toast({
@@ -370,6 +442,44 @@ export const AlmacenRecepcionSheet = ({
       if (prev[productoId]) URL.revokeObjectURL(prev[productoId]!.preview);
       return { ...prev, [productoId]: null };
     });
+  };
+
+  // Funciones para manejar lotes múltiples
+  const handleLoteChange = (productoDetalleId: string, loteIndex: number, field: keyof LoteInput, value: string | number) => {
+    setLotesInputs(prev => {
+      const lotes = [...(prev[productoDetalleId] || [])];
+      if (lotes[loteIndex]) {
+        lotes[loteIndex] = { ...lotes[loteIndex], [field]: value };
+      }
+      return { ...prev, [productoDetalleId]: lotes };
+    });
+  };
+
+  const addLoteInput = (productoDetalleId: string) => {
+    setLotesInputs(prev => {
+      const lotes = [...(prev[productoDetalleId] || [])];
+      lotes.push({
+        id: `${productoDetalleId}-lote-${Date.now()}`,
+        numero_lote: "",
+        cantidad: 0,
+        fecha_caducidad: ""
+      });
+      return { ...prev, [productoDetalleId]: lotes };
+    });
+  };
+
+  const removeLoteInput = (productoDetalleId: string, loteIndex: number) => {
+    setLotesInputs(prev => {
+      const lotes = [...(prev[productoDetalleId] || [])];
+      lotes.splice(loteIndex, 1);
+      return { ...prev, [productoDetalleId]: lotes };
+    });
+  };
+
+  // Obtener total de lotes para un producto
+  const getTotalLotes = (productoDetalleId: string): number => {
+    const lotes = lotesInputs[productoDetalleId] || [];
+    return lotes.reduce((sum, l) => sum + (l.cantidad || 0), 0);
   };
 
   const getProductosConDiferencia = () => {
@@ -452,11 +562,42 @@ export const AlmacenRecepcionSheet = ({
       return false;
     }
 
-    const productosConCaducidad = productos.filter(p => 
-      p.producto?.maneja_caducidad && getCantidadNumerica(p.id) > 0
+    // Validar productos con múltiples lotes
+    const productosConLotes = productos.filter(p => p.lotesConfig?.dividir_en_lotes);
+    for (const p of productosConLotes) {
+      const lotes = lotesInputs[p.id] || [];
+      const lotesSinNumero = lotes.filter(l => l.cantidad > 0 && !l.numero_lote.trim());
+      if (lotesSinNumero.length > 0) {
+        toast({
+          title: "Número de lote requerido",
+          description: `"${p.producto?.nombre}" requiere número de lote para cada entrada`,
+          variant: "destructive"
+        });
+        return false;
+      }
+      
+      // Validar fechas de caducidad en lotes si el producto maneja caducidad
+      if (p.producto?.maneja_caducidad) {
+        const lotesSinFecha = lotes.filter(l => l.cantidad > 0 && !l.fecha_caducidad);
+        if (lotesSinFecha.length > 0) {
+          toast({
+            title: "Fecha de caducidad requerida",
+            description: `Todos los lotes de "${p.producto?.nombre}" requieren fecha de caducidad`,
+            variant: "destructive"
+          });
+          return false;
+        }
+      }
+    }
+
+    // Validar productos SIN lotes múltiples que manejan caducidad
+    const productosConCaducidadSinLotes = productos.filter(p => 
+      p.producto?.maneja_caducidad && 
+      getCantidadNumerica(p.id) > 0 && 
+      !p.lotesConfig?.dividir_en_lotes
     );
     
-    const faltaFecha = productosConCaducidad.find(p => !fechasCaducidad[p.id]);
+    const faltaFecha = productosConCaducidadSinLotes.find(p => !fechasCaducidad[p.id]);
     if (faltaFecha) {
       toast({
         title: "Fecha obligatoria",
@@ -466,7 +607,7 @@ export const AlmacenRecepcionSheet = ({
       return false;
     }
     
-    const faltaFoto = productosConCaducidad.find(p => !fotosCaducidad[p.id]);
+    const faltaFoto = productosConCaducidadSinLotes.find(p => !fotosCaducidad[p.id]);
     if (faltaFoto) {
       toast({
         title: "Foto obligatoria", 
@@ -582,7 +723,13 @@ export const AlmacenRecepcionSheet = ({
       });
 
       for (const producto of productos) {
-        const cantidad = getCantidadNumerica(producto.id);
+        // Determinar cantidad total recibida (normal o suma de lotes)
+        const tieneLotesMultiples = producto.lotesConfig?.dividir_en_lotes && lotesInputs[producto.id]?.length > 0;
+        const lotes = lotesInputs[producto.id] || [];
+        const cantidad = tieneLotesMultiples 
+          ? lotes.reduce((sum, l) => sum + (l.cantidad || 0), 0)
+          : getCantidadNumerica(producto.id);
+        
         if (producto) {
           const nuevaCantidadRecibida = producto.cantidad_recibida + cantidad;
           const updateData: any = { cantidad_recibida: nuevaCantidadRecibida };
@@ -607,25 +754,53 @@ export const AlmacenRecepcionSheet = ({
             
             const precioCompra = detalleConPrecio?.precio_unitario_compra || 0;
 
-            const fechaCaducidad = fechasCaducidad[producto.id] || null;
-            const { error: loteError } = await supabase
-              .from("inventario_lotes")
-              .insert({
-                producto_id: producto.producto_id,
-                cantidad_disponible: cantidad,
-                precio_compra: precioCompra,
-                fecha_entrada: new Date().toISOString(),
-                fecha_caducidad: fechaCaducidad || null,
-                lote_referencia: loteReferencia,
-                orden_compra_id: entrega.orden_compra.id,
-                bodega_id: bodegaSeleccionada,
-                recibido_por: user.id,
-                notas: `Recibido de ${proveedorNombre}`
-              });
+            // Si tiene lotes múltiples, crear un registro por cada lote
+            if (tieneLotesMultiples) {
+              for (const lote of lotes) {
+                if (lote.cantidad > 0) {
+                  const { error: loteError } = await supabase
+                    .from("inventario_lotes")
+                    .insert({
+                      producto_id: producto.producto_id,
+                      cantidad_disponible: lote.cantidad,
+                      precio_compra: precioCompra,
+                      fecha_entrada: new Date().toISOString(),
+                      fecha_caducidad: lote.fecha_caducidad || null,
+                      lote_referencia: lote.numero_lote || loteReferencia,
+                      orden_compra_id: entrega.orden_compra.id,
+                      bodega_id: bodegaSeleccionada,
+                      recibido_por: user.id,
+                      notas: `Recibido de ${proveedorNombre} - Lote: ${lote.numero_lote}`
+                    });
 
-            if (loteError) {
-              console.error("Error creando lote:", loteError);
-              throw loteError;
+                  if (loteError) {
+                    console.error("Error creando lote:", loteError);
+                    throw loteError;
+                  }
+                }
+              }
+            } else {
+              // Comportamiento original: un solo lote
+              const fechaCaducidad = fechasCaducidad[producto.id] || null;
+              const { error: loteError } = await supabase
+                .from("inventario_lotes")
+                .insert({
+                  producto_id: producto.producto_id,
+                  cantidad_disponible: cantidad,
+                  precio_compra: precioCompra,
+                  fecha_entrada: new Date().toISOString(),
+                  fecha_caducidad: fechaCaducidad || null,
+                  lote_referencia: loteReferencia,
+                  orden_compra_id: entrega.orden_compra.id,
+                  bodega_id: bodegaSeleccionada,
+                  recibido_por: user.id,
+                  notas: `Recibido de ${proveedorNombre}`
+                });
+
+              if (loteError) {
+                console.error("Error creando lote:", loteError);
+                throw loteError;
+              }
             }
 
             const { data: productoActual } = await supabase
@@ -901,9 +1076,12 @@ export const AlmacenRecepcionSheet = ({
                     {productos.map((producto) => {
                       const faltante = producto.cantidad_ordenada - producto.cantidad_recibida;
                       const requiereCaducidad = producto.producto?.maneja_caducidad;
-                      const cantidadActual = getCantidadNumerica(producto.id);
-                      const faltaFechaCaducidad = requiereCaducidad && cantidadActual > 0 && !fechasCaducidad[producto.id];
-                      const faltaFotoCaducidad = requiereCaducidad && cantidadActual > 0 && !fotosCaducidad[producto.id];
+                      const tieneLotesMultiples = producto.lotesConfig?.dividir_en_lotes;
+                      const lotes = lotesInputs[producto.id] || [];
+                      const totalLotes = getTotalLotes(producto.id);
+                      const cantidadActual = tieneLotesMultiples ? totalLotes : getCantidadNumerica(producto.id);
+                      const faltaFechaCaducidad = requiereCaducidad && cantidadActual > 0 && !tieneLotesMultiples && !fechasCaducidad[producto.id];
+                      const faltaFotoCaducidad = requiereCaducidad && cantidadActual > 0 && !tieneLotesMultiples && !fotosCaducidad[producto.id];
                       const tieneDiferencia = cantidadActual < faltante;
                       const faltaRazonDiferencia = tieneDiferencia && !razonesDiferencia[producto.id];
                       const razonActual = razonesDiferencia[producto.id];
@@ -924,6 +1102,12 @@ export const AlmacenRecepcionSheet = ({
                                       Requiere caducidad
                                     </Badge>
                                   )}
+                                  {tieneLotesMultiples && (
+                                    <Badge variant="outline" className="text-xs border-primary text-primary">
+                                      <Package className="h-3 w-3 mr-1" />
+                                      {producto.lotesConfig?.cantidad_lotes} lotes
+                                    </Badge>
+                                  )}
                                 </div>
                                 <p className="text-sm text-muted-foreground">
                                   Código: {producto.producto?.codigo}
@@ -932,18 +1116,142 @@ export const AlmacenRecepcionSheet = ({
                                   Esperado: {faltante} unidades
                                 </p>
                               </div>
-                              <div className="w-24">
-                                <Label className="text-xs text-muted-foreground">Recibido</Label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={faltante}
-                                  value={cantidadesRecibidas[producto.id] ?? ""}
-                                  onChange={(e) => handleCantidadChange(producto.id, e.target.value)}
-                                  className="text-center"
-                                />
-                              </div>
+                              
+                              {/* Si NO tiene lotes múltiples, mostrar input normal */}
+                              {!tieneLotesMultiples && (
+                                <div className="w-24">
+                                  <Label className="text-xs text-muted-foreground">Recibido</Label>
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    max={faltante}
+                                    value={cantidadesRecibidas[producto.id] ?? ""}
+                                    onChange={(e) => handleCantidadChange(producto.id, e.target.value)}
+                                    className="text-center"
+                                  />
+                                </div>
+                              )}
+                              
+                              {/* Si tiene lotes múltiples, mostrar total calculado */}
+                              {tieneLotesMultiples && (
+                                <div className="text-right">
+                                  <Label className="text-xs text-muted-foreground">Total</Label>
+                                  <div className={cn(
+                                    "text-lg font-semibold",
+                                    totalLotes === faltante ? "text-green-600" : totalLotes > faltante ? "text-destructive" : "text-amber-600"
+                                  )}>
+                                    {totalLotes.toLocaleString()}
+                                  </div>
+                                </div>
+                              )}
                             </div>
+                            
+                            {/* UI para múltiples lotes */}
+                            {tieneLotesMultiples && (
+                              <div className="space-y-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium flex items-center gap-1">
+                                    <Package className="h-4 w-4" />
+                                    Lotes a registrar
+                                  </span>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => addLoteInput(producto.id)}
+                                    className="h-7 text-xs"
+                                  >
+                                    + Agregar lote
+                                  </Button>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  {lotes.map((lote, index) => (
+                                    <div key={lote.id} className="flex items-end gap-2 p-2 bg-background rounded border">
+                                      <div className="flex-1 min-w-0">
+                                        <Label className="text-xs">Lote #{index + 1}</Label>
+                                        <Input
+                                          placeholder="Número de lote"
+                                          value={lote.numero_lote}
+                                          onChange={(e) => handleLoteChange(producto.id, index, "numero_lote", e.target.value)}
+                                          className={cn("h-8 text-sm", !lote.numero_lote && lote.cantidad > 0 && "border-destructive")}
+                                        />
+                                      </div>
+                                      <div className="w-20">
+                                        <Label className="text-xs">Cantidad</Label>
+                                        <Input
+                                          type="number"
+                                          min={0}
+                                          value={lote.cantidad || ""}
+                                          onChange={(e) => handleLoteChange(producto.id, index, "cantidad", parseInt(e.target.value) || 0)}
+                                          className="h-8 text-sm text-center"
+                                        />
+                                      </div>
+                                      {requiereCaducidad && (
+                                        <div className="w-32">
+                                          <Label className="text-xs">Caducidad</Label>
+                                          <Popover>
+                                            <PopoverTrigger asChild>
+                                              <Button
+                                                variant="outline"
+                                                className={cn(
+                                                  "h-8 w-full justify-start text-left font-normal text-xs",
+                                                  !lote.fecha_caducidad && "text-muted-foreground",
+                                                  !lote.fecha_caducidad && lote.cantidad > 0 && "border-destructive"
+                                                )}
+                                              >
+                                                <CalendarIcon className="mr-1 h-3 w-3" />
+                                                {lote.fecha_caducidad 
+                                                  ? format(new Date(lote.fecha_caducidad), "dd/MM/yy")
+                                                  : "Fecha"}
+                                              </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0 z-50" align="start">
+                                              <Calendar
+                                                mode="single"
+                                                selected={lote.fecha_caducidad ? new Date(lote.fecha_caducidad) : undefined}
+                                                onSelect={(date) => handleLoteChange(producto.id, index, "fecha_caducidad", date ? format(date, "yyyy-MM-dd") : "")}
+                                                initialFocus
+                                                className="pointer-events-auto"
+                                                locale={es}
+                                              />
+                                            </PopoverContent>
+                                          </Popover>
+                                        </div>
+                                      )}
+                                      {lotes.length > 1 && (
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => removeLoteInput(producto.id, index)}
+                                          className="h-8 w-8 p-0 text-destructive"
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                                
+                                {/* Resumen de lotes */}
+                                <div className={cn(
+                                  "text-xs p-2 rounded",
+                                  totalLotes === faltante 
+                                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" 
+                                    : totalLotes > faltante
+                                    ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                                    : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                                )}>
+                                  <span className="font-medium">
+                                    {lotes.filter(l => l.cantidad > 0).length} lotes = {totalLotes.toLocaleString()} unidades
+                                  </span>
+                                  {totalLotes !== faltante && (
+                                    <span> (esperado: {faltante.toLocaleString()})</span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                             
                             {/* Razón de diferencia */}
                             {tieneDiferencia && (
