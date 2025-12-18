@@ -1361,6 +1361,150 @@ const OrdenesCompraTab = () => {
                   )}
                 </div>
               </div>
+
+              {/* Payment Type Section */}
+              <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <Receipt className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <h3 className="font-semibold">Tipo de Pago</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Define cómo se pagará esta orden de compra
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="tipoPago"
+                      checked={tipoPago === 'contra_entrega'}
+                      onChange={() => {
+                        setTipoPago('contra_entrega');
+                        setStatusPago('pendiente');
+                        setFechaPago("");
+                        setReferenciaPago("");
+                        setComprobantePagoUrl("");
+                      }}
+                      className="accent-primary"
+                    />
+                    <span>🚚 Contra Entrega</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="tipoPago"
+                      checked={tipoPago === 'anticipado'}
+                      onChange={() => setTipoPago('anticipado')}
+                      className="accent-primary"
+                    />
+                    <span>💳 Pago Anticipado</span>
+                  </label>
+                </div>
+
+                {tipoPago === 'anticipado' && (
+                  <div className="border rounded-lg p-4 bg-background space-y-4">
+                    <div className="flex items-center gap-4">
+                      <Label>Estado del pago:</Label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="statusPago"
+                          checked={statusPago === 'pendiente'}
+                          onChange={() => setStatusPago('pendiente')}
+                          className="accent-primary"
+                        />
+                        <span>Pendiente</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="statusPago"
+                          checked={statusPago === 'pagado'}
+                          onChange={() => setStatusPago('pagado')}
+                          className="accent-primary"
+                        />
+                        <span>Ya pagado</span>
+                      </label>
+                    </div>
+
+                    {statusPago === 'pagado' && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Fecha de pago</Label>
+                          <Input
+                            type="date"
+                            value={fechaPago}
+                            onChange={(e) => setFechaPago(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label>Referencia de pago</Label>
+                          <Input
+                            value={referenciaPago}
+                            onChange={(e) => setReferenciaPago(e.target.value)}
+                            placeholder="Ej: Transferencia #12345"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <Label>Comprobante (opcional)</Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                
+                                setUploadingComprobante(true);
+                                try {
+                                  const fileName = `comprobantes/${Date.now()}-${file.name}`;
+                                  const { error: uploadError } = await supabase.storage
+                                    .from('proveedor-facturas')
+                                    .upload(fileName, file);
+                                  
+                                  if (uploadError) throw uploadError;
+                                  
+                                  const { data: urlData } = supabase.storage
+                                    .from('proveedor-facturas')
+                                    .getPublicUrl(fileName);
+                                  
+                                  setComprobantePagoUrl(urlData.publicUrl);
+                                  toast({
+                                    title: "Comprobante subido",
+                                    description: "El comprobante se ha guardado correctamente",
+                                  });
+                                } catch (error: any) {
+                                  toast({
+                                    title: "Error al subir",
+                                    description: error.message,
+                                    variant: "destructive",
+                                  });
+                                } finally {
+                                  setUploadingComprobante(false);
+                                }
+                              }}
+                              disabled={uploadingComprobante}
+                            />
+                            {uploadingComprobante && <Loader2 className="h-4 w-4 animate-spin" />}
+                            {comprobantePagoUrl && (
+                              <a
+                                href={comprobantePagoUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary text-sm underline"
+                              >
+                                Ver archivo
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               {!entregasMultiples && (
                 <div>
                   <Label>Fecha de Entrega Programada *</Label>
@@ -1717,149 +1861,6 @@ const OrdenesCompraTab = () => {
               )}
             </div>
 
-            {/* Payment Type Section */}
-            <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
-              <div className="flex items-center gap-3">
-                <Receipt className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <h3 className="font-semibold">Tipo de Pago</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Define cómo se pagará esta orden de compra
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-6">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="tipoPago"
-                    checked={tipoPago === 'contra_entrega'}
-                    onChange={() => {
-                      setTipoPago('contra_entrega');
-                      setStatusPago('pendiente');
-                      setFechaPago("");
-                      setReferenciaPago("");
-                      setComprobantePagoUrl("");
-                    }}
-                    className="accent-primary"
-                  />
-                  <span>🚚 Contra Entrega</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="tipoPago"
-                    checked={tipoPago === 'anticipado'}
-                    onChange={() => setTipoPago('anticipado')}
-                    className="accent-primary"
-                  />
-                  <span>💳 Pago Anticipado</span>
-                </label>
-              </div>
-
-              {tipoPago === 'anticipado' && (
-                <div className="border rounded-lg p-4 bg-background space-y-4">
-                  <div className="flex items-center gap-4">
-                    <Label>Estado del pago:</Label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="statusPago"
-                        checked={statusPago === 'pendiente'}
-                        onChange={() => setStatusPago('pendiente')}
-                        className="accent-primary"
-                      />
-                      <span>Pendiente</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="statusPago"
-                        checked={statusPago === 'pagado'}
-                        onChange={() => setStatusPago('pagado')}
-                        className="accent-primary"
-                      />
-                      <span>Ya pagado</span>
-                    </label>
-                  </div>
-
-                  {statusPago === 'pagado' && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Fecha de pago</Label>
-                        <Input
-                          type="date"
-                          value={fechaPago}
-                          onChange={(e) => setFechaPago(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label>Referencia de pago</Label>
-                        <Input
-                          value={referenciaPago}
-                          onChange={(e) => setReferenciaPago(e.target.value)}
-                          placeholder="Ej: Transferencia #12345"
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <Label>Comprobante (opcional)</Label>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="file"
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (!file) return;
-                              
-                              setUploadingComprobante(true);
-                              try {
-                                const fileName = `comprobantes/${Date.now()}-${file.name}`;
-                                const { error: uploadError } = await supabase.storage
-                                  .from('proveedor-facturas')
-                                  .upload(fileName, file);
-                                
-                                if (uploadError) throw uploadError;
-                                
-                                const { data: urlData } = supabase.storage
-                                  .from('proveedor-facturas')
-                                  .getPublicUrl(fileName);
-                                
-                                setComprobantePagoUrl(urlData.publicUrl);
-                                toast({
-                                  title: "Comprobante subido",
-                                  description: "El comprobante se ha guardado correctamente",
-                                });
-                              } catch (error: any) {
-                                toast({
-                                  title: "Error al subir",
-                                  description: error.message,
-                                  variant: "destructive",
-                                });
-                              } finally {
-                                setUploadingComprobante(false);
-                              }
-                            }}
-                            disabled={uploadingComprobante}
-                          />
-                          {uploadingComprobante && <Loader2 className="h-4 w-4 animate-spin" />}
-                          {comprobantePagoUrl && (
-                            <a
-                              href={comprobantePagoUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary text-sm underline"
-                            >
-                              Ver archivo
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
 
             {/* Multiple Deliveries Section */}
             {productosEnOrden.length > 0 && (
