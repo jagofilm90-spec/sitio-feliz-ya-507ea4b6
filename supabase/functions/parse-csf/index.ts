@@ -23,6 +23,7 @@ serve(async (req) => {
     }
 
     console.log("Parsing CSF PDF with AI...");
+    console.log("PDF base64 length:", pdfBase64.length);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -34,35 +35,34 @@ serve(async (req) => {
         model: "google/gemini-2.5-flash",
         messages: [
           {
-            role: "system",
-            content: `You are a document parser specialized in Mexican tax documents (Constancia de Situación Fiscal - CSF).
-Extract the following fields from the CSF PDF and return them in a JSON format.
-
-Required fields to extract:
-- rfc: The RFC (tax ID) of the person/company
-- razon_social: The legal name (Denominación/Razón Social)
-- regimen_capital: The capital regime (S.A. de C.V., S. de R.L., etc.) - extract from the end of razon_social if present
-- codigo_postal: Postal code
-- tipo_vialidad: Street type (Calle, Avenida, Boulevard, etc.)
-- nombre_vialidad: Street name
-- numero_exterior: External number
-- numero_interior: Internal number (if any)
-- nombre_colonia: Neighborhood name
-- nombre_localidad: Locality name
-- nombre_municipio: Municipality/Delegation name
-- nombre_entidad_federativa: State name
-- entre_calle: Between street 1
-- y_calle: Between street 2
-
-Return ONLY a valid JSON object with these fields. Use null for fields not found.
-For razon_social, remove the regime part (S.A. de C.V., etc.) if present and put it in regimen_capital instead.`
-          },
-          {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Please extract the fiscal data from this CSF document:"
+                text: `Analiza esta Constancia de Situación Fiscal (CSF) del SAT de México y extrae los siguientes datos en formato JSON.
+
+IMPORTANTE: Responde SOLO con el JSON, sin markdown, sin backticks, sin explicaciones.
+
+Campos a extraer:
+- rfc: El RFC del contribuyente
+- razon_social: La denominación o razón social (sin el régimen de capital)
+- regimen_capital: El tipo de sociedad (S.A. de C.V., S. de R.L., etc.) si aplica
+- codigo_postal: Código postal del domicilio fiscal
+- tipo_vialidad: Tipo de vialidad (Calle, Avenida, Boulevard, etc.)
+- nombre_vialidad: Nombre de la calle/avenida
+- numero_exterior: Número exterior
+- numero_interior: Número interior (si existe)
+- nombre_colonia: Nombre de la colonia
+- nombre_localidad: Nombre de la localidad
+- nombre_municipio: Nombre del municipio o alcaldía
+- nombre_entidad_federativa: Nombre del estado
+- entre_calle: Entre calle (si existe)
+- y_calle: Y calle (si existe)
+
+Responde ÚNICAMENTE con un objeto JSON válido. Si un campo no se encuentra, usa null.
+
+Ejemplo de respuesta esperada:
+{"rfc":"ABC123456XY1","razon_social":"EMPRESA EJEMPLO","regimen_capital":"S.A. DE C.V.","codigo_postal":"06600","tipo_vialidad":"Calle","nombre_vialidad":"Reforma","numero_exterior":"123","numero_interior":null,"nombre_colonia":"Juárez","nombre_localidad":"Ciudad de México","nombre_municipio":"Cuauhtémoc","nombre_entidad_federativa":"Ciudad de México","entre_calle":null,"y_calle":null}`
               },
               {
                 type: "image_url",
@@ -73,7 +73,7 @@ For razon_social, remove the regime part (S.A. de C.V., etc.) if present and put
             ]
           }
         ],
-        max_tokens: 2000,
+        max_tokens: 4000,
       }),
     });
 
@@ -93,34 +93,56 @@ For razon_social, remove the regime part (S.A. de C.V., etc.) if present and put
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error(`AI Gateway error: ${response.status}`);
+      throw new Error(`AI Gateway error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
     
-    console.log("AI response:", content);
+    console.log("AI response content:", content);
 
     if (!content) {
       throw new Error("No response from AI");
     }
 
+    // Clean up the response - remove markdown code blocks if present
+    let cleanContent = content.trim();
+    
+    // Remove markdown code block markers
+    if (cleanContent.startsWith('```json')) {
+      cleanContent = cleanContent.slice(7);
+    } else if (cleanContent.startsWith('```')) {
+      cleanContent = cleanContent.slice(3);
+    }
+    if (cleanContent.endsWith('```')) {
+      cleanContent = cleanContent.slice(0, -3);
+    }
+    cleanContent = cleanContent.trim();
+
     // Extract JSON from the response
     let parsedData;
     try {
-      // Try to find JSON in the response
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      // Try direct parse first
+      parsedData = JSON.parse(cleanContent);
+    } catch (directParseError) {
+      console.log("Direct parse failed, trying to find JSON in response...");
+      // Try to find JSON object in the response
+      const jsonMatch = cleanContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        parsedData = JSON.parse(jsonMatch[0]);
+        try {
+          parsedData = JSON.parse(jsonMatch[0]);
+        } catch (matchParseError) {
+          console.error("Failed to parse extracted JSON:", matchParseError);
+          console.error("Extracted content:", jsonMatch[0]);
+          throw new Error("Failed to parse CSF data - invalid JSON structure");
+        }
       } else {
-        throw new Error("No JSON found in response");
+        console.error("No JSON found in response. Full content:", content);
+        throw new Error("Failed to parse CSF data - no JSON found in AI response");
       }
-    } catch (parseError) {
-      console.error("Failed to parse AI response:", parseError);
-      throw new Error("Failed to parse CSF data from AI response");
     }
 
-    console.log("Parsed CSF data:", parsedData);
+    console.log("Parsed CSF data:", JSON.stringify(parsedData, null, 2));
 
     return new Response(JSON.stringify({ data: parsedData }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
