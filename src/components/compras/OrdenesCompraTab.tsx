@@ -31,7 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Trash2, Search, MoreVertical, Loader2, Truck, Send, Bell, CalendarCheck, CalendarX, RefreshCw, Calendar as CalendarIcon, Receipt } from "lucide-react";
+import { Plus, Trash2, Search, MoreVertical, Loader2, Truck, Send, Bell, CalendarCheck, CalendarX, RefreshCw, Calendar as CalendarIcon, Receipt, Check, CreditCard, Clock, FileCheck, Hash, Upload, ExternalLink, X } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -1362,143 +1362,273 @@ const OrdenesCompraTab = () => {
                 </div>
               </div>
 
-              {/* Payment Type Section */}
-              <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+              {/* Payment Type Section - Redesigned */}
+              <div className="border rounded-lg p-5 space-y-5 bg-muted/30">
                 <div className="flex items-center gap-3">
-                  <Receipt className="h-5 w-5 text-muted-foreground" />
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Receipt className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
-                    <h3 className="font-semibold">Tipo de Pago</h3>
+                    <h3 className="font-semibold text-base">Tipo de Pago</h3>
                     <p className="text-sm text-muted-foreground">
                       Define cómo se pagará esta orden de compra
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-6">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="tipoPago"
-                      checked={tipoPago === 'contra_entrega'}
-                      onChange={() => {
-                        setTipoPago('contra_entrega');
-                        setStatusPago('pendiente');
-                        setFechaPago("");
-                        setReferenciaPago("");
-                        setComprobantePagoUrl("");
-                      }}
-                      className="accent-primary"
-                    />
-                    <span>🚚 Contra Entrega</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="tipoPago"
-                      checked={tipoPago === 'anticipado'}
-                      onChange={() => setTipoPago('anticipado')}
-                      className="accent-primary"
-                    />
-                    <span>💳 Pago Anticipado</span>
-                  </label>
+                {/* Payment Type Cards */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Contra Entrega Card */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTipoPago('contra_entrega');
+                      setStatusPago('pendiente');
+                      setFechaPago("");
+                      setReferenciaPago("");
+                      setComprobantePagoUrl("");
+                    }}
+                    className={`relative p-4 rounded-xl border-2 text-left transition-all duration-200 hover:shadow-md ${
+                      tipoPago === 'contra_entrega'
+                        ? 'border-primary bg-primary/5 shadow-sm'
+                        : 'border-border bg-background hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    {tipoPago === 'contra_entrega' && (
+                      <div className="absolute top-3 right-3">
+                        <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                          <Check className="h-3 w-3 text-primary-foreground" />
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2.5 rounded-lg ${tipoPago === 'contra_entrega' ? 'bg-primary/20' : 'bg-muted'}`}>
+                        <Truck className={`h-5 w-5 ${tipoPago === 'contra_entrega' ? 'text-primary' : 'text-muted-foreground'}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className={`font-medium ${tipoPago === 'contra_entrega' ? 'text-primary' : 'text-foreground'}`}>
+                          Contra Entrega
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                          El pago se realiza al momento de recibir la mercancía
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Pago Anticipado Card */}
+                  <button
+                    type="button"
+                    onClick={() => setTipoPago('anticipado')}
+                    className={`relative p-4 rounded-xl border-2 text-left transition-all duration-200 hover:shadow-md ${
+                      tipoPago === 'anticipado'
+                        ? 'border-primary bg-primary/5 shadow-sm'
+                        : 'border-border bg-background hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    {tipoPago === 'anticipado' && (
+                      <div className="absolute top-3 right-3">
+                        <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                          <Check className="h-3 w-3 text-primary-foreground" />
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2.5 rounded-lg ${tipoPago === 'anticipado' ? 'bg-primary/20' : 'bg-muted'}`}>
+                        <CreditCard className={`h-5 w-5 ${tipoPago === 'anticipado' ? 'text-primary' : 'text-muted-foreground'}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className={`font-medium ${tipoPago === 'anticipado' ? 'text-primary' : 'text-foreground'}`}>
+                          Pago Anticipado
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                          El pago se realiza antes de recibir la mercancía
+                        </p>
+                      </div>
+                    </div>
+                  </button>
                 </div>
 
+                {/* Anticipado Payment Details */}
                 {tipoPago === 'anticipado' && (
-                  <div className="border rounded-lg p-4 bg-background space-y-4">
-                    <div className="flex items-center gap-4">
-                      <Label>Estado del pago:</Label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="statusPago"
-                          checked={statusPago === 'pendiente'}
-                          onChange={() => setStatusPago('pendiente')}
-                          className="accent-primary"
-                        />
-                        <span>Pendiente</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="statusPago"
-                          checked={statusPago === 'pagado'}
-                          onChange={() => setStatusPago('pagado')}
-                          className="accent-primary"
-                        />
-                        <span>Ya pagado</span>
-                      </label>
+                  <div className="border rounded-xl p-5 bg-background space-y-5 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-amber-500/10">
+                        <Clock className="h-4 w-4 text-amber-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-sm">Estado del Pago</h4>
+                        <p className="text-xs text-muted-foreground">¿Ya se realizó el pago?</p>
+                      </div>
                     </div>
 
+                    {/* Payment Status Cards */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setStatusPago('pendiente')}
+                        className={`p-3 rounded-lg border-2 text-left transition-all ${
+                          statusPago === 'pendiente'
+                            ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30'
+                            : 'border-border bg-muted/30 hover:border-muted-foreground/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Clock className={`h-4 w-4 ${statusPago === 'pendiente' ? 'text-amber-600' : 'text-muted-foreground'}`} />
+                          <span className={`font-medium text-sm ${statusPago === 'pendiente' ? 'text-amber-700 dark:text-amber-400' : ''}`}>
+                            Pendiente
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">Por pagar</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setStatusPago('pagado')}
+                        className={`p-3 rounded-lg border-2 text-left transition-all ${
+                          statusPago === 'pagado'
+                            ? 'border-green-500 bg-green-50 dark:bg-green-950/30'
+                            : 'border-border bg-muted/30 hover:border-muted-foreground/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Check className={`h-4 w-4 ${statusPago === 'pagado' ? 'text-green-600' : 'text-muted-foreground'}`} />
+                          <span className={`font-medium text-sm ${statusPago === 'pagado' ? 'text-green-700 dark:text-green-400' : ''}`}>
+                            Ya pagado
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">Registrar datos</p>
+                      </button>
+                    </div>
+
+                    {/* Payment Details Form */}
                     {statusPago === 'pagado' && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Fecha de pago</Label>
-                          <Input
-                            type="date"
-                            value={fechaPago}
-                            onChange={(e) => setFechaPago(e.target.value)}
-                          />
+                      <div className="border rounded-lg p-4 bg-green-50/50 dark:bg-green-950/20 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                          <FileCheck className="h-4 w-4" />
+                          <span className="text-sm font-medium">Datos del pago realizado</span>
                         </div>
-                        <div>
-                          <Label>Referencia de pago</Label>
-                          <Input
-                            value={referenciaPago}
-                            onChange={(e) => setReferenciaPago(e.target.value)}
-                            placeholder="Ej: Transferencia #12345"
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <Label>Comprobante (opcional)</Label>
-                          <div className="flex items-center gap-2">
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm flex items-center gap-2">
+                              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                              Fecha de pago
+                            </Label>
                             <Input
-                              type="file"
-                              accept=".pdf,.jpg,.jpeg,.png"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                
-                                setUploadingComprobante(true);
-                                try {
-                                  const fileName = `comprobantes/${Date.now()}-${file.name}`;
-                                  const { error: uploadError } = await supabase.storage
-                                    .from('proveedor-facturas')
-                                    .upload(fileName, file);
-                                  
-                                  if (uploadError) throw uploadError;
-                                  
-                                  const { data: urlData } = supabase.storage
-                                    .from('proveedor-facturas')
-                                    .getPublicUrl(fileName);
-                                  
-                                  setComprobantePagoUrl(urlData.publicUrl);
-                                  toast({
-                                    title: "Comprobante subido",
-                                    description: "El comprobante se ha guardado correctamente",
-                                  });
-                                } catch (error: any) {
-                                  toast({
-                                    title: "Error al subir",
-                                    description: error.message,
-                                    variant: "destructive",
-                                  });
-                                } finally {
-                                  setUploadingComprobante(false);
-                                }
-                              }}
-                              disabled={uploadingComprobante}
+                              type="date"
+                              value={fechaPago}
+                              onChange={(e) => setFechaPago(e.target.value)}
+                              className="bg-background"
                             />
-                            {uploadingComprobante && <Loader2 className="h-4 w-4 animate-spin" />}
-                            {comprobantePagoUrl && (
-                              <a
-                                href={comprobantePagoUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary text-sm underline"
-                              >
-                                Ver archivo
-                              </a>
-                            )}
                           </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm flex items-center gap-2">
+                              <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                              Referencia de pago
+                            </Label>
+                            <Input
+                              value={referenciaPago}
+                              onChange={(e) => setReferenciaPago(e.target.value)}
+                              placeholder="Ej: Transferencia #12345"
+                              className="bg-background"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm flex items-center gap-2">
+                            <Upload className="h-3.5 w-3.5 text-muted-foreground" />
+                            Comprobante de pago
+                            <span className="text-muted-foreground font-normal">(opcional)</span>
+                          </Label>
+                          
+                          {!comprobantePagoUrl ? (
+                            <div className="relative">
+                              <input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  
+                                  setUploadingComprobante(true);
+                                  try {
+                                    const fileName = `comprobantes/${Date.now()}-${file.name}`;
+                                    const { error: uploadError } = await supabase.storage
+                                      .from('proveedor-facturas')
+                                      .upload(fileName, file);
+                                    
+                                    if (uploadError) throw uploadError;
+                                    
+                                    const { data: urlData } = supabase.storage
+                                      .from('proveedor-facturas')
+                                      .getPublicUrl(fileName);
+                                    
+                                    setComprobantePagoUrl(urlData.publicUrl);
+                                    toast({
+                                      title: "Comprobante subido",
+                                      description: "El comprobante se ha guardado correctamente",
+                                    });
+                                  } catch (error: any) {
+                                    toast({
+                                      title: "Error al subir",
+                                      description: error.message,
+                                      variant: "destructive",
+                                    });
+                                  } finally {
+                                    setUploadingComprobante(false);
+                                  }
+                                }}
+                                disabled={uploadingComprobante}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                              <div className={`flex items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg transition-colors ${
+                                uploadingComprobante ? 'bg-muted' : 'bg-background hover:border-primary/50 hover:bg-primary/5'
+                              }`}>
+                                {uploadingComprobante ? (
+                                  <>
+                                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">Subiendo archivo...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload className="h-5 w-5 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                      Clic para seleccionar PDF o imagen
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between p-3 bg-background border rounded-lg">
+                              <div className="flex items-center gap-2">
+                                <FileCheck className="h-5 w-5 text-green-600" />
+                                <span className="text-sm font-medium">Comprobante adjunto</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <a
+                                  href={comprobantePagoUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-primary hover:underline flex items-center gap-1"
+                                >
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                  Ver archivo
+                                </a>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setComprobantePagoUrl("")}
+                                  className="h-7 px-2 text-muted-foreground hover:text-destructive"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
