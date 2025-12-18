@@ -20,15 +20,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Search, Download, TrendingUp, TrendingDown, Package } from "lucide-react";
+import { Search, Download, TrendingUp, TrendingDown, Package, Info } from "lucide-react";
 import * as XLSX from "xlsx";
 
 interface HistorialItem {
   id: string;
   fecha: string;
   proveedor: string;
+  notas_proveedor: string | null;
   precio_unitario: number;
   cantidad: number;
   subtotal: number;
@@ -78,6 +85,7 @@ const HistorialComprasProductoTab = () => {
             status_pago,
             proveedor_id,
             proveedor_nombre_manual,
+            notas_proveedor_manual,
             proveedores (nombre)
           )
         `)
@@ -94,6 +102,7 @@ const HistorialComprasProductoTab = () => {
           id: item.id,
           fecha: item.ordenes_compra.fecha_orden,
           proveedor: item.ordenes_compra.proveedores?.nombre || item.ordenes_compra.proveedor_nombre_manual || "Sin nombre",
+          notas_proveedor: item.ordenes_compra.notas_proveedor_manual || null,
           precio_unitario: item.precio_unitario_compra,
           cantidad: item.cantidad_ordenada,
           subtotal: item.subtotal,
@@ -322,8 +331,22 @@ const HistorialComprasProductoTab = () => {
                         </TableCell>
                         <TableCell className="font-mono text-xs">{item.folio}</TableCell>
                         <TableCell>
-                          <div className="max-w-[200px] truncate" title={item.proveedor}>
-                            {item.proveedor}
+                          <div className="flex items-center gap-1">
+                            <div className="max-w-[180px] truncate" title={item.proveedor}>
+                              {item.proveedor}
+                            </div>
+                            {item.notas_proveedor && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="max-w-[200px]">
+                                    <p className="text-xs">{item.notas_proveedor}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="text-right font-medium">
