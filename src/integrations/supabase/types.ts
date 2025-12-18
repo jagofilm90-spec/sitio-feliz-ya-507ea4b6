@@ -3169,6 +3169,116 @@ export type Database = {
         }
         Relationships: []
       }
+      proveedor_factura_entregas: {
+        Row: {
+          created_at: string
+          entrega_id: string
+          factura_id: string
+          fecha_recepcion: string | null
+          id: string
+          notas: string | null
+          recibido_por: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          entrega_id: string
+          factura_id: string
+          fecha_recepcion?: string | null
+          id?: string
+          notas?: string | null
+          recibido_por?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          entrega_id?: string
+          factura_id?: string
+          fecha_recepcion?: string | null
+          id?: string
+          notas?: string | null
+          recibido_por?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proveedor_factura_entregas_entrega_id_fkey"
+            columns: ["entrega_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_compra_entregas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedor_factura_entregas_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "proveedor_facturas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proveedor_facturas: {
+        Row: {
+          archivo_url: string | null
+          comprobante_pago_url: string | null
+          creado_por: string | null
+          created_at: string
+          fecha_factura: string
+          fecha_pago: string | null
+          id: string
+          monto_total: number
+          notas: string | null
+          numero_factura: string
+          orden_compra_id: string
+          referencia_pago: string | null
+          status_pago: string
+          tipo_pago: string
+          updated_at: string
+        }
+        Insert: {
+          archivo_url?: string | null
+          comprobante_pago_url?: string | null
+          creado_por?: string | null
+          created_at?: string
+          fecha_factura?: string
+          fecha_pago?: string | null
+          id?: string
+          monto_total?: number
+          notas?: string | null
+          numero_factura: string
+          orden_compra_id: string
+          referencia_pago?: string | null
+          status_pago?: string
+          tipo_pago?: string
+          updated_at?: string
+        }
+        Update: {
+          archivo_url?: string | null
+          comprobante_pago_url?: string | null
+          creado_por?: string | null
+          created_at?: string
+          fecha_factura?: string
+          fecha_pago?: string | null
+          id?: string
+          monto_total?: number
+          notas?: string | null
+          numero_factura?: string
+          orden_compra_id?: string
+          referencia_pago?: string | null
+          status_pago?: string
+          tipo_pago?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proveedor_facturas_orden_compra_id_fkey"
+            columns: ["orden_compra_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_compra"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proveedor_productos: {
         Row: {
           capacidad_vehiculo_bultos: number | null

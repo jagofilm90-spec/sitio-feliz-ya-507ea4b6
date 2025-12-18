@@ -31,7 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Trash2, Search, MoreVertical, Loader2, Truck, Send, Bell, CalendarCheck, CalendarX, RefreshCw, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, Trash2, Search, MoreVertical, Loader2, Truck, Send, Bell, CalendarCheck, CalendarX, RefreshCw, Calendar as CalendarIcon, Receipt } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -42,6 +42,7 @@ import OrdenAccionesDialog from "./OrdenAccionesDialog";
 import AutorizacionOCDialog from "./AutorizacionOCDialog";
 import OCAutorizadaAlert from "./OCAutorizadaAlert";
 import EntregasPopover from "./EntregasPopover";
+import ProveedorFacturasDialog from "./ProveedorFacturasDialog";
 import { formatCurrency } from "@/lib/utils";
 import { sendPushNotification } from "@/services/pushNotifications";
 
@@ -107,6 +108,10 @@ const OrdenesCompraTab = () => {
   // Estado para envío de recordatorio
   const [enviandoRecordatorioId, setEnviandoRecordatorioId] = useState<string | null>(null);
   
+  // Estado para dialog de facturas del proveedor
+  const [facturasDialogOpen, setFacturasDialogOpen] = useState(false);
+  const [ordenParaFacturas, setOrdenParaFacturas] = useState<any>(null);
+
   // Estado para modo "Por Vehículos"
   const [modoCreacion, setModoCreacion] = useState<'manual' | 'vehiculos'>('manual');
   const [numeroVehiculos, setNumeroVehiculos] = useState("");
@@ -1144,6 +1149,23 @@ const OrdenesCompraTab = () => {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
+                          title="Facturas del proveedor"
+                          onClick={() => {
+                            setOrdenParaFacturas({
+                              id: orden.id,
+                              folio: orden.folio,
+                              proveedor_nombre: orden.proveedor_id ? orden.proveedores?.nombre : orden.proveedor_nombre_manual,
+                              total: orden.total,
+                            });
+                            setFacturasDialogOpen(true);
+                          }}
+                        >
+                          <Receipt className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
                           title="Reenviar OC"
                           onClick={() => {
                             setOrdenSeleccionada(orden);
@@ -1824,6 +1846,12 @@ const OrdenesCompraTab = () => {
         open={autorizacionDialogOpen}
         onOpenChange={setAutorizacionDialogOpen}
         orden={ordenSeleccionada}
+      />
+
+      <ProveedorFacturasDialog
+        open={facturasDialogOpen}
+        onOpenChange={setFacturasDialogOpen}
+        ordenCompra={ordenParaFacturas}
       />
     </Card>
   );
