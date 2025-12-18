@@ -4,11 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import Layout from "@/components/Layout";
-import { Package, Truck, Calendar, BarChart3 } from "lucide-react";
+import { Package, Truck, Calendar, BarChart3, History } from "lucide-react";
 import ProveedoresTab from "@/components/compras/ProveedoresTab";
 import OrdenesCompraTab from "@/components/compras/OrdenesCompraTab";
 import CalendarioEntregasTab from "@/components/compras/CalendarioEntregasTab";
 import ComprasAnalyticsTab from "@/components/compras/ComprasAnalyticsTab";
+import HistorialComprasProductoTab from "@/components/compras/HistorialComprasProductoTab";
 import { supabase } from "@/integrations/supabase/client";
 
 const Compras = () => {
@@ -66,7 +67,7 @@ const Compras = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="proveedores" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
               Proveedores
@@ -87,6 +88,10 @@ const Compras = () => {
               <Calendar className="h-4 w-4" />
               Calendario
             </TabsTrigger>
+            <TabsTrigger value="historial" className="flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Historial
+            </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Analytics
@@ -103,6 +108,10 @@ const Compras = () => {
 
           <TabsContent value="calendario">
             <CalendarioEntregasTab />
+          </TabsContent>
+
+          <TabsContent value="historial">
+            <HistorialComprasProductoTab />
           </TabsContent>
 
           <TabsContent value="analytics">
