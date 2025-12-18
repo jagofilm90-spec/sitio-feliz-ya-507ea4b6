@@ -46,6 +46,8 @@ const CalendarioEntregasTab = () => {
             status,
             proveedor_id,
             proveedor_nombre_manual,
+            tipo_pago,
+            status_pago,
             proveedores (nombre),
             ordenes_compra_detalles (
               cantidad_ordenada,
@@ -61,26 +63,6 @@ const CalendarioEntregasTab = () => {
     },
   });
 
-  // Fetch facturas with anticipado payment linked to entregas
-  const { data: facturasAnticipadas = [] } = useQuery({
-    queryKey: ["facturas_anticipadas_calendario"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("proveedor_factura_entregas")
-        .select(`
-          entrega_id,
-          proveedor_facturas!inner (
-            tipo_pago,
-            status_pago
-          )
-        `)
-        .eq("proveedor_facturas.tipo_pago", "anticipado")
-        .eq("proveedor_facturas.status_pago", "pagado");
-
-      if (error) throw error;
-      return data || [];
-    },
-  });
 
   // Also fetch single-delivery orders (legacy or non-multiple)
   const { data: ordenesSimples = [] } = useQuery({
@@ -124,16 +106,10 @@ const CalendarioEntregasTab = () => {
     return notas?.includes("[AUTO]") || false;
   };
 
-  // Set of entrega IDs that have paid anticipado invoices
-  const entregasConAnticipo = useMemo(() => {
-    const set = new Set<string>();
-    facturasAnticipadas.forEach((fa: any) => {
-      if (fa.entrega_id) {
-        set.add(fa.entrega_id);
-      }
-    });
-    return set;
-  }, [facturasAnticipadas]);
+  // Helper to determine if delivery has paid anticipado
+  const tieneAnticipoPagado = (orden: any) => {
+    return orden?.tipo_pago === 'anticipado' && orden?.status_pago === 'pagado';
+  };
 
   // Combine both data sources into unified format
   const todasLasEntregas = useMemo(() => [
@@ -154,7 +130,7 @@ const CalendarioEntregasTab = () => {
       cantidadBultos: entrega.cantidad_bultos,
       esMultiple: true,
       reprogramada: esReprogramada(entrega.notas),
-      tieneAnticipo: entregasConAnticipo.has(entrega.id),
+      tieneAnticipo: tieneAnticipoPagado(entrega.ordenes_compra),
     })),
     // Simple delivery entries
     ...ordenesSimples.map((orden: any) => ({
@@ -173,9 +149,9 @@ const CalendarioEntregasTab = () => {
       cantidadBultos: null,
       esMultiple: false,
       reprogramada: esReprogramada(orden.notas),
-      tieneAnticipo: false, // Simple orders don't have entregas linked
+      tieneAnticipo: tieneAnticipoPagado(orden),
     })),
-  ], [entregasProgramadas, ordenesSimples, entregasConAnticipo]);
+  ], [entregasProgramadas, ordenesSimples]);
 
   // Helper to parse date string without timezone issues
   const parseDateLocal = (dateStr: string): Date => {
