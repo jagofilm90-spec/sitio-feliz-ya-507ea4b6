@@ -7,16 +7,45 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Package } from "lucide-react";
+import { Search, Package, Truck, Settings2, ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface ProveedorProductosSelectorProps {
   proveedorId: string;
   proveedorNombre: string;
 }
 
+interface TransportConfig {
+  tipo_vehiculo_estandar: string | null;
+  capacidad_vehiculo_bultos: number | null;
+  capacidad_vehiculo_kg: number | null;
+  permite_combinacion: boolean;
+  es_capacidad_fija: boolean;
+}
+
+interface ProveedorProductoRow {
+  id: string;
+  producto_id: string;
+  tipo_vehiculo_estandar: string | null;
+  capacidad_vehiculo_bultos: number | null;
+  capacidad_vehiculo_kg: number | null;
+  permite_combinacion: boolean | null;
+  es_capacidad_fija: boolean | null;
+}
+
+const TIPOS_VEHICULO = [
+  { value: "trailer", label: "Tráiler", capacidadDefault: 20000 },
+  { value: "torton", label: "Tortón", capacidadDefault: 10000 },
+  { value: "rabon", label: "Rabón", capacidadDefault: 5000 },
+  { value: "camioneta", label: "Camioneta", capacidadDefault: 3500 },
+];
+
 const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorProductosSelectorProps) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -34,32 +63,38 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
     },
   });
 
-  // Fetch products associated with this supplier
+  // Fetch products associated with this supplier WITH transport config
   const { data: productosProveedor = [] } = useQuery({
-    queryKey: ["proveedor-productos", proveedorId],
+    queryKey: ["proveedor-productos-config", proveedorId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("proveedor_productos")
-        .select("producto_id")
+        .select("id, producto_id, tipo_vehiculo_estandar, capacidad_vehiculo_bultos, capacidad_vehiculo_kg, permite_combinacion, es_capacidad_fija")
         .eq("proveedor_id", proveedorId);
       if (error) throw error;
-      return data.map(p => p.producto_id);
+      return data as ProveedorProductoRow[];
     },
     enabled: !!proveedorId,
   });
 
+  const productosProveedorIds = productosProveedor.map(p => p.producto_id);
+
   const toggleProducto = useMutation({
     mutationFn: async ({ productoId, isSelected }: { productoId: string; isSelected: boolean }) => {
       if (isSelected) {
-        // Remove association
         const { error } = await supabase
           .from("proveedor_productos")
           .delete()
           .eq("proveedor_id", proveedorId)
           .eq("producto_id", productoId);
         if (error) throw error;
+        // Remove from expanded
+        setExpandedProducts(prev => {
+          const next = new Set(prev);
+          next.delete(productoId);
+          return next;
+        });
       } else {
-        // Add association
         const { error } = await supabase
           .from("proveedor_productos")
           .insert({ proveedor_id: proveedorId, producto_id: productoId });
@@ -67,7 +102,7 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["proveedor-productos", proveedorId] });
+      queryClient.invalidateQueries({ queryKey: ["proveedor-productos-config", proveedorId] });
     },
     onError: (error: any) => {
       toast({
@@ -78,6 +113,51 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
     },
   });
 
+  const updateTransportConfig = useMutation({
+    mutationFn: async ({ productoId, config }: { productoId: string; config: Partial<TransportConfig> }) => {
+      const { error } = await supabase
+        .from("proveedor_productos")
+        .update({
+          ...config,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("proveedor_id", proveedorId)
+        .eq("producto_id", productoId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["proveedor-productos-config", proveedorId] });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error al guardar configuración",
+        description: error.message,
+      });
+    },
+  });
+
+  const toggleExpanded = (productoId: string) => {
+    setExpandedProducts(prev => {
+      const next = new Set(prev);
+      if (next.has(productoId)) {
+        next.delete(productoId);
+      } else {
+        next.add(productoId);
+      }
+      return next;
+    });
+  };
+
+  const getProductConfig = (productoId: string): ProveedorProductoRow | undefined => {
+    return productosProveedor.find(p => p.producto_id === productoId);
+  };
+
+  const hasTransportConfig = (productoId: string): boolean => {
+    const config = getProductConfig(productoId);
+    return !!(config?.tipo_vehiculo_estandar || config?.capacidad_vehiculo_bultos || config?.capacidad_vehiculo_kg);
+  };
+
   const filteredProductos = productos.filter(
     (p) =>
       p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -85,14 +165,28 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
       (p.marca && p.marca.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const productosConConfig = productosProveedor.filter(p => 
+    p.tipo_vehiculo_estandar || p.capacidad_vehiculo_bultos || p.capacidad_vehiculo_kg
+  ).length;
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Package className="h-5 w-5 text-primary" />
-        <Label className="text-base font-semibold">
-          Productos que vende {proveedorNombre}
-        </Label>
-        <Badge variant="secondary">{productosProveedor.length} seleccionados</Badge>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Package className="h-5 w-5 text-primary" />
+          <Label className="text-base font-semibold">
+            Productos que vende {proveedorNombre}
+          </Label>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary">{productosProveedorIds.length} productos</Badge>
+          {productosConConfig > 0 && (
+            <Badge variant="default" className="bg-green-600">
+              <Truck className="h-3 w-3 mr-1" />
+              {productosConConfig} configurados
+            </Badge>
+          )}
+        </div>
       </div>
 
       <div className="relative">
@@ -105,35 +199,77 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
         />
       </div>
 
-      <ScrollArea className="h-[300px] rounded-md border p-4">
-        <div className="space-y-3">
+      <ScrollArea className="h-[400px] rounded-md border p-4">
+        <div className="space-y-2">
           {filteredProductos.map((producto) => {
-            const isSelected = productosProveedor.includes(producto.id);
+            const isSelected = productosProveedorIds.includes(producto.id);
+            const isExpanded = expandedProducts.has(producto.id);
+            const config = getProductConfig(producto.id);
+            const hasConfig = hasTransportConfig(producto.id);
+
             return (
               <div
                 key={producto.id}
-                className="flex items-center space-x-3 p-2 rounded hover:bg-muted/50 cursor-pointer"
-                onClick={() => toggleProducto.mutate({ productoId: producto.id, isSelected })}
+                className={`rounded-lg border transition-colors ${
+                  isSelected ? "border-primary/50 bg-primary/5" : "border-transparent hover:bg-muted/50"
+                }`}
               >
-              <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={() => toggleProducto.mutate({ productoId: producto.id, isSelected })}
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium truncate">{producto.nombre}</span>
-                    {producto.marca && (
-                      <Badge variant="outline" className="text-xs">
-                        {producto.marca}
-                      </Badge>
-                    )}
+                <div
+                  className="flex items-center space-x-3 p-3 cursor-pointer"
+                  onClick={() => toggleProducto.mutate({ productoId: producto.id, isSelected })}
+                >
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => toggleProducto.mutate({ productoId: producto.id, isSelected })}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium truncate">{producto.nombre}</span>
+                      {producto.marca && (
+                        <Badge variant="outline" className="text-xs">
+                          {producto.marca}
+                        </Badge>
+                      )}
+                      {hasConfig && (
+                        <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                          <Truck className="h-3 w-3 mr-1" />
+                          Configurado
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {producto.codigo}
+                      {producto.presentacion && ` • ${producto.presentacion}kg`}
+                    </div>
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    {producto.codigo}
-                    {producto.presentacion && ` • ${producto.presentacion}kg`}
-                  </div>
+                  
+                  {isSelected && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleExpanded(producto.id);
+                      }}
+                    >
+                      <Settings2 className="h-4 w-4 mr-1" />
+                      {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                  )}
                 </div>
+
+                {isSelected && isExpanded && (
+                  <div className="px-3 pb-3 pt-0 border-t border-dashed ml-8">
+                    <TransportConfigPanel
+                      productoId={producto.id}
+                      unidadComercial="bultos"
+                      config={config}
+                      onUpdate={(updates) => updateTransportConfig.mutate({ productoId: producto.id, config: updates })}
+                    />
+                  </div>
+                )}
               </div>
             );
           })}
@@ -147,8 +283,150 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
 
       <div className="flex items-center justify-between pt-2 border-t text-sm text-muted-foreground">
         <span>{filteredProductos.length} productos mostrados</span>
-        <span className="font-medium text-foreground">{productosProveedor.length} productos asociados</span>
+        <span className="font-medium text-foreground">{productosProveedorIds.length} productos asociados</span>
       </div>
+    </div>
+  );
+};
+
+// Sub-component for transport configuration
+interface TransportConfigPanelProps {
+  productoId: string;
+  unidadComercial: string;
+  config: ProveedorProductoRow | undefined;
+  onUpdate: (updates: Partial<TransportConfig>) => void;
+}
+
+const TransportConfigPanel = ({ productoId, unidadComercial, config, onUpdate }: TransportConfigPanelProps) => {
+  const [localConfig, setLocalConfig] = useState<TransportConfig>({
+    tipo_vehiculo_estandar: config?.tipo_vehiculo_estandar || null,
+    capacidad_vehiculo_bultos: config?.capacidad_vehiculo_bultos || null,
+    capacidad_vehiculo_kg: config?.capacidad_vehiculo_kg || null,
+    permite_combinacion: config?.permite_combinacion ?? false,
+    es_capacidad_fija: config?.es_capacidad_fija ?? true,
+  });
+
+  const handleVehiculoChange = (value: string) => {
+    const vehiculo = TIPOS_VEHICULO.find(v => v.value === value);
+    const updates = {
+      tipo_vehiculo_estandar: value,
+      capacidad_vehiculo_kg: vehiculo?.capacidadDefault || null,
+    };
+    setLocalConfig(prev => ({ ...prev, ...updates }));
+    onUpdate(updates);
+  };
+
+  const handleCapacidadBultosChange = (value: string) => {
+    const numValue = value ? parseInt(value) : null;
+    setLocalConfig(prev => ({ ...prev, capacidad_vehiculo_bultos: numValue }));
+    onUpdate({ capacidad_vehiculo_bultos: numValue });
+  };
+
+  const handleCapacidadKgChange = (value: string) => {
+    const numValue = value ? parseFloat(value) : null;
+    setLocalConfig(prev => ({ ...prev, capacidad_vehiculo_kg: numValue }));
+    onUpdate({ capacidad_vehiculo_kg: numValue });
+  };
+
+  const handleCombinacionChange = (checked: boolean) => {
+    setLocalConfig(prev => ({ ...prev, permite_combinacion: checked }));
+    onUpdate({ permite_combinacion: checked });
+  };
+
+  const handleCapacidadFijaChange = (checked: boolean) => {
+    setLocalConfig(prev => ({ ...prev, es_capacidad_fija: checked }));
+    onUpdate({ es_capacidad_fija: checked });
+  };
+
+  return (
+    <div className="mt-3 space-y-4 p-3 bg-muted/30 rounded-lg">
+      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+        <Truck className="h-4 w-4" />
+        Configuración de Transporte
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label className="text-xs">Tipo de Vehículo</Label>
+          <Select
+            value={localConfig.tipo_vehiculo_estandar || ""}
+            onValueChange={handleVehiculoChange}
+          >
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="Seleccionar..." />
+            </SelectTrigger>
+            <SelectContent>
+              {TIPOS_VEHICULO.map(tipo => (
+                <SelectItem key={tipo.value} value={tipo.value}>
+                  {tipo.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs">Capacidad ({unidadComercial})</Label>
+          <Input
+            type="number"
+            placeholder="Ej: 1200"
+            className="h-9"
+            value={localConfig.capacidad_vehiculo_bultos || ""}
+            onChange={(e) => handleCapacidadBultosChange(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs">Capacidad en kg (opcional)</Label>
+        <Input
+          type="number"
+          placeholder="Ej: 20000"
+          className="h-9"
+          value={localConfig.capacidad_vehiculo_kg || ""}
+          onChange={(e) => handleCapacidadKgChange(e.target.value)}
+        />
+      </div>
+
+      <div className="flex flex-col gap-3 pt-2">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label className="text-xs">Permite combinación</Label>
+            <p className="text-xs text-muted-foreground">
+              Puede mezclarse con otros productos en el mismo vehículo
+            </p>
+          </div>
+          <Switch
+            checked={localConfig.permite_combinacion}
+            onCheckedChange={handleCombinacionChange}
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label className="text-xs">Capacidad fija</Label>
+            <p className="text-xs text-muted-foreground">
+              Siempre viene en esta cantidad exacta
+            </p>
+          </div>
+          <Switch
+            checked={localConfig.es_capacidad_fija}
+            onCheckedChange={handleCapacidadFijaChange}
+          />
+        </div>
+      </div>
+
+      {localConfig.tipo_vehiculo_estandar && localConfig.capacidad_vehiculo_bultos && (
+        <div className="pt-2 border-t">
+          <div className="text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">Resumen:</span>{" "}
+            {TIPOS_VEHICULO.find(v => v.value === localConfig.tipo_vehiculo_estandar)?.label} de{" "}
+            {localConfig.capacidad_vehiculo_bultos.toLocaleString()} {unidadComercial}
+            {localConfig.es_capacidad_fija && " (capacidad fija)"}
+            {localConfig.permite_combinacion && " • Combinable"}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
