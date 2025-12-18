@@ -299,33 +299,47 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
   let badgeVariant: "default" | "destructive" | "secondary" | "outline" = "outline";
   let badgeClassName = "";
 
-  if (orden.entregas_multiples && entregasStatus) {
-    const { total, programadas } = entregasStatus;
-    if (programadas === total) {
-      badgeVariant = "default";
-      badgeClassName = "bg-green-600 hover:bg-green-700 cursor-pointer";
-      badgeContent = (
-        <>
-          <CalendarCheck className="h-3 w-3" />
-          {total}/{total}
-        </>
-      );
-    } else if (programadas === 0) {
-      badgeVariant = "destructive";
-      badgeClassName = "cursor-pointer";
+  if (orden.entregas_multiples) {
+    // Calculate status directly from entregasOrden as fallback
+    const total = entregasStatus?.total ?? entregasOrden.length;
+    const programadas = entregasStatus?.programadas ?? entregasOrden.filter(e => e.fecha_programada).length;
+    
+    if (total > 0) {
+      if (programadas === total) {
+        badgeVariant = "default";
+        badgeClassName = "bg-green-600 hover:bg-green-700 cursor-pointer";
+        badgeContent = (
+          <>
+            <CalendarCheck className="h-3 w-3" />
+            {programadas}/{total}
+          </>
+        );
+      } else if (programadas === 0) {
+        badgeVariant = "destructive";
+        badgeClassName = "cursor-pointer";
+        badgeContent = (
+          <>
+            <CalendarX className="h-3 w-3" />
+            0/{total}
+          </>
+        );
+      } else {
+        badgeVariant = "secondary";
+        badgeClassName = "cursor-pointer";
+        badgeContent = (
+          <>
+            <CalendarCheck className="h-3 w-3" />
+            {programadas}/{total}
+          </>
+        );
+      }
+    } else {
+      badgeVariant = "outline";
+      badgeClassName = "text-muted-foreground cursor-pointer";
       badgeContent = (
         <>
           <CalendarX className="h-3 w-3" />
-          0/{total}
-        </>
-      );
-    } else {
-      badgeVariant = "secondary";
-      badgeClassName = "cursor-pointer";
-      badgeContent = (
-        <>
-          <CalendarCheck className="h-3 w-3" />
-          {programadas}/{total}
+          Sin entregas
         </>
       );
     }
