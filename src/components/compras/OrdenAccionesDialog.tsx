@@ -1760,39 +1760,28 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
           <div className="space-y-4">
             <div>
               <Label>Nueva Fecha de Entrega</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !nuevaFecha && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {nuevaFecha 
-                      ? format(new Date(nuevaFecha + "T12:00:00"), "dd/MM/yyyy") 
-                      : "Seleccionar fecha"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 z-[9999]" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={nuevaFecha ? new Date(nuevaFecha + "T12:00:00") : undefined}
-                    onSelect={(date) => setNuevaFecha(date ? format(date, "yyyy-MM-dd") : "")}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-sm text-muted-foreground mb-3">
                 Fecha actual: {orden?.fecha_entrega_programada
                   ? format(new Date(orden.fecha_entrega_programada), "dd/MM/yyyy")
                   : "Sin programar"}
               </p>
+              {/* Calendario inline para evitar conflictos de z-index con Dialog */}
+              <div className="border rounded-md">
+                <Calendar
+                  mode="single"
+                  selected={nuevaFecha ? new Date(nuevaFecha + "T12:00:00") : undefined}
+                  onSelect={(date) => setNuevaFecha(date ? format(date, "yyyy-MM-dd") : "")}
+                  className="rounded-md pointer-events-auto"
+                />
+              </div>
+              {nuevaFecha && (
+                <p className="text-sm text-green-600 mt-2">
+                  Nueva fecha seleccionada: {format(new Date(nuevaFecha + "T12:00:00"), "dd/MM/yyyy")}
+                </p>
+              )}
             </div>
             <div className="flex gap-2">
-              <Button onClick={handleCambiarFecha} disabled={updateOrden.isPending}>
+              <Button onClick={handleCambiarFecha} disabled={updateOrden.isPending || !nuevaFecha}>
                 Actualizar Fecha
               </Button>
               <Button variant="ghost" onClick={() => setAccion(null)}>
