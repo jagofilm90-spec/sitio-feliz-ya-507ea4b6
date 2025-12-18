@@ -1453,11 +1453,12 @@ const OrdenesCompraTab = () => {
                       </div>
                       <Label>¿Cuántos vehículos?</Label>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={numeroVehiculos}
-                        onChange={(e) => setNumeroVehiculos(e.target.value)}
-                        placeholder="5"
-                        min="1"
+                        onChange={(e) => setNumeroVehiculos(e.target.value.replace(/\D/g, ''))}
+                        placeholder="Ej: 5"
                         className="font-bold text-lg"
                       />
                       {numeroVehiculos && (
