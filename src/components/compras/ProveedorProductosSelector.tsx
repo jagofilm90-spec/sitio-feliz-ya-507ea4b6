@@ -24,6 +24,9 @@ interface TransportConfig {
   capacidad_vehiculo_kg: number | null;
   permite_combinacion: boolean;
   es_capacidad_fija: boolean;
+  dividir_en_lotes_recepcion: boolean;
+  cantidad_lotes_default: number | null;
+  unidades_por_lote_default: number | null;
 }
 
 interface ProveedorProductoRow {
@@ -34,6 +37,9 @@ interface ProveedorProductoRow {
   capacidad_vehiculo_kg: number | null;
   permite_combinacion: boolean | null;
   es_capacidad_fija: boolean | null;
+  dividir_en_lotes_recepcion: boolean | null;
+  cantidad_lotes_default: number | null;
+  unidades_por_lote_default: number | null;
 }
 
 const TIPOS_VEHICULO = [
@@ -69,7 +75,7 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
     queryFn: async () => {
       const { data, error } = await supabase
         .from("proveedor_productos")
-        .select("id, producto_id, tipo_vehiculo_estandar, capacidad_vehiculo_bultos, capacidad_vehiculo_kg, permite_combinacion, es_capacidad_fija")
+        .select("id, producto_id, tipo_vehiculo_estandar, capacidad_vehiculo_bultos, capacidad_vehiculo_kg, permite_combinacion, es_capacidad_fija, dividir_en_lotes_recepcion, cantidad_lotes_default, unidades_por_lote_default")
         .eq("proveedor_id", proveedorId);
       if (error) throw error;
       return data as ProveedorProductoRow[];
@@ -155,7 +161,7 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
 
   const hasTransportConfig = (productoId: string): boolean => {
     const config = getProductConfig(productoId);
-    return !!(config?.tipo_vehiculo_estandar || config?.capacidad_vehiculo_bultos || config?.capacidad_vehiculo_kg);
+    return !!(config?.tipo_vehiculo_estandar || config?.capacidad_vehiculo_bultos || config?.capacidad_vehiculo_kg || config?.dividir_en_lotes_recepcion);
   };
 
   const filteredProductos = productos.filter(
@@ -304,6 +310,9 @@ const TransportConfigPanel = ({ productoId, unidadComercial, config, onUpdate }:
     capacidad_vehiculo_kg: config?.capacidad_vehiculo_kg || null,
     permite_combinacion: config?.permite_combinacion ?? false,
     es_capacidad_fija: config?.es_capacidad_fija ?? true,
+    dividir_en_lotes_recepcion: config?.dividir_en_lotes_recepcion ?? false,
+    cantidad_lotes_default: config?.cantidad_lotes_default || null,
+    unidades_por_lote_default: config?.unidades_por_lote_default || null,
   });
 
   const handleVehiculoChange = (value: string) => {
@@ -337,6 +346,26 @@ const TransportConfigPanel = ({ productoId, unidadComercial, config, onUpdate }:
     setLocalConfig(prev => ({ ...prev, es_capacidad_fija: checked }));
     onUpdate({ es_capacidad_fija: checked });
   };
+
+  const handleDividirLotesChange = (checked: boolean) => {
+    setLocalConfig(prev => ({ ...prev, dividir_en_lotes_recepcion: checked }));
+    onUpdate({ dividir_en_lotes_recepcion: checked });
+  };
+
+  const handleCantidadLotesChange = (value: string) => {
+    const numValue = value ? parseInt(value) : null;
+    setLocalConfig(prev => ({ ...prev, cantidad_lotes_default: numValue }));
+    onUpdate({ cantidad_lotes_default: numValue });
+  };
+
+  const handleUnidadesPorLoteChange = (value: string) => {
+    const numValue = value ? parseInt(value) : null;
+    setLocalConfig(prev => ({ ...prev, unidades_por_lote_default: numValue }));
+    onUpdate({ unidades_por_lote_default: numValue });
+  };
+
+  const totalCalculado = (localConfig.cantidad_lotes_default || 0) * (localConfig.unidades_por_lote_default || 0);
+  const coincideConCapacidad = localConfig.capacidad_vehiculo_bultos && totalCalculado === localConfig.capacidad_vehiculo_bultos;
 
   return (
     <div className="mt-3 space-y-4 p-3 bg-muted/30 rounded-lg">
@@ -416,6 +445,77 @@ const TransportConfigPanel = ({ productoId, unidadComercial, config, onUpdate }:
         </div>
       </div>
 
+      {/* Configuración de Lotes */}
+      <div className="pt-3 border-t space-y-3">
+        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <Package className="h-4 w-4" />
+          Configuración de Lotes en Recepción
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label className="text-xs">Dividir en lotes al recibir</Label>
+            <p className="text-xs text-muted-foreground">
+              El producto viene dividido en múltiples lotes
+            </p>
+          </div>
+          <Switch
+            checked={localConfig.dividir_en_lotes_recepcion}
+            onCheckedChange={handleDividirLotesChange}
+          />
+        </div>
+
+        {localConfig.dividir_en_lotes_recepcion && (
+          <div className="space-y-3 p-3 bg-primary/5 rounded-md border border-primary/20">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Cantidad de lotes</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  placeholder="Ej: 4"
+                  className="h-9"
+                  value={localConfig.cantidad_lotes_default || ""}
+                  onChange={(e) => handleCantidadLotesChange(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Unidades por lote</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  placeholder="Ej: 700"
+                  className="h-9"
+                  value={localConfig.unidades_por_lote_default || ""}
+                  onChange={(e) => handleUnidadesPorLoteChange(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {localConfig.cantidad_lotes_default && localConfig.unidades_por_lote_default && (
+              <div className={`p-2 rounded text-sm ${
+                coincideConCapacidad 
+                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" 
+                  : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+              }`}>
+                <span className="font-medium">Total calculado: </span>
+                {localConfig.cantidad_lotes_default} lotes × {localConfig.unidades_por_lote_default} = {totalCalculado.toLocaleString()} {unidadComercial}
+                {localConfig.capacidad_vehiculo_bultos && !coincideConCapacidad && (
+                  <span className="block text-xs mt-1">
+                    ⚠️ No coincide con capacidad del vehículo ({localConfig.capacidad_vehiculo_bultos.toLocaleString()})
+                  </span>
+                )}
+                {coincideConCapacidad && (
+                  <span className="block text-xs mt-1">
+                    ✓ Coincide con capacidad del vehículo
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {localConfig.tipo_vehiculo_estandar && localConfig.capacidad_vehiculo_bultos && (
         <div className="pt-2 border-t">
           <div className="text-xs text-muted-foreground">
@@ -424,6 +524,9 @@ const TransportConfigPanel = ({ productoId, unidadComercial, config, onUpdate }:
             {localConfig.capacidad_vehiculo_bultos.toLocaleString()} {unidadComercial}
             {localConfig.es_capacidad_fija && " (capacidad fija)"}
             {localConfig.permite_combinacion && " • Combinable"}
+            {localConfig.dividir_en_lotes_recepcion && localConfig.cantidad_lotes_default && (
+              <> • {localConfig.cantidad_lotes_default} lotes</>
+            )}
           </div>
         </div>
       )}
