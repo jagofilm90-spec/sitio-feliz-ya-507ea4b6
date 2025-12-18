@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Globe, Package, Trash2, X, Mail } from "lucide-react";
+import { Plus, Search, Edit, Globe, Package, Trash2, X, Mail, FileText, Upload, Loader2, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ProveedorProductosSelector from "./ProveedorProductosSelector";
 import {
@@ -65,6 +65,11 @@ const ProveedoresTab = () => {
   const [productosProveedor, setProductosProveedor] = useState<Proveedor | null>(null);
   const [deletingProveedor, setDeletingProveedor] = useState<Proveedor | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // CSF upload state
+  const [isParsingCSF, setIsParsingCSF] = useState(false);
+  const [csfParsed, setCSFParsed] = useState(false);
+  const csfInputRef = useRef<HTMLInputElement>(null);
   
   // Multi-email support
   const [emails, setEmails] = useState<string[]>([]);
@@ -118,6 +123,132 @@ const ProveedoresTab = () => {
     setEditEmails(editEmails.filter(e => e !== emailToRemove));
   };
 
+  // Helper function to build complete address from CSF data
+  const buildDireccionFromCSF = (data: any): string => {
+    const parts = [];
+    
+    if (data.tipo_vialidad && data.nombre_vialidad) {
+      parts.push(`${data.tipo_vialidad} ${data.nombre_vialidad}`);
+    } else if (data.nombre_vialidad) {
+      parts.push(data.nombre_vialidad);
+    }
+    
+    if (data.numero_exterior) {
+      parts.push(`#${data.numero_exterior}`);
+    }
+    
+    if (data.numero_interior) {
+      parts.push(`Int. ${data.numero_interior}`);
+    }
+    
+    if (data.nombre_colonia) {
+      parts.push(`Col. ${data.nombre_colonia}`);
+    }
+    
+    const localidadParts = [];
+    if (data.nombre_localidad) localidadParts.push(data.nombre_localidad);
+    if (data.nombre_municipio && data.nombre_municipio !== data.nombre_localidad) {
+      localidadParts.push(data.nombre_municipio);
+    }
+    if (localidadParts.length > 0) {
+      parts.push(localidadParts.join(", "));
+    }
+    
+    if (data.nombre_entidad_federativa) {
+      parts.push(data.nombre_entidad_federativa);
+    }
+    
+    if (data.codigo_postal) {
+      parts.push(`C.P. ${data.codigo_postal}`);
+    }
+    
+    return parts.join(", ");
+  };
+
+  // Handle CSF PDF upload and parsing
+  const handleCSFUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    if (file.type !== 'application/pdf') {
+      toast({
+        variant: "destructive",
+        title: "Archivo inválido",
+        description: "Por favor selecciona un archivo PDF",
+      });
+      return;
+    }
+    
+    setIsParsingCSF(true);
+    setCSFParsed(false);
+    
+    try {
+      // Convert PDF to base64
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Remove data URL prefix
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      
+      // Call parse-csf edge function
+      const { data, error } = await supabase.functions.invoke('parse-csf', {
+        body: { pdfBase64: base64 }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.data) {
+        const csfData = data.data;
+        
+        // Build full name with regime
+        let nombreCompleto = csfData.razon_social || '';
+        if (csfData.regimen_capital) {
+          nombreCompleto += ` ${csfData.regimen_capital}`;
+        }
+        
+        // Build full address
+        const direccionCompleta = buildDireccionFromCSF(csfData);
+        
+        // Auto-fill form fields
+        setNewProveedor(prev => ({
+          ...prev,
+          nombre: nombreCompleto.trim(),
+          rfc: csfData.rfc || prev.rfc,
+          direccion: direccionCompleta || prev.direccion,
+          pais: "México",
+        }));
+        
+        setCSFParsed(true);
+        
+        toast({
+          title: "CSF procesada exitosamente",
+          description: `Se auto-llenaron los datos de: ${csfData.razon_social || 'proveedor'}`,
+        });
+      } else {
+        throw new Error("No se pudieron extraer datos de la CSF");
+      }
+    } catch (error) {
+      console.error("Error parsing CSF:", error);
+      toast({
+        variant: "destructive",
+        title: "Error al procesar CSF",
+        description: error instanceof Error ? error.message : "No se pudo analizar el documento",
+      });
+    } finally {
+      setIsParsingCSF(false);
+      // Reset file input
+      if (csfInputRef.current) {
+        csfInputRef.current.value = '';
+      }
+    }
+  };
+
   const { data: proveedores = [], isLoading } = useQuery({
     queryKey: ["proveedores"],
     queryFn: async () => {
@@ -150,6 +281,7 @@ const ProveedoresTab = () => {
       });
       setEmails([]);
       setNewEmail("");
+      setCSFParsed(false);
       toast({
         title: "Proveedor creado",
         description: "El proveedor ha sido registrado exitosamente",
@@ -267,6 +399,48 @@ const ProveedoresTab = () => {
               <DialogTitle>Registrar Nuevo Proveedor</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
+              {/* CSF Upload Section */}
+              <div className="border-2 border-dashed rounded-lg p-4 transition-colors hover:border-primary/50">
+                <input
+                  ref={csfInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  onChange={handleCSFUpload}
+                  className="hidden"
+                  id="csf-upload"
+                  disabled={isParsingCSF}
+                />
+                <label 
+                  htmlFor="csf-upload" 
+                  className="cursor-pointer flex flex-col items-center gap-2"
+                >
+                  {isParsingCSF ? (
+                    <>
+                      <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                      <span className="text-sm font-medium">Analizando CSF...</span>
+                      <span className="text-xs text-muted-foreground">Extrayendo datos fiscales con IA</span>
+                    </>
+                  ) : csfParsed ? (
+                    <>
+                      <CheckCircle2 className="h-8 w-8 text-green-500" />
+                      <span className="text-sm font-medium text-green-600">CSF procesada</span>
+                      <span className="text-xs text-muted-foreground">Los datos se auto-llenaron. Haz clic para subir otra CSF.</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-6 w-6 text-muted-foreground" />
+                        <Upload className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <span className="text-sm font-medium">Subir Constancia de Situación Fiscal (CSF)</span>
+                      <span className="text-xs text-muted-foreground text-center">
+                        Arrastra o haz clic para cargar el PDF. La IA extraerá automáticamente RFC, razón social y dirección.
+                      </span>
+                    </>
+                  )}
+                </label>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="nombre">Nombre del Proveedor *</Label>
