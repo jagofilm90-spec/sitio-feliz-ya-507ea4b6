@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera, Scissors } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import ProgramarEntregasDialog from "./ProgramarEntregasDialog";
 import RegistrarRecepcionDialog from "./RegistrarRecepcionDialog";
 import ConvertirEntregasMultiplesDialog from "./ConvertirEntregasMultiplesDialog";
+import DividirEntregaDialog from "./DividirEntregaDialog";
 import { EvidenciasGallery, EvidenciasBadge } from "./EvidenciasGallery";
 import logoAlmasa from "@/assets/logo-almasa.png";
 
@@ -64,6 +65,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   const [programarEntregasOpen, setProgramarEntregasOpen] = useState(false);
   const [registrarRecepcionOpen, setRegistrarRecepcionOpen] = useState(false);
   const [convertirEntregasOpen, setConvertirEntregasOpen] = useState(false);
+  const [dividirEntregaOpen, setDividirEntregaOpen] = useState(false);
   const [evidenciasGalleryOpen, setEvidenciasGalleryOpen] = useState(false);
   
   // Email CC functionality
@@ -1486,19 +1488,29 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
             )}
 
             {orden?.entregas_multiples ? (
-              <Button
-                variant="outline"
-                className={`w-full justify-start ${entregasPendientes > 0 ? "border-amber-300 text-amber-600 hover:bg-amber-50" : ""}`}
-                onClick={() => setProgramarEntregasOpen(true)}
-              >
-                <Truck className="mr-2 h-4 w-4" />
-                Programar Entregas
-                {entregasPendientes > 0 && (
-                  <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700">
-                    {entregasPendientes} pendientes
-                  </Badge>
-                )}
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  className={`w-full justify-start ${entregasPendientes > 0 ? "border-amber-300 text-amber-600 hover:bg-amber-50" : ""}`}
+                  onClick={() => setProgramarEntregasOpen(true)}
+                >
+                  <Truck className="mr-2 h-4 w-4" />
+                  Programar Entregas
+                  {entregasPendientes > 0 && (
+                    <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700">
+                      {entregasPendientes} pendientes
+                    </Badge>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-violet-600 hover:text-violet-700 border-violet-200"
+                  onClick={() => setDividirEntregaOpen(true)}
+                >
+                  <Scissors className="mr-2 h-4 w-4" />
+                  Dividir Entrega
+                </Button>
+              </>
             ) : (orden?.status === "enviada" || orden?.status === "confirmada" || orden?.status === "parcial") && (
               <Button
                 variant="outline"
@@ -1864,6 +1876,12 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
     <ConvertirEntregasMultiplesDialog
       open={convertirEntregasOpen}
       onOpenChange={setConvertirEntregasOpen}
+      orden={orden}
+    />
+
+    <DividirEntregaDialog
+      open={dividirEntregaOpen}
+      onOpenChange={setDividirEntregaOpen}
       orden={orden}
     />
 
