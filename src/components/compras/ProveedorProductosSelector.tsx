@@ -7,11 +7,17 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Package, Truck, Settings2, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Package, Truck, Settings2, ChevronDown, ChevronUp, Plus, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ProveedorProductosSelectorProps {
   proveedorId: string;
@@ -41,6 +47,7 @@ interface ProveedorProductoRow {
   cantidad_lotes_default: number | null;
   unidades_por_lote_default: number | null;
   precio_por_kilo_compra: boolean | null;
+  costo_proveedor: number | null;
 }
 
 const TIPOS_VEHICULO = [
@@ -53,6 +60,7 @@ const TIPOS_VEHICULO = [
 const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorProductosSelectorProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
+  const [showCrearProducto, setShowCrearProducto] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -70,13 +78,13 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
     },
   });
 
-  // Fetch products associated with this supplier WITH transport config
+  // Fetch products associated with this supplier WITH transport config and costo
   const { data: productosProveedor = [] } = useQuery({
     queryKey: ["proveedor-productos-config", proveedorId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("proveedor_productos")
-        .select("id, producto_id, tipo_vehiculo_estandar, capacidad_vehiculo_bultos, capacidad_vehiculo_kg, permite_combinacion, es_capacidad_fija, dividir_en_lotes_recepcion, cantidad_lotes_default, unidades_por_lote_default, precio_por_kilo_compra")
+        .select("id, producto_id, tipo_vehiculo_estandar, capacidad_vehiculo_bultos, capacidad_vehiculo_kg, permite_combinacion, es_capacidad_fija, dividir_en_lotes_recepcion, cantidad_lotes_default, unidades_por_lote_default, precio_por_kilo_compra, costo_proveedor")
         .eq("proveedor_id", proveedorId);
       if (error) throw error;
       return data as ProveedorProductoRow[];
@@ -95,7 +103,6 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
           .eq("proveedor_id", proveedorId)
           .eq("producto_id", productoId);
         if (error) throw error;
-        // Remove from expanded
         setExpandedProducts(prev => {
           const next = new Set(prev);
           next.delete(productoId);
@@ -144,6 +151,30 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
     },
   });
 
+  const updateCostoProveedor = useMutation({
+    mutationFn: async ({ productoId, costo }: { productoId: string; costo: number | null }) => {
+      const { error } = await supabase
+        .from("proveedor_productos")
+        .update({
+          costo_proveedor: costo,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("proveedor_id", proveedorId)
+        .eq("producto_id", productoId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["proveedor-productos-config", proveedorId] });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error al guardar costo",
+        description: error.message,
+      });
+    },
+  });
+
   const toggleExpanded = (productoId: string) => {
     setExpandedProducts(prev => {
       const next = new Set(prev);
@@ -176,6 +207,8 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
     p.tipo_vehiculo_estandar || p.capacidad_vehiculo_bultos || p.capacidad_vehiculo_kg
   ).length;
 
+  const productosConCosto = productosProveedor.filter(p => p.costo_proveedor).length;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -187,8 +220,14 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="secondary">{productosProveedorIds.length} productos</Badge>
-          {productosConConfig > 0 && (
+          {productosConCosto > 0 && (
             <Badge variant="default" className="bg-green-600">
+              <DollarSign className="h-3 w-3 mr-1" />
+              {productosConCosto} con precio
+            </Badge>
+          )}
+          {productosConConfig > 0 && (
+            <Badge variant="outline">
               <Truck className="h-3 w-3 mr-1" />
               {productosConConfig} configurados
             </Badge>
@@ -196,14 +235,26 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
         </div>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-        <Input
-          placeholder="Buscar productos..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
+      {/* Botón crear producto + buscador */}
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowCrearProducto(true)}
+          className="shrink-0"
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Crear producto
+        </Button>
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Buscar productos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
       </div>
 
       <ScrollArea className="h-[400px] rounded-md border p-4">
@@ -221,14 +272,10 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
                   isSelected ? "border-primary/50 bg-primary/5" : "border-transparent hover:bg-muted/50"
                 }`}
               >
-                <div
-                  className="flex items-center space-x-3 p-3 cursor-pointer"
-                  onClick={() => toggleProducto.mutate({ productoId: producto.id, isSelected })}
-                >
+                <div className="flex items-center space-x-3 p-3">
                   <Checkbox
                     checked={isSelected}
                     onCheckedChange={() => toggleProducto.mutate({ productoId: producto.id, isSelected })}
-                    onClick={(e) => e.stopPropagation()}
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -238,8 +285,13 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
                           {producto.marca}
                         </Badge>
                       )}
-                      {hasConfig && (
+                      {config?.costo_proveedor && (
                         <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                          ${config.costo_proveedor.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                        </Badge>
+                      )}
+                      {hasConfig && (
+                        <Badge variant="secondary" className="text-xs">
                           <Truck className="h-3 w-3 mr-1" />
                           Configurado
                         </Badge>
@@ -252,18 +304,38 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
                   </div>
                   
                   {isSelected && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleExpanded(producto.id);
-                      }}
-                    >
-                      <Settings2 className="h-4 w-4 mr-1" />
-                      {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {/* Input de costo inline */}
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground">$</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Costo"
+                          className="w-24 h-8 text-sm"
+                          defaultValue={config?.costo_proveedor || ""}
+                          onBlur={(e) => {
+                            const value = e.target.value ? parseFloat(e.target.value) : null;
+                            if (value !== config?.costo_proveedor) {
+                              updateCostoProveedor.mutate({ productoId: producto.id, costo: value });
+                            }
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleExpanded(producto.id);
+                        }}
+                      >
+                        <Settings2 className="h-4 w-4 mr-1" />
+                        {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      </Button>
+                    </div>
                   )}
                 </div>
 
@@ -292,7 +364,249 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
         <span>{filteredProductos.length} productos mostrados</span>
         <span className="font-medium text-foreground">{productosProveedorIds.length} productos asociados</span>
       </div>
+
+      {/* Dialog para crear nuevo producto */}
+      <CrearProductoDialog
+        open={showCrearProducto}
+        onOpenChange={setShowCrearProducto}
+        proveedorId={proveedorId}
+        proveedorNombre={proveedorNombre}
+        onProductoCreado={() => {
+          queryClient.invalidateQueries({ queryKey: ["productos-activos"] });
+          queryClient.invalidateQueries({ queryKey: ["proveedor-productos-config", proveedorId] });
+        }}
+      />
     </div>
+  );
+};
+
+// Dialog para crear nuevo producto
+interface CrearProductoDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  proveedorId: string;
+  proveedorNombre: string;
+  onProductoCreado: () => void;
+}
+
+const CrearProductoDialog = ({ open, onOpenChange, proveedorId, proveedorNombre, onProductoCreado }: CrearProductoDialogProps) => {
+  const [nombre, setNombre] = useState("");
+  const [codigo, setCodigo] = useState("");
+  const [unidad, setUnidad] = useState<"bulto" | "kg" | "caja" | "pieza" | "costal" | "cubeta">("bulto");
+  const [presentacion, setPresentacion] = useState("");
+  const [aplica_iva, setAplicaIva] = useState(true);
+  const [aplica_ieps, setAplicaIeps] = useState(false);
+  const [costoProveedor, setCostoProveedor] = useState("");
+  const [precioVenta, setPrecioVenta] = useState("");
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+
+  const resetForm = () => {
+    setNombre("");
+    setCodigo("");
+    setUnidad("bulto");
+    setPresentacion("");
+    setAplicaIva(true);
+    setAplicaIeps(false);
+    setCostoProveedor("");
+    setPrecioVenta("");
+  };
+
+  const handleCreate = async () => {
+    if (!nombre.trim() || !costoProveedor || !precioVenta) {
+      toast({
+        variant: "destructive",
+        title: "Campos requeridos",
+        description: "Nombre, costo del proveedor y precio de venta son obligatorios",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Generate codigo if empty
+      let codigoFinal = codigo.trim();
+      if (!codigoFinal) {
+        const { data: maxCodigo } = await supabase
+          .from("productos")
+          .select("codigo")
+          .like("codigo", "PROD-%")
+          .order("codigo", { ascending: false })
+          .limit(1);
+        
+        const nextNum = maxCodigo && maxCodigo[0] 
+          ? parseInt(maxCodigo[0].codigo.replace("PROD-", "")) + 1 
+          : 1;
+        codigoFinal = `PROD-${nextNum.toString().padStart(4, "0")}`;
+      }
+
+      // Create product
+      const { data: producto, error: productoError } = await supabase
+        .from("productos")
+        .insert([{
+          nombre: nombre.trim(),
+          codigo: codigoFinal,
+          unidad,
+          presentacion: presentacion || null,
+          aplica_iva,
+          aplica_ieps,
+          precio_venta: parseFloat(precioVenta),
+          ultimo_costo_compra: parseFloat(costoProveedor),
+          activo: true,
+        }])
+        .select()
+        .single();
+
+      if (productoError) throw productoError;
+
+      // Associate with supplier and set costo
+      const { error: asociarError } = await supabase
+        .from("proveedor_productos")
+        .insert({
+          proveedor_id: proveedorId,
+          producto_id: producto.id,
+          costo_proveedor: parseFloat(costoProveedor),
+        });
+
+      if (asociarError) throw asociarError;
+
+      toast({
+        title: "Producto creado",
+        description: `${nombre} ha sido creado y asociado a ${proveedorNombre}`,
+      });
+
+      resetForm();
+      onOpenChange(false);
+      onProductoCreado();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error al crear producto",
+        description: error.message,
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Calculate margin
+  const margen = costoProveedor && precioVenta 
+    ? (((parseFloat(precioVenta) - parseFloat(costoProveedor)) / parseFloat(precioVenta)) * 100).toFixed(1)
+    : null;
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) resetForm(); onOpenChange(o); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Crear producto nuevo</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Este producto se asociará automáticamente a <strong>{proveedorNombre}</strong>
+          </p>
+
+          <div className="space-y-2">
+            <Label>Nombre del producto *</Label>
+            <Input
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Ej: Almendra Natural"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Código (opcional)</Label>
+              <Input
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value)}
+                placeholder="Auto-generado"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Unidad</Label>
+              <Select value={unidad} onValueChange={(v) => setUnidad(v as typeof unidad)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bulto">Bulto</SelectItem>
+                  <SelectItem value="kg">Kilogramos</SelectItem>
+                  <SelectItem value="caja">Caja</SelectItem>
+                  <SelectItem value="pieza">Pieza</SelectItem>
+                  <SelectItem value="costal">Costal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Presentación (kg por unidad)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              value={presentacion}
+              onChange={(e) => setPresentacion(e.target.value)}
+              placeholder="Ej: 22.68"
+            />
+          </div>
+
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2">
+              <Checkbox checked={aplica_iva} onCheckedChange={(c) => setAplicaIva(!!c)} />
+              <span className="text-sm">Grava IVA (16%)</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <Checkbox checked={aplica_ieps} onCheckedChange={(c) => setAplicaIeps(!!c)} />
+              <span className="text-sm">Grava IEPS (8%)</span>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Costo proveedor (con IVA) *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={costoProveedor}
+                onChange={(e) => setCostoProveedor(e.target.value)}
+                placeholder="$0.00"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Precio venta (con IVA) *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={precioVenta}
+                onChange={(e) => setPrecioVenta(e.target.value)}
+                placeholder="$0.00"
+              />
+            </div>
+          </div>
+
+          {margen && parseFloat(margen) > 0 && (
+            <div className={`p-2 rounded text-sm ${
+              parseFloat(margen) >= 15 
+                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" 
+                : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+            }`}>
+              Margen estimado: <strong>{margen}%</strong>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreate} disabled={saving}>
+              {saving ? "Guardando..." : "Crear producto"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

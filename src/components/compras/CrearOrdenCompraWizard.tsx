@@ -86,6 +86,7 @@ interface ProveedorConfig {
   permite_combinacion?: boolean;
   es_capacidad_fija?: boolean;
   precio_por_kilo_compra?: boolean | null;
+  costo_proveedor?: number | null;
 }
 
 interface ProveedorManual {
@@ -223,7 +224,8 @@ const CrearOrdenCompraWizard = ({
             capacidad_vehiculo_kg,
             permite_combinacion,
             es_capacidad_fija,
-            precio_por_kilo_compra
+            precio_por_kilo_compra,
+            costo_proveedor
           `)
           .eq("proveedor_id", proveedorId);
         if (!error && data) {
@@ -1003,26 +1005,30 @@ const CrearOrdenCompraWizard = ({
                     setShowPreguntaPrecioKg(false);
                     
                     const prod = productosDisponibles.find(p => p.id === v);
-                    if (prod?.ultimo_costo_compra) {
+                    const provConfig = productosProveedorConfig.find(pc => pc.producto_id === v);
+                    
+                    // Use costo_proveedor if available, otherwise fallback to ultimo_costo_compra
+                    if (provConfig?.costo_proveedor) {
+                      setPrecioUnitario(provConfig.costo_proveedor.toString());
+                    } else if (prod?.ultimo_costo_compra) {
                       setPrecioUnitario(prod.ultimo_costo_compra.toString());
+                    } else {
+                      setPrecioUnitario("");
                     }
+                    
                     if (prod?.kg_por_unidad) {
                       setKgPorUnidad(prod.kg_por_unidad.toString());
                     }
                     
-                    // Check proveedor-producto config first
-                    const provConfig = productosProveedorConfig.find(pc => pc.producto_id === v);
+                    // Check proveedor-producto config for precio por kilo
                     if (tipoProveedor === 'catalogo' && provConfig) {
                       if (provConfig.precio_por_kilo_compra !== null && provConfig.precio_por_kilo_compra !== undefined) {
-                        // Use stored preference
                         setUsaPrecioPorKg(provConfig.precio_por_kilo_compra);
                       } else {
-                        // Not configured - ask the user
                         setShowPreguntaPrecioKg(true);
-                        setUsaPrecioPorKg(false); // Default to false until user answers
+                        setUsaPrecioPorKg(false);
                       }
                     } else if (tipoProveedor === 'manual') {
-                      // Manual provider - always show toggle
                       setUsaPrecioPorKg(false);
                     }
                   }}>
@@ -1030,12 +1036,22 @@ const CrearOrdenCompraWizard = ({
                       <SelectValue placeholder="Selecciona..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {productosDisponibles.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.nombre}
-                          {p.marca && <span className="text-muted-foreground ml-1">({p.marca})</span>}
-                        </SelectItem>
-                      ))}
+                      {productosDisponibles.map((p) => {
+                        const provConfig = productosProveedorConfig.find(pc => pc.producto_id === p.id);
+                        return (
+                          <SelectItem key={p.id} value={p.id}>
+                            <div className="flex items-center gap-2">
+                              <span>{p.nombre}</span>
+                              {p.marca && <span className="text-muted-foreground">({p.marca})</span>}
+                              {provConfig?.costo_proveedor && (
+                                <span className="text-xs text-green-600 dark:text-green-400">
+                                  ${provConfig.costo_proveedor.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
