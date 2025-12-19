@@ -30,14 +30,13 @@ import {
 } from "@/components/ui/dialog";
 import { 
   Plus, Trash2, Loader2, Truck, ArrowRight, ArrowLeft, Check, 
-  Calendar as CalendarIcon, CreditCard, ChevronDown, ChevronUp
+  Calendar as CalendarIcon, CreditCard, ChevronDown, ChevronUp, Package
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { formatCurrency } from "@/lib/utils";
 import { sendPushNotification } from "@/services/pushNotifications";
@@ -109,21 +108,20 @@ const CrearOrdenCompraWizard = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Wizard state
+  // Wizard state - now 4 steps
   const [step, setStep] = useState(1);
   
-  // Step 1: Proveedor
+  // Step 1: Proveedor y Pago
   const [tipoProveedor, setTipoProveedor] = useState<'catalogo' | 'manual'>('catalogo');
   const [proveedorId, setProveedorId] = useState("");
   const [proveedorNombreManual, setProveedorNombreManual] = useState("");
   const [proveedorTelefonoManual, setProveedorTelefonoManual] = useState("");
   const [notasProveedorManual, setNotasProveedorManual] = useState("");
   const [showProveedorSuggestions, setShowProveedorSuggestions] = useState(false);
-  const [fechaEntrega, setFechaEntrega] = useState("");
+  const [tipoPago, setTipoPago] = useState<'contra_entrega' | 'anticipado'>('contra_entrega');
   
   // Advanced options (collapsed by default)
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [tipoPago, setTipoPago] = useState<'contra_entrega' | 'anticipado'>('contra_entrega');
   const [notas, setNotas] = useState("");
   
   // Step 2: Productos
@@ -138,14 +136,15 @@ const CrearOrdenCompraWizard = ({
   const [precioPorKg, setPrecioPorKg] = useState("");
   const [kgPorUnidad, setKgPorUnidad] = useState("");
   
-  // Multiple deliveries (collapsed)
-  const [entregasMultiples, setEntregasMultiples] = useState(false);
-  const [bultosPorEntrega, setBultosPorEntrega] = useState("");
-  const [entregasProgramadas, setEntregasProgramadas] = useState<EntregaProgramada[]>([]);
-  
   // Vehicle mode
   const [modoCreacion, setModoCreacion] = useState<'manual' | 'vehiculos'>('manual');
   const [numeroVehiculos, setNumeroVehiculos] = useState("");
+  
+  // Step 3: Programar Entregas
+  const [tipoEntrega, setTipoEntrega] = useState<'unica' | 'multiple'>('unica');
+  const [fechaEntregaUnica, setFechaEntregaUnica] = useState("");
+  const [bultosPorEntrega, setBultosPorEntrega] = useState("");
+  const [entregasProgramadas, setEntregasProgramadas] = useState<EntregaProgramada[]>([]);
   
   // Folio (auto-generated)
   const [folio, setFolio] = useState("");
@@ -186,10 +185,6 @@ const CrearOrdenCompraWizard = ({
   useEffect(() => {
     if (open) {
       generateNextFolio();
-      // Set default date to tomorrow
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      setFechaEntrega(format(tomorrow, "yyyy-MM-dd"));
     }
   }, [open]);
   
@@ -273,7 +268,7 @@ const CrearOrdenCompraWizard = ({
   const totalesOrden = calcularTotalesOrden();
   const cantidadTotalBultos = productosEnOrden.reduce((sum, p) => sum + p.cantidad, 0);
 
-  // Calculate deliveries
+  // Calculate deliveries for multiple mode
   const calcularEntregas = () => {
     const bultosPorTrailer = parseInt(bultosPorEntrega) || 0;
     
@@ -310,6 +305,15 @@ const CrearOrdenCompraWizard = ({
       prev.map((e, i) => i === index ? { ...e, cantidad_bultos: cantidad } : e)
     );
   };
+
+  // Initialize single delivery date when entering step 3
+  useEffect(() => {
+    if (step === 3 && tipoEntrega === 'unica' && !fechaEntregaUnica) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      setFechaEntregaUnica(format(tomorrow, "yyyy-MM-dd"));
+    }
+  }, [step, tipoEntrega]);
   
   // Add product
   const agregarProducto = () => {
@@ -402,7 +406,7 @@ const CrearOrdenCompraWizard = ({
     ]);
 
     // Auto-activate multiple deliveries
-    setEntregasMultiples(true);
+    setTipoEntrega('multiple');
     
     // Auto-generate deliveries (one per vehicle)
     const entregas: EntregaProgramada[] = Array.from({ length: numVehiculos }, (_, i) => ({
@@ -434,9 +438,6 @@ const CrearOrdenCompraWizard = ({
 
   const eliminarProducto = (index: number) => {
     setProductosEnOrden(productosEnOrden.filter((_, i) => i !== index));
-    if (entregasMultiples) {
-      setTimeout(calcularEntregas, 0);
-    }
   };
 
   const resetForm = () => {
@@ -447,13 +448,13 @@ const CrearOrdenCompraWizard = ({
     setProveedorTelefonoManual("");
     setNotasProveedorManual("");
     setShowProveedorSuggestions(false);
-    setFechaEntrega("");
-    setShowAdvanced(false);
     setTipoPago('contra_entrega');
+    setShowAdvanced(false);
     setNotas("");
     setProductosEnOrden([]);
     resetProductoForm();
-    setEntregasMultiples(false);
+    setTipoEntrega('unica');
+    setFechaEntregaUnica("");
     setBultosPorEntrega("");
     setEntregasProgramadas([]);
     setModoCreacion('manual');
@@ -493,6 +494,9 @@ const CrearOrdenCompraWizard = ({
       const impuestos = ivaAmount + iepsAmount;
       const total = subtotalBase + impuestos;
 
+      const entregasMultiples = tipoEntrega === 'multiple';
+      const fechaEntrega = tipoEntrega === 'unica' ? fechaEntregaUnica : null;
+
       // Create orden
       const { data: orden, error: ordenError } = await supabase
         .from("ordenes_compra")
@@ -502,7 +506,7 @@ const CrearOrdenCompraWizard = ({
           proveedor_nombre_manual: tipoProveedor === 'manual' ? proveedorNombreManual : null,
           proveedor_telefono_manual: tipoProveedor === 'manual' ? proveedorTelefonoManual || null : null,
           notas_proveedor_manual: tipoProveedor === 'manual' ? notasProveedorManual || null : null,
-          fecha_entrega_programada: entregasMultiples ? null : (fechaEntrega || null),
+          fecha_entrega_programada: fechaEntrega,
           subtotal: subtotalBase,
           impuestos,
           total,
@@ -548,7 +552,7 @@ const CrearOrdenCompraWizard = ({
           .insert(entregas);
 
         if (entregasError) throw entregasError;
-      } else if (!entregasMultiples && fechaEntrega) {
+      } else if (!entregasMultiples && fechaEntregaUnica) {
         const cantidadTotalBultos = productosEnOrden.reduce((sum, p) => sum + p.cantidad, 0);
         
         const { error: entregaError } = await supabase
@@ -557,7 +561,7 @@ const CrearOrdenCompraWizard = ({
             orden_compra_id: orden.id,
             numero_entrega: 1,
             cantidad_bultos: cantidadTotalBultos,
-            fecha_programada: fechaEntrega,
+            fecha_programada: fechaEntregaUnica,
             status: "programada",
           });
 
@@ -584,30 +588,29 @@ const CrearOrdenCompraWizard = ({
       queryClient.invalidateQueries({ queryKey: ["proveedores-manuales-autocomplete"] });
       toast({
         title: "Orden creada",
-        description: entregasMultiples 
+        description: tipoEntrega === 'multiple' 
           ? `Orden creada con ${entregasProgramadas.length} entregas programadas`
           : "La orden de compra se ha creado exitosamente",
       });
       
       // Send push notification
-      const tieneEntregaProgramada = fechaEntrega || entregasProgramadas.some(e => e.fecha_programada);
-      if (tieneEntregaProgramada) {
+      const fechaEntregaReal = tipoEntrega === 'unica' 
+        ? fechaEntregaUnica 
+        : entregasProgramadas[0]?.fecha_programada;
+      
+      if (fechaEntregaReal) {
         const proveedorNombreNotif = tipoProveedor === 'catalogo' 
           ? proveedores.find(p => p.id === proveedorId)?.nombre || 'Proveedor'
           : proveedorNombreManual || 'Proveedor';
         
-        const fechaEntregaReal = fechaEntrega || entregasProgramadas[0]?.fecha_programada;
-        const esParaHoy = fechaEntregaReal && 
-          format(new Date(fechaEntregaReal), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+        const esParaHoy = format(new Date(fechaEntregaReal), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
         
-        const fechaNotif = fechaEntregaReal 
-          ? format(new Date(fechaEntregaReal), "dd/MM/yyyy", { locale: es })
-          : '';
+        const fechaNotif = format(new Date(fechaEntregaReal), "dd/MM/yyyy", { locale: es });
         
         sendPushNotification({
           roles: ['almacen'],
           title: esParaHoy ? '🔴 ENTREGA HOY' : '🚚 Nueva entrega programada',
-          body: `${orden.folio} - ${proveedorNombreNotif}${fechaNotif ? ` - ${fechaNotif}` : ''}`,
+          body: `${orden.folio} - ${proveedorNombreNotif} - ${fechaNotif}`,
           data: {
             type: 'recepcion_programada',
             orden_id: orden.id,
@@ -632,7 +635,6 @@ const CrearOrdenCompraWizard = ({
   const canProceedStep1 = () => {
     if (tipoProveedor === 'catalogo' && !proveedorId) return false;
     if (tipoProveedor === 'manual' && !proveedorNombreManual.trim()) return false;
-    if (!fechaEntrega && !entregasMultiples) return false;
     return true;
   };
 
@@ -640,11 +642,22 @@ const CrearOrdenCompraWizard = ({
     return productosEnOrden.length > 0;
   };
 
+  const canProceedStep3 = () => {
+    if (tipoEntrega === 'unica') {
+      return !!fechaEntregaUnica;
+    } else {
+      // At least one delivery with a date
+      return entregasProgramadas.length > 0 && entregasProgramadas.some(e => e.fecha_programada);
+    }
+  };
+
   const handleNextStep = () => {
     if (step === 1 && canProceedStep1()) {
       setStep(2);
     } else if (step === 2 && canProceedStep2()) {
       setStep(3);
+    } else if (step === 3 && canProceedStep3()) {
+      setStep(4);
     }
   };
 
@@ -663,6 +676,12 @@ const CrearOrdenCompraWizard = ({
     return proveedorNombreManual;
   };
 
+  // Sum of multiple deliveries
+  const sumaBultosEntregas = entregasProgramadas.reduce((sum, e) => sum + e.cantidad_bultos, 0);
+  const entregasValidas = tipoEntrega === 'multiple' 
+    ? sumaBultosEntregas === cantidadTotalBultos
+    : true;
+
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) resetForm(); onOpenChange(o); }}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -670,7 +689,7 @@ const CrearOrdenCompraWizard = ({
           <DialogTitle className="flex items-center justify-between">
             <span>Nueva Orden de Compra</span>
             <div className="flex items-center gap-2">
-              {[1, 2, 3].map((s) => (
+              {[1, 2, 3, 4].map((s) => (
                 <div
                   key={s}
                   className={cn(
@@ -689,12 +708,12 @@ const CrearOrdenCompraWizard = ({
           </DialogTitle>
         </DialogHeader>
 
-        {/* Step 1: Proveedor y Fecha */}
+        {/* Step 1: Proveedor y Pago */}
         {step === 1 && (
           <div className="space-y-6">
             <div className="text-center pb-4 border-b">
               <h3 className="text-lg font-semibold">¿A quién le compras?</h3>
-              <p className="text-sm text-muted-foreground">Selecciona el proveedor y fecha de entrega</p>
+              <p className="text-sm text-muted-foreground">Selecciona el proveedor y tipo de pago</p>
             </div>
 
             <div className="space-y-4">
@@ -776,34 +795,43 @@ const CrearOrdenCompraWizard = ({
                 )}
               </div>
 
-              {/* Fecha de Entrega */}
+              {/* Tipo de pago - ahora visible directamente */}
               <div>
-                <Label className="text-base">Fecha de Entrega</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal mt-2 text-base",
-                        !fechaEntrega && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {fechaEntrega 
-                        ? format(new Date(fechaEntrega + "T12:00:00"), "dd 'de' MMMM, yyyy", { locale: es }) 
-                        : "Seleccionar fecha"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={fechaEntrega ? new Date(fechaEntrega + "T12:00:00") : undefined}
-                      onSelect={(date) => setFechaEntrega(date ? format(date, "yyyy-MM-dd") : "")}
-                      initialFocus
-                      className="pointer-events-auto"
+                <Label className="text-base">¿Cómo pagarás?</Label>
+                <div className="flex gap-3 mt-2">
+                  <label 
+                    className={`flex items-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all flex-1 ${
+                      tipoPago === 'contra_entrega' 
+                        ? 'border-primary bg-primary/10' 
+                        : 'border-border hover:border-muted-foreground/50'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      checked={tipoPago === 'contra_entrega'}
+                      onChange={() => setTipoPago('contra_entrega')}
+                      className="sr-only"
                     />
-                  </PopoverContent>
-                </Popover>
+                    <Truck className="h-5 w-5" />
+                    <span>Contra Entrega</span>
+                  </label>
+                  <label 
+                    className={`flex items-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all flex-1 ${
+                      tipoPago === 'anticipado' 
+                        ? 'border-primary bg-primary/10' 
+                        : 'border-border hover:border-muted-foreground/50'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      checked={tipoPago === 'anticipado'}
+                      onChange={() => setTipoPago('anticipado')}
+                      className="sr-only"
+                    />
+                    <CreditCard className="h-5 w-5" />
+                    <span>Pago Anticipado</span>
+                  </label>
+                </div>
               </div>
 
               {/* Advanced options - collapsed */}
@@ -813,45 +841,6 @@ const CrearOrdenCompraWizard = ({
                   Opciones avanzadas
                 </CollapsibleTrigger>
                 <CollapsibleContent className="space-y-4 pt-2">
-                  {/* Tipo de pago */}
-                  <div>
-                    <Label>Tipo de Pago</Label>
-                    <div className="flex gap-3 mt-2">
-                      <label 
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer transition-all ${
-                          tipoPago === 'contra_entrega' 
-                            ? 'border-primary bg-primary/10' 
-                            : 'border-border hover:border-muted-foreground/50'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          checked={tipoPago === 'contra_entrega'}
-                          onChange={() => setTipoPago('contra_entrega')}
-                          className="sr-only"
-                        />
-                        <Truck className="h-4 w-4" />
-                        <span className="text-sm">Contra Entrega</span>
-                      </label>
-                      <label 
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer transition-all ${
-                          tipoPago === 'anticipado' 
-                            ? 'border-primary bg-primary/10' 
-                            : 'border-border hover:border-muted-foreground/50'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          checked={tipoPago === 'anticipado'}
-                          onChange={() => setTipoPago('anticipado')}
-                          className="sr-only"
-                        />
-                        <CreditCard className="h-4 w-4" />
-                        <span className="text-sm">Pago Anticipado</span>
-                      </label>
-                    </div>
-                  </div>
-
                   {/* Notas */}
                   <div>
                     <Label>Notas</Label>
@@ -933,69 +922,58 @@ const CrearOrdenCompraWizard = ({
 
               {/* Product form */}
               <div className="grid grid-cols-12 gap-3 items-end">
-                <div className={modoCreacion === 'vehiculos' ? "col-span-5" : "col-span-5"}>
+                <div className="col-span-4">
                   <Label>Producto</Label>
-                  <Select
-                    value={productoSeleccionado}
-                    onValueChange={(value) => {
-                      setProductoSeleccionado(value);
-                      const prod = productosDisponibles.find((p) => p.id === value);
-                      if (prod?.ultimo_costo_compra) {
-                        setPrecioUnitario(prod.ultimo_costo_compra.toString());
-                      }
-                      if (prod?.kg_por_unidad) {
-                        setKgPorUnidad(prod.kg_por_unidad.toString());
-                      } else {
-                        setKgPorUnidad("");
-                      }
-                    }}
-                    disabled={tipoProveedor === 'catalogo' && !proveedorId}
-                  >
+                  <Select value={productoSeleccionado} onValueChange={(v) => {
+                    setProductoSeleccionado(v);
+                    const prod = productosDisponibles.find(p => p.id === v);
+                    if (prod?.ultimo_costo_compra) {
+                      setPrecioUnitario(prod.ultimo_costo_compra.toString());
+                    }
+                    if (prod?.kg_por_unidad) {
+                      setKgPorUnidad(prod.kg_por_unidad.toString());
+                    }
+                  }}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar" />
+                      <SelectValue placeholder="Selecciona..." />
                     </SelectTrigger>
                     <SelectContent>
                       {productosDisponibles.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
-                          <div className="flex items-center gap-2">
-                            {p.nombre}
-                            {p.ultimo_costo_compra && (
-                              <span className="text-xs text-muted-foreground">
-                                (${p.ultimo_costo_compra})
-                              </span>
-                            )}
-                          </div>
+                          {p.nombre}
+                          {p.marca && <span className="text-muted-foreground ml-1">({p.marca})</span>}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {modoCreacion === 'vehiculos' && productoSeleccionado && configTransporteProducto?.capacidad_vehiculo_bultos ? (
-                  <div className="col-span-2">
+                {modoCreacion === 'vehiculos' ? (
+                  <div className="col-span-3">
                     <Label>Vehículos</Label>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      value={numeroVehiculos}
-                      onChange={(e) => setNumeroVehiculos(e.target.value.replace(/\D/g, ''))}
-                      placeholder="Ej: 5"
-                    />
-                    {numeroVehiculos && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {(parseInt(numeroVehiculos) * configTransporteProducto.capacidad_vehiculo_bultos).toLocaleString()} u.
-                      </p>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={numeroVehiculos}
+                        onChange={(e) => setNumeroVehiculos(e.target.value)}
+                        placeholder="Ej: 3"
+                        min="1"
+                      />
+                      {configTransporteProducto?.capacidad_vehiculo_bultos && (
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          ×{configTransporteProducto.capacidad_vehiculo_bultos.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ) : (
-                  <div className="col-span-2">
+                  <div className="col-span-3">
                     <Label>Cantidad</Label>
                     <Input
-                      type="text"
-                      inputMode="numeric"
+                      type="number"
                       value={cantidad}
-                      onChange={(e) => setCantidad(e.target.value.replace(/\D/g, ''))}
-                      placeholder="0"
+                      onChange={(e) => setCantidad(e.target.value)}
+                      placeholder="Ej: 1200"
                     />
                   </div>
                 )}
@@ -1105,40 +1083,153 @@ const CrearOrdenCompraWizard = ({
                   </Table>
                 </div>
               )}
+            </div>
 
-              {/* Multiple deliveries - collapsed */}
-              {productosEnOrden.length > 0 && (
-                <Collapsible open={entregasMultiples} onOpenChange={setEntregasMultiples}>
-                  <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground py-2">
-                    <Switch checked={entregasMultiples} />
-                    <span>Dividir en múltiples entregas</span>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-4 pt-2">
-                    <div className="grid grid-cols-3 gap-4 items-end">
-                      <div>
-                        <Label>Total bultos</Label>
-                        <Input value={cantidadTotalBultos.toLocaleString()} disabled className="bg-muted" />
-                      </div>
-                      <div>
-                        <Label>Por entrega</Label>
-                        <Input
-                          type="number"
-                          value={bultosPorEntrega}
-                          onChange={(e) => setBultosPorEntrega(e.target.value)}
-                          placeholder="Ej: 1200"
-                        />
-                      </div>
-                      <Button type="button" variant="secondary" onClick={calcularEntregas}>
-                        Calcular
-                      </Button>
+            <div className="flex justify-between pt-4 border-t">
+              <Button variant="outline" onClick={handlePrevStep} className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Atrás
+              </Button>
+              <Button 
+                onClick={handleNextStep} 
+                disabled={!canProceedStep2()}
+                className="gap-2"
+              >
+                Programar Entregas
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Programar Entregas (NUEVO) */}
+        {step === 3 && (
+          <div className="space-y-6">
+            <div className="text-center pb-4 border-b">
+              <h3 className="text-lg font-semibold">¿Cuándo te llega?</h3>
+              <p className="text-sm text-muted-foreground">
+                Programa la(s) fecha(s) de entrega
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Resumen de productos */}
+              <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                <Package className="h-6 w-6 text-primary" />
+                <div>
+                  <p className="font-semibold">{cantidadTotalBultos.toLocaleString()} bultos</p>
+                  <p className="text-sm text-muted-foreground">
+                    {productosEnOrden.length} producto(s) de {getProveedorNombre()}
+                  </p>
+                </div>
+              </div>
+
+              {/* Tipo de entrega */}
+              <div>
+                <Label className="text-base">¿Cómo deseas recibir la mercancía?</Label>
+                <div className="flex gap-3 mt-2">
+                  <label 
+                    className={`flex items-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all flex-1 ${
+                      tipoEntrega === 'unica' 
+                        ? 'border-primary bg-primary/10' 
+                        : 'border-border hover:border-muted-foreground/50'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      checked={tipoEntrega === 'unica'}
+                      onChange={() => setTipoEntrega('unica')}
+                      className="sr-only"
+                    />
+                    <CalendarIcon className="h-5 w-5" />
+                    <div>
+                      <span className="font-medium">Una sola entrega</span>
+                      <p className="text-xs text-muted-foreground">Todo en una fecha</p>
                     </div>
+                  </label>
+                  <label 
+                    className={`flex items-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all flex-1 ${
+                      tipoEntrega === 'multiple' 
+                        ? 'border-primary bg-primary/10' 
+                        : 'border-border hover:border-muted-foreground/50'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      checked={tipoEntrega === 'multiple'}
+                      onChange={() => setTipoEntrega('multiple')}
+                      className="sr-only"
+                    />
+                    <Truck className="h-5 w-5" />
+                    <div>
+                      <span className="font-medium">Múltiples entregas</span>
+                      <p className="text-xs text-muted-foreground">Dividir en varias fechas</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
 
-                    {entregasProgramadas.length > 0 && (
+              {/* Una sola entrega */}
+              {tipoEntrega === 'unica' && (
+                <div className="p-4 border rounded-lg space-y-3">
+                  <Label>Fecha de Entrega</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal text-base",
+                          !fechaEntregaUnica && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {fechaEntregaUnica 
+                          ? format(new Date(fechaEntregaUnica + "T12:00:00"), "dd 'de' MMMM, yyyy", { locale: es }) 
+                          : "Seleccionar fecha"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={fechaEntregaUnica ? new Date(fechaEntregaUnica + "T12:00:00") : undefined}
+                        onSelect={(date) => setFechaEntregaUnica(date ? format(date, "yyyy-MM-dd") : "")}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
+
+              {/* Múltiples entregas */}
+              {tipoEntrega === 'multiple' && (
+                <div className="p-4 border rounded-lg space-y-4">
+                  <div className="grid grid-cols-3 gap-4 items-end">
+                    <div>
+                      <Label>Total bultos</Label>
+                      <Input value={cantidadTotalBultos.toLocaleString()} disabled className="bg-muted" />
+                    </div>
+                    <div>
+                      <Label>Bultos por entrega</Label>
+                      <Input
+                        type="number"
+                        value={bultosPorEntrega}
+                        onChange={(e) => setBultosPorEntrega(e.target.value)}
+                        placeholder="Ej: 1200"
+                      />
+                    </div>
+                    <Button type="button" variant="secondary" onClick={calcularEntregas}>
+                      Calcular
+                    </Button>
+                  </div>
+
+                  {entregasProgramadas.length > 0 && (
+                    <>
                       <div className="border rounded-lg overflow-hidden">
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>#</TableHead>
+                              <TableHead className="w-16">#</TableHead>
                               <TableHead>Bultos</TableHead>
                               <TableHead>Fecha</TableHead>
                             </TableRow>
@@ -1154,7 +1245,7 @@ const CrearOrdenCompraWizard = ({
                                     type="number"
                                     value={entrega.cantidad_bultos}
                                     onChange={(e) => updateCantidadEntrega(index, parseInt(e.target.value) || 0)}
-                                    className="w-20"
+                                    className="w-24"
                                   />
                                 </TableCell>
                                 <TableCell>
@@ -1169,9 +1260,17 @@ const CrearOrdenCompraWizard = ({
                           </TableBody>
                         </Table>
                       </div>
-                    )}
-                  </CollapsibleContent>
-                </Collapsible>
+
+                      {/* Validation message */}
+                      {!entregasValidas && (
+                        <div className="text-sm text-destructive flex items-center gap-2">
+                          <span>⚠️</span>
+                          La suma de bultos ({sumaBultosEntregas.toLocaleString()}) no coincide con el total ({cantidadTotalBultos.toLocaleString()})
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               )}
             </div>
 
@@ -1182,7 +1281,7 @@ const CrearOrdenCompraWizard = ({
               </Button>
               <Button 
                 onClick={handleNextStep} 
-                disabled={!canProceedStep2()}
+                disabled={!canProceedStep3() || !entregasValidas}
                 className="gap-2"
               >
                 Revisar
@@ -1192,8 +1291,8 @@ const CrearOrdenCompraWizard = ({
           </div>
         )}
 
-        {/* Step 3: Revisión */}
-        {step === 3 && (
+        {/* Step 4: Revisión */}
+        {step === 4 && (
           <div className="space-y-6">
             <div className="text-center pb-4 border-b">
               <h3 className="text-lg font-semibold">Revisa tu orden</h3>
@@ -1216,20 +1315,48 @@ const CrearOrdenCompraWizard = ({
                   <p className="font-semibold">{getProveedorNombre()}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Fecha de Entrega</p>
-                  <p className="font-semibold">
-                    {entregasMultiples 
-                      ? `${entregasProgramadas.length} entregas`
-                      : format(new Date(fechaEntrega + "T12:00:00"), "dd/MM/yyyy")
-                    }
-                  </p>
-                </div>
-                <div>
                   <p className="text-sm text-muted-foreground">Tipo de Pago</p>
                   <p className="font-semibold">
                     {tipoPago === 'contra_entrega' ? 'Contra Entrega' : 'Anticipado'}
                   </p>
                 </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Bultos</p>
+                  <p className="font-semibold">{cantidadTotalBultos.toLocaleString()}</p>
+                </div>
+              </div>
+
+              {/* Entregas programadas */}
+              <div className="border rounded-lg p-4 bg-primary/5">
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4" />
+                  Entregas Programadas
+                </h4>
+                {tipoEntrega === 'unica' ? (
+                  <div className="flex items-center justify-between p-3 bg-background rounded-lg">
+                    <span>Entrega única</span>
+                    <span className="font-semibold">
+                      {format(new Date(fechaEntregaUnica + "T12:00:00"), "dd/MM/yyyy")}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {entregasProgramadas.map((entrega, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-background rounded-lg">
+                        <span className="flex items-center gap-2">
+                          <Badge variant="outline">#{entrega.numero_entrega}</Badge>
+                          {entrega.cantidad_bultos.toLocaleString()} bultos
+                        </span>
+                        <span className="font-semibold">
+                          {entrega.fecha_programada 
+                            ? format(new Date(entrega.fecha_programada + "T12:00:00"), "dd/MM/yyyy")
+                            : <span className="text-muted-foreground">Sin fecha</span>
+                          }
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Productos */}
