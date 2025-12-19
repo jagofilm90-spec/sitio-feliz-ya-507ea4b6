@@ -44,6 +44,7 @@ import OCAutorizadaAlert from "./OCAutorizadaAlert";
 import EntregasPopover from "./EntregasPopover";
 import ProveedorFacturasDialog from "./ProveedorFacturasDialog";
 import { MarcarPagadoDialog } from "./MarcarPagadoDialog";
+import CrearOrdenCompraWizard from "./CrearOrdenCompraWizard";
 import { formatCurrency } from "@/lib/utils";
 import { sendPushNotification } from "@/services/pushNotifications";
 
@@ -70,6 +71,7 @@ const OrdenesCompraTab = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [accionesDialogOpen, setAccionesDialogOpen] = useState(false);
   const [autorizacionDialogOpen, setAutorizacionDialogOpen] = useState(false);
   const [ordenSeleccionada, setOrdenSeleccionada] = useState<any>(null);
@@ -155,8 +157,13 @@ const OrdenesCompraTab = () => {
     }
   };
 
-  // Open dialog for new order with auto-generated folio
-  const handleNewOrder = async () => {
+  // Open wizard for new order (simplified flow)
+  const handleNewOrder = () => {
+    setWizardOpen(true);
+  };
+
+  // Open dialog for editing (keeps full form)
+  const handleNewOrderLegacy = async () => {
     resetForm();
     setDialogOpen(true);
     await generateNextFolio();
@@ -2216,6 +2223,14 @@ const OrdenesCompraTab = () => {
         open={marcarPagadoDialogOpen}
         onOpenChange={setMarcarPagadoDialogOpen}
         orden={ordenParaPago}
+      />
+
+      <CrearOrdenCompraWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        proveedores={proveedores}
+        productos={productos}
+        proveedoresManuales={proveedoresManuales}
       />
     </Card>
   );
