@@ -1,0 +1,1323 @@
+import { useState, useEffect, useMemo } from "react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { 
+  Plus, Trash2, Loader2, Truck, ArrowRight, ArrowLeft, Check, 
+  Calendar as CalendarIcon, CreditCard, ChevronDown, ChevronUp
+} from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { formatCurrency } from "@/lib/utils";
+import { sendPushNotification } from "@/services/pushNotifications";
+
+interface ProductoEnOrden {
+  producto_id: string;
+  nombre: string;
+  cantidad: number;
+  precio_unitario: number;
+  ultimo_costo?: number;
+  subtotal: number;
+  aplica_iva: boolean;
+  aplica_ieps: boolean;
+  precio_incluye_iva: boolean;
+}
+
+interface EntregaProgramada {
+  numero_entrega: number;
+  cantidad_bultos: number;
+  fecha_programada: string;
+}
+
+interface Proveedor {
+  id: string;
+  nombre: string;
+  email?: string;
+}
+
+interface Producto {
+  id: string;
+  nombre: string;
+  marca?: string;
+  ultimo_costo_compra?: number;
+  aplica_iva?: boolean;
+  aplica_ieps?: boolean;
+  kg_por_unidad?: number;
+}
+
+interface ProveedorConfig {
+  producto_id: string;
+  tipo_vehiculo_estandar?: string;
+  capacidad_vehiculo_bultos?: number;
+  capacidad_vehiculo_kg?: number;
+  permite_combinacion?: boolean;
+  es_capacidad_fija?: boolean;
+}
+
+interface ProveedorManual {
+  nombre: string;
+  telefono: string;
+  notas: string;
+}
+
+interface CrearOrdenCompraWizardProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  proveedores: Proveedor[];
+  productos: Producto[];
+  proveedoresManuales: ProveedorManual[];
+}
+
+const CrearOrdenCompraWizard = ({
+  open,
+  onOpenChange,
+  proveedores,
+  productos,
+  proveedoresManuales,
+}: CrearOrdenCompraWizardProps) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Wizard state
+  const [step, setStep] = useState(1);
+  
+  // Step 1: Proveedor
+  const [tipoProveedor, setTipoProveedor] = useState<'catalogo' | 'manual'>('catalogo');
+  const [proveedorId, setProveedorId] = useState("");
+  const [proveedorNombreManual, setProveedorNombreManual] = useState("");
+  const [proveedorTelefonoManual, setProveedorTelefonoManual] = useState("");
+  const [notasProveedorManual, setNotasProveedorManual] = useState("");
+  const [showProveedorSuggestions, setShowProveedorSuggestions] = useState(false);
+  const [fechaEntrega, setFechaEntrega] = useState("");
+  
+  // Advanced options (collapsed by default)
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [tipoPago, setTipoPago] = useState<'contra_entrega' | 'anticipado'>('contra_entrega');
+  const [notas, setNotas] = useState("");
+  
+  // Step 2: Productos
+  const [productosEnOrden, setProductosEnOrden] = useState<ProductoEnOrden[]>([]);
+  const [productoSeleccionado, setProductoSeleccionado] = useState("");
+  const [cantidad, setCantidad] = useState("");
+  const [precioUnitario, setPrecioUnitario] = useState("");
+  const [precioIncluyeIva, setPrecioIncluyeIva] = useState(false);
+  
+  // Precio por kg (optional)
+  const [showPrecioPorKg, setShowPrecioPorKg] = useState(false);
+  const [precioPorKg, setPrecioPorKg] = useState("");
+  const [kgPorUnidad, setKgPorUnidad] = useState("");
+  
+  // Multiple deliveries (collapsed)
+  const [entregasMultiples, setEntregasMultiples] = useState(false);
+  const [bultosPorEntrega, setBultosPorEntrega] = useState("");
+  const [entregasProgramadas, setEntregasProgramadas] = useState<EntregaProgramada[]>([]);
+  
+  // Vehicle mode
+  const [modoCreacion, setModoCreacion] = useState<'manual' | 'vehiculos'>('manual');
+  const [numeroVehiculos, setNumeroVehiculos] = useState("");
+  
+  // Folio (auto-generated)
+  const [folio, setFolio] = useState("");
+  const [generatingFolio, setGeneratingFolio] = useState(false);
+  
+  // Proveedor productos config
+  const [productosProveedorConfig, setProductosProveedorConfig] = useState<ProveedorConfig[]>([]);
+  
+  // Auto-calculate precio unitario when using precio por kg
+  const precioUnitarioCalculado = showPrecioPorKg && precioPorKg && kgPorUnidad
+    ? (parseFloat(precioPorKg) * parseFloat(kgPorUnidad)).toFixed(2)
+    : "";
+  
+  // Filter products based on provider
+  const productosProveedor = productosProveedorConfig.map(p => p.producto_id);
+  
+  const proveedorTieneTransportConfig = productosProveedorConfig.some(
+    p => p.capacidad_vehiculo_bultos && p.capacidad_vehiculo_bultos > 0
+  );
+  
+  const configTransporteProducto = productosProveedorConfig.find(
+    p => p.producto_id === productoSeleccionado
+  );
+  
+  const productosDisponibles = tipoProveedor === 'manual' 
+    ? productos
+    : (proveedorId && productosProveedor.length > 0
+        ? productos.filter(p => productosProveedor.includes(p.id))
+        : productos);
+        
+  // Filter suggestions based on input
+  const proveedorSuggestions = proveedoresManuales.filter(p => 
+    p.nombre.toLowerCase().includes(proveedorNombreManual.toLowerCase()) && 
+    proveedorNombreManual.length > 0
+  );
+
+  // Generate folio on open
+  useEffect(() => {
+    if (open) {
+      generateNextFolio();
+      // Set default date to tomorrow
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      setFechaEntrega(format(tomorrow, "yyyy-MM-dd"));
+    }
+  }, [open]);
+  
+  // Load proveedor products config
+  useEffect(() => {
+    const loadConfig = async () => {
+      if (proveedorId) {
+        const { data, error } = await supabase
+          .from("proveedor_productos")
+          .select(`
+            producto_id,
+            tipo_vehiculo_estandar,
+            capacidad_vehiculo_bultos,
+            capacidad_vehiculo_kg,
+            permite_combinacion,
+            es_capacidad_fija
+          `)
+          .eq("proveedor_id", proveedorId);
+        if (!error && data) {
+          setProductosProveedorConfig(data);
+        }
+      } else {
+        setProductosProveedorConfig([]);
+      }
+    };
+    loadConfig();
+  }, [proveedorId]);
+
+  const generateNextFolio = async () => {
+    setGeneratingFolio(true);
+    try {
+      const { data, error } = await supabase.rpc("generar_folio_orden_compra");
+      if (error) throw error;
+      setFolio(data);
+    } catch (error: any) {
+      toast({
+        title: "Error al generar folio",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingFolio(false);
+    }
+  };
+  
+  // Calculate totals
+  const calcularTotalesOrden = () => {
+    let subtotalBase = 0;
+    let ivaAmount = 0;
+    let iepsAmount = 0;
+
+    for (const p of productosEnOrden) {
+      if (p.aplica_iva && p.precio_incluye_iva) {
+        const base = p.subtotal / 1.16;
+        subtotalBase += base;
+        ivaAmount += p.subtotal - base;
+      } else if (p.aplica_iva && !p.precio_incluye_iva) {
+        subtotalBase += p.subtotal;
+        ivaAmount += p.subtotal * 0.16;
+      } else {
+        subtotalBase += p.subtotal;
+      }
+      
+      if (p.aplica_ieps) {
+        const baseForIeps = p.aplica_iva && p.precio_incluye_iva 
+          ? p.subtotal / 1.16 
+          : p.subtotal;
+        iepsAmount += baseForIeps * 0.08;
+      }
+    }
+
+    return {
+      subtotal: subtotalBase,
+      iva: ivaAmount,
+      ieps: iepsAmount,
+      impuestos: ivaAmount + iepsAmount,
+      total: subtotalBase + ivaAmount + iepsAmount,
+    };
+  };
+
+  const totalesOrden = calcularTotalesOrden();
+  const cantidadTotalBultos = productosEnOrden.reduce((sum, p) => sum + p.cantidad, 0);
+
+  // Calculate deliveries
+  const calcularEntregas = () => {
+    const bultosPorTrailer = parseInt(bultosPorEntrega) || 0;
+    
+    if (cantidadTotalBultos <= 0 || bultosPorTrailer <= 0) {
+      setEntregasProgramadas([]);
+      return;
+    }
+    
+    const numEntregas = Math.ceil(cantidadTotalBultos / bultosPorTrailer);
+    const entregas: EntregaProgramada[] = [];
+    let bultosRestantes = cantidadTotalBultos;
+    
+    for (let i = 1; i <= numEntregas; i++) {
+      const bultosEntrega = Math.min(bultosPorTrailer, bultosRestantes);
+      entregas.push({
+        numero_entrega: i,
+        cantidad_bultos: bultosEntrega,
+        fecha_programada: "",
+      });
+      bultosRestantes -= bultosEntrega;
+    }
+    
+    setEntregasProgramadas(entregas);
+  };
+
+  const updateFechaEntrega = (index: number, fecha: string) => {
+    setEntregasProgramadas(prev => 
+      prev.map((e, i) => i === index ? { ...e, fecha_programada: fecha } : e)
+    );
+  };
+
+  const updateCantidadEntrega = (index: number, cantidad: number) => {
+    setEntregasProgramadas(prev => 
+      prev.map((e, i) => i === index ? { ...e, cantidad_bultos: cantidad } : e)
+    );
+  };
+  
+  // Add product
+  const agregarProducto = () => {
+    if (modoCreacion === 'vehiculos') {
+      agregarProductoPorVehiculos();
+      return;
+    }
+    
+    const precioFinal = showPrecioPorKg ? precioUnitarioCalculado : precioUnitario;
+    
+    if (!productoSeleccionado || !cantidad || !precioFinal) {
+      toast({
+        title: "Campos incompletos",
+        description: showPrecioPorKg 
+          ? "Selecciona un producto, cantidad, precio/kg y kg/unidad"
+          : "Selecciona un producto, cantidad y precio",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const producto = productosDisponibles.find((p) => p.id === productoSeleccionado);
+    if (!producto) return;
+
+    const cantidadNum = parseInt(cantidad);
+    const precioNum = parseFloat(precioFinal);
+    const subtotal = cantidadNum * precioNum;
+
+    setProductosEnOrden([
+      ...productosEnOrden,
+      {
+        producto_id: producto.id,
+        nombre: producto.nombre,
+        cantidad: cantidadNum,
+        precio_unitario: precioNum,
+        ultimo_costo: producto.ultimo_costo_compra,
+        subtotal,
+        aplica_iva: producto.aplica_iva ?? false,
+        aplica_ieps: producto.aplica_ieps ?? false,
+        precio_incluye_iva: precioIncluyeIva,
+      },
+    ]);
+
+    resetProductoForm();
+  };
+  
+  const agregarProductoPorVehiculos = () => {
+    const precioFinal = showPrecioPorKg ? precioUnitarioCalculado : precioUnitario;
+    
+    if (!productoSeleccionado || !numeroVehiculos || !precioFinal) {
+      toast({
+        title: "Campos incompletos",
+        description: "Selecciona un producto, número de vehículos y precio",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!configTransporteProducto?.capacidad_vehiculo_bultos) {
+      toast({
+        title: "Sin configuración de transporte",
+        description: "Este producto no tiene capacidad por vehículo configurada",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const producto = productosDisponibles.find((p) => p.id === productoSeleccionado);
+    if (!producto) return;
+
+    const numVehiculos = parseInt(numeroVehiculos);
+    const capacidad = configTransporteProducto.capacidad_vehiculo_bultos;
+    const cantidadTotal = capacidad * numVehiculos;
+    const precioNum = parseFloat(precioFinal);
+    const subtotal = cantidadTotal * precioNum;
+
+    setProductosEnOrden([
+      ...productosEnOrden,
+      {
+        producto_id: producto.id,
+        nombre: producto.nombre,
+        cantidad: cantidadTotal,
+        precio_unitario: precioNum,
+        ultimo_costo: producto.ultimo_costo_compra,
+        subtotal,
+        aplica_iva: producto.aplica_iva ?? false,
+        aplica_ieps: producto.aplica_ieps ?? false,
+        precio_incluye_iva: precioIncluyeIva,
+      },
+    ]);
+
+    // Auto-activate multiple deliveries
+    setEntregasMultiples(true);
+    
+    // Auto-generate deliveries (one per vehicle)
+    const entregas: EntregaProgramada[] = Array.from({ length: numVehiculos }, (_, i) => ({
+      numero_entrega: i + 1,
+      cantidad_bultos: capacidad,
+      fecha_programada: "",
+    }));
+    setEntregasProgramadas(entregas);
+    setBultosPorEntrega(capacidad.toString());
+
+    resetProductoForm();
+    
+    toast({
+      title: "Producto agregado",
+      description: `${numVehiculos} vehículos de ${producto.nombre} (${cantidadTotal.toLocaleString()} unidades)`,
+    });
+  };
+
+  const resetProductoForm = () => {
+    setProductoSeleccionado("");
+    setCantidad("");
+    setPrecioUnitario("");
+    setPrecioIncluyeIva(false);
+    setShowPrecioPorKg(false);
+    setPrecioPorKg("");
+    setKgPorUnidad("");
+    setNumeroVehiculos("");
+  };
+
+  const eliminarProducto = (index: number) => {
+    setProductosEnOrden(productosEnOrden.filter((_, i) => i !== index));
+    if (entregasMultiples) {
+      setTimeout(calcularEntregas, 0);
+    }
+  };
+
+  const resetForm = () => {
+    setStep(1);
+    setTipoProveedor('catalogo');
+    setProveedorId("");
+    setProveedorNombreManual("");
+    setProveedorTelefonoManual("");
+    setNotasProveedorManual("");
+    setShowProveedorSuggestions(false);
+    setFechaEntrega("");
+    setShowAdvanced(false);
+    setTipoPago('contra_entrega');
+    setNotas("");
+    setProductosEnOrden([]);
+    resetProductoForm();
+    setEntregasMultiples(false);
+    setBultosPorEntrega("");
+    setEntregasProgramadas([]);
+    setModoCreacion('manual');
+    setFolio("");
+  };
+  
+  // Create orden mutation
+  const createOrden = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user");
+
+      let subtotalBase = 0;
+      let ivaAmount = 0;
+      let iepsAmount = 0;
+
+      for (const p of productosEnOrden) {
+        if (p.aplica_iva && p.precio_incluye_iva) {
+          const base = p.subtotal / 1.16;
+          subtotalBase += base;
+          ivaAmount += p.subtotal - base;
+        } else if (p.aplica_iva && !p.precio_incluye_iva) {
+          subtotalBase += p.subtotal;
+          ivaAmount += p.subtotal * 0.16;
+        } else {
+          subtotalBase += p.subtotal;
+        }
+        
+        if (p.aplica_ieps) {
+          const baseForIeps = p.aplica_iva && p.precio_incluye_iva 
+            ? p.subtotal / 1.16 
+            : p.subtotal;
+          iepsAmount += baseForIeps * 0.08;
+        }
+      }
+
+      const impuestos = ivaAmount + iepsAmount;
+      const total = subtotalBase + impuestos;
+
+      // Create orden
+      const { data: orden, error: ordenError } = await supabase
+        .from("ordenes_compra")
+        .insert({
+          folio,
+          proveedor_id: tipoProveedor === 'catalogo' ? proveedorId : null,
+          proveedor_nombre_manual: tipoProveedor === 'manual' ? proveedorNombreManual : null,
+          proveedor_telefono_manual: tipoProveedor === 'manual' ? proveedorTelefonoManual || null : null,
+          notas_proveedor_manual: tipoProveedor === 'manual' ? notasProveedorManual || null : null,
+          fecha_entrega_programada: entregasMultiples ? null : (fechaEntrega || null),
+          subtotal: subtotalBase,
+          impuestos,
+          total,
+          notas,
+          creado_por: user.id,
+          status: "pendiente",
+          entregas_multiples: entregasMultiples,
+          tipo_pago: tipoPago,
+          status_pago: 'pendiente',
+        })
+        .select()
+        .single();
+
+      if (ordenError) throw ordenError;
+
+      // Create detalles
+      const detalles = productosEnOrden.map((p) => ({
+        orden_compra_id: orden.id,
+        producto_id: p.producto_id,
+        cantidad_ordenada: p.cantidad,
+        precio_unitario_compra: p.precio_unitario,
+        subtotal: p.subtotal,
+      }));
+
+      const { error: detallesError } = await supabase
+        .from("ordenes_compra_detalles")
+        .insert(detalles);
+
+      if (detallesError) throw detallesError;
+
+      // Create deliveries
+      if (entregasMultiples && entregasProgramadas.length > 0) {
+        const entregas = entregasProgramadas.map((e) => ({
+          orden_compra_id: orden.id,
+          numero_entrega: e.numero_entrega,
+          cantidad_bultos: e.cantidad_bultos,
+          fecha_programada: e.fecha_programada || null,
+          status: e.fecha_programada ? "programada" : "pendiente_fecha",
+        }));
+
+        const { error: entregasError } = await supabase
+          .from("ordenes_compra_entregas")
+          .insert(entregas);
+
+        if (entregasError) throw entregasError;
+      } else if (!entregasMultiples && fechaEntrega) {
+        const cantidadTotalBultos = productosEnOrden.reduce((sum, p) => sum + p.cantidad, 0);
+        
+        const { error: entregaError } = await supabase
+          .from("ordenes_compra_entregas")
+          .insert({
+            orden_compra_id: orden.id,
+            numero_entrega: 1,
+            cantidad_bultos: cantidadTotalBultos,
+            fecha_programada: fechaEntrega,
+            status: "programada",
+          });
+
+        if (entregaError) throw entregaError;
+      }
+
+      // Update productos with last purchase info
+      for (const p of productosEnOrden) {
+        await supabase
+          .from("productos")
+          .update({
+            ultimo_costo_compra: p.precio_unitario,
+            fecha_ultima_compra: new Date().toISOString(),
+          })
+          .eq("id", p.producto_id);
+      }
+
+      return orden;
+    },
+    onSuccess: async (orden) => {
+      queryClient.invalidateQueries({ queryKey: ["ordenes_compra"] });
+      queryClient.invalidateQueries({ queryKey: ["ordenes_calendario"] });
+      queryClient.invalidateQueries({ queryKey: ["productos"] });
+      queryClient.invalidateQueries({ queryKey: ["proveedores-manuales-autocomplete"] });
+      toast({
+        title: "Orden creada",
+        description: entregasMultiples 
+          ? `Orden creada con ${entregasProgramadas.length} entregas programadas`
+          : "La orden de compra se ha creado exitosamente",
+      });
+      
+      // Send push notification
+      const tieneEntregaProgramada = fechaEntrega || entregasProgramadas.some(e => e.fecha_programada);
+      if (tieneEntregaProgramada) {
+        const proveedorNombreNotif = tipoProveedor === 'catalogo' 
+          ? proveedores.find(p => p.id === proveedorId)?.nombre || 'Proveedor'
+          : proveedorNombreManual || 'Proveedor';
+        
+        const fechaEntregaReal = fechaEntrega || entregasProgramadas[0]?.fecha_programada;
+        const esParaHoy = fechaEntregaReal && 
+          format(new Date(fechaEntregaReal), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+        
+        const fechaNotif = fechaEntregaReal 
+          ? format(new Date(fechaEntregaReal), "dd/MM/yyyy", { locale: es })
+          : '';
+        
+        sendPushNotification({
+          roles: ['almacen'],
+          title: esParaHoy ? '🔴 ENTREGA HOY' : '🚚 Nueva entrega programada',
+          body: `${orden.folio} - ${proveedorNombreNotif}${fechaNotif ? ` - ${fechaNotif}` : ''}`,
+          data: {
+            type: 'recepcion_programada',
+            orden_id: orden.id,
+            folio: orden.folio
+          }
+        });
+      }
+      
+      resetForm();
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Validation for each step
+  const canProceedStep1 = () => {
+    if (tipoProveedor === 'catalogo' && !proveedorId) return false;
+    if (tipoProveedor === 'manual' && !proveedorNombreManual.trim()) return false;
+    if (!fechaEntrega && !entregasMultiples) return false;
+    return true;
+  };
+
+  const canProceedStep2 = () => {
+    return productosEnOrden.length > 0;
+  };
+
+  const handleNextStep = () => {
+    if (step === 1 && canProceedStep1()) {
+      setStep(2);
+    } else if (step === 2 && canProceedStep2()) {
+      setStep(3);
+    }
+  };
+
+  const handlePrevStep = () => {
+    if (step > 1) setStep(step - 1);
+  };
+
+  const handleCreate = () => {
+    createOrden.mutate();
+  };
+
+  const getProveedorNombre = () => {
+    if (tipoProveedor === 'catalogo') {
+      return proveedores.find(p => p.id === proveedorId)?.nombre || '';
+    }
+    return proveedorNombreManual;
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) resetForm(); onOpenChange(o); }}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center justify-between">
+            <span>Nueva Orden de Compra</span>
+            <div className="flex items-center gap-2">
+              {[1, 2, 3].map((s) => (
+                <div
+                  key={s}
+                  className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all",
+                    s === step 
+                      ? "bg-primary text-primary-foreground" 
+                      : s < step 
+                        ? "bg-primary/20 text-primary" 
+                        : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {s < step ? <Check className="h-4 w-4" /> : s}
+                </div>
+              ))}
+            </div>
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Step 1: Proveedor y Fecha */}
+        {step === 1 && (
+          <div className="space-y-6">
+            <div className="text-center pb-4 border-b">
+              <h3 className="text-lg font-semibold">¿A quién le compras?</h3>
+              <p className="text-sm text-muted-foreground">Selecciona el proveedor y fecha de entrega</p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Proveedor */}
+              <div>
+                <Label className="text-base">Proveedor</Label>
+                <div className="flex gap-4 mt-2 mb-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={tipoProveedor === 'catalogo'}
+                      onChange={() => {
+                        setTipoProveedor('catalogo');
+                        setProveedorNombreManual("");
+                        setProveedorTelefonoManual("");
+                      }}
+                      className="accent-primary"
+                    />
+                    <span className="text-sm">Del catálogo</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={tipoProveedor === 'manual'}
+                      onChange={() => {
+                        setTipoProveedor('manual');
+                        setProveedorId("");
+                      }}
+                      className="accent-primary"
+                    />
+                    <span className="text-sm">No registrado</span>
+                  </label>
+                </div>
+                
+                {tipoProveedor === 'catalogo' ? (
+                  <Select value={proveedorId} onValueChange={setProveedorId}>
+                    <SelectTrigger className="text-base">
+                      <SelectValue placeholder="Selecciona un proveedor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {proveedores.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="relative">
+                    <Input
+                      value={proveedorNombreManual}
+                      onChange={(e) => {
+                        setProveedorNombreManual(e.target.value);
+                        setShowProveedorSuggestions(true);
+                      }}
+                      onFocus={() => setShowProveedorSuggestions(true)}
+                      placeholder="Nombre del proveedor"
+                      className="text-base"
+                    />
+                    {showProveedorSuggestions && proveedorSuggestions.length > 0 && (
+                      <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {proveedorSuggestions.slice(0, 5).map((sugg, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            className="w-full px-3 py-2 text-left hover:bg-accent text-sm"
+                            onClick={() => {
+                              setProveedorNombreManual(sugg.nombre);
+                              setProveedorTelefonoManual(sugg.telefono);
+                              setNotasProveedorManual(sugg.notas);
+                              setShowProveedorSuggestions(false);
+                            }}
+                          >
+                            {sugg.nombre}
+                            {sugg.telefono && <span className="text-muted-foreground ml-2">· {sugg.telefono}</span>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Fecha de Entrega */}
+              <div>
+                <Label className="text-base">Fecha de Entrega</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal mt-2 text-base",
+                        !fechaEntrega && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {fechaEntrega 
+                        ? format(new Date(fechaEntrega + "T12:00:00"), "dd 'de' MMMM, yyyy", { locale: es }) 
+                        : "Seleccionar fecha"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={fechaEntrega ? new Date(fechaEntrega + "T12:00:00") : undefined}
+                      onSelect={(date) => setFechaEntrega(date ? format(date, "yyyy-MM-dd") : "")}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Advanced options - collapsed */}
+              <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+                <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground py-2">
+                  {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  Opciones avanzadas
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 pt-2">
+                  {/* Tipo de pago */}
+                  <div>
+                    <Label>Tipo de Pago</Label>
+                    <div className="flex gap-3 mt-2">
+                      <label 
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer transition-all ${
+                          tipoPago === 'contra_entrega' 
+                            ? 'border-primary bg-primary/10' 
+                            : 'border-border hover:border-muted-foreground/50'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          checked={tipoPago === 'contra_entrega'}
+                          onChange={() => setTipoPago('contra_entrega')}
+                          className="sr-only"
+                        />
+                        <Truck className="h-4 w-4" />
+                        <span className="text-sm">Contra Entrega</span>
+                      </label>
+                      <label 
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer transition-all ${
+                          tipoPago === 'anticipado' 
+                            ? 'border-primary bg-primary/10' 
+                            : 'border-border hover:border-muted-foreground/50'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          checked={tipoPago === 'anticipado'}
+                          onChange={() => setTipoPago('anticipado')}
+                          className="sr-only"
+                        />
+                        <CreditCard className="h-4 w-4" />
+                        <span className="text-sm">Pago Anticipado</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Notas */}
+                  <div>
+                    <Label>Notas</Label>
+                    <Textarea
+                      value={notas}
+                      onChange={(e) => setNotas(e.target.value)}
+                      placeholder="Notas adicionales..."
+                      rows={2}
+                      className="mt-2"
+                    />
+                  </div>
+
+                  {/* Teléfono (solo manual) */}
+                  {tipoProveedor === 'manual' && (
+                    <div>
+                      <Label>Teléfono del proveedor</Label>
+                      <Input
+                        value={proveedorTelefonoManual}
+                        onChange={(e) => setProveedorTelefonoManual(e.target.value)}
+                        placeholder="(opcional)"
+                        className="mt-2"
+                      />
+                    </div>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+
+            <div className="flex justify-end pt-4 border-t">
+              <Button 
+                onClick={handleNextStep} 
+                disabled={!canProceedStep1()}
+                className="gap-2"
+              >
+                Siguiente
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Productos */}
+        {step === 2 && (
+          <div className="space-y-6">
+            <div className="text-center pb-4 border-b">
+              <h3 className="text-lg font-semibold">¿Qué productos?</h3>
+              <p className="text-sm text-muted-foreground">
+                Agrega los productos a la orden de {getProveedorNombre()}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Vehicle mode toggle */}
+              {proveedorId && proveedorTieneTransportConfig && tipoProveedor === 'catalogo' && (
+                <div className="flex items-center gap-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                  <Truck className="h-5 w-5 text-primary" />
+                  <div className="flex items-center gap-4 text-sm">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={modoCreacion === 'vehiculos'}
+                        onChange={() => setModoCreacion('vehiculos')}
+                        className="accent-primary"
+                      />
+                      <span className="font-medium">Por Vehículos (rápido)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={modoCreacion === 'manual'}
+                        onChange={() => setModoCreacion('manual')}
+                        className="accent-primary"
+                      />
+                      <span>Manual</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Product form */}
+              <div className="grid grid-cols-12 gap-3 items-end">
+                <div className={modoCreacion === 'vehiculos' ? "col-span-5" : "col-span-5"}>
+                  <Label>Producto</Label>
+                  <Select
+                    value={productoSeleccionado}
+                    onValueChange={(value) => {
+                      setProductoSeleccionado(value);
+                      const prod = productosDisponibles.find((p) => p.id === value);
+                      if (prod?.ultimo_costo_compra) {
+                        setPrecioUnitario(prod.ultimo_costo_compra.toString());
+                      }
+                      if (prod?.kg_por_unidad) {
+                        setKgPorUnidad(prod.kg_por_unidad.toString());
+                      } else {
+                        setKgPorUnidad("");
+                      }
+                    }}
+                    disabled={tipoProveedor === 'catalogo' && !proveedorId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {productosDisponibles.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          <div className="flex items-center gap-2">
+                            {p.nombre}
+                            {p.ultimo_costo_compra && (
+                              <span className="text-xs text-muted-foreground">
+                                (${p.ultimo_costo_compra})
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {modoCreacion === 'vehiculos' && productoSeleccionado && configTransporteProducto?.capacidad_vehiculo_bultos ? (
+                  <div className="col-span-2">
+                    <Label>Vehículos</Label>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      value={numeroVehiculos}
+                      onChange={(e) => setNumeroVehiculos(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Ej: 5"
+                    />
+                    {numeroVehiculos && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {(parseInt(numeroVehiculos) * configTransporteProducto.capacidad_vehiculo_bultos).toLocaleString()} u.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="col-span-2">
+                    <Label>Cantidad</Label>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      value={cantidad}
+                      onChange={(e) => setCantidad(e.target.value.replace(/\D/g, ''))}
+                      placeholder="0"
+                    />
+                  </div>
+                )}
+
+                <div className="col-span-3">
+                  <Label>Precio Unitario</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={showPrecioPorKg ? precioUnitarioCalculado : precioUnitario}
+                    onChange={(e) => setPrecioUnitario(e.target.value)}
+                    placeholder="$0.00"
+                    disabled={showPrecioPorKg}
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <Button type="button" onClick={agregarProducto} className="w-full">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Precio por kg toggle */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPrecioPorKg(!showPrecioPorKg)}
+                  className="text-xs text-primary hover:underline"
+                >
+                  {showPrecioPorKg ? "Usar precio por unidad" : "¿Precio por kg?"}
+                </button>
+              </div>
+
+              {showPrecioPorKg && (
+                <div className="grid grid-cols-2 gap-3 p-3 bg-muted/50 rounded-lg">
+                  <div>
+                    <Label className="text-xs">Precio por kg</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={precioPorKg}
+                      onChange={(e) => setPrecioPorKg(e.target.value)}
+                      placeholder="$0.00"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Kg por unidad</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={kgPorUnidad}
+                      onChange={(e) => setKgPorUnidad(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* IVA checkbox */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="precioIncluyeIva"
+                  checked={precioIncluyeIva}
+                  onChange={(e) => setPrecioIncluyeIva(e.target.checked)}
+                  className="accent-primary"
+                />
+                <label htmlFor="precioIncluyeIva" className="text-sm text-muted-foreground">
+                  El precio incluye IVA
+                </label>
+              </div>
+
+              {/* Products table */}
+              {productosEnOrden.length > 0 && (
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Producto</TableHead>
+                        <TableHead className="text-right">Cantidad</TableHead>
+                        <TableHead className="text-right">Precio</TableHead>
+                        <TableHead className="text-right">Subtotal</TableHead>
+                        <TableHead className="w-10"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {productosEnOrden.map((p, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{p.nombre}</TableCell>
+                          <TableCell className="text-right">{p.cantidad.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">${formatCurrency(p.precio_unitario)}</TableCell>
+                          <TableCell className="text-right">${formatCurrency(p.subtotal)}</TableCell>
+                          <TableCell>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => eliminarProducto(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {/* Multiple deliveries - collapsed */}
+              {productosEnOrden.length > 0 && (
+                <Collapsible open={entregasMultiples} onOpenChange={setEntregasMultiples}>
+                  <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground py-2">
+                    <Switch checked={entregasMultiples} />
+                    <span>Dividir en múltiples entregas</span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-4 pt-2">
+                    <div className="grid grid-cols-3 gap-4 items-end">
+                      <div>
+                        <Label>Total bultos</Label>
+                        <Input value={cantidadTotalBultos.toLocaleString()} disabled className="bg-muted" />
+                      </div>
+                      <div>
+                        <Label>Por entrega</Label>
+                        <Input
+                          type="number"
+                          value={bultosPorEntrega}
+                          onChange={(e) => setBultosPorEntrega(e.target.value)}
+                          placeholder="Ej: 1200"
+                        />
+                      </div>
+                      <Button type="button" variant="secondary" onClick={calcularEntregas}>
+                        Calcular
+                      </Button>
+                    </div>
+
+                    {entregasProgramadas.length > 0 && (
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>#</TableHead>
+                              <TableHead>Bultos</TableHead>
+                              <TableHead>Fecha</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {entregasProgramadas.map((entrega, index) => (
+                              <TableRow key={index}>
+                                <TableCell>
+                                  <Badge variant="outline">{entrega.numero_entrega}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="number"
+                                    value={entrega.cantidad_bultos}
+                                    onChange={(e) => updateCantidadEntrega(index, parseInt(e.target.value) || 0)}
+                                    className="w-20"
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="date"
+                                    value={entrega.fecha_programada}
+                                    onChange={(e) => updateFechaEntrega(index, e.target.value)}
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+            </div>
+
+            <div className="flex justify-between pt-4 border-t">
+              <Button variant="outline" onClick={handlePrevStep} className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Atrás
+              </Button>
+              <Button 
+                onClick={handleNextStep} 
+                disabled={!canProceedStep2()}
+                className="gap-2"
+              >
+                Revisar
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Revisión */}
+        {step === 3 && (
+          <div className="space-y-6">
+            <div className="text-center pb-4 border-b">
+              <h3 className="text-lg font-semibold">Revisa tu orden</h3>
+              <p className="text-sm text-muted-foreground">
+                Verifica los datos antes de crear
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Resumen */}
+              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+                <div>
+                  <p className="text-sm text-muted-foreground">Folio</p>
+                  <p className="font-semibold flex items-center gap-2">
+                    {generatingFolio ? <Loader2 className="h-4 w-4 animate-spin" /> : folio}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Proveedor</p>
+                  <p className="font-semibold">{getProveedorNombre()}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Fecha de Entrega</p>
+                  <p className="font-semibold">
+                    {entregasMultiples 
+                      ? `${entregasProgramadas.length} entregas`
+                      : format(new Date(fechaEntrega + "T12:00:00"), "dd/MM/yyyy")
+                    }
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Tipo de Pago</p>
+                  <p className="font-semibold">
+                    {tipoPago === 'contra_entrega' ? 'Contra Entrega' : 'Anticipado'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Productos */}
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Producto</TableHead>
+                      <TableHead className="text-right">Cantidad</TableHead>
+                      <TableHead className="text-right">Precio</TableHead>
+                      <TableHead className="text-right">Subtotal</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {productosEnOrden.map((p, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{p.nombre}</TableCell>
+                        <TableCell className="text-right">{p.cantidad.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">${formatCurrency(p.precio_unitario)}</TableCell>
+                        <TableCell className="text-right">${formatCurrency(p.subtotal)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Totales */}
+              <div className="border rounded-lg p-4 bg-primary/5">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>${formatCurrency(totalesOrden.subtotal)}</span>
+                  </div>
+                  {totalesOrden.iva > 0 && (
+                    <div className="flex justify-between">
+                      <span>IVA (16%):</span>
+                      <span>${formatCurrency(totalesOrden.iva)}</span>
+                    </div>
+                  )}
+                  {totalesOrden.ieps > 0 && (
+                    <div className="flex justify-between">
+                      <span>IEPS (8%):</span>
+                      <span>${formatCurrency(totalesOrden.ieps)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-xl pt-2 border-t">
+                    <span>Total:</span>
+                    <span className="text-primary">${formatCurrency(totalesOrden.total)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {notas && (
+                <div className="p-3 bg-muted/30 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Notas:</p>
+                  <p className="text-sm">{notas}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-between pt-4 border-t">
+              <Button variant="outline" onClick={handlePrevStep} className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Editar
+              </Button>
+              <Button 
+                onClick={handleCreate}
+                disabled={createOrden.isPending}
+                className="gap-2"
+              >
+                {createOrden.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Creando...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Crear Orden
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default CrearOrdenCompraWizard;
