@@ -3370,6 +3370,7 @@ export type Database = {
           es_capacidad_fija: boolean | null
           id: string
           permite_combinacion: boolean | null
+          precio_por_kilo_compra: boolean | null
           producto_id: string
           proveedor_id: string
           tipo_vehiculo_estandar: string | null
@@ -3385,6 +3386,7 @@ export type Database = {
           es_capacidad_fija?: boolean | null
           id?: string
           permite_combinacion?: boolean | null
+          precio_por_kilo_compra?: boolean | null
           producto_id: string
           proveedor_id: string
           tipo_vehiculo_estandar?: string | null
@@ -3400,6 +3402,7 @@ export type Database = {
           es_capacidad_fija?: boolean | null
           id?: string
           permite_combinacion?: boolean | null
+          precio_por_kilo_compra?: boolean | null
           producto_id?: string
           proveedor_id?: string
           tipo_vehiculo_estandar?: string | null
