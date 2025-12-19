@@ -40,6 +40,7 @@ interface ProveedorProductoRow {
   dividir_en_lotes_recepcion: boolean | null;
   cantidad_lotes_default: number | null;
   unidades_por_lote_default: number | null;
+  precio_por_kilo_compra: boolean | null;
 }
 
 const TIPOS_VEHICULO = [
@@ -75,7 +76,7 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
     queryFn: async () => {
       const { data, error } = await supabase
         .from("proveedor_productos")
-        .select("id, producto_id, tipo_vehiculo_estandar, capacidad_vehiculo_bultos, capacidad_vehiculo_kg, permite_combinacion, es_capacidad_fija, dividir_en_lotes_recepcion, cantidad_lotes_default, unidades_por_lote_default")
+        .select("id, producto_id, tipo_vehiculo_estandar, capacidad_vehiculo_bultos, capacidad_vehiculo_kg, permite_combinacion, es_capacidad_fija, dividir_en_lotes_recepcion, cantidad_lotes_default, unidades_por_lote_default, precio_por_kilo_compra")
         .eq("proveedor_id", proveedorId);
       if (error) throw error;
       return data as ProveedorProductoRow[];
@@ -161,7 +162,7 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
 
   const hasTransportConfig = (productoId: string): boolean => {
     const config = getProductConfig(productoId);
-    return !!(config?.tipo_vehiculo_estandar || config?.capacidad_vehiculo_bultos || config?.capacidad_vehiculo_kg || config?.dividir_en_lotes_recepcion);
+    return !!(config?.tipo_vehiculo_estandar || config?.capacidad_vehiculo_bultos || config?.capacidad_vehiculo_kg || config?.dividir_en_lotes_recepcion || config?.precio_por_kilo_compra !== null);
   };
 
   const filteredProductos = productos.filter(
@@ -304,7 +305,7 @@ interface TransportConfigPanelProps {
 }
 
 const TransportConfigPanel = ({ productoId, unidadComercial, config, onUpdate }: TransportConfigPanelProps) => {
-  const [localConfig, setLocalConfig] = useState<TransportConfig>({
+  const [localConfig, setLocalConfig] = useState<TransportConfig & { precio_por_kilo_compra?: boolean | null }>({
     tipo_vehiculo_estandar: config?.tipo_vehiculo_estandar || null,
     capacidad_vehiculo_bultos: config?.capacidad_vehiculo_bultos || null,
     capacidad_vehiculo_kg: config?.capacidad_vehiculo_kg || null,
@@ -313,6 +314,7 @@ const TransportConfigPanel = ({ productoId, unidadComercial, config, onUpdate }:
     dividir_en_lotes_recepcion: config?.dividir_en_lotes_recepcion ?? false,
     cantidad_lotes_default: config?.cantidad_lotes_default || null,
     unidades_por_lote_default: config?.unidades_por_lote_default || null,
+    precio_por_kilo_compra: config?.precio_por_kilo_compra ?? null,
   });
 
   const handleVehiculoChange = (value: string) => {
@@ -367,8 +369,62 @@ const TransportConfigPanel = ({ productoId, unidadComercial, config, onUpdate }:
   const totalCalculado = (localConfig.cantidad_lotes_default || 0) * (localConfig.unidades_por_lote_default || 0);
   const coincideConCapacidad = localConfig.capacidad_vehiculo_bultos && totalCalculado === localConfig.capacidad_vehiculo_bultos;
 
+  const handlePrecioPorKiloCompraChange = (value: string) => {
+    const boolValue = value === 'true' ? true : value === 'false' ? false : null;
+    setLocalConfig(prev => ({ ...prev, precio_por_kilo_compra: boolValue }));
+    onUpdate({ precio_por_kilo_compra: boolValue } as any);
+  };
+
   return (
     <div className="mt-3 space-y-4 p-3 bg-muted/30 rounded-lg">
+      {/* Unidad de Compra - First and most important */}
+      <div className="space-y-2 pb-3 border-b">
+        <div className="flex items-center gap-2 text-sm font-medium text-amber-600 dark:text-amber-400">
+          💰 Unidad de Compra
+        </div>
+        <p className="text-xs text-muted-foreground mb-2">
+          ¿Cómo te cobra el proveedor este producto?
+        </p>
+        <div className="flex gap-2">
+          <label className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
+            (config?.precio_por_kilo_compra as any) === true ? 'border-primary bg-primary/10' : 'border-border hover:border-muted-foreground/50'
+          }`}>
+            <input
+              type="radio"
+              name={`precio-compra-${productoId}`}
+              checked={(config?.precio_por_kilo_compra as any) === true}
+              onChange={() => handlePrecioPorKiloCompraChange('true')}
+              className="sr-only"
+            />
+            <span className="text-sm">Por kilo</span>
+          </label>
+          <label className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
+            (config?.precio_por_kilo_compra as any) === false ? 'border-primary bg-primary/10' : 'border-border hover:border-muted-foreground/50'
+          }`}>
+            <input
+              type="radio"
+              name={`precio-compra-${productoId}`}
+              checked={(config?.precio_por_kilo_compra as any) === false}
+              onChange={() => handlePrecioPorKiloCompraChange('false')}
+              className="sr-only"
+            />
+            <span className="text-sm">Por bulto/caja</span>
+          </label>
+          <label className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
+            config?.precio_por_kilo_compra === null || config?.precio_por_kilo_compra === undefined ? 'border-muted-foreground/30 bg-muted/50' : 'border-border hover:border-muted-foreground/50'
+          }`}>
+            <input
+              type="radio"
+              name={`precio-compra-${productoId}`}
+              checked={config?.precio_por_kilo_compra === null || config?.precio_por_kilo_compra === undefined}
+              onChange={() => handlePrecioPorKiloCompraChange('null')}
+              className="sr-only"
+            />
+            <span className="text-sm text-muted-foreground">Sin definir</span>
+          </label>
+        </div>
+      </div>
+
       <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
         <Truck className="h-4 w-4" />
         Configuración de Transporte

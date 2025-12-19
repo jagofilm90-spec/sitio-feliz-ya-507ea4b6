@@ -84,6 +84,7 @@ interface ProveedorConfig {
   capacidad_vehiculo_kg?: number;
   permite_combinacion?: boolean;
   es_capacidad_fija?: boolean;
+  precio_por_kilo_compra?: boolean | null;
 }
 
 interface ProveedorManual {
@@ -133,12 +134,15 @@ const CrearOrdenCompraWizard = ({
   const [precioUnitario, setPrecioUnitario] = useState("");
   const [precioIncluyeIva, setPrecioIncluyeIva] = useState(false);
   
-  // Precio por kg (heredado del producto o manual)
+  // Precio por kg (heredado del proveedor-producto o manual)
   const [usaPrecioPorKg, setUsaPrecioPorKg] = useState(false);
   const [showOverridePrecioUnidad, setShowOverridePrecioUnidad] = useState(false);
   const [precioPorKg, setPrecioPorKg] = useState("");
   const [kgPorUnidad, setKgPorUnidad] = useState("");
   
+  // State for asking the user about precio por kilo when not configured
+  const [showPreguntaPrecioKg, setShowPreguntaPrecioKg] = useState(false);
+  const [guardarPreferenciaPrecioKg, setGuardarPreferenciaPrecioKg] = useState(true);
   // Vehicle mode
   const [modoCreacion, setModoCreacion] = useState<'manual' | 'vehiculos'>('manual');
   const [numeroVehiculos, setNumeroVehiculos] = useState("");
@@ -180,9 +184,15 @@ const CrearOrdenCompraWizard = ({
         ? productos.filter(p => productosProveedor.includes(p.id))
         : productos);
 
-  // Track if current product uses precio_por_kilo from catalog
+  // Track if current product uses precio_por_kilo from proveedor config
   const productoSeleccionadoData = productosDisponibles.find(p => p.id === productoSeleccionado);
   const productoEsDeCatalogo = tipoProveedor === 'catalogo' && productoSeleccionadoData;
+  
+  // Get precio_por_kilo_compra from proveedor-producto config
+  const configPrecioCompra = productosProveedorConfig.find(p => p.producto_id === productoSeleccionado);
+  const precioPorKiloCompraConfigurado = configPrecioCompra?.precio_por_kilo_compra;
+  
+  // Fallback to product catalog if proveedor-producto doesn't have config
   const productoPrecioPorKgCatalogo = productoEsDeCatalogo ? productoSeleccionadoData?.precio_por_kilo : undefined;
         
   // Filter suggestions based on input
@@ -210,7 +220,8 @@ const CrearOrdenCompraWizard = ({
             capacidad_vehiculo_bultos,
             capacidad_vehiculo_kg,
             permite_combinacion,
-            es_capacidad_fija
+            es_capacidad_fija,
+            precio_por_kilo_compra
           `)
           .eq("proveedor_id", proveedorId);
         if (!error && data) {
@@ -325,8 +336,26 @@ const CrearOrdenCompraWizard = ({
     }
   }, [step, tipoEntrega]);
   
+  // Save precio_por_kilo_compra preference
+  const guardarPreferenciaPrecioKgEnDB = async (productoId: string, precioPorKg: boolean) => {
+    if (!proveedorId) return;
+    
+    try {
+      await supabase
+        .from("proveedor_productos")
+        .update({ 
+          precio_por_kilo_compra: precioPorKg,
+          updated_at: new Date().toISOString()
+        })
+        .eq("proveedor_id", proveedorId)
+        .eq("producto_id", productoId);
+    } catch (error) {
+      console.error("Error saving precio_por_kilo_compra preference:", error);
+    }
+  };
+  
   // Add product
-  const agregarProducto = () => {
+  const agregarProducto = async () => {
     if (modoCreacion === 'vehiculos') {
       agregarProductoPorVehiculos();
       return;
@@ -347,6 +376,13 @@ const CrearOrdenCompraWizard = ({
 
     const producto = productosDisponibles.find((p) => p.id === productoSeleccionado);
     if (!producto) return;
+
+    // Save preference if user answered the question and wants to remember
+    if (showPreguntaPrecioKg && guardarPreferenciaPrecioKg && tipoProveedor === 'catalogo') {
+      await guardarPreferenciaPrecioKgEnDB(productoSeleccionado, usaPrecioPorKg);
+      // Refresh the config
+      queryClient.invalidateQueries({ queryKey: ["proveedor-productos-config", proveedorId] });
+    }
 
     const cantidadNum = parseInt(cantidad);
     const precioNum = parseFloat(precioFinal);
@@ -370,7 +406,7 @@ const CrearOrdenCompraWizard = ({
     resetProductoForm();
   };
   
-  const agregarProductoPorVehiculos = () => {
+  const agregarProductoPorVehiculos = async () => {
     const precioFinal = usaPrecioPorKg ? precioUnitarioCalculado : precioUnitario;
     
     if (!productoSeleccionado || !numeroVehiculos || !precioFinal) {
@@ -393,6 +429,12 @@ const CrearOrdenCompraWizard = ({
 
     const producto = productosDisponibles.find((p) => p.id === productoSeleccionado);
     if (!producto) return;
+
+    // Save preference if user answered the question and wants to remember
+    if (showPreguntaPrecioKg && guardarPreferenciaPrecioKg && tipoProveedor === 'catalogo') {
+      await guardarPreferenciaPrecioKgEnDB(productoSeleccionado, usaPrecioPorKg);
+      queryClient.invalidateQueries({ queryKey: ["proveedor-productos-config", proveedorId] });
+    }
 
     const numVehiculos = parseInt(numeroVehiculos);
     const capacidad = configTransporteProducto.capacidad_vehiculo_bultos;
@@ -442,6 +484,8 @@ const CrearOrdenCompraWizard = ({
     setPrecioIncluyeIva(false);
     setUsaPrecioPorKg(false);
     setShowOverridePrecioUnidad(false);
+    setShowPreguntaPrecioKg(false);
+    setGuardarPreferenciaPrecioKg(true);
     setPrecioPorKg("");
     setKgPorUnidad("");
     setNumeroVehiculos("");
@@ -937,7 +981,9 @@ const CrearOrdenCompraWizard = ({
                   <Label>Producto</Label>
                   <Select value={productoSeleccionado} onValueChange={(v) => {
                     setProductoSeleccionado(v);
-                    setShowOverridePrecioUnidad(false); // Reset override when changing product
+                    setShowOverridePrecioUnidad(false);
+                    setShowPreguntaPrecioKg(false);
+                    
                     const prod = productosDisponibles.find(p => p.id === v);
                     if (prod?.ultimo_costo_compra) {
                       setPrecioUnitario(prod.ultimo_costo_compra.toString());
@@ -945,9 +991,21 @@ const CrearOrdenCompraWizard = ({
                     if (prod?.kg_por_unidad) {
                       setKgPorUnidad(prod.kg_por_unidad.toString());
                     }
-                    // Auto-heredar precio_por_kilo del catálogo
-                    if (tipoProveedor === 'catalogo' && prod?.precio_por_kilo !== undefined) {
-                      setUsaPrecioPorKg(prod.precio_por_kilo);
+                    
+                    // Check proveedor-producto config first
+                    const provConfig = productosProveedorConfig.find(pc => pc.producto_id === v);
+                    if (tipoProveedor === 'catalogo' && provConfig) {
+                      if (provConfig.precio_por_kilo_compra !== null && provConfig.precio_por_kilo_compra !== undefined) {
+                        // Use stored preference
+                        setUsaPrecioPorKg(provConfig.precio_por_kilo_compra);
+                      } else {
+                        // Not configured - ask the user
+                        setShowPreguntaPrecioKg(true);
+                        setUsaPrecioPorKg(false); // Default to false until user answers
+                      }
+                    } else if (tipoProveedor === 'manual') {
+                      // Manual provider - always show toggle
+                      setUsaPrecioPorKg(false);
                     }
                   }}>
                     <SelectTrigger>
@@ -1013,16 +1071,58 @@ const CrearOrdenCompraWizard = ({
                 </div>
               </div>
 
-              {/* Indicador de precio por kg - heredado automáticamente del catálogo */}
-              {productoSeleccionado && (
+              {/* Pregunta para configurar precio por kg - primera vez */}
+              {productoSeleccionado && showPreguntaPrecioKg && tipoProveedor === 'catalogo' && (
+                <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg space-y-3">
+                  <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-medium">
+                    ⚠️ ¿Cómo te cobra el proveedor este producto?
+                  </div>
+                  <div className="flex gap-3">
+                    <label className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer transition-all ${
+                      usaPrecioPorKg ? 'border-primary bg-primary/10' : 'border-border hover:border-muted-foreground/50'
+                    }`}>
+                      <input
+                        type="radio"
+                        checked={usaPrecioPorKg}
+                        onChange={() => setUsaPrecioPorKg(true)}
+                        className="sr-only"
+                      />
+                      <span>Por kilo</span>
+                    </label>
+                    <label className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer transition-all ${
+                      !usaPrecioPorKg ? 'border-primary bg-primary/10' : 'border-border hover:border-muted-foreground/50'
+                    }`}>
+                      <input
+                        type="radio"
+                        checked={!usaPrecioPorKg}
+                        onChange={() => setUsaPrecioPorKg(false)}
+                        className="sr-only"
+                      />
+                      <span>Por bulto/caja</span>
+                    </label>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={guardarPreferenciaPrecioKg}
+                      onChange={(e) => setGuardarPreferenciaPrecioKg(e.target.checked)}
+                      className="accent-primary"
+                    />
+                    Recordar para futuras compras
+                  </label>
+                </div>
+              )}
+              
+              {/* Indicador de precio por kg - cuando ya está configurado */}
+              {productoSeleccionado && !showPreguntaPrecioKg && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  {/* Badge informativo según producto seleccionado */}
-                  {productoEsDeCatalogo && productoPrecioPorKgCatalogo !== undefined && (
+                  {/* Badge informativo según configuración del proveedor-producto */}
+                  {tipoProveedor === 'catalogo' && precioPorKiloCompraConfigurado !== null && precioPorKiloCompraConfigurado !== undefined && (
                     <Badge 
                       variant="secondary" 
-                      className={productoPrecioPorKgCatalogo ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" : ""}
+                      className={precioPorKiloCompraConfigurado ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" : ""}
                     >
-                      {productoPrecioPorKgCatalogo ? "💰 Precio por kg" : "📦 Precio por bulto"}
+                      {precioPorKiloCompraConfigurado ? "💰 Precio por kg" : "📦 Precio por bulto"}
                     </Badge>
                   )}
                   
@@ -1038,10 +1138,12 @@ const CrearOrdenCompraWizard = ({
                   )}
                   
                   {/* Link para sobrescribir (solo catálogo) */}
-                  {productoEsDeCatalogo && !showOverridePrecioUnidad && (
+                  {tipoProveedor === 'catalogo' && !showOverridePrecioUnidad && precioPorKiloCompraConfigurado !== null && (
                     <button
                       type="button"
-                      onClick={() => setShowOverridePrecioUnidad(true)}
+                      onClick={() => {
+                        setShowOverridePrecioUnidad(true);
+                      }}
                       className="text-xs text-muted-foreground hover:text-foreground"
                     >
                       ¿Comprar diferente?
