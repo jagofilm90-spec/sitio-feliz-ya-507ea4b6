@@ -977,27 +977,35 @@ const Productos = () => {
                     </div>
                   )}
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="aplica_iva"
-                      checked={formData.aplica_iva}
-                      onChange={(e) => setFormData({ ...formData, aplica_iva: e.target.checked })}
-                      className="rounded"
-                    />
-                    <Label htmlFor="aplica_iva">Precio incluye IVA (16%)</Label>
+                <div className="space-y-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-medium text-blue-800 dark:text-blue-300">📋 Impuestos que grava este producto</span>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="aplica_ieps"
-                      checked={formData.aplica_ieps}
-                      onChange={(e) => setFormData({ ...formData, aplica_ieps: e.target.checked })}
-                      className="rounded"
-                    />
-                    <Label htmlFor="aplica_ieps">Precio incluye IEPS (8%)</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="aplica_iva"
+                        checked={formData.aplica_iva}
+                        onChange={(e) => setFormData({ ...formData, aplica_iva: e.target.checked })}
+                        className="rounded"
+                      />
+                      <Label htmlFor="aplica_iva">Grava IVA (16%)</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="aplica_ieps"
+                        checked={formData.aplica_ieps}
+                        onChange={(e) => setFormData({ ...formData, aplica_ieps: e.target.checked })}
+                        className="rounded"
+                      />
+                      <Label htmlFor="aplica_ieps">Grava IEPS (8%)</Label>
+                    </div>
                   </div>
+                  <p className="text-xs text-blue-700 dark:text-blue-400 mt-2">
+                    ℹ️ Los precios de venta se capturan CON impuestos incluidos. Estos mismos impuestos aplican en compras.
+                  </p>
                 </div>
                 <div className="flex items-center space-x-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
                   <input

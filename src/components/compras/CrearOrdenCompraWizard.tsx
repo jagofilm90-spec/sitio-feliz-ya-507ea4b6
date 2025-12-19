@@ -51,6 +51,7 @@ interface ProductoEnOrden {
   aplica_iva: boolean;
   aplica_ieps: boolean;
   precio_incluye_iva: boolean;
+  precio_incluye_ieps: boolean;
 }
 
 interface EntregaProgramada {
@@ -132,7 +133,8 @@ const CrearOrdenCompraWizard = ({
   const [productoSeleccionado, setProductoSeleccionado] = useState("");
   const [cantidad, setCantidad] = useState("");
   const [precioUnitario, setPrecioUnitario] = useState("");
-  const [precioIncluyeIva, setPrecioIncluyeIva] = useState(false);
+  const [precioIncluyeIva, setPrecioIncluyeIva] = useState(true);
+  const [precioIncluyeIeps, setPrecioIncluyeIeps] = useState(true);
   
   // Precio por kg (heredado del proveedor-producto o manual)
   const [usaPrecioPorKg, setUsaPrecioPorKg] = useState(false);
@@ -258,22 +260,35 @@ const CrearOrdenCompraWizard = ({
     let iepsAmount = 0;
 
     for (const p of productosEnOrden) {
+      // Calculate base and taxes considering both IVA and IEPS included status
+      let base = p.subtotal;
+      let divisor = 1;
+      
       if (p.aplica_iva && p.precio_incluye_iva) {
-        const base = p.subtotal / 1.16;
-        subtotalBase += base;
-        ivaAmount += p.subtotal - base;
-      } else if (p.aplica_iva && !p.precio_incluye_iva) {
-        subtotalBase += p.subtotal;
-        ivaAmount += p.subtotal * 0.16;
-      } else {
-        subtotalBase += p.subtotal;
+        divisor *= 1.16;
+      }
+      if (p.aplica_ieps && p.precio_incluye_ieps) {
+        divisor *= 1.08;
+      }
+      
+      base = p.subtotal / divisor;
+      subtotalBase += base;
+      
+      if (p.aplica_iva) {
+        if (p.precio_incluye_iva) {
+          ivaAmount += base * 0.16;
+        } else {
+          ivaAmount += p.subtotal * 0.16;
+        }
       }
       
       if (p.aplica_ieps) {
-        const baseForIeps = p.aplica_iva && p.precio_incluye_iva 
-          ? p.subtotal / 1.16 
-          : p.subtotal;
-        iepsAmount += baseForIeps * 0.08;
+        if (p.precio_incluye_ieps) {
+          iepsAmount += base * 0.08;
+        } else {
+          const baseForIeps = p.aplica_iva && !p.precio_incluye_iva ? p.subtotal : base;
+          iepsAmount += baseForIeps * 0.08;
+        }
       }
     }
 
@@ -400,6 +415,7 @@ const CrearOrdenCompraWizard = ({
         aplica_iva: producto.aplica_iva ?? false,
         aplica_ieps: producto.aplica_ieps ?? false,
         precio_incluye_iva: precioIncluyeIva,
+        precio_incluye_ieps: precioIncluyeIeps,
       },
     ]);
 
@@ -454,6 +470,7 @@ const CrearOrdenCompraWizard = ({
         aplica_iva: producto.aplica_iva ?? false,
         aplica_ieps: producto.aplica_ieps ?? false,
         precio_incluye_iva: precioIncluyeIva,
+        precio_incluye_ieps: precioIncluyeIeps,
       },
     ]);
 
@@ -481,7 +498,8 @@ const CrearOrdenCompraWizard = ({
     setProductoSeleccionado("");
     setCantidad("");
     setPrecioUnitario("");
-    setPrecioIncluyeIva(false);
+    setPrecioIncluyeIva(true);
+    setPrecioIncluyeIeps(true);
     setUsaPrecioPorKg(false);
     setShowOverridePrecioUnidad(false);
     setShowPreguntaPrecioKg(false);
@@ -1178,19 +1196,89 @@ const CrearOrdenCompraWizard = ({
                 </div>
               )}
 
-              {/* IVA checkbox */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="precioIncluyeIva"
-                  checked={precioIncluyeIva}
-                  onChange={(e) => setPrecioIncluyeIva(e.target.checked)}
-                  className="accent-primary"
-                />
-                <label htmlFor="precioIncluyeIva" className="text-sm text-muted-foreground">
-                  El precio incluye IVA
-                </label>
-              </div>
+              {/* Impuestos que grava el producto y checkboxes dinámicos */}
+              {productoSeleccionado && productoSeleccionadoData && (productoSeleccionadoData.aplica_iva || productoSeleccionadoData.aplica_ieps) && (
+                <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                      💰 Este producto grava: {[
+                        productoSeleccionadoData.aplica_iva && "IVA (16%)",
+                        productoSeleccionadoData.aplica_ieps && "IEPS (8%)"
+                      ].filter(Boolean).join(" + ")}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <p className="text-xs text-blue-700 dark:text-blue-400">El precio del proveedor YA incluye:</p>
+                    <div className="flex flex-wrap gap-4">
+                      {productoSeleccionadoData.aplica_iva && (
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={precioIncluyeIva}
+                            onChange={(e) => setPrecioIncluyeIva(e.target.checked)}
+                            className="accent-primary"
+                          />
+                          <span className="text-sm">IVA (16%)</span>
+                        </label>
+                      )}
+                      {productoSeleccionadoData.aplica_ieps && (
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={precioIncluyeIeps}
+                            onChange={(e) => setPrecioIncluyeIeps(e.target.checked)}
+                            className="accent-primary"
+                          />
+                          <span className="text-sm">IEPS (8%)</span>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Desglose en tiempo real */}
+                  {precioUnitario && parseFloat(precioUnitario) > 0 && (
+                    <div className="mt-3 p-2 bg-white dark:bg-background rounded border text-xs space-y-1">
+                      <p className="font-medium text-muted-foreground">📊 Desglose del precio capturado:</p>
+                      {(() => {
+                        const precio = parseFloat(precioUnitario);
+                        let divisor = 1;
+                        if (productoSeleccionadoData.aplica_iva && precioIncluyeIva) divisor *= 1.16;
+                        if (productoSeleccionadoData.aplica_ieps && precioIncluyeIeps) divisor *= 1.08;
+                        const base = precio / divisor;
+                        const iva = productoSeleccionadoData.aplica_iva ? (precioIncluyeIva ? base * 0.16 : precio * 0.16) : 0;
+                        const ieps = productoSeleccionadoData.aplica_ieps ? (precioIncluyeIeps ? base * 0.08 : base * 0.08) : 0;
+                        const total = precioIncluyeIva && precioIncluyeIeps ? precio : base + iva + ieps;
+                        
+                        return (
+                          <>
+                            <div className="flex justify-between">
+                              <span>Base:</span>
+                              <span className="font-medium">${formatCurrency(base)}</span>
+                            </div>
+                            {productoSeleccionadoData.aplica_iva && (
+                              <div className="flex justify-between text-blue-600 dark:text-blue-400">
+                                <span>IVA (16%) {precioIncluyeIva ? "incluido" : ""}:</span>
+                                <span>${formatCurrency(iva)}</span>
+                              </div>
+                            )}
+                            {productoSeleccionadoData.aplica_ieps && (
+                              <div className="flex justify-between text-amber-600 dark:text-amber-400">
+                                <span>IEPS (8%) {precioIncluyeIeps ? "incluido" : ""}:</span>
+                                <span>${formatCurrency(ieps)}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between border-t pt-1 font-semibold">
+                              <span>Total:</span>
+                              <span>${formatCurrency(total)}</span>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Products table */}
               {productosEnOrden.length > 0 && (
@@ -1208,7 +1296,25 @@ const CrearOrdenCompraWizard = ({
                     <TableBody>
                       {productosEnOrden.map((p, index) => (
                         <TableRow key={index}>
-                          <TableCell>{p.nombre}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <span>{p.nombre}</span>
+                              {(p.aplica_iva || p.aplica_ieps) && (
+                                <div className="flex gap-1 flex-wrap">
+                                  {p.aplica_iva && p.precio_incluye_iva && (
+                                    <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                                      IVA incl.
+                                    </Badge>
+                                  )}
+                                  {p.aplica_ieps && p.precio_incluye_ieps && (
+                                    <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                                      IEPS incl.
+                                    </Badge>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell className="text-right">{p.cantidad.toLocaleString()}</TableCell>
                           <TableCell className="text-right">${formatCurrency(p.precio_unitario)}</TableCell>
                           <TableCell className="text-right">${formatCurrency(p.subtotal)}</TableCell>
