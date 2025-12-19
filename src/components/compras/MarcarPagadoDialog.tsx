@@ -1,10 +1,10 @@
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarIcon, Upload, Loader2, Mail, Send } from "lucide-react";
+import { CalendarIcon, Upload, Loader2, Mail, Send, X, Plus, Save } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +37,7 @@ interface MarcarPagadoDialogProps {
   orden: {
     id: string;
     folio: string;
+    proveedor_id: string | null;
     proveedor_nombre: string;
     proveedor_email: string | null;
     total: number;
@@ -49,15 +57,71 @@ export function MarcarPagadoDialog({
   
   // Estado para envío de correo
   const [enviarCorreo, setEnviarCorreo] = useState(false);
-  const [emailDestino, setEmailDestino] = useState("");
+  const [emailSeleccionado, setEmailSeleccionado] = useState<string>("otro");
+  const [emailManual, setEmailManual] = useState("");
+  const [guardarEmail, setGuardarEmail] = useState(false);
   const [enviandoCorreo, setEnviandoCorreo] = useState(false);
 
-  // Actualizar email cuando cambia la orden
-  useState(() => {
-    if (orden?.proveedor_email) {
-      setEmailDestino(orden.proveedor_email);
-    }
+  // Fetch saved emails for this provider
+  const { data: correosGuardados = [], refetch: refetchCorreos } = useQuery({
+    queryKey: ["proveedor-correos", orden?.proveedor_id],
+    queryFn: async () => {
+      if (!orden?.proveedor_id) return [];
+      const { data, error } = await supabase
+        .from("proveedor_correos")
+        .select("*")
+        .eq("proveedor_id", orden.proveedor_id)
+        .eq("activo", true)
+        .order("es_principal", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!orden?.proveedor_id && open,
   });
+
+  // Initialize email when dialog opens or emails load
+  useEffect(() => {
+    if (open && orden) {
+      if (correosGuardados.length > 0) {
+        const principal = correosGuardados.find(c => c.es_principal);
+        setEmailSeleccionado(principal?.id || correosGuardados[0].id);
+      } else if (orden.proveedor_email) {
+        setEmailManual(orden.proveedor_email);
+        setEmailSeleccionado("otro");
+      } else {
+        setEmailSeleccionado("otro");
+        setEmailManual("");
+      }
+    }
+  }, [open, orden, correosGuardados]);
+
+  // Delete email mutation
+  const deleteEmailMutation = useMutation({
+    mutationFn: async (emailId: string) => {
+      const { error } = await supabase
+        .from("proveedor_correos")
+        .delete()
+        .eq("id", emailId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Correo eliminado");
+      refetchCorreos();
+      setEmailSeleccionado("otro");
+    },
+    onError: (error: Error) => {
+      toast.error("Error al eliminar: " + error.message);
+    },
+  });
+
+  // Get the actual email to use
+  const getEmailDestino = (): string => {
+    if (emailSeleccionado === "otro") {
+      return emailManual;
+    }
+    const correo = correosGuardados.find(c => c.id === emailSeleccionado);
+    return correo?.email || "";
+  };
 
   const marcarPagadoMutation = useMutation({
     mutationFn: async () => {
@@ -66,7 +130,7 @@ export function MarcarPagadoDialog({
       let comprobanteNombre: string | null = null;
       let comprobanteMimeType: string | null = null;
 
-      // Upload comprobante if provided
+      // Upload comprobante (now required)
       if (comprobante) {
         setUploading(true);
         const fileExt = comprobante.name.split(".").pop();
@@ -90,6 +154,7 @@ export function MarcarPagadoDialog({
         comprobanteMimeType = comprobante.type;
         
         // Si vamos a enviar correo, convertir a base64
+        const emailDestino = getEmailDestino();
         if (enviarCorreo && emailDestino) {
           const arrayBuffer = await comprobante.arrayBuffer();
           const bytes = new Uint8Array(arrayBuffer);
@@ -116,7 +181,23 @@ export function MarcarPagadoDialog({
 
       if (error) throw error;
 
+      // Save email if requested
+      if (guardarEmail && emailSeleccionado === "otro" && emailManual && orden?.proveedor_id) {
+        const { error: saveEmailError } = await supabase
+          .from("proveedor_correos")
+          .insert({
+            proveedor_id: orden.proveedor_id,
+            email: emailManual,
+            proposito: "pagos",
+            es_principal: correosGuardados.length === 0,
+          });
+        if (saveEmailError) {
+          console.error("Error guardando correo:", saveEmailError);
+        }
+      }
+
       // Send email if requested
+      const emailDestino = getEmailDestino();
       if (enviarCorreo && emailDestino) {
         setEnviandoCorreo(true);
         try {
@@ -176,11 +257,10 @@ export function MarcarPagadoDialog({
 
           if (emailError) {
             console.error("Error enviando correo:", emailError);
-            // No lanzar error, el pago ya se registró
             toast.warning("Pago registrado, pero no se pudo enviar el correo");
           } else {
             toast.success("Pago registrado y notificación enviada al proveedor");
-            return; // Exit early to avoid double toast
+            return;
           }
         } catch (emailErr: any) {
           console.error("Error enviando correo:", emailErr);
@@ -196,6 +276,7 @@ export function MarcarPagadoDialog({
         toast.success("Pago registrado correctamente");
       }
       queryClient.invalidateQueries({ queryKey: ["ordenes-compra"] });
+      queryClient.invalidateQueries({ queryKey: ["proveedor-correos"] });
       resetAndClose();
     },
     onError: (error: Error) => {
@@ -210,7 +291,9 @@ export function MarcarPagadoDialog({
     setReferenciaPago("");
     setComprobante(null);
     setEnviarCorreo(false);
-    setEmailDestino(orden?.proveedor_email || "");
+    setEmailSeleccionado("otro");
+    setEmailManual("");
+    setGuardarEmail(false);
     onOpenChange(false);
   };
 
@@ -220,19 +303,18 @@ export function MarcarPagadoDialog({
       toast.error("La referencia de pago es requerida");
       return;
     }
-    if (enviarCorreo && !emailDestino.trim()) {
-      toast.error("El correo del proveedor es requerido para enviar la notificación");
+    if (!comprobante) {
+      toast.error("El comprobante de pago es obligatorio");
       return;
     }
-    marcarPagadoMutation.mutate();
-  };
-
-  // Actualizar email cuando cambia la orden
-  const handleOpenChange = (newOpen: boolean) => {
-    if (newOpen && orden?.proveedor_email) {
-      setEmailDestino(orden.proveedor_email);
+    if (enviarCorreo) {
+      const emailDestino = getEmailDestino();
+      if (!emailDestino.trim()) {
+        toast.error("El correo del proveedor es requerido para enviar la notificación");
+        return;
+      }
     }
-    onOpenChange(newOpen);
+    marcarPagadoMutation.mutate();
   };
 
   if (!orden) return null;
@@ -240,7 +322,7 @@ export function MarcarPagadoDialog({
   const isLoading = marcarPagadoMutation.isPending || uploading || enviandoCorreo;
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Registrar Pago</DialogTitle>
@@ -306,22 +388,24 @@ export function MarcarPagadoDialog({
             />
           </div>
 
-          {/* Comprobante */}
+          {/* Comprobante - NOW REQUIRED */}
           <div className="space-y-2">
-            <Label>Comprobante (opcional)</Label>
+            <Label>Comprobante de pago *</Label>
             <div className="flex items-center gap-2">
               <Input
                 type="file"
                 accept="image/*,.pdf"
                 onChange={(e) => setComprobante(e.target.files?.[0] || null)}
                 className="text-sm"
+                required
               />
-              {comprobante && (
-                <span className="text-xs text-muted-foreground truncate max-w-[100px]">
-                  {comprobante.name}
-                </span>
-              )}
             </div>
+            {comprobante && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Upload className="h-3 w-3" />
+                {comprobante.name}
+              </p>
+            )}
           </div>
 
           {/* Enviar correo al proveedor */}
@@ -342,22 +426,84 @@ export function MarcarPagadoDialog({
             </div>
 
             {enviarCorreo && (
-              <div className="space-y-2 pl-6">
-                <Label htmlFor="emailDestino" className="text-sm">
-                  Correo del proveedor *
-                </Label>
-                <Input
-                  id="emailDestino"
-                  type="email"
-                  placeholder="proveedor@email.com"
-                  value={emailDestino}
-                  onChange={(e) => setEmailDestino(e.target.value)}
-                  className="text-sm"
-                />
-                {!orden.proveedor_email && (
-                  <p className="text-xs text-muted-foreground">
-                    Este proveedor no tiene correo registrado. Ingrese uno manualmente.
-                  </p>
+              <div className="space-y-3 pl-6">
+                <Label className="text-sm">Correo del proveedor *</Label>
+                
+                {/* Selector de correos guardados */}
+                <Select value={emailSeleccionado} onValueChange={setEmailSeleccionado}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar correo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {correosGuardados.map((correo) => (
+                      <SelectItem key={correo.id} value={correo.id}>
+                        <div className="flex items-center justify-between w-full gap-2">
+                          <span>{correo.email}</span>
+                          {correo.es_principal && (
+                            <span className="text-xs text-muted-foreground">(principal)</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="otro">
+                      <div className="flex items-center gap-2">
+                        <Plus className="h-3 w-3" />
+                        Ingresar otro correo
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Mostrar botón de eliminar si hay correo guardado seleccionado */}
+                {emailSeleccionado !== "otro" && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground flex-1">
+                      {correosGuardados.find(c => c.id === emailSeleccionado)?.email}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-destructive hover:text-destructive"
+                      onClick={() => {
+                        if (confirm("¿Eliminar este correo guardado?")) {
+                          deleteEmailMutation.mutate(emailSeleccionado);
+                        }
+                      }}
+                      disabled={deleteEmailMutation.isPending}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+
+                {/* Input para correo manual */}
+                {emailSeleccionado === "otro" && (
+                  <div className="space-y-2">
+                    <Input
+                      type="email"
+                      placeholder="proveedor@email.com"
+                      value={emailManual}
+                      onChange={(e) => setEmailManual(e.target.value)}
+                      className="text-sm"
+                    />
+                    {orden.proveedor_id && (
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="guardarEmail"
+                          checked={guardarEmail}
+                          onCheckedChange={(checked) => setGuardarEmail(checked === true)}
+                        />
+                        <Label 
+                          htmlFor="guardarEmail" 
+                          className="text-xs font-normal cursor-pointer flex items-center gap-1"
+                        >
+                          <Save className="h-3 w-3" />
+                          Guardar este correo para el proveedor
+                        </Label>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}

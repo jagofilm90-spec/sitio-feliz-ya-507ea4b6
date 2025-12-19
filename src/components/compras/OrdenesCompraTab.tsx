@@ -122,6 +122,7 @@ const OrdenesCompraTab = () => {
   const [ordenParaPago, setOrdenParaPago] = useState<{
     id: string;
     folio: string;
+    proveedor_id: string | null;
     proveedor_nombre: string;
     proveedor_email: string | null;
     total: number;
@@ -1233,6 +1234,7 @@ const OrdenesCompraTab = () => {
                                 setOrdenParaPago({
                                   id: orden.id,
                                   folio: orden.folio,
+                                  proveedor_id: orden.proveedor_id || null,
                                   proveedor_nombre: orden.proveedor_id ? orden.proveedores?.nombre : orden.proveedor_nombre_manual,
                                   proveedor_email: orden.proveedor_id ? orden.proveedores?.email : null,
                                   total: orden.total,

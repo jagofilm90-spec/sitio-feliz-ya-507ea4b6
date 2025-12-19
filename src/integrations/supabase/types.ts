@@ -3250,6 +3250,50 @@ export type Database = {
         }
         Relationships: []
       }
+      proveedor_correos: {
+        Row: {
+          activo: boolean | null
+          created_at: string | null
+          email: string
+          es_principal: boolean | null
+          id: string
+          nombre_contacto: string | null
+          proposito: string | null
+          proveedor_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          created_at?: string | null
+          email: string
+          es_principal?: boolean | null
+          id?: string
+          nombre_contacto?: string | null
+          proposito?: string | null
+          proveedor_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          created_at?: string | null
+          email?: string
+          es_principal?: boolean | null
+          id?: string
+          nombre_contacto?: string | null
+          proposito?: string | null
+          proveedor_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proveedor_correos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proveedor_factura_entregas: {
         Row: {
           created_at: string
