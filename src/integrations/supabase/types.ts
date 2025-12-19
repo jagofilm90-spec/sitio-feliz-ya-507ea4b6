@@ -3254,33 +3254,48 @@ export type Database = {
         Row: {
           activo: boolean | null
           created_at: string | null
+          email: string | null
           es_principal: boolean | null
           id: string
           nombre: string
           proveedor_id: string
           puesto: string | null
+          recibe_devoluciones: boolean | null
+          recibe_logistica: boolean | null
+          recibe_ordenes: boolean | null
+          recibe_pagos: boolean | null
           telefono: string
           updated_at: string | null
         }
         Insert: {
           activo?: boolean | null
           created_at?: string | null
+          email?: string | null
           es_principal?: boolean | null
           id?: string
           nombre: string
           proveedor_id: string
           puesto?: string | null
+          recibe_devoluciones?: boolean | null
+          recibe_logistica?: boolean | null
+          recibe_ordenes?: boolean | null
+          recibe_pagos?: boolean | null
           telefono: string
           updated_at?: string | null
         }
         Update: {
           activo?: boolean | null
           created_at?: string | null
+          email?: string | null
           es_principal?: boolean | null
           id?: string
           nombre?: string
           proveedor_id?: string
           puesto?: string | null
+          recibe_devoluciones?: boolean | null
+          recibe_logistica?: boolean | null
+          recibe_ordenes?: boolean | null
+          recibe_pagos?: boolean | null
           telefono?: string
           updated_at?: string | null
         }
