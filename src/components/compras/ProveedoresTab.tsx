@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -26,12 +26,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Globe, Package, Trash2, X, Mail, FileText, Upload, Loader2, CheckCircle2, AtSign } from "lucide-react";
+import { Plus, Search, Edit, Globe, Package, Trash2, X, Mail, FileText, Upload, Loader2, CheckCircle2, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ProveedorProductosSelector from "./ProveedorProductosSelector";
-import ProveedorCorreosManager from "./ProveedorCorreosManager";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,6 +48,36 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+type PropositoCorreo = 'general' | 'ordenes' | 'pagos' | 'devoluciones';
+
+interface CorreoProveedor {
+  id?: string;
+  email: string;
+  nombre_contacto?: string;
+  proposito: PropositoCorreo;
+  es_principal: boolean;
+}
+
+const PROPOSITOS: { value: PropositoCorreo; label: string }[] = [
+  { value: 'general', label: 'General' },
+  { value: 'ordenes', label: 'Órdenes de compra' },
+  { value: 'pagos', label: 'Pagos' },
+  { value: 'devoluciones', label: 'Devoluciones' },
+];
+
+const getPropositoLabel = (proposito: PropositoCorreo): string => {
+  return PROPOSITOS.find(p => p.value === proposito)?.label || proposito;
+};
+
+const getPropositoVariant = (proposito: PropositoCorreo): "default" | "secondary" | "outline" | "destructive" => {
+  switch (proposito) {
+    case 'ordenes': return 'default';
+    case 'pagos': return 'secondary';
+    case 'devoluciones': return 'destructive';
+    default: return 'outline';
+  }
+};
 
 interface Proveedor {
   id: string;
@@ -62,11 +98,9 @@ const ProveedoresTab = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isProductosDialogOpen, setIsProductosDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isCorreosDialogOpen, setIsCorreosDialogOpen] = useState(false);
   const [editingProveedor, setEditingProveedor] = useState<Proveedor | null>(null);
   const [productosProveedor, setProductosProveedor] = useState<Proveedor | null>(null);
   const [deletingProveedor, setDeletingProveedor] = useState<Proveedor | null>(null);
-  const [correosProveedor, setCorreosProveedor] = useState<Proveedor | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   
   // CSF upload state
@@ -74,11 +108,18 @@ const ProveedoresTab = () => {
   const [csfParsed, setCSFParsed] = useState(false);
   const csfInputRef = useRef<HTMLInputElement>(null);
   
-  // Multi-email support
-  const [emails, setEmails] = useState<string[]>([]);
-  const [newEmail, setNewEmail] = useState("");
-  const [editEmails, setEditEmails] = useState<string[]>([]);
-  const [editNewEmail, setEditNewEmail] = useState("");
+  // Correos con propósitos - para crear
+  const [correosNuevos, setCorreosNuevos] = useState<CorreoProveedor[]>([]);
+  const [nuevoCorreoEmail, setNuevoCorreoEmail] = useState("");
+  const [nuevoCorreoContacto, setNuevoCorreoContacto] = useState("");
+  const [nuevoCorreoProposito, setNuevoCorreoProposito] = useState<PropositoCorreo>("general");
+  
+  // Correos con propósitos - para editar
+  const [correosEdit, setCorreosEdit] = useState<CorreoProveedor[]>([]);
+  const [editCorreoEmail, setEditCorreoEmail] = useState("");
+  const [editCorreoContacto, setEditCorreoContacto] = useState("");
+  const [editCorreoProposito, setEditCorreoProposito] = useState<PropositoCorreo>("general");
+  const [isLoadingCorreos, setIsLoadingCorreos] = useState(false);
   
   const [newProveedor, setNewProveedor] = useState({
     nombre: "",
@@ -93,37 +134,137 @@ const ProveedoresTab = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Helper to parse emails from DB (stored as comma-separated)
-  const parseEmails = (emailStr: string | null): string[] => {
-    if (!emailStr) return [];
-    return emailStr.split(",").map(e => e.trim()).filter(e => e.length > 0);
+  // Helper to join emails for DB storage (for backwards compatibility)
+  const joinEmails = (correos: CorreoProveedor[]): string => {
+    return correos.map(c => c.email).join(", ");
   };
 
-  // Helper to join emails for DB storage
-  const joinEmails = (emailsArr: string[]): string => {
-    return emailsArr.join(", ");
+  // Agregar correo nuevo (formulario crear)
+  const handleAddCorreoNuevo = () => {
+    if (!nuevoCorreoEmail || !nuevoCorreoEmail.includes("@")) return;
+    if (correosNuevos.some(c => c.email === nuevoCorreoEmail.trim())) return;
+    
+    // Determinar si debe ser principal para su propósito
+    const existePrincipalEnProposito = correosNuevos.some(
+      c => c.proposito === nuevoCorreoProposito && c.es_principal
+    );
+    
+    setCorreosNuevos([...correosNuevos, {
+      email: nuevoCorreoEmail.trim(),
+      nombre_contacto: nuevoCorreoContacto.trim() || undefined,
+      proposito: nuevoCorreoProposito,
+      es_principal: !existePrincipalEnProposito,
+    }]);
+    setNuevoCorreoEmail("");
+    setNuevoCorreoContacto("");
   };
 
-  const handleAddEmail = () => {
-    if (newEmail && newEmail.includes("@") && !emails.includes(newEmail.trim())) {
-      setEmails([...emails, newEmail.trim()]);
-      setNewEmail("");
+  const handleRemoveCorreoNuevo = (email: string) => {
+    setCorreosNuevos(correosNuevos.filter(c => c.email !== email));
+  };
+
+  const handleSetPrincipalNuevo = (email: string, proposito: PropositoCorreo) => {
+    setCorreosNuevos(correosNuevos.map(c => ({
+      ...c,
+      es_principal: c.proposito === proposito ? c.email === email : c.es_principal
+    })));
+  };
+
+  // Agregar correo (formulario editar)
+  const handleAddCorreoEdit = () => {
+    if (!editCorreoEmail || !editCorreoEmail.includes("@")) return;
+    if (correosEdit.some(c => c.email === editCorreoEmail.trim())) return;
+    
+    const existePrincipalEnProposito = correosEdit.some(
+      c => c.proposito === editCorreoProposito && c.es_principal
+    );
+    
+    setCorreosEdit([...correosEdit, {
+      email: editCorreoEmail.trim(),
+      nombre_contacto: editCorreoContacto.trim() || undefined,
+      proposito: editCorreoProposito,
+      es_principal: !existePrincipalEnProposito,
+    }]);
+    setEditCorreoEmail("");
+    setEditCorreoContacto("");
+  };
+
+  const handleRemoveCorreoEdit = (email: string) => {
+    setCorreosEdit(correosEdit.filter(c => c.email !== email));
+  };
+
+  const handleSetPrincipalEdit = (email: string, proposito: PropositoCorreo) => {
+    setCorreosEdit(correosEdit.map(c => ({
+      ...c,
+      es_principal: c.proposito === proposito ? c.email === email : c.es_principal
+    })));
+  };
+
+  // Cargar correos existentes cuando se abre el diálogo de editar
+  const loadCorreosProveedor = async (proveedorId: string) => {
+    setIsLoadingCorreos(true);
+    try {
+      const { data, error } = await supabase
+        .from("proveedor_correos")
+        .select("*")
+        .eq("proveedor_id", proveedorId)
+        .eq("activo", true)
+        .order("proposito")
+        .order("es_principal", { ascending: false });
+      
+      if (error) throw error;
+      
+      setCorreosEdit((data || []).map(c => ({
+        id: c.id,
+        email: c.email,
+        nombre_contacto: c.nombre_contacto || undefined,
+        proposito: (c.proposito || 'general') as PropositoCorreo,
+        es_principal: c.es_principal || false,
+      })));
+    } catch (error) {
+      console.error("Error loading correos:", error);
+      setCorreosEdit([]);
+    } finally {
+      setIsLoadingCorreos(false);
     }
   };
 
-  const handleRemoveEmail = (emailToRemove: string) => {
-    setEmails(emails.filter(e => e !== emailToRemove));
-  };
-
-  const handleAddEditEmail = () => {
-    if (editNewEmail && editNewEmail.includes("@") && !editEmails.includes(editNewEmail.trim())) {
-      setEditEmails([...editEmails, editNewEmail.trim()]);
-      setEditNewEmail("");
+  // Guardar correos en la tabla proveedor_correos
+  const saveCorreosProveedor = async (proveedorId: string, correos: CorreoProveedor[]) => {
+    // Primero marcar todos los correos existentes como inactivos
+    await supabase
+      .from("proveedor_correos")
+      .update({ activo: false })
+      .eq("proveedor_id", proveedorId);
+    
+    // Insertar/actualizar los nuevos correos
+    for (const correo of correos) {
+      if (correo.id) {
+        // Actualizar existente
+        await supabase
+          .from("proveedor_correos")
+          .update({
+            email: correo.email,
+            nombre_contacto: correo.nombre_contacto || null,
+            proposito: correo.proposito,
+            es_principal: correo.es_principal,
+            activo: true,
+          })
+          .eq("id", correo.id);
+      } else {
+        // Insertar nuevo
+        await supabase
+          .from("proveedor_correos")
+          .insert({
+            proveedor_id: proveedorId,
+            email: correo.email,
+            nombre_contacto: correo.nombre_contacto || null,
+            proposito: correo.proposito,
+            es_principal: correo.es_principal,
+            activo: true,
+          });
+      }
     }
-  };
-
-  const handleRemoveEditEmail = (emailToRemove: string) => {
-    setEditEmails(editEmails.filter(e => e !== emailToRemove));
   };
 
   // Helper function to build complete address from CSF data
@@ -267,11 +408,22 @@ const ProveedoresTab = () => {
 
   const createProveedor = useMutation({
     mutationFn: async (proveedor: typeof newProveedor & { email: string }) => {
-      const { error } = await supabase.from("proveedores").insert([proveedor]);
+      const { data, error } = await supabase
+        .from("proveedores")
+        .insert([proveedor])
+        .select()
+        .single();
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
+      // Guardar correos en proveedor_correos
+      if (correosNuevos.length > 0) {
+        await saveCorreosProveedor(data.id, correosNuevos);
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["proveedores"] });
+      queryClient.invalidateQueries({ queryKey: ["proveedor-correos"] });
       setIsDialogOpen(false);
       setNewProveedor({
         nombre: "",
@@ -282,8 +434,9 @@ const ProveedoresTab = () => {
         rfc: "",
         notas: "",
       });
-      setEmails([]);
-      setNewEmail("");
+      setCorreosNuevos([]);
+      setNuevoCorreoEmail("");
+      setNuevoCorreoContacto("");
       setCSFParsed(false);
       toast({
         title: "Proveedor creado",
@@ -317,11 +470,17 @@ const ProveedoresTab = () => {
         .eq("id", proveedor.id);
       
       if (error) throw error;
+      return proveedor.id;
     },
-    onSuccess: () => {
+    onSuccess: async (proveedorId) => {
+      // Guardar correos en proveedor_correos
+      await saveCorreosProveedor(proveedorId, correosEdit);
+      
       queryClient.invalidateQueries({ queryKey: ["proveedores"] });
+      queryClient.invalidateQueries({ queryKey: ["proveedor-correos"] });
       setIsEditDialogOpen(false);
       setEditingProveedor(null);
+      setCorreosEdit([]);
       toast({
         title: "Proveedor actualizado",
         description: "Los cambios han sido guardados",
@@ -497,41 +656,81 @@ const ProveedoresTab = () => {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label>Correos electrónicos</Label>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <Input
                     type="email"
                     placeholder="correo@proveedor.com"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddEmail())}
+                    value={nuevoCorreoEmail}
+                    onChange={(e) => setNuevoCorreoEmail(e.target.value)}
                   />
-                  <Button type="button" variant="outline" onClick={handleAddEmail}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  <Input
+                    placeholder="Nombre contacto (opcional)"
+                    value={nuevoCorreoContacto}
+                    onChange={(e) => setNuevoCorreoContacto(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <Select value={nuevoCorreoProposito} onValueChange={(v) => setNuevoCorreoProposito(v as PropositoCorreo)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PROPOSITOS.map(p => (
+                          <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" variant="outline" onClick={handleAddCorreoNuevo}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                {emails.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {emails.map((email, idx) => (
-                      <Badge key={idx} variant="secondary" className="gap-1 pr-1">
-                        <Mail className="h-3 w-3" />
-                        {email}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-4 w-4 ml-1 hover:bg-destructive/20"
-                          onClick={() => handleRemoveEmail(email)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </Badge>
+                {correosNuevos.length > 0 && (
+                  <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
+                    {correosNuevos.map((correo) => (
+                      <div key={correo.email} className="flex items-center justify-between gap-2 text-sm">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <Mail className="h-3 w-3 shrink-0 text-muted-foreground" />
+                          <span className="truncate">{correo.email}</span>
+                          {correo.nombre_contacto && (
+                            <span className="text-muted-foreground truncate">({correo.nombre_contacto})</span>
+                          )}
+                          <Badge variant={getPropositoVariant(correo.proposito)} className="text-xs shrink-0">
+                            {getPropositoLabel(correo.proposito)}
+                          </Badge>
+                          {correo.es_principal && (
+                            <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 shrink-0" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {!correo.es_principal && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs"
+                              onClick={() => handleSetPrincipalNuevo(correo.email, correo.proposito)}
+                            >
+                              <Star className="h-3 w-3" />
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-destructive hover:text-destructive"
+                            onClick={() => handleRemoveCorreoNuevo(correo.email)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Agrega uno o más correos. Las órdenes de compra se enviarán a todos.
+                  Agrega correos con propósitos específicos. ⭐ indica el correo principal de cada propósito.
                 </p>
               </div>
 
@@ -572,7 +771,7 @@ const ProveedoresTab = () => {
               </div>
 
               <Button
-                onClick={() => createProveedor.mutate({ ...newProveedor, email: joinEmails(emails) })}
+                onClick={() => createProveedor.mutate({ ...newProveedor, email: joinEmails(correosNuevos) })}
                 disabled={!newProveedor.nombre || createProveedor.isPending}
                 className="w-full"
               >
@@ -620,34 +819,7 @@ const ProveedoresTab = () => {
                   <TableCell>{proveedor.nombre_contacto || "-"}</TableCell>
                   <TableCell>{proveedor.telefono || "-"}</TableCell>
                   <TableCell>
-                    {proveedor.email ? (
-                      (() => {
-                        const emailsList = parseEmails(proveedor.email);
-                        if (emailsList.length === 0) return "-";
-                        if (emailsList.length === 1) return emailsList[0];
-                        return (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="cursor-help flex items-center gap-1">
-                                  {emailsList[0]}
-                                  <Badge variant="outline" className="text-xs px-1 py-0">
-                                    +{emailsList.length - 1}
-                                  </Badge>
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <div className="space-y-1">
-                                  {emailsList.map((email, idx) => (
-                                    <div key={idx}>{email}</div>
-                                  ))}
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        );
-                      })()
-                    ) : "-"}
+                    {proveedor.email || "-"}
                   </TableCell>
                   <TableCell>
                     <Badge variant={proveedor.activo ? "default" : "secondary"}>
@@ -656,17 +828,6 @@ const ProveedoresTab = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setCorreosProveedor(proveedor);
-                          setIsCorreosDialogOpen(true);
-                        }}
-                        title="Gestionar correos"
-                      >
-                        <AtSign className="h-4 w-4" />
-                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -681,10 +842,9 @@ const ProveedoresTab = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
+                        onClick={async () => {
                           setEditingProveedor(proveedor);
-                          setEditEmails(parseEmails(proveedor.email));
-                          setEditNewEmail("");
+                          await loadCorreosProveedor(proveedor.id);
                           setIsEditDialogOpen(true);
                         }}
                         title="Editar proveedor"
@@ -777,42 +937,91 @@ const ProveedoresTab = () => {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label>Correos electrónicos</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="email"
-                    placeholder="correo@proveedor.com"
-                    value={editNewEmail}
-                    onChange={(e) => setEditNewEmail(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddEditEmail())}
-                  />
-                  <Button type="button" variant="outline" onClick={handleAddEditEmail}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                {editEmails.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {editEmails.map((email, idx) => (
-                      <Badge key={idx} variant="secondary" className="gap-1 pr-1">
-                        <Mail className="h-3 w-3" />
-                        {email}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-4 w-4 ml-1 hover:bg-destructive/20"
-                          onClick={() => handleRemoveEditEmail(email)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </Badge>
-                    ))}
+                {isLoadingCorreos ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Cargando correos...
                   </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <Input
+                        type="email"
+                        placeholder="correo@proveedor.com"
+                        value={editCorreoEmail}
+                        onChange={(e) => setEditCorreoEmail(e.target.value)}
+                      />
+                      <Input
+                        placeholder="Nombre contacto (opcional)"
+                        value={editCorreoContacto}
+                        onChange={(e) => setEditCorreoContacto(e.target.value)}
+                      />
+                      <div className="flex gap-2">
+                        <Select value={editCorreoProposito} onValueChange={(v) => setEditCorreoProposito(v as PropositoCorreo)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PROPOSITOS.map(p => (
+                              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button type="button" variant="outline" onClick={handleAddCorreoEdit}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    {correosEdit.length > 0 && (
+                      <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
+                        {correosEdit.map((correo) => (
+                          <div key={correo.email} className="flex items-center justify-between gap-2 text-sm">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <Mail className="h-3 w-3 shrink-0 text-muted-foreground" />
+                              <span className="truncate">{correo.email}</span>
+                              {correo.nombre_contacto && (
+                                <span className="text-muted-foreground truncate">({correo.nombre_contacto})</span>
+                              )}
+                              <Badge variant={getPropositoVariant(correo.proposito)} className="text-xs shrink-0">
+                                {getPropositoLabel(correo.proposito)}
+                              </Badge>
+                              {correo.es_principal && (
+                                <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 shrink-0" />
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {!correo.es_principal && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs"
+                                  onClick={() => handleSetPrincipalEdit(correo.email, correo.proposito)}
+                                >
+                                  <Star className="h-3 w-3" />
+                                </Button>
+                              )}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-destructive hover:text-destructive"
+                                onClick={() => handleRemoveCorreoEdit(correo.email)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Agrega correos con propósitos específicos. ⭐ indica el correo principal de cada propósito.
+                    </p>
+                  </>
                 )}
-                <p className="text-xs text-muted-foreground">
-                  Agrega uno o más correos. Las órdenes de compra se enviarán a todos.
-                </p>
               </div>
 
               <div className="space-y-2">
@@ -874,11 +1083,18 @@ const ProveedoresTab = () => {
               </div>
 
               <Button
-                onClick={() => updateProveedor.mutate({ ...editingProveedor, email: joinEmails(editEmails) })}
-                disabled={!editingProveedor.nombre || updateProveedor.isPending}
+                onClick={() => updateProveedor.mutate({ ...editingProveedor, email: joinEmails(correosEdit) })}
+                disabled={!editingProveedor.nombre || updateProveedor.isPending || isLoadingCorreos}
                 className="w-full"
               >
-                Guardar Cambios
+                {updateProveedor.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  "Guardar Cambios"
+                )}
               </Button>
             </div>
           )}
@@ -922,15 +1138,6 @@ const ProveedoresTab = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog for managing supplier emails */}
-      {correosProveedor && (
-        <ProveedorCorreosManager
-          proveedorId={correosProveedor.id}
-          proveedorNombre={correosProveedor.nombre}
-          open={isCorreosDialogOpen}
-          onOpenChange={setIsCorreosDialogOpen}
-        />
-      )}
     </Card>
   );
 };
