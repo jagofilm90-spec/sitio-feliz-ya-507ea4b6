@@ -108,9 +108,12 @@ const CalendarioEntregasTab = () => {
     return notas?.includes("[AUTO]") || false;
   };
 
-  // Helper to determine if delivery has paid anticipado
-  const tieneAnticipoPagado = (orden: any) => {
-    return orden?.tipo_pago === 'anticipado' && orden?.status_pago === 'pagado';
+  // Helper to determine payment status: 'anticipado_pagado' | 'anticipado_pendiente' | 'contra_entrega'
+  const getEstadoPago = (orden: any): 'anticipado_pagado' | 'anticipado_pendiente' | 'contra_entrega' => {
+    if (orden?.tipo_pago === 'anticipado') {
+      return orden?.status_pago === 'pagado' ? 'anticipado_pagado' : 'anticipado_pendiente';
+    }
+    return 'contra_entrega';
   };
 
   // Combine both data sources into unified format
@@ -132,7 +135,7 @@ const CalendarioEntregasTab = () => {
       cantidadBultos: entrega.cantidad_bultos,
       esMultiple: true,
       reprogramada: esReprogramada(entrega.notas),
-      tieneAnticipo: tieneAnticipoPagado(entrega.ordenes_compra),
+      estadoPago: getEstadoPago(entrega.ordenes_compra),
     })),
     // Simple delivery entries
     ...ordenesSimples.map((orden: any) => ({
@@ -151,7 +154,7 @@ const CalendarioEntregasTab = () => {
       cantidadBultos: null,
       esMultiple: false,
       reprogramada: esReprogramada(orden.notas),
-      tieneAnticipo: tieneAnticipoPagado(orden),
+      estadoPago: getEstadoPago(orden),
     })),
   ], [entregasProgramadas, ordenesSimples]);
 
@@ -303,7 +306,7 @@ const CalendarioEntregasTab = () => {
                     {format(dia, "d")}
                   </span>
                   
-                  {/* Dots indicator - green for anticipado, rose for contra entrega */}
+                  {/* Dots indicator - green: anticipado pagado, yellow: anticipado pendiente, red: contra entrega */}
                   {tieneEntregas && (
                     <div className="flex justify-center gap-1 mt-1">
                       {entregas.slice(0, 3).map((entrega, idx) => (
@@ -311,7 +314,9 @@ const CalendarioEntregasTab = () => {
                           key={idx}
                           className={cn(
                             "w-2 h-2 rounded-full",
-                            entrega.tieneAnticipo ? "bg-green-500" : "bg-rose-500"
+                            entrega.estadoPago === 'anticipado_pagado' && "bg-green-500",
+                            entrega.estadoPago === 'anticipado_pendiente' && "bg-yellow-500",
+                            entrega.estadoPago === 'contra_entrega' && "bg-rose-500"
                           )}
                         />
                       ))}
@@ -329,7 +334,11 @@ const CalendarioEntregasTab = () => {
           <div className="flex items-center justify-center gap-6 pt-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-green-500" />
-              <span>Pago anticipado</span>
+              <span>Anticipado pagado</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-yellow-500" />
+              <span>Anticipado pendiente</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-rose-500" />
@@ -377,10 +386,16 @@ const CalendarioEntregasTab = () => {
                                   #{entrega.numeroEntrega}
                                 </Badge>
                               )}
-                              {entrega.tieneAnticipo && (
+                              {entrega.estadoPago === 'anticipado_pagado' && (
                                 <Badge className="text-xs bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
                                   <Banknote className="h-3 w-3 mr-1" />
-                                  Anticipado
+                                  Anticipado pagado
+                                </Badge>
+                              )}
+                              {entrega.estadoPago === 'anticipado_pendiente' && (
+                                <Badge className="text-xs bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-950/30 dark:text-yellow-400 dark:border-yellow-800">
+                                  <Banknote className="h-3 w-3 mr-1" />
+                                  Anticipo pendiente
                                 </Badge>
                               )}
                               {entrega.reprogramada && (
@@ -480,10 +495,16 @@ const CalendarioEntregasTab = () => {
                         Entrega #{entrega.numeroEntrega}
                       </Badge>
                     )}
-                    {entrega.tieneAnticipo && (
+                    {entrega.estadoPago === 'anticipado_pagado' && (
                       <Badge className="text-xs bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
                         <Banknote className="h-3 w-3 mr-1" />
-                        Anticipado
+                        Anticipado pagado
+                      </Badge>
+                    )}
+                    {entrega.estadoPago === 'anticipado_pendiente' && (
+                      <Badge className="text-xs bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-950/30 dark:text-yellow-400 dark:border-yellow-800">
+                        <Banknote className="h-3 w-3 mr-1" />
+                        Anticipo pendiente
                       </Badge>
                     )}
                     {entrega.reprogramada && (
