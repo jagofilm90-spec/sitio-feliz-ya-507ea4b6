@@ -26,51 +26,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Globe, Package, Trash2, X, Mail, FileText, Upload, Loader2, CheckCircle2, Star, Phone, User } from "lucide-react";
+import { Plus, Search, Edit, Globe, Package, Trash2, X, FileText, Upload, Loader2, CheckCircle2, Star, Phone, User, Mail } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ProveedorProductosSelector from "./ProveedorProductosSelector";
-
-type PuestoContacto = 'general' | 'ventas' | 'cobranza' | 'logistica' | 'devoluciones';
-
-interface ContactoProveedor {
-  id?: string;
-  nombre: string;
-  telefono: string;
-  puesto?: PuestoContacto;
-  es_principal: boolean;
-}
-
-const PUESTOS: { value: PuestoContacto; label: string }[] = [
-  { value: 'general', label: 'General' },
-  { value: 'ventas', label: 'Ventas' },
-  { value: 'cobranza', label: 'Cobranza' },
-  { value: 'logistica', label: 'Logística' },
-  { value: 'devoluciones', label: 'Devoluciones' },
-];
-
-const getPuestoLabel = (puesto?: PuestoContacto): string => {
-  if (!puesto) return 'General';
-  return PUESTOS.find(p => p.value === puesto)?.label || puesto;
-};
-
-const getPuestoVariant = (puesto?: PuestoContacto): "default" | "secondary" | "outline" | "destructive" => {
-  switch (puesto) {
-    case 'ventas': return 'default';
-    case 'cobranza': return 'secondary';
-    case 'devoluciones': return 'destructive';
-    case 'logistica': return 'outline';
-    default: return 'outline';
-  }
-};
 import {
   AlertDialog,
   AlertDialogAction,
@@ -82,35 +43,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type PropositoCorreo = 'general' | 'ordenes' | 'pagos' | 'devoluciones';
-
-interface CorreoProveedor {
+// Interfaz unificada de Contacto (con email y checkboxes de responsabilidades)
+interface ContactoProveedor {
   id?: string;
+  nombre: string;
+  telefono: string;
   email: string;
-  nombre_contacto?: string;
-  proposito: PropositoCorreo;
+  recibe_ordenes: boolean;
+  recibe_pagos: boolean;
+  recibe_devoluciones: boolean;
+  recibe_logistica: boolean;
   es_principal: boolean;
 }
-
-const PROPOSITOS: { value: PropositoCorreo; label: string }[] = [
-  { value: 'general', label: 'General' },
-  { value: 'ordenes', label: 'Órdenes de compra' },
-  { value: 'pagos', label: 'Pagos' },
-  { value: 'devoluciones', label: 'Devoluciones' },
-];
-
-const getPropositoLabel = (proposito: PropositoCorreo): string => {
-  return PROPOSITOS.find(p => p.value === proposito)?.label || proposito;
-};
-
-const getPropositoVariant = (proposito: PropositoCorreo): "default" | "secondary" | "outline" | "destructive" => {
-  switch (proposito) {
-    case 'ordenes': return 'default';
-    case 'pagos': return 'secondary';
-    case 'devoluciones': return 'destructive';
-    default: return 'outline';
-  }
-};
 
 interface Proveedor {
   id: string;
@@ -141,30 +85,31 @@ const ProveedoresTab = () => {
   const [csfParsed, setCSFParsed] = useState(false);
   const csfInputRef = useRef<HTMLInputElement>(null);
   
-  // Correos con propósitos - para crear
-  const [correosNuevos, setCorreosNuevos] = useState<CorreoProveedor[]>([]);
-  const [nuevoCorreoEmail, setNuevoCorreoEmail] = useState("");
-  const [nuevoCorreoContacto, setNuevoCorreoContacto] = useState("");
-  const [nuevoCorreoProposito, setNuevoCorreoProposito] = useState<PropositoCorreo>("general");
-  
-  // Correos con propósitos - para editar
-  const [correosEdit, setCorreosEdit] = useState<CorreoProveedor[]>([]);
-  const [editCorreoEmail, setEditCorreoEmail] = useState("");
-  const [editCorreoContacto, setEditCorreoContacto] = useState("");
-  const [editCorreoProposito, setEditCorreoProposito] = useState<PropositoCorreo>("general");
-  const [isLoadingCorreos, setIsLoadingCorreos] = useState(false);
-  
-  // Contactos con nombre y teléfono - para crear
+  // Contactos unificados - para crear
   const [contactosNuevos, setContactosNuevos] = useState<ContactoProveedor[]>([]);
-  const [nuevoContactoNombre, setNuevoContactoNombre] = useState("");
-  const [nuevoContactoTelefono, setNuevoContactoTelefono] = useState("");
-  const [nuevoContactoPuesto, setNuevoContactoPuesto] = useState<PuestoContacto>("general");
+  const [nuevoContacto, setNuevoContacto] = useState<ContactoProveedor>({
+    nombre: "",
+    telefono: "",
+    email: "",
+    recibe_ordenes: false,
+    recibe_pagos: false,
+    recibe_devoluciones: false,
+    recibe_logistica: false,
+    es_principal: false,
+  });
   
-  // Contactos con nombre y teléfono - para editar
+  // Contactos unificados - para editar
   const [contactosEdit, setContactosEdit] = useState<ContactoProveedor[]>([]);
-  const [editContactoNombre, setEditContactoNombre] = useState("");
-  const [editContactoTelefono, setEditContactoTelefono] = useState("");
-  const [editContactoPuesto, setEditContactoPuesto] = useState<PuestoContacto>("general");
+  const [editContacto, setEditContacto] = useState<ContactoProveedor>({
+    nombre: "",
+    telefono: "",
+    email: "",
+    recibe_ordenes: false,
+    recibe_pagos: false,
+    recibe_devoluciones: false,
+    recibe_logistica: false,
+    es_principal: false,
+  });
   const [isLoadingContactos, setIsLoadingContactos] = useState(false);
   
   const [newProveedor, setNewProveedor] = useState({
@@ -178,93 +123,51 @@ const ProveedoresTab = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Helper to join emails for DB storage (for backwards compatibility)
-  const joinEmails = (correos: CorreoProveedor[]): string => {
-    return correos.map(c => c.email).join(", ");
+  // Reset nuevo contacto form
+  const resetNuevoContacto = () => {
+    setNuevoContacto({
+      nombre: "",
+      telefono: "",
+      email: "",
+      recibe_ordenes: false,
+      recibe_pagos: false,
+      recibe_devoluciones: false,
+      recibe_logistica: false,
+      es_principal: false,
+    });
   };
 
-  // Agregar correo nuevo (formulario crear)
-  const handleAddCorreoNuevo = () => {
-    if (!nuevoCorreoEmail || !nuevoCorreoEmail.includes("@")) return;
-    if (correosNuevos.some(c => c.email === nuevoCorreoEmail.trim())) return;
-    
-    // Determinar si debe ser principal para su propósito
-    const existePrincipalEnProposito = correosNuevos.some(
-      c => c.proposito === nuevoCorreoProposito && c.es_principal
-    );
-    
-    setCorreosNuevos([...correosNuevos, {
-      email: nuevoCorreoEmail.trim(),
-      nombre_contacto: nuevoCorreoContacto.trim() || undefined,
-      proposito: nuevoCorreoProposito,
-      es_principal: !existePrincipalEnProposito,
-    }]);
-    setNuevoCorreoEmail("");
-    setNuevoCorreoContacto("");
+  const resetEditContacto = () => {
+    setEditContacto({
+      nombre: "",
+      telefono: "",
+      email: "",
+      recibe_ordenes: false,
+      recibe_pagos: false,
+      recibe_devoluciones: false,
+      recibe_logistica: false,
+      es_principal: false,
+    });
   };
 
-  const handleRemoveCorreoNuevo = (email: string) => {
-    setCorreosNuevos(correosNuevos.filter(c => c.email !== email));
-  };
-
-  const handleSetPrincipalNuevo = (email: string, proposito: PropositoCorreo) => {
-    setCorreosNuevos(correosNuevos.map(c => ({
-      ...c,
-      es_principal: c.proposito === proposito ? c.email === email : c.es_principal
-    })));
-  };
-
-  // Agregar correo (formulario editar)
-  const handleAddCorreoEdit = () => {
-    if (!editCorreoEmail || !editCorreoEmail.includes("@")) return;
-    if (correosEdit.some(c => c.email === editCorreoEmail.trim())) return;
-    
-    const existePrincipalEnProposito = correosEdit.some(
-      c => c.proposito === editCorreoProposito && c.es_principal
-    );
-    
-    setCorreosEdit([...correosEdit, {
-      email: editCorreoEmail.trim(),
-      nombre_contacto: editCorreoContacto.trim() || undefined,
-      proposito: editCorreoProposito,
-      es_principal: !existePrincipalEnProposito,
-    }]);
-    setEditCorreoEmail("");
-    setEditCorreoContacto("");
-  };
-
-  const handleRemoveCorreoEdit = (email: string) => {
-    setCorreosEdit(correosEdit.filter(c => c.email !== email));
-  };
-
-  const handleSetPrincipalEdit = (email: string, proposito: PropositoCorreo) => {
-    setCorreosEdit(correosEdit.map(c => ({
-      ...c,
-      es_principal: c.proposito === proposito ? c.email === email : c.es_principal
-    })));
-  };
-
-  // === CONTACTOS HELPERS ===
-  
   // Agregar contacto nuevo (formulario crear)
   const handleAddContactoNuevo = () => {
-    if (!nuevoContactoNombre.trim() || !nuevoContactoTelefono.trim()) return;
+    if (!nuevoContacto.nombre.trim()) return;
     
     const esPrincipal = contactosNuevos.length === 0;
     
     setContactosNuevos([...contactosNuevos, {
-      nombre: nuevoContactoNombre.trim(),
-      telefono: nuevoContactoTelefono.trim(),
-      puesto: nuevoContactoPuesto,
+      ...nuevoContacto,
+      nombre: nuevoContacto.nombre.trim(),
+      telefono: nuevoContacto.telefono.trim(),
+      email: nuevoContacto.email.trim(),
       es_principal: esPrincipal,
     }]);
-    setNuevoContactoNombre("");
-    setNuevoContactoTelefono("");
+    resetNuevoContacto();
   };
 
   const handleRemoveContactoNuevo = (index: number) => {
     const updated = contactosNuevos.filter((_, i) => i !== index);
-    // Si eliminamos el principal, hacer principal al primero
     if (contactosNuevos[index]?.es_principal && updated.length > 0) {
       updated[0].es_principal = true;
     }
@@ -280,18 +183,18 @@ const ProveedoresTab = () => {
 
   // Agregar contacto (formulario editar)
   const handleAddContactoEdit = () => {
-    if (!editContactoNombre.trim() || !editContactoTelefono.trim()) return;
+    if (!editContacto.nombre.trim()) return;
     
     const esPrincipal = contactosEdit.length === 0;
     
     setContactosEdit([...contactosEdit, {
-      nombre: editContactoNombre.trim(),
-      telefono: editContactoTelefono.trim(),
-      puesto: editContactoPuesto,
+      ...editContacto,
+      nombre: editContacto.nombre.trim(),
+      telefono: editContacto.telefono.trim(),
+      email: editContacto.email.trim(),
       es_principal: esPrincipal,
     }]);
-    setEditContactoNombre("");
-    setEditContactoTelefono("");
+    resetEditContacto();
   };
 
   const handleRemoveContactoEdit = (index: number) => {
@@ -325,8 +228,12 @@ const ProveedoresTab = () => {
       setContactosEdit((data || []).map(c => ({
         id: c.id,
         nombre: c.nombre,
-        telefono: c.telefono,
-        puesto: (c.puesto || 'general') as PuestoContacto,
+        telefono: c.telefono || "",
+        email: c.email || "",
+        recibe_ordenes: c.recibe_ordenes || false,
+        recibe_pagos: c.recibe_pagos || false,
+        recibe_devoluciones: c.recibe_devoluciones || false,
+        recibe_logistica: c.recibe_logistica || false,
         es_principal: c.es_principal || false,
       })));
     } catch (error) {
@@ -353,7 +260,11 @@ const ProveedoresTab = () => {
           .update({
             nombre: contacto.nombre,
             telefono: contacto.telefono,
-            puesto: contacto.puesto || 'general',
+            email: contacto.email,
+            recibe_ordenes: contacto.recibe_ordenes,
+            recibe_pagos: contacto.recibe_pagos,
+            recibe_devoluciones: contacto.recibe_devoluciones,
+            recibe_logistica: contacto.recibe_logistica,
             es_principal: contacto.es_principal,
             activo: true,
           })
@@ -365,7 +276,11 @@ const ProveedoresTab = () => {
             proveedor_id: proveedorId,
             nombre: contacto.nombre,
             telefono: contacto.telefono,
-            puesto: contacto.puesto || 'general',
+            email: contacto.email,
+            recibe_ordenes: contacto.recibe_ordenes,
+            recibe_pagos: contacto.recibe_pagos,
+            recibe_devoluciones: contacto.recibe_devoluciones,
+            recibe_logistica: contacto.recibe_logistica,
             es_principal: contacto.es_principal,
             activo: true,
           });
@@ -374,79 +289,13 @@ const ProveedoresTab = () => {
   };
 
   // Helper para obtener contacto principal (para backwards compatibility)
-  const getContactoPrincipal = (contactos: ContactoProveedor[]): { nombre: string | null; telefono: string | null } => {
+  const getContactoPrincipal = (contactos: ContactoProveedor[]): { nombre: string | null; telefono: string | null; email: string | null } => {
     const principal = contactos.find(c => c.es_principal) || contactos[0];
     return {
       nombre: principal?.nombre || null,
       telefono: principal?.telefono || null,
+      email: principal?.email || null,
     };
-  };
-
-  // Cargar correos existentes cuando se abre el diálogo de editar
-  const loadCorreosProveedor = async (proveedorId: string) => {
-    setIsLoadingCorreos(true);
-    try {
-      const { data, error } = await supabase
-        .from("proveedor_correos")
-        .select("*")
-        .eq("proveedor_id", proveedorId)
-        .eq("activo", true)
-        .order("proposito")
-        .order("es_principal", { ascending: false });
-      
-      if (error) throw error;
-      
-      setCorreosEdit((data || []).map(c => ({
-        id: c.id,
-        email: c.email,
-        nombre_contacto: c.nombre_contacto || undefined,
-        proposito: (c.proposito || 'general') as PropositoCorreo,
-        es_principal: c.es_principal || false,
-      })));
-    } catch (error) {
-      console.error("Error loading correos:", error);
-      setCorreosEdit([]);
-    } finally {
-      setIsLoadingCorreos(false);
-    }
-  };
-
-  // Guardar correos en la tabla proveedor_correos
-  const saveCorreosProveedor = async (proveedorId: string, correos: CorreoProveedor[]) => {
-    // Primero marcar todos los correos existentes como inactivos
-    await supabase
-      .from("proveedor_correos")
-      .update({ activo: false })
-      .eq("proveedor_id", proveedorId);
-    
-    // Insertar/actualizar los nuevos correos
-    for (const correo of correos) {
-      if (correo.id) {
-        // Actualizar existente
-        await supabase
-          .from("proveedor_correos")
-          .update({
-            email: correo.email,
-            nombre_contacto: correo.nombre_contacto || null,
-            proposito: correo.proposito,
-            es_principal: correo.es_principal,
-            activo: true,
-          })
-          .eq("id", correo.id);
-      } else {
-        // Insertar nuevo
-        await supabase
-          .from("proveedor_correos")
-          .insert({
-            proveedor_id: proveedorId,
-            email: correo.email,
-            nombre_contacto: correo.nombre_contacto || null,
-            proposito: correo.proposito,
-            es_principal: correo.es_principal,
-            activo: true,
-          });
-      }
-    }
   };
 
   // Helper function to build complete address from CSF data
@@ -509,12 +358,10 @@ const ProveedoresTab = () => {
     setCSFParsed(false);
     
     try {
-      // Convert PDF to base64
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
           const result = reader.result as string;
-          // Remove data URL prefix
           const base64Data = result.split(',')[1];
           resolve(base64Data);
         };
@@ -522,7 +369,6 @@ const ProveedoresTab = () => {
         reader.readAsDataURL(file);
       });
       
-      // Call parse-csf edge function
       const { data, error } = await supabase.functions.invoke('parse-csf', {
         body: { pdfBase64: base64 }
       });
@@ -532,16 +378,13 @@ const ProveedoresTab = () => {
       if (data?.data) {
         const csfData = data.data;
         
-        // Build full name with regime
         let nombreCompleto = csfData.razon_social || '';
         if (csfData.regimen_capital) {
           nombreCompleto += ` ${csfData.regimen_capital}`;
         }
         
-        // Build full address
         const direccionCompleta = buildDireccionFromCSF(csfData);
         
-        // Auto-fill form fields
         setNewProveedor(prev => ({
           ...prev,
           nombre: nombreCompleto.trim(),
@@ -568,7 +411,6 @@ const ProveedoresTab = () => {
       });
     } finally {
       setIsParsingCSF(false);
-      // Reset file input
       if (csfInputRef.current) {
         csfInputRef.current.value = '';
       }
@@ -599,17 +441,11 @@ const ProveedoresTab = () => {
       return data;
     },
     onSuccess: async (data) => {
-      // Guardar correos en proveedor_correos
-      if (correosNuevos.length > 0) {
-        await saveCorreosProveedor(data.id, correosNuevos);
-      }
-      // Guardar contactos en proveedor_contactos
       if (contactosNuevos.length > 0) {
         await saveContactosProveedor(data.id, contactosNuevos);
       }
       
       queryClient.invalidateQueries({ queryKey: ["proveedores"] });
-      queryClient.invalidateQueries({ queryKey: ["proveedor-correos"] });
       queryClient.invalidateQueries({ queryKey: ["proveedor-contactos"] });
       setIsDialogOpen(false);
       setNewProveedor({
@@ -619,12 +455,8 @@ const ProveedoresTab = () => {
         rfc: "",
         notas: "",
       });
-      setCorreosNuevos([]);
-      setNuevoCorreoEmail("");
-      setNuevoCorreoContacto("");
       setContactosNuevos([]);
-      setNuevoContactoNombre("");
-      setNuevoContactoTelefono("");
+      resetNuevoContacto();
       setCSFParsed(false);
       toast({
         title: "Proveedor creado",
@@ -648,7 +480,7 @@ const ProveedoresTab = () => {
         .update({
           nombre: proveedor.nombre,
           nombre_contacto: contactoPrincipal.nombre,
-          email: proveedor.email,
+          email: contactoPrincipal.email,
           telefono: contactoPrincipal.telefono,
           direccion: proveedor.direccion,
           pais: proveedor.pais,
@@ -662,17 +494,12 @@ const ProveedoresTab = () => {
       return proveedor.id;
     },
     onSuccess: async (proveedorId) => {
-      // Guardar correos en proveedor_correos
-      await saveCorreosProveedor(proveedorId, correosEdit);
-      // Guardar contactos en proveedor_contactos
       await saveContactosProveedor(proveedorId, contactosEdit);
       
       queryClient.invalidateQueries({ queryKey: ["proveedores"] });
-      queryClient.invalidateQueries({ queryKey: ["proveedor-correos"] });
       queryClient.invalidateQueries({ queryKey: ["proveedor-contactos"] });
       setIsEditDialogOpen(false);
       setEditingProveedor(null);
-      setCorreosEdit([]);
       setContactosEdit([]);
       toast({
         title: "Proveedor actualizado",
@@ -690,13 +517,11 @@ const ProveedoresTab = () => {
 
   const deleteProveedor = useMutation({
     mutationFn: async (proveedorId: string) => {
-      // Primero eliminar relaciones con productos
       await supabase
         .from("proveedor_productos")
         .delete()
         .eq("proveedor_id", proveedorId);
       
-      // Luego eliminar el proveedor
       const { error } = await supabase
         .from("proveedores")
         .delete()
@@ -727,6 +552,171 @@ const ProveedoresTab = () => {
       p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.pais.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (p.rfc && p.rfc.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  // Render de badges de responsabilidades
+  const renderResponsabilidades = (contacto: ContactoProveedor) => {
+    const badges = [];
+    if (contacto.recibe_ordenes) badges.push(<Badge key="ord" variant="default" className="text-xs">Órdenes</Badge>);
+    if (contacto.recibe_pagos) badges.push(<Badge key="pag" variant="secondary" className="text-xs">Pagos</Badge>);
+    if (contacto.recibe_devoluciones) badges.push(<Badge key="dev" variant="destructive" className="text-xs">Devoluciones</Badge>);
+    if (contacto.recibe_logistica) badges.push(<Badge key="log" variant="outline" className="text-xs">Logística</Badge>);
+    return badges.length > 0 ? badges : <span className="text-xs text-muted-foreground">Sin asignar</span>;
+  };
+
+  // Form de agregar contacto reutilizable
+  const ContactoForm = ({ 
+    contacto, 
+    setContacto, 
+    onAdd, 
+    disabled 
+  }: { 
+    contacto: ContactoProveedor; 
+    setContacto: (c: ContactoProveedor) => void; 
+    onAdd: () => void; 
+    disabled: boolean;
+  }) => (
+    <div className="space-y-3 border rounded-lg p-4 bg-muted/20">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Nombre *</Label>
+          <Input
+            placeholder="Nombre del contacto"
+            value={contacto.nombre}
+            onChange={(e) => setContacto({ ...contacto, nombre: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Teléfono</Label>
+          <Input
+            placeholder="55 1234 5678"
+            value={contacto.telefono}
+            onChange={(e) => setContacto({ ...contacto, telefono: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Correo</Label>
+          <Input
+            type="email"
+            placeholder="correo@ejemplo.com"
+            value={contacto.email}
+            onChange={(e) => setContacto({ ...contacto, email: e.target.value })}
+          />
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-4">
+        <Label className="text-xs text-muted-foreground">Recibe comunicaciones de:</Label>
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="recibe_ordenes"
+            checked={contacto.recibe_ordenes}
+            onCheckedChange={(c) => setContacto({ ...contacto, recibe_ordenes: c === true })}
+          />
+          <Label htmlFor="recibe_ordenes" className="text-sm font-normal cursor-pointer">Órdenes</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="recibe_pagos"
+            checked={contacto.recibe_pagos}
+            onCheckedChange={(c) => setContacto({ ...contacto, recibe_pagos: c === true })}
+          />
+          <Label htmlFor="recibe_pagos" className="text-sm font-normal cursor-pointer">Pagos</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="recibe_devoluciones"
+            checked={contacto.recibe_devoluciones}
+            onCheckedChange={(c) => setContacto({ ...contacto, recibe_devoluciones: c === true })}
+          />
+          <Label htmlFor="recibe_devoluciones" className="text-sm font-normal cursor-pointer">Devoluciones</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="recibe_logistica"
+            checked={contacto.recibe_logistica}
+            onCheckedChange={(c) => setContacto({ ...contacto, recibe_logistica: c === true })}
+          />
+          <Label htmlFor="recibe_logistica" className="text-sm font-normal cursor-pointer">Logística</Label>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={onAdd} disabled={disabled} className="ml-auto">
+          <Plus className="h-4 w-4 mr-1" />
+          Agregar
+        </Button>
+      </div>
+    </div>
+  );
+
+  // Lista de contactos reutilizable
+  const ContactosList = ({ 
+    contactos, 
+    onRemove, 
+    onSetPrincipal 
+  }: { 
+    contactos: ContactoProveedor[]; 
+    onRemove: (index: number) => void; 
+    onSetPrincipal: (index: number) => void;
+  }) => (
+    <div className="space-y-2">
+      {contactos.map((contacto, index) => (
+        <div key={contacto.id || index} className="flex items-start justify-between gap-2 p-3 border rounded-lg bg-background">
+          <div className="flex-1 min-w-0 space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="font-medium">{contacto.nombre}</span>
+              {contacto.es_principal && (
+                <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 shrink-0" />
+              )}
+            </div>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+              {contacto.telefono && (
+                <span className="flex items-center gap-1">
+                  <Phone className="h-3 w-3" />
+                  {contacto.telefono}
+                </span>
+              )}
+              {contacto.email && (
+                <span className="flex items-center gap-1">
+                  <Mail className="h-3 w-3" />
+                  {contacto.email}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1 flex-wrap">
+              {renderResponsabilidades(contacto)}
+            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {!contacto.es_principal && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => onSetPrincipal(index)}
+                    >
+                      <Star className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Marcar como principal</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              onClick={() => onRemove(index)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 
   return (
@@ -833,159 +823,24 @@ const ProveedoresTab = () => {
                 />
               </div>
 
-              {/* Sección de Contactos */}
+              {/* Sección de Contactos Unificados */}
               <div className="space-y-3">
                 <Label>Contactos del proveedor</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <Input
-                    placeholder="Nombre del contacto *"
-                    value={nuevoContactoNombre}
-                    onChange={(e) => setNuevoContactoNombre(e.target.value)}
-                  />
-                  <Input
-                    placeholder="Teléfono *"
-                    value={nuevoContactoTelefono}
-                    onChange={(e) => setNuevoContactoTelefono(e.target.value)}
-                  />
-                  <div className="flex gap-2">
-                    <Select value={nuevoContactoPuesto} onValueChange={(v) => setNuevoContactoPuesto(v as PuestoContacto)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PUESTOS.map(p => (
-                          <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button type="button" variant="outline" onClick={handleAddContactoNuevo} disabled={!nuevoContactoNombre.trim() || !nuevoContactoTelefono.trim()}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+                <ContactoForm
+                  contacto={nuevoContacto}
+                  setContacto={setNuevoContacto}
+                  onAdd={handleAddContactoNuevo}
+                  disabled={!nuevoContacto.nombre.trim()}
+                />
                 {contactosNuevos.length > 0 && (
-                  <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
-                    {contactosNuevos.map((contacto, index) => (
-                      <div key={index} className="flex items-center justify-between gap-2 text-sm">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <User className="h-3 w-3 shrink-0 text-muted-foreground" />
-                          <span className="font-medium truncate">{contacto.nombre}</span>
-                          <Phone className="h-3 w-3 shrink-0 text-muted-foreground" />
-                          <span className="truncate">{contacto.telefono}</span>
-                          <Badge variant={getPuestoVariant(contacto.puesto)} className="text-xs shrink-0">
-                            {getPuestoLabel(contacto.puesto)}
-                          </Badge>
-                          {contacto.es_principal && (
-                            <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 shrink-0" />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          {!contacto.es_principal && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-2 text-xs"
-                              onClick={() => handleSetPrincipalContactoNuevo(index)}
-                              title="Marcar como principal"
-                            >
-                              <Star className="h-3 w-3" />
-                            </Button>
-                          )}
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-destructive hover:text-destructive"
-                            onClick={() => handleRemoveContactoNuevo(index)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <ContactosList
+                    contactos={contactosNuevos}
+                    onRemove={handleRemoveContactoNuevo}
+                    onSetPrincipal={handleSetPrincipalContactoNuevo}
+                  />
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Agrega contactos con nombre, teléfono y área. ⭐ indica el contacto principal.
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <Label>Correos electrónicos</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <Input
-                    type="email"
-                    placeholder="correo@proveedor.com"
-                    value={nuevoCorreoEmail}
-                    onChange={(e) => setNuevoCorreoEmail(e.target.value)}
-                  />
-                  <Input
-                    placeholder="Nombre contacto (opcional)"
-                    value={nuevoCorreoContacto}
-                    onChange={(e) => setNuevoCorreoContacto(e.target.value)}
-                  />
-                  <div className="flex gap-2">
-                    <Select value={nuevoCorreoProposito} onValueChange={(v) => setNuevoCorreoProposito(v as PropositoCorreo)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PROPOSITOS.map(p => (
-                          <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button type="button" variant="outline" onClick={handleAddCorreoNuevo}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                {correosNuevos.length > 0 && (
-                  <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
-                    {correosNuevos.map((correo) => (
-                      <div key={correo.email} className="flex items-center justify-between gap-2 text-sm">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <Mail className="h-3 w-3 shrink-0 text-muted-foreground" />
-                          <span className="truncate">{correo.email}</span>
-                          {correo.nombre_contacto && (
-                            <span className="text-muted-foreground truncate">({correo.nombre_contacto})</span>
-                          )}
-                          <Badge variant={getPropositoVariant(correo.proposito)} className="text-xs shrink-0">
-                            {getPropositoLabel(correo.proposito)}
-                          </Badge>
-                          {correo.es_principal && (
-                            <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 shrink-0" />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          {!correo.es_principal && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-2 text-xs"
-                              onClick={() => handleSetPrincipalNuevo(correo.email, correo.proposito)}
-                            >
-                              <Star className="h-3 w-3" />
-                            </Button>
-                          )}
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-destructive hover:text-destructive"
-                            onClick={() => handleRemoveCorreoNuevo(correo.email)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  Agrega correos con propósitos específicos. ⭐ indica el correo principal de cada propósito.
+                  Agrega contactos con nombre, teléfono, correo y selecciona qué comunicaciones reciben. ⭐ indica el contacto principal.
                 </p>
               </div>
 
@@ -993,7 +848,7 @@ const ProveedoresTab = () => {
                 <Label htmlFor="direccion">Dirección</Label>
                 <Input
                   id="direccion"
-                  placeholder="Calle, número, colonia, ciudad"
+                  placeholder="Av. Principal #123, Col. Centro"
                   value={newProveedor.direccion}
                   onChange={(e) =>
                     setNewProveedor({ ...newProveedor, direccion: e.target.value })
@@ -1018,7 +873,7 @@ const ProveedoresTab = () => {
                   const contactoPrincipal = getContactoPrincipal(contactosNuevos);
                   createProveedor.mutate({ 
                     ...newProveedor, 
-                    email: joinEmails(correosNuevos),
+                    email: contactoPrincipal.email || "",
                     nombre_contacto: contactoPrincipal.nombre,
                     telefono: contactoPrincipal.telefono,
                   });
@@ -1095,10 +950,7 @@ const ProveedoresTab = () => {
                         size="sm"
                         onClick={async () => {
                           setEditingProveedor(proveedor);
-                          await Promise.all([
-                            loadCorreosProveedor(proveedor.id),
-                            loadContactosProveedor(proveedor.id),
-                          ]);
+                          await loadContactosProveedor(proveedor.id);
                           setIsEditDialogOpen(true);
                         }}
                         title="Editar proveedor"
@@ -1176,7 +1028,7 @@ const ProveedoresTab = () => {
                 />
               </div>
 
-              {/* Sección de Contactos - Editar */}
+              {/* Sección de Contactos Unificados - Editar */}
               <div className="space-y-3">
                 <Label>Contactos del proveedor</Label>
                 {isLoadingContactos ? (
@@ -1186,165 +1038,21 @@ const ProveedoresTab = () => {
                   </div>
                 ) : (
                   <>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <Input
-                        placeholder="Nombre del contacto *"
-                        value={editContactoNombre}
-                        onChange={(e) => setEditContactoNombre(e.target.value)}
-                      />
-                      <Input
-                        placeholder="Teléfono *"
-                        value={editContactoTelefono}
-                        onChange={(e) => setEditContactoTelefono(e.target.value)}
-                      />
-                      <div className="flex gap-2">
-                        <Select value={editContactoPuesto} onValueChange={(v) => setEditContactoPuesto(v as PuestoContacto)}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {PUESTOS.map(p => (
-                              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button type="button" variant="outline" onClick={handleAddContactoEdit} disabled={!editContactoNombre.trim() || !editContactoTelefono.trim()}>
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+                    <ContactoForm
+                      contacto={editContacto}
+                      setContacto={setEditContacto}
+                      onAdd={handleAddContactoEdit}
+                      disabled={!editContacto.nombre.trim()}
+                    />
                     {contactosEdit.length > 0 && (
-                      <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
-                        {contactosEdit.map((contacto, index) => (
-                          <div key={contacto.id || index} className="flex items-center justify-between gap-2 text-sm">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <User className="h-3 w-3 shrink-0 text-muted-foreground" />
-                              <span className="font-medium truncate">{contacto.nombre}</span>
-                              <Phone className="h-3 w-3 shrink-0 text-muted-foreground" />
-                              <span className="truncate">{contacto.telefono}</span>
-                              <Badge variant={getPuestoVariant(contacto.puesto)} className="text-xs shrink-0">
-                                {getPuestoLabel(contacto.puesto)}
-                              </Badge>
-                              {contacto.es_principal && (
-                                <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 shrink-0" />
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              {!contacto.es_principal && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 px-2 text-xs"
-                                  onClick={() => handleSetPrincipalContactoEdit(index)}
-                                  title="Marcar como principal"
-                                >
-                                  <Star className="h-3 w-3" />
-                                </Button>
-                              )}
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2 text-destructive hover:text-destructive"
-                                onClick={() => handleRemoveContactoEdit(index)}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <ContactosList
+                        contactos={contactosEdit}
+                        onRemove={handleRemoveContactoEdit}
+                        onSetPrincipal={handleSetPrincipalContactoEdit}
+                      />
                     )}
                     <p className="text-xs text-muted-foreground">
-                      Agrega contactos con nombre, teléfono y área. ⭐ indica el contacto principal.
-                    </p>
-                  </>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                <Label>Correos electrónicos</Label>
-                {isLoadingCorreos ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Cargando correos...
-                  </div>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <Input
-                        type="email"
-                        placeholder="correo@proveedor.com"
-                        value={editCorreoEmail}
-                        onChange={(e) => setEditCorreoEmail(e.target.value)}
-                      />
-                      <Input
-                        placeholder="Nombre contacto (opcional)"
-                        value={editCorreoContacto}
-                        onChange={(e) => setEditCorreoContacto(e.target.value)}
-                      />
-                      <div className="flex gap-2">
-                        <Select value={editCorreoProposito} onValueChange={(v) => setEditCorreoProposito(v as PropositoCorreo)}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {PROPOSITOS.map(p => (
-                              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button type="button" variant="outline" onClick={handleAddCorreoEdit}>
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    {correosEdit.length > 0 && (
-                      <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
-                        {correosEdit.map((correo) => (
-                          <div key={correo.email} className="flex items-center justify-between gap-2 text-sm">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <Mail className="h-3 w-3 shrink-0 text-muted-foreground" />
-                              <span className="truncate">{correo.email}</span>
-                              {correo.nombre_contacto && (
-                                <span className="text-muted-foreground truncate">({correo.nombre_contacto})</span>
-                              )}
-                              <Badge variant={getPropositoVariant(correo.proposito)} className="text-xs shrink-0">
-                                {getPropositoLabel(correo.proposito)}
-                              </Badge>
-                              {correo.es_principal && (
-                                <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 shrink-0" />
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              {!correo.es_principal && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 px-2 text-xs"
-                                  onClick={() => handleSetPrincipalEdit(correo.email, correo.proposito)}
-                                >
-                                  <Star className="h-3 w-3" />
-                                </Button>
-                              )}
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2 text-destructive hover:text-destructive"
-                                onClick={() => handleRemoveCorreoEdit(correo.email)}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      Agrega correos con propósitos específicos. ⭐ indica el correo principal de cada propósito.
+                      Agrega contactos con nombre, teléfono, correo y selecciona qué comunicaciones reciben. ⭐ indica el contacto principal.
                     </p>
                   </>
                 )}
@@ -1379,69 +1087,68 @@ const ProveedoresTab = () => {
               </div>
 
               <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
+                <Checkbox
                   id="edit-activo"
                   checked={editingProveedor.activo}
-                  onChange={(e) =>
+                  onCheckedChange={(c) =>
                     setEditingProveedor({
                       ...editingProveedor,
-                      activo: e.target.checked,
+                      activo: c === true,
                     })
                   }
-                  className="h-4 w-4"
                 />
-                <Label htmlFor="edit-activo">Proveedor activo</Label>
+                <Label htmlFor="edit-activo" className="text-sm font-normal cursor-pointer">
+                  Proveedor activo
+                </Label>
               </div>
 
               <Button
-                onClick={() => updateProveedor.mutate({ ...editingProveedor, email: joinEmails(correosEdit) })}
-                disabled={!editingProveedor.nombre || updateProveedor.isPending || isLoadingCorreos || isLoadingContactos}
+                onClick={() => {
+                  if (editingProveedor) {
+                    updateProveedor.mutate(editingProveedor);
+                  }
+                }}
+                disabled={!editingProveedor?.nombre || updateProveedor.isPending}
                 className="w-full"
               >
-                {updateProveedor.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  "Guardar Cambios"
-                )}
+                Guardar Cambios
               </Button>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Dialog for managing supplier products */}
       <Dialog open={isProductosDialogOpen} onOpenChange={setIsProductosDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Productos del Proveedor</DialogTitle>
+            <DialogTitle>
+              Productos de {productosProveedor?.nombre}
+            </DialogTitle>
           </DialogHeader>
           {productosProveedor && (
-            <ProveedorProductosSelector 
-              proveedorId={productosProveedor.id} 
-              proveedorNombre={productosProveedor.nombre}
-            />
+            <div className="flex-1 overflow-hidden">
+              <ProveedorProductosSelector proveedorId={productosProveedor.id} proveedorNombre={productosProveedor.nombre} />
+            </div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirmation dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar proveedor?</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Estás seguro de que deseas eliminar a "{deletingProveedor?.nombre}"? 
-              Esta acción no se puede deshacer y eliminará también las asociaciones con productos.
+              Esta acción no se puede deshacer. Se eliminará el proveedor "{deletingProveedor?.nombre}" y todas sus relaciones con productos.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deletingProveedor && deleteProveedor.mutate(deletingProveedor.id)}
+              onClick={() => {
+                if (deletingProveedor) {
+                  deleteProveedor.mutate(deletingProveedor.id);
+                }
+              }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Eliminar
@@ -1449,7 +1156,6 @@ const ProveedoresTab = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
     </Card>
   );
 };

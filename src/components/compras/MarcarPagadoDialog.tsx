@@ -62,16 +62,19 @@ export function MarcarPagadoDialog({
   const [guardarEmail, setGuardarEmail] = useState(false);
   const [enviandoCorreo, setEnviandoCorreo] = useState(false);
 
-  // Fetch saved emails for this provider
-  const { data: correosGuardados = [], refetch: refetchCorreos } = useQuery({
-    queryKey: ["proveedor-correos", orden?.proveedor_id],
+  // Fetch contacts that receive payment notifications
+  const { data: contactosPagos = [], refetch: refetchContactos } = useQuery({
+    queryKey: ["proveedor-contactos-pagos", orden?.proveedor_id],
     queryFn: async () => {
       if (!orden?.proveedor_id) return [];
       const { data, error } = await supabase
-        .from("proveedor_correos")
+        .from("proveedor_contactos")
         .select("*")
         .eq("proveedor_id", orden.proveedor_id)
         .eq("activo", true)
+        .not("email", "is", null)
+        .neq("email", "")
+        .order("recibe_pagos", { ascending: false })
         .order("es_principal", { ascending: false });
       if (error) throw error;
       return data || [];
@@ -79,24 +82,18 @@ export function MarcarPagadoDialog({
     enabled: !!orden?.proveedor_id && open,
   });
 
-  // Initialize email when dialog opens or emails load - prioritize "pagos" purpose
+  // Initialize email when dialog opens - prioritize contacts with recibe_pagos
   useEffect(() => {
     if (open && orden) {
-      if (correosGuardados.length > 0) {
-        // First try to find a principal email for "pagos"
-        const principalPagos = correosGuardados.find(c => c.es_principal && c.proposito === 'pagos');
-        if (principalPagos) {
-          setEmailSeleccionado(principalPagos.id);
+      if (contactosPagos.length > 0) {
+        // First try to find a contact with recibe_pagos = true
+        const contactoPagos = contactosPagos.find(c => c.recibe_pagos);
+        if (contactoPagos) {
+          setEmailSeleccionado(contactoPagos.id);
         } else {
-          // Then any email for "pagos"
-          const anyPagos = correosGuardados.find(c => c.proposito === 'pagos');
-          if (anyPagos) {
-            setEmailSeleccionado(anyPagos.id);
-          } else {
-            // Fallback to any principal or first email
-            const principal = correosGuardados.find(c => c.es_principal);
-            setEmailSeleccionado(principal?.id || correosGuardados[0].id);
-          }
+          // Fallback to principal or first contact with email
+          const principal = contactosPagos.find(c => c.es_principal);
+          setEmailSeleccionado(principal?.id || contactosPagos[0].id);
         }
       } else if (orden.proveedor_email) {
         setEmailManual(orden.proveedor_email);
@@ -106,20 +103,20 @@ export function MarcarPagadoDialog({
         setEmailManual("");
       }
     }
-  }, [open, orden, correosGuardados]);
+  }, [open, orden, contactosPagos]);
 
-  // Delete email mutation
+  // Delete contact mutation (for removing email from contact)
   const deleteEmailMutation = useMutation({
-    mutationFn: async (emailId: string) => {
+    mutationFn: async (contactoId: string) => {
       const { error } = await supabase
-        .from("proveedor_correos")
-        .delete()
-        .eq("id", emailId);
+        .from("proveedor_contactos")
+        .update({ email: null })
+        .eq("id", contactoId);
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Correo eliminado");
-      refetchCorreos();
+      refetchContactos();
       setEmailSeleccionado("otro");
     },
     onError: (error: Error) => {
@@ -132,8 +129,8 @@ export function MarcarPagadoDialog({
     if (emailSeleccionado === "otro") {
       return emailManual;
     }
-    const correo = correosGuardados.find(c => c.id === emailSeleccionado);
-    return correo?.email || "";
+    const contacto = contactosPagos.find(c => c.id === emailSeleccionado);
+    return contacto?.email || "";
   };
 
   const marcarPagadoMutation = useMutation({
@@ -194,18 +191,19 @@ export function MarcarPagadoDialog({
 
       if (error) throw error;
 
-      // Save email if requested
+      // Save contact with email if requested
       if (guardarEmail && emailSeleccionado === "otro" && emailManual && orden?.proveedor_id) {
         const { error: saveEmailError } = await supabase
-          .from("proveedor_correos")
+          .from("proveedor_contactos")
           .insert({
             proveedor_id: orden.proveedor_id,
+            nombre: "Contacto Pagos",
             email: emailManual,
-            proposito: "pagos",
-            es_principal: correosGuardados.length === 0,
+            recibe_pagos: true,
+            es_principal: contactosPagos.length === 0,
           });
         if (saveEmailError) {
-          console.error("Error guardando correo:", saveEmailError);
+          console.error("Error guardando contacto:", saveEmailError);
         }
       }
 
