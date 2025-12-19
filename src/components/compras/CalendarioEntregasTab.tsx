@@ -39,7 +39,7 @@ const CalendarioEntregasTab = () => {
         .select(
           `
           *,
-          ordenes_compra (
+          ordenes_compra!inner (
             id,
             folio,
             total,
@@ -48,6 +48,7 @@ const CalendarioEntregasTab = () => {
             proveedor_nombre_manual,
             tipo_pago,
             status_pago,
+            entregas_multiples,
             proveedores (nombre),
             ordenes_compra_detalles (
               cantidad_ordenada,
@@ -56,6 +57,7 @@ const CalendarioEntregasTab = () => {
           )
         `
         )
+        .eq("ordenes_compra.entregas_multiples", true)
         .order("fecha_programada");
 
       if (error) throw error;
