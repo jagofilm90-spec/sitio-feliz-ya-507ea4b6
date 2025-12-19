@@ -73,6 +73,8 @@ interface Producto {
   aplica_iva?: boolean;
   aplica_ieps?: boolean;
   kg_por_unidad?: number;
+  precio_por_kilo?: boolean;
+  unidad?: string;
 }
 
 interface ProveedorConfig {
@@ -131,8 +133,9 @@ const CrearOrdenCompraWizard = ({
   const [precioUnitario, setPrecioUnitario] = useState("");
   const [precioIncluyeIva, setPrecioIncluyeIva] = useState(false);
   
-  // Precio por kg (optional)
-  const [showPrecioPorKg, setShowPrecioPorKg] = useState(false);
+  // Precio por kg (heredado del producto o manual)
+  const [usaPrecioPorKg, setUsaPrecioPorKg] = useState(false);
+  const [showOverridePrecioUnidad, setShowOverridePrecioUnidad] = useState(false);
   const [precioPorKg, setPrecioPorKg] = useState("");
   const [kgPorUnidad, setKgPorUnidad] = useState("");
   
@@ -154,9 +157,11 @@ const CrearOrdenCompraWizard = ({
   const [productosProveedorConfig, setProductosProveedorConfig] = useState<ProveedorConfig[]>([]);
   
   // Auto-calculate precio unitario when using precio por kg
-  const precioUnitarioCalculado = showPrecioPorKg && precioPorKg && kgPorUnidad
+  const precioUnitarioCalculado = usaPrecioPorKg && precioPorKg && kgPorUnidad
     ? (parseFloat(precioPorKg) * parseFloat(kgPorUnidad)).toFixed(2)
     : "";
+  
+  // Track if current product uses precio_por_kilo from catalog (moved after productosDisponibles)
   
   // Filter products based on provider
   const productosProveedor = productosProveedorConfig.map(p => p.producto_id);
@@ -174,6 +179,11 @@ const CrearOrdenCompraWizard = ({
     : (proveedorId && productosProveedor.length > 0
         ? productos.filter(p => productosProveedor.includes(p.id))
         : productos);
+
+  // Track if current product uses precio_por_kilo from catalog
+  const productoSeleccionadoData = productosDisponibles.find(p => p.id === productoSeleccionado);
+  const productoEsDeCatalogo = tipoProveedor === 'catalogo' && productoSeleccionadoData;
+  const productoPrecioPorKgCatalogo = productoEsDeCatalogo ? productoSeleccionadoData?.precio_por_kilo : undefined;
         
   // Filter suggestions based on input
   const proveedorSuggestions = proveedoresManuales.filter(p => 
@@ -322,12 +332,12 @@ const CrearOrdenCompraWizard = ({
       return;
     }
     
-    const precioFinal = showPrecioPorKg ? precioUnitarioCalculado : precioUnitario;
+    const precioFinal = usaPrecioPorKg ? precioUnitarioCalculado : precioUnitario;
     
     if (!productoSeleccionado || !cantidad || !precioFinal) {
       toast({
         title: "Campos incompletos",
-        description: showPrecioPorKg 
+        description: usaPrecioPorKg 
           ? "Selecciona un producto, cantidad, precio/kg y kg/unidad"
           : "Selecciona un producto, cantidad y precio",
         variant: "destructive",
@@ -361,7 +371,7 @@ const CrearOrdenCompraWizard = ({
   };
   
   const agregarProductoPorVehiculos = () => {
-    const precioFinal = showPrecioPorKg ? precioUnitarioCalculado : precioUnitario;
+    const precioFinal = usaPrecioPorKg ? precioUnitarioCalculado : precioUnitario;
     
     if (!productoSeleccionado || !numeroVehiculos || !precioFinal) {
       toast({
@@ -430,7 +440,8 @@ const CrearOrdenCompraWizard = ({
     setCantidad("");
     setPrecioUnitario("");
     setPrecioIncluyeIva(false);
-    setShowPrecioPorKg(false);
+    setUsaPrecioPorKg(false);
+    setShowOverridePrecioUnidad(false);
     setPrecioPorKg("");
     setKgPorUnidad("");
     setNumeroVehiculos("");
@@ -926,12 +937,17 @@ const CrearOrdenCompraWizard = ({
                   <Label>Producto</Label>
                   <Select value={productoSeleccionado} onValueChange={(v) => {
                     setProductoSeleccionado(v);
+                    setShowOverridePrecioUnidad(false); // Reset override when changing product
                     const prod = productosDisponibles.find(p => p.id === v);
                     if (prod?.ultimo_costo_compra) {
                       setPrecioUnitario(prod.ultimo_costo_compra.toString());
                     }
                     if (prod?.kg_por_unidad) {
                       setKgPorUnidad(prod.kg_por_unidad.toString());
+                    }
+                    // Auto-heredar precio_por_kilo del catálogo
+                    if (tipoProveedor === 'catalogo' && prod?.precio_por_kilo !== undefined) {
+                      setUsaPrecioPorKg(prod.precio_por_kilo);
                     }
                   }}>
                     <SelectTrigger>
@@ -983,10 +999,10 @@ const CrearOrdenCompraWizard = ({
                   <Input
                     type="number"
                     step="0.01"
-                    value={showPrecioPorKg ? precioUnitarioCalculado : precioUnitario}
+                    value={usaPrecioPorKg ? precioUnitarioCalculado : precioUnitario}
                     onChange={(e) => setPrecioUnitario(e.target.value)}
                     placeholder="$0.00"
-                    disabled={showPrecioPorKg}
+                    disabled={usaPrecioPorKg}
                   />
                 </div>
 
@@ -997,18 +1013,45 @@ const CrearOrdenCompraWizard = ({
                 </div>
               </div>
 
-              {/* Precio por kg toggle */}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowPrecioPorKg(!showPrecioPorKg)}
-                  className="text-xs text-primary hover:underline"
-                >
-                  {showPrecioPorKg ? "Usar precio por unidad" : "¿Precio por kg?"}
-                </button>
-              </div>
+              {/* Indicador de precio por kg - heredado automáticamente del catálogo */}
+              {productoSeleccionado && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Badge informativo según producto seleccionado */}
+                  {productoEsDeCatalogo && productoPrecioPorKgCatalogo !== undefined && (
+                    <Badge 
+                      variant="secondary" 
+                      className={productoPrecioPorKgCatalogo ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" : ""}
+                    >
+                      {productoPrecioPorKgCatalogo ? "💰 Precio por kg" : "📦 Precio por bulto"}
+                    </Badge>
+                  )}
+                  
+                  {/* Para proveedores manuales o para cambiar la unidad */}
+                  {(tipoProveedor === 'manual' || showOverridePrecioUnidad) && (
+                    <button
+                      type="button"
+                      onClick={() => setUsaPrecioPorKg(!usaPrecioPorKg)}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      {usaPrecioPorKg ? "Usar precio por unidad" : "¿Precio por kg?"}
+                    </button>
+                  )}
+                  
+                  {/* Link para sobrescribir (solo catálogo) */}
+                  {productoEsDeCatalogo && !showOverridePrecioUnidad && (
+                    <button
+                      type="button"
+                      onClick={() => setShowOverridePrecioUnidad(true)}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      ¿Comprar diferente?
+                    </button>
+                  )}
+                </div>
+              )}
 
-              {showPrecioPorKg && (
+              {/* Campos de precio por kg (visible si está activo) */}
+              {usaPrecioPorKg && (
                 <div className="grid grid-cols-2 gap-3 p-3 bg-muted/50 rounded-lg">
                   <div>
                     <Label className="text-xs">Precio por kg</Label>
