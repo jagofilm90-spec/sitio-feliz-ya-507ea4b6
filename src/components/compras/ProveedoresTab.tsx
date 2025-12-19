@@ -35,9 +35,42 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Globe, Package, Trash2, X, Mail, FileText, Upload, Loader2, CheckCircle2, Star } from "lucide-react";
+import { Plus, Search, Edit, Globe, Package, Trash2, X, Mail, FileText, Upload, Loader2, CheckCircle2, Star, Phone, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ProveedorProductosSelector from "./ProveedorProductosSelector";
+
+type PuestoContacto = 'general' | 'ventas' | 'cobranza' | 'logistica' | 'devoluciones';
+
+interface ContactoProveedor {
+  id?: string;
+  nombre: string;
+  telefono: string;
+  puesto?: PuestoContacto;
+  es_principal: boolean;
+}
+
+const PUESTOS: { value: PuestoContacto; label: string }[] = [
+  { value: 'general', label: 'General' },
+  { value: 'ventas', label: 'Ventas' },
+  { value: 'cobranza', label: 'Cobranza' },
+  { value: 'logistica', label: 'Logística' },
+  { value: 'devoluciones', label: 'Devoluciones' },
+];
+
+const getPuestoLabel = (puesto?: PuestoContacto): string => {
+  if (!puesto) return 'General';
+  return PUESTOS.find(p => p.value === puesto)?.label || puesto;
+};
+
+const getPuestoVariant = (puesto?: PuestoContacto): "default" | "secondary" | "outline" | "destructive" => {
+  switch (puesto) {
+    case 'ventas': return 'default';
+    case 'cobranza': return 'secondary';
+    case 'devoluciones': return 'destructive';
+    case 'logistica': return 'outline';
+    default: return 'outline';
+  }
+};
 import {
   AlertDialog,
   AlertDialogAction,
@@ -121,10 +154,21 @@ const ProveedoresTab = () => {
   const [editCorreoProposito, setEditCorreoProposito] = useState<PropositoCorreo>("general");
   const [isLoadingCorreos, setIsLoadingCorreos] = useState(false);
   
+  // Contactos con nombre y teléfono - para crear
+  const [contactosNuevos, setContactosNuevos] = useState<ContactoProveedor[]>([]);
+  const [nuevoContactoNombre, setNuevoContactoNombre] = useState("");
+  const [nuevoContactoTelefono, setNuevoContactoTelefono] = useState("");
+  const [nuevoContactoPuesto, setNuevoContactoPuesto] = useState<PuestoContacto>("general");
+  
+  // Contactos con nombre y teléfono - para editar
+  const [contactosEdit, setContactosEdit] = useState<ContactoProveedor[]>([]);
+  const [editContactoNombre, setEditContactoNombre] = useState("");
+  const [editContactoTelefono, setEditContactoTelefono] = useState("");
+  const [editContactoPuesto, setEditContactoPuesto] = useState<PuestoContacto>("general");
+  const [isLoadingContactos, setIsLoadingContactos] = useState(false);
+  
   const [newProveedor, setNewProveedor] = useState({
     nombre: "",
-    nombre_contacto: "",
-    telefono: "",
     direccion: "",
     pais: "México",
     rfc: "",
@@ -198,6 +242,144 @@ const ProveedoresTab = () => {
       ...c,
       es_principal: c.proposito === proposito ? c.email === email : c.es_principal
     })));
+  };
+
+  // === CONTACTOS HELPERS ===
+  
+  // Agregar contacto nuevo (formulario crear)
+  const handleAddContactoNuevo = () => {
+    if (!nuevoContactoNombre.trim() || !nuevoContactoTelefono.trim()) return;
+    
+    const esPrincipal = contactosNuevos.length === 0;
+    
+    setContactosNuevos([...contactosNuevos, {
+      nombre: nuevoContactoNombre.trim(),
+      telefono: nuevoContactoTelefono.trim(),
+      puesto: nuevoContactoPuesto,
+      es_principal: esPrincipal,
+    }]);
+    setNuevoContactoNombre("");
+    setNuevoContactoTelefono("");
+  };
+
+  const handleRemoveContactoNuevo = (index: number) => {
+    const updated = contactosNuevos.filter((_, i) => i !== index);
+    // Si eliminamos el principal, hacer principal al primero
+    if (contactosNuevos[index]?.es_principal && updated.length > 0) {
+      updated[0].es_principal = true;
+    }
+    setContactosNuevos(updated);
+  };
+
+  const handleSetPrincipalContactoNuevo = (index: number) => {
+    setContactosNuevos(contactosNuevos.map((c, i) => ({
+      ...c,
+      es_principal: i === index
+    })));
+  };
+
+  // Agregar contacto (formulario editar)
+  const handleAddContactoEdit = () => {
+    if (!editContactoNombre.trim() || !editContactoTelefono.trim()) return;
+    
+    const esPrincipal = contactosEdit.length === 0;
+    
+    setContactosEdit([...contactosEdit, {
+      nombre: editContactoNombre.trim(),
+      telefono: editContactoTelefono.trim(),
+      puesto: editContactoPuesto,
+      es_principal: esPrincipal,
+    }]);
+    setEditContactoNombre("");
+    setEditContactoTelefono("");
+  };
+
+  const handleRemoveContactoEdit = (index: number) => {
+    const updated = contactosEdit.filter((_, i) => i !== index);
+    if (contactosEdit[index]?.es_principal && updated.length > 0) {
+      updated[0].es_principal = true;
+    }
+    setContactosEdit(updated);
+  };
+
+  const handleSetPrincipalContactoEdit = (index: number) => {
+    setContactosEdit(contactosEdit.map((c, i) => ({
+      ...c,
+      es_principal: i === index
+    })));
+  };
+
+  // Cargar contactos existentes cuando se abre el diálogo de editar
+  const loadContactosProveedor = async (proveedorId: string) => {
+    setIsLoadingContactos(true);
+    try {
+      const { data, error } = await supabase
+        .from("proveedor_contactos")
+        .select("*")
+        .eq("proveedor_id", proveedorId)
+        .eq("activo", true)
+        .order("es_principal", { ascending: false });
+      
+      if (error) throw error;
+      
+      setContactosEdit((data || []).map(c => ({
+        id: c.id,
+        nombre: c.nombre,
+        telefono: c.telefono,
+        puesto: (c.puesto || 'general') as PuestoContacto,
+        es_principal: c.es_principal || false,
+      })));
+    } catch (error) {
+      console.error("Error loading contactos:", error);
+      setContactosEdit([]);
+    } finally {
+      setIsLoadingContactos(false);
+    }
+  };
+
+  // Guardar contactos en la tabla proveedor_contactos
+  const saveContactosProveedor = async (proveedorId: string, contactos: ContactoProveedor[]) => {
+    // Primero marcar todos los contactos existentes como inactivos
+    await supabase
+      .from("proveedor_contactos")
+      .update({ activo: false })
+      .eq("proveedor_id", proveedorId);
+    
+    // Insertar/actualizar los nuevos contactos
+    for (const contacto of contactos) {
+      if (contacto.id) {
+        await supabase
+          .from("proveedor_contactos")
+          .update({
+            nombre: contacto.nombre,
+            telefono: contacto.telefono,
+            puesto: contacto.puesto || 'general',
+            es_principal: contacto.es_principal,
+            activo: true,
+          })
+          .eq("id", contacto.id);
+      } else {
+        await supabase
+          .from("proveedor_contactos")
+          .insert({
+            proveedor_id: proveedorId,
+            nombre: contacto.nombre,
+            telefono: contacto.telefono,
+            puesto: contacto.puesto || 'general',
+            es_principal: contacto.es_principal,
+            activo: true,
+          });
+      }
+    }
+  };
+
+  // Helper para obtener contacto principal (para backwards compatibility)
+  const getContactoPrincipal = (contactos: ContactoProveedor[]): { nombre: string | null; telefono: string | null } => {
+    const principal = contactos.find(c => c.es_principal) || contactos[0];
+    return {
+      nombre: principal?.nombre || null,
+      telefono: principal?.telefono || null,
+    };
   };
 
   // Cargar correos existentes cuando se abre el diálogo de editar
@@ -407,7 +589,7 @@ const ProveedoresTab = () => {
   });
 
   const createProveedor = useMutation({
-    mutationFn: async (proveedor: typeof newProveedor & { email: string }) => {
+    mutationFn: async (proveedor: typeof newProveedor & { email: string; nombre_contacto: string | null; telefono: string | null }) => {
       const { data, error } = await supabase
         .from("proveedores")
         .insert([proveedor])
@@ -421,14 +603,17 @@ const ProveedoresTab = () => {
       if (correosNuevos.length > 0) {
         await saveCorreosProveedor(data.id, correosNuevos);
       }
+      // Guardar contactos en proveedor_contactos
+      if (contactosNuevos.length > 0) {
+        await saveContactosProveedor(data.id, contactosNuevos);
+      }
       
       queryClient.invalidateQueries({ queryKey: ["proveedores"] });
       queryClient.invalidateQueries({ queryKey: ["proveedor-correos"] });
+      queryClient.invalidateQueries({ queryKey: ["proveedor-contactos"] });
       setIsDialogOpen(false);
       setNewProveedor({
         nombre: "",
-        nombre_contacto: "",
-        telefono: "",
         direccion: "",
         pais: "México",
         rfc: "",
@@ -437,6 +622,9 @@ const ProveedoresTab = () => {
       setCorreosNuevos([]);
       setNuevoCorreoEmail("");
       setNuevoCorreoContacto("");
+      setContactosNuevos([]);
+      setNuevoContactoNombre("");
+      setNuevoContactoTelefono("");
       setCSFParsed(false);
       toast({
         title: "Proveedor creado",
@@ -454,13 +642,14 @@ const ProveedoresTab = () => {
 
   const updateProveedor = useMutation({
     mutationFn: async (proveedor: Proveedor) => {
+      const contactoPrincipal = getContactoPrincipal(contactosEdit);
       const { error } = await supabase
         .from("proveedores")
         .update({
           nombre: proveedor.nombre,
-          nombre_contacto: proveedor.nombre_contacto,
+          nombre_contacto: contactoPrincipal.nombre,
           email: proveedor.email,
-          telefono: proveedor.telefono,
+          telefono: contactoPrincipal.telefono,
           direccion: proveedor.direccion,
           pais: proveedor.pais,
           rfc: proveedor.rfc,
@@ -475,12 +664,16 @@ const ProveedoresTab = () => {
     onSuccess: async (proveedorId) => {
       // Guardar correos en proveedor_correos
       await saveCorreosProveedor(proveedorId, correosEdit);
+      // Guardar contactos en proveedor_contactos
+      await saveContactosProveedor(proveedorId, contactosEdit);
       
       queryClient.invalidateQueries({ queryKey: ["proveedores"] });
       queryClient.invalidateQueries({ queryKey: ["proveedor-correos"] });
+      queryClient.invalidateQueries({ queryKey: ["proveedor-contactos"] });
       setIsEditDialogOpen(false);
       setEditingProveedor(null);
       setCorreosEdit([]);
+      setContactosEdit([]);
       toast({
         title: "Proveedor actualizado",
         description: "Los cambios han sido guardados",
@@ -628,32 +821,94 @@ const ProveedoresTab = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nombre_contacto">Nombre de Contacto</Label>
+              <div className="space-y-2">
+                <Label htmlFor="rfc">RFC</Label>
+                <Input
+                  id="rfc"
+                  placeholder="ABC123456XYZ"
+                  value={newProveedor.rfc}
+                  onChange={(e) =>
+                    setNewProveedor({ ...newProveedor, rfc: e.target.value })
+                  }
+                />
+              </div>
+
+              {/* Sección de Contactos */}
+              <div className="space-y-3">
+                <Label>Contactos del proveedor</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <Input
-                    id="nombre_contacto"
-                    placeholder="Juan Pérez"
-                    value={newProveedor.nombre_contacto}
-                    onChange={(e) =>
-                      setNewProveedor({
-                        ...newProveedor,
-                        nombre_contacto: e.target.value,
-                      })
-                    }
+                    placeholder="Nombre del contacto *"
+                    value={nuevoContactoNombre}
+                    onChange={(e) => setNuevoContactoNombre(e.target.value)}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="rfc">RFC</Label>
                   <Input
-                    id="rfc"
-                    placeholder="ABC123456XYZ"
-                    value={newProveedor.rfc}
-                    onChange={(e) =>
-                      setNewProveedor({ ...newProveedor, rfc: e.target.value })
-                    }
+                    placeholder="Teléfono *"
+                    value={nuevoContactoTelefono}
+                    onChange={(e) => setNuevoContactoTelefono(e.target.value)}
                   />
+                  <div className="flex gap-2">
+                    <Select value={nuevoContactoPuesto} onValueChange={(v) => setNuevoContactoPuesto(v as PuestoContacto)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PUESTOS.map(p => (
+                          <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" variant="outline" onClick={handleAddContactoNuevo} disabled={!nuevoContactoNombre.trim() || !nuevoContactoTelefono.trim()}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
+                {contactosNuevos.length > 0 && (
+                  <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
+                    {contactosNuevos.map((contacto, index) => (
+                      <div key={index} className="flex items-center justify-between gap-2 text-sm">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <User className="h-3 w-3 shrink-0 text-muted-foreground" />
+                          <span className="font-medium truncate">{contacto.nombre}</span>
+                          <Phone className="h-3 w-3 shrink-0 text-muted-foreground" />
+                          <span className="truncate">{contacto.telefono}</span>
+                          <Badge variant={getPuestoVariant(contacto.puesto)} className="text-xs shrink-0">
+                            {getPuestoLabel(contacto.puesto)}
+                          </Badge>
+                          {contacto.es_principal && (
+                            <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 shrink-0" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {!contacto.es_principal && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs"
+                              onClick={() => handleSetPrincipalContactoNuevo(index)}
+                              title="Marcar como principal"
+                            >
+                              <Star className="h-3 w-3" />
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-destructive hover:text-destructive"
+                            onClick={() => handleRemoveContactoNuevo(index)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Agrega contactos con nombre, teléfono y área. ⭐ indica el contacto principal.
+                </p>
               </div>
 
               <div className="space-y-3">
@@ -735,18 +990,6 @@ const ProveedoresTab = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="telefono">Teléfono</Label>
-                <Input
-                  id="telefono"
-                  placeholder="555-1234"
-                  value={newProveedor.telefono}
-                  onChange={(e) =>
-                    setNewProveedor({ ...newProveedor, telefono: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="direccion">Dirección</Label>
                 <Input
                   id="direccion"
@@ -771,7 +1014,15 @@ const ProveedoresTab = () => {
               </div>
 
               <Button
-                onClick={() => createProveedor.mutate({ ...newProveedor, email: joinEmails(correosNuevos) })}
+                onClick={() => {
+                  const contactoPrincipal = getContactoPrincipal(contactosNuevos);
+                  createProveedor.mutate({ 
+                    ...newProveedor, 
+                    email: joinEmails(correosNuevos),
+                    nombre_contacto: contactoPrincipal.nombre,
+                    telefono: contactoPrincipal.telefono,
+                  });
+                }}
                 disabled={!newProveedor.nombre || createProveedor.isPending}
                 className="w-full"
               >
@@ -844,7 +1095,10 @@ const ProveedoresTab = () => {
                         size="sm"
                         onClick={async () => {
                           setEditingProveedor(proveedor);
-                          await loadCorreosProveedor(proveedor.id);
+                          await Promise.all([
+                            loadCorreosProveedor(proveedor.id),
+                            loadContactosProveedor(proveedor.id),
+                          ]);
                           setIsEditDialogOpen(true);
                         }}
                         title="Editar proveedor"
@@ -908,33 +1162,105 @@ const ProveedoresTab = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-nombre_contacto">Nombre de Contacto</Label>
-                  <Input
-                    id="edit-nombre_contacto"
-                    value={editingProveedor.nombre_contacto || ""}
-                    onChange={(e) =>
-                      setEditingProveedor({
-                        ...editingProveedor,
-                        nombre_contacto: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-rfc">RFC</Label>
-                  <Input
-                    id="edit-rfc"
-                    value={editingProveedor.rfc || ""}
-                    onChange={(e) =>
-                      setEditingProveedor({
-                        ...editingProveedor,
-                        rfc: e.target.value,
-                      })
-                    }
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-rfc">RFC</Label>
+                <Input
+                  id="edit-rfc"
+                  value={editingProveedor.rfc || ""}
+                  onChange={(e) =>
+                    setEditingProveedor({
+                      ...editingProveedor,
+                      rfc: e.target.value,
+                    })
+                  }
+                />
+              </div>
+
+              {/* Sección de Contactos - Editar */}
+              <div className="space-y-3">
+                <Label>Contactos del proveedor</Label>
+                {isLoadingContactos ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Cargando contactos...
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <Input
+                        placeholder="Nombre del contacto *"
+                        value={editContactoNombre}
+                        onChange={(e) => setEditContactoNombre(e.target.value)}
+                      />
+                      <Input
+                        placeholder="Teléfono *"
+                        value={editContactoTelefono}
+                        onChange={(e) => setEditContactoTelefono(e.target.value)}
+                      />
+                      <div className="flex gap-2">
+                        <Select value={editContactoPuesto} onValueChange={(v) => setEditContactoPuesto(v as PuestoContacto)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PUESTOS.map(p => (
+                              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button type="button" variant="outline" onClick={handleAddContactoEdit} disabled={!editContactoNombre.trim() || !editContactoTelefono.trim()}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    {contactosEdit.length > 0 && (
+                      <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
+                        {contactosEdit.map((contacto, index) => (
+                          <div key={contacto.id || index} className="flex items-center justify-between gap-2 text-sm">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <User className="h-3 w-3 shrink-0 text-muted-foreground" />
+                              <span className="font-medium truncate">{contacto.nombre}</span>
+                              <Phone className="h-3 w-3 shrink-0 text-muted-foreground" />
+                              <span className="truncate">{contacto.telefono}</span>
+                              <Badge variant={getPuestoVariant(contacto.puesto)} className="text-xs shrink-0">
+                                {getPuestoLabel(contacto.puesto)}
+                              </Badge>
+                              {contacto.es_principal && (
+                                <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 shrink-0" />
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {!contacto.es_principal && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs"
+                                  onClick={() => handleSetPrincipalContactoEdit(index)}
+                                  title="Marcar como principal"
+                                >
+                                  <Star className="h-3 w-3" />
+                                </Button>
+                              )}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-destructive hover:text-destructive"
+                                onClick={() => handleRemoveContactoEdit(index)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Agrega contactos con nombre, teléfono y área. ⭐ indica el contacto principal.
+                    </p>
+                  </>
+                )}
               </div>
 
               <div className="space-y-3">
@@ -1025,20 +1351,6 @@ const ProveedoresTab = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-telefono">Teléfono</Label>
-                <Input
-                  id="edit-telefono"
-                  value={editingProveedor.telefono || ""}
-                  onChange={(e) =>
-                    setEditingProveedor({
-                      ...editingProveedor,
-                      telefono: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="edit-direccion">Dirección</Label>
                 <Input
                   id="edit-direccion"
@@ -1084,7 +1396,7 @@ const ProveedoresTab = () => {
 
               <Button
                 onClick={() => updateProveedor.mutate({ ...editingProveedor, email: joinEmails(correosEdit) })}
-                disabled={!editingProveedor.nombre || updateProveedor.isPending || isLoadingCorreos}
+                disabled={!editingProveedor.nombre || updateProveedor.isPending || isLoadingCorreos || isLoadingContactos}
                 className="w-full"
               >
                 {updateProveedor.isPending ? (

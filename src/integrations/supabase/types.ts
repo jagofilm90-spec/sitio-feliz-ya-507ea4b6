@@ -3250,6 +3250,50 @@ export type Database = {
         }
         Relationships: []
       }
+      proveedor_contactos: {
+        Row: {
+          activo: boolean | null
+          created_at: string | null
+          es_principal: boolean | null
+          id: string
+          nombre: string
+          proveedor_id: string
+          puesto: string | null
+          telefono: string
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          created_at?: string | null
+          es_principal?: boolean | null
+          id?: string
+          nombre: string
+          proveedor_id: string
+          puesto?: string | null
+          telefono: string
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          created_at?: string | null
+          es_principal?: boolean | null
+          id?: string
+          nombre?: string
+          proveedor_id?: string
+          puesto?: string | null
+          telefono?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proveedor_contactos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proveedor_correos: {
         Row: {
           activo: boolean | null
