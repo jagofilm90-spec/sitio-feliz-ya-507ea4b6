@@ -1040,23 +1040,41 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       // Convert HTML to base64 for attachment
       const pdfBase64 = btoa(unescape(encodeURIComponent(pdfContent)));
 
+      // Get fecha_entrega for the propose-date action
+      const fechaEntrega = orden.fecha_entrega ? new Date(orden.fecha_entrega).toISOString().split('T')[0] : null;
+
       // Generate signed confirmation URL via edge function
-      const { data: urlData, error: urlError } = await supabase.functions.invoke("generate-oc-confirmation-url", {
+      const { data: confirmUrlData, error: confirmUrlError } = await supabase.functions.invoke("generate-oc-confirmation-url", {
         body: {
           ordenId: orden.id,
           action: "confirm",
         },
       });
 
-      if (urlError || !urlData?.url) {
-        console.error("Error generating signed URL:", urlError);
+      if (confirmUrlError || !confirmUrlData?.url) {
+        console.error("Error generating confirm URL:", confirmUrlError);
         throw new Error("No se pudo generar URL de confirmación");
       }
 
-      const confirmUrl = urlData.url;
+      // Generate signed propose-date URL
+      const { data: proposeDateUrlData, error: proposeDateUrlError } = await supabase.functions.invoke("generate-oc-confirmation-url", {
+        body: {
+          ordenId: orden.id,
+          action: "propose-date",
+          fechaOriginal: fechaEntrega,
+        },
+      });
+
+      if (proposeDateUrlError || !proposeDateUrlData?.url) {
+        console.error("Error generating propose-date URL:", proposeDateUrlError);
+        throw new Error("No se pudo generar URL de propuesta de fecha");
+      }
+
+      const confirmUrl = confirmUrlData.url;
+      const proposeDateUrl = proposeDateUrlData.url;
       const trackingPixelUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/confirmar-oc?id=${orden.id}&action=track`;
 
-      // Simple email body with reference to attachment and confirmation button
+      // Email body with two action buttons: confirm and propose new date
       const htmlBody = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #2e7d32;">Orden de Compra: ${orden.folio}</h2>
@@ -1068,24 +1086,38 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
             <p style="margin: 5px 0;"><strong>Folio:</strong> ${orden.folio}</p>
             <p style="margin: 5px 0;"><strong>Total:</strong> $${orden.total?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
             <p style="margin: 5px 0;"><strong>Fecha de la orden:</strong> ${new Date(orden.fecha_orden).toLocaleDateString('es-MX')}</p>
+            ${fechaEntrega ? `<p style="margin: 5px 0;"><strong>Fecha de entrega solicitada:</strong> ${new Date(fechaEntrega).toLocaleDateString('es-MX')}</p>` : ''}
           </div>
           
           ${orden.notas ? `<p><strong>Notas:</strong> ${orden.notas}</p>` : ''}
 
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${confirmUrl}" 
-               style="display: inline-block; background-color: #2e7d32; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
-              ✓ Confirmar Recepción de Orden
-            </a>
-            <p style="color: #666; font-size: 12px; margin-top: 10px;">
-              Por favor haga clic en el botón para confirmar que recibió esta orden.
+            <p style="color: #333; font-size: 14px; margin-bottom: 20px;">
+              <strong>¿Puede cumplir con la fecha de entrega?</strong>
+            </p>
+            
+            <div style="display: inline-block;">
+              <a href="${confirmUrl}" 
+                 style="display: inline-block; background-color: #22c55e; color: white; padding: 14px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin: 5px;">
+                ✓ Confirmar Fecha
+              </a>
+              
+              <a href="${proposeDateUrl}" 
+                 style="display: inline-block; background-color: #f59e0b; color: white; padding: 14px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin: 5px;">
+                📅 Proponer Otra Fecha
+              </a>
+            </div>
+            
+            <p style="color: #666; font-size: 12px; margin-top: 15px;">
+              Si puede cumplir con la fecha, haga clic en "Confirmar Fecha".<br/>
+              Si necesita cambiar la fecha, haga clic en "Proponer Otra Fecha".
             </p>
           </div>
 
           <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;" />
           <p style="color: #666; font-size: 12px;">
             Este correo fue enviado desde el sistema de Abarrotes La Manita.<br/>
-            <strong>Importante:</strong> Por favor confirme la recepción haciendo clic en el botón verde.
+            <strong>Importante:</strong> Su respuesta nos ayuda a planificar mejor nuestras operaciones.
           </p>
           <img src="${trackingPixelUrl}" width="1" height="1" style="display:none;" alt="" />
         </div>
