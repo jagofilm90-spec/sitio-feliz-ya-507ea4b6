@@ -31,7 +31,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { ordenId, action, entregas, expirationDays = 30 } = await req.json();
+    const { ordenId, action, entregas, fechaOriginal, expirationDays = 30 } = await req.json();
 
     if (!ordenId || !action) {
       return new Response(
@@ -54,10 +54,16 @@ serve(async (req: Request) => {
     // Calculate expiration timestamp (Unix timestamp in seconds)
     const expiresAt = Math.floor(Date.now() / 1000) + (expirationDays * 24 * 60 * 60);
     
-    // Build the message to sign
+    // Build the message to sign based on action type
     let messageToSign = `${ordenId}:${action}:${expiresAt}`;
+    
     if (action === 'confirm-entregas' && entregas && entregas.length > 0) {
       messageToSign += `:${entregas.join(',')}`;
+    }
+    
+    // For propose-date action, include the original date in the signature
+    if (action === 'propose-date' && fechaOriginal) {
+      messageToSign += `:${fechaOriginal}`;
     }
     
     // Generate HMAC signature
@@ -72,6 +78,10 @@ serve(async (req: Request) => {
     
     if (action === 'confirm-entregas' && entregas && entregas.length > 0) {
       url.searchParams.set('entregas', entregas.join(','));
+    }
+    
+    if (action === 'propose-date' && fechaOriginal) {
+      url.searchParams.set('fecha_original', fechaOriginal);
     }
 
     console.log(`Generated signed URL for OC ${ordenId}, action: ${action}, expires: ${new Date(expiresAt * 1000).toISOString()}`);

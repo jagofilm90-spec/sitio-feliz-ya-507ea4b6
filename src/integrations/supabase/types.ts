@@ -2731,6 +2731,69 @@ export type Database = {
           },
         ]
       }
+      ordenes_compra_respuestas_proveedor: {
+        Row: {
+          created_at: string | null
+          entrega_id: string | null
+          fecha_original: string | null
+          fecha_propuesta: string | null
+          id: string
+          ip_address: string | null
+          motivo: string | null
+          orden_compra_id: string
+          revisado: boolean | null
+          revisado_en: string | null
+          revisado_por: string | null
+          tipo_respuesta: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          entrega_id?: string | null
+          fecha_original?: string | null
+          fecha_propuesta?: string | null
+          id?: string
+          ip_address?: string | null
+          motivo?: string | null
+          orden_compra_id: string
+          revisado?: boolean | null
+          revisado_en?: string | null
+          revisado_por?: string | null
+          tipo_respuesta: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          entrega_id?: string | null
+          fecha_original?: string | null
+          fecha_propuesta?: string | null
+          id?: string
+          ip_address?: string | null
+          motivo?: string | null
+          orden_compra_id?: string
+          revisado?: boolean | null
+          revisado_en?: string | null
+          revisado_por?: string | null
+          tipo_respuesta?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordenes_compra_respuestas_proveedor_entrega_id_fkey"
+            columns: ["entrega_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_compra_entregas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordenes_compra_respuestas_proveedor_orden_compra_id_fkey"
+            columns: ["orden_compra_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_compra"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pedidos: {
         Row: {
           cliente_id: string
