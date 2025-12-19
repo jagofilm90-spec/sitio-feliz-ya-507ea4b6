@@ -195,13 +195,14 @@ export function MarcarPagadoDialog({
       if (guardarEmail && emailSeleccionado === "otro" && emailManual && orden?.proveedor_id) {
         const { error: saveEmailError } = await supabase
           .from("proveedor_contactos")
-          .insert({
+          .insert([{
             proveedor_id: orden.proveedor_id,
             nombre: "Contacto Pagos",
+            telefono: "",
             email: emailManual,
             recibe_pagos: true,
             es_principal: contactosPagos.length === 0,
-          });
+          }]);
         if (saveEmailError) {
           console.error("Error guardando contacto:", saveEmailError);
         }
@@ -446,36 +447,20 @@ export function MarcarPagadoDialog({
                     <SelectValue placeholder="Seleccionar correo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* Primero mostrar correos de pagos */}
-                    {correosGuardados
-                      .filter(c => c.proposito === 'pagos')
-                      .map((correo) => (
-                        <SelectItem key={correo.id} value={correo.id}>
-                          <div className="flex items-center gap-2">
-                            <span>{correo.email}</span>
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">Pagos</span>
-                            {correo.es_principal && (
-                              <span className="text-xs text-muted-foreground">★</span>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    {/* Luego otros correos */}
-                    {correosGuardados
-                      .filter(c => c.proposito !== 'pagos')
-                      .map((correo) => (
-                        <SelectItem key={correo.id} value={correo.id}>
-                          <div className="flex items-center gap-2">
-                            <span>{correo.email}</span>
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground capitalize">
-                              {correo.proposito || 'General'}
-                            </span>
-                            {correo.es_principal && (
-                              <span className="text-xs text-muted-foreground">★</span>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
+                    {/* Mostrar contactos que reciben pagos */}
+                    {contactosPagos.map((contacto) => (
+                      <SelectItem key={contacto.id} value={contacto.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{contacto.email}</span>
+                          {contacto.nombre && (
+                            <span className="text-xs text-muted-foreground">({contacto.nombre})</span>
+                          )}
+                          {contacto.es_principal && (
+                            <span className="text-xs text-muted-foreground">★</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
                     <SelectItem value="otro">
                       <div className="flex items-center gap-2">
                         <Plus className="h-3 w-3" />
@@ -489,7 +474,7 @@ export function MarcarPagadoDialog({
                 {emailSeleccionado !== "otro" && (
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground flex-1">
-                      {correosGuardados.find(c => c.id === emailSeleccionado)?.email}
+                      {contactosPagos.find(c => c.id === emailSeleccionado)?.email}
                     </span>
                     <Button
                       type="button"
