@@ -79,12 +79,25 @@ export function MarcarPagadoDialog({
     enabled: !!orden?.proveedor_id && open,
   });
 
-  // Initialize email when dialog opens or emails load
+  // Initialize email when dialog opens or emails load - prioritize "pagos" purpose
   useEffect(() => {
     if (open && orden) {
       if (correosGuardados.length > 0) {
-        const principal = correosGuardados.find(c => c.es_principal);
-        setEmailSeleccionado(principal?.id || correosGuardados[0].id);
+        // First try to find a principal email for "pagos"
+        const principalPagos = correosGuardados.find(c => c.es_principal && c.proposito === 'pagos');
+        if (principalPagos) {
+          setEmailSeleccionado(principalPagos.id);
+        } else {
+          // Then any email for "pagos"
+          const anyPagos = correosGuardados.find(c => c.proposito === 'pagos');
+          if (anyPagos) {
+            setEmailSeleccionado(anyPagos.id);
+          } else {
+            // Fallback to any principal or first email
+            const principal = correosGuardados.find(c => c.es_principal);
+            setEmailSeleccionado(principal?.id || correosGuardados[0].id);
+          }
+        }
       } else if (orden.proveedor_email) {
         setEmailManual(orden.proveedor_email);
         setEmailSeleccionado("otro");
@@ -429,22 +442,42 @@ export function MarcarPagadoDialog({
               <div className="space-y-3 pl-6">
                 <Label className="text-sm">Correo del proveedor *</Label>
                 
-                {/* Selector de correos guardados */}
+                {/* Selector de correos guardados - prioriza correos de pagos */}
                 <Select value={emailSeleccionado} onValueChange={setEmailSeleccionado}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar correo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {correosGuardados.map((correo) => (
-                      <SelectItem key={correo.id} value={correo.id}>
-                        <div className="flex items-center justify-between w-full gap-2">
-                          <span>{correo.email}</span>
-                          {correo.es_principal && (
-                            <span className="text-xs text-muted-foreground">(principal)</span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
+                    {/* Primero mostrar correos de pagos */}
+                    {correosGuardados
+                      .filter(c => c.proposito === 'pagos')
+                      .map((correo) => (
+                        <SelectItem key={correo.id} value={correo.id}>
+                          <div className="flex items-center gap-2">
+                            <span>{correo.email}</span>
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">Pagos</span>
+                            {correo.es_principal && (
+                              <span className="text-xs text-muted-foreground">★</span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    {/* Luego otros correos */}
+                    {correosGuardados
+                      .filter(c => c.proposito !== 'pagos')
+                      .map((correo) => (
+                        <SelectItem key={correo.id} value={correo.id}>
+                          <div className="flex items-center gap-2">
+                            <span>{correo.email}</span>
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground capitalize">
+                              {correo.proposito || 'General'}
+                            </span>
+                            {correo.es_principal && (
+                              <span className="text-xs text-muted-foreground">★</span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
                     <SelectItem value="otro">
                       <div className="flex items-center gap-2">
                         <Plus className="h-3 w-3" />
