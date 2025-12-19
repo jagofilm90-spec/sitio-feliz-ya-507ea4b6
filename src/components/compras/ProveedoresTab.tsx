@@ -28,9 +28,10 @@ import {
 } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Globe, Package, Trash2, X, Mail, FileText, Upload, Loader2, CheckCircle2 } from "lucide-react";
+import { Plus, Search, Edit, Globe, Package, Trash2, X, Mail, FileText, Upload, Loader2, CheckCircle2, AtSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ProveedorProductosSelector from "./ProveedorProductosSelector";
+import ProveedorCorreosManager from "./ProveedorCorreosManager";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,9 +62,11 @@ const ProveedoresTab = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isProductosDialogOpen, setIsProductosDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isCorreosDialogOpen, setIsCorreosDialogOpen] = useState(false);
   const [editingProveedor, setEditingProveedor] = useState<Proveedor | null>(null);
   const [productosProveedor, setProductosProveedor] = useState<Proveedor | null>(null);
   const [deletingProveedor, setDeletingProveedor] = useState<Proveedor | null>(null);
+  const [correosProveedor, setCorreosProveedor] = useState<Proveedor | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   
   // CSF upload state
@@ -657,6 +660,17 @@ const ProveedoresTab = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => {
+                          setCorreosProveedor(proveedor);
+                          setIsCorreosDialogOpen(true);
+                        }}
+                        title="Gestionar correos"
+                      >
+                        <AtSign className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
                           setProductosProveedor(proveedor);
                           setIsProductosDialogOpen(true);
                         }}
@@ -907,6 +921,16 @@ const ProveedoresTab = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog for managing supplier emails */}
+      {correosProveedor && (
+        <ProveedorCorreosManager
+          proveedorId={correosProveedor.id}
+          proveedorNombre={correosProveedor.nombre}
+          open={isCorreosDialogOpen}
+          onOpenChange={setIsCorreosDialogOpen}
+        />
+      )}
     </Card>
   );
 };
