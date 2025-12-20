@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { EvidenciaCapture, EvidenciasPreviewGrid, TipoEvidencia } from "./EvidenciaCapture";
+import { registrarCorreoEnviado } from "./HistorialCorreosOC";
 
 interface EvidenciaPreview {
   tipo: TipoEvidencia;
@@ -356,12 +357,13 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
             const fechaLocal = new Date(year, month - 1, day);
             const fechaFormateada = fechaLocal.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
             
-            await supabase.functions.invoke("gmail-api", {
+            const asunto = `Entrega pendiente reprogramada - ${orden.folio}`;
+            const { data: emailData } = await supabase.functions.invoke("gmail-api", {
               body: {
                 action: "send",
                 email: "compras@almasa.com.mx",
                 to: orden.proveedores.email,
-                subject: `Entrega pendiente reprogramada - ${orden.folio}`,
+                subject: asunto,
                 body: `
                   <h2>Entrega Parcial Registrada</h2>
                   <p>Le informamos que hemos recibido una entrega parcial de la orden <strong>${orden.folio}</strong>.</p>
@@ -371,6 +373,16 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
                   <p>Saludos cordiales,<br>Abarrotes La Manita</p>
                 `
               }
+            });
+
+            // Registrar correo enviado
+            await registrarCorreoEnviado({
+              tipo: "reprogramacion",
+              referencia_id: orden.id,
+              destinatario: orden.proveedores.email,
+              asunto: asunto,
+              gmail_message_id: emailData?.messageId || null,
+              contenido_preview: `Entrega parcial registrada. Nueva fecha: ${fechaFormateada}`,
             });
           } catch (emailError) {
             console.error("Error sending email:", emailError);

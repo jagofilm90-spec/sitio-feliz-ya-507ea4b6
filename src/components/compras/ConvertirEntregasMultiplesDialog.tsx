@@ -18,6 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Calendar, Truck, Plus, Trash2, Loader2, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { registrarCorreoEnviado } from "./HistorialCorreosOC";
 
 interface Entrega {
   id: string;
@@ -178,14 +179,25 @@ const ConvertirEntregasMultiplesDialog = ({ open, onOpenChange, orden }: Convert
             <p>Saludos cordiales,<br>Abarrotes La Manita</p>
           `;
 
-          await supabase.functions.invoke("gmail-api", {
+          const asunto = `Calendario de entregas - ${orden.folio}`;
+          const { data: emailData } = await supabase.functions.invoke("gmail-api", {
             body: {
               action: "send",
               email: "compras@almasa.com.mx",
               to: orden.proveedores.email,
-              subject: `Calendario de entregas - ${orden.folio}`,
+              subject: asunto,
               body: htmlBody,
             },
+          });
+
+          // Registrar correo enviado
+          await registrarCorreoEnviado({
+            tipo: "orden_compra",
+            referencia_id: orden.id,
+            destinatario: orden.proveedores.email,
+            asunto: asunto,
+            gmail_message_id: emailData?.messageId || null,
+            contenido_preview: `Calendario de ${entregas.length} entregas programadas`,
           });
 
           toast({

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { CalendarCheck, CalendarX, Check, Loader2, Pencil, X, Mail } from "lucide-react";
+import { registrarCorreoEnviado } from "./HistorialCorreosOC";
 
 interface Entrega {
   id: string;
@@ -149,7 +150,7 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
         </div>
       `;
 
-      const { error } = await supabase.functions.invoke("gmail-api", {
+      const { data: emailData, error } = await supabase.functions.invoke("gmail-api", {
         body: {
           action: "send",
           gmailCuentaId: gmailCuenta.id,
@@ -157,6 +158,20 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
           subject,
           htmlBody,
         },
+      });
+
+      // Registrar correo enviado
+      await registrarCorreoEnviado({
+        tipo: isDateChange ? "reprogramacion" : "orden_compra",
+        referencia_id: orden.id,
+        destinatario: orden.proveedores.email,
+        asunto: subject,
+        gmail_cuenta_id: gmailCuenta.id,
+        gmail_message_id: emailData?.messageId || null,
+        error: error?.message || null,
+        contenido_preview: isDateChange 
+          ? `Notificación de cambio de fecha de entrega`
+          : `Notificación de ${programadasCount} entrega(s) programada(s)`,
       });
 
       if (error) throw error;

@@ -805,6 +805,80 @@ export type Database = {
         }
         Relationships: []
       }
+      correos_enviados: {
+        Row: {
+          asunto: string
+          contenido_preview: string | null
+          created_at: string | null
+          destinatario: string
+          enviado_por: string | null
+          error: string | null
+          fecha_envio: string | null
+          gmail_cuenta_id: string | null
+          gmail_message_id: string | null
+          id: string
+          referencia_id: string | null
+          tipo: string
+        }
+        Insert: {
+          asunto: string
+          contenido_preview?: string | null
+          created_at?: string | null
+          destinatario: string
+          enviado_por?: string | null
+          error?: string | null
+          fecha_envio?: string | null
+          gmail_cuenta_id?: string | null
+          gmail_message_id?: string | null
+          id?: string
+          referencia_id?: string | null
+          tipo: string
+        }
+        Update: {
+          asunto?: string
+          contenido_preview?: string | null
+          created_at?: string | null
+          destinatario?: string
+          enviado_por?: string | null
+          error?: string | null
+          fecha_envio?: string | null
+          gmail_cuenta_id?: string | null
+          gmail_message_id?: string | null
+          id?: string
+          referencia_id?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "correos_enviados_enviado_por_fkey"
+            columns: ["enviado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "correos_enviados_enviado_por_fkey"
+            columns: ["enviado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "correos_enviados_gmail_cuenta_id_fkey"
+            columns: ["gmail_cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "gmail_cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "correos_enviados_gmail_cuenta_id_fkey"
+            columns: ["gmail_cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "gmail_cuentas_segura"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cotizaciones: {
         Row: {
           autorizado_por: string | null

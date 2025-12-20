@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Calendar, Truck, Send, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { registrarCorreoEnviado } from "./HistorialCorreosOC";
 
 interface ProgramarEntregasDialogProps {
   open: boolean;
@@ -113,14 +114,26 @@ const ProgramarEntregasDialog = ({ open, onOpenChange, orden }: ProgramarEntrega
             <p>Saludos cordiales,<br>Abarrotes La Manita</p>
           `;
           
-          const { error: emailError } = await supabase.functions.invoke("gmail-api", {
+          const asunto = `Nuevas fechas programadas - ${orden.folio}`;
+          const { data: emailData, error: emailError } = await supabase.functions.invoke("gmail-api", {
             body: {
               action: "send",
               email: "compras@almasa.com.mx",
               to: orden.proveedores.email,
-              subject: `Nuevas fechas programadas - ${orden.folio}`,
+              subject: asunto,
               body: htmlBody
             }
+          });
+          
+          // Registrar correo enviado
+          await registrarCorreoEnviado({
+            tipo: "orden_compra",
+            referencia_id: orden.id,
+            destinatario: orden.proveedores.email,
+            asunto: asunto,
+            gmail_message_id: emailData?.messageId || null,
+            error: emailError?.message || null,
+            contenido_preview: `Nuevas fechas programadas: ${entregasNuevas.map(e => e.fecha).join(", ")}`,
           });
           
           if (emailError) throw emailError;
@@ -129,7 +142,7 @@ const ProgramarEntregasDialog = ({ open, onOpenChange, orden }: ProgramarEntrega
             title: "Fechas guardadas y notificación enviada",
             description: `Se envió notificación a ${orden.proveedores.email}`,
           });
-        } catch (emailError) {
+        } catch (emailError: any) {
           console.error("Error sending email:", emailError);
           toast({
             title: "Fechas guardadas",
