@@ -17,6 +17,11 @@ const tipoConfig: Record<string, { label: string; icon: React.ReactNode; color: 
     icon: <Send className="h-3 w-3" />, 
     color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" 
   },
+  reenvio_oc: { 
+    label: "Reenvío OC", 
+    icon: <RefreshCw className="h-3 w-3" />, 
+    color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200" 
+  },
   orden_compra_confirmacion: { 
     label: "Confirmación", 
     icon: <Check className="h-3 w-3" />, 
