@@ -1078,10 +1078,17 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       const proposeDateUrl = proposeDateUrlData.url;
       const trackingPixelUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/confirmar-oc?id=${orden.id}&action=track`;
 
+      // Get logo URL from current origin
+      const logoUrl = `${window.location.origin}/logo-almasa-header.png`;
+
       // Email body with two action buttons: confirm and propose new date
       const htmlBody = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2e7d32;">Orden de Compra: ${orden.folio}</h2>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+          <div style="text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: 8px 8px 0 0; border-bottom: 3px solid #c41e3a;">
+            <img src="${logoUrl}" alt="Abarrotes La Manita" style="max-width: 180px; height: auto;" />
+          </div>
+          <div style="padding: 20px;">
+          <h2 style="color: #2e7d32; margin-top: 0;">Orden de Compra: ${orden.folio}</h2>
           <p>Estimado proveedor <strong>${orden.proveedores?.nombre}</strong>,</p>
           <p>Por medio del presente, le enviamos nuestra orden de compra.</p>
           <p><strong>Adjunto encontrará el documento formal de la orden de compra en formato HTML que puede abrir en cualquier navegador e imprimir.</strong></p>
@@ -1124,6 +1131,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
             <strong>Importante:</strong> Su respuesta nos ayuda a planificar mejor nuestras operaciones.
           </p>
           <img src="${trackingPixelUrl}" width="1" height="1" style="display:none;" alt="" />
+          </div>
         </div>
       `;
 
@@ -1186,7 +1194,11 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       // 2. Send copy notification to compras@almasa.com.mx
       const copyHtmlBody = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333333; background-color: #ffffff;">
-          <h2 style="color: #2e7d32;">✓ Orden de Compra Enviada</h2>
+          <div style="text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: 8px 8px 0 0; border-bottom: 3px solid #c41e3a;">
+            <img src="${logoUrl}" alt="Abarrotes La Manita" style="max-width: 180px; height: auto;" />
+          </div>
+          <div style="padding: 20px;">
+          <h2 style="color: #2e7d32; margin-top: 0;">✓ Orden de Compra Enviada</h2>
           <p style="color: #333333;">Se ha enviado la siguiente orden de compra al proveedor:</p>
           
           <div style="background-color: #e8f5e9; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2e7d32; color: #1a1a1a;">
@@ -1205,6 +1217,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
           <p style="color: #666666; font-size: 12px;">
             Notificación automática del sistema ERP - Abarrotes La Manita
           </p>
+          </div>
         </div>
       `;
 
