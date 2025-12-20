@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { registrarCorreoEnviado } from "./HistorialCorreosOC";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -1079,14 +1080,26 @@ const OrdenesCompraTab = () => {
         </div>
       `;
 
-      const { error } = await supabase.functions.invoke('gmail-api', {
+      const asunto = `[RECORDATORIO] Orden de Compra ${orden.folio} - Pendiente de Confirmar`;
+      const { data, error } = await supabase.functions.invoke('gmail-api', {
         body: {
           action: 'send',
           email: 'compras@almasa.com.mx',
           to: proveedorEmail,
-          subject: `[RECORDATORIO] Orden de Compra ${orden.folio} - Pendiente de Confirmar`,
+          subject: asunto,
           body: htmlBody,
         },
+      });
+
+      // Registrar el correo enviado
+      await registrarCorreoEnviado({
+        tipo: "recordatorio_oc",
+        referencia_id: orden.id,
+        destinatario: proveedorEmail,
+        asunto: asunto,
+        gmail_message_id: data?.messageId || null,
+        error: error?.message || null,
+        contenido_preview: `Recordatorio de OC pendiente de confirmación para ${orden.proveedores?.nombre}`,
       });
 
       if (error) throw error;

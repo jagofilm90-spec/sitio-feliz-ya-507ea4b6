@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera, Scissors } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera, Scissors, History } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,8 @@ import RegistrarRecepcionDialog from "./RegistrarRecepcionDialog";
 import ConvertirEntregasMultiplesDialog from "./ConvertirEntregasMultiplesDialog";
 import DividirEntregaDialog from "./DividirEntregaDialog";
 import { EvidenciasGallery, EvidenciasBadge } from "./EvidenciasGallery";
+import { HistorialCorreosOC, registrarCorreoEnviado } from "./HistorialCorreosOC";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import logoAlmasa from "@/assets/logo-almasa.png";
 
 // Helper function to convert image to base64
@@ -1152,7 +1154,32 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
         body: emailPayload,
       });
 
-      if (error) throw error;
+      // Registrar el correo enviado (exitoso o con error)
+      const asunto = `Orden de Compra ${orden.folio} - Abarrotes La Manita`;
+      if (error) {
+        await registrarCorreoEnviado({
+          tipo: "orden_compra",
+          referencia_id: orden.id,
+          destinatario: destinatario,
+          asunto: asunto,
+          gmail_message_id: null,
+          error: error.message || "Error desconocido",
+        });
+        throw error;
+      }
+
+      // Registrar envío exitoso
+      await registrarCorreoEnviado({
+        tipo: "orden_compra",
+        referencia_id: orden.id,
+        destinatario: destinatario,
+        asunto: asunto,
+        gmail_message_id: data?.messageId || null,
+        contenido_preview: `Orden de compra enviada a ${orden.proveedores?.nombre}. Total: $${orden.total?.toLocaleString('es-MX')}`,
+      });
+
+      // Invalidar queries de correos
+      queryClient.invalidateQueries({ queryKey: ["correos-enviados-oc", orden.id] });
 
       // 2. Send copy notification to compras@almasa.com.mx
       const copyHtmlBody = `
@@ -1578,6 +1605,19 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                 Eliminar Orden
               </Button>
             )}
+
+            {/* Historial de correos enviados */}
+            <Collapsible className="w-full">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground">
+                  <History className="mr-2 h-4 w-4" />
+                  Historial de Correos Enviados
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2 border rounded-lg p-3 bg-muted/30">
+                <HistorialCorreosOC ordenId={orden?.id} />
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         ) : accion === "solicitar_autorizacion" ? (
           <div className="space-y-4">

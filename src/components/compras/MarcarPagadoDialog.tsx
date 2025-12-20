@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { registrarCorreoEnviado } from "./HistorialCorreosOC";
 
 interface MarcarPagadoDialogProps {
   open: boolean;
@@ -263,9 +264,24 @@ export function MarcarPagadoDialog({
             }];
           }
 
-          const { error: emailError } = await supabase.functions.invoke('gmail-api', {
+          const asunto = `Confirmación de Pago - ${orden?.folio} - ALMASA`;
+          const { data: emailData, error: emailError } = await supabase.functions.invoke('gmail-api', {
             body: emailPayload,
           });
+
+          // Registrar el correo enviado
+          await registrarCorreoEnviado({
+            tipo: "pago_proveedor",
+            referencia_id: orden?.id || "",
+            destinatario: emailDestino,
+            asunto: asunto,
+            gmail_message_id: emailData?.messageId || null,
+            error: emailError?.message || null,
+            contenido_preview: `Confirmación de pago de ${orden?.folio}. Monto: $${orden?.total.toLocaleString("es-MX")}`,
+          });
+          
+          // Invalidar queries de correos
+          queryClient.invalidateQueries({ queryKey: ["correos-enviados-oc", orden?.id] });
 
           if (emailError) {
             console.error("Error enviando correo:", emailError);
