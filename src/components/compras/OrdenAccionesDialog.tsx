@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera, Scissors, History } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera, Scissors, History, RefreshCw } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -55,7 +55,7 @@ interface OrdenAccionesDialogProps {
 const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccionesDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [accion, setAccion] = useState<"cambiar_fecha" | "recibir" | "devolver" | "enviar_email" | "eliminar" | "solicitar_autorizacion" | "autorizar" | "rechazar" | null>(null);
+  const [accion, setAccion] = useState<"cambiar_fecha" | "recibir" | "devolver" | "enviar_email" | "reenviar_email" | "eliminar" | "solicitar_autorizacion" | "autorizar" | "rechazar" | null>(null);
   const [nuevaFecha, setNuevaFecha] = useState("");
   const [motivoDevolucion, setMotivoDevolucion] = useState("");
   const [motivoRechazo, setMotivoRechazo] = useState("");
@@ -242,7 +242,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
 
   // Initialize email when action changes
   useEffect(() => {
-    if (accion === "enviar_email" && orden?.proveedores?.email) {
+    if ((accion === "enviar_email" || accion === "reenviar_email") && orden?.proveedores?.email) {
       setEmailTo(orden.proveedores.email);
     }
   }, [accion, orden?.proveedores?.email]);
@@ -1157,8 +1157,9 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       // Registrar el correo enviado (exitoso o con error)
       const asunto = `Orden de Compra ${orden.folio} - Abarrotes La Manita`;
       if (error) {
+        const tipoCorreo = accion === "reenviar_email" ? "reenvio_oc" : "orden_compra";
         await registrarCorreoEnviado({
-          tipo: "orden_compra",
+          tipo: tipoCorreo,
           referencia_id: orden.id,
           destinatario: destinatario,
           asunto: asunto,
@@ -1169,13 +1170,14 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       }
 
       // Registrar envío exitoso
+      const tipoCorreoExito = accion === "reenviar_email" ? "reenvio_oc" : "orden_compra";
       await registrarCorreoEnviado({
-        tipo: "orden_compra",
+        tipo: tipoCorreoExito,
         referencia_id: orden.id,
         destinatario: destinatario,
         asunto: asunto,
         gmail_message_id: data?.messageId || null,
-        contenido_preview: `Orden de compra enviada a ${orden.proveedores?.nombre}. Total: $${orden.total?.toLocaleString('es-MX')}`,
+        contenido_preview: `Orden de compra ${accion === "reenviar_email" ? "reenviada" : "enviada"} a ${orden.proveedores?.nombre}. Total: $${orden.total?.toLocaleString('es-MX')}`,
       });
 
       // Invalidar queries de correos
@@ -1276,6 +1278,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   const canAuthorize = isAdmin && orden?.status === "pendiente_autorizacion";
   const canSendToSupplier = orden?.status === "autorizada";
   const canSendDirectly = isAdmin && orden?.status === "pendiente";
+  const canResendToSupplier = ["enviada", "confirmada", "parcial"].includes(orden?.status || "");
   const proveedorTieneEmail = !!(orden?.proveedores?.email);
 
   // Mark as sent without email (for informal suppliers) - still sends internal copy
@@ -1511,6 +1514,18 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
               >
                 <CheckCircle className="mr-2 h-4 w-4" />
                 Marcar como Enviada (control interno)
+              </Button>
+            )}
+
+            {/* Resend to supplier - for orders already sent */}
+            {canResendToSupplier && proveedorTieneEmail && (
+              <Button
+                variant="outline"
+                className="w-full justify-start text-cyan-600 hover:text-cyan-700 border-cyan-200"
+                onClick={() => setAccion("reenviar_email")}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Reenviar OC al Proveedor
               </Button>
             )}
 
@@ -1757,10 +1772,17 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
               </Button>
             </div>
           </div>
-        ) : accion === "enviar_email" ? (
+        ) : accion === "enviar_email" || accion === "reenviar_email" ? (
           <div className="space-y-4">
             <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-              <p className="font-medium">Detalles del envío</p>
+              <p className="font-medium">
+                {accion === "reenviar_email" ? "Reenviar orden de compra" : "Detalles del envío"}
+              </p>
+              {accion === "reenviar_email" && (
+                <p className="text-sm text-cyan-600">
+                  Esta orden ya fue enviada previamente. Se volverá a enviar al proveedor.
+                </p>
+              )}
               <div className="text-sm text-muted-foreground space-y-1">
                 <p><strong>Proveedor:</strong> {orden?.proveedores?.nombre}</p>
                 <p><strong>Total de la orden:</strong> ${orden?.total?.toLocaleString()}</p>
@@ -1832,7 +1854,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                     Enviando...
                   </>
                 ) : (
-                  "Enviar orden"
+                  accion === "reenviar_email" ? "Reenviar orden" : "Enviar orden"
                 )}
               </Button>
               <Button variant="ghost" onClick={() => setAccion(null)}>
