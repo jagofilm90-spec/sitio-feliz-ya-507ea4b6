@@ -30,7 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, Search, ShoppingCart, Building2, AlertTriangle, Gift } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { calcularSubtotal, calcularDesgloseImpuestos, validarAntesDeGuardar, redondear, LineaPedido } from "@/lib/calculos";
+import { calcularSubtotal, calcularDesgloseImpuestos, validarAntesDeGuardar, redondear, LineaPedido, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface NuevoPedidoDialogProps {
@@ -64,6 +64,8 @@ interface Producto {
   aplica_ieps: boolean;
   stock_actual: number;
   kg_por_unidad: number | null;
+  precio_por_kilo: boolean;
+  presentacion: string | null;
 }
 
 interface DetallePedido {
@@ -153,7 +155,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
   const loadProductos = async () => {
     const { data, error } = await supabase
       .from("productos")
-      .select("id, codigo, nombre, precio_venta, unidad, aplica_iva, aplica_ieps, stock_actual, kg_por_unidad")
+      .select("id, codigo, nombre, precio_venta, unidad, aplica_iva, aplica_ieps, stock_actual, kg_por_unidad, precio_por_kilo, presentacion")
       .eq("activo", true)
       .order("nombre");
 
@@ -203,12 +205,20 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
   );
 
   const addProducto = (producto: Producto) => {
+    // Calcular precio correcto considerando precio_por_kilo
+    const precioCalculado = obtenerPrecioUnitarioVenta({
+      precio_venta: producto.precio_venta,
+      precio_por_kilo: producto.precio_por_kilo,
+      kg_por_unidad: producto.kg_por_unidad,
+      presentacion: producto.presentacion
+    });
+    
     setDetalles([...detalles, {
       producto_id: producto.id,
       producto,
       cantidad: 1,
-      precio_unitario: producto.precio_venta,
-      subtotal: producto.precio_venta,
+      precio_unitario: precioCalculado,
+      subtotal: precioCalculado,
       es_cortesia: false,
     }]);
     setSearchProducto("");

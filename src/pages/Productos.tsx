@@ -29,7 +29,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calculator } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { LotesDesglose } from "@/components/productos/LotesDesglose";
 import { NotificacionesSistema } from "@/components/NotificacionesSistema";
@@ -886,9 +886,20 @@ const Productos = () => {
                       autoComplete="off"
                     />
                     {formData.precio_por_kilo && calcularPrecioTotal() && (
-                      <p className="text-xs text-primary font-medium">
-                        Total del {formData.unidad}: ${calcularPrecioTotal()}
-                      </p>
+                      <div className="mt-2 p-3 bg-primary/10 rounded-lg border border-primary/30">
+                        <div className="flex items-center gap-2">
+                          <Calculator className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-medium text-primary">
+                            Precio por {formData.unidad}:
+                          </span>
+                        </div>
+                        <p className="text-2xl font-bold text-primary">
+                          ${calcularPrecioTotal()}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          = ${formData.precio_venta}/kg × {formData.presentacion || formData.kg_por_unidad} kg
+                        </p>
+                      </div>
                     )}
                   </div>
                   <div className="space-y-2">

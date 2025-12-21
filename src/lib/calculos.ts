@@ -97,6 +97,59 @@ export function redondear(valor: number): number {
   return Math.round(valor * 100) / 100;
 }
 
+// ==================== PRECIO UNITARIO DE VENTA ====================
+
+export interface ProductoPrecioParams {
+  precio_venta: number;
+  precio_por_kilo?: boolean;
+  kg_por_unidad?: number | null;
+  presentacion?: string | null;
+}
+
+/**
+ * Obtiene el precio unitario de venta real para un producto.
+ * Si el producto tiene precio_por_kilo=true, multiplica por kg_por_unidad o presentacion.
+ * 
+ * REGLA: Si precio_por_kilo=true → precio_unitario = precio_venta × kg_del_bulto
+ * REGLA: Si precio_por_kilo=false → precio_unitario = precio_venta (sin cambios)
+ * 
+ * @param producto - Objeto con datos del producto
+ * @returns Precio unitario por unidad comercial (bulto, caja, etc.)
+ */
+export function obtenerPrecioUnitarioVenta(producto: ProductoPrecioParams): number {
+  // Si no es precio por kilo, devolver el precio de venta directamente
+  if (!producto.precio_por_kilo) {
+    return producto.precio_venta;
+  }
+  
+  // Si es precio por kilo, multiplicar por los kg de la unidad
+  const kilos = producto.kg_por_unidad 
+    || parseFloat(producto.presentacion || "0");
+  
+  if (!kilos || kilos <= 0) {
+    console.warn(
+      `Producto con precio_por_kilo=true pero sin kg definidos. ` +
+      `Usando precio_venta sin multiplicar: ${producto.precio_venta}`
+    );
+    return producto.precio_venta;
+  }
+  
+  const precioCalculado = redondear(producto.precio_venta * kilos);
+  
+  auditoriaCalculos.registrar('precio_unitario_venta', {
+    entrada: { 
+      precio_venta: producto.precio_venta, 
+      precio_por_kilo: producto.precio_por_kilo,
+      kg: kilos 
+    },
+    salida: { precio_calculado: precioCalculado },
+    valido: true,
+    contexto: { formula: `${producto.precio_venta} × ${kilos} kg = ${precioCalculado}` }
+  });
+  
+  return precioCalculado;
+}
+
 // ==================== CONVERSIÓN DE UNIDADES ====================
 
 export interface ConversionUnidadParams {

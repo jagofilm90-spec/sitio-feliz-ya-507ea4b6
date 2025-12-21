@@ -33,7 +33,7 @@ import ClienteCorreosManager from "@/components/clientes/ClienteCorreosManager";
 import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { formatCurrency } from "@/lib/utils";
-import { calcularDesgloseImpuestos, redondear } from "@/lib/calculos";
+import { calcularDesgloseImpuestos, redondear, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
 
 interface DetalleProducto {
   producto_id: string;
@@ -76,6 +76,8 @@ interface Producto {
   aplica_iva: boolean;
   aplica_ieps: boolean;
   precio_por_kilo: boolean;
+  kg_por_unidad: number | null;
+  presentacion: string | null;
 }
 
 interface CrearCotizacionDialogProps {
@@ -186,7 +188,7 @@ const CrearCotizacionDialog = ({
   const loadProductos = async () => {
     const { data, error } = await supabase
       .from("productos")
-      .select("id, nombre, codigo, unidad, marca, precio_venta, stock_actual, aplica_iva, aplica_ieps, precio_por_kilo")
+      .select("id, nombre, codigo, unidad, marca, precio_venta, stock_actual, aplica_iva, aplica_ieps, precio_por_kilo, kg_por_unidad, presentacion")
       .eq("activo", true)
       .order("nombre");
 
@@ -329,8 +331,19 @@ const CrearCotizacionDialog = ({
     // Buscar historial de precios para este cliente
     const historial = await buscarUltimoPrecioCliente(producto.id);
     
-    // Si hay precio anterior, usarlo; si no, usar precio de lista
-    const precioAUsar = historial.precio || producto.precio_venta;
+    // Si hay precio anterior, usarlo (ya está calculado por unidad)
+    // Si no, calcular el precio correcto considerando precio_por_kilo
+    let precioAUsar: number;
+    if (historial.precio) {
+      precioAUsar = historial.precio;
+    } else {
+      precioAUsar = obtenerPrecioUnitarioVenta({
+        precio_venta: producto.precio_venta,
+        precio_por_kilo: producto.precio_por_kilo,
+        kg_por_unidad: producto.kg_por_unidad,
+        presentacion: producto.presentacion
+      });
+    }
 
     setDetalles([
       ...detalles,
