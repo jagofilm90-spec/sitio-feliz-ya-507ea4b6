@@ -809,7 +809,7 @@ const Productos = () => {
                   </p>
                 )}
                 
-                <div className="flex flex-wrap items-center gap-4 p-3 bg-muted rounded-md">
+                <div className="flex items-center gap-4 p-3 bg-muted rounded-md">
                   <div className="flex items-center space-x-2">
                     <input
                       type="checkbox"
@@ -821,39 +821,6 @@ const Productos = () => {
                     <Label htmlFor="precio_por_kilo" className="cursor-pointer">
                       Precio por kilo
                     </Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="kg_por_unidad" className="text-sm whitespace-nowrap">
-                      Kg por unidad:
-                    </Label>
-                    <Input
-                      id="kg_por_unidad"
-                      type="number"
-                      step="0.01"
-                      value={formData.kg_por_unidad}
-                      onChange={(e) => setFormData({ ...formData, kg_por_unidad: e.target.value })}
-                      placeholder="ej: 13"
-                      className="w-20"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="piezas_por_unidad" className="text-sm whitespace-nowrap">
-                      Piezas por unidad:
-                    </Label>
-                    <Input
-                      id="piezas_por_unidad"
-                      type="number"
-                      min="1"
-                      value={formData.piezas_por_unidad}
-                      onChange={(e) => setFormData({ ...formData, piezas_por_unidad: e.target.value })}
-                      placeholder="1"
-                      className="w-16"
-                    />
-                    {parseInt(formData.piezas_por_unidad) > 1 && (
-                      <span className="text-xs text-primary font-medium">
-                        ({formData.piezas_por_unidad} piezas por {formData.unidad})
-                      </span>
-                    )}
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
@@ -897,7 +864,7 @@ const Productos = () => {
                           ${calcularPrecioTotal()}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          = ${formData.precio_venta}/kg × {formData.presentacion || formData.kg_por_unidad} kg
+                          = ${formData.precio_venta}/kg × {formData.presentacion} kg
                         </p>
                       </div>
                     )}
