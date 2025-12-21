@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/utils";
-import { calcularDesgloseImpuestos, redondear, validarAntesDeGuardar, LineaPedido } from "@/lib/calculos";
+import { calcularDesgloseImpuestos, redondear, validarAntesDeGuardar, LineaPedido, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
 import { format, addDays, isWeekend } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -71,6 +71,7 @@ interface ProductoFrecuente {
     aplica_ieps: boolean;
     kg_por_unidad: number | null;
     precio_por_kilo: boolean;
+    presentacion: string | null;
   };
 }
 
@@ -111,7 +112,7 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
     try {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, nombre, codigo, unidad, precio_venta, stock_actual, aplica_iva, aplica_ieps, kg_por_unidad, precio_por_kilo")
+        .select("id, nombre, codigo, unidad, precio_venta, stock_actual, aplica_iva, aplica_ieps, kg_por_unidad, precio_por_kilo, presentacion")
         .eq("activo", true)
         .gt("stock_actual", 0)
         .order("nombre");
@@ -136,7 +137,7 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
           id,
           producto_id,
           es_especial,
-          producto:productos(id, nombre, codigo, unidad, precio_venta, stock_actual, aplica_iva, aplica_ieps, kg_por_unidad, precio_por_kilo)
+          producto:productos(id, nombre, codigo, unidad, precio_venta, stock_actual, aplica_iva, aplica_ieps, kg_por_unidad, precio_por_kilo, presentacion)
         `)
         .eq("cliente_id", clienteId)
         .eq("activo", true)
@@ -216,7 +217,21 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
     if (cantidad <= 0) return;
     
     const producto = item.producto;
-    const precio = item.ultimo_precio || producto.precio_venta;
+    
+    // Si hay precio histórico, usarlo (ya está calculado)
+    // Si no, calcular el precio correcto considerando precio_por_kilo
+    let precio: number;
+    if (item.ultimo_precio) {
+      precio = item.ultimo_precio;
+    } else {
+      precio = obtenerPrecioUnitarioVenta({
+        precio_venta: producto.precio_venta,
+        precio_por_kilo: producto.precio_por_kilo,
+        kg_por_unidad: producto.kg_por_unidad,
+        presentacion: producto.presentacion
+      });
+    }
+    
     const existe = detalles.find((d) => d.productoId === producto.id);
     
     if (existe) {
@@ -251,14 +266,22 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
       return;
     }
 
+    // Calcular precio correcto considerando precio_por_kilo
+    const precioCalculado = obtenerPrecioUnitarioVenta({
+      precio_venta: producto.precio_venta,
+      precio_por_kilo: producto.precio_por_kilo,
+      kg_por_unidad: producto.kg_por_unidad,
+      presentacion: producto.presentacion
+    });
+
     const nuevoDetalle: DetalleProducto = {
       productoId: producto.id,
       nombre: producto.nombre,
       codigo: producto.codigo,
       unidad: producto.unidad,
-      precioUnitario: producto.precio_venta,
+      precioUnitario: precioCalculado,
       cantidad: 1,
-      subtotal: producto.precio_venta,
+      subtotal: precioCalculado,
       aplica_iva: producto.aplica_iva || false,
       aplica_ieps: producto.aplica_ieps || false,
     };
