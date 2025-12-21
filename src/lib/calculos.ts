@@ -102,16 +102,17 @@ export function redondear(valor: number): number {
 export interface ProductoPrecioParams {
   precio_venta: number;
   precio_por_kilo?: boolean;
-  kg_por_unidad?: number | null;
-  presentacion?: string | null;
+  presentacion?: string | number | null;
 }
 
 /**
  * Obtiene el precio unitario de venta real para un producto.
- * Si el producto tiene precio_por_kilo=true, multiplica por kg_por_unidad o presentacion.
+ * Si el producto tiene precio_por_kilo=true, multiplica por los kg de la presentación.
  * 
- * REGLA: Si precio_por_kilo=true → precio_unitario = precio_venta × kg_del_bulto
+ * REGLA: Si precio_por_kilo=true → precio_unitario = precio_venta × kilos_presentacion
  * REGLA: Si precio_por_kilo=false → precio_unitario = precio_venta (sin cambios)
+ * 
+ * Ejemplo: Alpiste 25kg a $13/kg → precio_unitario = $13 × 25 = $325/bulto
  * 
  * @param producto - Objeto con datos del producto
  * @returns Precio unitario por unidad comercial (bulto, caja, etc.)
@@ -122,13 +123,14 @@ export function obtenerPrecioUnitarioVenta(producto: ProductoPrecioParams): numb
     return producto.precio_venta;
   }
   
-  // Si es precio por kilo, multiplicar por los kg de la unidad
-  const kilos = producto.kg_por_unidad 
-    || parseFloat(producto.presentacion || "0");
+  // Usar SOLO la presentación para obtener los kilos
+  const kilos = typeof producto.presentacion === 'number'
+    ? producto.presentacion
+    : parseFloat(producto.presentacion || "0");
   
   if (!kilos || kilos <= 0) {
     console.warn(
-      `Producto con precio_por_kilo=true pero sin kg definidos. ` +
+      `Producto con precio_por_kilo=true pero sin presentación definida. ` +
       `Usando precio_venta sin multiplicar: ${producto.precio_venta}`
     );
     return producto.precio_venta;
@@ -140,11 +142,11 @@ export function obtenerPrecioUnitarioVenta(producto: ProductoPrecioParams): numb
     entrada: { 
       precio_venta: producto.precio_venta, 
       precio_por_kilo: producto.precio_por_kilo,
-      kg: kilos 
+      presentacion_kg: kilos 
     },
     salida: { precio_calculado: precioCalculado },
     valido: true,
-    contexto: { formula: `${producto.precio_venta} × ${kilos} kg = ${precioCalculado}` }
+    contexto: { formula: `${producto.precio_venta}/kg × ${kilos} kg = ${precioCalculado}` }
   });
   
   return precioCalculado;

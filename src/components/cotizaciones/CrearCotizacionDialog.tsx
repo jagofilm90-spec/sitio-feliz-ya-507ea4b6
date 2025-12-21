@@ -340,7 +340,6 @@ const CrearCotizacionDialog = ({
       precioAUsar = obtenerPrecioUnitarioVenta({
         precio_venta: producto.precio_venta,
         precio_por_kilo: producto.precio_por_kilo,
-        kg_por_unidad: producto.kg_por_unidad,
         presentacion: producto.presentacion
       });
     }

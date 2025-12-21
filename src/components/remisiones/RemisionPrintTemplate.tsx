@@ -10,6 +10,8 @@ interface ProductoRemision {
   total: number;
   cantidadDisplay?: string; // Cantidad con unidad original (ej: "45 kg")
   es_cortesia?: boolean; // Indica si es cortesía sin cargo
+  kilos_totales?: number; // Total de kilos (cantidad × presentación)
+  precio_por_kilo?: boolean; // Si el precio es por kilo
 }
 
 interface DatosRemision {
@@ -150,10 +152,10 @@ export const RemisionPrintTemplate = ({ datos }: RemisionPrintTemplateProps) => 
       <table className="w-full mb-4 text-xs">
         <thead>
           <tr className="bg-gray-800 text-white">
-            <th className="p-2 text-left w-16">Cantidad</th>
-            <th className="p-2 text-left w-24 font-bold">Presentación</th>
+            <th className="p-2 text-right w-16">Kilos</th>
+            <th className="p-2 text-left w-20">Cantidad</th>
             <th className="p-2 text-left">Descripción</th>
-            <th className="p-2 text-right w-24">P.Unitario</th>
+            <th className="p-2 text-right w-20">Precio</th>
             <th className="p-2 text-right w-24">Total</th>
           </tr>
         </thead>
@@ -163,8 +165,12 @@ export const RemisionPrintTemplate = ({ datos }: RemisionPrintTemplateProps) => 
               key={index} 
               className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} ${producto.es_cortesia ? "bg-amber-50" : ""}`}
             >
-              <td className="p-2 border-b">{producto.cantidadDisplay || producto.cantidad}</td>
-              <td className="p-2 border-b font-semibold text-primary">{abreviarUnidad(producto.unidad)}</td>
+              <td className="p-2 border-b text-right font-semibold">
+                {producto.kilos_totales ? `${producto.kilos_totales.toLocaleString('es-MX')} kg` : '-'}
+              </td>
+              <td className="p-2 border-b">
+                {producto.cantidad} {abreviarUnidad(producto.unidad)}
+              </td>
               <td className="p-2 border-b">
                 {producto.descripcion}
                 {producto.es_cortesia && (
@@ -174,11 +180,13 @@ export const RemisionPrintTemplate = ({ datos }: RemisionPrintTemplateProps) => 
               <td className="p-2 border-b text-right">
                 {producto.es_cortesia ? (
                   <span className="text-amber-600 font-medium">CORTESÍA</span>
+                ) : producto.precio_por_kilo ? (
+                  `$${producto.precio_unitario.toLocaleString('es-MX', { minimumFractionDigits: 2 })}/kg`
                 ) : (
                   `$${producto.precio_unitario.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
                 )}
               </td>
-              <td className="p-2 border-b text-right">
+              <td className="p-2 border-b text-right font-semibold">
                 {producto.es_cortesia ? (
                   <span className="text-amber-600 font-medium">$0.00</span>
                 ) : (

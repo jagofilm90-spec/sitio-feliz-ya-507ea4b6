@@ -227,7 +227,6 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
       precio = obtenerPrecioUnitarioVenta({
         precio_venta: producto.precio_venta,
         precio_por_kilo: producto.precio_por_kilo,
-        kg_por_unidad: producto.kg_por_unidad,
         presentacion: producto.presentacion
       });
     }
@@ -270,7 +269,6 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
     const precioCalculado = obtenerPrecioUnitarioVenta({
       precio_venta: producto.precio_venta,
       precio_por_kilo: producto.precio_por_kilo,
-      kg_por_unidad: producto.kg_por_unidad,
       presentacion: producto.presentacion
     });
 
