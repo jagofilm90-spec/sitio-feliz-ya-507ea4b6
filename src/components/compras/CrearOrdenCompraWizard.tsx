@@ -28,9 +28,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Plus, Trash2, Loader2, Truck, ArrowRight, ArrowLeft, Check, 
-  Calendar as CalendarIcon, CreditCard, ChevronDown, ChevronUp, Package
+  Calendar as CalendarIcon, CreditCard, ChevronDown, ChevronUp, Package, Mail
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -120,10 +130,14 @@ const CrearOrdenCompraWizard = ({
   const [tipoProveedor, setTipoProveedor] = useState<'catalogo' | 'manual'>('catalogo');
   const [proveedorId, setProveedorId] = useState("");
   const [proveedorNombreManual, setProveedorNombreManual] = useState("");
+  const [proveedorEmailManual, setProveedorEmailManual] = useState("");
   const [proveedorTelefonoManual, setProveedorTelefonoManual] = useState("");
   const [notasProveedorManual, setNotasProveedorManual] = useState("");
   const [showProveedorSuggestions, setShowProveedorSuggestions] = useState(false);
   const [tipoPago, setTipoPago] = useState<'contra_entrega' | 'anticipado'>('contra_entrega');
+  
+  // AlertDialog for missing email confirmation
+  const [showEmailWarning, setShowEmailWarning] = useState(false);
   
   // Advanced options (collapsed by default)
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -520,11 +534,13 @@ const CrearOrdenCompraWizard = ({
     setTipoProveedor('catalogo');
     setProveedorId("");
     setProveedorNombreManual("");
+    setProveedorEmailManual("");
     setProveedorTelefonoManual("");
     setNotasProveedorManual("");
     setShowProveedorSuggestions(false);
     setTipoPago('contra_entrega');
     setShowAdvanced(false);
+    setShowEmailWarning(false);
     setNotas("");
     setProductosEnOrden([]);
     resetProductoForm();
@@ -579,6 +595,7 @@ const CrearOrdenCompraWizard = ({
           folio,
           proveedor_id: tipoProveedor === 'catalogo' ? proveedorId : null,
           proveedor_nombre_manual: tipoProveedor === 'manual' ? proveedorNombreManual : null,
+          proveedor_email_manual: tipoProveedor === 'manual' ? proveedorEmailManual || null : null,
           proveedor_telefono_manual: tipoProveedor === 'manual' ? proveedorTelefonoManual || null : null,
           notas_proveedor_manual: tipoProveedor === 'manual' ? notasProveedorManual || null : null,
           fecha_entrega_programada: fechaEntrega,
@@ -728,12 +745,22 @@ const CrearOrdenCompraWizard = ({
 
   const handleNextStep = () => {
     if (step === 1 && canProceedStep1()) {
+      // Check if manual supplier without email - show warning
+      if (tipoProveedor === 'manual' && !proveedorEmailManual.trim()) {
+        setShowEmailWarning(true);
+        return;
+      }
       setStep(2);
     } else if (step === 2 && canProceedStep2()) {
       setStep(3);
     } else if (step === 3 && canProceedStep3()) {
       setStep(4);
     }
+  };
+  
+  const handleConfirmNoEmail = () => {
+    setShowEmailWarning(false);
+    setStep(2);
   };
 
   const handlePrevStep = () => {
@@ -758,6 +785,7 @@ const CrearOrdenCompraWizard = ({
     : true;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(o) => { if (!o) resetForm(); onOpenChange(o); }}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -835,37 +863,51 @@ const CrearOrdenCompraWizard = ({
                     </SelectContent>
                   </Select>
                 ) : (
-                  <div className="relative">
-                    <Input
-                      value={proveedorNombreManual}
-                      onChange={(e) => {
-                        setProveedorNombreManual(e.target.value);
-                        setShowProveedorSuggestions(true);
-                      }}
-                      onFocus={() => setShowProveedorSuggestions(true)}
-                      placeholder="Nombre del proveedor"
-                      className="text-base"
-                    />
-                    {showProveedorSuggestions && proveedorSuggestions.length > 0 && (
-                      <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                        {proveedorSuggestions.slice(0, 5).map((sugg, i) => (
-                          <button
-                            key={i}
-                            type="button"
-                            className="w-full px-3 py-2 text-left hover:bg-accent text-sm"
-                            onClick={() => {
-                              setProveedorNombreManual(sugg.nombre);
-                              setProveedorTelefonoManual(sugg.telefono);
-                              setNotasProveedorManual(sugg.notas);
-                              setShowProveedorSuggestions(false);
-                            }}
-                          >
-                            {sugg.nombre}
-                            {sugg.telefono && <span className="text-muted-foreground ml-2">· {sugg.telefono}</span>}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Input
+                        value={proveedorNombreManual}
+                        onChange={(e) => {
+                          setProveedorNombreManual(e.target.value);
+                          setShowProveedorSuggestions(true);
+                        }}
+                        onFocus={() => setShowProveedorSuggestions(true)}
+                        placeholder="Nombre del proveedor"
+                        className="text-base"
+                      />
+                      {showProveedorSuggestions && proveedorSuggestions.length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                          {proveedorSuggestions.slice(0, 5).map((sugg, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              className="w-full px-3 py-2 text-left hover:bg-accent text-sm"
+                              onClick={() => {
+                                setProveedorNombreManual(sugg.nombre);
+                                setProveedorTelefonoManual(sugg.telefono);
+                                setNotasProveedorManual(sugg.notas);
+                                setShowProveedorSuggestions(false);
+                              }}
+                            >
+                              {sugg.nombre}
+                              {sugg.telefono && <span className="text-muted-foreground ml-2">· {sugg.telefono}</span>}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Email field for manual supplier - visible by default */}
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="email"
+                        value={proveedorEmailManual}
+                        onChange={(e) => setProveedorEmailManual(e.target.value)}
+                        placeholder="correo@proveedor.com (opcional)"
+                        className="pl-9 text-base"
+                      />
+                    </div>
                   </div>
                 )}
               </div>
@@ -1711,6 +1753,31 @@ const CrearOrdenCompraWizard = ({
         )}
       </DialogContent>
     </Dialog>
+    
+    {/* AlertDialog for missing email confirmation */}
+    <AlertDialog open={showEmailWarning} onOpenChange={setShowEmailWarning}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5 text-amber-500" />
+            Sin correo electrónico
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            No has ingresado un correo para este proveedor. 
+            No podrás enviar la orden de compra por correo electrónico.
+            <br /><br />
+            ¿Deseas continuar?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmNoEmail}>
+            Continuar sin correo
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 };
 

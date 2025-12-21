@@ -240,12 +240,16 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
     setNewCcEmail("");
   };
 
-  // Initialize email when action changes
+  // Initialize email when action changes - support both catalog and manual supplier emails
   useEffect(() => {
-    if ((accion === "enviar_email" || accion === "reenviar_email") && orden?.proveedores?.email) {
-      setEmailTo(orden.proveedores.email);
+    if (accion === "enviar_email" || accion === "reenviar_email") {
+      // Priority: catalog supplier email, then manual supplier email
+      const email = orden?.proveedores?.email || orden?.proveedor_email_manual;
+      if (email) {
+        setEmailTo(email);
+      }
     }
-  }, [accion, orden?.proveedores?.email]);
+  }, [accion, orden?.proveedores?.email, orden?.proveedor_email_manual]);
 
   const handleAddCcEmail = () => {
     const email = newCcEmail.trim();
@@ -1292,7 +1296,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   const canSendToSupplier = orden?.status === "autorizada";
   const canSendDirectly = isAdmin && orden?.status === "pendiente";
   const canResendToSupplier = ["enviada", "confirmada", "parcial"].includes(orden?.status || "");
-  const proveedorTieneEmail = !!(orden?.proveedores?.email);
+  const proveedorTieneEmail = !!(orden?.proveedores?.email || orden?.proveedor_email_manual);
 
   // Mark as sent without email (for informal suppliers) - still sends internal copy
   const handleMarcarComoEnviada = async () => {
@@ -1692,7 +1696,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                 <p><strong>Folio:</strong> {orden?.folio}</p>
                 <p><strong>Proveedor:</strong> {orden?.proveedores?.nombre}</p>
                 {proveedorTieneEmail ? (
-                  <p><strong>Correo proveedor:</strong> {orden?.proveedores?.email}</p>
+                  <p><strong>Correo proveedor:</strong> {orden?.proveedores?.email || orden?.proveedor_email_manual}</p>
                 ) : (
                   <p className="text-amber-600"><strong>⚠ Sin correo:</strong> Control interno</p>
                 )}
