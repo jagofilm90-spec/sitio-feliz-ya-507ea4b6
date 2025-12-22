@@ -302,6 +302,84 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
               : `[RECEPCIÓN ${new Date().toLocaleDateString('es-MX')}] ${notasControlInterno}`
           })
           .eq("id", orden.id);
+
+        // Send confirmation email to supplier
+        if (orden?.proveedores?.email) {
+          try {
+            const productosRecibidos = productos
+              .filter(p => p.cantidad_recibida_ahora > 0)
+              .map(p => `<tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">${p.producto_codigo}</td><td style="padding:4px 8px;border-bottom:1px solid #eee;">${p.producto_nombre}</td><td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${p.cantidad_recibida_ahora}</td></tr>`)
+              .join("");
+            
+            const fechaRecepcion = new Date().toLocaleDateString('es-MX', { 
+              weekday: 'long', 
+              day: 'numeric', 
+              month: 'long', 
+              year: 'numeric' 
+            });
+            
+            const asunto = `Recepción confirmada - ${orden.folio}`;
+            const { data: emailData } = await supabase.functions.invoke("gmail-api", {
+              body: {
+                action: "send",
+                email: "compras@almasa.com.mx",
+                to: orden.proveedores.email,
+                subject: asunto,
+                body: `
+                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #16a34a;">✅ Recepción de Mercancía Confirmada</h2>
+                    <p>Le informamos que hemos recibido satisfactoriamente la mercancía de la orden <strong>${orden.folio}</strong>.</p>
+                    
+                    <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+                      <tr style="background:#f3f4f6;">
+                        <td style="padding:8px;font-weight:bold;">Fecha de recepción:</td>
+                        <td style="padding:8px;">${fechaRecepcion}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:8px;font-weight:bold;">Entregado por:</td>
+                        <td style="padding:8px;">${nombreEntregador}</td>
+                      </tr>
+                      <tr style="background:#f3f4f6;">
+                        <td style="padding:8px;font-weight:bold;">Sellos de seguridad:</td>
+                        <td style="padding:8px;">${numeroSellos}</td>
+                      </tr>
+                      ${notasRecepcion ? `<tr><td style="padding:8px;font-weight:bold;">Notas:</td><td style="padding:8px;">${notasRecepcion}</td></tr>` : ''}
+                    </table>
+                    
+                    <h3 style="margin-top:24px;">Productos recibidos:</h3>
+                    <table style="width:100%;border-collapse:collapse;margin:8px 0;">
+                      <thead>
+                        <tr style="background:#f3f4f6;">
+                          <th style="padding:8px;text-align:left;border-bottom:2px solid #ddd;">Código</th>
+                          <th style="padding:8px;text-align:left;border-bottom:2px solid #ddd;">Producto</th>
+                          <th style="padding:8px;text-align:right;border-bottom:2px solid #ddd;">Cantidad</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${productosRecibidos}
+                      </tbody>
+                    </table>
+                    
+                    <p style="margin-top:24px;">Gracias por su servicio.</p>
+                    <p style="color:#666;">Saludos cordiales,<br><strong>Almasa - Abarrotes La Manita</strong></p>
+                  </div>
+                `
+              }
+            });
+
+            // Register sent email in history
+            await registrarCorreoEnviado({
+              tipo: "recepcion_confirmada",
+              referencia_id: orden.id,
+              destinatario: orden.proveedores.email,
+              asunto: asunto,
+              gmail_message_id: emailData?.messageId || null,
+              contenido_preview: `Recepción completa confirmada - ${productos.filter(p => p.cantidad_recibida_ahora > 0).length} productos recibidos`,
+            });
+          } catch (emailError) {
+            console.error("Error sending confirmation email:", emailError);
+          }
+        }
       } else {
         // Mark as partially received and schedule next delivery
         await supabase
