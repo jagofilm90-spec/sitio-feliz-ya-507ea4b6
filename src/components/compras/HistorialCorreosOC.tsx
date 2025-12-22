@@ -42,6 +42,11 @@ const tipoConfig: Record<string, { label: string; icon: React.ReactNode; color: 
     icon: <RefreshCw className="h-3 w-3" />, 
     color: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" 
   },
+  recepcion_confirmada: { 
+    label: "Recepción", 
+    icon: <Check className="h-3 w-3" />, 
+    color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200" 
+  },
 };
 
 export function HistorialCorreosOC({ ordenId }: HistorialCorreosOCProps) {
