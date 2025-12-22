@@ -48,6 +48,7 @@ interface ProveedorProductoRow {
   unidades_por_lote_default: number | null;
   precio_por_kilo_compra: boolean | null;
   costo_proveedor: number | null;
+  codigo_proveedor: string | null;
 }
 
 const TIPOS_VEHICULO = [
@@ -84,7 +85,7 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
     queryFn: async () => {
       const { data, error } = await supabase
         .from("proveedor_productos")
-        .select("id, producto_id, tipo_vehiculo_estandar, capacidad_vehiculo_bultos, capacidad_vehiculo_kg, permite_combinacion, es_capacidad_fija, dividir_en_lotes_recepcion, cantidad_lotes_default, unidades_por_lote_default, precio_por_kilo_compra, costo_proveedor")
+        .select("id, producto_id, tipo_vehiculo_estandar, capacidad_vehiculo_bultos, capacidad_vehiculo_kg, permite_combinacion, es_capacidad_fija, dividir_en_lotes_recepcion, cantidad_lotes_default, unidades_por_lote_default, precio_por_kilo_compra, costo_proveedor, codigo_proveedor")
         .eq("proveedor_id", proveedorId);
       if (error) throw error;
       return data as ProveedorProductoRow[];
@@ -170,6 +171,30 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
       toast({
         variant: "destructive",
         title: "Error al guardar costo",
+        description: error.message,
+      });
+    },
+  });
+
+  const updateCodigoProveedor = useMutation({
+    mutationFn: async ({ productoId, codigo }: { productoId: string; codigo: string | null }) => {
+      const { error } = await supabase
+        .from("proveedor_productos")
+        .update({
+          codigo_proveedor: codigo,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("proveedor_id", proveedorId)
+        .eq("producto_id", productoId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["proveedor-productos-config", proveedorId] });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error al guardar código",
         description: error.message,
       });
     },
@@ -297,14 +322,33 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
                         </Badge>
                       )}
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {producto.codigo}
-                      {producto.presentacion && ` • ${producto.presentacion}kg`}
+                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                      <span>{producto.codigo}</span>
+                      {config?.codigo_proveedor && (
+                        <Badge variant="outline" className="text-xs font-mono">
+                          SKU: {config.codigo_proveedor}
+                        </Badge>
+                      )}
+                      {producto.presentacion && <span>• {producto.presentacion}kg</span>}
                     </div>
                   </div>
                   
                   {isSelected && (
                     <div className="flex items-center gap-2">
+                      {/* Input de código proveedor inline */}
+                      <Input
+                        type="text"
+                        placeholder="SKU Prov."
+                        className="w-24 h-8 text-sm font-mono"
+                        defaultValue={config?.codigo_proveedor || ""}
+                        onBlur={(e) => {
+                          const value = e.target.value.trim() || null;
+                          if (value !== config?.codigo_proveedor) {
+                            updateCodigoProveedor.mutate({ productoId: producto.id, codigo: value });
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
                       {/* Input de costo inline */}
                       <div className="flex items-center gap-1">
                         <span className="text-xs text-muted-foreground">$</span>

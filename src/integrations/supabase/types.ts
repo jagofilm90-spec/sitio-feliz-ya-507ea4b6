@@ -3545,6 +3545,7 @@ export type Database = {
           cantidad_lotes_default: number | null
           capacidad_vehiculo_bultos: number | null
           capacidad_vehiculo_kg: number | null
+          codigo_proveedor: string | null
           costo_proveedor: number | null
           created_at: string
           dividir_en_lotes_recepcion: boolean | null
@@ -3562,6 +3563,7 @@ export type Database = {
           cantidad_lotes_default?: number | null
           capacidad_vehiculo_bultos?: number | null
           capacidad_vehiculo_kg?: number | null
+          codigo_proveedor?: string | null
           costo_proveedor?: number | null
           created_at?: string
           dividir_en_lotes_recepcion?: boolean | null
@@ -3579,6 +3581,7 @@ export type Database = {
           cantidad_lotes_default?: number | null
           capacidad_vehiculo_bultos?: number | null
           capacidad_vehiculo_kg?: number | null
+          codigo_proveedor?: string | null
           costo_proveedor?: number | null
           created_at?: string
           dividir_en_lotes_recepcion?: boolean | null
