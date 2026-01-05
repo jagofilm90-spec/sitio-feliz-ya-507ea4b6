@@ -19,13 +19,15 @@ import {
   WifiOff,
   Bug,
   AlertTriangle,
-  Boxes
+  Boxes,
+  ShoppingCart
 } from "lucide-react";
 import { AlmacenCargaRutasTab } from "@/components/almacen/AlmacenCargaRutasTab";
 import { AlmacenRecepcionTab } from "@/components/almacen/AlmacenRecepcionTab";
 import { AlmacenFumigacionesTab } from "@/components/almacen/AlmacenFumigacionesTab";
 import { AlmacenInventarioTab } from "@/components/almacen/AlmacenInventarioTab";
 import { AlmacenProductosTab } from "@/components/almacen/AlmacenProductosTab";
+import { AlmacenVentasMostradorTab } from "@/components/almacen/AlmacenVentasMostradorTab";
 
 const AlmacenTablet = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -38,6 +40,7 @@ const AlmacenTablet = () => {
   const [rutasStats, setRutasStats] = useState({ total: 0, pendientes: 0, completadas: 0, entregas: 0 });
   const [recepcionStats, setRecepcionStats] = useState({ pendientes: 0, recibidas: 0 });
   const [fumigacionStats, setFumigacionStats] = useState({ vencidas: 0, proximas: 0, vigentes: 0 });
+  const [ventasStats, setVentasStats] = useState({ pendientes: 0, listas: 0, entregadas: 0 });
 
   // Monitor de conexión
   useEffect(() => {
@@ -268,10 +271,19 @@ const AlmacenTablet = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full grid grid-cols-5 h-14 mb-4">
+        <TabsList className="w-full grid grid-cols-6 h-14 mb-4">
           <TabsTrigger value="rutas" className="text-base h-12 gap-2">
             <Truck className="w-5 h-5" />
             <span className="hidden sm:inline">Mis</span> Rutas
+          </TabsTrigger>
+          <TabsTrigger value="ventas" className="text-base h-12 gap-2 relative">
+            <ShoppingCart className="w-5 h-5" />
+            Ventas
+            {ventasStats.pendientes > 0 && (
+              <span className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">
+                {ventasStats.pendientes}
+              </span>
+            )}
           </TabsTrigger>
           <TabsTrigger value="recepcion" className="text-base h-12 gap-2 relative">
             <Package className="w-5 h-5" />
@@ -301,6 +313,14 @@ const AlmacenTablet = () => {
             key={`rutas-${refreshKey}`}
             onStatsUpdate={setRutasStats}
             empleadoId={empleadoId}
+          />
+        </TabsContent>
+
+        <TabsContent value="ventas" className="mt-0">
+          <AlmacenVentasMostradorTab 
+            key={`ventas-${refreshKey}`}
+            empleadoId={empleadoId}
+            onStatsUpdate={setVentasStats}
           />
         </TabsContent>
 

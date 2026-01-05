@@ -4064,6 +4064,102 @@ export type Database = {
         }
         Relationships: []
       }
+      solicitudes_venta_mostrador: {
+        Row: {
+          created_at: string | null
+          factura_id: string | null
+          fecha_entregado: string | null
+          fecha_pagado: string | null
+          fecha_procesado: string | null
+          fecha_solicitud: string | null
+          folio: string
+          forma_pago: string | null
+          id: string
+          notas: string | null
+          procesado_por: string | null
+          productos_solicitados: Json
+          referencia_pago: string | null
+          solicitante_id: string | null
+          status: string | null
+          total: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          factura_id?: string | null
+          fecha_entregado?: string | null
+          fecha_pagado?: string | null
+          fecha_procesado?: string | null
+          fecha_solicitud?: string | null
+          folio: string
+          forma_pago?: string | null
+          id?: string
+          notas?: string | null
+          procesado_por?: string | null
+          productos_solicitados?: Json
+          referencia_pago?: string | null
+          solicitante_id?: string | null
+          status?: string | null
+          total?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          factura_id?: string | null
+          fecha_entregado?: string | null
+          fecha_pagado?: string | null
+          fecha_procesado?: string | null
+          fecha_solicitud?: string | null
+          folio?: string
+          forma_pago?: string | null
+          id?: string
+          notas?: string | null
+          procesado_por?: string | null
+          productos_solicitados?: Json
+          referencia_pago?: string | null
+          solicitante_id?: string | null
+          status?: string | null
+          total?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitudes_venta_mostrador_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "facturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitudes_venta_mostrador_procesado_por_fkey"
+            columns: ["procesado_por"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitudes_venta_mostrador_procesado_por_fkey"
+            columns: ["procesado_por"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitudes_venta_mostrador_solicitante_id_fkey"
+            columns: ["solicitante_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitudes_venta_mostrador_solicitante_id_fkey"
+            columns: ["solicitante_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -4545,6 +4641,7 @@ export type Database = {
       }
       generar_folio_cotizacion: { Args: never; Returns: string }
       generar_folio_orden_compra: { Args: never; Returns: string }
+      generar_folio_venta_mostrador: { Args: never; Returns: string }
       generar_notificaciones_fumigacion: { Args: never; Returns: undefined }
       get_cliente_id_for_user: { Args: { user_uuid: string }; Returns: string }
       get_user_roles: {
