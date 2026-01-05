@@ -623,6 +623,7 @@ export type Database = {
           created_at: string
           csf_archivo_url: string | null
           deadline_dias_habiles_default: number | null
+          dias_visita_preferidos: string[] | null
           direccion: string | null
           email: string | null
           entre_calle: string | null
@@ -663,6 +664,7 @@ export type Database = {
           created_at?: string
           csf_archivo_url?: string | null
           deadline_dias_habiles_default?: number | null
+          dias_visita_preferidos?: string[] | null
           direccion?: string | null
           email?: string | null
           entre_calle?: string | null
@@ -703,6 +705,7 @@ export type Database = {
           created_at?: string
           csf_archivo_url?: string | null
           deadline_dias_habiles_default?: number | null
+          dias_visita_preferidos?: string[] | null
           direccion?: string | null
           email?: string | null
           entre_calle?: string | null
@@ -763,6 +766,158 @@ export type Database = {
             columns: ["zona_id"]
             isOneToOne: false
             referencedRelation: "zonas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comisiones_detalle: {
+        Row: {
+          comision_id: string | null
+          created_at: string | null
+          factura_id: string | null
+          id: string
+          monto_comision: number
+          monto_venta: number
+          pedido_id: string | null
+        }
+        Insert: {
+          comision_id?: string | null
+          created_at?: string | null
+          factura_id?: string | null
+          id?: string
+          monto_comision: number
+          monto_venta: number
+          pedido_id?: string | null
+        }
+        Update: {
+          comision_id?: string | null
+          created_at?: string | null
+          factura_id?: string | null
+          id?: string
+          monto_comision?: number
+          monto_venta?: number
+          pedido_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comisiones_detalle_comision_id_fkey"
+            columns: ["comision_id"]
+            isOneToOne: false
+            referencedRelation: "comisiones_vendedor"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comisiones_detalle_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "facturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comisiones_detalle_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comisiones_vendedor: {
+        Row: {
+          aprobado_por: string | null
+          calculado_por: string | null
+          created_at: string | null
+          empleado_id: string
+          fecha_pago: string | null
+          forma_pago: string | null
+          id: string
+          monto_comision: number
+          notas: string | null
+          periodo_fin: string
+          periodo_inicio: string
+          porcentaje_aplicado: number
+          referencia_pago: string | null
+          status: string | null
+          total_ventas: number
+          updated_at: string | null
+        }
+        Insert: {
+          aprobado_por?: string | null
+          calculado_por?: string | null
+          created_at?: string | null
+          empleado_id: string
+          fecha_pago?: string | null
+          forma_pago?: string | null
+          id?: string
+          monto_comision?: number
+          notas?: string | null
+          periodo_fin: string
+          periodo_inicio: string
+          porcentaje_aplicado: number
+          referencia_pago?: string | null
+          status?: string | null
+          total_ventas?: number
+          updated_at?: string | null
+        }
+        Update: {
+          aprobado_por?: string | null
+          calculado_por?: string | null
+          created_at?: string | null
+          empleado_id?: string
+          fecha_pago?: string | null
+          forma_pago?: string | null
+          id?: string
+          monto_comision?: number
+          notas?: string | null
+          periodo_fin?: string
+          periodo_inicio?: string
+          porcentaje_aplicado?: number
+          referencia_pago?: string | null
+          status?: string | null
+          total_ventas?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comisiones_vendedor_aprobado_por_fkey"
+            columns: ["aprobado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comisiones_vendedor_aprobado_por_fkey"
+            columns: ["aprobado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comisiones_vendedor_calculado_por_fkey"
+            columns: ["calculado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comisiones_vendedor_calculado_por_fkey"
+            columns: ["calculado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comisiones_vendedor_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comisiones_vendedor_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
             referencedColumns: ["id"]
           },
         ]
@@ -1509,7 +1664,9 @@ export type Database = {
           notas: string | null
           numero_dependientes: number | null
           numero_seguro_social: string | null
+          periodo_comision: string | null
           periodo_pago: string | null
+          porcentaje_comision: number | null
           primer_apellido: string | null
           puesto: string
           rfc: string | null
@@ -1542,7 +1699,9 @@ export type Database = {
           notas?: string | null
           numero_dependientes?: number | null
           numero_seguro_social?: string | null
+          periodo_comision?: string | null
           periodo_pago?: string | null
+          porcentaje_comision?: number | null
           primer_apellido?: string | null
           puesto: string
           rfc?: string | null
@@ -1575,7 +1734,9 @@ export type Database = {
           notas?: string | null
           numero_dependientes?: number | null
           numero_seguro_social?: string | null
+          periodo_comision?: string | null
           periodo_pago?: string | null
+          porcentaje_comision?: number | null
           primer_apellido?: string | null
           puesto?: string
           rfc?: string | null
