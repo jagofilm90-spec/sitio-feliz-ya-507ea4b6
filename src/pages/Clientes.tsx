@@ -30,7 +30,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, MapPin, X, Mail, BarChart3, Loader2, Sparkles, User, Package, Map, ClipboardList, FileSpreadsheet, Users, Building2, Gift } from "lucide-react";
+import { Plus, Search, Edit, Trash2, MapPin, X, Mail, BarChart3, Loader2, Sparkles, User, Package, Map, ClipboardList, FileSpreadsheet, Users, Building2, Gift, CalendarDays } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AuditoriaFiscalSheet } from "@/components/clientes/AuditoriaFiscalSheet";
 import ClienteSucursalesDialog from "@/components/clientes/ClienteSucursalesDialog";
@@ -42,6 +42,7 @@ import { ClienteProductosTab } from "@/components/clientes/ClienteProductosTab";
 import { ClienteProductosDialog } from "@/components/clientes/ClienteProductosDialog";
 import { ClienteCreditosExcepcionesTab } from "@/components/clientes/ClienteCreditosExcepcionesTab";
 import { ClienteCortesiasTab } from "@/components/clientes/ClienteCortesiasTab";
+import { ClienteProgramacionTab } from "@/components/clientes/ClienteProgramacionTab";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { CreditCard } from "lucide-react";
 import { ImportarCatalogoAspelDialog } from "@/components/clientes/ImportarCatalogoAspelDialog";
@@ -792,8 +793,8 @@ const Clientes = () => {
               </DialogHeader>
               
               {editingClient ? (
-                <Tabs defaultValue="datos" className="w-full">
-                  <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
+              <Tabs defaultValue="datos" className="w-full">
+                  <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-6' : 'grid-cols-5'}`}>
                     <TabsTrigger value="datos">Datos</TabsTrigger>
                     <TabsTrigger value="productos" className="flex items-center gap-1">
                       <Package className="h-4 w-4" />
@@ -806,6 +807,10 @@ const Clientes = () => {
                     <TabsTrigger value="creditos" className="flex items-center gap-1">
                       <CreditCard className="h-4 w-4" />
                       Plazos
+                    </TabsTrigger>
+                    <TabsTrigger value="programacion" className="flex items-center gap-1">
+                      <CalendarDays className="h-4 w-4 text-blue-500" />
+                      Días
                     </TabsTrigger>
                     {isAdmin && (
                       <TabsTrigger value="usuario" className="flex items-center gap-1">
@@ -831,6 +836,12 @@ const Clientes = () => {
                       clienteId={editingClient.id}
                       clienteNombre={editingClient.nombre}
                       terminoDefault={editingClient.termino_credito}
+                    />
+                  </TabsContent>
+                  <TabsContent value="programacion" className="mt-4">
+                    <ClienteProgramacionTab 
+                      clienteId={editingClient.id}
+                      clienteNombre={editingClient.nombre}
                     />
                   </TabsContent>
                   {isAdmin && (

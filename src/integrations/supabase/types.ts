@@ -468,6 +468,57 @@ export type Database = {
           },
         ]
       }
+      cliente_programacion_pedidos: {
+        Row: {
+          activo: boolean | null
+          cliente_id: string
+          created_at: string | null
+          dia_semana: string
+          hora_preferida: string | null
+          id: string
+          notas: string | null
+          sucursal_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          cliente_id: string
+          created_at?: string | null
+          dia_semana: string
+          hora_preferida?: string | null
+          id?: string
+          notas?: string | null
+          sucursal_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          cliente_id?: string
+          created_at?: string | null
+          dia_semana?: string
+          hora_preferida?: string | null
+          id?: string
+          notas?: string | null
+          sucursal_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_programacion_pedidos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_programacion_pedidos_sucursal_id_fkey"
+            columns: ["sucursal_id"]
+            isOneToOne: false
+            referencedRelation: "cliente_sucursales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cliente_sucursales: {
         Row: {
           activo: boolean

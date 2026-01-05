@@ -44,12 +44,13 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Eye, ShoppingCart, FileText, Link2, Printer, Receipt, Send, CheckCircle2, Clock, BarChart3, Trash2, AlertCircle, FileCheck } from "lucide-react";
+import { Plus, Search, Eye, ShoppingCart, FileText, Link2, Printer, Receipt, Send, CheckCircle2, Clock, BarChart3, Trash2, AlertCircle, FileCheck, CalendarDays } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import CotizacionesTab from "@/components/cotizaciones/CotizacionesTab";
 import CotizacionesAnalyticsTab from "@/components/cotizaciones/CotizacionesAnalyticsTab";
 import { PedidosPorAutorizarTab } from "@/components/pedidos/PedidosPorAutorizarTab";
+import { CalendarioPedidosTab } from "@/components/pedidos/CalendarioPedidosTab";
 import CotizacionDetalleDialog from "@/components/cotizaciones/CotizacionDetalleDialog";
 import { ImprimirRemisionDialog } from "@/components/remisiones/ImprimirRemisionDialog";
 import EditarEmailClienteDialog from "@/components/pedidos/EditarEmailClienteDialog";
@@ -661,6 +662,10 @@ const PedidosContent = () => {
               <BarChart3 className="h-4 w-4" />
               Análisis
             </TabsTrigger>
+            <TabsTrigger value="calendario" className="gap-2">
+              <CalendarDays className="h-4 w-4" />
+              Calendario
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pedidos" className="mt-6 space-y-4">
@@ -875,6 +880,10 @@ const PedidosContent = () => {
 
           <TabsContent value="analisis" className="mt-6">
             <CotizacionesAnalyticsTab />
+          </TabsContent>
+
+          <TabsContent value="calendario" className="mt-6">
+            <CalendarioPedidosTab />
           </TabsContent>
         </Tabs>
       </div>
