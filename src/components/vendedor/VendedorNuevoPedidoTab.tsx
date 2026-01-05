@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Search, Plus, Minus, ShoppingCart, Trash2, Loader2 } from "lucide-react";
+import { Search, Plus, Minus, ShoppingCart, Trash2, Loader2, Package, Store } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { calcularDesgloseImpuestos, redondear, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
 import { format, addDays, isWeekend } from "date-fns";
@@ -295,47 +295,72 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-32 w-full" />
+      <div className="space-y-6">
+        <Skeleton className="h-14 w-full" />
+        <Skeleton className="h-14 w-full" />
+        <Skeleton className="h-40 w-full" />
       </div>
     );
   }
 
   const totales = calcularTotales();
+  const selectedCliente = clientes.find(c => c.id === selectedClienteId);
 
   return (
-    <div className="space-y-4">
-      {/* Client Selection */}
+    <div className="space-y-6">
+      {/* Client Selection - Larger */}
       <div className="space-y-2">
-        <Label>Cliente *</Label>
+        <Label className="text-base flex items-center gap-2">
+          <Store className="h-4 w-4" />
+          Cliente *
+        </Label>
         <Select value={selectedClienteId} onValueChange={setSelectedClienteId}>
-          <SelectTrigger>
+          <SelectTrigger className="h-14 text-lg">
             <SelectValue placeholder="Seleccionar cliente" />
           </SelectTrigger>
           <SelectContent>
-            {clientes.map((cliente) => (
-              <SelectItem key={cliente.id} value={cliente.id}>
-                {cliente.nombre} ({cliente.codigo})
-              </SelectItem>
-            ))}
+            {clientes.length === 0 ? (
+              <div className="p-4 text-center text-muted-foreground">
+                No tienes clientes asignados
+              </div>
+            ) : (
+              clientes.map((cliente) => (
+                <SelectItem key={cliente.id} value={cliente.id} className="text-base py-3">
+                  <div className="flex items-center justify-between w-full gap-4">
+                    <span>{cliente.nombre}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {cliente.termino_credito === 'contado' ? 'Contado' : cliente.termino_credito.replace('_', ' ')}
+                    </Badge>
+                  </div>
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
+        {selectedCliente && (
+          <p className="text-sm text-muted-foreground">
+            Crédito: {selectedCliente.termino_credito === 'contado' ? 'Contado' : selectedCliente.termino_credito.replace('_', ' ')}
+          </p>
+        )}
       </div>
 
-      {/* Branch Selection */}
+      {/* Branch Selection - Larger */}
       {sucursales.length > 0 && (
         <div className="space-y-2">
-          <Label>Sucursal de entrega *</Label>
+          <Label className="text-base">Sucursal de entrega *</Label>
           <Select value={selectedSucursalId} onValueChange={setSelectedSucursalId}>
-            <SelectTrigger>
+            <SelectTrigger className="h-14 text-lg">
               <SelectValue placeholder="Seleccionar sucursal" />
             </SelectTrigger>
             <SelectContent>
               {sucursales.map((sucursal) => (
-                <SelectItem key={sucursal.id} value={sucursal.id}>
-                  {sucursal.nombre} - {sucursal.direccion}
+                <SelectItem key={sucursal.id} value={sucursal.id} className="text-base py-3">
+                  <div>
+                    <span className="font-medium">{sucursal.nombre}</span>
+                    {sucursal.direccion && (
+                      <span className="text-muted-foreground"> - {sucursal.direccion}</span>
+                    )}
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -343,71 +368,78 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
         </div>
       )}
 
-      {/* Product Search */}
+      {/* Product Search - Larger */}
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <ShoppingCart className="h-4 w-4" />
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Package className="h-5 w-5" />
             Productos
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
-              placeholder="Buscar producto..."
+              placeholder="Buscar producto por nombre o código..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-12 h-14 text-lg"
             />
           </div>
 
           {/* Search Results */}
           {searchTerm && (
-            <ScrollArea className="h-40 border rounded-md">
+            <ScrollArea className="h-48 border rounded-lg">
               <div className="p-2 space-y-1">
                 {productosFiltrados.slice(0, 10).map((producto) => (
                   <div
                     key={producto.id}
-                    className="flex items-center justify-between p-2 hover:bg-muted rounded-md cursor-pointer"
+                    className="flex items-center justify-between p-4 hover:bg-muted rounded-lg cursor-pointer transition-colors"
                     onClick={() => agregarProducto(producto)}
                   >
                     <div>
-                      <p className="text-sm font-medium">{producto.nombre}</p>
-                      <p className="text-xs text-muted-foreground">{producto.codigo}</p>
+                      <p className="font-medium text-base">{producto.nombre}</p>
+                      <p className="text-sm text-muted-foreground">{producto.codigo}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium">{formatCurrency(producto.precio_venta)}</p>
-                      <p className="text-xs text-muted-foreground">{producto.stock_actual} disp.</p>
+                      <p className="font-bold text-lg">{formatCurrency(producto.precio_venta)}</p>
+                      <p className="text-sm text-muted-foreground">{producto.stock_actual} disponibles</p>
                     </div>
                   </div>
                 ))}
+                {productosFiltrados.length === 0 && (
+                  <p className="text-center text-muted-foreground py-4">No se encontraron productos</p>
+                )}
               </div>
             </ScrollArea>
           )}
 
-          {/* Cart */}
+          {/* Cart - Larger Items */}
           {lineas.length > 0 && (
-            <div className="space-y-2 pt-2 border-t">
+            <div className="space-y-3 pt-4 border-t">
+              <h4 className="font-medium text-base flex items-center gap-2">
+                <ShoppingCart className="h-4 w-4" />
+                Productos en el pedido ({lineas.length})
+              </h4>
               {lineas.map((linea) => (
-                <div key={linea.producto.id} className="flex items-center gap-2">
+                <div key={linea.producto.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{linea.producto.nombre}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="font-medium truncate">{linea.producto.nombre}</p>
+                    <p className="text-sm text-muted-foreground">
                       {formatCurrency(linea.precioUnitario)} × {linea.cantidad}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2">
                     <Button
                       size="icon"
                       variant="outline"
-                      className="h-7 w-7"
+                      className="h-10 w-10"
                       onClick={() => actualizarCantidad(linea.producto.id, linea.cantidad - 1)}
                     >
-                      <Minus className="h-3 w-3" />
+                      <Minus className="h-4 w-4" />
                     </Button>
                     <Input
-                      className="w-14 h-7 text-center text-sm"
+                      className="w-16 h-10 text-center text-lg font-medium"
                       value={linea.cantidad}
                       onChange={(e) => {
                         const val = parseInt(e.target.value) || 0;
@@ -417,22 +449,22 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
                     <Button
                       size="icon"
                       variant="outline"
-                      className="h-7 w-7"
+                      className="h-10 w-10"
                       onClick={() => actualizarCantidad(linea.producto.id, linea.cantidad + 1)}
                     >
-                      <Plus className="h-3 w-3" />
+                      <Plus className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="text-sm font-medium w-20 text-right">
+                  <p className="font-bold text-lg w-24 text-right">
                     {formatCurrency(linea.subtotal)}
                   </p>
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-7 w-7 text-destructive"
+                    className="h-10 w-10 text-destructive hover:text-destructive"
                     onClick={() => actualizarCantidad(linea.producto.id, 0)}
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash2 className="h-5 w-5" />
                   </Button>
                 </div>
               ))}
@@ -441,16 +473,16 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
         </CardContent>
       </Card>
 
-      {/* Delivery Date */}
+      {/* Delivery Date - Larger */}
       <div className="space-y-2">
-        <Label>Fecha de entrega *</Label>
+        <Label className="text-base">Fecha de entrega *</Label>
         <Select value={fechaEntrega} onValueChange={setFechaEntrega}>
-          <SelectTrigger>
+          <SelectTrigger className="h-14 text-lg">
             <SelectValue placeholder="Seleccionar fecha" />
           </SelectTrigger>
           <SelectContent>
             {fechasDisponibles().map((fecha) => (
-              <SelectItem key={fecha} value={fecha}>
+              <SelectItem key={fecha} value={fecha} className="text-base py-3">
                 {format(new Date(fecha + 'T12:00:00'), "EEEE d 'de' MMMM", { locale: es })}
               </SelectItem>
             ))}
@@ -458,42 +490,44 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
         </Select>
       </div>
 
-      {/* Notes */}
+      {/* Notes - Larger */}
       <div className="space-y-2">
-        <Label>Notas</Label>
+        <Label className="text-base">Notas del pedido</Label>
         <Textarea
-          placeholder="Instrucciones especiales..."
+          placeholder="Instrucciones especiales de entrega, horarios, etc."
           value={notas}
           onChange={(e) => setNotas(e.target.value)}
-          rows={2}
+          rows={3}
+          className="text-base resize-none"
         />
       </div>
 
-      {/* Totals and Submit */}
+      {/* Totals and Submit - Larger */}
       {lineas.length > 0 && (
-        <Card className="bg-muted/50">
-          <CardContent className="p-4">
-            <div className="space-y-1 text-sm">
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="p-6">
+            <div className="space-y-2 text-base mb-6">
               <div className="flex justify-between">
-                <span>Subtotal:</span>
-                <span>{formatCurrency(totales.subtotal)}</span>
+                <span className="text-muted-foreground">Subtotal:</span>
+                <span className="font-medium">{formatCurrency(totales.subtotal)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Impuestos:</span>
-                <span>{formatCurrency(totales.impuestos)}</span>
+                <span className="text-muted-foreground">Impuestos:</span>
+                <span className="font-medium">{formatCurrency(totales.impuestos)}</span>
               </div>
-              <div className="flex justify-between font-bold text-lg pt-2 border-t">
+              <div className="flex justify-between text-xl font-bold pt-3 border-t">
                 <span>Total:</span>
-                <span>{formatCurrency(totales.total)}</span>
+                <span className="text-primary">{formatCurrency(totales.total)}</span>
               </div>
             </div>
 
             <Button 
               onClick={handleSubmit} 
               disabled={submitting} 
-              className="w-full mt-4"
+              className="w-full h-14 text-lg font-semibold"
+              size="lg"
             >
-              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {submitting && <Loader2 className="h-5 w-5 mr-2 animate-spin" />}
               Crear Pedido
             </Button>
           </CardContent>

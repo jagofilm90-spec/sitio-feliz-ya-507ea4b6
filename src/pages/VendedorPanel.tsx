@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Users, ShoppingCart, BarChart3, CreditCard, LogOut, User, Menu } from "lucide-react";
@@ -298,35 +297,39 @@ export default function VendedorPanel() {
             </Card>
           </div>
 
-          {/* Mobile Tabs */}
-          <div className="lg:hidden">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-4">
-                {navItems.map((item) => (
-                  <TabsTrigger key={item.id} value={item.id} className="text-xs px-2">
-                    <item.icon className="h-4 w-4 mr-1" />
-                    <span className="hidden sm:inline">{item.label.split(" ")[0]}</span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+      {/* Mobile Tabs - Bottom Navigation */}
+      <div className="lg:hidden">
+        {/* Content Area */}
+        <div className="pb-24">
+          {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
+          {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} />}
+          {activeTab === "ventas" && <VendedorMisVentasTab />}
+          {activeTab === "cobranza" && <VendedorCobranzaTab />}
+        </div>
 
-              <TabsContent value="clientes">
-                <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />
-              </TabsContent>
-
-              <TabsContent value="nuevo">
-                <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} />
-              </TabsContent>
-
-              <TabsContent value="ventas">
-                <VendedorMisVentasTab />
-              </TabsContent>
-
-              <TabsContent value="cobranza">
-                <VendedorCobranzaTab />
-              </TabsContent>
-            </Tabs>
+        {/* Fixed Bottom Navigation */}
+        <nav className="fixed bottom-0 left-0 right-0 bg-background border-t safe-area-bottom z-50">
+          <div className="grid grid-cols-4">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={cn(
+                  "flex flex-col items-center justify-center py-3 px-2 transition-colors min-h-[64px]",
+                  activeTab === item.id
+                    ? "text-primary bg-primary/10"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                <item.icon className={cn("h-6 w-6 mb-1", activeTab === item.id && "text-primary")} />
+                <span className="text-xs font-medium truncate max-w-full">
+                  {item.label.split(" ")[0]}
+                </span>
+              </button>
+            ))}
           </div>
+        </nav>
+      </div>
         </div>
       </main>
     </div>

@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { CreditCard, Phone, Calendar, AlertTriangle, CheckCircle } from "lucide-react";
+import { CreditCard, Phone, Calendar, AlertTriangle, CheckCircle, Clock, MessageCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { format, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -130,89 +130,125 @@ export function VendedorCobranzaTab() {
 
   const getEstadoBadge = (diasVencido: number) => {
     if (diasVencido > 0) {
-      return <Badge variant="destructive">Vencido {diasVencido}d</Badge>;
+      return (
+        <Badge variant="destructive" className="flex items-center gap-1">
+          <AlertTriangle className="h-3 w-3" />
+          Vencido {diasVencido}d
+        </Badge>
+      );
     } else if (diasVencido >= -7) {
-      return <Badge variant="secondary" className="bg-amber-100 text-amber-800">Por vencer</Badge>;
+      return (
+        <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          Por vencer
+        </Badge>
+      );
     }
-    return <Badge variant="outline" className="text-green-600">Al corriente</Badge>;
+    return (
+      <Badge variant="outline" className="text-green-600 border-green-300 flex items-center gap-1">
+        <CheckCircle className="h-3 w-3" />
+        Al corriente
+      </Badge>
+    );
   };
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <Skeleton className="h-20" />
-          <Skeleton className="h-20" />
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
         </div>
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-14 w-full" />
+        <Skeleton className="h-32 w-full" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-3">
-        <Card>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2 text-muted-foreground mb-1">
-              <CreditCard className="h-4 w-4" />
-              <span className="text-xs">Por cobrar</span>
+    <div className="space-y-6">
+      {/* Stats - Larger Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <CreditCard className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Por cobrar</p>
+                <p className="text-2xl font-bold">{formatCurrency(stats.total)}</p>
+              </div>
             </div>
-            <p className="text-xl font-bold">{formatCurrency(stats.total)}</p>
           </CardContent>
         </Card>
-        <Card className="border-destructive/50">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2 text-destructive mb-1">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="text-xs">Vencido</span>
+        
+        <Card className="border-destructive/50 hover:shadow-md transition-shadow">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Vencido</p>
+                <p className="text-2xl font-bold text-destructive">{formatCurrency(stats.vencido)}</p>
+              </div>
             </div>
-            <p className="text-xl font-bold text-destructive">{formatCurrency(stats.vencido)}</p>
           </CardContent>
         </Card>
-        <Card className="border-amber-500/50">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2 text-amber-600 mb-1">
-              <Calendar className="h-4 w-4" />
-              <span className="text-xs">Por vencer (7 días)</span>
+        
+        <Card className="border-amber-500/50 hover:shadow-md transition-shadow">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                <Clock className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Por vencer</p>
+                <p className="text-2xl font-bold text-amber-600">{formatCurrency(stats.porVencer)}</p>
+              </div>
             </div>
-            <p className="text-xl font-bold text-amber-600">{formatCurrency(stats.porVencer)}</p>
           </CardContent>
         </Card>
-        <Card className="border-green-500/50">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2 text-green-600 mb-1">
-              <CheckCircle className="h-4 w-4" />
-              <span className="text-xs">Al corriente</span>
+        
+        <Card className="border-green-500/50 hover:shadow-md transition-shadow">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Al corriente</p>
+                <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.alCorriente)}</p>
+              </div>
             </div>
-            <p className="text-xl font-bold text-green-600">{formatCurrency(stats.alCorriente)}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filter */}
+      {/* Filter - Larger */}
       <Select value={filtro} onValueChange={setFiltro}>
-        <SelectTrigger>
+        <SelectTrigger className="h-14 text-lg">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="todas">Todas las facturas</SelectItem>
-          <SelectItem value="vencidas">Solo vencidas</SelectItem>
-          <SelectItem value="por_vencer">Por vencer (7 días)</SelectItem>
-          <SelectItem value="al_corriente">Al corriente</SelectItem>
+          <SelectItem value="todas" className="text-base py-3">Todas las facturas</SelectItem>
+          <SelectItem value="vencidas" className="text-base py-3">Solo vencidas</SelectItem>
+          <SelectItem value="por_vencer" className="text-base py-3">Por vencer (7 días)</SelectItem>
+          <SelectItem value="al_corriente" className="text-base py-3">Al corriente</SelectItem>
         </SelectContent>
       </Select>
 
-      {/* Invoices List */}
-      <ScrollArea className="h-[calc(100vh-480px)]">
-        <div className="space-y-3">
+      {/* Invoices List - Larger Items */}
+      <ScrollArea className="h-[calc(100vh-520px)] lg:h-[calc(100vh-480px)]">
+        <div className="space-y-4">
           {facturasFiltradas.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <CreditCard className="h-12 w-12 text-muted-foreground mb-2" />
+            <Card className="border-dashed border-2">
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <CreditCard className="h-16 w-16 text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Sin facturas pendientes</h3>
                 <p className="text-muted-foreground">
                   {filtro === "todas" 
                     ? "No tienes facturas pendientes de cobro" 
@@ -222,43 +258,64 @@ export function VendedorCobranzaTab() {
             </Card>
           ) : (
             facturasFiltradas.map((factura) => (
-              <Card key={factura.id} className={factura.dias_vencido > 0 ? "border-destructive/50" : ""}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium">{factura.folio}</span>
+              <Card 
+                key={factura.id} 
+                className={`hover:shadow-md transition-shadow ${
+                  factura.dias_vencido > 0 ? "border-destructive/50 bg-destructive/5" : ""
+                }`}
+              >
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <span className="font-semibold text-lg">{factura.folio}</span>
                         {getEstadoBadge(factura.dias_vencido)}
                       </div>
-                      <p className="text-sm text-muted-foreground">{factura.cliente.nombre}</p>
+                      <p className="text-base font-medium truncate">{factura.cliente.nombre}</p>
                     </div>
-                    <p className="text-lg font-bold">{formatCurrency(factura.total)}</p>
+                    <p className="text-2xl font-bold shrink-0">{formatCurrency(factura.total)}</p>
                   </div>
 
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
                       <span>
                         Vence: {factura.fecha_vencimiento 
-                          ? format(new Date(factura.fecha_vencimiento), "d MMM yyyy", { locale: es })
+                          ? format(new Date(factura.fecha_vencimiento), "d 'de' MMMM yyyy", { locale: es })
                           : "Sin fecha"}
                       </span>
                     </div>
                     
-                    {factura.cliente.telefono && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 gap-1"
-                        onClick={() => {
-                          const tel = factura.cliente.telefono?.replace(/\D/g, '');
-                          window.open(`https://wa.me/52${tel}`, '_blank');
-                        }}
-                      >
-                        <Phone className="h-3 w-3" />
-                        Llamar
-                      </Button>
-                    )}
+                    <div className="flex gap-2">
+                      {factura.cliente.telefono && (
+                        <>
+                          <Button
+                            size="default"
+                            variant="outline"
+                            className="h-11 gap-2"
+                            onClick={() => {
+                              window.open(`tel:${factura.cliente.telefono}`, '_blank');
+                            }}
+                          >
+                            <Phone className="h-4 w-4" />
+                            <span className="hidden sm:inline">Llamar</span>
+                          </Button>
+                          <Button
+                            size="default"
+                            variant="default"
+                            className="h-11 gap-2"
+                            onClick={() => {
+                              const tel = factura.cliente.telefono?.replace(/\D/g, '');
+                              const mensaje = `Hola, le escribo respecto a la factura ${factura.folio} por ${formatCurrency(factura.total)}. ¿Podría ayudarme con el cobro?`;
+                              window.open(`https://wa.me/52${tel}?text=${encodeURIComponent(mensaje)}`, '_blank');
+                            }}
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            <span className="hidden sm:inline">WhatsApp</span>
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
