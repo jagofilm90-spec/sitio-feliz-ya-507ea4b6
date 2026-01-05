@@ -202,20 +202,26 @@ const ImprimirCotizacionDialog = ({
       nombre: cotizacion.sucursal.nombre,
       direccion: cotizacion.sucursal.direccion || undefined,
     } : undefined,
-    productos: cotizacion.detalles?.map((d: any) => ({
-      codigo: d.producto?.codigo || "",
-      nombre: d.producto?.nombre || "Producto",
-      unidad: d.producto?.unidad || "pieza",
-      cantidad: d.cantidad || 0,
-      precio_unitario: d.precio_unitario || 0,
-      subtotal: d.subtotal || 0,
-      cantidad_maxima: d.cantidad_maxima || null,
-      nota_linea: d.nota_linea || null,
-      tipo_precio: d.tipo_precio || null,
-      kilos_totales: d.kilos_totales || null,
-      precio_por_kilo: d.producto?.precio_por_kilo || false,
-      presentacion: d.producto?.presentacion || null,
-    })) || [],
+    productos: cotizacion.detalles?.map((d: any) => {
+      // Fallback para kilos_totales: si no viene de BD, calcular con presentacion
+      const kilosTotalesCalculado = d.kilos_totales ?? 
+        (d.producto?.presentacion ? Number(d.cantidad) * Number(d.producto.presentacion) : null);
+      
+      return {
+        codigo: d.producto?.codigo || "",
+        nombre: d.producto?.nombre || "Producto",
+        unidad: d.producto?.unidad || "pieza",
+        cantidad: d.cantidad || 0,
+        precio_unitario: d.precio_unitario || 0,
+        subtotal: d.subtotal || 0,
+        cantidad_maxima: d.cantidad_maxima || null,
+        nota_linea: d.nota_linea || null,
+        tipo_precio: d.tipo_precio || null,
+        kilos_totales: kilosTotalesCalculado,
+        precio_por_kilo: d.producto?.precio_por_kilo || false,
+        presentacion: d.producto?.presentacion || null,
+      };
+    }) || [],
     subtotal: impuestosDesglosados.subtotal,
     iva: impuestosDesglosados.iva,
     ieps: impuestosDesglosados.ieps,

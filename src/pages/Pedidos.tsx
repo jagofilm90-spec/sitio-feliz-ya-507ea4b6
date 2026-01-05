@@ -410,7 +410,7 @@ const PedidosContent = () => {
             full_name
           ),
           pedidos_detalles (
-            id, cantidad, precio_unitario, subtotal, unidades_manual,
+            id, cantidad, precio_unitario, subtotal, unidades_manual, kilos_totales, es_cortesia,
             productos (
               id, codigo, nombre, marca, presentacion, unidad, aplica_iva, aplica_ieps, kg_por_unidad, precio_por_kilo
             )
@@ -537,6 +537,10 @@ const PedidosContent = () => {
           presentacion = `${Math.round(cantidadNum)} ${pluralizar(unidadComercial, cantidadNum)}`;
         }
         
+        // Fallback para kilos_totales: si no viene de BD, calcular con presentacion
+        const kilosTotalesCalculado = detalle.kilos_totales ?? 
+          (producto.presentacion ? Number(detalle.cantidad) * Number(producto.presentacion) : null);
+        
         return {
           cantidad: detalle.cantidad,
           cantidadDisplay, // Cantidad con unidad original (ej: "45 kg")
@@ -544,7 +548,7 @@ const PedidosContent = () => {
           descripcion,
           precio_unitario: detalle.precio_unitario,
           total: detalle.subtotal,
-          kilos_totales: detalle.kilos_totales, // Total de kilos del pedido_detalle
+          kilos_totales: kilosTotalesCalculado, // Total de kilos del pedido_detalle
           precio_por_kilo: producto.precio_por_kilo, // Para mostrar "/kg" en precio
           es_cortesia: detalle.es_cortesia || false,
         };
