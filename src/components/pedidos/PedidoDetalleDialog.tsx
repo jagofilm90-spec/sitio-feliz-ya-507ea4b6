@@ -46,6 +46,8 @@ interface PedidoDetalle {
     cantidad: number;
     precio_unitario: number;
     subtotal: number;
+    kilos_totales: number | null;
+    unidades_manual: number | null;
     productos: {
       codigo: string;
       nombre: string;
@@ -53,6 +55,7 @@ interface PedidoDetalle {
       unidad: string;
       kg_por_unidad: number | null;
       precio_por_kilo: boolean;
+      presentacion: number | null;
     };
   }>;
 }
@@ -116,13 +119,16 @@ export default function PedidoDetalleDialog({
             cantidad,
             precio_unitario,
             subtotal,
+            kilos_totales,
+            unidades_manual,
             productos (
               codigo,
               nombre,
               marca,
               unidad,
               kg_por_unidad,
-              precio_por_kilo
+              precio_por_kilo,
+              presentacion
             )
           )
         `)
@@ -229,26 +235,32 @@ export default function PedidoDetalleDialog({
                     }
                     
                     // Calcular presentación para bodegueros - SIEMPRE en unidades comerciales, nunca solo kg
-                    let presentacion = "";
+                    let presentacionDisplay = "";
                     
                     // *** REGLA ESPECIAL ANÍS / CANELA MOLIDA: Bolsas de 5kg ***
                     if (esProductoBolsas5kg(producto.nombre)) {
-                      const cantidadAjustada = redondearABolsasCompletas(detalle.cantidad, KG_POR_BOLSA);
                       const numBolsas = calcularNumeroBolsas(detalle.cantidad, KG_POR_BOLSA);
-                      presentacion = `${numBolsas} bolsa${numBolsas !== 1 ? 's' : ''}`;
-                    } else if (producto.precio_por_kilo && producto.kg_por_unidad && producto.kg_por_unidad > 0) {
-                      // Producto vendido por kilo con conversión conocida
-                      const unidadesComerciales = Math.ceil(detalle.cantidad / producto.kg_por_unidad);
-                      const plural = unidadesComerciales !== 1 ? 's' : '';
-                      presentacion = `${unidadesComerciales} ${unidadComercial}${plural}`;
-                    } else if (producto.precio_por_kilo && (!producto.kg_por_unidad || producto.kg_por_unidad === 0)) {
-                      // Producto vendido por kilo sin conversión fija (ej: bolsa pesada, piloncillo)
-                      // Mostrar como "1 {unidad} de X kg"
-                      presentacion = `1 ${unidadComercial} de ${detalle.cantidad} kg`;
-                    } else {
-                      // Producto vendido por unidad comercial directamente
+                      presentacionDisplay = `${numBolsas} bolsa${numBolsas !== 1 ? 's' : ''}`;
+                    } else if (detalle.kilos_totales && producto.presentacion) {
+                      // CASO PRINCIPAL: Tenemos kilos_totales y presentacion guardados
                       const plural = detalle.cantidad !== 1 ? 's' : '';
-                      presentacion = `${detalle.cantidad} ${unidadComercial}${plural}`;
+                      presentacionDisplay = `${detalle.cantidad.toLocaleString()} ${unidadComercial}${plural} de ${producto.presentacion} kg`;
+                    } else if (detalle.kilos_totales) {
+                      // Solo tenemos kilos_totales (sin presentacion del producto)
+                      presentacionDisplay = `${detalle.kilos_totales.toLocaleString()} kg total`;
+                    } else if (producto.presentacion && producto.precio_por_kilo) {
+                      // Tenemos presentacion pero no kilos_totales guardados - calcular para display
+                      const kilosCalc = detalle.cantidad * producto.presentacion;
+                      const plural = detalle.cantidad !== 1 ? 's' : '';
+                      presentacionDisplay = `${detalle.cantidad.toLocaleString()} ${unidadComercial}${plural} de ${producto.presentacion} kg`;
+                    } else if (producto.kg_por_unidad && producto.kg_por_unidad > 0) {
+                      // Fallback: calcular con kg_por_unidad
+                      const kilosCalc = detalle.cantidad * producto.kg_por_unidad;
+                      presentacionDisplay = `${detalle.cantidad} × ${producto.kg_por_unidad} kg = ${kilosCalc.toLocaleString()} kg`;
+                    } else {
+                      // Producto sin conversión a kilos
+                      const plural = detalle.cantidad !== 1 ? 's' : '';
+                      presentacionDisplay = `${detalle.cantidad} ${unidadComercial}${plural}`;
                     }
                     
                     return (
@@ -259,15 +271,22 @@ export default function PedidoDetalleDialog({
                           {producto.marca && <span className="text-muted-foreground ml-1">({producto.marca})</span>}
                         </TableCell>
                         <TableCell className="text-right">
-                          {detalle.cantidad} {producto.precio_por_kilo ? "kg" : unidadComercial}
-                          {producto.kg_por_unidad && !producto.precio_por_kilo && (
+                          {/* Si tiene presentacion, la cantidad son unidades comerciales */}
+                          {producto.presentacion && producto.precio_por_kilo
+                            ? `${detalle.cantidad} ${unidadComercial}${detalle.cantidad !== 1 ? 's' : ''}`
+                            : producto.precio_por_kilo
+                              ? `${detalle.cantidad} kg`
+                              : `${detalle.cantidad} ${unidadComercial}${detalle.cantidad !== 1 ? 's' : ''}`
+                          }
+                          {/* Mostrar kilos totales entre paréntesis si están disponibles */}
+                          {detalle.kilos_totales && (
                             <span className="text-muted-foreground text-xs ml-1">
-                              ({detalle.cantidad * producto.kg_por_unidad} kg)
+                              ({detalle.kilos_totales.toLocaleString()} kg)
                             </span>
                           )}
                         </TableCell>
                         <TableCell className="text-center font-semibold text-primary">
-                          {presentacion}
+                          {presentacionDisplay}
                         </TableCell>
                         <TableCell className="text-right font-mono">
                           ${formatCurrency(detalle.precio_unitario)}
