@@ -31,6 +31,7 @@ import Permisos from "./pages/Permisos";
 import Respaldos from "./pages/Respaldos";
 import AlmacenTablet from "./pages/AlmacenTablet";
 import ChoferPanel from "./pages/ChoferPanel";
+import VendedorPanel from "./pages/VendedorPanel";
 import AppMobileGuide from "./pages/AppMobileGuide";
 import TestFirma from "./pages/TestFirma";
 
@@ -113,7 +114,9 @@ const App = () => (
               <Route path="/respaldos" element={<Respaldos />} />
               <Route path="/almacen-tablet" element={<AlmacenTablet />} />
               <Route path="/chofer" element={<ChoferPanel />} />
+              <Route path="/vendedor" element={<VendedorPanel />} />
               <Route path="/app-mobile" element={<AppMobileGuide />} />
+              <Route path="/test-firma" element={<TestFirma />} />
               <Route path="/test-firma" element={<TestFirma />} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
