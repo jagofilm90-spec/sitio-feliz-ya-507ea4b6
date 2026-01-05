@@ -540,10 +540,13 @@ const PedidosContent = () => {
         return {
           cantidad: detalle.cantidad,
           cantidadDisplay, // Cantidad con unidad original (ej: "45 kg")
-          unidad: presentacion, // Presentación calculada para bodegueros (ej: "2 cajas")
+          unidad: unidadComercial, // Solo la unidad (ej: "bulto"), el template agrega la cantidad
           descripcion,
           precio_unitario: detalle.precio_unitario,
           total: detalle.subtotal,
+          kilos_totales: detalle.kilos_totales, // Total de kilos del pedido_detalle
+          precio_por_kilo: producto.precio_por_kilo, // Para mostrar "/kg" en precio
+          es_cortesia: detalle.es_cortesia || false,
         };
       });
 

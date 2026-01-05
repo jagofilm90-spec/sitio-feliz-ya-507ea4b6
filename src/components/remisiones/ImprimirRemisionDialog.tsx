@@ -9,11 +9,14 @@ import jsPDF from "jspdf";
 
 interface ProductoRemision {
   cantidad: number;
-  unidad: string; // Presentación calculada para bodegueros
+  unidad: string; // Unidad comercial (ej: "bulto")
   descripcion: string;
   precio_unitario: number;
   total: number;
   cantidadDisplay?: string; // Cantidad con unidad original (ej: "45 kg")
+  kilos_totales?: number; // Total de kilos (cantidad × presentación)
+  precio_por_kilo?: boolean; // Si el precio es por kilo
+  es_cortesia?: boolean; // Si es cortesía sin cargo
 }
 
 interface DatosRemision {
