@@ -18,6 +18,7 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorBoundaryModule } from "@/components/ErrorBoundaryModule";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -53,10 +54,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Plus, Search, Eye, MoreHorizontal, FileText, Download, 
-  XCircle, CheckCircle, AlertCircle, Loader2, FileDown 
+  XCircle, CheckCircle, AlertCircle, Loader2, FileDown, Package 
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { NuevaFacturaDirectaDialog } from "@/components/facturas/NuevaFacturaDirectaDialog";
+import { SolicitudesAlmacenTab } from "@/components/facturas/SolicitudesAlmacenTab";
+import { useSolicitudesVenta } from "@/hooks/useSolicitudesVenta";
 
 const FacturasContent = () => {
   const [facturas, setFacturas] = useState<any[]>([]);
@@ -68,7 +71,9 @@ const FacturasContent = () => {
   const [facturaToCancel, setFacturaToCancel] = useState<any>(null);
   const [motivoCancelacion, setMotivoCancelacion] = useState("02");
   const [nuevaFacturaOpen, setNuevaFacturaOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("facturas");
   const { toast } = useToast();
+  const { pendingCount } = useSolicitudesVenta();
 
   useEffect(() => {
     loadFacturas();
@@ -261,17 +266,38 @@ const FacturasContent = () => {
           </Button>
         </div>
 
-        <div className="flex gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por folio, cliente o UUID..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="facturas">
+              <FileText className="h-4 w-4 mr-2" />
+              Facturas
+            </TabsTrigger>
+            <TabsTrigger value="solicitudes" className="relative">
+              <Package className="h-4 w-4 mr-2" />
+              Solicitudes Almacén
+              {pendingCount > 0 && (
+                <Badge 
+                  className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center p-0 text-xs bg-yellow-500"
+                >
+                  {pendingCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="facturas" className="space-y-4 mt-4">
+            <div className="flex gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por folio, cliente o UUID..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
 
         <div className="border rounded-lg">
           <Table>
@@ -386,11 +412,17 @@ const FacturasContent = () => {
         </div>
 
         {/* UUID mostrado debajo si existe */}
-        {filteredFacturas.some(f => f.cfdi_uuid) && (
+        {activeTab === 'facturas' && filteredFacturas.some(f => f.cfdi_uuid) && (
           <div className="text-xs text-muted-foreground">
             Tip: Puedes buscar por UUID del CFDI
           </div>
         )}
+          </TabsContent>
+
+          <TabsContent value="solicitudes" className="mt-4">
+            <SolicitudesAlmacenTab />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Dialog de nueva factura directa */}
