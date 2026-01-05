@@ -43,6 +43,7 @@ interface DetalleProducto {
   marca: string | null;
   precio_unitario: number;
   cantidad: number;
+  kilos_totales: number | null; // cantidad × presentacion para productos precio_por_kilo
   subtotal: number;
   precio_lista: number;
   ultimo_precio_cliente: number | null;
@@ -51,6 +52,8 @@ interface DetalleProducto {
   aplica_ieps: boolean;
   cantidad_maxima: number | null;
   nota_linea: string | null;
+  precio_por_kilo: boolean;
+  presentacion: string | null;
 }
 
 interface Cliente {
@@ -208,12 +211,13 @@ const CrearCotizacionDialog = ({
             id,
             producto_id,
             cantidad,
+            kilos_totales,
             precio_unitario,
             subtotal,
             cantidad_maxima,
             nota_linea,
             producto:productos(
-              id, nombre, codigo, unidad, marca, precio_venta, aplica_iva, aplica_ieps
+              id, nombre, codigo, unidad, marca, precio_venta, aplica_iva, aplica_ieps, precio_por_kilo, presentacion
             )
           )
         `)
@@ -261,6 +265,7 @@ const CrearCotizacionDialog = ({
         marca: d.producto.marca,
         precio_unitario: d.precio_unitario,
         cantidad: d.cantidad,
+        kilos_totales: d.kilos_totales || null,
         subtotal: d.subtotal,
         precio_lista: d.producto.precio_venta,
         ultimo_precio_cliente: null,
@@ -269,6 +274,8 @@ const CrearCotizacionDialog = ({
         aplica_ieps: d.producto.aplica_ieps,
         cantidad_maxima: d.cantidad_maxima || null,
         nota_linea: d.nota_linea || null,
+        precio_por_kilo: d.producto.precio_por_kilo || false,
+        presentacion: d.producto.presentacion || null,
       }));
 
       setDetalles(detallesFormateados);
@@ -331,17 +338,32 @@ const CrearCotizacionDialog = ({
     // Buscar historial de precios para este cliente
     const historial = await buscarUltimoPrecioCliente(producto.id);
     
-    // Si hay precio anterior, usarlo (ya está calculado por unidad)
-    // Si no, calcular el precio correcto considerando precio_por_kilo
+    // Para productos precio_por_kilo: mantener precio original por kg
+    // Si hay precio histórico y el producto es por kilo, ese precio ya es por kg
     let precioAUsar: number;
+    let kilosTotales: number | null = null;
+    let subtotal: number;
+    
     if (historial.precio) {
       precioAUsar = historial.precio;
     } else {
-      precioAUsar = obtenerPrecioUnitarioVenta({
-        precio_venta: producto.precio_venta,
-        precio_por_kilo: producto.precio_por_kilo,
-        presentacion: producto.presentacion
-      });
+      // Para productos precio_por_kilo, mantener el precio por kg
+      precioAUsar = producto.precio_por_kilo 
+        ? producto.precio_venta 
+        : obtenerPrecioUnitarioVenta({
+            precio_venta: producto.precio_venta,
+            precio_por_kilo: producto.precio_por_kilo,
+            presentacion: producto.presentacion
+          });
+    }
+
+    // Calcular kilos y subtotal para productos por kilo
+    if (producto.precio_por_kilo && producto.presentacion) {
+      const kgPorUnidad = parseFloat(producto.presentacion);
+      kilosTotales = 1 * kgPorUnidad;
+      subtotal = kilosTotales * precioAUsar;
+    } else {
+      subtotal = precioAUsar;
     }
 
     setDetalles([
@@ -354,7 +376,8 @@ const CrearCotizacionDialog = ({
         marca: producto.marca,
         precio_unitario: precioAUsar,
         cantidad: 1,
-        subtotal: precioAUsar,
+        kilos_totales: kilosTotales,
+        subtotal: subtotal,
         precio_lista: producto.precio_venta,
         ultimo_precio_cliente: historial.precio,
         fecha_ultima_compra: historial.fecha,
@@ -362,6 +385,8 @@ const CrearCotizacionDialog = ({
         aplica_ieps: producto.aplica_ieps,
         cantidad_maxima: null,
         nota_linea: null,
+        precio_por_kilo: producto.precio_por_kilo,
+        presentacion: producto.presentacion,
       },
     ]);
     // Limpiar búsqueda pero mantener el dropdown abierto para seguir agregando
@@ -371,15 +396,36 @@ const CrearCotizacionDialog = ({
 
   const actualizarCantidad = (index: number, cantidad: number) => {
     const nuevosDetalles = [...detalles];
-    nuevosDetalles[index].cantidad = cantidad;
-    nuevosDetalles[index].subtotal = cantidad * nuevosDetalles[index].precio_unitario;
+    const detalle = nuevosDetalles[index];
+    detalle.cantidad = cantidad;
+    
+    // Recalcular kilos y subtotal según tipo de producto
+    if (detalle.precio_por_kilo && detalle.presentacion) {
+      const kgPorUnidad = parseFloat(detalle.presentacion);
+      detalle.kilos_totales = cantidad * kgPorUnidad;
+      detalle.subtotal = detalle.kilos_totales * detalle.precio_unitario;
+    } else {
+      detalle.kilos_totales = null;
+      detalle.subtotal = cantidad * detalle.precio_unitario;
+    }
+    
     setDetalles(nuevosDetalles);
   };
 
   const actualizarPrecio = (index: number, precio: number) => {
     const nuevosDetalles = [...detalles];
-    nuevosDetalles[index].precio_unitario = precio;
-    nuevosDetalles[index].subtotal = nuevosDetalles[index].cantidad * precio;
+    const detalle = nuevosDetalles[index];
+    detalle.precio_unitario = precio;
+    
+    // Recalcular subtotal según tipo de producto
+    if (detalle.precio_por_kilo && detalle.presentacion) {
+      const kgPorUnidad = parseFloat(detalle.presentacion);
+      detalle.kilos_totales = detalle.cantidad * kgPorUnidad;
+      detalle.subtotal = detalle.kilos_totales * precio;
+    } else {
+      detalle.subtotal = detalle.cantidad * precio;
+    }
+    
     setDetalles(nuevosDetalles);
   };
 
@@ -495,15 +541,15 @@ const CrearCotizacionDialog = ({
 
         // Insert new detalles - si es "solo precios", guardar cantidad como 0
         const detallesInsert = detalles.map((d) => {
-          const producto = productos.find(p => p.id === d.producto_id);
-          const tipoPrecio = producto?.precio_por_kilo 
+          const tipoPrecio = d.precio_por_kilo 
             ? 'por_kilo' 
-            : `por_${(producto?.unidad || 'bulto').toLowerCase()}`;
+            : `por_${(d.unidad || 'bulto').toLowerCase()}`;
           
           return {
             cotizacion_id: cotizacionId,
             producto_id: d.producto_id,
             cantidad: sinCantidades ? 0 : d.cantidad,
+            kilos_totales: sinCantidades ? null : d.kilos_totales,
             precio_unitario: d.precio_unitario,
             subtotal: sinCantidades ? 0 : d.subtotal,
             cantidad_maxima: d.cantidad_maxima || null,
@@ -560,15 +606,15 @@ const CrearCotizacionDialog = ({
 
         // Si es "solo precios", guardar cantidad como 0
         const detallesInsert = detalles.map((d) => {
-          const producto = productos.find(p => p.id === d.producto_id);
-          const tipoPrecio = producto?.precio_por_kilo 
+          const tipoPrecio = d.precio_por_kilo 
             ? 'por_kilo' 
-            : `por_${(producto?.unidad || 'bulto').toLowerCase()}`;
+            : `por_${(d.unidad || 'bulto').toLowerCase()}`;
           
           return {
             cotizacion_id: cotizacion.id,
             producto_id: d.producto_id,
             cantidad: sinCantidades ? 0 : d.cantidad,
+            kilos_totales: sinCantidades ? null : d.kilos_totales,
             precio_unitario: d.precio_unitario,
             subtotal: sinCantidades ? 0 : d.subtotal,
             cantidad_maxima: d.cantidad_maxima || null,
@@ -929,7 +975,8 @@ const CrearCotizacionDialog = ({
                   <TableRow>
                     <TableHead>Producto</TableHead>
                     {!sinCantidades && <TableHead className="w-24">Cantidad</TableHead>}
-                    <TableHead className="w-40">Precio Unit.</TableHead>
+                    {!sinCantidades && <TableHead className="w-20">Kilos</TableHead>}
+                    <TableHead className="w-40">Precio</TableHead>
                     <TableHead className="w-28">Máx. Disponible</TableHead>
                     <TableHead className="w-40">Nota línea</TableHead>
                     {!sinCantidades && <TableHead className="w-28 text-right">Subtotal</TableHead>}
@@ -937,121 +984,156 @@ const CrearCotizacionDialog = ({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {detalles.map((d, index) => (
-                    <TableRow key={d.producto_id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">
-                            {d.nombre}
-                            {d.marca && <span className="text-primary ml-1">{d.marca}</span>}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {d.codigo} • {d.unidad}
-                            {d.aplica_iva && <span className="ml-1 text-blue-600">IVA</span>}
-                            {d.aplica_ieps && <span className="ml-1 text-orange-600">IEPS</span>}
-                          </p>
-                        </div>
-                      </TableCell>
-                      {!sinCantidades && (
+                  {detalles.map((d, index) => {
+                    const esPorKilo = d.precio_por_kilo && d.presentacion;
+                    const kgPorUnidad = esPorKilo ? parseFloat(d.presentacion!) : null;
+                    
+                    return (
+                      <TableRow key={d.producto_id}>
                         <TableCell>
-                          <Input
-                            type="number"
-                            min={1}
-                            value={d.cantidad}
-                            onChange={(e) =>
-                              actualizarCantidad(index, parseInt(e.target.value) || 1)
-                            }
-                            className="w-20"
-                          />
-                        </TableCell>
-                      )}
-                      <TableCell>
-                        <div className="space-y-1">
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={d.precio_unitario}
-                            onChange={(e) =>
-                              actualizarPrecio(index, parseFloat(e.target.value) || 0)
-                            }
-                            className="w-28"
-                          />
-                          {/* Mostrar historial de precios */}
-                          <div className="text-xs space-y-0.5">
-                            <p className="text-muted-foreground">
-                              Lista: <span className="font-medium text-foreground">${d.precio_lista.toFixed(2)}</span>
-                              {d.precio_unitario !== d.precio_lista && (
-                                <button
-                                  type="button"
-                                  onClick={() => actualizarPrecio(index, d.precio_lista)}
-                                  className="ml-1 text-blue-600 hover:underline"
-                                >
-                                  usar
-                                </button>
-                              )}
+                          <div>
+                            <p className="font-medium">
+                              {d.nombre}
+                              {d.marca && <span className="text-primary ml-1">{d.marca}</span>}
                             </p>
-                            {d.ultimo_precio_cliente !== null && (
-                              <p className="text-amber-600">
-                                Último: <span className="font-medium">${d.ultimo_precio_cliente.toFixed(2)}</span>
-                                {d.fecha_ultima_compra && (
-                                  <span className="text-muted-foreground ml-1">
-                                    ({format(new Date(d.fecha_ultima_compra), "MMM yyyy", { locale: es })})
-                                  </span>
-                                )}
-                                {d.precio_unitario !== d.ultimo_precio_cliente && (
+                            <p className="text-xs text-muted-foreground space-x-1">
+                              <span>{d.codigo} • {d.unidad}</span>
+                              {esPorKilo && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {kgPorUnidad} kg/{d.unidad}
+                                </Badge>
+                              )}
+                              {d.aplica_iva && <span className="text-blue-600">IVA</span>}
+                              {d.aplica_ieps && <span className="text-orange-600">IEPS</span>}
+                            </p>
+                          </div>
+                        </TableCell>
+                        {!sinCantidades && (
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Input
+                                type="number"
+                                min={1}
+                                value={d.cantidad}
+                                onChange={(e) =>
+                                  actualizarCantidad(index, parseInt(e.target.value) || 1)
+                                }
+                                className="w-16"
+                              />
+                              <span className="text-xs text-muted-foreground">{d.unidad}</span>
+                            </div>
+                          </TableCell>
+                        )}
+                        {!sinCantidades && (
+                          <TableCell>
+                            {esPorKilo && d.kilos_totales !== null ? (
+                              <span className="font-medium text-blue-600">
+                                {d.kilos_totales.toLocaleString('es-MX')} kg
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                        )}
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1">
+                              <span className="text-muted-foreground">$</span>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={d.precio_unitario}
+                                onChange={(e) =>
+                                  actualizarPrecio(index, parseFloat(e.target.value) || 0)
+                                }
+                                className="w-24"
+                              />
+                              <span className="text-xs text-muted-foreground">
+                                {esPorKilo ? '/kg' : `/${d.unidad}`}
+                              </span>
+                            </div>
+                            {/* Mostrar historial de precios */}
+                            <div className="text-xs space-y-0.5">
+                              <p className="text-muted-foreground">
+                                Lista: <span className="font-medium text-foreground">${d.precio_lista.toFixed(2)}</span>
+                                {d.precio_unitario !== d.precio_lista && (
                                   <button
                                     type="button"
-                                    onClick={() => actualizarPrecio(index, d.ultimo_precio_cliente!)}
+                                    onClick={() => actualizarPrecio(index, d.precio_lista)}
                                     className="ml-1 text-blue-600 hover:underline"
                                   >
                                     usar
                                   </button>
                                 )}
                               </p>
-                            )}
-                            {d.ultimo_precio_cliente === null && (
-                              <p className="text-green-600 italic">Primera compra de este cliente</p>
-                            )}
+                              {d.ultimo_precio_cliente !== null && (
+                                <p className="text-amber-600">
+                                  Último: <span className="font-medium">${d.ultimo_precio_cliente.toFixed(2)}</span>
+                                  {d.fecha_ultima_compra && (
+                                    <span className="text-muted-foreground ml-1">
+                                      ({format(new Date(d.fecha_ultima_compra), "MMM yyyy", { locale: es })})
+                                    </span>
+                                  )}
+                                  {d.precio_unitario !== d.ultimo_precio_cliente && (
+                                    <button
+                                      type="button"
+                                      onClick={() => actualizarPrecio(index, d.ultimo_precio_cliente!)}
+                                      className="ml-1 text-blue-600 hover:underline"
+                                    >
+                                      usar
+                                    </button>
+                                  )}
+                                </p>
+                              )}
+                              {d.ultimo_precio_cliente === null && (
+                                <p className="text-green-600 italic">Primera compra</p>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min={0}
-                          placeholder="Sin límite"
-                          value={d.cantidad_maxima || ""}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            actualizarCantidadMaxima(index, val ? parseInt(val) : null);
-                          }}
-                          className="w-24"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          placeholder="Ej: Solo 3000 bultos"
-                          value={d.nota_linea || ""}
-                          onChange={(e) => actualizarNotaLinea(index, e.target.value)}
-                          className="w-36 text-xs"
-                        />
-                      </TableCell>
-                      {!sinCantidades && (
-                        <TableCell className="text-right font-medium">
-                          ${formatCurrency(d.subtotal)}
                         </TableCell>
-                      )}
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => eliminarProducto(index)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min={0}
+                            placeholder="Sin límite"
+                            value={d.cantidad_maxima || ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              actualizarCantidadMaxima(index, val ? parseInt(val) : null);
+                            }}
+                            className="w-24"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            placeholder="Ej: Solo 3000 bultos"
+                            value={d.nota_linea || ""}
+                            onChange={(e) => actualizarNotaLinea(index, e.target.value)}
+                            className="w-36 text-xs"
+                          />
+                        </TableCell>
+                        {!sinCantidades && (
+                          <TableCell className="text-right font-medium">
+                            ${formatCurrency(d.subtotal)}
+                            {esPorKilo && d.kilos_totales !== null && (
+                              <div className="text-xs text-muted-foreground font-normal">
+                                {d.kilos_totales.toLocaleString('es-MX')} × ${d.precio_unitario.toFixed(2)}
+                              </div>
+                            )}
+                          </TableCell>
+                        )}
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => eliminarProducto(index)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

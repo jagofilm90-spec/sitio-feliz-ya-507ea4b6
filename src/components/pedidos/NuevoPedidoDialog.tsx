@@ -72,7 +72,8 @@ interface DetallePedido {
   producto_id: string;
   producto: Producto;
   cantidad: number;
-  precio_unitario: number;
+  kilos_totales: number | null; // cantidad × presentacion para productos precio_por_kilo
+  precio_unitario: number; // precio por kg si precio_por_kilo, sino precio por unidad
   subtotal: number;
   es_cortesia: boolean;
 }
@@ -182,6 +183,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
         producto_id: c.producto_id,
         producto: c.producto as Producto,
         cantidad: c.cantidad,
+        kilos_totales: null,
         precio_unitario: 0,
         subtotal: 0,
         es_cortesia: true,
@@ -205,19 +207,35 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
   );
 
   const addProducto = (producto: Producto) => {
-    // Calcular precio correcto considerando precio_por_kilo
-    const precioCalculado = obtenerPrecioUnitarioVenta({
-      precio_venta: producto.precio_venta,
-      precio_por_kilo: producto.precio_por_kilo,
-      presentacion: producto.presentacion
-    });
+    // Para productos precio_por_kilo: mantener precio original (por kg)
+    // El subtotal se calcula como: kilos_totales × precio_por_kg
+    const cantidad = 1;
+    let kilosTotales: number | null = null;
+    let precioUnitario = producto.precio_venta;
+    let subtotal: number;
+
+    if (producto.precio_por_kilo && producto.presentacion) {
+      const kgPorUnidad = parseFloat(producto.presentacion);
+      kilosTotales = cantidad * kgPorUnidad;
+      precioUnitario = producto.precio_venta; // Precio por kg
+      subtotal = kilosTotales * precioUnitario;
+    } else {
+      // Producto normal: precio ya está por unidad
+      precioUnitario = obtenerPrecioUnitarioVenta({
+        precio_venta: producto.precio_venta,
+        precio_por_kilo: producto.precio_por_kilo,
+        presentacion: producto.presentacion
+      });
+      subtotal = precioUnitario;
+    }
     
     setDetalles([...detalles, {
       producto_id: producto.id,
       producto,
-      cantidad: 1,
-      precio_unitario: precioCalculado,
-      subtotal: precioCalculado,
+      cantidad,
+      kilos_totales: kilosTotales,
+      precio_unitario: precioUnitario,
+      subtotal,
       es_cortesia: false,
     }]);
     setSearchProducto("");
@@ -228,6 +246,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
       producto_id: producto.id,
       producto,
       cantidad: 1,
+      kilos_totales: null,
       precio_unitario: 0,
       subtotal: 0,
       es_cortesia: true,
@@ -238,14 +257,19 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
 
   const updateDetalle = (index: number, field: "cantidad" | "precio_unitario", value: number) => {
     const newDetalles = [...detalles];
-    newDetalles[index][field] = value;
-    // Usar sistema centralizado de cálculos
-    const resultado = calcularSubtotal({
-      cantidad: newDetalles[index].cantidad,
-      precio_unitario: newDetalles[index].precio_unitario,
-      nombre_producto: newDetalles[index].producto.nombre
-    });
-    newDetalles[index].subtotal = resultado.subtotal;
+    const detalle = newDetalles[index];
+    detalle[field] = value;
+    
+    // Recalcular kilos y subtotal según tipo de producto
+    if (detalle.producto.precio_por_kilo && detalle.producto.presentacion) {
+      const kgPorUnidad = parseFloat(detalle.producto.presentacion);
+      detalle.kilos_totales = detalle.cantidad * kgPorUnidad;
+      detalle.subtotal = detalle.kilos_totales * detalle.precio_unitario;
+    } else {
+      detalle.kilos_totales = null;
+      detalle.subtotal = detalle.cantidad * detalle.precio_unitario;
+    }
+    
     setDetalles(newDetalles);
   };
 
@@ -374,6 +398,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
         pedido_id: pedido.id,
         producto_id: d.producto_id,
         cantidad: d.cantidad,
+        kilos_totales: d.kilos_totales,
         precio_unitario: d.precio_unitario,
         subtotal: d.subtotal,
         es_cortesia: false,
@@ -545,57 +570,91 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
                   <TableRow>
                     <TableHead>Producto</TableHead>
                     <TableHead className="w-24">Cantidad</TableHead>
-                    <TableHead className="w-32">Precio Unit.</TableHead>
+                    <TableHead className="w-20">Kilos</TableHead>
+                    <TableHead className="w-32">Precio</TableHead>
                     <TableHead className="w-32 text-right">Subtotal</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {detalles.map((d, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell>
-                        <div>
-                          <span className="font-mono text-xs mr-2">{d.producto.codigo}</span>
-                          {d.producto.nombre}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {d.producto.aplica_iva && <Badge variant="outline" className="mr-1">IVA</Badge>}
-                          {d.producto.aplica_ieps && <Badge variant="outline">IEPS</Badge>}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min={1}
-                          value={d.cantidad}
-                          onChange={(e) => updateDetalle(idx, "cantidad", Number(e.target.value))}
-                          className="w-20"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min={0}
-                          step={0.01}
-                          value={d.precio_unitario}
-                          onChange={(e) => updateDetalle(idx, "precio_unitario", Number(e.target.value))}
-                          className="w-28"
-                        />
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        ${formatCurrency(d.subtotal)}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeDetalle(idx)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {detalles.map((d, idx) => {
+                    const esPorKilo = d.producto.precio_por_kilo && d.producto.presentacion;
+                    const kgPorUnidad = esPorKilo ? parseFloat(d.producto.presentacion!) : null;
+                    
+                    return (
+                      <TableRow key={idx}>
+                        <TableCell>
+                          <div>
+                            <span className="font-mono text-xs mr-2">{d.producto.codigo}</span>
+                            {d.producto.nombre}
+                          </div>
+                          <div className="text-xs text-muted-foreground space-x-1">
+                            {esPorKilo && (
+                              <Badge variant="secondary" className="text-xs">
+                                {kgPorUnidad} kg/{d.producto.unidad}
+                              </Badge>
+                            )}
+                            {d.producto.aplica_iva && <Badge variant="outline" className="text-xs">IVA</Badge>}
+                            {d.producto.aplica_ieps && <Badge variant="outline" className="text-xs">IEPS</Badge>}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              min={1}
+                              value={d.cantidad}
+                              onChange={(e) => updateDetalle(idx, "cantidad", Number(e.target.value))}
+                              className="w-16"
+                            />
+                            <span className="text-xs text-muted-foreground">{d.producto.unidad}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {esPorKilo && d.kilos_totales !== null ? (
+                            <span className="font-medium text-blue-600">
+                              {d.kilos_totales.toLocaleString('es-MX')} kg
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <span className="text-muted-foreground">$</span>
+                            <Input
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              value={d.precio_unitario}
+                              onChange={(e) => updateDetalle(idx, "precio_unitario", Number(e.target.value))}
+                              className="w-20"
+                            />
+                            <span className="text-xs text-muted-foreground">
+                              {esPorKilo ? '/kg' : `/${d.producto.unidad}`}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-mono font-medium">
+                          ${formatCurrency(d.subtotal)}
+                          {esPorKilo && (
+                            <div className="text-xs text-muted-foreground font-normal">
+                              {d.kilos_totales?.toLocaleString('es-MX')} × ${d.precio_unitario.toFixed(2)}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeDetalle(idx)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
