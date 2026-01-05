@@ -258,9 +258,8 @@ export default function PedidoDetalleDialog({
                       const kilosCalc = detalle.cantidad * producto.kg_por_unidad;
                       presentacionDisplay = `${detalle.cantidad} × ${producto.kg_por_unidad} kg = ${kilosCalc.toLocaleString()} kg`;
                     } else {
-                      // Producto sin conversión a kilos
-                      const plural = detalle.cantidad !== 1 ? 's' : '';
-                      presentacionDisplay = `${detalle.cantidad} ${unidadComercial}${plural}`;
+                      // Producto sin conversión a kilos - mostrar guion
+                      presentacionDisplay = "-";
                     }
                     
                     return (
