@@ -248,9 +248,8 @@ export default function PedidoDetalleDialog({
                     } else if (detalle.kilos_totales) {
                       // Solo tenemos kilos_totales (sin presentacion del producto)
                       presentacionDisplay = `${detalle.kilos_totales.toLocaleString()} kg total`;
-                    } else if (producto.presentacion && producto.precio_por_kilo) {
-                      // Tenemos presentacion pero no kilos_totales guardados - calcular para display
-                      const kilosCalc = detalle.cantidad * producto.presentacion;
+                    } else if (producto.presentacion) {
+                      // Tenemos presentacion pero no kilos_totales guardados - mostrar presentación del producto
                       const plural = detalle.cantidad !== 1 ? 's' : '';
                       presentacionDisplay = `${detalle.cantidad.toLocaleString()} ${unidadComercial}${plural} de ${producto.presentacion} kg`;
                     } else if (producto.kg_por_unidad && producto.kg_por_unidad > 0) {
