@@ -127,12 +127,13 @@ const CotizacionDetalleDialog = ({
             id,
             producto_id,
             cantidad,
+            kilos_totales,
             precio_unitario,
             subtotal,
             cantidad_maxima,
             nota_linea,
             tipo_precio,
-            producto:productos(nombre, codigo, unidad)
+            producto:productos(nombre, codigo, unidad, precio_por_kilo, presentacion)
           )
         `)
         .eq("id", cotizacionId)
@@ -1013,46 +1014,80 @@ const CotizacionDetalleDialog = ({
                   <TableHead>Producto</TableHead>
                   <TableHead className="text-center">Tipo Precio</TableHead>
                   {!esSoloPrecios && <TableHead className="text-center">Cantidad</TableHead>}
-                  <TableHead className="text-right">Precio Unit.</TableHead>
+                  {!esSoloPrecios && <TableHead className="text-center">Kilos</TableHead>}
+                  <TableHead className="text-right">Precio</TableHead>
                   {!esSoloPrecios && <TableHead className="text-right">Subtotal</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {cotizacion.detalles?.map((d: any) => (
-                  <TableRow key={d.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{d.producto?.nombre}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {d.producto?.codigo} • {d.producto?.unidad}
-                        </p>
-                        {(d.cantidad_maxima || d.nota_linea) && (
-                          <p className="text-xs text-amber-600 mt-1 font-medium">
-                            {d.cantidad_maxima && (
-                              <span>Máx: {d.cantidad_maxima.toLocaleString()} {d.producto?.unidad}</span>
+                {cotizacion.detalles?.map((d: any) => {
+                  const esPorKilo = d.producto?.precio_por_kilo && d.producto?.presentacion;
+                  const kgPorUnidad = esPorKilo ? parseFloat(d.producto.presentacion) : null;
+                  
+                  return (
+                    <TableRow key={d.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{d.producto?.nombre}</p>
+                          <p className="text-xs text-muted-foreground space-x-1">
+                            <span>{d.producto?.codigo} • {d.producto?.unidad}</span>
+                            {esPorKilo && (
+                              <Badge variant="secondary" className="text-xs">
+                                {kgPorUnidad} kg/{d.producto?.unidad}
+                              </Badge>
                             )}
-                            {d.cantidad_maxima && d.nota_linea && <span> • </span>}
-                            {d.nota_linea && <span>{d.nota_linea}</span>}
                           </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="secondary" className="text-xs">
-                        {d.tipo_precio?.replace('por_', '') || 'N/A'}
-                      </Badge>
-                    </TableCell>
-                    {!esSoloPrecios && <TableCell className="text-center">{d.cantidad}</TableCell>}
-                    <TableCell className="text-right font-mono">
-                      ${formatCurrency(d.precio_unitario)}
-                    </TableCell>
-                    {!esSoloPrecios && (
-                      <TableCell className="text-right font-medium font-mono">
-                        ${formatCurrency(d.subtotal)}
+                          {(d.cantidad_maxima || d.nota_linea) && (
+                            <p className="text-xs text-amber-600 mt-1 font-medium">
+                              {d.cantidad_maxima && (
+                                <span>Máx: {d.cantidad_maxima.toLocaleString()} {d.producto?.unidad}</span>
+                              )}
+                              {d.cantidad_maxima && d.nota_linea && <span> • </span>}
+                              {d.nota_linea && <span>{d.nota_linea}</span>}
+                            </p>
+                          )}
+                        </div>
                       </TableCell>
-                    )}
-                  </TableRow>
-                ))}
+                      <TableCell className="text-center">
+                        <Badge variant="secondary" className="text-xs">
+                          {d.tipo_precio?.replace('por_', '') || 'N/A'}
+                        </Badge>
+                      </TableCell>
+                      {!esSoloPrecios && (
+                        <TableCell className="text-center">
+                          {d.cantidad} {d.producto?.unidad}
+                        </TableCell>
+                      )}
+                      {!esSoloPrecios && (
+                        <TableCell className="text-center">
+                          {esPorKilo && d.kilos_totales ? (
+                            <span className="font-medium text-blue-600">
+                              {d.kilos_totales.toLocaleString('es-MX')} kg
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                      )}
+                      <TableCell className="text-right font-mono">
+                        ${formatCurrency(d.precio_unitario)}
+                        <span className="text-xs text-muted-foreground ml-1">
+                          {esPorKilo ? '/kg' : `/${d.producto?.unidad}`}
+                        </span>
+                      </TableCell>
+                      {!esSoloPrecios && (
+                        <TableCell className="text-right font-medium font-mono">
+                          ${formatCurrency(d.subtotal)}
+                          {esPorKilo && d.kilos_totales && (
+                            <div className="text-xs text-muted-foreground font-normal">
+                              {d.kilos_totales.toLocaleString('es-MX')} × ${d.precio_unitario.toFixed(2)}
+                            </div>
+                          )}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

@@ -1085,6 +1085,7 @@ export type Database = {
           cotizacion_id: string
           created_at: string
           id: string
+          kilos_totales: number | null
           nota_linea: string | null
           precio_unitario: number
           producto_id: string
@@ -1097,6 +1098,7 @@ export type Database = {
           cotizacion_id: string
           created_at?: string
           id?: string
+          kilos_totales?: number | null
           nota_linea?: string | null
           precio_unitario: number
           producto_id: string
@@ -1109,6 +1111,7 @@ export type Database = {
           cotizacion_id?: string
           created_at?: string
           id?: string
+          kilos_totales?: number | null
           nota_linea?: string | null
           precio_unitario?: number
           producto_id?: string
@@ -3163,6 +3166,7 @@ export type Database = {
           es_cortesia: boolean | null
           fecha_ajuste_precio: string | null
           id: string
+          kilos_totales: number | null
           linea_dividida_de: string | null
           notas_ajuste: string | null
           pedido_id: string
@@ -3179,6 +3183,7 @@ export type Database = {
           es_cortesia?: boolean | null
           fecha_ajuste_precio?: string | null
           id?: string
+          kilos_totales?: number | null
           linea_dividida_de?: string | null
           notas_ajuste?: string | null
           pedido_id: string
@@ -3195,6 +3200,7 @@ export type Database = {
           es_cortesia?: boolean | null
           fecha_ajuste_precio?: string | null
           id?: string
+          kilos_totales?: number | null
           linea_dividida_de?: string | null
           notas_ajuste?: string | null
           pedido_id?: string
