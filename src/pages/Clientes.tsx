@@ -30,7 +30,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, MapPin, X, Mail, BarChart3, Loader2, Sparkles, User, Package, Map, ClipboardList, FileSpreadsheet, Users, Building2, Gift, CalendarDays } from "lucide-react";
+import { Plus, Search, Edit, Trash2, MapPin, X, Mail, BarChart3, Loader2, Sparkles, User, Package, Map, ClipboardList, FileSpreadsheet, Users, Building2, Gift, CalendarDays, Home } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AuditoriaFiscalSheet } from "@/components/clientes/AuditoriaFiscalSheet";
 import ClienteSucursalesDialog from "@/components/clientes/ClienteSucursalesDialog";
@@ -55,7 +55,6 @@ import {
   DialogHeader as HistorialDialogHeader,
   DialogTitle as HistorialDialogTitle,
 } from "@/components/ui/dialog";
-// import { ClienteSucursalesMapDialog } from "@/components/clientes/ClienteSucursalesMapDialog";
 
 interface Zona {
   id: string;
@@ -80,6 +79,20 @@ interface CorreoForm {
   isNew?: boolean;
 }
 
+interface Vendedor {
+  user_id: string;
+  nombre: string;
+  nombre_corto: string;
+}
+
+// Lista de vendedores con sus user_ids
+const VENDEDORES: Vendedor[] = [
+  { user_id: "1e19d492-2dff-4798-942d-a2fe99ff1389", nombre: "Carlos Giron Intzin", nombre_corto: "Carlos" },
+  { user_id: "b8eef389-1ea1-4e84-81af-5d2d805e198f", nombre: "Venancio Gregorio", nombre_corto: "Venancio" },
+  { user_id: "07400eb2-f9a3-42dc-9a49-5d1126530f23", nombre: "Salvador Rojas Joaquin", nombre_corto: "Salvador" },
+  { user_id: "001ed4a3-44d3-4bbc-a362-4b78c4d52dd2", nombre: "Martin Castro Albarran", nombre_corto: "Martin" },
+];
+
 const Clientes = () => {
   const [clientes, setClientes] = useState<any[]>([]);
   const [zonas, setZonas] = useState<Zona[]>([]);
@@ -99,6 +112,7 @@ const Clientes = () => {
   const [detectarGruposDialogOpen, setDetectarGruposDialogOpen] = useState(false);
   const [importSucursalesDialogOpen, setImportSucursalesDialogOpen] = useState(false);
   const [sucursalesConRfcCount, setSucursalesConRfcCount] = useState(0);
+  const [activeVendedorTab, setActiveVendedorTab] = useState("casa");
   const { toast } = useToast();
   const { isAdmin } = useUserRoles();
 
@@ -131,6 +145,7 @@ const Clientes = () => {
     prioridad_entrega_default: "vip_mismo_dia" | "deadline" | "dia_fijo_recurrente" | "fecha_sugerida" | "flexible";
     deadline_dias_habiles_default: string;
     es_grupo: boolean;
+    vendedor_asignado: string;
   }>({
     codigo: "",
     nombre: "",
@@ -159,6 +174,7 @@ const Clientes = () => {
     prioridad_entrega_default: "flexible",
     deadline_dias_habiles_default: "",
     es_grupo: false,
+    vendedor_asignado: "",
   });
   
   // CSF file upload state
@@ -443,6 +459,7 @@ const Clientes = () => {
         prioridad_entrega_default: formData.prioridad_entrega_default,
         deadline_dias_habiles_default: formData.deadline_dias_habiles_default ? parseInt(formData.deadline_dias_habiles_default) : null,
         es_grupo: formData.es_grupo,
+        vendedor_asignado: formData.vendedor_asignado || null,
       };
 
       let clienteId: string;
@@ -618,6 +635,7 @@ const Clientes = () => {
       prioridad_entrega_default: client.prioridad_entrega_default || "flexible",
       deadline_dias_habiles_default: client.deadline_dias_habiles_default?.toString() || "",
       es_grupo: client.es_grupo || false,
+      vendedor_asignado: client.vendedor_asignado || "",
     });
     setEntregarMismaDireccion(true);
     setSucursales([]);
@@ -692,6 +710,7 @@ const Clientes = () => {
       prioridad_entrega_default: "flexible",
       deadline_dias_habiles_default: "",
       es_grupo: false,
+      vendedor_asignado: activeVendedorTab === "casa" ? "" : VENDEDORES.find(v => v.nombre_corto.toLowerCase() === activeVendedorTab)?.user_id || "",
     });
     setEntregarMismaDireccion(true);
     setSucursales([]);
@@ -702,11 +721,38 @@ const Clientes = () => {
     setCsfFile(null);
   };
 
-  const filteredClientes = clientes.filter(
+  // Filter by search term
+  const searchFiltered = clientes.filter(
     (c) =>
       c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.codigo.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Filter by vendedor tab
+  const getFilteredClientes = () => {
+    if (activeVendedorTab === "casa") {
+      return searchFiltered.filter(c => !c.vendedor_asignado);
+    }
+    const vendedor = VENDEDORES.find(v => v.nombre_corto.toLowerCase() === activeVendedorTab);
+    if (vendedor) {
+      return searchFiltered.filter(c => c.vendedor_asignado === vendedor.user_id);
+    }
+    return searchFiltered;
+  };
+
+  const filteredClientes = getFilteredClientes();
+
+  // Count clients per tab
+  const getClientCount = (tab: string) => {
+    if (tab === "casa") {
+      return clientes.filter(c => !c.vendedor_asignado).length;
+    }
+    const vendedor = VENDEDORES.find(v => v.nombre_corto.toLowerCase() === tab);
+    if (vendedor) {
+      return clientes.filter(c => c.vendedor_asignado === vendedor.user_id).length;
+    }
+    return 0;
+  };
 
   const getCreditLabel = (term: string) => {
     const labels: Record<string, string> = {
@@ -718,6 +764,154 @@ const Clientes = () => {
     return labels[term] || term;
   };
 
+  const getVendedorName = (vendedor_asignado: string | null) => {
+    if (!vendedor_asignado) return null;
+    const vendedor = VENDEDORES.find(v => v.user_id === vendedor_asignado);
+    return vendedor?.nombre_corto || null;
+  };
+
+  const renderClienteTable = () => (
+    <div className="border rounded-lg">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Código</TableHead>
+            <TableHead>Nombre</TableHead>
+            <TableHead>RFC</TableHead>
+            <TableHead>Crédito</TableHead>
+            <TableHead>Límite</TableHead>
+            <TableHead>Saldo</TableHead>
+            <TableHead>Estado</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={8} className="text-center py-8">
+                Cargando...
+              </TableCell>
+            </TableRow>
+          ) : filteredClientes.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                No se encontraron clientes
+              </TableCell>
+            </TableRow>
+          ) : (
+            filteredClientes.map((cliente) => (
+              <TableRow key={cliente.id} className={cliente.grupo_cliente_id ? "bg-muted/30" : ""}>
+                <TableCell className="font-mono">{cliente.codigo}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    {cliente.es_grupo && (
+                      <Badge variant="outline" className="text-xs flex items-center gap-1 bg-primary/10">
+                        <Building2 className="h-3 w-3" />
+                        Grupo
+                      </Badge>
+                    )}
+                    {cliente.grupo_padre && (
+                      <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {cliente.grupo_padre.nombre}
+                      </Badge>
+                    )}
+                    <span>{cliente.nombre}</span>
+                  </div>
+                </TableCell>
+                <TableCell>{cliente.rfc || "-"}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary">
+                    {getCreditLabel(cliente.termino_credito)}
+                  </Badge>
+                </TableCell>
+                <TableCell>${(cliente.limite_credito || 0).toLocaleString()}</TableCell>
+                <TableCell className={cliente.saldo_pendiente > 0 ? "text-destructive" : ""}>
+                  ${(cliente.saldo_pendiente || 0).toLocaleString()}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={cliente.activo ? "default" : "destructive"}>
+                    {cliente.activo ? "Activo" : "Inactivo"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setSelectedClienteForHistorial({ id: cliente.id, nombre: cliente.nombre });
+                        setHistorialDialogOpen(true);
+                      }}
+                      title="Ver historial de precios"
+                    >
+                      <BarChart3 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setSelectedClienteForSucursales({ id: cliente.id, nombre: cliente.nombre });
+                        setSucursalesDialogOpen(true);
+                      }}
+                      title={`Ver sucursales (${cliente.cliente_sucursales?.[0]?.count || 0})`}
+                      className="relative"
+                    >
+                      <MapPin className="h-4 w-4" />
+                      {cliente.cliente_sucursales?.[0]?.count > 0 && (
+                        <Badge 
+                          variant="secondary" 
+                          className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center px-1 text-xs"
+                        >
+                          {cliente.cliente_sucursales[0].count}
+                        </Badge>
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setSelectedClienteForProductos({ id: cliente.id, nombre: cliente.nombre });
+                        setProductosDialogOpen(true);
+                      }}
+                      title={`Productos frecuentes (${cliente.cliente_productos_frecuentes?.[0]?.count || 0})`}
+                      className="relative"
+                    >
+                      <Package className="h-4 w-4" />
+                      {cliente.cliente_productos_frecuentes?.[0]?.count > 0 && (
+                        <Badge 
+                          variant="secondary" 
+                          className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center px-1 text-xs"
+                        >
+                          {cliente.cliente_productos_frecuentes[0].count}
+                        </Badge>
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(cliente)}
+                      title="Editar cliente"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(cliente.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -727,12 +921,6 @@ const Clientes = () => {
             <p className="text-muted-foreground">Gestión de clientes y créditos</p>
           </div>
           <div className="flex gap-2">
-            {/* TODO: Reimplementar mapa con edge function para API key segura
-            <Button variant="outline" onClick={() => setMapDialogOpen(true)}>
-              <Map className="h-4 w-4 mr-2" />
-              Mapa Sucursales
-            </Button>
-            */}
             <Button
               variant="outline"
               onClick={() => setDetectarGruposDialogOpen(true)}
@@ -791,6 +979,40 @@ const Clientes = () => {
                     : "Completa la información del cliente y sus sucursales de entrega"}
                 </DialogDescription>
               </DialogHeader>
+              
+              {/* Vendedor assignment section */}
+              <div className="border rounded-lg p-4 mb-4 bg-muted/30">
+                <Label className="text-sm font-medium mb-2 block">Vendedor asignado</Label>
+                <Select
+                  value={formData.vendedor_asignado}
+                  onValueChange={(value) => setFormData({ ...formData, vendedor_asignado: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Casa (sin vendedor)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">
+                      <div className="flex items-center gap-2">
+                        <Home className="h-4 w-4" />
+                        Casa (sin comisión)
+                      </div>
+                    </SelectItem>
+                    {VENDEDORES.map((v) => (
+                      <SelectItem key={v.user_id} value={v.user_id}>
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          {v.nombre}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.vendedor_asignado && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Este cliente genera comisión del 1% para el vendedor
+                  </p>
+                )}
+              </div>
               
               {editingClient ? (
               <Tabs defaultValue="datos" className="w-full">
@@ -945,145 +1167,48 @@ const Clientes = () => {
           </div>
         </div>
 
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Código</TableHead>
-                <TableHead>Nombre</TableHead>
-                <TableHead>RFC</TableHead>
-                <TableHead>Crédito</TableHead>
-                <TableHead>Límite</TableHead>
-                <TableHead>Saldo</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
-                    Cargando...
-                  </TableCell>
-                </TableRow>
-              ) : filteredClientes.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    No se encontraron clientes
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredClientes.map((cliente) => (
-                  <TableRow key={cliente.id} className={cliente.grupo_cliente_id ? "bg-muted/30" : ""}>
-                    <TableCell className="font-mono">{cliente.codigo}</TableCell>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {cliente.es_grupo && (
-                          <Badge variant="outline" className="text-xs flex items-center gap-1 bg-primary/10">
-                            <Building2 className="h-3 w-3" />
-                            Grupo
-                          </Badge>
-                        )}
-                        {cliente.grupo_padre && (
-                          <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            {cliente.grupo_padre.nombre}
-                          </Badge>
-                        )}
-                        <span>{cliente.nombre}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{cliente.rfc || "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {getCreditLabel(cliente.termino_credito)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>${(cliente.limite_credito || 0).toLocaleString()}</TableCell>
-                    <TableCell className={cliente.saldo_pendiente > 0 ? "text-destructive" : ""}>
-                      ${(cliente.saldo_pendiente || 0).toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={cliente.activo ? "default" : "destructive"}>
-                        {cliente.activo ? "Activo" : "Inactivo"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setSelectedClienteForHistorial({ id: cliente.id, nombre: cliente.nombre });
-                            setHistorialDialogOpen(true);
-                          }}
-                          title="Ver historial de precios"
-                        >
-                          <BarChart3 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setSelectedClienteForSucursales({ id: cliente.id, nombre: cliente.nombre });
-                            setSucursalesDialogOpen(true);
-                          }}
-                          title={`Ver sucursales (${cliente.cliente_sucursales?.[0]?.count || 0})`}
-                          className="relative"
-                        >
-                          <MapPin className="h-4 w-4" />
-                          {cliente.cliente_sucursales?.[0]?.count > 0 && (
-                            <Badge 
-                              variant="secondary" 
-                              className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center px-1 text-xs"
-                            >
-                              {cliente.cliente_sucursales[0].count}
-                            </Badge>
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setSelectedClienteForProductos({ id: cliente.id, nombre: cliente.nombre });
-                            setProductosDialogOpen(true);
-                          }}
-                          title={`Productos frecuentes (${cliente.cliente_productos_frecuentes?.[0]?.count || 0})`}
-                          className="relative"
-                        >
-                          <Package className="h-4 w-4" />
-                          {cliente.cliente_productos_frecuentes?.[0]?.count > 0 && (
-                            <Badge 
-                              variant="secondary" 
-                              className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center px-1 text-xs"
-                            >
-                              {cliente.cliente_productos_frecuentes[0].count}
-                            </Badge>
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(cliente)}
-                          title="Editar cliente"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(cliente.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        {/* Vendedor Tabs */}
+        <Tabs value={activeVendedorTab} onValueChange={setActiveVendedorTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="casa" className="flex items-center gap-2">
+              <Home className="h-4 w-4" />
+              Casa
+              <Badge variant="secondary" className="ml-1">{getClientCount("casa")}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="carlos" className="flex items-center gap-2">
+              Carlos
+              <Badge variant="secondary" className="ml-1">{getClientCount("carlos")}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="venancio" className="flex items-center gap-2">
+              Venancio
+              <Badge variant="secondary" className="ml-1">{getClientCount("venancio")}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="salvador" className="flex items-center gap-2">
+              Salvador
+              <Badge variant="secondary" className="ml-1">{getClientCount("salvador")}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="martin" className="flex items-center gap-2">
+              Martin
+              <Badge variant="secondary" className="ml-1">{getClientCount("martin")}</Badge>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="casa" className="mt-4">
+            {renderClienteTable()}
+          </TabsContent>
+          <TabsContent value="carlos" className="mt-4">
+            {renderClienteTable()}
+          </TabsContent>
+          <TabsContent value="venancio" className="mt-4">
+            {renderClienteTable()}
+          </TabsContent>
+          <TabsContent value="salvador" className="mt-4">
+            {renderClienteTable()}
+          </TabsContent>
+          <TabsContent value="martin" className="mt-4">
+            {renderClienteTable()}
+          </TabsContent>
+        </Tabs>
       </div>
 
       <ClienteSucursalesDialog

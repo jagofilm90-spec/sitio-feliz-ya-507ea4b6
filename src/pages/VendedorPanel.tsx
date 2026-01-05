@@ -7,19 +7,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Users, ShoppingCart, BarChart3, CreditCard, LogOut, User } from "lucide-react";
+import { Users, ShoppingCart, BarChart3, CreditCard, LogOut, User, Menu } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { VendedorMisClientesTab } from "@/components/vendedor/VendedorMisClientesTab";
 import { VendedorNuevoPedidoTab } from "@/components/vendedor/VendedorNuevoPedidoTab";
 import { VendedorMisVentasTab } from "@/components/vendedor/VendedorMisVentasTab";
 import { VendedorCobranzaTab } from "@/components/vendedor/VendedorCobranzaTab";
 import PushNotificationSetup from "@/components/PushNotificationSetup";
+import { cn } from "@/lib/utils";
 
 export default function VendedorPanel() {
   const navigate = useNavigate();
   const { isVendedor, isAdmin, isLoading: rolesLoading } = useUserRoles();
   const [loading, setLoading] = useState(true);
   const [vendedorNombre, setVendedorNombre] = useState("");
+  const [activeTab, setActiveTab] = useState("clientes");
   const [stats, setStats] = useState({
     totalClientes: 0,
     ventasMes: 0,
@@ -119,31 +121,96 @@ export default function VendedorPanel() {
 
   if (rolesLoading || loading) {
     return (
-      <div className="min-h-screen bg-background p-4">
-        <Skeleton className="h-24 w-full mb-4" />
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <Skeleton className="h-20" />
-          <Skeleton className="h-20" />
-          <Skeleton className="h-20" />
-          <Skeleton className="h-20" />
+      <div className="min-h-screen bg-background p-4 lg:p-8">
+        <Skeleton className="h-16 w-full mb-6" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
         </div>
-        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-96 w-full" />
       </div>
     );
   }
 
+  const navItems = [
+    { id: "clientes", label: "Mis Clientes", icon: Users },
+    { id: "nuevo", label: "Nueva Venta", icon: ShoppingCart },
+    { id: "ventas", label: "Mis Ventas", icon: BarChart3 },
+    { id: "cobranza", label: "Cobranza", icon: CreditCard },
+  ];
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col lg:flex-row">
       <PushNotificationSetup />
       
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-primary text-primary-foreground p-4 shadow-lg">
+      {/* Sidebar for desktop/tablet */}
+      <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 bg-card border-r">
+        {/* Logo/Brand */}
+        <div className="flex items-center gap-3 px-6 py-5 border-b">
+          <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
+            <BarChart3 className="h-6 w-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="font-bold text-lg">ALMASA</h1>
+            <p className="text-xs text-muted-foreground">Panel de Vendedor</p>
+          </div>
+        </div>
+
+        {/* User Info */}
+        <div className="px-6 py-4 border-b">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <User className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium truncate">{vendedorNombre}</p>
+              <p className="text-xs text-muted-foreground">Vendedor</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-4 space-y-1">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors",
+                activeTab === item.id
+                  ? "bg-primary text-primary-foreground"
+                  : "hover:bg-muted text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <item.icon className="h-5 w-5" />
+              <span className="font-medium">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        {/* Logout */}
+        <div className="p-4 border-t">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-muted-foreground hover:text-foreground"
+            onClick={() => { supabase.auth.signOut(); navigate("/auth"); }} 
+          >
+            <LogOut className="h-5 w-5 mr-3" />
+            Cerrar sesión
+          </Button>
+        </div>
+      </aside>
+
+      {/* Mobile Header */}
+      <header className="lg:hidden sticky top-0 z-50 bg-primary text-primary-foreground p-4 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <BarChart3 className="h-8 w-8" />
+            <BarChart3 className="h-7 w-7" />
             <div>
-              <h1 className="text-lg font-bold">Panel de Vendedor</h1>
-              <p className="text-sm opacity-90">ALMASA</p>
+              <h1 className="text-lg font-bold">ALMASA</h1>
+              <p className="text-xs opacity-90">{vendedorNombre}</p>
             </div>
           </div>
           <Button 
@@ -155,92 +222,112 @@ export default function VendedorPanel() {
             <LogOut className="h-5 w-5" />
           </Button>
         </div>
-        {vendedorNombre && (
-          <div className="flex items-center gap-2 mt-2 text-sm">
-            <User className="h-4 w-4" />
-            <span>{vendedorNombre}</span>
-          </div>
-        )}
       </header>
 
-      <main className="p-4 pb-24">
-        {/* Stats Dashboard */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <Users className="h-4 w-4" />
-                <span className="text-xs">Clientes</span>
-              </div>
-              <p className="text-2xl font-bold">{stats.totalClientes}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <ShoppingCart className="h-4 w-4" />
-                <span className="text-xs">Ventas (mes)</span>
-              </div>
-              <p className="text-2xl font-bold">{formatCurrency(stats.ventasMes)}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <CreditCard className="h-4 w-4" />
-                <span className="text-xs">Por cobrar</span>
-              </div>
-              <p className="text-2xl font-bold text-amber-600">{formatCurrency(stats.porCobrar)}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <CreditCard className="h-4 w-4" />
-                <span className="text-xs">Vencido</span>
-              </div>
-              <p className="text-2xl font-bold text-destructive">{formatCurrency(stats.vencido)}</p>
-            </CardContent>
-          </Card>
+      {/* Main Content */}
+      <main className="flex-1 lg:ml-64">
+        <div className="p-4 lg:p-8 pb-24 lg:pb-8">
+          {/* Stats Dashboard - Horizontal on desktop */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4 lg:p-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Clientes</p>
+                    <p className="text-2xl lg:text-3xl font-bold">{stats.totalClientes}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4 lg:p-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <ShoppingCart className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Ventas (mes)</p>
+                    <p className="text-xl lg:text-2xl font-bold">{formatCurrency(stats.ventasMes)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4 lg:p-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                    <CreditCard className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Por cobrar</p>
+                    <p className="text-xl lg:text-2xl font-bold text-amber-600">{formatCurrency(stats.porCobrar)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4 lg:p-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                    <CreditCard className="h-6 w-6 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Vencido</p>
+                    <p className="text-xl lg:text-2xl font-bold text-destructive">{formatCurrency(stats.vencido)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Content Area - Desktop uses activeTab state */}
+          <div className="hidden lg:block">
+            <Card>
+              <CardContent className="p-6">
+                {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
+                {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} />}
+                {activeTab === "ventas" && <VendedorMisVentasTab />}
+                {activeTab === "cobranza" && <VendedorCobranzaTab />}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Mobile Tabs */}
+          <div className="lg:hidden">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-4 mb-4">
+                {navItems.map((item) => (
+                  <TabsTrigger key={item.id} value={item.id} className="text-xs px-2">
+                    <item.icon className="h-4 w-4 mr-1" />
+                    <span className="hidden sm:inline">{item.label.split(" ")[0]}</span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              <TabsContent value="clientes">
+                <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />
+              </TabsContent>
+
+              <TabsContent value="nuevo">
+                <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} />
+              </TabsContent>
+
+              <TabsContent value="ventas">
+                <VendedorMisVentasTab />
+              </TabsContent>
+
+              <TabsContent value="cobranza">
+                <VendedorCobranzaTab />
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
-
-        {/* Tabs */}
-        <Tabs defaultValue="clientes" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-4">
-            <TabsTrigger value="clientes" className="text-xs">
-              <Users className="h-4 w-4 mr-1 hidden sm:inline" />
-              Clientes
-            </TabsTrigger>
-            <TabsTrigger value="nuevo" className="text-xs">
-              <ShoppingCart className="h-4 w-4 mr-1 hidden sm:inline" />
-              Venta
-            </TabsTrigger>
-            <TabsTrigger value="ventas" className="text-xs">
-              <BarChart3 className="h-4 w-4 mr-1 hidden sm:inline" />
-              Ventas
-            </TabsTrigger>
-            <TabsTrigger value="cobranza" className="text-xs">
-              <CreditCard className="h-4 w-4 mr-1 hidden sm:inline" />
-              Cobranza
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="clientes">
-            <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />
-          </TabsContent>
-
-          <TabsContent value="nuevo">
-            <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} />
-          </TabsContent>
-
-          <TabsContent value="ventas">
-            <VendedorMisVentasTab />
-          </TabsContent>
-
-          <TabsContent value="cobranza">
-            <VendedorCobranzaTab />
-          </TabsContent>
-        </Tabs>
       </main>
     </div>
   );
