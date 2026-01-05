@@ -11,6 +11,9 @@ interface ProductoCotizacion {
   cantidad_maxima?: number | null;
   nota_linea?: string | null;
   tipo_precio?: string | null;
+  kilos_totales?: number | null;
+  precio_por_kilo?: boolean;
+  presentacion?: string | null;
 }
 
 interface DatosCotizacion {
@@ -122,10 +125,11 @@ export const CotizacionPrintTemplate = ({ datos }: CotizacionPrintTemplateProps)
           <tr className="bg-gray-800 text-white">
             <th className="p-2 text-left w-20">Código</th>
             <th className="p-2 text-left">Producto</th>
-            <th className="p-2 text-center w-20">Tipo</th>
+            <th className="p-2 text-center w-16">Tipo</th>
             {!datos.soloPrecios && (
               <>
-                <th className="p-2 text-center w-20">Cantidad</th>
+                <th className="p-2 text-right w-16">Kilos</th>
+                <th className="p-2 text-center w-16">Cantidad</th>
                 <th className="p-2 text-center w-16">Unidad</th>
               </>
             )}
@@ -160,12 +164,18 @@ export const CotizacionPrintTemplate = ({ datos }: CotizacionPrintTemplateProps)
               </td>
               {!datos.soloPrecios && (
                 <>
+                  <td className="p-2 border-b text-right">
+                    {producto.kilos_totales 
+                      ? `${producto.kilos_totales.toLocaleString('es-MX')} kg` 
+                      : '-'}
+                  </td>
                   <td className="p-2 border-b text-center">{producto.cantidad}</td>
                   <td className="p-2 border-b text-center">{producto.unidad}</td>
                 </>
               )}
               <td className="p-2 border-b text-right">
                 ${producto.precio_unitario.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                {producto.precio_por_kilo && '/kg'}
               </td>
               {!datos.soloPrecios && (
                 <td className="p-2 border-b text-right">
@@ -182,6 +192,7 @@ export const CotizacionPrintTemplate = ({ datos }: CotizacionPrintTemplateProps)
               <td className="p-2 border-b"></td>
               {!datos.soloPrecios && (
                 <>
+                  <td className="p-2 border-b"></td>
                   <td className="p-2 border-b"></td>
                   <td className="p-2 border-b"></td>
                 </>

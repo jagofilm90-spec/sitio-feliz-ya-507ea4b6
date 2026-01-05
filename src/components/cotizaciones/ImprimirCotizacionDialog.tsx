@@ -46,7 +46,8 @@ const ImprimirCotizacionDialog = ({
             cantidad_maxima,
             nota_linea,
             tipo_precio,
-            producto:productos(nombre, codigo, unidad, aplica_iva, aplica_ieps)
+            kilos_totales,
+            producto:productos(nombre, codigo, unidad, aplica_iva, aplica_ieps, precio_por_kilo, presentacion)
           )
         `)
         .eq("id", cotizacionId)
@@ -211,6 +212,9 @@ const ImprimirCotizacionDialog = ({
       cantidad_maxima: d.cantidad_maxima || null,
       nota_linea: d.nota_linea || null,
       tipo_precio: d.tipo_precio || null,
+      kilos_totales: d.kilos_totales || null,
+      precio_por_kilo: d.producto?.precio_por_kilo || false,
+      presentacion: d.producto?.presentacion || null,
     })) || [],
     subtotal: impuestosDesglosados.subtotal,
     iva: impuestosDesglosados.iva,
