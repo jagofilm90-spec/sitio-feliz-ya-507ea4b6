@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Search, Plus, MapPin, Phone, Building2, ChevronRight } from "lucide-react";
+import { Search, Plus, MapPin, Phone, Building2, MessageCircle, ShoppingCart, History } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { VendedorNuevoClienteSheet } from "./VendedorNuevoClienteSheet";
 
@@ -31,7 +31,6 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showNuevoCliente, setShowNuevoCliente] = useState(false);
-  const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
 
   useEffect(() => {
     fetchClientes();
@@ -96,160 +95,171 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
 
   if (loading) {
     return (
-      <div className="space-y-3">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-24 w-full" />
+      <div className="space-y-4">
+        <Skeleton className="h-14 w-full" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Skeleton className="h-40" />
+          <Skeleton className="h-40" />
+          <Skeleton className="h-40" />
+          <Skeleton className="h-40" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Search and Add */}
-      <div className="flex gap-2">
+    <div className="space-y-6">
+      {/* Search and Add - Larger for tablet */}
+      <div className="flex gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
-            placeholder="Buscar cliente..."
+            placeholder="Buscar cliente por nombre o código..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-12 h-14 text-lg"
           />
         </div>
-        <Button onClick={() => setShowNuevoCliente(true)}>
-          <Plus className="h-4 w-4 mr-1" />
-          Nuevo
+        <Button 
+          onClick={() => setShowNuevoCliente(true)}
+          className="h-14 px-6 text-base"
+          size="lg"
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          <span className="hidden sm:inline">Nuevo Cliente</span>
+          <span className="sm:hidden">Nuevo</span>
         </Button>
       </div>
 
-      {/* Client List */}
-      <ScrollArea className="h-[calc(100vh-380px)]">
-        <div className="space-y-3">
-          {clientesFiltrados.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <Building2 className="h-12 w-12 text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">
-                  {searchTerm ? "No se encontraron clientes" : "No tienes clientes asignados"}
-                </p>
+      {/* Client Grid - Responsive for tablet/desktop */}
+      <ScrollArea className="h-[calc(100vh-350px)] lg:h-[calc(100vh-300px)]">
+        {clientesFiltrados.length === 0 ? (
+          <Card className="border-dashed border-2">
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+              <Building2 className="h-16 w-16 text-muted-foreground mb-4" />
+              <h3 className="text-xl font-semibold mb-2">
+                {searchTerm ? "No se encontraron clientes" : "No tienes clientes asignados"}
+              </h3>
+              <p className="text-muted-foreground mb-6 max-w-md">
+                {searchTerm 
+                  ? "Intenta con otro término de búsqueda" 
+                  : "Comienza agregando tu primer cliente para empezar a vender"}
+              </p>
+              {!searchTerm && (
                 <Button 
-                  variant="link" 
                   onClick={() => setShowNuevoCliente(true)}
-                  className="mt-2"
+                  size="lg"
+                  className="h-12 px-6"
                 >
-                  Dar de alta tu primer cliente
+                  <Plus className="h-5 w-5 mr-2" />
+                  Agregar primer cliente
                 </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            clientesFiltrados.map((cliente) => (
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {clientesFiltrados.map((cliente) => (
               <Card 
                 key={cliente.id} 
-                className="cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => setSelectedCliente(selectedCliente?.id === cliente.id ? null : cliente)}
+                className="hover:shadow-lg transition-all duration-200 hover:border-primary/50"
               >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
+                <CardContent className="p-5">
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium truncate">{cliente.nombre}</span>
-                        <Badge variant="outline" className="text-xs shrink-0">
-                          {cliente.codigo}
-                        </Badge>
+                      <h3 className="font-semibold text-lg truncate mb-1">
+                        {cliente.nombre}
+                      </h3>
+                      <Badge variant="outline" className="text-xs">
+                        {cliente.codigo}
+                      </Badge>
+                    </div>
+                    {(cliente.saldo_pendiente || 0) > 0 && (
+                      <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 shrink-0">
+                        {formatCurrency(cliente.saldo_pendiente || 0)}
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {/* Details */}
+                  <div className="space-y-2 mb-5">
+                    {cliente.direccion && (
+                      <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4 shrink-0 mt-0.5" />
+                        <span className="line-clamp-2">{cliente.direccion}</span>
                       </div>
-                      
-                      {cliente.direccion && (
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
-                          <MapPin className="h-3 w-3 shrink-0" />
-                          <span className="truncate">{cliente.direccion}</span>
-                        </div>
-                      )}
-                      
-                      {cliente.telefono && (
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Phone className="h-3 w-3 shrink-0" />
-                          <a 
-                            href={`tel:${cliente.telefono}`}
-                            className="text-primary hover:underline"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {cliente.telefono}
-                          </a>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="text-right shrink-0 ml-2">
-                      {(cliente.saldo_pendiente || 0) > 0 && (
-                        <p className="text-sm font-medium text-amber-600">
-                          {formatCurrency(cliente.saldo_pendiente || 0)}
-                        </p>
-                      )}
-                      {cliente.sucursales_count > 0 && (
-                        <Badge variant="secondary" className="text-xs">
-                          {cliente.sucursales_count} suc.
-                        </Badge>
-                      )}
-                    </div>
+                    )}
                     
-                    <ChevronRight className="h-5 w-5 text-muted-foreground ml-2" />
+                    {cliente.telefono && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <a 
+                          href={`tel:${cliente.telefono}`}
+                          className="text-primary hover:underline font-medium"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {cliente.telefono}
+                        </a>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
+                      {cliente.sucursales_count > 0 && (
+                        <span>{cliente.sucursales_count} sucursal(es)</span>
+                      )}
+                      {cliente.ultimo_pedido && (
+                        <span>
+                          Último pedido: {new Date(cliente.ultimo_pedido).toLocaleDateString('es-MX')}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Expanded view */}
-                  {selectedCliente?.id === cliente.id && (
-                    <div className="mt-4 pt-4 border-t space-y-2">
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Último pedido:</span>
-                          <p className="font-medium">
-                            {cliente.ultimo_pedido 
-                              ? new Date(cliente.ultimo_pedido).toLocaleDateString('es-MX')
-                              : "Sin pedidos"}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Saldo:</span>
-                          <p className="font-medium">
-                            {formatCurrency(cliente.saldo_pendiente || 0)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 pt-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="flex-1"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (cliente.telefono) {
-                              window.open(`https://wa.me/52${cliente.telefono.replace(/\D/g, '')}`, '_blank');
-                            }
-                          }}
-                          disabled={!cliente.telefono}
-                        >
-                          WhatsApp
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          className="flex-1"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Navigate to new order tab with this client
-                            toast.info("Selecciona la pestaña 'Venta' y elige este cliente");
-                          }}
-                        >
-                          Nuevo Pedido
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                  {/* Action Buttons - Large and tactile */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button 
+                      variant="outline" 
+                      className="h-12 flex-col gap-1 p-2"
+                      onClick={() => {
+                        if (cliente.telefono) {
+                          const tel = cliente.telefono.replace(/\D/g, '');
+                          window.open(`https://wa.me/52${tel}`, '_blank');
+                        } else {
+                          toast.error("Este cliente no tiene teléfono registrado");
+                        }
+                      }}
+                      disabled={!cliente.telefono}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      <span className="text-[10px]">WhatsApp</span>
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      className="h-12 flex-col gap-1 p-2"
+                      onClick={() => {
+                        toast.info("Ve a la pestaña 'Nueva Venta' y selecciona este cliente");
+                      }}
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                      <span className="text-[10px]">Pedido</span>
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      className="h-12 flex-col gap-1 p-2"
+                      onClick={() => {
+                        toast.info("Ve a la pestaña 'Mis Ventas' para ver el historial");
+                      }}
+                    >
+                      <History className="h-4 w-4" />
+                      <span className="text-[10px]">Historial</span>
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </ScrollArea>
 
       {/* New Client Sheet */}

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, MapPin } from "lucide-react";
+import { Loader2, MapPin, User, Phone, FileText, MapPinned } from "lucide-react";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
 import {
   Select,
@@ -173,85 +173,111 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent side="bottom" className="h-[90vh]">
-        <SheetHeader>
-          <SheetTitle>Nuevo Cliente</SheetTitle>
+      <SheetContent side="bottom" className="h-[90vh] sm:h-[85vh] overflow-hidden">
+        <SheetHeader className="pb-4">
+          <SheetTitle className="text-xl">Nuevo Cliente</SheetTitle>
         </SheetHeader>
 
-        <div className="mt-6 space-y-4 overflow-y-auto pb-24">
-          <div className="space-y-2">
-            <Label htmlFor="nombre">Nombre comercial *</Label>
-            <Input
-              id="nombre"
-              placeholder="Ej: Restaurante El Buen Sabor"
-              value={formData.nombre}
-              onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
-            />
-          </div>
+        <div className="overflow-y-auto h-[calc(100%-140px)] pb-8">
+          <div className="space-y-6 max-w-2xl mx-auto">
+            {/* Name Input */}
+            <div className="space-y-2">
+              <Label htmlFor="nombre" className="text-base flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Nombre comercial *
+              </Label>
+              <Input
+                id="nombre"
+                placeholder="Ej: Restaurante El Buen Sabor"
+                value={formData.nombre}
+                onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
+                className="h-14 text-lg"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="telefono">Teléfono</Label>
-            <Input
-              id="telefono"
-              type="tel"
-              placeholder="55 1234 5678"
-              value={formData.telefono}
-              onChange={(e) => setFormData(prev => ({ ...prev, telefono: e.target.value }))}
-            />
-          </div>
+            {/* Phone Input */}
+            <div className="space-y-2">
+              <Label htmlFor="telefono" className="text-base flex items-center gap-2">
+                <Phone className="h-4 w-4" />
+                Teléfono
+              </Label>
+              <Input
+                id="telefono"
+                type="tel"
+                placeholder="55 1234 5678"
+                value={formData.telefono}
+                onChange={(e) => setFormData(prev => ({ ...prev, telefono: e.target.value }))}
+                className="h-14 text-lg"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label>Dirección de entrega *</Label>
-            <GoogleMapsAddressAutocomplete
-              value={formData.direccion}
-              onChange={handleAddressChange}
-              placeholder="Buscar dirección..."
-            />
-            {formData.latitud && formData.longitud && (
-              <div className="flex items-center gap-1 text-xs text-green-600">
-                <MapPin className="h-3 w-3" />
-                <span>Ubicación exacta guardada</span>
-              </div>
-            )}
-          </div>
+            {/* Address Input */}
+            <div className="space-y-2">
+              <Label className="text-base flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Dirección de entrega *
+              </Label>
+              <GoogleMapsAddressAutocomplete
+                value={formData.direccion}
+                onChange={handleAddressChange}
+                placeholder="Buscar dirección..."
+              />
+              {formData.latitud && formData.longitud && (
+                <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
+                  <MapPinned className="h-4 w-4" />
+                  <span>Ubicación exacta guardada para rutas de entrega</span>
+                </div>
+              )}
+            </div>
 
-          <div className="space-y-2">
-            <Label>Zona</Label>
-            <Select
-              value={formData.zona_id}
-              onValueChange={(val) => setFormData(prev => ({ ...prev, zona_id: val }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar zona" />
-              </SelectTrigger>
-              <SelectContent>
-                {zonas.map((zona) => (
-                  <SelectItem key={zona.id} value={zona.id}>
-                    {zona.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            {/* Zone Selection */}
+            <div className="space-y-2">
+              <Label className="text-base">Zona de entrega</Label>
+              <Select
+                value={formData.zona_id}
+                onValueChange={(val) => setFormData(prev => ({ ...prev, zona_id: val }))}
+              >
+                <SelectTrigger className="h-14 text-lg">
+                  <SelectValue placeholder="Seleccionar zona" />
+                </SelectTrigger>
+                <SelectContent>
+                  {zonas.map((zona) => (
+                    <SelectItem key={zona.id} value={zona.id} className="text-base py-3">
+                      {zona.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="notas">Notas de entrega</Label>
-            <Textarea
-              id="notas"
-              placeholder="Instrucciones especiales, horarios, etc."
-              value={formData.notas}
-              onChange={(e) => setFormData(prev => ({ ...prev, notas: e.target.value }))}
-              rows={3}
-            />
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label htmlFor="notas" className="text-base flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Notas de entrega
+              </Label>
+              <Textarea
+                id="notas"
+                placeholder="Instrucciones especiales, horarios preferidos, referencias de ubicación..."
+                value={formData.notas}
+                onChange={(e) => setFormData(prev => ({ ...prev, notas: e.target.value }))}
+                rows={4}
+                className="text-base resize-none"
+              />
+            </div>
           </div>
+        </div>
 
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">
+        {/* Fixed Submit Button */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t">
+          <div className="max-w-2xl mx-auto">
             <Button 
               onClick={handleSubmit} 
               disabled={loading} 
-              className="w-full"
+              className="w-full h-14 text-lg font-semibold"
+              size="lg"
             >
-              {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {loading && <Loader2 className="h-5 w-5 mr-2 animate-spin" />}
               Crear Cliente
             </Button>
           </div>
