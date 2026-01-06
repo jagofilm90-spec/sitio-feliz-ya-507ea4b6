@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Users, ShoppingCart, BarChart3, CreditCard, LogOut, User, TrendingUp, Calendar } from "lucide-react";
+import { Users, ShoppingCart, BarChart3, CreditCard, LogOut, User, TrendingUp, Calendar, Percent } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { VendedorMisClientesTab } from "@/components/vendedor/VendedorMisClientesTab";
 import { VendedorNuevoPedidoTab } from "@/components/vendedor/VendedorNuevoPedidoTab";
 import { VendedorMisVentasTab } from "@/components/vendedor/VendedorMisVentasTab";
 import { VendedorCobranzaTab } from "@/components/vendedor/VendedorCobranzaTab";
+import { VendedorComisionesTab } from "@/components/vendedor/VendedorComisionesTab";
 import PushNotificationSetup from "@/components/PushNotificationSetup";
 import { cn } from "@/lib/utils";
 
@@ -154,6 +155,7 @@ export default function VendedorPanel() {
     { id: "nuevo", label: "Nueva Venta", icon: ShoppingCart },
     { id: "ventas", label: "Mis Ventas", icon: BarChart3 },
     { id: "cobranza", label: "Cobranza", icon: CreditCard },
+    { id: "comisiones", label: "Comisiones", icon: Percent },
   ];
 
   return (
@@ -323,6 +325,7 @@ export default function VendedorPanel() {
                 {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} />}
                 {activeTab === "ventas" && <VendedorMisVentasTab />}
                 {activeTab === "cobranza" && <VendedorCobranzaTab />}
+                {activeTab === "comisiones" && <VendedorComisionesTab />}
               </CardContent>
             </Card>
           </div>
@@ -335,11 +338,12 @@ export default function VendedorPanel() {
           {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} />}
           {activeTab === "ventas" && <VendedorMisVentasTab />}
           {activeTab === "cobranza" && <VendedorCobranzaTab />}
+          {activeTab === "comisiones" && <VendedorComisionesTab />}
         </div>
 
         {/* Fixed Bottom Navigation */}
         <nav className="fixed bottom-0 left-0 right-0 bg-background border-t safe-area-bottom z-50">
-          <div className="grid grid-cols-4">
+          <div className="grid grid-cols-5">
             {navItems.map((item) => (
               <button
                 key={item.id}
