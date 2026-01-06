@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Users, ShoppingCart, BarChart3, CreditCard, LogOut, User, Menu } from "lucide-react";
+import { Users, ShoppingCart, BarChart3, CreditCard, LogOut, User, TrendingUp, Calendar } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { VendedorMisClientesTab } from "@/components/vendedor/VendedorMisClientesTab";
 import { VendedorNuevoPedidoTab } from "@/components/vendedor/VendedorNuevoPedidoTab";
@@ -24,6 +24,7 @@ export default function VendedorPanel() {
   const [stats, setStats] = useState({
     totalClientes: 0,
     ventasMes: 0,
+    ventasAnio: 0,
     porCobrar: 0,
     vencido: 0
   });
@@ -68,14 +69,28 @@ export default function VendedorPanel() {
       inicioMes.setDate(1);
       inicioMes.setHours(0, 0, 0, 0);
 
-      const { data: ventasData } = await supabase
+      const { data: ventasMesData } = await supabase
         .from("pedidos")
         .select("total")
         .eq("vendedor_id", user.id)
         .gte("fecha_pedido", inicioMes.toISOString())
         .not("status", "in", "(cancelado,por_autorizar)");
 
-      const ventasMes = (ventasData || []).reduce((sum, p) => sum + (p.total || 0), 0);
+      const ventasMes = (ventasMesData || []).reduce((sum, p) => sum + (p.total || 0), 0);
+
+      // Get current year sales
+      const inicioAnio = new Date();
+      inicioAnio.setMonth(0, 1);
+      inicioAnio.setHours(0, 0, 0, 0);
+
+      const { data: ventasAnioData } = await supabase
+        .from("pedidos")
+        .select("total")
+        .eq("vendedor_id", user.id)
+        .gte("fecha_pedido", inicioAnio.toISOString())
+        .not("status", "in", "(cancelado,por_autorizar)");
+
+      const ventasAnio = (ventasAnioData || []).reduce((sum, p) => sum + (p.total || 0), 0);
 
       // Get accounts receivable (facturas pendientes de clientes del vendedor)
       const { data: clientesIds } = await supabase
@@ -107,6 +122,7 @@ export default function VendedorPanel() {
       setStats({
         totalClientes: clientesCount || 0,
         ventasMes,
+        ventasAnio,
         porCobrar,
         vencido
       });
@@ -226,59 +242,73 @@ export default function VendedorPanel() {
       {/* Main Content */}
       <main className="flex-1 lg:ml-64">
         <div className="p-4 lg:p-8 pb-24 lg:pb-8">
-          {/* Stats Dashboard - Horizontal on desktop */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {/* Stats Dashboard - 5 KPIs */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4 mb-6">
             <Card className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4 lg:p-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <CardContent className="p-3 lg:p-4">
+                <div className="flex items-center gap-2 lg:gap-3">
+                  <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                    <Users className="h-5 w-5 lg:h-6 lg:w-6 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Clientes</p>
-                    <p className="text-2xl lg:text-3xl font-bold">{stats.totalClientes}</p>
+                  <div className="min-w-0">
+                    <p className="text-xs lg:text-sm text-muted-foreground truncate">Clientes</p>
+                    <p className="text-xl lg:text-2xl font-bold">{stats.totalClientes}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             
             <Card className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4 lg:p-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                    <ShoppingCart className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <CardContent className="p-3 lg:p-4">
+                <div className="flex items-center gap-2 lg:gap-3">
+                  <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                    <Calendar className="h-5 w-5 lg:h-6 lg:w-6 text-green-600 dark:text-green-400" />
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Ventas (mes)</p>
-                    <p className="text-xl lg:text-2xl font-bold">{formatCurrency(stats.ventasMes)}</p>
+                  <div className="min-w-0">
+                    <p className="text-xs lg:text-sm text-muted-foreground truncate">Ventas Mes</p>
+                    <p className="text-lg lg:text-xl font-bold">{formatCurrency(stats.ventasMes)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow bg-primary/5 border-primary/20">
+              <CardContent className="p-3 lg:p-4">
+                <div className="flex items-center gap-2 lg:gap-3">
+                  <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
+                    <TrendingUp className="h-5 w-5 lg:h-6 lg:w-6 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs lg:text-sm text-muted-foreground truncate">Ventas Año</p>
+                    <p className="text-lg lg:text-xl font-bold text-primary">{formatCurrency(stats.ventasAnio)}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             
             <Card className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4 lg:p-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                    <CreditCard className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              <CardContent className="p-3 lg:p-4">
+                <div className="flex items-center gap-2 lg:gap-3">
+                  <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                    <CreditCard className="h-5 w-5 lg:h-6 lg:w-6 text-amber-600 dark:text-amber-400" />
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Por cobrar</p>
-                    <p className="text-xl lg:text-2xl font-bold text-amber-600">{formatCurrency(stats.porCobrar)}</p>
+                  <div className="min-w-0">
+                    <p className="text-xs lg:text-sm text-muted-foreground truncate">Por Cobrar</p>
+                    <p className="text-lg lg:text-xl font-bold text-amber-600">{formatCurrency(stats.porCobrar)}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             
-            <Card className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4 lg:p-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                    <CreditCard className="h-6 w-6 text-red-600 dark:text-red-400" />
+            <Card className="hover:shadow-md transition-shadow col-span-2 lg:col-span-1">
+              <CardContent className="p-3 lg:p-4">
+                <div className="flex items-center gap-2 lg:gap-3">
+                  <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+                    <CreditCard className="h-5 w-5 lg:h-6 lg:w-6 text-red-600 dark:text-red-400" />
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Vencido</p>
-                    <p className="text-xl lg:text-2xl font-bold text-destructive">{formatCurrency(stats.vencido)}</p>
+                  <div className="min-w-0">
+                    <p className="text-xs lg:text-sm text-muted-foreground truncate">Vencido</p>
+                    <p className="text-lg lg:text-xl font-bold text-destructive">{formatCurrency(stats.vencido)}</p>
                   </div>
                 </div>
               </CardContent>

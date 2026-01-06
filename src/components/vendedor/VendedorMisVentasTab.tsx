@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { Package, Calendar, TrendingUp, DollarSign, Receipt } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   Select,
@@ -16,6 +16,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis } from "recharts";
 
 interface Pedido {
   id: string;
@@ -28,6 +35,12 @@ interface Pedido {
   };
 }
 
+interface VentaMensual {
+  mes: string;
+  mesCorto: string;
+  total: number;
+}
+
 const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   por_autorizar: { label: "Por autorizar", variant: "secondary" },
   autorizado: { label: "Autorizado", variant: "default" },
@@ -37,10 +50,18 @@ const statusLabels: Record<string, { label: string; variant: "default" | "second
   cancelado: { label: "Cancelado", variant: "destructive" }
 };
 
+const chartConfig = {
+  total: {
+    label: "Ventas",
+    color: "hsl(var(--primary))",
+  },
+} satisfies ChartConfig;
+
 export function VendedorMisVentasTab() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [periodo, setPeriodo] = useState("mes");
+  const [ventasMensuales, setVentasMensuales] = useState<VentaMensual[]>([]);
   const [stats, setStats] = useState({
     totalVentas: 0,
     totalPedidos: 0,
@@ -51,6 +72,46 @@ export function VendedorMisVentasTab() {
   useEffect(() => {
     fetchPedidos();
   }, [periodo]);
+
+  useEffect(() => {
+    fetchVentasMensuales();
+  }, []);
+
+  const fetchVentasMensuales = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const meses: VentaMensual[] = [];
+      const now = new Date();
+
+      for (let i = 5; i >= 0; i--) {
+        const fecha = subMonths(now, i);
+        const inicio = startOfMonth(fecha);
+        const fin = endOfMonth(fecha);
+
+        const { data } = await supabase
+          .from("pedidos")
+          .select("total")
+          .eq("vendedor_id", user.id)
+          .gte("fecha_pedido", inicio.toISOString())
+          .lte("fecha_pedido", fin.toISOString())
+          .not("status", "in", "(cancelado,por_autorizar)");
+
+        const total = (data || []).reduce((sum, p) => sum + (p.total || 0), 0);
+
+        meses.push({
+          mes: format(fecha, "MMMM yyyy", { locale: es }),
+          mesCorto: format(fecha, "MMM", { locale: es }).toUpperCase(),
+          total
+        });
+      }
+
+      setVentasMensuales(meses);
+    } catch (error) {
+      console.error("Error fetching monthly sales:", error);
+    }
+  };
 
   const fetchPedidos = async () => {
     try {
@@ -70,6 +131,10 @@ export function VendedorMisVentasTab() {
         case "mes":
           fechaInicio = startOfMonth(now);
           fechaFin = endOfMonth(now);
+          break;
+        case "anio":
+          fechaInicio = startOfYear(now);
+          fechaFin = endOfYear(now);
           break;
         case "todo":
           fechaInicio = new Date(2020, 0, 1);
@@ -100,12 +165,11 @@ export function VendedorMisVentasTab() {
 
       setPedidos(pedidosData);
 
-      // Calculate stats (exclude cancelled)
       const pedidosValidos = pedidosData.filter(p => p.status !== "cancelado");
       const totalVentas = pedidosValidos.reduce((sum, p) => sum + (p.total || 0), 0);
       const totalPedidos = pedidosValidos.length;
       const ticketPromedio = totalPedidos > 0 ? totalVentas / totalPedidos : 0;
-      const comisionEstimada = totalVentas * 0.01; // 1% commission
+      const comisionEstimada = totalVentas * 0.01;
 
       setStats({
         totalVentas,
@@ -131,6 +195,7 @@ export function VendedorMisVentasTab() {
           <Skeleton className="h-28" />
           <Skeleton className="h-28" />
         </div>
+        <Skeleton className="h-48 w-full" />
         <Skeleton className="h-40 w-full" />
       </div>
     );
@@ -138,7 +203,6 @@ export function VendedorMisVentasTab() {
 
   return (
     <div className="space-y-6">
-      {/* Period Filter - Larger */}
       <Select value={periodo} onValueChange={setPeriodo}>
         <SelectTrigger className="h-14 text-lg">
           <SelectValue />
@@ -146,11 +210,11 @@ export function VendedorMisVentasTab() {
         <SelectContent>
           <SelectItem value="semana" className="text-base py-3">Esta semana</SelectItem>
           <SelectItem value="mes" className="text-base py-3">Este mes</SelectItem>
+          <SelectItem value="anio" className="text-base py-3">Este año</SelectItem>
           <SelectItem value="todo" className="text-base py-3">Todo el historial</SelectItem>
         </SelectContent>
       </Select>
 
-      {/* Stats - Larger Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="hover:shadow-md transition-shadow">
           <CardContent className="p-5">
@@ -211,10 +275,47 @@ export function VendedorMisVentasTab() {
         </Card>
       </div>
 
-      {/* Orders List - Larger Items */}
+      {ventasMensuales.length > 0 && (
+        <Card>
+          <CardContent className="p-4 lg:p-6">
+            <h3 className="text-lg font-semibold mb-4">Ventas últimos 6 meses</h3>
+            <ChartContainer config={chartConfig} className="h-[200px] w-full">
+              <BarChart data={ventasMensuales} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <XAxis 
+                  dataKey="mesCorto" 
+                  tickLine={false} 
+                  axisLine={false}
+                  fontSize={12}
+                />
+                <YAxis 
+                  tickLine={false} 
+                  axisLine={false}
+                  tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                  fontSize={11}
+                  width={50}
+                />
+                <ChartTooltip 
+                  content={<ChartTooltipContent />}
+                  formatter={(value: number) => [formatCurrency(value), "Ventas"]}
+                  labelFormatter={(label, payload) => {
+                    const item = payload?.[0]?.payload as VentaMensual | undefined;
+                    return item?.mes || label;
+                  }}
+                />
+                <Bar 
+                  dataKey="total" 
+                  fill="hsl(var(--primary))" 
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      )}
+
       <div>
         <h3 className="text-lg font-semibold mb-4">Mis Pedidos</h3>
-        <ScrollArea className="h-[calc(100vh-520px)] lg:h-[calc(100vh-480px)]">
+        <ScrollArea className="h-[calc(100vh-750px)] lg:h-[calc(100vh-700px)] min-h-[200px]">
           <div className="space-y-3">
             {pedidos.length === 0 ? (
               <Card className="border-dashed border-2">
