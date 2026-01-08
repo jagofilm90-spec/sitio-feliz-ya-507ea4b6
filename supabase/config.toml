@@ -13,13 +13,13 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.gmail-auth]
-verify_jwt = true
+verify_jwt = false
 
 [functions.gmail-callback]
 verify_jwt = false
 
 [functions.gmail-api]
-verify_jwt = true
+verify_jwt = false
 
 [functions.google-places-autocomplete]
 verify_jwt = true
