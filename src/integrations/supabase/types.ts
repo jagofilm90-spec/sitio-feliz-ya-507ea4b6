@@ -3622,6 +3622,48 @@ export type Database = {
           },
         ]
       }
+      productos_historial_precios: {
+        Row: {
+          created_at: string
+          id: string
+          precio_anterior: number
+          precio_nuevo: number
+          producto_id: string
+          usuario_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          precio_anterior: number
+          precio_nuevo: number
+          producto_id: string
+          usuario_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          precio_anterior?: number
+          precio_nuevo?: number
+          producto_id?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "productos_historial_precios_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_historial_precios_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
