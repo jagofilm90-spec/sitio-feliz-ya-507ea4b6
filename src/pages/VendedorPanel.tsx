@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Users, ShoppingCart, BarChart3, CreditCard, LogOut, User, TrendingUp, Calendar, Percent, UserPlus, Wallet } from "lucide-react";
+import { Users, ShoppingCart, CreditCard, LogOut, User, TrendingUp, Calendar, Percent, UserPlus, Wallet } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { VendedorMisClientesTab } from "@/components/vendedor/VendedorMisClientesTab";
 import { VendedorNuevoPedidoTab } from "@/components/vendedor/VendedorNuevoPedidoTab";
@@ -18,6 +18,8 @@ import { VendedorSaldosTab } from "@/components/vendedor/VendedorSaldosTab";
 import { VendedorBienvenidaDialog } from "@/components/vendedor/VendedorBienvenidaDialog";
 import PushNotificationSetup from "@/components/PushNotificationSetup";
 import { cn } from "@/lib/utils";
+import logoAlmasa from "@/assets/logo-almasa.png";
+import logoBlanco from "@/assets/logos/logo-blanco.png";
 
 export default function VendedorPanel() {
   const navigate = useNavigate();
@@ -181,56 +183,51 @@ export default function VendedorPanel() {
         onIrPedidos={() => setActiveTab("nuevo")}
       />
       
-      {/* Sidebar for desktop/tablet */}
-      <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 bg-card border-r">
-        {/* Logo/Brand */}
-        <div className="flex items-center gap-3 px-6 py-5 border-b">
-          <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-            <BarChart3 className="h-6 w-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="font-bold text-lg">ALMASA</h1>
-            <p className="text-xs text-muted-foreground">Panel de Vendedor</p>
-          </div>
+      {/* Sidebar para desktop/tablet */}
+      <aside className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0 bg-card border-r shadow-sm">
+        {/* Logo Header */}
+        <div className="flex items-center justify-center px-6 py-5 border-b bg-gradient-to-r from-primary/5 via-primary/3 to-transparent">
+          <img src={logoAlmasa} alt="ALMASA" className="h-12 object-contain" />
         </div>
 
-        {/* User Info */}
-        <div className="px-6 py-4 border-b">
+        {/* Info del vendedor */}
+        <div className="px-5 py-4 border-b bg-muted/20">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-5 w-5 text-primary" />
+            <div className="h-11 w-11 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md ring-2 ring-primary/20">
+              <User className="h-5 w-5 text-primary-foreground" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">{vendedorNombre}</p>
-              <p className="text-xs text-muted-foreground">Vendedor</p>
+              <p className="font-semibold text-foreground truncate">{vendedorNombre}</p>
+              <p className="text-xs text-muted-foreground font-medium">Ejecutivo de Ventas</p>
             </div>
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        {/* Navegación */}
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Menú Principal</p>
           {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
               className={cn(
-                "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors",
+                "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200",
                 activeTab === item.id
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : "hover:bg-muted text-muted-foreground hover:text-foreground"
               )}
             >
-              <item.icon className="h-5 w-5" />
+              <item.icon className={cn("h-5 w-5", activeTab !== item.id && "text-muted-foreground")} />
               <span className="font-medium">{item.label}</span>
             </button>
           ))}
         </nav>
 
         {/* Logout */}
-        <div className="p-4 border-t">
+        <div className="p-3 border-t bg-muted/10">
           <Button 
             variant="ghost" 
-            className="w-full justify-start text-muted-foreground hover:text-foreground"
+            className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
             onClick={() => { sessionStorage.removeItem("vendedor_bienvenida_mostrado"); supabase.auth.signOut(); navigate("/auth"); }}
           >
             <LogOut className="h-5 w-5 mr-3" />
@@ -239,29 +236,29 @@ export default function VendedorPanel() {
         </div>
       </aside>
 
-      {/* Mobile Header */}
-      <header className="lg:hidden sticky top-0 z-50 bg-primary text-primary-foreground p-4 shadow-lg">
+      {/* Header móvil */}
+      <header className="lg:hidden sticky top-0 z-50 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground px-4 py-3 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <BarChart3 className="h-7 w-7" />
-            <div>
-              <h1 className="text-lg font-bold">ALMASA</h1>
-              <p className="text-xs opacity-90">{vendedorNombre}</p>
+            <img src={logoBlanco} alt="ALMASA" className="h-9 object-contain" />
+            <div className="border-l border-primary-foreground/30 pl-3">
+              <p className="text-sm font-medium opacity-95 truncate max-w-[150px]">{vendedorNombre}</p>
+              <p className="text-[10px] opacity-70 font-medium">Ejecutivo de Ventas</p>
             </div>
           </div>
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={() => { sessionStorage.removeItem("vendedor_bienvenida_mostrado"); supabase.auth.signOut(); navigate("/auth"); }} 
-            className="text-primary-foreground hover:bg-primary-foreground/20"
+            className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full"
           >
             <LogOut className="h-5 w-5" />
           </Button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 lg:ml-64">
+      {/* Contenido principal */}
+      <main className="flex-1 lg:ml-72">
         <div className="p-4 lg:p-8 pb-24 lg:pb-8">
           {/* Stats Dashboard - 5 KPIs */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4 mb-6">
