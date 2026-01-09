@@ -14,8 +14,8 @@ import {
   Clock, 
   ShoppingCart,
   Wallet,
-  X,
-  ArrowRight
+  ArrowRight,
+  Cake
 } from "lucide-react";
 
 interface Props {
@@ -49,6 +49,7 @@ export function VendedorBienvenidaDialog({
     pedidosPendientes: 0
   });
   const [loading, setLoading] = useState(true);
+  const [esCumpleanos, setEsCumpleanos] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -61,6 +62,22 @@ export function VendedorBienvenidaDialog({
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Verificar si es cumpleaños del vendedor
+      const { data: empleado } = await supabase
+        .from("empleados")
+        .select("fecha_nacimiento")
+        .eq("user_id", user.id)
+        .single();
+
+      if (empleado?.fecha_nacimiento) {
+        const hoy = new Date();
+        const fechaNac = new Date(empleado.fecha_nacimiento);
+        const esHoyCumple = 
+          hoy.getDate() === fechaNac.getUTCDate() && 
+          hoy.getMonth() === fechaNac.getUTCMonth();
+        setEsCumpleanos(esHoyCumple);
+      }
 
       // Obtener IDs de clientes del vendedor
       const { data: clientesIds } = await supabase
@@ -139,6 +156,13 @@ export function VendedorBienvenidaDialog({
     return "¡Buenas noches";
   };
 
+  const getTitulo = () => {
+    if (esCumpleanos) {
+      return "🎉 ¡Un día muy especial!";
+    }
+    return `👋 ${getSaludo()}, ${vendedorNombre}!`;
+  };
+
   const tieneAlertas = alertas.facturasVencidas > 0 || alertas.facturasPorVencer > 0 || alertas.pedidosPendientes > 0;
 
   return (
@@ -146,7 +170,7 @@ export function VendedorBienvenidaDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-xl flex items-center gap-2">
-            👋 {getSaludo()}, {vendedorNombre}!
+            {getTitulo()}
           </DialogTitle>
         </DialogHeader>
 
@@ -157,10 +181,46 @@ export function VendedorBienvenidaDialog({
             </div>
           ) : (
             <>
+              {/* Sección especial de cumpleaños */}
+              {esCumpleanos && (
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-pink-500/20 via-purple-500/20 to-indigo-500/20 border-2 border-pink-500/30 p-6 mb-2">
+                  {/* Efectos decorativos */}
+                  <div className="absolute -top-2 -right-2 text-4xl animate-bounce" style={{ animationDelay: "0.1s" }}>🎈</div>
+                  <div className="absolute -bottom-1 -left-1 text-3xl animate-bounce" style={{ animationDelay: "0.3s" }}>🎉</div>
+                  <div className="absolute top-1/2 -right-3 text-2xl animate-pulse">✨</div>
+                  <div className="absolute top-0 left-1/4 text-2xl animate-pulse" style={{ animationDelay: "0.5s" }}>🎊</div>
+                  
+                  <div className="text-center space-y-3 relative z-10">
+                    <div className="flex justify-center items-center gap-2">
+                      <Cake className="h-10 w-10 text-pink-500 animate-bounce" />
+                      <span className="text-5xl animate-bounce">🎂</span>
+                      <Cake className="h-10 w-10 text-purple-500 animate-bounce" style={{ animationDelay: "0.2s" }} />
+                    </div>
+                    <h2 className="text-2xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                      ¡Feliz Cumpleaños, {vendedorNombre}!
+                    </h2>
+                    <p className="text-muted-foreground text-sm">
+                      El equipo de <span className="font-semibold text-primary">ALMASA</span> te desea un día lleno de éxitos y felicidad 🎊
+                    </p>
+                    <div className="flex justify-center gap-1 pt-1">
+                      {["🌟", "💫", "⭐", "💫", "🌟"].map((emoji, i) => (
+                        <span 
+                          key={i} 
+                          className="text-lg animate-pulse" 
+                          style={{ animationDelay: `${i * 0.15}s` }}
+                        >
+                          {emoji}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <p className="text-muted-foreground">
-                {tieneAlertas 
-                  ? "Aquí tienes un resumen de pendientes importantes:"
-                  : "¡Excelente! No tienes pendientes urgentes hoy."}
+                {esCumpleanos 
+                  ? (tieneAlertas ? "Pero antes, aquí tienes un resumen de pendientes:" : "¡Y además, no tienes pendientes urgentes hoy!")
+                  : (tieneAlertas ? "Aquí tienes un resumen de pendientes importantes:" : "¡Excelente! No tienes pendientes urgentes hoy.")}
               </p>
 
               <div className="space-y-3">
