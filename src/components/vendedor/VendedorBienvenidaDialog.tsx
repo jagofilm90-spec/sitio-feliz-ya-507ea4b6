@@ -20,7 +20,8 @@ import {
   Package,
   TrendingUp,
   TrendingDown,
-  Sparkles
+  Sparkles,
+  Ban
 } from "lucide-react";
 
 interface Props {
@@ -48,6 +49,13 @@ interface CambioPrecio {
   created_at: string;
 }
 
+interface ProductoInhabilitado {
+  producto_id: string;
+  codigo: string;
+  nombre: string;
+  created_at: string;
+}
+
 interface Alertas {
   facturasVencidas: number;
   montoVencido: number;
@@ -56,6 +64,7 @@ interface Alertas {
   pedidosPendientes: number;
   productosNuevos: ProductoNuevo[];
   cambiosPrecios: CambioPrecio[];
+  productosInhabilitados: ProductoInhabilitado[];
 }
 
 export function VendedorBienvenidaDialog({ 
@@ -72,7 +81,8 @@ export function VendedorBienvenidaDialog({
     montoPorVencer: 0,
     pedidosPendientes: 0,
     productosNuevos: [],
-    cambiosPrecios: []
+    cambiosPrecios: [],
+    productosInhabilitados: []
   });
   const [loading, setLoading] = useState(true);
   const [esCumpleanos, setEsCumpleanos] = useState(false);
@@ -182,6 +192,19 @@ export function VendedorBienvenidaDialog({
         .order("created_at", { ascending: false })
         .limit(15);
 
+      // Productos inhabilitados (últimos 7 días)
+      const { data: productosInhabilitadosData } = await supabase
+        .from("productos_historial_estado")
+        .select(`
+          producto_id,
+          created_at,
+          productos(codigo, nombre)
+        `)
+        .eq("activo_nuevo", false)
+        .gte("created_at", hace7Dias.toISOString())
+        .order("created_at", { ascending: false })
+        .limit(10);
+
       // Transformar cambios de precios
       const cambiosPrecios: CambioPrecio[] = (cambiosPreciosData || [])
         .filter(c => c.productos)
@@ -194,6 +217,16 @@ export function VendedorBienvenidaDialog({
           created_at: c.created_at
         }));
 
+      // Transformar productos inhabilitados
+      const productosInhabilitados: ProductoInhabilitado[] = (productosInhabilitadosData || [])
+        .filter(p => p.productos)
+        .map(p => ({
+          producto_id: p.producto_id,
+          codigo: (p.productos as any).codigo || "",
+          nombre: (p.productos as any).nombre || "",
+          created_at: p.created_at
+        }));
+
       setAlertas({
         facturasVencidas,
         montoVencido,
@@ -201,7 +234,8 @@ export function VendedorBienvenidaDialog({
         montoPorVencer,
         pedidosPendientes: pedidosPendientesCount,
         productosNuevos: productosNuevos || [],
-        cambiosPrecios
+        cambiosPrecios,
+        productosInhabilitados
       });
     } catch (error) {
       console.error("Error fetching alertas:", error);
@@ -230,7 +264,7 @@ export function VendedorBienvenidaDialog({
   };
 
   const tieneAlertas = alertas.facturasVencidas > 0 || alertas.facturasPorVencer > 0 || alertas.pedidosPendientes > 0;
-  const tieneNovedadesProductos = alertas.productosNuevos.length > 0 || alertas.cambiosPrecios.length > 0;
+  const tieneNovedadesProductos = alertas.productosNuevos.length > 0 || alertas.cambiosPrecios.length > 0 || alertas.productosInhabilitados.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -372,6 +406,31 @@ export function VendedorBienvenidaDialog({
                           {alertas.cambiosPrecios.length > 5 && (
                             <p className="text-xs text-muted-foreground">
                               +{alertas.cambiosPrecios.length - 5} más...
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Productos inhabilitados */}
+                    {alertas.productosInhabilitados.length > 0 && (
+                      <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Ban className="h-4 w-4 text-red-600 dark:text-red-400" />
+                          <span className="font-medium text-red-700 dark:text-red-400 text-sm">
+                            {alertas.productosInhabilitados.length} producto{alertas.productosInhabilitados.length > 1 ? "s" : ""} descontinuado{alertas.productosInhabilitados.length > 1 ? "s" : ""}
+                          </span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {alertas.productosInhabilitados.slice(0, 5).map((producto) => (
+                            <div key={producto.producto_id} className="flex items-center gap-2 text-sm">
+                              <span className="text-muted-foreground font-mono text-xs">{producto.codigo}</span>
+                              <span className="truncate line-through text-muted-foreground">{producto.nombre}</span>
+                            </div>
+                          ))}
+                          {alertas.productosInhabilitados.length > 5 && (
+                            <p className="text-xs text-muted-foreground">
+                              +{alertas.productosInhabilitados.length - 5} más...
                             </p>
                           )}
                         </div>
