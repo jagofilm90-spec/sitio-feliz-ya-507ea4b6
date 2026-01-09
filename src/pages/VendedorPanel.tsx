@@ -6,13 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Users, ShoppingCart, BarChart3, CreditCard, LogOut, User, TrendingUp, Calendar, Percent } from "lucide-react";
+import { Users, ShoppingCart, BarChart3, CreditCard, LogOut, User, TrendingUp, Calendar, Percent, UserPlus, Wallet } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { VendedorMisClientesTab } from "@/components/vendedor/VendedorMisClientesTab";
 import { VendedorNuevoPedidoTab } from "@/components/vendedor/VendedorNuevoPedidoTab";
 import { VendedorMisVentasTab } from "@/components/vendedor/VendedorMisVentasTab";
 import { VendedorCobranzaTab } from "@/components/vendedor/VendedorCobranzaTab";
 import { VendedorComisionesTab } from "@/components/vendedor/VendedorComisionesTab";
+import { VendedorAltaClienteTab } from "@/components/vendedor/VendedorAltaClienteTab";
+import { VendedorSaldosTab } from "@/components/vendedor/VendedorSaldosTab";
+import { VendedorBienvenidaDialog } from "@/components/vendedor/VendedorBienvenidaDialog";
 import PushNotificationSetup from "@/components/PushNotificationSetup";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +25,7 @@ export default function VendedorPanel() {
   const [loading, setLoading] = useState(true);
   const [vendedorNombre, setVendedorNombre] = useState("");
   const [activeTab, setActiveTab] = useState("clientes");
+  const [showBienvenida, setShowBienvenida] = useState(false);
   const [stats, setStats] = useState({
     totalClientes: 0,
     ventasMes: 0,
@@ -40,6 +44,12 @@ export default function VendedorPanel() {
   useEffect(() => {
     if (!rolesLoading && (isVendedor || isAdmin)) {
       fetchDashboardData();
+      // Mostrar bienvenida solo una vez por sesión
+      const yaVisto = sessionStorage.getItem("vendedor_bienvenida_mostrado");
+      if (!yaVisto) {
+        setShowBienvenida(true);
+        sessionStorage.setItem("vendedor_bienvenida_mostrado", "true");
+      }
     }
   }, [rolesLoading, isVendedor, isAdmin]);
 
@@ -151,16 +161,25 @@ export default function VendedorPanel() {
   }
 
   const navItems = [
-    { id: "clientes", label: "Mis Clientes", icon: Users },
-    { id: "nuevo", label: "Nueva Venta", icon: ShoppingCart },
-    { id: "ventas", label: "Mis Ventas", icon: BarChart3 },
-    { id: "cobranza", label: "Cobranza", icon: CreditCard },
+    { id: "alta", label: "Alta Cliente", icon: UserPlus },
+    { id: "clientes", label: "Clientes", icon: Users },
+    { id: "nuevo", label: "Pedidos", icon: ShoppingCart },
+    { id: "saldos", label: "Saldos", icon: Wallet },
     { id: "comisiones", label: "Comisiones", icon: Percent },
   ];
 
   return (
     <div className="min-h-screen bg-background flex flex-col lg:flex-row">
       <PushNotificationSetup />
+      
+      {/* Dialog de Bienvenida */}
+      <VendedorBienvenidaDialog
+        open={showBienvenida}
+        onOpenChange={setShowBienvenida}
+        vendedorNombre={vendedorNombre}
+        onIrCobranza={() => setActiveTab("saldos")}
+        onIrPedidos={() => setActiveTab("nuevo")}
+      />
       
       {/* Sidebar for desktop/tablet */}
       <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 bg-card border-r">
@@ -321,10 +340,10 @@ export default function VendedorPanel() {
           <div className="hidden lg:block">
             <Card>
               <CardContent className="p-6">
+                {activeTab === "alta" && <VendedorAltaClienteTab onClienteCreado={fetchDashboardData} />}
                 {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
                 {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} />}
-                {activeTab === "ventas" && <VendedorMisVentasTab />}
-                {activeTab === "cobranza" && <VendedorCobranzaTab />}
+                {activeTab === "saldos" && <VendedorSaldosTab />}
                 {activeTab === "comisiones" && <VendedorComisionesTab />}
               </CardContent>
             </Card>
@@ -334,10 +353,10 @@ export default function VendedorPanel() {
       <div className="lg:hidden">
         {/* Content Area */}
         <div className="pb-24">
+          {activeTab === "alta" && <VendedorAltaClienteTab onClienteCreado={fetchDashboardData} />}
           {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
           {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} />}
-          {activeTab === "ventas" && <VendedorMisVentasTab />}
-          {activeTab === "cobranza" && <VendedorCobranzaTab />}
+          {activeTab === "saldos" && <VendedorSaldosTab />}
           {activeTab === "comisiones" && <VendedorComisionesTab />}
         </div>
 

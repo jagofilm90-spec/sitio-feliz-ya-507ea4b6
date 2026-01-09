@@ -91,6 +91,15 @@ const Auth = () => {
         return;
       }
 
+      // Solo vendedor -> panel vendedor
+      const isOnlyVendedor = roles.includes("vendedor") && 
+        !roles.includes("admin") && !roles.includes("secretaria");
+      if (isOnlyVendedor) {
+        console.log("Redirecting to /vendedor");
+        navigate("/vendedor", { replace: true });
+        return;
+      }
+
       navigate("/dashboard", { replace: true });
     } catch (error) {
       console.error("Error checking user role:", error);
