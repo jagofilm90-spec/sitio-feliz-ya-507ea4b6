@@ -15,6 +15,7 @@ import { VendedorCobranzaTab } from "@/components/vendedor/VendedorCobranzaTab";
 import { VendedorComisionesTab } from "@/components/vendedor/VendedorComisionesTab";
 import { VendedorAltaClienteTab } from "@/components/vendedor/VendedorAltaClienteTab";
 import { VendedorSaldosTab } from "@/components/vendedor/VendedorSaldosTab";
+import { VendedorVentasChart } from "@/components/vendedor/VendedorVentasChart";
 import { VendedorBienvenidaDialog } from "@/components/vendedor/VendedorBienvenidaDialog";
 import PushNotificationSetup from "@/components/PushNotificationSetup";
 import { cn } from "@/lib/utils";
@@ -351,6 +352,11 @@ export default function VendedorPanel() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Gráfica de Ventas del Mes */}
+          <div className="mb-6">
+            <VendedorVentasChart />
           </div>
 
           {/* Content Area - Desktop uses activeTab state */}
