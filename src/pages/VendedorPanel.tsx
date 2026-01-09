@@ -231,7 +231,7 @@ export default function VendedorPanel() {
           <Button 
             variant="ghost" 
             className="w-full justify-start text-muted-foreground hover:text-foreground"
-            onClick={() => { supabase.auth.signOut(); navigate("/auth"); }} 
+            onClick={() => { sessionStorage.removeItem("vendedor_bienvenida_mostrado"); supabase.auth.signOut(); navigate("/auth"); }}
           >
             <LogOut className="h-5 w-5 mr-3" />
             Cerrar sesión
@@ -252,7 +252,7 @@ export default function VendedorPanel() {
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={() => { supabase.auth.signOut(); navigate("/auth"); }} 
+            onClick={() => { sessionStorage.removeItem("vendedor_bienvenida_mostrado"); supabase.auth.signOut(); navigate("/auth"); }} 
             className="text-primary-foreground hover:bg-primary-foreground/20"
           >
             <LogOut className="h-5 w-5" />
