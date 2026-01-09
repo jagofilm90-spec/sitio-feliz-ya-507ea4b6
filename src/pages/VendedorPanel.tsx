@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Users, ShoppingCart, CreditCard, LogOut, User, TrendingUp, Calendar, Percent, UserPlus, Wallet } from "lucide-react";
+import { Users, ShoppingCart, CreditCard, LogOut, User, TrendingUp, Calendar, Percent, UserPlus, Wallet, IdCard } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { VendedorMisClientesTab } from "@/components/vendedor/VendedorMisClientesTab";
 import { VendedorNuevoPedidoTab } from "@/components/vendedor/VendedorNuevoPedidoTab";
@@ -200,6 +200,15 @@ export default function VendedorPanel() {
               <p className="font-semibold text-foreground truncate">{vendedorNombre}</p>
               <p className="text-xs text-muted-foreground font-medium">Ejecutivo de Ventas</p>
             </div>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => navigate("/tarjeta")}
+              className="shrink-0 hover:bg-primary/10"
+              title="Mi Tarjeta Digital"
+            >
+              <IdCard className="h-5 w-5 text-muted-foreground" />
+            </Button>
           </div>
         </div>
 
@@ -246,14 +255,25 @@ export default function VendedorPanel() {
               <p className="text-[10px] opacity-70 font-medium">Ejecutivo de Ventas</p>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => { sessionStorage.removeItem("vendedor_bienvenida_mostrado"); supabase.auth.signOut(); navigate("/auth"); }} 
-            className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full"
-          >
-            <LogOut className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate("/tarjeta")}
+              className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full"
+              title="Mi Tarjeta"
+            >
+              <IdCard className="h-5 w-5" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => { sessionStorage.removeItem("vendedor_bienvenida_mostrado"); supabase.auth.signOut(); navigate("/auth"); }} 
+              className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       </header>
 
