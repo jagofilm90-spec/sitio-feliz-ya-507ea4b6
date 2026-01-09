@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Users, ShoppingCart, CreditCard, LogOut, User, TrendingUp, Calendar, Percent, UserPlus, Wallet, IdCard } from "lucide-react";
+import { Users, ShoppingCart, CreditCard, LogOut, User, TrendingUp, Calendar, Percent, UserPlus, Wallet, IdCard, BarChart3 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { VendedorMisClientesTab } from "@/components/vendedor/VendedorMisClientesTab";
 import { VendedorNuevoPedidoTab } from "@/components/vendedor/VendedorNuevoPedidoTab";
@@ -15,7 +15,7 @@ import { VendedorCobranzaTab } from "@/components/vendedor/VendedorCobranzaTab";
 import { VendedorComisionesTab } from "@/components/vendedor/VendedorComisionesTab";
 import { VendedorAltaClienteTab } from "@/components/vendedor/VendedorAltaClienteTab";
 import { VendedorSaldosTab } from "@/components/vendedor/VendedorSaldosTab";
-import { VendedorVentasChart } from "@/components/vendedor/VendedorVentasChart";
+
 import { VendedorBienvenidaDialog } from "@/components/vendedor/VendedorBienvenidaDialog";
 import PushNotificationSetup from "@/components/PushNotificationSetup";
 import { cn } from "@/lib/utils";
@@ -169,6 +169,7 @@ export default function VendedorPanel() {
     { id: "nuevo", label: "Pedidos", icon: ShoppingCart },
     { id: "saldos", label: "Saldos", icon: Wallet },
     { id: "comisiones", label: "Comisiones", icon: Percent },
+    { id: "analisis", label: "Análisis", icon: BarChart3, isLink: true, href: "/vendedor/analisis" },
   ];
 
   return (
@@ -219,10 +220,10 @@ export default function VendedorPanel() {
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => item.isLink ? navigate(item.href!) : setActiveTab(item.id)}
               className={cn(
                 "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200",
-                activeTab === item.id
+                activeTab === item.id && !item.isLink
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : "hover:bg-muted text-muted-foreground hover:text-foreground"
               )}
@@ -354,10 +355,6 @@ export default function VendedorPanel() {
             </Card>
           </div>
 
-          {/* Gráfica de Ventas del Mes */}
-          <div className="mb-6">
-            <VendedorVentasChart />
-          </div>
 
           {/* Content Area - Desktop uses activeTab state */}
           <div className="hidden lg:block">
@@ -385,19 +382,19 @@ export default function VendedorPanel() {
 
         {/* Fixed Bottom Navigation */}
         <nav className="fixed bottom-0 left-0 right-0 bg-background border-t safe-area-bottom z-50">
-          <div className="grid grid-cols-5">
+          <div className="grid grid-cols-6">
             {navItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => item.isLink ? navigate(item.href!) : setActiveTab(item.id)}
                 className={cn(
                   "flex flex-col items-center justify-center py-3 px-2 transition-colors min-h-[64px]",
-                  activeTab === item.id
+                  activeTab === item.id && !item.isLink
                     ? "text-primary bg-primary/10"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
               >
-                <item.icon className={cn("h-6 w-6 mb-1", activeTab === item.id && "text-primary")} />
+                <item.icon className={cn("h-6 w-6 mb-1", activeTab === item.id && !item.isLink && "text-primary")} />
                 <span className="text-xs font-medium truncate max-w-full">
                   {item.label.split(" ")[0]}
                 </span>

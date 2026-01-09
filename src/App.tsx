@@ -32,6 +32,7 @@ import Respaldos from "./pages/Respaldos";
 import AlmacenTablet from "./pages/AlmacenTablet";
 import ChoferPanel from "./pages/ChoferPanel";
 import VendedorPanel from "./pages/VendedorPanel";
+import VendedorAnalisisVentas from "./pages/VendedorAnalisisVentas";
 import AppMobileGuide from "./pages/AppMobileGuide";
 import TestFirma from "./pages/TestFirma";
 
@@ -115,6 +116,7 @@ const App = () => (
               <Route path="/almacen-tablet" element={<AlmacenTablet />} />
               <Route path="/chofer" element={<ChoferPanel />} />
               <Route path="/vendedor" element={<VendedorPanel />} />
+              <Route path="/vendedor/analisis" element={<VendedorAnalisisVentas />} />
               <Route path="/app-mobile" element={<AppMobileGuide />} />
               <Route path="/test-firma" element={<TestFirma />} />
               <Route path="/test-firma" element={<TestFirma />} />
