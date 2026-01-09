@@ -5,8 +5,9 @@ import { useUserRoles } from "@/hooks/useUserRoles";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Users, ShoppingCart, CreditCard, LogOut, User, TrendingUp, Calendar, Percent, UserPlus, Wallet, IdCard, BarChart3, List } from "lucide-react";
+import { Users, ShoppingCart, CreditCard, LogOut, User, TrendingUp, Calendar, Percent, UserPlus, Wallet, IdCard, BarChart3, List, Sparkles } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { VendedorMisClientesTab } from "@/components/vendedor/VendedorMisClientesTab";
 import { VendedorNuevoPedidoTab } from "@/components/vendedor/VendedorNuevoPedidoTab";
@@ -16,6 +17,7 @@ import { VendedorComisionesTab } from "@/components/vendedor/VendedorComisionesT
 import { VendedorAltaClienteTab } from "@/components/vendedor/VendedorAltaClienteTab";
 import { VendedorSaldosTab } from "@/components/vendedor/VendedorSaldosTab";
 import { VendedorListaPreciosTab } from "@/components/vendedor/VendedorListaPreciosTab";
+import { VendedorNovedadesTab } from "@/components/vendedor/VendedorNovedadesTab";
 
 import { VendedorBienvenidaDialog } from "@/components/vendedor/VendedorBienvenidaDialog";
 import PushNotificationSetup from "@/components/PushNotificationSetup";
@@ -37,6 +39,7 @@ export default function VendedorPanel() {
     porCobrar: 0,
     vencido: 0
   });
+  const [novedadesCount, setNovedadesCount] = useState(0);
 
   useEffect(() => {
     if (!rolesLoading && !isVendedor && !isAdmin) {
@@ -48,6 +51,7 @@ export default function VendedorPanel() {
   useEffect(() => {
     if (!rolesLoading && (isVendedor || isAdmin)) {
       fetchDashboardData();
+      fetchNovedadesCount();
       // Mostrar bienvenida solo una vez por sesión
       const yaVisto = sessionStorage.getItem("vendedor_bienvenida_mostrado");
       if (!yaVisto) {
@@ -56,6 +60,38 @@ export default function VendedorPanel() {
       }
     }
   }, [rolesLoading, isVendedor, isAdmin]);
+
+  const fetchNovedadesCount = async () => {
+    try {
+      const hace48Horas = new Date();
+      hace48Horas.setHours(hace48Horas.getHours() - 48);
+
+      // Contar productos nuevos
+      const { count: nuevos } = await supabase
+        .from("productos")
+        .select("id", { count: "exact", head: true })
+        .eq("activo", true)
+        .or("solo_uso_interno.is.null,solo_uso_interno.eq.false")
+        .gte("created_at", hace48Horas.toISOString());
+
+      // Contar cambios de precio
+      const { count: precios } = await supabase
+        .from("productos_historial_precios")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", hace48Horas.toISOString());
+
+      // Contar productos inhabilitados
+      const { count: inhabilitados } = await supabase
+        .from("productos_historial_estado")
+        .select("id", { count: "exact", head: true })
+        .eq("activo_nuevo", false)
+        .gte("created_at", hace48Horas.toISOString());
+
+      setNovedadesCount((nuevos || 0) + (precios || 0) + (inhabilitados || 0));
+    } catch (error) {
+      console.error("Error fetching novedades count:", error);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -168,6 +204,7 @@ export default function VendedorPanel() {
     { id: "alta", label: "Alta Cliente", icon: UserPlus },
     { id: "clientes", label: "Clientes", icon: Users },
     { id: "nuevo", label: "Pedidos", icon: ShoppingCart },
+    { id: "novedades", label: "Novedades", icon: Sparkles, badge: novedadesCount },
     { id: "precios", label: "Precios", icon: List },
     { id: "saldos", label: "Saldos", icon: Wallet },
     { id: "comisiones", label: "Comisiones", icon: Percent },
@@ -230,8 +267,20 @@ export default function VendedorPanel() {
                   : "hover:bg-muted text-muted-foreground hover:text-foreground"
               )}
             >
-              <item.icon className={cn("h-5 w-5", activeTab !== item.id && "text-muted-foreground")} />
+              <div className="relative">
+                <item.icon className={cn("h-5 w-5", activeTab !== item.id && "text-muted-foreground")} />
+                {item.badge && item.badge > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 h-4 w-4 flex items-center justify-center bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full">
+                    {item.badge > 9 ? "9+" : item.badge}
+                  </span>
+                )}
+              </div>
               <span className="font-medium">{item.label}</span>
+              {item.badge && item.badge > 0 && activeTab !== item.id && (
+                <Badge variant="secondary" className="ml-auto text-xs">
+                  {item.badge}
+                </Badge>
+              )}
             </button>
           ))}
         </nav>
@@ -365,6 +414,7 @@ export default function VendedorPanel() {
                 {activeTab === "alta" && <VendedorAltaClienteTab onClienteCreado={fetchDashboardData} />}
                 {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
                 {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} />}
+                {activeTab === "novedades" && <VendedorNovedadesTab />}
                 {activeTab === "precios" && <VendedorListaPreciosTab />}
                 {activeTab === "saldos" && <VendedorSaldosTab />}
                 {activeTab === "comisiones" && <VendedorComisionesTab />}
@@ -379,6 +429,7 @@ export default function VendedorPanel() {
           {activeTab === "alta" && <VendedorAltaClienteTab onClienteCreado={fetchDashboardData} />}
           {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
           {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} />}
+          {activeTab === "novedades" && <VendedorNovedadesTab />}
           {activeTab === "precios" && <VendedorListaPreciosTab />}
           {activeTab === "saldos" && <VendedorSaldosTab />}
           {activeTab === "comisiones" && <VendedorComisionesTab />}
@@ -386,21 +437,28 @@ export default function VendedorPanel() {
 
         {/* Fixed Bottom Navigation */}
         <nav className="fixed bottom-0 left-0 right-0 bg-background border-t safe-area-bottom z-50">
-          <div className="grid grid-cols-6">
-            {navItems.map((item) => (
+          <div className="grid grid-cols-7">
+            {navItems.filter(item => !item.isLink).map((item) => (
               <button
                 key={item.id}
-                onClick={() => item.isLink ? navigate(item.href!) : setActiveTab(item.id)}
+                onClick={() => setActiveTab(item.id)}
                 className={cn(
-                  "flex flex-col items-center justify-center py-3 px-2 transition-colors min-h-[64px]",
-                  activeTab === item.id && !item.isLink
+                  "flex flex-col items-center justify-center py-2 px-1 transition-colors min-h-[60px] relative",
+                  activeTab === item.id
                     ? "text-primary bg-primary/10"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
               >
-                <item.icon className={cn("h-6 w-6 mb-1", activeTab === item.id && !item.isLink && "text-primary")} />
-                <span className="text-xs font-medium truncate max-w-full">
-                  {item.label.split(" ")[0]}
+                <div className="relative">
+                  <item.icon className={cn("h-5 w-5 mb-0.5", activeTab === item.id && "text-primary")} />
+                  {item.badge && item.badge > 0 && (
+                    <span className="absolute -top-1 -right-1.5 h-3.5 w-3.5 flex items-center justify-center bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full">
+                      {item.badge > 9 ? "+" : item.badge}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] font-medium truncate max-w-full">
+                  {item.id === "novedades" ? "Nuevo" : item.label.split(" ")[0]}
                 </span>
               </button>
             ))}
