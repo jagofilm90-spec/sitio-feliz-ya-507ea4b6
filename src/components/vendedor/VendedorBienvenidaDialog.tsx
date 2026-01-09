@@ -115,9 +115,9 @@ export function VendedorBienvenidaDialog({
         setEsCumpleanos(esHoyCumple);
       }
 
-      // Fecha de hace 7 días
-      const hace7Dias = new Date();
-      hace7Dias.setDate(hace7Dias.getDate() - 7);
+      // Fecha de hace 24 horas (cada novedad dura 24h desde el cambio)
+      const hace24Horas = new Date();
+      hace24Horas.setHours(hace24Horas.getHours() - 24);
 
       // Obtener IDs de clientes del vendedor
       const { data: clientesIds } = await supabase
@@ -168,17 +168,17 @@ export function VendedorBienvenidaDialog({
         pedidosPendientesCount = count || 0;
       }
 
-      // Productos nuevos (últimos 7 días) - independiente de clientes
+      // Productos nuevos (últimas 24 horas) - independiente de clientes
       const { data: productosNuevos } = await supabase
         .from("productos")
         .select("id, codigo, nombre, precio_venta, created_at")
         .eq("activo", true)
         .or("solo_uso_interno.is.null,solo_uso_interno.eq.false")
-        .gte("created_at", hace7Dias.toISOString())
+        .gte("created_at", hace24Horas.toISOString())
         .order("created_at", { ascending: false })
         .limit(10);
 
-      // Cambios de precio (últimos 7 días)
+      // Cambios de precio (últimas 24 horas)
       const { data: cambiosPreciosData } = await supabase
         .from("productos_historial_precios")
         .select(`
@@ -188,11 +188,11 @@ export function VendedorBienvenidaDialog({
           created_at,
           productos(codigo, nombre)
         `)
-        .gte("created_at", hace7Dias.toISOString())
+        .gte("created_at", hace24Horas.toISOString())
         .order("created_at", { ascending: false })
         .limit(15);
 
-      // Productos inhabilitados (últimos 7 días)
+      // Productos inhabilitados (últimas 24 horas)
       const { data: productosInhabilitadosData } = await supabase
         .from("productos_historial_estado")
         .select(`
@@ -201,7 +201,7 @@ export function VendedorBienvenidaDialog({
           productos(codigo, nombre)
         `)
         .eq("activo_nuevo", false)
-        .gte("created_at", hace7Dias.toISOString())
+        .gte("created_at", hace24Horas.toISOString())
         .order("created_at", { ascending: false })
         .limit(10);
 
@@ -324,7 +324,7 @@ export function VendedorBienvenidaDialog({
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <Sparkles className="h-4 w-4 text-primary" />
-                      <h3 className="font-semibold text-sm">Novedades en Productos (últimos 7 días)</h3>
+                      <h3 className="font-semibold text-sm">Novedades en Productos (últimas 24 horas)</h3>
                     </div>
 
                     {/* Productos nuevos */}
