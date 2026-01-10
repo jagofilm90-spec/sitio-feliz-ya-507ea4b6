@@ -1080,6 +1080,7 @@ const Productos = () => {
                   <TableHead>Presentación</TableHead>
                   <TableHead>Unidad</TableHead>
                   <TableHead>Precio</TableHead>
+                  <TableHead>Desc. Máx</TableHead>
                   <TableHead>Stock</TableHead>
                   <TableHead>Acciones</TableHead>
                 </TableRow>
@@ -1087,13 +1088,13 @@ const Productos = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center">
+                    <TableCell colSpan={9} className="text-center">
                       Cargando...
                     </TableCell>
                   </TableRow>
                 ) : filteredProductos.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center">
+                    <TableCell colSpan={9} className="text-center">
                       No hay productos registrados
                     </TableCell>
                   </TableRow>
@@ -1132,6 +1133,15 @@ const Productos = () => {
                         <TableCell>{producto.presentacion ? `${producto.presentacion} kg` : "-"}</TableCell>
                         <TableCell className="uppercase">{producto.unidad}</TableCell>
                         <TableCell className="font-medium">{precioMostrar}</TableCell>
+                        <TableCell>
+                          {producto.descuento_maximo && producto.descuento_maximo > 0 ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950/50 dark:text-green-400 dark:border-green-800">
+                              -${producto.descuento_maximo.toFixed(2)}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <div className="space-y-2">
                             {producto.stock_actual === 0 ? (
