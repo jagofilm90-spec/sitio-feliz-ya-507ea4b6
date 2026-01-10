@@ -3531,6 +3531,7 @@ export type Database = {
           codigo_sat: string | null
           created_at: string
           descripcion: string | null
+          descuento_maximo: number | null
           fecha_ultima_compra: string | null
           fecha_ultima_fumigacion: string | null
           id: string
@@ -3561,6 +3562,7 @@ export type Database = {
           codigo_sat?: string | null
           created_at?: string
           descripcion?: string | null
+          descuento_maximo?: number | null
           fecha_ultima_compra?: string | null
           fecha_ultima_fumigacion?: string | null
           id?: string
@@ -3591,6 +3593,7 @@ export type Database = {
           codigo_sat?: string | null
           created_at?: string
           descripcion?: string | null
+          descuento_maximo?: number | null
           fecha_ultima_compra?: string | null
           fecha_ultima_fumigacion?: string | null
           id?: string
@@ -4415,6 +4418,108 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      solicitudes_descuento: {
+        Row: {
+          cantidad_solicitada: number | null
+          cliente_id: string
+          created_at: string | null
+          descuento_maximo: number
+          descuento_solicitado: number
+          id: string
+          motivo: string | null
+          pedido_id: string | null
+          precio_aprobado: number | null
+          precio_lista: number
+          precio_solicitado: number
+          producto_id: string
+          respondido_at: string | null
+          respondido_por: string | null
+          respuesta_notas: string | null
+          status: string | null
+          sucursal_id: string | null
+          updated_at: string | null
+          vendedor_id: string
+        }
+        Insert: {
+          cantidad_solicitada?: number | null
+          cliente_id: string
+          created_at?: string | null
+          descuento_maximo: number
+          descuento_solicitado: number
+          id?: string
+          motivo?: string | null
+          pedido_id?: string | null
+          precio_aprobado?: number | null
+          precio_lista: number
+          precio_solicitado: number
+          producto_id: string
+          respondido_at?: string | null
+          respondido_por?: string | null
+          respuesta_notas?: string | null
+          status?: string | null
+          sucursal_id?: string | null
+          updated_at?: string | null
+          vendedor_id: string
+        }
+        Update: {
+          cantidad_solicitada?: number | null
+          cliente_id?: string
+          created_at?: string | null
+          descuento_maximo?: number
+          descuento_solicitado?: number
+          id?: string
+          motivo?: string | null
+          pedido_id?: string | null
+          precio_aprobado?: number | null
+          precio_lista?: number
+          precio_solicitado?: number
+          producto_id?: string
+          respondido_at?: string | null
+          respondido_por?: string | null
+          respuesta_notas?: string | null
+          status?: string | null
+          sucursal_id?: string | null
+          updated_at?: string | null
+          vendedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitudes_descuento_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitudes_descuento_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitudes_descuento_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitudes_descuento_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitudes_descuento_sucursal_id_fkey"
+            columns: ["sucursal_id"]
+            isOneToOne: false
+            referencedRelation: "cliente_sucursales"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       solicitudes_venta_mostrador: {
         Row: {
