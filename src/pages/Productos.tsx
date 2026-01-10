@@ -219,6 +219,7 @@ const Productos = () => {
     piezas_por_unidad: string;
     precio_venta: string;
     precio_compra: string;
+    descuento_maximo: string;
     stock_minimo: string;
     maneja_caducidad: boolean;
     aplica_iva: boolean;
@@ -243,6 +244,7 @@ const Productos = () => {
     piezas_por_unidad: "1",
     precio_venta: "",
     precio_compra: "",
+    descuento_maximo: "0",
     stock_minimo: "",
     maneja_caducidad: false,
     aplica_iva: false,
@@ -332,6 +334,7 @@ const Productos = () => {
         piezas_por_unidad: formData.piezas_por_unidad ? parseInt(formData.piezas_por_unidad) : 1,
         precio_venta: parseFloat(formData.precio_venta),
         precio_compra: parseFloat(formData.precio_compra) || 0,
+        descuento_maximo: parseFloat(formData.descuento_maximo) || 0,
         stock_minimo: parseInt(formData.stock_minimo),
         maneja_caducidad: formData.maneja_caducidad,
         aplica_iva: formData.aplica_iva,
@@ -462,6 +465,7 @@ const Productos = () => {
       piezas_por_unidad: product.piezas_por_unidad?.toString() || "1",
       precio_venta: product.precio_venta.toString(),
       precio_compra: product.precio_compra.toString(),
+      descuento_maximo: product.descuento_maximo?.toString() || "0",
       stock_minimo: product.stock_minimo.toString(),
       maneja_caducidad: product.maneja_caducidad,
       aplica_iva: product.aplica_iva || false,
@@ -516,6 +520,7 @@ const Productos = () => {
       piezas_por_unidad: "1",
       precio_venta: "",
       precio_compra: "",
+      descuento_maximo: "0",
       stock_minimo: "",
       maneja_caducidad: false,
       aplica_iva: false,
@@ -880,6 +885,36 @@ const Productos = () => {
                       autoComplete="off"
                     />
                   </div>
+                </div>
+                
+                {/* Descuento Máximo Autorizado */}
+                <div className="space-y-2 p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-medium text-green-800 dark:text-green-300">💰 Descuento para Vendedores</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 items-end">
+                    <div className="space-y-2">
+                      <Label htmlFor="descuento_maximo">Descuento Máximo Autorizado ($)</Label>
+                      <Input
+                        id="descuento_maximo"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.descuento_maximo}
+                        onChange={(e) => setFormData({ ...formData, descuento_maximo: e.target.value })}
+                        placeholder="0.00"
+                        autoComplete="off"
+                      />
+                    </div>
+                    {parseFloat(formData.precio_venta) > 0 && parseFloat(formData.descuento_maximo) > 0 && (
+                      <div className="text-sm text-green-700 dark:text-green-400">
+                        Precio mínimo sin autorización: <strong>${(parseFloat(formData.precio_venta) - parseFloat(formData.descuento_maximo)).toFixed(2)}</strong>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-green-700 dark:text-green-400 mt-2">
+                    ℹ️ El vendedor puede aplicar descuentos hasta este monto sin necesitar autorización adicional.
+                  </p>
                 </div>
                 <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
                   <div className="flex items-center space-x-2">
