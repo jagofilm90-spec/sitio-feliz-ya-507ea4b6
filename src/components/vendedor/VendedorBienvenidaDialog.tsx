@@ -206,7 +206,7 @@ export function VendedorBienvenidaDialog({
         .limit(10);
 
       // Transformar cambios de precios
-      const cambiosPrecios: CambioPrecio[] = (cambiosPreciosData || [])
+      const cambiosPreciosRaw: CambioPrecio[] = (cambiosPreciosData || [])
         .filter(c => c.productos)
         .map(c => ({
           producto_id: c.producto_id,
@@ -216,6 +216,20 @@ export function VendedorBienvenidaDialog({
           precio_nuevo: c.precio_nuevo,
           created_at: c.created_at
         }));
+
+      // Filtrar para obtener solo el último cambio por producto
+      const obtenerUltimoCambioPorProducto = (cambios: CambioPrecio[]): CambioPrecio[] => {
+        const ultimoPorProducto = new Map<string, CambioPrecio>();
+        // Ya vienen ordenados por fecha descendente de la consulta
+        cambios.forEach(cambio => {
+          if (!ultimoPorProducto.has(cambio.producto_id)) {
+            ultimoPorProducto.set(cambio.producto_id, cambio);
+          }
+        });
+        return Array.from(ultimoPorProducto.values());
+      };
+
+      const cambiosPrecios = obtenerUltimoCambioPorProducto(cambiosPreciosRaw);
 
       // Transformar productos inhabilitados
       const productosInhabilitados: ProductoInhabilitado[] = (productosInhabilitadosData || [])
