@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Package, Users, ShoppingCart, TrendingUp, AlertTriangle, DollarSign, Loader2 } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { NotificacionesSistema } from "@/components/NotificacionesSistema";
+import { SolicitudesDescuentoPanel } from "@/components/admin/SolicitudesDescuentoPanel";
 import { useUserRoles } from "@/hooks/useUserRoles";
 
 const Dashboard = () => {
@@ -252,6 +253,9 @@ const Dashboard = () => {
         </div>
 
         <NotificacionesSistema />
+
+        {/* Panel de Solicitudes de Descuento */}
+        <SolicitudesDescuentoPanel />
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

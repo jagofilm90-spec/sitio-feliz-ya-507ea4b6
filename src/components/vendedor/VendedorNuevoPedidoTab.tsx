@@ -9,7 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Search, Plus, Minus, ShoppingCart, Trash2, Loader2, Package, Store } from "lucide-react";
+import { 
+  Search, Plus, Minus, ShoppingCart, Trash2, Loader2, Package, Store, 
+  AlertTriangle, Percent, Lock, Send, Clock 
+} from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { calcularDesgloseImpuestos, redondear, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
 import { format, addDays, isWeekend } from "date-fns";
@@ -21,6 +24,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { SolicitudDescuentoDialog } from "./SolicitudDescuentoDialog";
 
 interface Props {
   onPedidoCreado: () => void;
@@ -51,13 +61,19 @@ interface Producto {
   kg_por_unidad: number | null;
   precio_por_kilo: boolean;
   presentacion: string | null;
+  descuento_maximo: number;
 }
 
 interface LineaPedido {
   producto: Producto;
   cantidad: number;
+  precioLista: number;
   precioUnitario: number;
+  descuento: number;
   subtotal: number;
+  requiereAutorizacion: boolean;
+  autorizacionStatus?: 'pendiente' | 'aprobado' | 'rechazado' | null;
+  solicitudId?: string;
 }
 
 export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
@@ -74,6 +90,18 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
   const [lineas, setLineas] = useState<LineaPedido[]>([]);
   const [fechaEntrega, setFechaEntrega] = useState("");
   const [notas, setNotas] = useState("");
+
+  // Discount authorization dialog
+  const [solicitudDialogOpen, setSolicitudDialogOpen] = useState(false);
+  const [productoParaSolicitud, setProductoParaSolicitud] = useState<{
+    id: string;
+    codigo: string;
+    nombre: string;
+    precioLista: number;
+    descuentoMaximo: number;
+    precioSolicitado: number;
+    cantidad: number;
+  } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -104,10 +132,10 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
 
       setClientes(clientesData || []);
 
-      // Fetch products
+      // Fetch products with descuento_maximo
       const { data: productosData } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, unidad, precio_venta, stock_actual, aplica_iva, aplica_ieps, kg_por_unidad, precio_por_kilo, presentacion")
+        .select("id, codigo, nombre, unidad, precio_venta, stock_actual, aplica_iva, aplica_ieps, kg_por_unidad, precio_por_kilo, presentacion, descuento_maximo")
         .eq("activo", true)
         .gt("stock_actual", 0)
         .order("nombre");
@@ -168,8 +196,11 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
     setLineas([...lineas, {
       producto,
       cantidad: 1,
+      precioLista: precio,
       precioUnitario: precio,
-      subtotal: precio
+      descuento: 0,
+      subtotal: precio,
+      requiereAutorizacion: false,
     }]);
     setSearchTerm("");
   };
@@ -185,6 +216,67 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
         ? { ...l, cantidad, subtotal: l.precioUnitario * cantidad }
         : l
     ));
+  };
+
+  const actualizarDescuento = (productoId: string, descuento: number) => {
+    setLineas(lineas.map(l => {
+      if (l.producto.id !== productoId) return l;
+      
+      const descuentoMaximo = l.producto.descuento_maximo || 0;
+      const nuevoPrecio = l.precioLista - descuento;
+      const requiereAutorizacion = descuento > descuentoMaximo;
+      
+      return {
+        ...l,
+        descuento,
+        precioUnitario: nuevoPrecio,
+        subtotal: nuevoPrecio * l.cantidad,
+        requiereAutorizacion,
+        // Clear authorization if descuento is now within limits
+        autorizacionStatus: requiereAutorizacion ? l.autorizacionStatus : null,
+        solicitudId: requiereAutorizacion ? l.solicitudId : undefined,
+      };
+    }));
+  };
+
+  const handleSolicitarAutorizacion = (linea: LineaPedido) => {
+    setProductoParaSolicitud({
+      id: linea.producto.id,
+      codigo: linea.producto.codigo,
+      nombre: linea.producto.nombre,
+      precioLista: linea.precioLista,
+      descuentoMaximo: linea.producto.descuento_maximo || 0,
+      precioSolicitado: linea.precioUnitario,
+      cantidad: linea.cantidad,
+    });
+    setSolicitudDialogOpen(true);
+  };
+
+  const handleAutorizacionAprobada = (productoId: string, precioAprobado: number) => {
+    setLineas(lineas.map(l => {
+      if (l.producto.id !== productoId) return l;
+      return {
+        ...l,
+        precioUnitario: precioAprobado,
+        descuento: l.precioLista - precioAprobado,
+        subtotal: precioAprobado * l.cantidad,
+        requiereAutorizacion: false,
+        autorizacionStatus: 'aprobado',
+      };
+    }));
+  };
+
+  const marcarParaRevision = (productoId: string) => {
+    setLineas(lineas.map(l => {
+      if (l.producto.id !== productoId) return l;
+      return {
+        ...l,
+        autorizacionStatus: 'pendiente',
+      };
+    }));
+    toast.info("Producto marcado para revisión de precio", {
+      description: "El administrador revisará este descuento al autorizar el pedido",
+    });
   };
 
   const calcularTotales = () => {
@@ -232,6 +324,18 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
       return;
     }
 
+    // Check for unauthorized discounts
+    const productosConDescuentoNoAutorizado = lineas.filter(
+      l => l.requiereAutorizacion && l.autorizacionStatus !== 'aprobado' && l.autorizacionStatus !== 'pendiente'
+    );
+
+    if (productosConDescuentoNoAutorizado.length > 0) {
+      toast.error("Hay productos con descuentos no autorizados", {
+        description: "Solicita autorización o marca para revisión",
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -266,7 +370,11 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
         producto_id: l.producto.id,
         cantidad: l.cantidad,
         precio_unitario: l.precioUnitario,
-        subtotal: l.subtotal
+        subtotal: l.subtotal,
+        // Store discount info for admin review
+        notas: l.descuento > 0 
+          ? `Descuento: ${formatCurrency(l.descuento)} (máx: ${formatCurrency(l.producto.descuento_maximo || 0)})${l.autorizacionStatus === 'pendiente' ? ' [PENDIENTE REVISIÓN]' : l.autorizacionStatus === 'aprobado' ? ' [APROBADO]' : ''}`
+          : null
       }));
 
       const { error: detallesError } = await supabase
@@ -305,234 +413,400 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
 
   const totales = calcularTotales();
   const selectedCliente = clientes.find(c => c.id === selectedClienteId);
+  const tieneDescuentosPendientes = lineas.some(
+    l => l.requiereAutorizacion && l.autorizacionStatus !== 'aprobado'
+  );
 
   return (
-    <div className="space-y-6">
-      {/* Client Selection - Larger */}
-      <div className="space-y-2">
-        <Label className="text-base flex items-center gap-2">
-          <Store className="h-4 w-4" />
-          Cliente *
-        </Label>
-        <Select value={selectedClienteId} onValueChange={setSelectedClienteId}>
-          <SelectTrigger className="h-14 text-lg">
-            <SelectValue placeholder="Seleccionar cliente" />
-          </SelectTrigger>
-          <SelectContent>
-            {clientes.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground">
-                No tienes clientes asignados
-              </div>
-            ) : (
-              clientes.map((cliente) => (
-                <SelectItem key={cliente.id} value={cliente.id} className="text-base py-3">
-                  <div className="flex items-center justify-between w-full gap-4">
-                    <span>{cliente.nombre}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {cliente.termino_credito === 'contado' ? 'Contado' : cliente.termino_credito.replace('_', ' ')}
-                    </Badge>
-                  </div>
-                </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
-        {selectedCliente && (
-          <p className="text-sm text-muted-foreground">
-            Crédito: {selectedCliente.termino_credito === 'contado' ? 'Contado' : selectedCliente.termino_credito.replace('_', ' ')}
-          </p>
-        )}
-      </div>
-
-      {/* Branch Selection - Larger */}
-      {sucursales.length > 0 && (
+    <TooltipProvider>
+      <div className="space-y-6">
+        {/* Client Selection - Larger */}
         <div className="space-y-2">
-          <Label className="text-base">Sucursal de entrega *</Label>
-          <Select value={selectedSucursalId} onValueChange={setSelectedSucursalId}>
+          <Label className="text-base flex items-center gap-2">
+            <Store className="h-4 w-4" />
+            Cliente *
+          </Label>
+          <Select value={selectedClienteId} onValueChange={setSelectedClienteId}>
             <SelectTrigger className="h-14 text-lg">
-              <SelectValue placeholder="Seleccionar sucursal" />
+              <SelectValue placeholder="Seleccionar cliente" />
             </SelectTrigger>
             <SelectContent>
-              {sucursales.map((sucursal) => (
-                <SelectItem key={sucursal.id} value={sucursal.id} className="text-base py-3">
-                  <div>
-                    <span className="font-medium">{sucursal.nombre}</span>
-                    {sucursal.direccion && (
-                      <span className="text-muted-foreground"> - {sucursal.direccion}</span>
-                    )}
-                  </div>
+              {clientes.length === 0 ? (
+                <div className="p-4 text-center text-muted-foreground">
+                  No tienes clientes asignados
+                </div>
+              ) : (
+                clientes.map((cliente) => (
+                  <SelectItem key={cliente.id} value={cliente.id} className="text-base py-3">
+                    <div className="flex items-center justify-between w-full gap-4">
+                      <span>{cliente.nombre}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {cliente.termino_credito === 'contado' ? 'Contado' : cliente.termino_credito.replace('_', ' ')}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+          {selectedCliente && (
+            <p className="text-sm text-muted-foreground">
+              Crédito: {selectedCliente.termino_credito === 'contado' ? 'Contado' : selectedCliente.termino_credito.replace('_', ' ')}
+            </p>
+          )}
+        </div>
+
+        {/* Branch Selection - Larger */}
+        {sucursales.length > 0 && (
+          <div className="space-y-2">
+            <Label className="text-base">Sucursal de entrega *</Label>
+            <Select value={selectedSucursalId} onValueChange={setSelectedSucursalId}>
+              <SelectTrigger className="h-14 text-lg">
+                <SelectValue placeholder="Seleccionar sucursal" />
+              </SelectTrigger>
+              <SelectContent>
+                {sucursales.map((sucursal) => (
+                  <SelectItem key={sucursal.id} value={sucursal.id} className="text-base py-3">
+                    <div>
+                      <span className="font-medium">{sucursal.nombre}</span>
+                      {sucursal.direccion && (
+                        <span className="text-muted-foreground"> - {sucursal.direccion}</span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Product Search - Larger */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Productos
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                placeholder="Buscar producto por nombre o código..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-12 h-14 text-lg"
+              />
+            </div>
+
+            {/* Search Results */}
+            {searchTerm && (
+              <ScrollArea className="h-48 border rounded-lg">
+                <div className="p-2 space-y-1">
+                  {productosFiltrados.slice(0, 10).map((producto) => (
+                    <div
+                      key={producto.id}
+                      className="flex items-center justify-between p-4 hover:bg-muted rounded-lg cursor-pointer transition-colors"
+                      onClick={() => agregarProducto(producto)}
+                    >
+                      <div>
+                        <p className="font-medium text-base">{producto.nombre}</p>
+                        <p className="text-sm text-muted-foreground">{producto.codigo}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-lg">{formatCurrency(producto.precio_venta)}</p>
+                        <div className="flex items-center gap-2 justify-end">
+                          <p className="text-sm text-muted-foreground">{producto.stock_actual} disp.</p>
+                          {(producto.descuento_maximo || 0) > 0 && (
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Badge variant="secondary" className="text-xs">
+                                  <Percent className="h-3 w-3 mr-1" />
+                                  -{formatCurrency(producto.descuento_maximo)}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Descuento máximo autorizado
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {productosFiltrados.length === 0 && (
+                    <p className="text-center text-muted-foreground py-4">No se encontraron productos</p>
+                  )}
+                </div>
+              </ScrollArea>
+            )}
+
+            {/* Cart with Discount Control */}
+            {lineas.length > 0 && (
+              <div className="space-y-3 pt-4 border-t">
+                <h4 className="font-medium text-base flex items-center gap-2">
+                  <ShoppingCart className="h-4 w-4" />
+                  Productos en el pedido ({lineas.length})
+                </h4>
+                {lineas.map((linea) => {
+                  const descuentoMaximo = linea.producto.descuento_maximo || 0;
+                  const excedeLimite = linea.descuento > descuentoMaximo;
+                  const tieneDescuento = linea.descuento > 0;
+                  
+                  return (
+                    <div 
+                      key={linea.producto.id} 
+                      className={`p-4 rounded-lg border ${
+                        excedeLimite && linea.autorizacionStatus !== 'aprobado' 
+                          ? 'border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700' 
+                          : 'bg-muted/50'
+                      }`}
+                    >
+                      {/* Product header */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{linea.producto.nombre}</p>
+                          <p className="text-xs text-muted-foreground">{linea.producto.codigo}</p>
+                        </div>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
+                          onClick={() => actualizarCantidad(linea.producto.id, 0)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {/* Price and discount row */}
+                      <div className="grid grid-cols-2 gap-4 mb-3">
+                        {/* Discount control */}
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Percent className="h-3 w-3" />
+                            Descuento (máx: {formatCurrency(descuentoMaximo)})
+                          </Label>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-8 w-8"
+                              onClick={() => actualizarDescuento(linea.producto.id, Math.max(0, linea.descuento - 5))}
+                              disabled={linea.descuento <= 0}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <Input
+                              type="number"
+                              className="h-8 w-20 text-center text-sm"
+                              value={linea.descuento}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                actualizarDescuento(linea.producto.id, Math.max(0, val));
+                              }}
+                            />
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-8 w-8"
+                              onClick={() => actualizarDescuento(linea.producto.id, linea.descuento + 5)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Price display */}
+                        <div className="space-y-1 text-right">
+                          <Label className="text-xs text-muted-foreground">Precio</Label>
+                          <div>
+                            {tieneDescuento && (
+                              <span className="text-xs line-through text-muted-foreground mr-2">
+                                {formatCurrency(linea.precioLista)}
+                              </span>
+                            )}
+                            <span className={`font-bold ${tieneDescuento ? 'text-green-600' : ''}`}>
+                              {formatCurrency(linea.precioUnitario)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Quantity and subtotal row */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-8 w-8"
+                            onClick={() => actualizarCantidad(linea.producto.id, linea.cantidad - 1)}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <Input
+                            className="w-14 h-8 text-center text-sm font-medium"
+                            value={linea.cantidad}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 0;
+                              actualizarCantidad(linea.producto.id, val);
+                            }}
+                          />
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-8 w-8"
+                            onClick={() => actualizarCantidad(linea.producto.id, linea.cantidad + 1)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <p className="font-bold text-lg">
+                          {formatCurrency(linea.subtotal)}
+                        </p>
+                      </div>
+
+                      {/* Authorization warning */}
+                      {excedeLimite && linea.autorizacionStatus !== 'aprobado' && (
+                        <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-700">
+                          <div className="flex items-start gap-2 mb-2">
+                            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                            <div className="text-sm">
+                              <p className="font-medium text-amber-700 dark:text-amber-400">
+                                Descuento excede el límite
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Excedente: {formatCurrency(linea.descuento - descuentoMaximo)}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {linea.autorizacionStatus === 'pendiente' ? (
+                            <Badge variant="outline" className="w-full justify-center py-1">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Pendiente revisión de admin
+                            </Badge>
+                          ) : (
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="flex-1"
+                                onClick={() => handleSolicitarAutorizacion(linea)}
+                              >
+                                <Send className="h-3 w-3 mr-1" />
+                                Solicitar ahora
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => marcarParaRevision(linea.producto.id)}
+                              >
+                                <Clock className="h-3 w-3 mr-1" />
+                                Dejar pendiente
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Approved badge */}
+                      {linea.autorizacionStatus === 'aprobado' && (
+                        <Badge variant="default" className="mt-2 w-full justify-center bg-green-600">
+                          <Lock className="h-3 w-3 mr-1" />
+                          Descuento autorizado
+                        </Badge>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Delivery Date - Larger */}
+        <div className="space-y-2">
+          <Label className="text-base">Fecha de entrega *</Label>
+          <Select value={fechaEntrega} onValueChange={setFechaEntrega}>
+            <SelectTrigger className="h-14 text-lg">
+              <SelectValue placeholder="Seleccionar fecha" />
+            </SelectTrigger>
+            <SelectContent>
+              {fechasDisponibles().map((fecha) => (
+                <SelectItem key={fecha} value={fecha} className="text-base py-3">
+                  {format(new Date(fecha + 'T12:00:00'), "EEEE d 'de' MMMM", { locale: es })}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-      )}
 
-      {/* Product Search - Larger */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Productos
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              placeholder="Buscar producto por nombre o código..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 h-14 text-lg"
-            />
-          </div>
+        {/* Notes - Larger */}
+        <div className="space-y-2">
+          <Label className="text-base">Notas del pedido</Label>
+          <Textarea
+            placeholder="Instrucciones especiales de entrega, horarios, etc."
+            value={notas}
+            onChange={(e) => setNotas(e.target.value)}
+            rows={3}
+            className="text-base resize-none"
+          />
+        </div>
 
-          {/* Search Results */}
-          {searchTerm && (
-            <ScrollArea className="h-48 border rounded-lg">
-              <div className="p-2 space-y-1">
-                {productosFiltrados.slice(0, 10).map((producto) => (
-                  <div
-                    key={producto.id}
-                    className="flex items-center justify-between p-4 hover:bg-muted rounded-lg cursor-pointer transition-colors"
-                    onClick={() => agregarProducto(producto)}
-                  >
-                    <div>
-                      <p className="font-medium text-base">{producto.nombre}</p>
-                      <p className="text-sm text-muted-foreground">{producto.codigo}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-lg">{formatCurrency(producto.precio_venta)}</p>
-                      <p className="text-sm text-muted-foreground">{producto.stock_actual} disponibles</p>
-                    </div>
-                  </div>
-                ))}
-                {productosFiltrados.length === 0 && (
-                  <p className="text-center text-muted-foreground py-4">No se encontraron productos</p>
-                )}
-              </div>
-            </ScrollArea>
-          )}
-
-          {/* Cart - Larger Items */}
-          {lineas.length > 0 && (
-            <div className="space-y-3 pt-4 border-t">
-              <h4 className="font-medium text-base flex items-center gap-2">
-                <ShoppingCart className="h-4 w-4" />
-                Productos en el pedido ({lineas.length})
-              </h4>
-              {lineas.map((linea) => (
-                <div key={linea.producto.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{linea.producto.nombre}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatCurrency(linea.precioUnitario)} × {linea.cantidad}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="h-10 w-10"
-                      onClick={() => actualizarCantidad(linea.producto.id, linea.cantidad - 1)}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <Input
-                      className="w-16 h-10 text-center text-lg font-medium"
-                      value={linea.cantidad}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value) || 0;
-                        actualizarCantidad(linea.producto.id, val);
-                      }}
-                    />
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="h-10 w-10"
-                      onClick={() => actualizarCantidad(linea.producto.id, linea.cantidad + 1)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <p className="font-bold text-lg w-24 text-right">
-                    {formatCurrency(linea.subtotal)}
-                  </p>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-10 w-10 text-destructive hover:text-destructive"
-                    onClick={() => actualizarCantidad(linea.producto.id, 0)}
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </Button>
+        {/* Totals and Submit - Larger */}
+        {lineas.length > 0 && (
+          <Card className="bg-primary/5 border-primary/20">
+            <CardContent className="p-6">
+              <div className="space-y-2 text-base mb-6">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Subtotal:</span>
+                  <span className="font-medium">{formatCurrency(totales.subtotal)}</span>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Impuestos:</span>
+                  <span className="font-medium">{formatCurrency(totales.impuestos)}</span>
+                </div>
+                <div className="flex justify-between text-xl font-bold pt-3 border-t">
+                  <span>Total:</span>
+                  <span className="text-primary">{formatCurrency(totales.total)}</span>
+                </div>
+              </div>
 
-      {/* Delivery Date - Larger */}
-      <div className="space-y-2">
-        <Label className="text-base">Fecha de entrega *</Label>
-        <Select value={fechaEntrega} onValueChange={setFechaEntrega}>
-          <SelectTrigger className="h-14 text-lg">
-            <SelectValue placeholder="Seleccionar fecha" />
-          </SelectTrigger>
-          <SelectContent>
-            {fechasDisponibles().map((fecha) => (
-              <SelectItem key={fecha} value={fecha} className="text-base py-3">
-                {format(new Date(fecha + 'T12:00:00'), "EEEE d 'de' MMMM", { locale: es })}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+              {tieneDescuentosPendientes && (
+                <div className="mb-4 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>
+                    Hay productos con descuentos pendientes de autorización. Serán revisados por el administrador.
+                  </span>
+                </div>
+              )}
 
-      {/* Notes - Larger */}
-      <div className="space-y-2">
-        <Label className="text-base">Notas del pedido</Label>
-        <Textarea
-          placeholder="Instrucciones especiales de entrega, horarios, etc."
-          value={notas}
-          onChange={(e) => setNotas(e.target.value)}
-          rows={3}
-          className="text-base resize-none"
+              <Button 
+                onClick={handleSubmit} 
+                disabled={submitting} 
+                className="w-full h-14 text-lg font-semibold"
+                size="lg"
+              >
+                {submitting && <Loader2 className="h-5 w-5 mr-2 animate-spin" />}
+                Crear Pedido
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Solicitud Dialog */}
+        <SolicitudDescuentoDialog
+          open={solicitudDialogOpen}
+          onOpenChange={setSolicitudDialogOpen}
+          producto={productoParaSolicitud}
+          clienteId={selectedClienteId}
+          clienteNombre={selectedCliente?.nombre || ""}
+          sucursalId={selectedSucursalId || null}
+          onAprobado={handleAutorizacionAprobada}
+          onCancelar={() => setProductoParaSolicitud(null)}
         />
       </div>
-
-      {/* Totals and Submit - Larger */}
-      {lineas.length > 0 && (
-        <Card className="bg-primary/5 border-primary/20">
-          <CardContent className="p-6">
-            <div className="space-y-2 text-base mb-6">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Subtotal:</span>
-                <span className="font-medium">{formatCurrency(totales.subtotal)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Impuestos:</span>
-                <span className="font-medium">{formatCurrency(totales.impuestos)}</span>
-              </div>
-              <div className="flex justify-between text-xl font-bold pt-3 border-t">
-                <span>Total:</span>
-                <span className="text-primary">{formatCurrency(totales.total)}</span>
-              </div>
-            </div>
-
-            <Button 
-              onClick={handleSubmit} 
-              disabled={submitting} 
-              className="w-full h-14 text-lg font-semibold"
-              size="lg"
-            >
-              {submitting && <Loader2 className="h-5 w-5 mr-2 animate-spin" />}
-              Crear Pedido
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+    </TooltipProvider>
   );
 }
