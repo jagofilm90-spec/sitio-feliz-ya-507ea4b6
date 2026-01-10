@@ -19,6 +19,7 @@ interface Producto {
   presentacion: string | null;
   kg_por_unidad: number | null;
   precio_por_kilo: boolean | null;
+  descuento_maximo: number | null;
   precio_anterior?: number | null;
   fecha_cambio_precio?: string | null;
 }
@@ -68,7 +69,8 @@ export function VendedorListaPreciosTab() {
           unidad,
           presentacion,
           kg_por_unidad,
-          precio_por_kilo
+          precio_por_kilo,
+          descuento_maximo
         `)
         .eq("activo", true)
         .or("solo_uso_interno.is.null,solo_uso_interno.eq.false")
@@ -248,14 +250,15 @@ export function VendedorListaPreciosTab() {
               
               <CollapsibleContent className="pt-2">
                 <div className="rounded-lg border overflow-hidden">
-                  {/* Header de tabla - solo desktop */}
-                  <div className="hidden sm:grid sm:grid-cols-12 gap-2 p-3 bg-muted/50 text-xs font-medium text-muted-foreground uppercase">
+                {/* Header de tabla - solo desktop */}
+                  <div className="hidden sm:grid sm:grid-cols-14 gap-2 p-3 bg-muted/50 text-xs font-medium text-muted-foreground uppercase">
                     <div className="col-span-2">Código</div>
                     <div className="col-span-3">Producto</div>
                     <div className="col-span-2">Marca</div>
                     <div className="col-span-2">Unidad</div>
                     <div className="col-span-1 text-right">Anterior</div>
                     <div className="col-span-2 text-right">Precio</div>
+                    <div className="col-span-2 text-right">Desc. Máx</div>
                   </div>
                   
                   {/* Productos */}
@@ -300,6 +303,16 @@ export function VendedorListaPreciosTab() {
                                   Por kilo
                                 </Badge>
                               )}
+                              {producto.descuento_maximo && producto.descuento_maximo > 0 && (
+                                <div className="mt-1">
+                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950/50 dark:text-green-400 dark:border-green-800 text-[10px]">
+                                    Desc. máx: -${producto.descuento_maximo.toFixed(2)}
+                                  </Badge>
+                                  <span className="text-[10px] text-muted-foreground block">
+                                    Mín. {formatCurrency((producto.precio_venta || 0) - producto.descuento_maximo)}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div className="flex gap-2 text-xs text-muted-foreground">
@@ -318,7 +331,7 @@ export function VendedorListaPreciosTab() {
                         </div>
 
                         {/* Vista desktop */}
-                        <div className="hidden sm:grid sm:grid-cols-12 gap-2 items-center">
+                        <div className="hidden sm:grid sm:grid-cols-14 gap-2 items-center">
                           <div className="col-span-2">
                             <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
                               {producto.codigo}
@@ -374,6 +387,20 @@ export function VendedorListaPreciosTab() {
                                 <Scale className="h-3 w-3 mr-1" />
                                 /kg
                               </Badge>
+                            )}
+                          </div>
+                          <div className="col-span-2 text-right">
+                            {producto.descuento_maximo && producto.descuento_maximo > 0 ? (
+                              <div className="flex flex-col items-end">
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950/50 dark:text-green-400 dark:border-green-800">
+                                  -${producto.descuento_maximo.toFixed(2)}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  Mín. {formatCurrency((producto.precio_venta || 0) - producto.descuento_maximo)}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
                             )}
                           </div>
                         </div>
