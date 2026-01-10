@@ -160,6 +160,9 @@ const ClienteCorreosManager = ({
       cotizaciones: "Cotizaciones",
       facturas: "Facturas",
       pedidos: "Pedidos",
+      en_ruta: "En ruta",
+      entregado: "Entregado",
+      todo: "Todas",
     };
     return labels[proposito || "general"] || proposito;
   };
@@ -208,10 +211,13 @@ const ClienteCorreosManager = ({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="general">General</SelectItem>
+                    <SelectItem value="todo">Todas las notificaciones</SelectItem>
+                    <SelectItem value="en_ruta">Pedido en ruta</SelectItem>
+                    <SelectItem value="entregado">Pedido entregado</SelectItem>
+                    <SelectItem value="pedidos">Confirmación de pedidos</SelectItem>
                     <SelectItem value="cotizaciones">Cotizaciones</SelectItem>
                     <SelectItem value="facturas">Facturas</SelectItem>
-                    <SelectItem value="pedidos">Pedidos</SelectItem>
+                    <SelectItem value="general">General</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
