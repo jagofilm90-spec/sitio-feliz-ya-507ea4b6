@@ -20,6 +20,7 @@ interface Producto {
   kg_por_unidad: number | null;
   precio_por_kilo: boolean | null;
   precio_anterior?: number | null;
+  fecha_cambio_precio?: string | null;
 }
 
 // Función para calcular porcentaje de cambio
@@ -30,6 +31,24 @@ const calcularPorcentajeCambio = (precioActual: number, precioAnterior: number):
     texto: `${signo}${cambio.toFixed(1)}%`,
     esAumento: cambio > 0
   };
+};
+
+// Función para formatear fecha de cambio de forma relativa
+const formatearFechaCambio = (fecha: string): string => {
+  const ahora = new Date();
+  const fechaCambio = new Date(fecha);
+  const diffMs = ahora.getTime() - fechaCambio.getTime();
+  const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  if (diffDias === 0) return "hoy";
+  if (diffDias === 1) return "ayer";
+  if (diffDias < 7) return `hace ${diffDias} días`;
+  if (diffDias < 30) return `hace ${Math.floor(diffDias / 7)} sem`;
+  if (diffDias < 365) {
+    const meses = Math.floor(diffDias / 30);
+    return `hace ${meses} mes${meses > 1 ? 'es' : ''}`;
+  }
+  return fechaCambio.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' });
 };
 
 export function VendedorListaPreciosTab() {
@@ -66,25 +85,32 @@ export function VendedorListaPreciosTab() {
 
       if (error) throw error;
 
-      // Obtener historial de precios para mostrar precio anterior
+      // Obtener historial de precios para mostrar precio anterior y fecha
       const { data: historialData } = await supabase
         .from("productos_historial_precios")
-        .select("producto_id, precio_anterior")
+        .select("producto_id, precio_anterior, created_at")
         .order("created_at", { ascending: false });
 
-      // Crear mapa con el último precio anterior por producto
-      const precioAnteriorMap = new Map<string, number>();
+      // Crear mapa con el último precio anterior y fecha por producto
+      const precioAnteriorMap = new Map<string, { precio: number; fecha: string }>();
       historialData?.forEach(h => {
         if (!precioAnteriorMap.has(h.producto_id)) {
-          precioAnteriorMap.set(h.producto_id, h.precio_anterior);
+          precioAnteriorMap.set(h.producto_id, {
+            precio: h.precio_anterior,
+            fecha: h.created_at
+          });
         }
       });
 
-      // Combinar productos con precio anterior
-      const productosConHistorial = (data || []).map(p => ({
-        ...p,
-        precio_anterior: precioAnteriorMap.get(p.id) || null
-      }));
+      // Combinar productos con precio anterior y fecha
+      const productosConHistorial = (data || []).map(p => {
+        const historial = precioAnteriorMap.get(p.id);
+        return {
+          ...p,
+          precio_anterior: historial?.precio || null,
+          fecha_cambio_precio: historial?.fecha || null
+        };
+      });
 
       setProductos(productosConHistorial);
       
@@ -268,6 +294,11 @@ export function VendedorListaPreciosTab() {
                                     <span className={cambio.esAumento ? "text-destructive ml-1" : "text-green-600 ml-1"}>
                                       ({cambio.texto})
                                     </span>
+                                    {producto.fecha_cambio_precio && (
+                                      <span className="opacity-60 ml-1">
+                                        · {formatearFechaCambio(producto.fecha_cambio_precio)}
+                                      </span>
+                                    )}
                                   </p>
                                 );
                               })()}
@@ -333,6 +364,11 @@ export function VendedorListaPreciosTab() {
                                   <span className={`text-xs ${cambio.esAumento ? "text-destructive" : "text-green-600"}`}>
                                     {cambio.texto}
                                   </span>
+                                  {producto.fecha_cambio_precio && (
+                                    <span className="text-[10px] text-muted-foreground opacity-60">
+                                      {formatearFechaCambio(producto.fecha_cambio_precio)}
+                                    </span>
+                                  )}
                                 </div>
                               );
                             })() : "—"}
