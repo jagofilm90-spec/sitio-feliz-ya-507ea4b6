@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, MapPin, User, Phone, FileText, MapPinned } from "lucide-react";
+import { Loader2, MapPin, User, Phone, FileText, MapPinned, Mail } from "lucide-react";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
 import {
   Select,
@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { VendedorCorreosCliente, CorreoCliente } from "./VendedorCorreosCliente";
 
 interface Props {
   open: boolean;
@@ -30,6 +31,7 @@ interface Zona {
 export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado }: Props) {
   const [loading, setLoading] = useState(false);
   const [zonas, setZonas] = useState<Zona[]>([]);
+  const [correos, setCorreos] = useState<CorreoCliente[]>([]);
   const [formData, setFormData] = useState({
     nombre: "",
     telefono: "",
@@ -121,6 +123,7 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
           codigo,
           nombre: formData.nombre.trim(),
           telefono: formData.telefono.trim() || null,
+          email: correos.length > 0 ? correos[0].email : null,
           direccion: formData.direccion.trim(),
           zona_id: formData.zona_id || null,
           vendedor_asignado: user.id,
@@ -149,6 +152,19 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
 
       if (sucursalError) throw sucursalError;
 
+      // Insert emails if any
+      if (correos.length > 0) {
+        const correosData = correos.map((correo, index) => ({
+          cliente_id: cliente.id,
+          email: correo.email,
+          nombre_contacto: correo.nombreContacto || null,
+          proposito: correo.proposito,
+          es_principal: index === 0,
+        }));
+
+        await supabase.from("cliente_correos").insert(correosData);
+      }
+
       toast.success(`Cliente ${formData.nombre} creado correctamente`);
       
       // Reset form
@@ -161,6 +177,7 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
         zona_id: "",
         notas: ""
       });
+      setCorreos([]);
 
       onClienteCreado();
     } catch (error: any) {
@@ -210,6 +227,9 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
                 className="h-14 text-lg"
               />
             </div>
+
+            {/* Emails Section */}
+            <VendedorCorreosCliente correos={correos} onChange={setCorreos} />
 
             {/* Address Input */}
             <div className="space-y-2">

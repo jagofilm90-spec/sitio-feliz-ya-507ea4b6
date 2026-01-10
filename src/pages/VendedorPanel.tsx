@@ -7,14 +7,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Users, ShoppingCart, CreditCard, LogOut, User, TrendingUp, Calendar, Percent, UserPlus, Wallet, IdCard, BarChart3, List, Sparkles } from "lucide-react";
+import { Users, ShoppingCart, CreditCard, LogOut, User, TrendingUp, Calendar, Percent, Wallet, IdCard, BarChart3, List, Sparkles } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { VendedorMisClientesTab } from "@/components/vendedor/VendedorMisClientesTab";
 import { VendedorNuevoPedidoTab } from "@/components/vendedor/VendedorNuevoPedidoTab";
 import { VendedorMisVentasTab } from "@/components/vendedor/VendedorMisVentasTab";
 import { VendedorCobranzaTab } from "@/components/vendedor/VendedorCobranzaTab";
 import { VendedorComisionesTab } from "@/components/vendedor/VendedorComisionesTab";
-import { VendedorAltaClienteTab } from "@/components/vendedor/VendedorAltaClienteTab";
 import { VendedorSaldosTab } from "@/components/vendedor/VendedorSaldosTab";
 import { VendedorListaPreciosTab } from "@/components/vendedor/VendedorListaPreciosTab";
 import { VendedorNovedadesTab } from "@/components/vendedor/VendedorNovedadesTab";
@@ -201,7 +200,6 @@ export default function VendedorPanel() {
   }
 
   const navItems = [
-    { id: "alta", label: "Alta Cliente", icon: UserPlus },
     { id: "clientes", label: "Clientes", icon: Users },
     { id: "nuevo", label: "Pedidos", icon: ShoppingCart },
     { id: "novedades", label: "Novedades", icon: Sparkles, badge: novedadesCount },
@@ -411,7 +409,6 @@ export default function VendedorPanel() {
           <div className="hidden lg:block">
             <Card>
               <CardContent className="p-6">
-                {activeTab === "alta" && <VendedorAltaClienteTab onClienteCreado={fetchDashboardData} />}
                 {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
                 {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} />}
                 {activeTab === "novedades" && <VendedorNovedadesTab />}
@@ -426,7 +423,6 @@ export default function VendedorPanel() {
       <div className="lg:hidden">
         {/* Content Area */}
         <div className="pb-24">
-          {activeTab === "alta" && <VendedorAltaClienteTab onClienteCreado={fetchDashboardData} />}
           {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
           {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} />}
           {activeTab === "novedades" && <VendedorNovedadesTab />}
@@ -437,7 +433,7 @@ export default function VendedorPanel() {
 
         {/* Fixed Bottom Navigation */}
         <nav className="fixed bottom-0 left-0 right-0 bg-background border-t safe-area-bottom z-50">
-          <div className="grid grid-cols-7">
+          <div className="grid grid-cols-6">
             {navItems.filter(item => !item.isLink).map((item) => (
               <button
                 key={item.id}
