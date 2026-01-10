@@ -33,22 +33,14 @@ const calcularPorcentajeCambio = (precioActual: number, precioAnterior: number):
   };
 };
 
-// Función para formatear fecha de cambio de forma relativa
+// Función para formatear fecha de cambio
 const formatearFechaCambio = (fecha: string): string => {
-  const ahora = new Date();
   const fechaCambio = new Date(fecha);
-  const diffMs = ahora.getTime() - fechaCambio.getTime();
-  const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  
-  if (diffDias === 0) return "hoy";
-  if (diffDias === 1) return "ayer";
-  if (diffDias < 7) return `hace ${diffDias} días`;
-  if (diffDias < 30) return `hace ${Math.floor(diffDias / 7)} sem`;
-  if (diffDias < 365) {
-    const meses = Math.floor(diffDias / 30);
-    return `hace ${meses} mes${meses > 1 ? 'es' : ''}`;
-  }
-  return fechaCambio.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' });
+  return fechaCambio.toLocaleDateString('es-MX', { 
+    day: '2-digit', 
+    month: 'short', 
+    year: '2-digit' 
+  });
 };
 
 export function VendedorListaPreciosTab() {
