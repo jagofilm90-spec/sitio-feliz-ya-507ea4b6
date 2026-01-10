@@ -19,6 +19,7 @@ interface Producto {
   presentacion: string | null;
   kg_por_unidad: number | null;
   precio_por_kilo: boolean | null;
+  precio_anterior?: number | null;
 }
 
 export function VendedorListaPreciosTab() {
@@ -54,7 +55,28 @@ export function VendedorListaPreciosTab() {
         .order("nombre");
 
       if (error) throw error;
-      setProductos(data || []);
+
+      // Obtener historial de precios para mostrar precio anterior
+      const { data: historialData } = await supabase
+        .from("productos_historial_precios")
+        .select("producto_id, precio_anterior")
+        .order("created_at", { ascending: false });
+
+      // Crear mapa con el último precio anterior por producto
+      const precioAnteriorMap = new Map<string, number>();
+      historialData?.forEach(h => {
+        if (!precioAnteriorMap.has(h.producto_id)) {
+          precioAnteriorMap.set(h.producto_id, h.precio_anterior);
+        }
+      });
+
+      // Combinar productos con precio anterior
+      const productosConHistorial = (data || []).map(p => ({
+        ...p,
+        precio_anterior: precioAnteriorMap.get(p.id) || null
+      }));
+
+      setProductos(productosConHistorial);
       
       // Abrir todas las categorías inicialmente
       const categorias = new Set((data || []).map(p => p.categoria || "Sin categoría"));
@@ -201,9 +223,10 @@ export function VendedorListaPreciosTab() {
                   {/* Header de tabla - solo desktop */}
                   <div className="hidden sm:grid sm:grid-cols-12 gap-2 p-3 bg-muted/50 text-xs font-medium text-muted-foreground uppercase">
                     <div className="col-span-2">Código</div>
-                    <div className="col-span-4">Producto</div>
+                    <div className="col-span-3">Producto</div>
                     <div className="col-span-2">Marca</div>
                     <div className="col-span-2">Unidad</div>
+                    <div className="col-span-1 text-right">Anterior</div>
                     <div className="col-span-2 text-right">Precio</div>
                   </div>
                   
@@ -225,6 +248,11 @@ export function VendedorListaPreciosTab() {
                               <p className="font-bold text-primary">
                                 {formatCurrency(producto.precio_venta || 0)}
                               </p>
+                              {producto.precio_anterior && (
+                                <p className="text-xs text-muted-foreground line-through">
+                                  Antes: {formatCurrency(producto.precio_anterior)}
+                                </p>
+                              )}
                               {producto.precio_por_kilo && (
                                 <Badge variant="outline" className="text-[10px] h-5">
                                   <Scale className="h-3 w-3 mr-1" />
@@ -255,7 +283,7 @@ export function VendedorListaPreciosTab() {
                               {producto.codigo}
                             </code>
                           </div>
-                          <div className="col-span-4">
+                          <div className="col-span-3">
                             <p className="font-medium truncate" title={producto.nombre}>
                               {producto.nombre}
                             </p>
@@ -275,6 +303,13 @@ export function VendedorListaPreciosTab() {
                                 ({producto.kg_por_unidad} kg)
                               </span>
                             )}
+                          </div>
+                          <div className="col-span-1 text-right text-muted-foreground text-sm">
+                            {producto.precio_anterior ? (
+                              <span className="line-through opacity-70">
+                                {formatCurrency(producto.precio_anterior)}
+                              </span>
+                            ) : "—"}
                           </div>
                           <div className="col-span-2 text-right">
                             <p className="font-bold text-primary">
