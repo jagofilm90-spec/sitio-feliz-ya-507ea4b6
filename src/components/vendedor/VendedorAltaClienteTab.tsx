@@ -13,8 +13,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { UserPlus, MapPin, Phone, Building2, Loader2, CheckCircle, Mail } from "lucide-react";
+import { UserPlus, MapPin, Phone, Building2, Loader2, CheckCircle } from "lucide-react";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
+import { VendedorCorreosCliente, CorreoCliente } from "./VendedorCorreosCliente";
 
 interface Props {
   onClienteCreado: () => void;
@@ -29,10 +30,10 @@ export function VendedorAltaClienteTab({ onClienteCreado }: Props) {
   const [loading, setLoading] = useState(false);
   const [exito, setExito] = useState(false);
   const [zonas, setZonas] = useState<Zona[]>([]);
+  const [correos, setCorreos] = useState<CorreoCliente[]>([]);
   const [formData, setFormData] = useState({
     nombre: "",
     telefono: "",
-    email: "",
     direccion: "",
     latitud: null as number | null,
     longitud: null as number | null,
@@ -103,7 +104,7 @@ export function VendedorAltaClienteTab({ onClienteCreado }: Props) {
         codigo,
         nombre: formData.nombre.trim(),
         telefono: formData.telefono || null,
-        email: formData.email.trim() || null,
+        email: correos.length > 0 ? correos[0].email : null,
         direccion: formData.direccion || null,
         zona_id: formData.zonaId || null,
         vendedor_asignado: user.id,
@@ -135,6 +136,19 @@ export function VendedorAltaClienteTab({ onClienteCreado }: Props) {
             notas: formData.notas || null,
             activo: true
           });
+
+        // Insertar correos si hay
+        if (correos.length > 0) {
+          const correosData = correos.map((correo, index) => ({
+            cliente_id: cliente.id,
+            email: correo.email,
+            nombre_contacto: correo.nombreContacto || null,
+            proposito: correo.proposito,
+            es_principal: index === 0,
+          }));
+
+          await supabase.from("cliente_correos").insert(correosData);
+        }
       }
 
       setExito(true);
@@ -145,13 +159,13 @@ export function VendedorAltaClienteTab({ onClienteCreado }: Props) {
           setFormData({
             nombre: "",
             telefono: "",
-            email: "",
             direccion: "",
             latitud: null,
             longitud: null,
             zonaId: "",
             notas: ""
           });
+          setCorreos([]);
         setExito(false);
         onClienteCreado();
       }, 2000);
@@ -223,21 +237,8 @@ export function VendedorAltaClienteTab({ onClienteCreado }: Props) {
             />
           </div>
 
-          {/* Correo electrónico */}
-          <div className="space-y-2">
-            <Label htmlFor="email" className="flex items-center gap-2">
-              <Mail className="h-4 w-4" />
-              Correo electrónico
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="Ej: contacto@restaurante.com"
-              value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-              className="h-12"
-            />
-          </div>
+          {/* Correos electrónicos */}
+          <VendedorCorreosCliente correos={correos} onChange={setCorreos} />
 
           {/* Dirección */}
           <div className="space-y-2">
