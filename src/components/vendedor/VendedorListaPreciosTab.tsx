@@ -22,6 +22,16 @@ interface Producto {
   precio_anterior?: number | null;
 }
 
+// Función para calcular porcentaje de cambio
+const calcularPorcentajeCambio = (precioActual: number, precioAnterior: number): { texto: string; esAumento: boolean } => {
+  const cambio = ((precioActual - precioAnterior) / precioAnterior) * 100;
+  const signo = cambio > 0 ? "+" : "";
+  return {
+    texto: `${signo}${cambio.toFixed(1)}%`,
+    esAumento: cambio > 0
+  };
+};
+
 export function VendedorListaPreciosTab() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -248,11 +258,19 @@ export function VendedorListaPreciosTab() {
                               <p className="font-bold text-primary">
                                 {formatCurrency(producto.precio_venta || 0)}
                               </p>
-                              {producto.precio_anterior && (
-                                <p className="text-xs text-muted-foreground line-through">
-                                  Antes: {formatCurrency(producto.precio_anterior)}
-                                </p>
-                              )}
+                              {producto.precio_anterior && producto.precio_venta && (() => {
+                                const cambio = calcularPorcentajeCambio(producto.precio_venta, producto.precio_anterior);
+                                return (
+                                  <p className="text-xs text-muted-foreground">
+                                    <span className="line-through">
+                                      Antes: {formatCurrency(producto.precio_anterior)}
+                                    </span>
+                                    <span className={cambio.esAumento ? "text-destructive ml-1" : "text-green-600 ml-1"}>
+                                      ({cambio.texto})
+                                    </span>
+                                  </p>
+                                );
+                              })()}
                               {producto.precio_por_kilo && (
                                 <Badge variant="outline" className="text-[10px] h-5">
                                   <Scale className="h-3 w-3 mr-1" />
@@ -305,11 +323,19 @@ export function VendedorListaPreciosTab() {
                             )}
                           </div>
                           <div className="col-span-1 text-right text-muted-foreground text-sm">
-                            {producto.precio_anterior ? (
-                              <span className="line-through opacity-70">
-                                {formatCurrency(producto.precio_anterior)}
-                              </span>
-                            ) : "—"}
+                            {producto.precio_anterior && producto.precio_venta ? (() => {
+                              const cambio = calcularPorcentajeCambio(producto.precio_venta, producto.precio_anterior);
+                              return (
+                                <div className="flex flex-col items-end">
+                                  <span className="line-through opacity-70">
+                                    {formatCurrency(producto.precio_anterior)}
+                                  </span>
+                                  <span className={`text-xs ${cambio.esAumento ? "text-destructive" : "text-green-600"}`}>
+                                    {cambio.texto}
+                                  </span>
+                                </div>
+                              );
+                            })() : "—"}
                           </div>
                           <div className="col-span-2 text-right">
                             <p className="font-bold text-primary">
