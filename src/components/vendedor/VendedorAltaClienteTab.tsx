@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { UserPlus, MapPin, Phone, Building2, Loader2, CheckCircle } from "lucide-react";
+import { UserPlus, MapPin, Phone, Building2, Loader2, CheckCircle, Mail } from "lucide-react";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
 
 interface Props {
@@ -32,6 +32,7 @@ export function VendedorAltaClienteTab({ onClienteCreado }: Props) {
   const [formData, setFormData] = useState({
     nombre: "",
     telefono: "",
+    email: "",
     direccion: "",
     latitud: null as number | null,
     longitud: null as number | null,
@@ -102,6 +103,7 @@ export function VendedorAltaClienteTab({ onClienteCreado }: Props) {
         codigo,
         nombre: formData.nombre.trim(),
         telefono: formData.telefono || null,
+        email: formData.email.trim() || null,
         direccion: formData.direccion || null,
         zona_id: formData.zonaId || null,
         vendedor_asignado: user.id,
@@ -139,16 +141,17 @@ export function VendedorAltaClienteTab({ onClienteCreado }: Props) {
       toast.success("Cliente registrado exitosamente");
       
       // Reset form after 2 seconds
-      setTimeout(() => {
-        setFormData({
-          nombre: "",
-          telefono: "",
-          direccion: "",
-          latitud: null,
-          longitud: null,
-          zonaId: "",
-          notas: ""
-        });
+        setTimeout(() => {
+          setFormData({
+            nombre: "",
+            telefono: "",
+            email: "",
+            direccion: "",
+            latitud: null,
+            longitud: null,
+            zonaId: "",
+            notas: ""
+          });
         setExito(false);
         onClienteCreado();
       }, 2000);
@@ -216,6 +219,22 @@ export function VendedorAltaClienteTab({ onClienteCreado }: Props) {
               placeholder="Ej: 8123456789"
               value={formData.telefono}
               onChange={(e) => setFormData(prev => ({ ...prev, telefono: e.target.value }))}
+              className="h-12"
+            />
+          </div>
+
+          {/* Correo electrónico */}
+          <div className="space-y-2">
+            <Label htmlFor="email" className="flex items-center gap-2">
+              <Mail className="h-4 w-4" />
+              Correo electrónico
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="Ej: contacto@restaurante.com"
+              value={formData.email}
+              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
               className="h-12"
             />
           </div>
