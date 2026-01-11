@@ -25,9 +25,10 @@ interface VendedorCorreosClienteProps {
 
 const PROPOSITOS = [
   { value: "todo", label: "Todas las notificaciones" },
+  { value: "pedidos", label: "Confirmación de pedidos" },
   { value: "en_ruta", label: "Pedido en ruta" },
   { value: "entregado", label: "Pedido entregado" },
-  { value: "pedidos", label: "Confirmación de pedidos" },
+  { value: "cobranza", label: "Recordatorios de vencimiento" },
   { value: "cotizaciones", label: "Cotizaciones" },
   { value: "facturas", label: "Facturas" },
   { value: "general", label: "General" },
@@ -72,6 +73,8 @@ export function VendedorCorreosCliente({ correos, onChange }: VendedorCorreosCli
       case "en_ruta":
       case "entregado":
         return "secondary";
+      case "cobranza":
+        return "destructive";
       default:
         return "outline";
     }

@@ -197,6 +197,35 @@ export function RegistrarEntregaSheet({
 
       if (error) throw error;
 
+      // Enviar notificación al cliente si fue entrega exitosa
+      if (status === "entregado") {
+        try {
+          // Obtener cliente_id del pedido
+          const { data: pedidoData } = await supabase
+            .from("pedidos")
+            .select("cliente_id")
+            .eq("folio", entrega.pedido.folio)
+            .single();
+
+          if (pedidoData?.cliente_id) {
+            await supabase.functions.invoke("send-client-notification", {
+              body: {
+                clienteId: pedidoData.cliente_id,
+                tipo: "entregado",
+                data: {
+                  pedidoFolio: entrega.pedido.folio,
+                  horaEntrega: new Date().toISOString(),
+                  nombreReceptor: nombreReceptor.trim(),
+                },
+              },
+            });
+          }
+        } catch (notifError) {
+          console.error("Error sending delivery notification:", notifError);
+          // No interrumpir el flujo si falla la notificación
+        }
+      }
+
       toast.success(
         status === "entregado" 
           ? "¡Entrega registrada exitosamente!" 
