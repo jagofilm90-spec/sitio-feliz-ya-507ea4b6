@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { 
   Search, Plus, Minus, ShoppingCart, Trash2, Loader2, Package, Store, 
-  AlertTriangle, Percent, Lock, Send, Clock 
+  AlertTriangle, Percent, Lock, Send, Clock, CreditCard 
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { calcularDesgloseImpuestos, redondear, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
@@ -89,6 +89,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
   const [lineas, setLineas] = useState<LineaPedido[]>([]);
   const [fechaEntrega, setFechaEntrega] = useState("");
+  const [terminoCredito, setTerminoCredito] = useState("contado");
   const [notas, setNotas] = useState("");
 
   // Discount authorization dialog
@@ -110,11 +111,17 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
   useEffect(() => {
     if (selectedClienteId) {
       fetchSucursales(selectedClienteId);
+      // Pre-fill credit term from client
+      const cliente = clientes.find(c => c.id === selectedClienteId);
+      if (cliente) {
+        setTerminoCredito(cliente.termino_credito);
+      }
     } else {
       setSucursales([]);
       setSelectedSucursalId("");
+      setTerminoCredito("contado");
     }
-  }, [selectedClienteId]);
+  }, [selectedClienteId, clientes]);
 
   const fetchData = async () => {
     try {
@@ -358,7 +365,8 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
           impuestos: totales.impuestos,
           total: totales.total,
           status: "por_autorizar",
-          notas: notas || null
+          notas: notas || null,
+          termino_credito: terminoCredito as any
         })
         .select()
         .single();
@@ -390,6 +398,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
       setSelectedSucursalId("");
       setLineas([]);
       setFechaEntrega("");
+      setTerminoCredito("contado");
       setNotas("");
 
       onPedidoCreado();
@@ -740,6 +749,32 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Credit Term Selector */}
+        <div className="space-y-2">
+          <Label className="text-base flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            Término de crédito
+          </Label>
+          <Select value={terminoCredito} onValueChange={setTerminoCredito}>
+            <SelectTrigger className="h-14 text-lg">
+              <SelectValue placeholder="Seleccionar término" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="contado" className="text-base py-3">Contado</SelectItem>
+              <SelectItem value="8_dias" className="text-base py-3">8 días</SelectItem>
+              <SelectItem value="15_dias" className="text-base py-3">15 días</SelectItem>
+              <SelectItem value="30_dias" className="text-base py-3">30 días</SelectItem>
+              <SelectItem value="60_dias" className="text-base py-3">60 días</SelectItem>
+            </SelectContent>
+          </Select>
+          {selectedCliente && selectedCliente.termino_credito !== terminoCredito && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <span className="inline-block w-2 h-2 rounded-full bg-amber-500"></span>
+              Default del cliente: {selectedCliente.termino_credito === 'contado' ? 'Contado' : selectedCliente.termino_credito.replace('_', ' ')}
+            </p>
+          )}
         </div>
 
         {/* Notes - Larger */}

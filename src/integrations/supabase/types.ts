@@ -3215,6 +3215,7 @@ export type Database = {
           status: Database["public"]["Enums"]["order_status"]
           subtotal: number | null
           sucursal_id: string | null
+          termino_credito: Database["public"]["Enums"]["credit_term"] | null
           total: number | null
           updated_at: string
           vendedor_id: string
@@ -3243,6 +3244,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number | null
           sucursal_id?: string | null
+          termino_credito?: Database["public"]["Enums"]["credit_term"] | null
           total?: number | null
           updated_at?: string
           vendedor_id: string
@@ -3271,6 +3273,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number | null
           sucursal_id?: string | null
+          termino_credito?: Database["public"]["Enums"]["credit_term"] | null
           total?: number | null
           updated_at?: string
           vendedor_id?: string
