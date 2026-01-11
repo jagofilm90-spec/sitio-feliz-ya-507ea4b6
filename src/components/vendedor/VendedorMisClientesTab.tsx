@@ -7,12 +7,21 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Search, Plus, MapPin, Phone, Building2, MessageCircle, ShoppingCart, History } from "lucide-react";
+import { Search, Plus, MapPin, Phone, Building2, MessageCircle, ShoppingCart, History, Navigation, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { VendedorNuevoClienteSheet } from "./VendedorNuevoClienteSheet";
+import { GeocodificarSucursalSheet } from "./GeocodificarSucursalSheet";
 
 interface Props {
   onClienteCreado: () => void;
+}
+
+interface Sucursal {
+  id: string;
+  nombre: string;
+  direccion: string | null;
+  latitud: number | null;
+  longitud: number | null;
 }
 
 interface Cliente {
@@ -24,6 +33,8 @@ interface Cliente {
   saldo_pendiente: number | null;
   ultimo_pedido?: string | null;
   sucursales_count?: number;
+  sucursales_sin_gps?: number;
+  sucursales?: Sucursal[];
 }
 
 export function VendedorMisClientesTab({ onClienteCreado }: Props) {
@@ -31,6 +42,10 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showNuevoCliente, setShowNuevoCliente] = useState(false);
+  
+  // Geocodificación
+  const [showGeocodificar, setShowGeocodificar] = useState(false);
+  const [selectedSucursal, setSelectedSucursal] = useState<Sucursal | null>(null);
 
   useEffect(() => {
     fetchClientes();
@@ -46,7 +61,7 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
         .from("clientes")
         .select(`
           id, codigo, nombre, direccion, telefono, saldo_pendiente,
-          sucursales:cliente_sucursales(count)
+          sucursales:cliente_sucursales(id, nombre, direccion, latitud, longitud)
         `)
         .eq("vendedor_asignado", user.id)
         .eq("activo", true)
@@ -54,8 +69,8 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
 
       if (error) throw error;
 
-      // Get last order date for each client
-      const clientesConUltimoPedido = await Promise.all(
+      // Get last order date for each client and count sucursales sin GPS
+      const clientesConInfo = await Promise.all(
         (data || []).map(async (cliente: any) => {
           const { data: ultimoPedido } = await supabase
             .from("pedidos")
@@ -65,15 +80,20 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
             .limit(1)
             .maybeSingle();
 
+          const sucursales = cliente.sucursales || [];
+          const sucursalesSinGps = sucursales.filter((s: Sucursal) => !s.latitud || !s.longitud).length;
+
           return {
             ...cliente,
             ultimo_pedido: ultimoPedido?.fecha_pedido || null,
-            sucursales_count: cliente.sucursales?.[0]?.count || 0
+            sucursales_count: sucursales.length,
+            sucursales_sin_gps: sucursalesSinGps,
+            sucursales,
           };
         })
       );
 
-      setClientes(clientesConUltimoPedido);
+      setClientes(clientesConInfo);
     } catch (error) {
       console.error("Error:", error);
       toast.error("Error al cargar clientes");
@@ -91,6 +111,15 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
     setShowNuevoCliente(false);
     fetchClientes();
     onClienteCreado();
+  };
+
+  const handleOpenGeocodificar = (sucursal: Sucursal) => {
+    setSelectedSucursal(sucursal);
+    setShowGeocodificar(true);
+  };
+
+  const handleGeocodificado = () => {
+    fetchClientes();
   };
 
   if (loading) {
@@ -171,9 +200,20 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
                       <h3 className="font-semibold text-lg truncate mb-1">
                         {cliente.nombre}
                       </h3>
-                      <Badge variant="outline" className="text-xs">
-                        {cliente.codigo}
-                      </Badge>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="text-xs">
+                          {cliente.codigo}
+                        </Badge>
+                        {(cliente.sucursales_sin_gps || 0) > 0 && (
+                          <Badge 
+                            variant="secondary" 
+                            className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 text-xs"
+                          >
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Sin GPS
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     {(cliente.saldo_pendiente || 0) > 0 && (
                       <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 shrink-0">
@@ -205,7 +245,7 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
                     )}
 
                     <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
-                      {cliente.sucursales_count > 0 && (
+                      {(cliente.sucursales_count || 0) > 0 && (
                         <span>{cliente.sucursales_count} sucursal(es)</span>
                       )}
                       {cliente.ultimo_pedido && (
@@ -215,6 +255,31 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
                       )}
                     </div>
                   </div>
+
+                  {/* Sucursales sin GPS - Botón para geocodificar */}
+                  {(cliente.sucursales_sin_gps || 0) > 0 && (
+                    <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                      <p className="text-xs text-amber-700 dark:text-amber-300 mb-2">
+                        📍 Sucursales pendientes de geocodificar:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {cliente.sucursales
+                          ?.filter((s) => !s.latitud || !s.longitud)
+                          .map((sucursal) => (
+                            <Button
+                              key={sucursal.id}
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs bg-white dark:bg-background"
+                              onClick={() => handleOpenGeocodificar(sucursal)}
+                            >
+                              <Navigation className="h-3 w-3 mr-1" />
+                              {sucursal.nombre}
+                            </Button>
+                          ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Action Buttons - Large and tactile */}
                   <div className="grid grid-cols-3 gap-2">
@@ -268,6 +333,20 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
         onOpenChange={setShowNuevoCliente}
         onClienteCreado={handleClienteCreado}
       />
+
+      {/* Geocodificar Sheet */}
+      {selectedSucursal && (
+        <GeocodificarSucursalSheet
+          open={showGeocodificar}
+          onOpenChange={setShowGeocodificar}
+          sucursalId={selectedSucursal.id}
+          sucursalNombre={selectedSucursal.nombre}
+          direccionActual={selectedSucursal.direccion}
+          latitudActual={selectedSucursal.latitud}
+          longitudActual={selectedSucursal.longitud}
+          onGeocodificado={handleGeocodificado}
+        />
+      )}
     </div>
   );
 }

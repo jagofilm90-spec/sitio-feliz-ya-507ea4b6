@@ -65,6 +65,7 @@ interface ClienteFormContentProps {
     prioridad_entrega_default: "vip_mismo_dia" | "deadline" | "dia_fijo_recurrente" | "fecha_sugerida" | "flexible";
     deadline_dias_habiles_default: string;
     es_grupo: boolean;
+    vendedor_asignado: string | null;
   };
   setFormData: (data: any) => void;
   zonas: Zona[];
@@ -370,6 +371,27 @@ export function ClienteFormContent({
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
           </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Vendedor Asignado</Label>
+          <Select
+            value={formData.vendedor_asignado || ""}
+            onValueChange={(value) => setFormData({ ...formData, vendedor_asignado: value || null })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Casa (sin vendedor asignado)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Casa (sin vendedor)</SelectItem>
+              <SelectItem value="1e19d492-2dff-4798-942d-a2fe99ff1389">Carlos Giron</SelectItem>
+              <SelectItem value="b8eef389-1ea1-4e84-81af-5d2d805e198f">Venancio Gregorio</SelectItem>
+              <SelectItem value="07400eb2-f9a3-42dc-9a49-5d1126530f23">Salvador Rojas</SelectItem>
+              <SelectItem value="001ed4a3-44d3-4bbc-a362-4b78c4d52dd2">Martin Castro</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Asigna este cliente a un vendedor o déjalo como "Casa" para clientes sin vendedor
+          </p>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
