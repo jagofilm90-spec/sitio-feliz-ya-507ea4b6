@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { 
   Loader2, MapPin, User, FileText, Upload, Sparkles, 
-  Building2, CheckCircle2, Clock
+  Building2, CheckCircle2, Clock, Search
 } from "lucide-react";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
 import {
@@ -32,6 +32,15 @@ interface Props {
 interface Zona {
   id: string;
   nombre: string;
+}
+
+interface PostalCodeData {
+  codigo_postal: string;
+  municipio: string;
+  estado: string;
+  ciudad: string;
+  colonias: string[];
+  colonia_sugerida: string | null;
 }
 
 type ModoEntrada = "csf" | "manual" | null;
@@ -89,6 +98,12 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
   const [latitud, setLatitud] = useState<number | null>(null);
   const [longitud, setLongitud] = useState<number | null>(null);
   const [zonaId, setZonaId] = useState("");
+
+  // Postal code lookup
+  const [buscandoCP, setBuscandoCP] = useState(false);
+  const [coloniasDisponibles, setColoniasDisponibles] = useState<string[]>([]);
+  const [cpAutocompletado, setCpAutocompletado] = useState(false);
+  const [zonaAutoAsignada, setZonaAutoAsignada] = useState(false);
 
   // Restricciones de entrega
   const [horarioInicio, setHorarioInicio] = useState("08:00");
@@ -148,10 +163,78 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
     setLatitud(null);
     setLongitud(null);
     setZonaId("");
+    setBuscandoCP(false);
+    setColoniasDisponibles([]);
+    setCpAutocompletado(false);
+    setZonaAutoAsignada(false);
     setHorarioInicio("08:00");
     setHorarioFin("18:00");
     setDiasSinEntrega([]);
     setNotas("");
+  };
+
+  // Función para buscar datos de código postal
+  const buscarCodigoPostal = async (cp: string) => {
+    if (cp.length !== 5) return;
+    
+    setBuscandoCP(true);
+    setCpAutocompletado(false);
+    setZonaAutoAsignada(false);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('lookup-postal-code', {
+        body: { codigo_postal: cp }
+      });
+
+      if (error) throw error;
+
+      if (data && !data.error) {
+        const cpData = data as PostalCodeData;
+        
+        // Auto-completar alcaldía/municipio
+        setAlcaldia(cpData.municipio);
+        
+        // Guardar colonias disponibles
+        setColoniasDisponibles(cpData.colonias);
+        
+        // Si solo hay una colonia, auto-seleccionarla
+        if (cpData.colonia_sugerida) {
+          setColonia(cpData.colonia_sugerida);
+        }
+        
+        setCpAutocompletado(true);
+        
+        // Intentar auto-asignar zona basándose en el municipio
+        const zonaMatch = zonas.find(z => 
+          z.nombre.toLowerCase().includes(cpData.municipio.toLowerCase()) ||
+          cpData.municipio.toLowerCase().includes(z.nombre.toLowerCase())
+        );
+        
+        if (zonaMatch) {
+          setZonaId(zonaMatch.id);
+          setZonaAutoAsignada(true);
+          toast.success(`Alcaldía y zona asignadas: ${cpData.municipio}`);
+        } else {
+          toast.success(`Alcaldía encontrada: ${cpData.municipio}`);
+        }
+      }
+    } catch (error) {
+      console.error("Error buscando CP:", error);
+      // No mostrar error, permitir captura manual
+    } finally {
+      setBuscandoCP(false);
+    }
+  };
+
+  const handleCodigoPostalChange = (value: string) => {
+    const cleaned = value.replace(/\D/g, '').slice(0, 5);
+    setCodigoPostal(cleaned);
+    setCpAutocompletado(false);
+    setZonaAutoAsignada(false);
+    
+    if (cleaned.length === 5) {
+      buscarCodigoPostal(cleaned);
+    }
   };
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -741,36 +824,67 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Colonia</Label>
-                    <Input
-                      placeholder="Nombre de la colonia"
-                      value={colonia}
-                      onChange={(e) => setColonia(e.target.value)}
-                      className="h-12"
-                    />
-                  </div>
-
+                  {/* Código Postal y Alcaldía con auto-completado */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label>Alcaldía/Municipio *</Label>
+                      <Label className="flex items-center gap-2">
+                        Código Postal *
+                        {buscandoCP && <Loader2 className="h-3 w-3 animate-spin" />}
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          placeholder="01234"
+                          value={codigoPostal}
+                          onChange={(e) => handleCodigoPostalChange(e.target.value)}
+                          className="h-12"
+                          maxLength={5}
+                        />
+                        {cpAutocompletado && (
+                          <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        Alcaldía/Municipio *
+                        {cpAutocompletado && <span className="text-xs text-green-600">(auto)</span>}
+                      </Label>
                       <Input
                         placeholder="Delegación o municipio"
                         value={alcaldia}
                         onChange={(e) => setAlcaldia(e.target.value)}
-                        className="h-12"
+                        className={`h-12 ${cpAutocompletado ? 'bg-green-50 dark:bg-green-900/20 border-green-200' : ''}`}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label>Código Postal *</Label>
+                  </div>
+
+                  {/* Colonia con selector si hay múltiples */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      Colonia
+                      {coloniasDisponibles.length > 1 && (
+                        <span className="text-xs text-muted-foreground">({coloniasDisponibles.length} opciones)</span>
+                      )}
+                    </Label>
+                    {coloniasDisponibles.length > 1 ? (
+                      <Select value={colonia} onValueChange={setColonia}>
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Seleccionar colonia..." />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[200px]">
+                          {coloniasDisponibles.map((col) => (
+                            <SelectItem key={col} value={col}>{col}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
                       <Input
-                        placeholder="01234"
-                        value={codigoPostal}
-                        onChange={(e) => setCodigoPostal(e.target.value)}
-                        className="h-12"
-                        maxLength={5}
+                        placeholder="Nombre de la colonia"
+                        value={colonia}
+                        onChange={(e) => setColonia(e.target.value)}
+                        className={`h-12 ${cpAutocompletado && colonia ? 'bg-green-50 dark:bg-green-900/20 border-green-200' : ''}`}
                       />
-                    </div>
+                    )}
                   </div>
 
                   {/* Nota sobre geocodificación */}
@@ -781,11 +895,14 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
                   </div>
                 </div>
 
-                {/* Zona */}
+                {/* Zona - mostrar si fue auto-asignada */}
                 <div className="space-y-2">
-                  <Label>Zona de Entrega</Label>
-                  <Select value={zonaId} onValueChange={setZonaId}>
-                    <SelectTrigger className="h-12">
+                  <Label className="flex items-center gap-2">
+                    Zona de Entrega
+                    {zonaAutoAsignada && <span className="text-xs text-green-600">(auto-asignada)</span>}
+                  </Label>
+                  <Select value={zonaId} onValueChange={(value) => { setZonaId(value); setZonaAutoAsignada(false); }}>
+                    <SelectTrigger className={`h-12 ${zonaAutoAsignada ? 'bg-green-50 dark:bg-green-900/20 border-green-200' : ''}`}>
                       <SelectValue placeholder="Seleccionar zona" />
                     </SelectTrigger>
                     <SelectContent>
