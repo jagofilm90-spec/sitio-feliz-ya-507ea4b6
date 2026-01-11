@@ -754,17 +754,17 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
                         </div>
                       </div>
 
-                      {/* Columna: Presentación */}
-                      <div className="w-24 text-center hidden sm:block">
-                        <p className="text-xs text-muted-foreground truncate">
-                          {producto.presentacion || producto.unidad || '-'}
+                      {/* Columna: Unidad (tipo de empaque) */}
+                      <div className="w-16 text-center hidden sm:block">
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {producto.unidad || '-'}
                         </p>
                       </div>
 
-                      {/* Columna: Peso */}
+                      {/* Columna: Presentación (peso) */}
                       <div className="w-16 text-center hidden sm:block">
                         <p className="text-xs text-muted-foreground">
-                          {producto.kg_por_unidad ? `${producto.kg_por_unidad} kg` : '-'}
+                          {producto.presentacion ? `${producto.presentacion} kg` : '-'}
                         </p>
                       </div>
                       
