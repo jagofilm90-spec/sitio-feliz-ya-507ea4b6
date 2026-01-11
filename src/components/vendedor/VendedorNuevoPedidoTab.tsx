@@ -708,85 +708,127 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
           </Card>
         )}
 
-        {/* Product Search - All Products */}
+        {/* Product Search - All Products - Always Visible Table */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <Package className="h-5 w-5" />
               Todos los Productos
+              <Badge variant="outline" className="ml-2 text-xs">
+                {productosFiltrados.length} productos
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
-                placeholder="Buscar producto por nombre o código..."
+                placeholder="Filtrar productos por nombre o código..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 h-14 text-lg"
+                className="pl-12 h-12"
               />
             </div>
 
-            {/* Search Results */}
-            {searchTerm && (
-              <ScrollArea className="h-64 border rounded-lg">
-                <div className="p-2 space-y-1">
-                  {productosFiltrados.slice(0, 15).map((producto) => {
-                    const yaEnCarrito = lineas.some(l => l.producto.id === producto.id);
-                    return (
-                      <div
-                        key={producto.id}
-                        className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors ${
-                          yaEnCarrito 
-                            ? 'bg-primary/10 border border-primary' 
-                            : 'hover:bg-muted'
-                        } ${producto.stock_actual <= 0 ? 'opacity-75' : ''}`}
-                        onClick={() => !yaEnCarrito && agregarProducto(producto)}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-base truncate">{producto.nombre}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <p className="text-sm text-muted-foreground">{producto.codigo}</p>
-                            <StockBadge producto={producto} />
-                          </div>
-                        </div>
-                        <div className="text-right ml-4">
-                          <p className="font-bold text-lg">{formatCurrency(producto.precio_venta)}</p>
-                          <div className="flex items-center gap-2 justify-end">
-                            {(producto.descuento_maximo || 0) > 0 && (
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <Badge variant="secondary" className="text-xs">
-                                    <Percent className="h-3 w-3 mr-1" />
-                                    -{formatCurrency(producto.descuento_maximo)}
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  Descuento máximo autorizado
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                            {yaEnCarrito && (
-                              <Badge variant="default" className="text-xs">
-                                En carrito
-                              </Badge>
-                            )}
-                          </div>
+            {/* Always Visible Product Table with Direct Quantity Input */}
+            <ScrollArea className="h-96 border rounded-lg">
+              <div className="p-2 space-y-1">
+                {productosFiltrados.slice(0, 50).map((producto) => {
+                  const lineaEnCarrito = lineas.find(l => l.producto.id === producto.id);
+                  const cantidadEnCarrito = lineaEnCarrito?.cantidad || 0;
+                  
+                  return (
+                    <div
+                      key={producto.id}
+                      className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
+                        cantidadEnCarrito > 0 
+                          ? 'bg-primary/10 border border-primary' 
+                          : 'hover:bg-muted border border-transparent'
+                      } ${producto.stock_actual <= 0 ? 'opacity-75' : ''}`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{producto.nombre}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-xs text-muted-foreground">{producto.codigo}</p>
+                          <StockBadge producto={producto} />
                         </div>
                       </div>
-                    );
-                  })}
-                  {productosFiltrados.length === 0 && (
-                    <p className="text-center text-muted-foreground py-4">No se encontraron productos</p>
-                  )}
-                  {productosFiltrados.length > 15 && (
-                    <p className="text-center text-muted-foreground py-2 text-sm">
-                      Mostrando 15 de {productosFiltrados.length} resultados
-                    </p>
-                  )}
-                </div>
-              </ScrollArea>
-            )}
+                      
+                      <div className="flex items-center gap-3 ml-2">
+                        <div className="text-right">
+                          <p className="font-bold text-sm">{formatCurrency(producto.precio_venta)}</p>
+                          {(producto.descuento_maximo || 0) > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              -{formatCurrency(producto.descuento_maximo)} máx
+                            </p>
+                          )}
+                        </div>
+                        
+                        {/* Direct Quantity Input */}
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              if (cantidadEnCarrito > 0) {
+                                actualizarCantidad(producto.id, cantidadEnCarrito - 1);
+                              }
+                            }}
+                            disabled={cantidadEnCarrito <= 0}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <Input
+                            type="number"
+                            min="0"
+                            className="h-8 w-16 text-center text-sm font-medium"
+                            value={cantidadEnCarrito || ""}
+                            placeholder="0"
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 0;
+                              if (val > 0 && cantidadEnCarrito === 0) {
+                                // Add new product to cart
+                                agregarProducto(producto);
+                                if (val > 1) {
+                                  setTimeout(() => actualizarCantidad(producto.id, val), 0);
+                                }
+                              } else if (val === 0 && cantidadEnCarrito > 0) {
+                                actualizarCantidad(producto.id, 0);
+                              } else if (val > 0) {
+                                actualizarCantidad(producto.id, val);
+                              }
+                            }}
+                          />
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              if (cantidadEnCarrito === 0) {
+                                agregarProducto(producto);
+                              } else {
+                                actualizarCantidad(producto.id, cantidadEnCarrito + 1);
+                              }
+                            }}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {productosFiltrados.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">No se encontraron productos</p>
+                )}
+                {productosFiltrados.length > 50 && (
+                  <p className="text-center text-muted-foreground py-2 text-sm border-t mt-2 pt-2">
+                    Mostrando 50 de {productosFiltrados.length} productos. Usa el filtro para encontrar más.
+                  </p>
+                )}
+              </div>
+            </ScrollArea>
 
             {/* Cart with Discount Control */}
             {lineas.length > 0 && (
