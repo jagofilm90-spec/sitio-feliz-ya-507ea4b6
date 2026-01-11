@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { 
   Loader2, MapPin, User, FileText, Upload, Sparkles, 
-  Building2, CheckCircle2, Navigation, Clock
+  Building2, CheckCircle2, Clock
 } from "lucide-react";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
 import {
@@ -51,7 +51,6 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
   const [modoEntrada, setModoEntrada] = useState<ModoEntrada>(null);
   const [parsingCsf, setParsingCsf] = useState(false);
   const [csfProcessed, setCsfProcessed] = useState(false);
-  const [geolocating, setGeolocating] = useState(false);
   
   // Listas
   const [correos, setCorreos] = useState<CorreoCliente[]>([]);
@@ -119,7 +118,6 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
     setModoEntrada(null);
     setParsingCsf(false);
     setCsfProcessed(false);
-    setGeolocating(false);
     setCorreos([]);
     setTelefonos([]);
     setContactos([]);
@@ -253,29 +251,6 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
         console.error("Error fetching place details:", error);
       }
     }
-  };
-
-  const handleUseCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error("Tu navegador no soporta geolocalización");
-      return;
-    }
-
-    setGeolocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLatitud(position.coords.latitude);
-        setLongitud(position.coords.longitude);
-        setGeolocating(false);
-        toast.success("Ubicación GPS capturada correctamente");
-      },
-      (error) => {
-        setGeolocating(false);
-        console.error("Geolocation error:", error);
-        toast.error("No se pudo obtener la ubicación. Verifica los permisos.");
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
   };
 
   const toggleDiaSinEntrega = (dia: string) => {
@@ -616,27 +591,16 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
                         placeholder="Buscar dirección de entrega..."
                       />
 
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleUseCurrentLocation}
-                        disabled={geolocating}
-                        className="w-full"
-                      >
-                        {geolocating ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        ) : (
-                          <Navigation className="h-4 w-4 mr-2" />
-                        )}
-                        📍 Usar mi ubicación actual (GPS exacto)
-                      </Button>
-
                       {latitud && longitud && (
                         <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
                           <CheckCircle2 className="h-4 w-4" />
                           <span>GPS: {latitud.toFixed(6)}, {longitud.toFixed(6)}</span>
                         </div>
                       )}
+                      
+                      <p className="text-xs text-muted-foreground">
+                        💡 Las coordenadas GPS exactas se pueden capturar después cuando visites físicamente al cliente
+                      </p>
                     </div>
                   )}
                 </div>
@@ -809,32 +773,11 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
                     </div>
                   </div>
 
-                  {/* Geocodificación */}
-                  <div className="pt-3 border-t space-y-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleUseCurrentLocation}
-                      disabled={geolocating}
-                      className="w-full"
-                    >
-                      {geolocating ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <Navigation className="h-4 w-4 mr-2" />
-                      )}
-                      📍 Usar mi ubicación actual (GPS exacto)
-                    </Button>
+                  {/* Nota sobre geocodificación */}
+                  <div className="pt-3 border-t">
                     <p className="text-xs text-muted-foreground">
-                      Captura las coordenadas GPS exactas estando en el domicilio del cliente para rutas precisas
+                      💡 Las coordenadas GPS exactas se pueden capturar después desde "Mis Clientes" cuando visites físicamente al cliente
                     </p>
-
-                    {latitud && longitud && (
-                      <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span>GPS guardado: {latitud.toFixed(6)}, {longitud.toFixed(6)}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
 
