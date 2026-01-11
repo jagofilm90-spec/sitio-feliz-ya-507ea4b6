@@ -288,43 +288,46 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
 
       if (error) throw error;
 
-      if (data) {
-        setRfc(data.rfc || "");
-        setRazonSocial(data.razon_social || "");
-        setRegimenCapital(data.regimen_capital || "");
-        setCodigoPostalFiscal(data.codigo_postal || "");
-        setNombre(data.razon_social || "");
+      // La respuesta viene anidada en data.data
+      const csfData = data?.data;
+      
+      if (csfData) {
+        setRfc(csfData.rfc || "");
+        setRazonSocial(csfData.razon_social || "");
+        setRegimenCapital(csfData.regimen_capital || "");
+        setCodigoPostalFiscal(csfData.codigo_postal || "");
+        setNombre(csfData.razon_social || "");
         
         // Store CSF address components
-        setTipoVialidad(data.tipo_vialidad || "");
-        setNombreVialidad(data.nombre_vialidad || "");
-        setNumExtFiscal(data.numero_exterior || "");
-        setNumIntFiscal(data.numero_interior || "");
-        setNombreColonia(data.nombre_colonia || "");
-        setNombreLocalidad(data.nombre_localidad || "");
-        setNombreMunicipio(data.nombre_municipio || "");
-        setNombreEntidadFederativa(data.nombre_entidad_federativa || "");
-        setEntreCalle(data.entre_calle || "");
-        setYCalle(data.y_calle || "");
+        setTipoVialidad(csfData.tipo_vialidad || "");
+        setNombreVialidad(csfData.nombre_vialidad || "");
+        setNumExtFiscal(csfData.numero_exterior || "");
+        setNumIntFiscal(csfData.numero_interior || "");
+        setNombreColonia(csfData.nombre_colonia || "");
+        setNombreLocalidad(csfData.nombre_localidad || "");
+        setNombreMunicipio(csfData.nombre_municipio || "");
+        setNombreEntidadFederativa(csfData.nombre_entidad_federativa || "");
+        setEntreCalle(csfData.entre_calle || "");
+        setYCalle(csfData.y_calle || "");
 
         // Build domicilio fiscal string
         const domicilioParts = [
-          data.tipo_vialidad,
-          data.nombre_vialidad,
-          data.numero_exterior && `No. ${data.numero_exterior}`,
-          data.numero_interior && `Int. ${data.numero_interior}`,
-          data.nombre_colonia && `Col. ${data.nombre_colonia}`,
-          data.nombre_municipio,
-          data.nombre_entidad_federativa,
-          data.codigo_postal && `C.P. ${data.codigo_postal}`
+          csfData.tipo_vialidad,
+          csfData.nombre_vialidad,
+          csfData.numero_exterior && `No. ${csfData.numero_exterior}`,
+          csfData.numero_interior && `Int. ${csfData.numero_interior}`,
+          csfData.nombre_colonia && `Col. ${csfData.nombre_colonia}`,
+          csfData.nombre_municipio,
+          csfData.nombre_entidad_federativa,
+          csfData.codigo_postal && `C.P. ${csfData.codigo_postal}`
         ].filter(Boolean).join(", ");
         
         setDomicilioFiscal(domicilioParts);
         setCsfProcessed(true);
 
         // Auto-asignar zona basándose en el municipio de la CSF
-        if (data.nombre_municipio && zonas.length > 0) {
-          const zonaMatch = buscarZonaPorMunicipio(data.nombre_municipio);
+        if (csfData.nombre_municipio && zonas.length > 0) {
+          const zonaMatch = buscarZonaPorMunicipio(csfData.nombre_municipio);
           
           if (zonaMatch) {
             setZonaId(zonaMatch.id);
@@ -338,10 +341,10 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
         }
 
         // Auto-completar código postal y buscar colonias disponibles
-        if (data.codigo_postal) {
-          setCodigoPostal(data.codigo_postal);
+        if (csfData.codigo_postal) {
+          setCodigoPostal(csfData.codigo_postal);
           // Buscar datos del CP para obtener colonias disponibles
-          buscarCodigoPostal(data.codigo_postal);
+          buscarCodigoPostal(csfData.codigo_postal);
         }
       }
     } catch (error: any) {
