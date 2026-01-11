@@ -262,6 +262,47 @@ export type Database = {
           },
         ]
       }
+      cliente_contactos: {
+        Row: {
+          activo: boolean | null
+          cliente_id: string
+          created_at: string | null
+          es_principal: boolean | null
+          id: string
+          nombre: string
+          puesto: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          cliente_id: string
+          created_at?: string | null
+          es_principal?: boolean | null
+          id?: string
+          nombre: string
+          puesto?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          cliente_id?: string
+          created_at?: string | null
+          es_principal?: boolean | null
+          id?: string
+          nombre?: string
+          puesto?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_contactos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cliente_correos: {
         Row: {
           activo: boolean | null
@@ -611,6 +652,47 @@ export type Database = {
             columns: ["zona_id"]
             isOneToOne: false
             referencedRelation: "zonas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cliente_telefonos: {
+        Row: {
+          activo: boolean | null
+          cliente_id: string
+          created_at: string | null
+          es_principal: boolean | null
+          etiqueta: string | null
+          id: string
+          telefono: string
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          cliente_id: string
+          created_at?: string | null
+          es_principal?: boolean | null
+          etiqueta?: string | null
+          id?: string
+          telefono: string
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          cliente_id?: string
+          created_at?: string | null
+          es_principal?: boolean | null
+          etiqueta?: string | null
+          id?: string
+          telefono?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_telefonos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
             referencedColumns: ["id"]
           },
         ]
