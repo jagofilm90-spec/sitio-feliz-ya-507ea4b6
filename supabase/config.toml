@@ -98,3 +98,6 @@ verify_jwt = true
 
 [functions.check-invoice-expiry-reminders]
 verify_jwt = false
+
+[functions.lookup-postal-code]
+verify_jwt = true
