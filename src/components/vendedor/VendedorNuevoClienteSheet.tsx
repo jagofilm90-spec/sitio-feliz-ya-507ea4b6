@@ -250,6 +250,28 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
     });
   };
 
+  // Función para normalizar texto (quitar acentos y minúsculas)
+  const normalizarTexto = (texto: string): string => {
+    return texto.toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+  };
+
+  // Función para buscar zona por municipio
+  const buscarZonaPorMunicipio = (municipio: string): Zona | undefined => {
+    if (!municipio || zonas.length === 0) return undefined;
+    
+    const municipioNorm = normalizarTexto(municipio);
+    
+    return zonas.find(z => {
+      const zonaNorm = normalizarTexto(z.nombre);
+      return zonaNorm === municipioNorm ||
+             zonaNorm.includes(municipioNorm) ||
+             municipioNorm.includes(zonaNorm);
+    });
+  };
+
   const handleCsfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -299,7 +321,28 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
         
         setDomicilioFiscal(domicilioParts);
         setCsfProcessed(true);
-        toast.success("Datos fiscales extraídos correctamente");
+
+        // Auto-asignar zona basándose en el municipio de la CSF
+        if (data.nombre_municipio && zonas.length > 0) {
+          const zonaMatch = buscarZonaPorMunicipio(data.nombre_municipio);
+          
+          if (zonaMatch) {
+            setZonaId(zonaMatch.id);
+            setZonaAutoAsignada(true);
+            toast.success(`Datos extraídos • Zona: ${zonaMatch.nombre}`);
+          } else {
+            toast.success("Datos fiscales extraídos correctamente");
+          }
+        } else {
+          toast.success("Datos fiscales extraídos correctamente");
+        }
+
+        // Auto-completar código postal y buscar colonias disponibles
+        if (data.codigo_postal) {
+          setCodigoPostal(data.codigo_postal);
+          // Buscar datos del CP para obtener colonias disponibles
+          buscarCodigoPostal(data.codigo_postal);
+        }
       }
     } catch (error: any) {
       console.error("Error parsing CSF:", error);
