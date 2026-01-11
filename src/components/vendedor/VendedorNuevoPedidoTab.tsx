@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,12 +11,34 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { 
   Search, Plus, Minus, ShoppingCart, Trash2, Loader2, Package, Store, 
-  AlertTriangle, Percent, Lock, Send, Clock, CreditCard, Star, AlertCircle
+  AlertTriangle, Percent, Lock, Send, Clock, CreditCard, Star, AlertCircle, FileEdit
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { calcularDesgloseImpuestos, redondear, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
-import { format, addDays, isWeekend } from "date-fns";
+import { format, addDays, isWeekend, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+
+// Storage key for persistent cart
+const CART_STORAGE_KEY = 'vendedor_cart_draft';
+
+// Interface for persisted cart state
+interface CartDraft {
+  clienteId: string;
+  sucursalId: string;
+  lineas: Array<{
+    productoId: string;
+    cantidad: number;
+    precioLista: number;
+    precioUnitario: number;
+    descuento: number;
+    requiereAutorizacion: boolean;
+    autorizacionStatus?: 'pendiente' | 'aprobado' | 'rechazado' | null;
+  }>;
+  fechaEntrega: string;
+  terminoCredito: string;
+  notas: string;
+  savedAt: string;
+}
 import {
   Select,
   SelectContent,
@@ -134,6 +156,57 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
     precioSolicitado: number;
     cantidad: number;
   } | null>(null);
+  
+  // Draft restoration flag
+  const [hasDraft, setHasDraft] = useState(false);
+  const [isRestoringDraft, setIsRestoringDraft] = useState(false);
+
+  // ==================== Cart Persistence Functions ====================
+  
+  const saveCartDraft = useCallback(() => {
+    // Don't save if we're restoring or if cart is empty and no client selected
+    if (isRestoringDraft || (lineas.length === 0 && !selectedClienteId)) {
+      return;
+    }
+    
+    const draft: CartDraft = {
+      clienteId: selectedClienteId,
+      sucursalId: selectedSucursalId,
+      lineas: lineas.map(l => ({
+        productoId: l.producto.id,
+        cantidad: l.cantidad,
+        precioLista: l.precioLista,
+        precioUnitario: l.precioUnitario,
+        descuento: l.descuento,
+        requiereAutorizacion: l.requiereAutorizacion,
+        autorizacionStatus: l.autorizacionStatus,
+      })),
+      fechaEntrega,
+      terminoCredito,
+      notas,
+      savedAt: new Date().toISOString(),
+    };
+    
+    sessionStorage.setItem(CART_STORAGE_KEY, JSON.stringify(draft));
+    setHasDraft(lineas.length > 0 || !!selectedClienteId);
+  }, [lineas, selectedClienteId, selectedSucursalId, fechaEntrega, terminoCredito, notas, isRestoringDraft]);
+
+  const loadCartDraft = useCallback((): CartDraft | null => {
+    try {
+      const saved = sessionStorage.getItem(CART_STORAGE_KEY);
+      if (!saved) return null;
+      return JSON.parse(saved) as CartDraft;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const clearCartDraft = useCallback(() => {
+    sessionStorage.removeItem(CART_STORAGE_KEY);
+    setHasDraft(false);
+  }, []);
+
+  // ==================== Effects ====================
 
   useEffect(() => {
     fetchData();
@@ -143,10 +216,12 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
     if (selectedClienteId) {
       fetchSucursales(selectedClienteId);
       fetchProductosFrecuentes(selectedClienteId);
-      // Pre-fill credit term from client
-      const cliente = clientes.find(c => c.id === selectedClienteId);
-      if (cliente) {
-        setTerminoCredito(cliente.termino_credito);
+      // Pre-fill credit term from client (only if not restoring draft)
+      if (!isRestoringDraft) {
+        const cliente = clientes.find(c => c.id === selectedClienteId);
+        if (cliente) {
+          setTerminoCredito(cliente.termino_credito);
+        }
       }
     } else {
       setSucursales([]);
@@ -154,7 +229,85 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
       setTerminoCredito("contado");
       setProductosFrecuentes([]);
     }
-  }, [selectedClienteId, clientes]);
+  }, [selectedClienteId, clientes, isRestoringDraft]);
+
+  // Auto-save cart on changes
+  useEffect(() => {
+    if (!loading) {
+      saveCartDraft();
+    }
+  }, [saveCartDraft, loading]);
+
+  // Restore cart on component mount (after products are loaded)
+  useEffect(() => {
+    if (loading || productos.length === 0) return;
+    
+    const draft = loadCartDraft();
+    if (!draft || (draft.lineas.length === 0 && !draft.clienteId)) return;
+    
+    // Check if draft is less than 4 hours old
+    const savedTime = new Date(draft.savedAt).getTime();
+    const now = Date.now();
+    const fourHoursMs = 4 * 60 * 60 * 1000;
+    
+    if (now - savedTime > fourHoursMs) {
+      clearCartDraft();
+      return;
+    }
+    
+    // Restore cart items by matching product IDs
+    const restoredLineas: LineaPedido[] = [];
+    draft.lineas.forEach(saved => {
+      const producto = productos.find(p => p.id === saved.productoId);
+      if (producto) {
+        restoredLineas.push({
+          producto,
+          cantidad: saved.cantidad,
+          precioLista: saved.precioLista,
+          precioUnitario: saved.precioUnitario,
+          descuento: saved.descuento,
+          subtotal: saved.precioUnitario * saved.cantidad,
+          requiereAutorizacion: saved.requiereAutorizacion,
+          autorizacionStatus: saved.autorizacionStatus,
+        });
+      }
+    });
+    
+    if (restoredLineas.length > 0 || draft.clienteId) {
+      setIsRestoringDraft(true);
+      
+      // Show recovery toast
+      toast.info("Borrador de pedido recuperado", {
+        description: `${restoredLineas.length} producto(s) - guardado ${formatDistanceToNow(new Date(draft.savedAt), { locale: es, addSuffix: true })}`,
+        action: {
+          label: "Descartar",
+          onClick: () => {
+            clearCartDraft();
+            setLineas([]);
+            setSelectedClienteId("");
+            setSelectedSucursalId("");
+            setFechaEntrega("");
+            setTerminoCredito("contado");
+            setNotas("");
+            setHasDraft(false);
+          }
+        },
+        duration: 8000,
+      });
+      
+      // Restore state
+      setSelectedClienteId(draft.clienteId);
+      setSelectedSucursalId(draft.sucursalId);
+      setLineas(restoredLineas);
+      setFechaEntrega(draft.fechaEntrega);
+      setTerminoCredito(draft.terminoCredito);
+      setNotas(draft.notas);
+      setHasDraft(true);
+      
+      // Reset restoring flag after a short delay
+      setTimeout(() => setIsRestoringDraft(false), 500);
+    }
+  }, [loading, productos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchData = async () => {
     try {
@@ -557,6 +710,9 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
 
       toast.success(`Pedido ${folio} creado exitosamente`);
 
+      // Clear draft after successful submission
+      clearCartDraft();
+
       // Reset form
       setSelectedClienteId("");
       setSelectedSucursalId("");
@@ -850,6 +1006,12 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
                 <h4 className="font-medium text-base flex items-center gap-2">
                   <ShoppingCart className="h-4 w-4" />
                   Productos en el pedido ({lineas.length})
+                  {hasDraft && (
+                    <Badge variant="secondary" className="text-xs gap-1 ml-2">
+                      <FileEdit className="h-3 w-3" />
+                      Borrador
+                    </Badge>
+                  )}
                 </h4>
                 {lineas.map((linea) => {
                   const descuentoMaximo = linea.producto.descuento_maximo || 0;
