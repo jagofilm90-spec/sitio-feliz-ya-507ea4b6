@@ -1259,6 +1259,16 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
           sucursalId={selectedSucursalId || null}
           onAprobado={handleAutorizacionAprobada}
           onCancelar={() => setProductoParaSolicitud(null)}
+          carritoSnapshot={lineas.map(l => ({
+            productoId: l.producto.id,
+            productoNombre: l.producto.nombre,
+            productoCodigo: l.producto.codigo,
+            cantidad: l.cantidad,
+            precioUnitario: l.precioUnitario,
+            subtotal: l.subtotal,
+            tieneDescuentoPendiente: l.requiereAutorizacion,
+          }))}
+          totalPedidoEstimado={totales.total}
         />
       </div>
     </TooltipProvider>

@@ -3,6 +3,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { playNotificationSound } from "@/utils/notificationSound";
 
+// Cart item snapshot for discount request context
+export interface CarritoItem {
+  productoId: string;
+  productoNombre: string;
+  productoCodigo: string;
+  cantidad: number;
+  precioUnitario: number;
+  subtotal: number;
+  tieneDescuentoPendiente: boolean;
+}
+
 export interface SolicitudDescuento {
   id: string;
   pedido_id: string | null;
@@ -23,6 +34,10 @@ export interface SolicitudDescuento {
   respuesta_notas: string | null;
   created_at: string;
   updated_at: string;
+  // New fields for order context
+  carrito_snapshot: CarritoItem[] | null;
+  total_pedido_estimado: number | null;
+  es_urgente: boolean;
   // Joined data
   producto?: {
     id: string;
@@ -37,6 +52,7 @@ export interface SolicitudDescuento {
     id: string;
     codigo: string;
     nombre: string;
+    saldo_pendiente?: number | null;
   };
   sucursal?: {
     id: string;
@@ -64,7 +80,7 @@ export function useSolicitudesDescuento(options: UseSolicitudesDescuentoOptions 
           *,
           producto:productos(id, codigo, nombre),
           vendedor:profiles!vendedor_id(id, full_name),
-          cliente:clientes(id, codigo, nombre),
+          cliente:clientes(id, codigo, nombre, saldo_pendiente),
           sucursal:cliente_sucursales(id, nombre)
         `)
         .order("created_at", { ascending: false });
@@ -205,17 +221,24 @@ export function useSolicitudesDescuento(options: UseSolicitudesDescuentoOptions 
     motivo?: string;
     vendedor_nombre?: string;
     producto_nombre?: string;
+    // New fields for order context
+    carrito_snapshot?: CarritoItem[];
+    total_pedido_estimado?: number;
+    es_urgente?: boolean;
   }) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("No autenticado");
 
-    const { vendedor_nombre, producto_nombre, ...solicitudData } = solicitud;
+    const { vendedor_nombre, producto_nombre, carrito_snapshot, total_pedido_estimado, es_urgente, ...solicitudData } = solicitud;
 
     const { data, error } = await supabase
       .from("solicitudes_descuento")
       .insert({
         ...solicitudData,
         vendedor_id: user.id,
+        carrito_snapshot: carrito_snapshot ? JSON.stringify(carrito_snapshot) : null,
+        total_pedido_estimado: total_pedido_estimado || null,
+        es_urgente: es_urgente ?? true,
       })
       .select()
       .single();
