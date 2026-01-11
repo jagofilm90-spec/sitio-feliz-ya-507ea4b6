@@ -92,3 +92,9 @@ verify_jwt = true
 
 [functions.notificar-pedidos-programados]
 verify_jwt = false
+
+[functions.send-client-notification]
+verify_jwt = true
+
+[functions.check-invoice-expiry-reminders]
+verify_jwt = false

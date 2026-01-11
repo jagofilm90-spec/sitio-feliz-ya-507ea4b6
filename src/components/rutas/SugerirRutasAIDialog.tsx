@@ -289,6 +289,26 @@ export const SugerirRutasAIDialog = ({
 
       toast({ title: `Ruta ${newFolio} creada` });
 
+      // Send "en_ruta" notification to each client
+      for (const pedido of ruta.pedidos) {
+        if (pedido.cliente_id) {
+          try {
+            await supabase.functions.invoke("send-client-notification", {
+              body: {
+                clienteId: pedido.cliente_id,
+                tipo: "en_ruta",
+                data: {
+                  pedidoFolio: pedido.folio,
+                  choferNombre: choferes[0]?.full_name || "Nuestro equipo",
+                },
+              },
+            });
+          } catch (notifError) {
+            console.error("Error sending en_ruta notification:", notifError);
+          }
+        }
+      }
+
       // Enviar notificación push al chofer asignado
       await notifyRouteAssignment({
         choferId: choferes[0].id,

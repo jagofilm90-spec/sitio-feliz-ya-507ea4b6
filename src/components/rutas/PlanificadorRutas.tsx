@@ -60,6 +60,7 @@ interface Vehiculo {
 interface Pedido {
   id: string;
   folio: string;
+  cliente_id: string;
   cliente: {
     nombre: string;
     direccion: string | null;
@@ -191,6 +192,7 @@ const PlanificadorRutas = () => {
         .select(`
           id,
           folio,
+          cliente_id,
           total,
           peso_total_kg,
           fecha_pedido,
@@ -213,6 +215,7 @@ const PlanificadorRutas = () => {
       
       const transformedPedidos = (pedidosData || []).map((p: any) => ({
         ...p,
+        cliente_id: p.cliente_id,
         cliente: p.cliente || { nombre: "Sin cliente", direccion: null, zona: null },
         sucursal: p.sucursal || null,
       }));
@@ -366,6 +369,25 @@ const PlanificadorRutas = () => {
         .eq("id", selectedVehiculo);
 
       toast({ title: `Ruta ${newFolio} creada correctamente` });
+
+      // Send "en_ruta" notification to each client
+      const choferInfo = choferes.find(c => c.id === selectedChofer);
+      for (const pedido of pedidosSeleccionados) {
+        try {
+          await supabase.functions.invoke("send-client-notification", {
+            body: {
+              clienteId: pedido.cliente_id,
+              tipo: "en_ruta",
+              data: {
+                pedidoFolio: pedido.folio,
+                choferNombre: choferInfo?.nombre_completo || "Nuestro equipo",
+              },
+            },
+          });
+        } catch (notifError) {
+          console.error("Error sending en_ruta notification:", notifError);
+        }
+      }
 
       // Send notifications usando user_id para push (no empleado_id)
       const choferSeleccionado = choferes.find(c => c.id === selectedChofer);
