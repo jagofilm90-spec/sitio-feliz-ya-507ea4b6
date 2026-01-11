@@ -42,7 +42,9 @@ interface CartDraft {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -54,6 +56,25 @@ import {
 } from "@/components/ui/tooltip";
 import { SolicitudDescuentoDialog } from "./SolicitudDescuentoDialog";
 
+// Regions that belong to Valle de México (metropolitan area)
+const VALLE_MEXICO_REGIONS = [
+  'cdmx_norte', 'cdmx_centro', 'cdmx_sur', 
+  'cdmx_oriente', 'cdmx_poniente',
+  'edomex_norte', 'edomex_oriente'
+];
+
+// Foráneas region labels for grouping
+const REGION_LABELS: Record<string, string> = {
+  'valle_mexico': 'Valle de México',
+  'toluca': 'Toluca',
+  'morelos': 'Morelos',
+  'puebla': 'Puebla',
+  'hidalgo': 'Hidalgo',
+  'queretaro': 'Querétaro',
+  'tlaxcala': 'Tlaxcala',
+  'sin_zona': 'Sin zona asignada',
+};
+
 interface Props {
   onPedidoCreado: () => void;
 }
@@ -63,6 +84,10 @@ interface Cliente {
   codigo: string;
   nombre: string;
   termino_credito: string;
+  zona?: {
+    nombre: string;
+    region: string | null;
+  } | null;
 }
 
 interface Sucursal {
@@ -311,10 +336,10 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch my clients
+      // Fetch my clients with zone info
       const { data: clientesData } = await supabase
         .from("clientes")
-        .select("id, codigo, nombre, termino_credito")
+        .select("id, codigo, nombre, termino_credito, zona:zonas(nombre, region)")
         .eq("vendedor_asignado", user.id)
         .eq("activo", true)
         .order("nombre");
@@ -761,22 +786,60 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
             <SelectTrigger className="h-14 text-lg">
               <SelectValue placeholder="Seleccionar cliente" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[400px]">
               {clientes.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground">
                   No tienes clientes asignados
                 </div>
               ) : (
-                clientes.map((cliente) => (
-                  <SelectItem key={cliente.id} value={cliente.id} className="text-base py-3">
-                    <div className="flex items-center justify-between w-full gap-4">
-                      <span>{cliente.nombre}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {cliente.termino_credito === 'contado' ? 'Contado' : cliente.termino_credito.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                  </SelectItem>
-                ))
+                (() => {
+                  // Group clients by region
+                  const clientesPorRegion: Record<string, Cliente[]> = {};
+                  
+                  clientes.forEach(cliente => {
+                    const region = cliente.zona?.region;
+                    let groupKey: string;
+                    
+                    if (!region) {
+                      groupKey = 'sin_zona';
+                    } else if (VALLE_MEXICO_REGIONS.includes(region)) {
+                      groupKey = 'valle_mexico';
+                    } else {
+                      groupKey = region;
+                    }
+                    
+                    if (!clientesPorRegion[groupKey]) {
+                      clientesPorRegion[groupKey] = [];
+                    }
+                    clientesPorRegion[groupKey].push(cliente);
+                  });
+                  
+                  // Define order for regions
+                  const regionOrder = ['valle_mexico', 'toluca', 'morelos', 'puebla', 'hidalgo', 'queretaro', 'tlaxcala', 'sin_zona'];
+                  const sortedRegions = Object.keys(clientesPorRegion).sort((a, b) => {
+                    const indexA = regionOrder.indexOf(a);
+                    const indexB = regionOrder.indexOf(b);
+                    return (indexA === -1 ? 100 : indexA) - (indexB === -1 ? 100 : indexB);
+                  });
+                  
+                  return sortedRegions.map(regionKey => (
+                    <SelectGroup key={regionKey}>
+                      <SelectLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-2 bg-muted/50">
+                        {REGION_LABELS[regionKey] || regionKey}
+                      </SelectLabel>
+                      {clientesPorRegion[regionKey].map((cliente) => (
+                        <SelectItem key={cliente.id} value={cliente.id} className="text-base py-3">
+                          <div className="flex items-center justify-between w-full gap-4">
+                            <span>{cliente.nombre}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {cliente.termino_credito === 'contado' ? 'Contado' : cliente.termino_credito.replace('_', ' ')}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ));
+                })()
               )}
             </SelectContent>
           </Select>

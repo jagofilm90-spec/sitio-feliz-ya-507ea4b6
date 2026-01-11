@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Search, Plus, MapPin, Phone, Building2, MessageCircle, ShoppingCart, History, Navigation, AlertTriangle } from "lucide-react";
+import { Search, Plus, MapPin, Phone, Building2, MessageCircle, ShoppingCart, History, Navigation, AlertTriangle, MapPinned } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { VendedorNuevoClienteSheet } from "./VendedorNuevoClienteSheet";
 import { GeocodificarSucursalSheet } from "./GeocodificarSucursalSheet";
@@ -24,6 +25,11 @@ interface Sucursal {
   longitud: number | null;
 }
 
+interface Zona {
+  nombre: string;
+  region: string | null;
+}
+
 interface Cliente {
   id: string;
   codigo: string;
@@ -35,13 +41,32 @@ interface Cliente {
   sucursales_count?: number;
   sucursales_sin_gps?: number;
   sucursales?: Sucursal[];
+  zona?: Zona | null;
 }
+
+// Regions that belong to Valle de México (metropolitan area)
+const VALLE_MEXICO_REGIONS = [
+  'cdmx_norte', 'cdmx_centro', 'cdmx_sur', 
+  'cdmx_oriente', 'cdmx_poniente',
+  'edomex_norte', 'edomex_oriente'
+];
+
+// Foráneas regions as separate tabs
+const REGIONES_FORANEAS = [
+  { key: 'toluca', label: 'Toluca', regions: ['toluca'] },
+  { key: 'morelos', label: 'Morelos', regions: ['morelos'] },
+  { key: 'puebla', label: 'Puebla', regions: ['puebla'] },
+  { key: 'hidalgo', label: 'Hidalgo', regions: ['hidalgo'] },
+  { key: 'queretaro', label: 'Querétaro', regions: ['queretaro'] },
+  { key: 'tlaxcala', label: 'Tlaxcala', regions: ['tlaxcala'] },
+];
 
 export function VendedorMisClientesTab({ onClienteCreado }: Props) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showNuevoCliente, setShowNuevoCliente] = useState(false);
+  const [activeRegion, setActiveRegion] = useState("todos");
   
   // Geocodificación
   const [showGeocodificar, setShowGeocodificar] = useState(false);
@@ -61,6 +86,7 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
         .from("clientes")
         .select(`
           id, codigo, nombre, direccion, telefono, saldo_pendiente,
+          zona:zonas(nombre, region),
           sucursales:cliente_sucursales(id, nombre, direccion, latitud, longitud)
         `)
         .eq("vendedor_asignado", user.id)
@@ -102,10 +128,84 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
     }
   };
 
-  const clientesFiltrados = clientes.filter(c =>
-    c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.codigo.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Helper function to check if a region belongs to Valle de México
+  const esValledeMexico = (region: string | null | undefined) => {
+    if (!region) return false;
+    return VALLE_MEXICO_REGIONS.includes(region);
+  };
+
+  // Count clients per region for tab badges
+  const conteosPorRegion = useMemo(() => {
+    const conteos: Record<string, number> = { todos: clientes.length };
+    
+    // Count Valle de México
+    conteos['valle_mexico'] = clientes.filter(c => esValledeMexico(c.zona?.region)).length;
+    
+    // Count each foránea region
+    REGIONES_FORANEAS.forEach(regionInfo => {
+      conteos[regionInfo.key] = clientes.filter(c => 
+        regionInfo.regions.includes(c.zona?.region || '')
+      ).length;
+    });
+    
+    // Count "sin zona" (no zone assigned)
+    conteos['sin_zona'] = clientes.filter(c => !c.zona?.region).length;
+    
+    return conteos;
+  }, [clientes]);
+
+  // Filter clients by search term first
+  const clientesFiltradosPorBusqueda = useMemo(() => {
+    return clientes.filter(c =>
+      c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.codigo.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [clientes, searchTerm]);
+
+  // Filter by region tab
+  const clientesFiltrados = useMemo(() => {
+    if (activeRegion === 'todos') return clientesFiltradosPorBusqueda;
+    
+    if (activeRegion === 'valle_mexico') {
+      return clientesFiltradosPorBusqueda.filter(c => esValledeMexico(c.zona?.region));
+    }
+    
+    if (activeRegion === 'sin_zona') {
+      return clientesFiltradosPorBusqueda.filter(c => !c.zona?.region);
+    }
+    
+    const regionInfo = REGIONES_FORANEAS.find(r => r.key === activeRegion);
+    if (regionInfo) {
+      return clientesFiltradosPorBusqueda.filter(c => 
+        regionInfo.regions.includes(c.zona?.region || '')
+      );
+    }
+    
+    return clientesFiltradosPorBusqueda;
+  }, [clientesFiltradosPorBusqueda, activeRegion]);
+
+  // Get region tabs that have clients (to avoid showing empty tabs)
+  const tabsVisibles = useMemo(() => {
+    const tabs: { key: string; label: string; count: number }[] = [
+      { key: 'todos', label: 'Todos', count: conteosPorRegion['todos'] },
+    ];
+    
+    if (conteosPorRegion['valle_mexico'] > 0) {
+      tabs.push({ key: 'valle_mexico', label: 'Valle de México', count: conteosPorRegion['valle_mexico'] });
+    }
+    
+    REGIONES_FORANEAS.forEach(region => {
+      if (conteosPorRegion[region.key] > 0) {
+        tabs.push({ key: region.key, label: region.label, count: conteosPorRegion[region.key] });
+      }
+    });
+    
+    if (conteosPorRegion['sin_zona'] > 0) {
+      tabs.push({ key: 'sin_zona', label: 'Sin zona', count: conteosPorRegion['sin_zona'] });
+    }
+    
+    return tabs;
+  }, [conteosPorRegion]);
 
   const handleClienteCreado = () => {
     setShowNuevoCliente(false);
@@ -126,6 +226,7 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-14 w-full" />
+        <Skeleton className="h-10 w-full" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Skeleton className="h-40" />
           <Skeleton className="h-40" />
@@ -137,7 +238,7 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Search and Add - Larger for tablet */}
       <div className="flex gap-3">
         <div className="relative flex-1">
@@ -160,21 +261,50 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
         </Button>
       </div>
 
+      {/* Region Tabs */}
+      {tabsVisibles.length > 1 && (
+        <Tabs value={activeRegion} onValueChange={setActiveRegion} className="w-full">
+          <ScrollArea className="w-full">
+            <TabsList className="h-auto p-1 flex flex-nowrap gap-1 justify-start bg-muted/50">
+              {tabsVisibles.map((tab) => (
+                <TabsTrigger
+                  key={tab.key}
+                  value={tab.key}
+                  className="shrink-0 data-[state=active]:bg-background px-3 py-2"
+                >
+                  <div className="flex items-center gap-2">
+                    {tab.key === 'valle_mexico' && <MapPinned className="h-4 w-4" />}
+                    <span className="text-sm">{tab.label}</span>
+                    <Badge variant="secondary" className="text-xs h-5 px-1.5">
+                      {tab.count}
+                    </Badge>
+                  </div>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </ScrollArea>
+        </Tabs>
+      )}
+
       {/* Client Grid - Responsive for tablet/desktop */}
-      <ScrollArea className="h-[calc(100vh-350px)] lg:h-[calc(100vh-300px)]">
+      <ScrollArea className="h-[calc(100vh-400px)] lg:h-[calc(100vh-350px)]">
         {clientesFiltrados.length === 0 ? (
           <Card className="border-dashed border-2">
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
               <Building2 className="h-16 w-16 text-muted-foreground mb-4" />
               <h3 className="text-xl font-semibold mb-2">
-                {searchTerm ? "No se encontraron clientes" : "No tienes clientes asignados"}
+                {searchTerm || activeRegion !== 'todos' 
+                  ? "No se encontraron clientes" 
+                  : "No tienes clientes asignados"}
               </h3>
               <p className="text-muted-foreground mb-6 max-w-md">
                 {searchTerm 
                   ? "Intenta con otro término de búsqueda" 
-                  : "Comienza agregando tu primer cliente para empezar a vender"}
+                  : activeRegion !== 'todos'
+                    ? "No hay clientes en esta zona"
+                    : "Comienza agregando tu primer cliente para empezar a vender"}
               </p>
-              {!searchTerm && (
+              {!searchTerm && activeRegion === 'todos' && (
                 <Button 
                   onClick={() => setShowNuevoCliente(true)}
                   size="lg"
@@ -204,6 +334,12 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
                         <Badge variant="outline" className="text-xs">
                           {cliente.codigo}
                         </Badge>
+                        {cliente.zona?.nombre && (
+                          <Badge variant="secondary" className="text-xs">
+                            <MapPin className="h-3 w-3 mr-1" />
+                            {cliente.zona.nombre}
+                          </Badge>
+                        )}
                         {(cliente.sucursales_sin_gps || 0) > 0 && (
                           <Badge 
                             variant="secondary" 
