@@ -391,6 +391,64 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
 
       if (detallesError) throw detallesError;
 
+      // Get vendedor name
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+      
+      const vendedorNombre = profile?.full_name || "Vendedor";
+      const clienteNombre = selectedCliente?.nombre || "Cliente";
+
+      // Create internal notification for secretaries
+      try {
+        await supabase.from("notificaciones").insert({
+          tipo: "nuevo_pedido_vendedor",
+          titulo: `Nuevo pedido ${folio}`,
+          descripcion: `${vendedorNombre} creó pedido para ${clienteNombre} - ${formatCurrency(totales.total)}`,
+          pedido_id: pedido.id,
+          leida: false,
+        });
+      } catch (notifError) {
+        console.error("Error creating notification:", notifError);
+      }
+
+      // Send push notification to secretaries
+      try {
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            roles: ['Secretaria'],
+            title: '📦 Nuevo Pedido',
+            body: `${vendedorNombre} → ${clienteNombre} - ${formatCurrency(totales.total)}`,
+            data: {
+              type: 'nuevo_pedido',
+              pedido_id: pedido.id,
+              folio: folio,
+            }
+          }
+        });
+      } catch (pushError) {
+        console.error("Error sending push to secretarias:", pushError);
+      }
+
+      // Send email notification to secretaries
+      try {
+        await supabase.functions.invoke('send-secretary-notification', {
+          body: {
+            tipo: 'nuevo_pedido',
+            pedidoId: pedido.id,
+            folio: folio,
+            vendedor: vendedorNombre,
+            cliente: clienteNombre,
+            total: totales.total,
+            requiereFactura: selectedCliente?.termino_credito !== 'contado'
+          }
+        });
+      } catch (emailError) {
+        console.error("Error sending email to secretarias:", emailError);
+      }
+
       toast.success(`Pedido ${folio} creado exitosamente`);
 
       // Reset form

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +48,24 @@ export function SolicitudesDescuentoPanel() {
     try {
       await responderSolicitud(solicitud.id, true, solicitud.precio_solicitado);
       toast.success("Descuento aprobado");
+      
+      // Send push notification to vendedor
+      try {
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            user_ids: [solicitud.vendedor_id],
+            title: '✅ Precio Autorizado',
+            body: `Tu descuento para ${solicitud.producto?.nombre || 'producto'} fue aprobado`,
+            data: {
+              type: 'descuento_aprobado',
+              solicitud_id: solicitud.id,
+              precio_aprobado: String(solicitud.precio_solicitado),
+            }
+          }
+        });
+      } catch (pushError) {
+        console.error("Error sending push:", pushError);
+      }
     } catch (error: any) {
       toast.error(error.message || "Error al aprobar");
     } finally {
@@ -60,6 +79,24 @@ export function SolicitudesDescuentoPanel() {
     try {
       await responderSolicitud(rechazarDialog.id, false, undefined, notasRechazo);
       toast.success("Solicitud rechazada");
+      
+      // Send push notification to vendedor
+      try {
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            user_ids: [rechazarDialog.vendedor_id],
+            title: '❌ Descuento Rechazado',
+            body: `Tu solicitud para ${rechazarDialog.producto?.nombre || 'producto'} fue rechazada`,
+            data: {
+              type: 'descuento_rechazado',
+              solicitud_id: rechazarDialog.id,
+            }
+          }
+        });
+      } catch (pushError) {
+        console.error("Error sending push:", pushError);
+      }
+      
       setRechazarDialog(null);
       setNotasRechazo("");
     } catch (error: any) {
