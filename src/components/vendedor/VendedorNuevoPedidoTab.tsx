@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { 
   Search, Plus, Minus, ShoppingCart, Trash2, Loader2, Package, Store, 
-  AlertTriangle, Percent, Lock, Send, Clock, CreditCard 
+  AlertTriangle, Percent, Lock, Send, Clock, CreditCard, Star, AlertCircle
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { calcularDesgloseImpuestos, redondear, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
@@ -56,6 +56,7 @@ interface Producto {
   unidad: string;
   precio_venta: number;
   stock_actual: number;
+  stock_minimo: number | null;
   aplica_iva: boolean;
   aplica_ieps: boolean;
   kg_por_unidad: number | null;
@@ -76,11 +77,41 @@ interface LineaPedido {
   solicitudId?: string;
 }
 
+// Stock badge component
+const StockBadge = ({ producto }: { producto: Producto }) => {
+  const stockMinimo = producto.stock_minimo || 10;
+  
+  if (producto.stock_actual <= 0) {
+    return (
+      <Badge variant="destructive" className="text-xs gap-1">
+        <AlertCircle className="h-3 w-3" />
+        Sin stock
+      </Badge>
+    );
+  }
+  
+  if (producto.stock_actual <= stockMinimo) {
+    return (
+      <Badge variant="outline" className="text-xs text-amber-600 border-amber-400 bg-amber-50 dark:bg-amber-950/30">
+        Stock bajo ({producto.stock_actual})
+      </Badge>
+    );
+  }
+  
+  return (
+    <Badge variant="outline" className="text-xs text-green-600 border-green-400 bg-green-50 dark:bg-green-950/30">
+      {producto.stock_actual} disp.
+    </Badge>
+  );
+};
+
 export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [productosFrecuentes, setProductosFrecuentes] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingFrecuentes, setLoadingFrecuentes] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   
   // Form state
@@ -111,6 +142,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
   useEffect(() => {
     if (selectedClienteId) {
       fetchSucursales(selectedClienteId);
+      fetchProductosFrecuentes(selectedClienteId);
       // Pre-fill credit term from client
       const cliente = clientes.find(c => c.id === selectedClienteId);
       if (cliente) {
@@ -120,6 +152,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
       setSucursales([]);
       setSelectedSucursalId("");
       setTerminoCredito("contado");
+      setProductosFrecuentes([]);
     }
   }, [selectedClienteId, clientes]);
 
@@ -139,12 +172,11 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
 
       setClientes(clientesData || []);
 
-      // Fetch products with descuento_maximo
+      // Fetch ALL active products (removed stock filter)
       const { data: productosData } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, unidad, precio_venta, stock_actual, aplica_iva, aplica_ieps, kg_por_unidad, precio_por_kilo, presentacion, descuento_maximo")
+        .select("id, codigo, nombre, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, kg_por_unidad, precio_por_kilo, presentacion, descuento_maximo")
         .eq("activo", true)
-        .gt("stock_actual", 0)
         .order("nombre");
 
       setProductos(productosData || []);
@@ -170,6 +202,69 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
     }
   };
 
+  const fetchProductosFrecuentes = async (clienteId: string) => {
+    try {
+      setLoadingFrecuentes(true);
+      
+      // Get product IDs from previous orders for this client
+      const { data: pedidosData } = await supabase
+        .from("pedidos")
+        .select("id")
+        .eq("cliente_id", clienteId)
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (!pedidosData || pedidosData.length === 0) {
+        setProductosFrecuentes([]);
+        return;
+      }
+
+      const pedidoIds = pedidosData.map(p => p.id);
+
+      // Get product frequency from order details
+      const { data: detallesData } = await supabase
+        .from("pedidos_detalles")
+        .select("producto_id")
+        .in("pedido_id", pedidoIds);
+
+      if (!detallesData || detallesData.length === 0) {
+        setProductosFrecuentes([]);
+        return;
+      }
+
+      // Count frequency
+      const frecuencia: Record<string, number> = {};
+      detallesData.forEach(d => {
+        frecuencia[d.producto_id] = (frecuencia[d.producto_id] || 0) + 1;
+      });
+
+      // Get top 8 most frequent product IDs
+      const topProductoIds = Object.entries(frecuencia)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([id]) => id);
+
+      // Fetch product details for frequent products
+      const { data: productosFrec } = await supabase
+        .from("productos")
+        .select("id, codigo, nombre, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, kg_por_unidad, precio_por_kilo, presentacion, descuento_maximo")
+        .in("id", topProductoIds)
+        .eq("activo", true);
+
+      // Sort by original frequency order
+      const sortedProductos = topProductoIds
+        .map(id => productosFrec?.find(p => p.id === id))
+        .filter(Boolean) as Producto[];
+
+      setProductosFrecuentes(sortedProductos);
+    } catch (error) {
+      console.error("Error fetching frequent products:", error);
+      setProductosFrecuentes([]);
+    } finally {
+      setLoadingFrecuentes(false);
+    }
+  };
+
   const fechasDisponibles = () => {
     const fechas: string[] = [];
     let date = addDays(new Date(), 1);
@@ -182,16 +277,27 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
     return fechas;
   };
 
-  const productosFiltrados = productos.filter(p =>
-    p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.codigo.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter products excluding frequent ones to avoid duplicates
+  const productosFiltrados = productos
+    .filter(p =>
+      p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.codigo.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .filter(p => !productosFrecuentes.some(f => f.id === p.id));
 
   const agregarProducto = (producto: Producto) => {
     const existe = lineas.find(l => l.producto.id === producto.id);
     if (existe) {
       actualizarCantidad(producto.id, existe.cantidad + 1);
       return;
+    }
+
+    // Warning for out of stock products
+    if (producto.stock_actual <= 0) {
+      toast.warning("Producto sin stock disponible", {
+        description: "Se agregó al pedido. Se surtirá cuando haya disponibilidad.",
+        duration: 4000,
+      });
     }
 
     const precio = obtenerPrecioUnitarioVenta({
@@ -547,12 +653,67 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
           </div>
         )}
 
-        {/* Product Search - Larger */}
+        {/* Frequent Products Section */}
+        {selectedClienteId && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Star className="h-5 w-5 text-amber-500" />
+                Productos Frecuentes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingFrecuentes ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[1, 2, 3, 4].map(i => (
+                    <Skeleton key={i} className="h-24" />
+                  ))}
+                </div>
+              ) : productosFrecuentes.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Sin historial de pedidos para este cliente
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {productosFrecuentes.map((producto) => {
+                    const yaEnCarrito = lineas.some(l => l.producto.id === producto.id);
+                    return (
+                      <div
+                        key={producto.id}
+                        className={`p-3 rounded-lg border transition-all cursor-pointer ${
+                          yaEnCarrito 
+                            ? 'bg-primary/10 border-primary' 
+                            : 'hover:bg-muted hover:border-primary/50'
+                        } ${producto.stock_actual <= 0 ? 'opacity-75' : ''}`}
+                        onClick={() => !yaEnCarrito && agregarProducto(producto)}
+                      >
+                        <p className="font-medium text-sm truncate mb-1">{producto.nombre}</p>
+                        <p className="text-lg font-bold text-primary mb-2">
+                          {formatCurrency(producto.precio_venta)}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <StockBadge producto={producto} />
+                          {yaEnCarrito && (
+                            <Badge variant="default" className="text-xs">
+                              ✓
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Product Search - All Products */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <Package className="h-5 w-5" />
-              Productos
+              Todos los Productos
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -568,41 +729,60 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
 
             {/* Search Results */}
             {searchTerm && (
-              <ScrollArea className="h-48 border rounded-lg">
+              <ScrollArea className="h-64 border rounded-lg">
                 <div className="p-2 space-y-1">
-                  {productosFiltrados.slice(0, 10).map((producto) => (
-                    <div
-                      key={producto.id}
-                      className="flex items-center justify-between p-4 hover:bg-muted rounded-lg cursor-pointer transition-colors"
-                      onClick={() => agregarProducto(producto)}
-                    >
-                      <div>
-                        <p className="font-medium text-base">{producto.nombre}</p>
-                        <p className="text-sm text-muted-foreground">{producto.codigo}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-lg">{formatCurrency(producto.precio_venta)}</p>
-                        <div className="flex items-center gap-2 justify-end">
-                          <p className="text-sm text-muted-foreground">{producto.stock_actual} disp.</p>
-                          {(producto.descuento_maximo || 0) > 0 && (
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <Badge variant="secondary" className="text-xs">
-                                  <Percent className="h-3 w-3 mr-1" />
-                                  -{formatCurrency(producto.descuento_maximo)}
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                Descuento máximo autorizado
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
+                  {productosFiltrados.slice(0, 15).map((producto) => {
+                    const yaEnCarrito = lineas.some(l => l.producto.id === producto.id);
+                    return (
+                      <div
+                        key={producto.id}
+                        className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors ${
+                          yaEnCarrito 
+                            ? 'bg-primary/10 border border-primary' 
+                            : 'hover:bg-muted'
+                        } ${producto.stock_actual <= 0 ? 'opacity-75' : ''}`}
+                        onClick={() => !yaEnCarrito && agregarProducto(producto)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-base truncate">{producto.nombre}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-sm text-muted-foreground">{producto.codigo}</p>
+                            <StockBadge producto={producto} />
+                          </div>
+                        </div>
+                        <div className="text-right ml-4">
+                          <p className="font-bold text-lg">{formatCurrency(producto.precio_venta)}</p>
+                          <div className="flex items-center gap-2 justify-end">
+                            {(producto.descuento_maximo || 0) > 0 && (
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Badge variant="secondary" className="text-xs">
+                                    <Percent className="h-3 w-3 mr-1" />
+                                    -{formatCurrency(producto.descuento_maximo)}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Descuento máximo autorizado
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {yaEnCarrito && (
+                              <Badge variant="default" className="text-xs">
+                                En carrito
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {productosFiltrados.length === 0 && (
                     <p className="text-center text-muted-foreground py-4">No se encontraron productos</p>
+                  )}
+                  {productosFiltrados.length > 15 && (
+                    <p className="text-center text-muted-foreground py-2 text-sm">
+                      Mostrando 15 de {productosFiltrados.length} resultados
+                    </p>
                   )}
                 </div>
               </ScrollArea>
@@ -633,7 +813,10 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">{linea.producto.nombre}</p>
-                          <p className="text-xs text-muted-foreground">{linea.producto.codigo}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-xs text-muted-foreground">{linea.producto.codigo}</p>
+                            <StockBadge producto={linea.producto} />
+                          </div>
                         </div>
                         <Button
                           size="icon"
