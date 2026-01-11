@@ -731,9 +731,9 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
             </div>
 
             {/* Always Visible Product Table with Direct Quantity Input */}
-            <ScrollArea className="h-96 border rounded-lg">
+            <ScrollArea className="h-[500px] border rounded-lg">
               <div className="p-2 space-y-1">
-                {productosFiltrados.slice(0, 50).map((producto) => {
+                {productosFiltrados.map((producto) => {
                   const lineaEnCarrito = lineas.find(l => l.producto.id === producto.id);
                   const cantidadEnCarrito = lineaEnCarrito?.cantidad || 0;
                   
