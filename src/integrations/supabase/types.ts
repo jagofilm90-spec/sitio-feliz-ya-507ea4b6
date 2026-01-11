@@ -4517,10 +4517,12 @@ export type Database = {
       solicitudes_descuento: {
         Row: {
           cantidad_solicitada: number | null
+          carrito_snapshot: Json | null
           cliente_id: string
           created_at: string | null
           descuento_maximo: number
           descuento_solicitado: number
+          es_urgente: boolean | null
           id: string
           motivo: string | null
           pedido_id: string | null
@@ -4533,15 +4535,18 @@ export type Database = {
           respuesta_notas: string | null
           status: string | null
           sucursal_id: string | null
+          total_pedido_estimado: number | null
           updated_at: string | null
           vendedor_id: string
         }
         Insert: {
           cantidad_solicitada?: number | null
+          carrito_snapshot?: Json | null
           cliente_id: string
           created_at?: string | null
           descuento_maximo: number
           descuento_solicitado: number
+          es_urgente?: boolean | null
           id?: string
           motivo?: string | null
           pedido_id?: string | null
@@ -4554,15 +4559,18 @@ export type Database = {
           respuesta_notas?: string | null
           status?: string | null
           sucursal_id?: string | null
+          total_pedido_estimado?: number | null
           updated_at?: string | null
           vendedor_id: string
         }
         Update: {
           cantidad_solicitada?: number | null
+          carrito_snapshot?: Json | null
           cliente_id?: string
           created_at?: string | null
           descuento_maximo?: number
           descuento_solicitado?: number
+          es_urgente?: boolean | null
           id?: string
           motivo?: string | null
           pedido_id?: string | null
@@ -4575,6 +4583,7 @@ export type Database = {
           respuesta_notas?: string | null
           status?: string | null
           sucursal_id?: string | null
+          total_pedido_estimado?: number | null
           updated_at?: string | null
           vendedor_id?: string
         }

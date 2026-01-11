@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, Send, Clock } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { useSolicitudesDescuento, useSolicitudStatus } from "@/hooks/useSolicitudesDescuento";
+import { useSolicitudesDescuento, useSolicitudStatus, CarritoItem } from "@/hooks/useSolicitudesDescuento";
 import { toast } from "sonner";
 
 interface ProductoConDescuento {
@@ -35,6 +35,9 @@ interface SolicitudDescuentoDialogProps {
   sucursalId?: string | null;
   onAprobado?: (productoId: string, precioAprobado: number) => void;
   onCancelar?: () => void;
+  // New: cart context for admin visibility
+  carritoSnapshot?: CarritoItem[];
+  totalPedidoEstimado?: number;
 }
 
 export function SolicitudDescuentoDialog({
@@ -46,6 +49,8 @@ export function SolicitudDescuentoDialog({
   sucursalId,
   onAprobado,
   onCancelar,
+  carritoSnapshot,
+  totalPedidoEstimado,
 }: SolicitudDescuentoDialogProps) {
   const [motivo, setMotivo] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -91,6 +96,11 @@ export function SolicitudDescuentoDialog({
         descuento_maximo: producto.descuentoMaximo,
         cantidad_solicitada: producto.cantidad,
         motivo: motivo || undefined,
+        producto_nombre: producto.nombre,
+        // Include cart context for admin
+        carrito_snapshot: carritoSnapshot,
+        total_pedido_estimado: totalPedidoEstimado,
+        es_urgente: true,
       });
 
       setSolicitudId(data.id);
@@ -169,6 +179,21 @@ export function SolicitudDescuentoDialog({
             <span className="text-muted-foreground">Cantidad solicitada:</span>
             <Badge variant="outline">{producto.cantidad} unidades</Badge>
           </div>
+
+          {/* Order context preview */}
+          {totalPedidoEstimado && (
+            <div className="text-sm bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-3 rounded-lg">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total estimado del pedido:</span>
+                <span className="font-bold text-blue-600">{formatCurrency(totalPedidoEstimado)}</span>
+              </div>
+              {carritoSnapshot && carritoSnapshot.length > 1 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  +{carritoSnapshot.length - 1} productos adicionales en el carrito
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Motivo */}
           {!esperandoRespuesta && (
