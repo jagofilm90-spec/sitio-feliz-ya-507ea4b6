@@ -11,7 +11,7 @@ export function cn(...inputs: ClassValue[]) {
  * Ejemplo: 9100 -> "9,100.00"
  */
 export function formatCurrency(value: number): string {
-  return value.toLocaleString('en-US', {
+  return '$' + value.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
