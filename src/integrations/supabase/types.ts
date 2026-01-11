@@ -2639,6 +2639,7 @@ export type Database = {
           id: string
           leida: boolean | null
           orden_compra_id: string | null
+          pedido_id: string | null
           tipo: string
           titulo: string
         }
@@ -2652,6 +2653,7 @@ export type Database = {
           id?: string
           leida?: boolean | null
           orden_compra_id?: string | null
+          pedido_id?: string | null
           tipo: string
           titulo: string
         }
@@ -2665,6 +2667,7 @@ export type Database = {
           id?: string
           leida?: boolean | null
           orden_compra_id?: string | null
+          pedido_id?: string | null
           tipo?: string
           titulo?: string
         }
@@ -2702,6 +2705,13 @@ export type Database = {
             columns: ["orden_compra_id"]
             isOneToOne: false
             referencedRelation: "ordenes_compra"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notificaciones_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
             referencedColumns: ["id"]
           },
         ]

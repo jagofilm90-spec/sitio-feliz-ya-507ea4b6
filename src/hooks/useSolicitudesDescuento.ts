@@ -194,20 +194,43 @@ export function useSolicitudesDescuento(options: UseSolicitudesDescuentoOptions 
     descuento_maximo: number;
     cantidad_solicitada?: number;
     motivo?: string;
+    vendedor_nombre?: string;
+    producto_nombre?: string;
   }) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("No autenticado");
 
+    const { vendedor_nombre, producto_nombre, ...solicitudData } = solicitud;
+
     const { data, error } = await supabase
       .from("solicitudes_descuento")
       .insert({
-        ...solicitud,
+        ...solicitudData,
         vendedor_id: user.id,
       })
       .select()
       .single();
 
     if (error) throw error;
+
+    // Send push notification to Admin
+    try {
+      await supabase.functions.invoke('send-push-notification', {
+        body: {
+          roles: ['Admin'],
+          title: '🔔 Autoriza precio',
+          body: `${vendedor_nombre || 'Vendedor'} solicita descuento para ${producto_nombre || 'producto'}`,
+          data: {
+            type: 'solicitud_descuento',
+            solicitud_id: data.id,
+          }
+        }
+      });
+    } catch (pushError) {
+      console.error("Error sending push notification:", pushError);
+      // Don't fail the main operation if push fails
+    }
+
     return data;
   };
 
