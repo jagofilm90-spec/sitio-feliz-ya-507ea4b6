@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { calcularDesgloseImpuestos, redondear, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
-import { format, addDays, isWeekend, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
 // Storage key for persistent cart
@@ -34,7 +34,6 @@ interface CartDraft {
     requiereAutorizacion: boolean;
     autorizacionStatus?: 'pendiente' | 'aprobado' | 'rechazado' | null;
   }>;
-  fechaEntrega: string;
   terminoCredito: string;
   notas: string;
   savedAt: string;
@@ -141,7 +140,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
   const [selectedSucursalId, setSelectedSucursalId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [lineas, setLineas] = useState<LineaPedido[]>([]);
-  const [fechaEntrega, setFechaEntrega] = useState("");
   const [terminoCredito, setTerminoCredito] = useState("contado");
   const [notas, setNotas] = useState("");
 
@@ -181,7 +179,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
         requiereAutorizacion: l.requiereAutorizacion,
         autorizacionStatus: l.autorizacionStatus,
       })),
-      fechaEntrega,
       terminoCredito,
       notas,
       savedAt: new Date().toISOString(),
@@ -189,7 +186,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
     
     sessionStorage.setItem(CART_STORAGE_KEY, JSON.stringify(draft));
     setHasDraft(lineas.length > 0 || !!selectedClienteId);
-  }, [lineas, selectedClienteId, selectedSucursalId, fechaEntrega, terminoCredito, notas, isRestoringDraft]);
+  }, [lineas, selectedClienteId, selectedSucursalId, terminoCredito, notas, isRestoringDraft]);
 
   const loadCartDraft = useCallback((): CartDraft | null => {
     try {
@@ -286,7 +283,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
             setLineas([]);
             setSelectedClienteId("");
             setSelectedSucursalId("");
-            setFechaEntrega("");
             setTerminoCredito("contado");
             setNotas("");
             setHasDraft(false);
@@ -299,7 +295,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
       setSelectedClienteId(draft.clienteId);
       setSelectedSucursalId(draft.sucursalId);
       setLineas(restoredLineas);
-      setFechaEntrega(draft.fechaEntrega);
       setTerminoCredito(draft.terminoCredito);
       setNotas(draft.notas);
       setHasDraft(true);
@@ -416,18 +411,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
     } finally {
       setLoadingFrecuentes(false);
     }
-  };
-
-  const fechasDisponibles = () => {
-    const fechas: string[] = [];
-    let date = addDays(new Date(), 1);
-    while (fechas.length < 7) {
-      if (!isWeekend(date) || date.getDay() === 6) {
-        fechas.push(format(date, "yyyy-MM-dd"));
-      }
-      date = addDays(date, 1);
-    }
-    return fechas;
   };
 
   // Filter products excluding frequent ones to avoid duplicates
@@ -585,11 +568,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
       return;
     }
 
-    if (!fechaEntrega) {
-      toast.error("Selecciona fecha de entrega");
-      return;
-    }
-
     // Check for unauthorized discounts
     const productosConDescuentoNoAutorizado = lineas.filter(
       l => l.requiereAutorizacion && l.autorizacionStatus !== 'aprobado' && l.autorizacionStatus !== 'pendiente'
@@ -619,7 +597,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
           vendedor_id: user.id,
           sucursal_id: selectedSucursalId || null,
           fecha_pedido: new Date().toISOString(),
-          fecha_entrega_estimada: fechaEntrega,
+          fecha_entrega_estimada: null,
           subtotal: totales.subtotal,
           impuestos: totales.impuestos,
           total: totales.total,
@@ -717,7 +695,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
       setSelectedClienteId("");
       setSelectedSucursalId("");
       setLineas([]);
-      setFechaEntrega("");
       setTerminoCredito("contado");
       setNotas("");
 
@@ -1192,23 +1169,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
             )}
           </CardContent>
         </Card>
-
-        {/* Delivery Date - Larger */}
-        <div className="space-y-2">
-          <Label className="text-base">Fecha de entrega *</Label>
-          <Select value={fechaEntrega} onValueChange={setFechaEntrega}>
-            <SelectTrigger className="h-14 text-lg">
-              <SelectValue placeholder="Seleccionar fecha" />
-            </SelectTrigger>
-            <SelectContent>
-              {fechasDisponibles().map((fecha) => (
-                <SelectItem key={fecha} value={fecha} className="text-base py-3">
-                  {format(new Date(fecha + 'T12:00:00'), "EEEE d 'de' MMMM", { locale: es })}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
 
         {/* Credit Term Selector */}
         <div className="space-y-2">
