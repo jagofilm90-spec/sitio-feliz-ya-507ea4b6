@@ -753,6 +753,20 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
                           <StockBadge producto={producto} />
                         </div>
                       </div>
+
+                      {/* Columna: Presentación */}
+                      <div className="w-24 text-center hidden sm:block">
+                        <p className="text-xs text-muted-foreground truncate">
+                          {producto.presentacion || producto.unidad || '-'}
+                        </p>
+                      </div>
+
+                      {/* Columna: Peso */}
+                      <div className="w-16 text-center hidden sm:block">
+                        <p className="text-xs text-muted-foreground">
+                          {producto.kg_por_unidad ? `${producto.kg_por_unidad} kg` : '-'}
+                        </p>
+                      </div>
                       
                       <div className="flex items-center gap-3 ml-2">
                         <div className="text-right">
