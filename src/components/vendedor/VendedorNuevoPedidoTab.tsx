@@ -11,7 +11,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { 
   Search, Plus, Minus, ShoppingCart, Trash2, Loader2, Package, Store, 
-  AlertTriangle, Percent, Lock, Send, Clock, CreditCard, Star, AlertCircle, FileEdit
+  AlertTriangle, Percent, Lock, Send, Clock, CreditCard, Star, AlertCircle, FileEdit,
+  Truck, Tag
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { calcularDesgloseImpuestos, redondear, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
@@ -532,6 +533,9 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
     let subtotalNeto = 0;
     let totalIva = 0;
     let totalIeps = 0;
+    let pesoTotalKg = 0;
+    let totalUnidades = 0;
+    let ahorroDescuentos = 0;
 
     lineas.forEach((l) => {
       const resultado = calcularDesgloseImpuestos({
@@ -543,12 +547,33 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
       subtotalNeto += resultado.base;
       totalIva += resultado.iva;
       totalIeps += resultado.ieps;
+      
+      // Calcular peso según tipo de producto
+      const pesoUnitario = l.producto.kg_por_unidad 
+        || parseFloat(l.producto.presentacion || "0") 
+        || 0;
+      pesoTotalKg += l.cantidad * pesoUnitario;
+      
+      // Contar unidades
+      totalUnidades += l.cantidad;
+      
+      // Calcular ahorro por descuentos
+      if (l.descuento > 0) {
+        ahorroDescuentos += l.descuento * l.cantidad;
+      }
     });
 
     return { 
       subtotal: redondear(subtotalNeto), 
+      iva: redondear(totalIva),
+      ieps: redondear(totalIeps),
       impuestos: redondear(totalIva + totalIeps), 
-      total: redondear(subtotalNeto + totalIva + totalIeps)
+      total: redondear(subtotalNeto + totalIva + totalIeps),
+      pesoTotalKg: redondear(pesoTotalKg),
+      totalUnidades,
+      ahorroDescuentos: redondear(ahorroDescuentos),
+      productosConIva: lineas.filter(l => l.producto.aplica_iva).length,
+      productosConIeps: lineas.filter(l => l.producto.aplica_ieps).length,
     };
   };
 
@@ -1208,27 +1233,82 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
           />
         </div>
 
-        {/* Totals and Submit - Larger */}
+        {/* Totals and Submit - Enhanced */}
         {lineas.length > 0 && (
           <Card className="bg-primary/5 border-primary/20">
             <CardContent className="p-6">
-              <div className="space-y-2 text-base mb-6">
+              {/* Resumen rápido */}
+              <div className="flex items-center justify-center gap-2 mb-4 text-sm text-muted-foreground bg-background/50 rounded-lg py-2">
+                <Package className="h-4 w-4" />
+                <span className="font-medium">{lineas.length} productos</span>
+                <span className="text-muted-foreground/50">·</span>
+                <span>{totales.totalUnidades} unidades</span>
+                <span className="text-muted-foreground/50">·</span>
+                <span className="font-semibold text-foreground">{totales.pesoTotalKg.toLocaleString()} kg</span>
+              </div>
+
+              {/* Desglose detallado */}
+              <div className="space-y-2 text-sm border-t pt-4">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subtotal:</span>
+                  <span className="text-muted-foreground">Subtotal (base):</span>
                   <span className="font-medium">{formatCurrency(totales.subtotal)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Impuestos:</span>
-                  <span className="font-medium">{formatCurrency(totales.impuestos)}</span>
-                </div>
-                <div className="flex justify-between text-xl font-bold pt-3 border-t">
-                  <span>Total:</span>
-                  <span className="text-primary">{formatCurrency(totales.total)}</span>
+                
+                {totales.iva > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">
+                      IVA (16%) <span className="text-xs opacity-70">({totales.productosConIva} prod.)</span>
+                    </span>
+                    <span className="font-medium">{formatCurrency(totales.iva)}</span>
+                  </div>
+                )}
+                
+                {totales.ieps > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">
+                      IEPS (8%) <span className="text-xs opacity-70">({totales.productosConIeps} prod.)</span>
+                    </span>
+                    <span className="font-medium">{formatCurrency(totales.ieps)}</span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between text-muted-foreground pt-1 border-t border-dashed">
+                  <span>Total impuestos:</span>
+                  <span>{formatCurrency(totales.impuestos)}</span>
                 </div>
               </div>
 
+              {/* Ahorro por descuentos */}
+              {totales.ahorroDescuentos > 0 && (
+                <div className="flex items-center justify-between mt-4 p-2 bg-green-100 dark:bg-green-900/30 rounded-lg text-sm text-green-700 dark:text-green-400">
+                  <div className="flex items-center gap-2">
+                    <Tag className="h-4 w-4" />
+                    <span>Ahorro por descuentos:</span>
+                  </div>
+                  <span className="font-bold">-{formatCurrency(totales.ahorroDescuentos)}</span>
+                </div>
+              )}
+
+              {/* Total destacado */}
+              <div className="flex justify-between text-xl font-bold pt-4 mt-4 border-t-2">
+                <span>TOTAL:</span>
+                <span className="text-primary">{formatCurrency(totales.total)}</span>
+              </div>
+
+              {/* Alerta de peso */}
+              {totales.pesoTotalKg > 15500 && (
+                <div className="mt-4 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
+                  <Truck className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>
+                    Peso total ({totales.pesoTotalKg.toLocaleString()} kg) excede capacidad estándar. 
+                    Requiere vehículo especial o división de entrega.
+                  </span>
+                </div>
+              )}
+
+              {/* Advertencia de descuentos pendientes */}
               {tieneDescuentosPendientes && (
-                <div className="mb-4 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
+                <div className="mt-4 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                   <span>
                     Hay productos con descuentos pendientes de autorización. Serán revisados por el administrador.
@@ -1239,7 +1319,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
               <Button 
                 onClick={handleSubmit} 
                 disabled={submitting} 
-                className="w-full h-14 text-lg font-semibold"
+                className="w-full h-14 text-lg font-semibold mt-6"
                 size="lg"
               >
                 {submitting && <Loader2 className="h-5 w-5 mr-2 animate-spin" />}
