@@ -1,22 +1,9 @@
 import { corsHeaders } from "../_shared/cors.ts";
 
-interface SepomexResponse {
-  error: boolean;
-  code_error: number;
-  error_message: string | null;
-  response: {
-    cp: string;
-    asentamiento: string;
-    tipo_asentamiento: string;
-    municipio: string;
-    estado: string;
-    ciudad: string;
-    pais: string;
-  }[];
-}
+// Using Zippopotam.us - a free, reliable postal code API
+// Falls back to a Mexican postal codes API
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -31,81 +18,107 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Query SEPOMEX API
-    const sepomexUrl = `https://api-sepomex.hckdrk.mx/query/info_cp/${codigo_postal}`;
+    // Try Zippopotam.us first (reliable, fast)
+    const zippoUrl = `https://api.zippopotam.us/MX/${codigo_postal}`;
     
-    const response = await fetch(sepomexUrl, {
-      headers: {
-        "Accept": "application/json",
-      },
-    });
+    try {
+      const response = await fetch(zippoUrl, {
+        signal: AbortSignal.timeout(5000), // 5 second timeout
+      });
 
-    if (!response.ok) {
-      // Try alternative API if first fails
-      const altUrl = `https://api.copomex.com/query/info_cp/${codigo_postal}?token=pruebas`;
-      const altResponse = await fetch(altUrl);
-      
-      if (!altResponse.ok) {
-        return new Response(
-          JSON.stringify({ 
-            error: "No se encontró información para este código postal",
-            codigo_postal 
-          }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.places && data.places.length > 0) {
+          const colonias = data.places.map((p: { "place name": string }) => p["place name"]);
+          const firstPlace = data.places[0];
+          
+          // Extract state and municipality from the data
+          // Zippopotam returns state in "state" and municipality info in place name
+          const estado = firstPlace.state || "";
+          // For Mexico, the "state abbreviation" often contains useful info
+          const municipio = extractMunicipio(firstPlace, estado);
+          
+          return new Response(
+            JSON.stringify({
+              codigo_postal: codigo_postal,
+              municipio: municipio,
+              estado: estado,
+              ciudad: municipio,
+              colonias: colonias,
+              colonia_sugerida: colonias.length === 1 ? colonias[0] : null,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
-      
-      const altData = await altResponse.json();
-      return new Response(
-        JSON.stringify(processData(altData)),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    } catch (e) {
+      console.log("Zippopotam failed, trying fallback:", e);
     }
 
-    const data: SepomexResponse = await response.json();
+    // Fallback: Try el-ccp.com API (Mexican postal codes)
+    try {
+      const elccpUrl = `https://api.el-ccp.com/codigo-postal/${codigo_postal}`;
+      const response = await fetch(elccpUrl, {
+        signal: AbortSignal.timeout(5000),
+      });
 
-    if (data.error || !data.response || data.response.length === 0) {
-      return new Response(
-        JSON.stringify({ 
-          error: "No se encontró información para este código postal",
-          codigo_postal 
-        }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.colonias) {
+          return new Response(
+            JSON.stringify({
+              codigo_postal: codigo_postal,
+              municipio: data.municipio || data.delegacion || "",
+              estado: data.estado || "",
+              ciudad: data.ciudad || data.municipio || "",
+              colonias: data.colonias || [],
+              colonia_sugerida: data.colonias?.length === 1 ? data.colonias[0] : null,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+    } catch (e) {
+      console.log("el-ccp failed:", e);
     }
 
-    const result = processData(data);
-
+    // If all APIs fail, return a helpful response
     return new Response(
-      JSON.stringify(result),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ 
+        error: "No se encontró información para este código postal. Por favor ingresa los datos manualmente.",
+        codigo_postal,
+        // Return empty but valid structure so UI can still work
+        municipio: "",
+        estado: "",
+        colonias: [],
+      }),
+      { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error) {
     console.error("Error in lookup-postal-code:", error);
     return new Response(
-      JSON.stringify({ error: "Error al consultar código postal" }),
+      JSON.stringify({ 
+        error: "Error al consultar código postal. Por favor ingresa los datos manualmente.",
+        municipio: "",
+        estado: "",
+        colonias: [],
+      }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
 
-function processData(data: SepomexResponse) {
-  const locations = data.response;
+// Helper to extract municipio from Zippopotam data
+function extractMunicipio(place: { state: string; "place name": string; "state abbreviation"?: string }, estado: string): string {
+  // For CDMX, the state abbreviation often contains the delegación/alcaldía
+  if (estado === "Distrito Federal" || estado === "Ciudad de Mexico" || estado === "Ciudad de México") {
+    // The place name might contain the colonia, try to get delegación from other sources
+    // Common CDMX alcaldías based on postal code ranges
+    return place["state abbreviation"] || "Ciudad de México";
+  }
   
-  // Get unique colonias
-  const colonias = [...new Set(locations.map(l => l.asentamiento))].sort();
-  
-  // All locations share the same municipio and estado
-  const firstLocation = locations[0];
-  
-  return {
-    codigo_postal: firstLocation.cp,
-    municipio: firstLocation.municipio,
-    estado: firstLocation.estado,
-    ciudad: firstLocation.ciudad || firstLocation.municipio,
-    colonias: colonias,
-    // For convenience, include primera colonia
-    colonia_sugerida: colonias.length === 1 ? colonias[0] : null,
-  };
+  // For other states, try to get municipio from the place data
+  return place["state abbreviation"] || estado;
 }
