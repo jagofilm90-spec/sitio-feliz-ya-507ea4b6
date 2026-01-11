@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { playNotificationSound } from "@/utils/notificationSound";
 
 export interface SolicitudDescuento {
   id: string;
@@ -128,11 +129,15 @@ export function useSolicitudesDescuento(options: UseSolicitudesDescuentoOptions 
               setSolicitudes(prev => [data as unknown as SolicitudDescuento, ...prev]);
               setPendingCount(prev => prev + 1);
               
-              // Show notification for admin
+              // Show notification for admin with URGENT sound
               const { data: { user } } = await supabase.auth.getUser();
               if (user && payload.new.vendedor_id !== user.id) {
-                toast.info("Nueva solicitud de descuento", {
+                // Play urgent notification sound
+                playNotificationSound('urgent');
+                
+                toast.info("🔔 Nueva solicitud de descuento", {
                   description: "Un vendedor solicita autorización de descuento",
+                  duration: 10000, // Keep visible longer
                   action: {
                     label: "Ver",
                     onClick: () => {
@@ -156,16 +161,20 @@ export function useSolicitudesDescuento(options: UseSolicitudesDescuentoOptions 
               setPendingCount(prev => Math.max(0, prev - 1));
             }
             
-            // Notify vendedor about response
+            // Notify vendedor about response with appropriate sound
             const { data: { user } } = await supabase.auth.getUser();
             if (user && payload.new.vendedor_id === user.id && payload.old.status === "pendiente") {
               if (payload.new.status === "aprobado") {
+                playNotificationSound('success');
                 toast.success("¡Descuento aprobado!", {
                   description: `Precio autorizado: $${payload.new.precio_aprobado}`,
+                  duration: 8000,
                 });
               } else if (payload.new.status === "rechazado") {
+                playNotificationSound('error');
                 toast.error("Descuento rechazado", {
                   description: payload.new.respuesta_notas || "El administrador rechazó la solicitud",
+                  duration: 8000,
                 });
               }
             }
