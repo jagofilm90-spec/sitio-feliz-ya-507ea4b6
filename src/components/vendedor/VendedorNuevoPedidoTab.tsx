@@ -8,11 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { 
   Search, Plus, Minus, ShoppingCart, Trash2, Loader2, Package, Store, 
   AlertTriangle, Percent, Lock, Send, Clock, CreditCard, Star, AlertCircle, FileEdit,
-  Truck, Tag
+  Truck, Tag, CheckCircle2
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { calcularDesgloseImpuestos, redondear, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
@@ -77,6 +78,13 @@ const REGION_LABELS: Record<string, string> = {
 
 interface Props {
   onPedidoCreado: () => void;
+  onNavigateToVentas?: () => void;
+}
+
+interface PedidoCreadoInfo {
+  folio: string;
+  total: number;
+  cliente: string;
 }
 
 interface Cliente {
@@ -152,7 +160,7 @@ const StockBadge = ({ producto }: { producto: Producto }) => {
   );
 };
 
-export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
+export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: Props) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -184,6 +192,9 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
   // Draft restoration flag
   const [hasDraft, setHasDraft] = useState(false);
   const [isRestoringDraft, setIsRestoringDraft] = useState(false);
+  
+  // Success confirmation dialog
+  const [pedidoCreado, setPedidoCreado] = useState<PedidoCreadoInfo | null>(null);
 
   // ==================== Cart Persistence Functions ====================
   
@@ -742,8 +753,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
         console.error("Error sending email to secretarias:", emailError);
       }
 
-      toast.success(`Pedido ${folio} creado exitosamente`);
-
       // Clear draft after successful submission
       clearCartDraft();
 
@@ -753,6 +762,13 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
       setLineas([]);
       setTerminoCredito("contado");
       setNotas("");
+
+      // Show success dialog
+      setPedidoCreado({
+        folio,
+        total: totales.total,
+        cliente: clienteNombre,
+      });
 
       onPedidoCreado();
     } catch (error: any) {
@@ -1419,6 +1435,50 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
           }))}
           totalPedidoEstimado={totales.total}
         />
+
+        {/* Dialog de Confirmación de Pedido Creado */}
+        <Dialog open={!!pedidoCreado} onOpenChange={() => setPedidoCreado(null)}>
+          <DialogContent className="sm:max-w-md">
+            <div className="flex flex-col items-center gap-4 py-4 text-center">
+              <div className="rounded-full bg-green-100 dark:bg-green-900/30 p-4">
+                <CheckCircle2 className="h-12 w-12 text-green-600 dark:text-green-400" />
+              </div>
+              
+              <DialogTitle className="text-2xl">¡Pedido Creado!</DialogTitle>
+              
+              <div className="space-y-2">
+                <p className="text-3xl font-bold text-primary">
+                  {pedidoCreado?.folio}
+                </p>
+                <p className="text-muted-foreground">
+                  {pedidoCreado?.cliente}
+                </p>
+                <p className="text-xl font-semibold">
+                  {formatCurrency(pedidoCreado?.total || 0)}
+                </p>
+              </div>
+            </div>
+            
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button 
+                variant="outline" 
+                className="w-full sm:w-auto"
+                onClick={() => setPedidoCreado(null)}
+              >
+                Crear Otro Pedido
+              </Button>
+              <Button 
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  setPedidoCreado(null);
+                  onNavigateToVentas?.();
+                }}
+              >
+                Ver Mis Ventas
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </TooltipProvider>
   );
