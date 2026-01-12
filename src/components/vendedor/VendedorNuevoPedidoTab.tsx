@@ -603,6 +603,9 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
   };
 
   const handleSubmit = async () => {
+    // Prevent double submit
+    if (submitting) return;
+    
     if (!selectedClienteId) {
       toast.error("Selecciona un cliente");
       return;
