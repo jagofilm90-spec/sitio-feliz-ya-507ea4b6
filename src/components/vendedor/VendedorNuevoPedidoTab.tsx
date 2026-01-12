@@ -667,7 +667,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
         precio_unitario: l.precioUnitario,
         subtotal: l.subtotal,
         // Store discount info for admin review
-        notas: l.descuento > 0 
+        notas_ajuste: l.descuento > 0 
           ? `Descuento: ${formatCurrency(l.descuento)} (máx: ${formatCurrency(l.producto.descuento_maximo || 0)})${l.autorizacionStatus === 'pendiente' ? ' [PENDIENTE REVISIÓN]' : l.autorizacionStatus === 'aprobado' ? ' [APROBADO]' : ''}`
           : null
       }));
