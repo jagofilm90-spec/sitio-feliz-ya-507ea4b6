@@ -411,7 +411,7 @@ export default function VendedorPanel() {
             <Card>
               <CardContent className="p-6">
                 {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
-                {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} />}
+                {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} onNavigateToVentas={() => setActiveTab("ventas")} />}
                 {activeTab === "ventas" && <VendedorMisVentasTab />}
                 {activeTab === "novedades" && <VendedorNovedadesTab />}
                 {activeTab === "precios" && <VendedorListaPreciosTab />}
@@ -426,7 +426,7 @@ export default function VendedorPanel() {
         {/* Content Area */}
         <div className="pb-24">
           {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
-          {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} />}
+          {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} onNavigateToVentas={() => setActiveTab("ventas")} />}
           {activeTab === "ventas" && <VendedorMisVentasTab />}
           {activeTab === "novedades" && <VendedorNovedadesTab />}
           {activeTab === "precios" && <VendedorListaPreciosTab />}
