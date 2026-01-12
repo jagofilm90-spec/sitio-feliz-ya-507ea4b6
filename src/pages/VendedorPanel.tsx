@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Users, ShoppingCart, CreditCard, LogOut, User, TrendingUp, Calendar, Percent, Wallet, IdCard, BarChart3, List, Sparkles } from "lucide-react";
+import { Users, ShoppingCart, CreditCard, LogOut, User, TrendingUp, Calendar, Percent, Wallet, IdCard, BarChart3, List, Sparkles, ClipboardList } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { VendedorMisClientesTab } from "@/components/vendedor/VendedorMisClientesTab";
 import { VendedorNuevoPedidoTab } from "@/components/vendedor/VendedorNuevoPedidoTab";
@@ -201,7 +201,8 @@ export default function VendedorPanel() {
 
   const navItems = [
     { id: "clientes", label: "Clientes", icon: Users },
-    { id: "nuevo", label: "Pedidos", icon: ShoppingCart },
+    { id: "nuevo", label: "Nuevo Pedido", icon: ShoppingCart },
+    { id: "ventas", label: "Mis Ventas", icon: ClipboardList },
     { id: "novedades", label: "Novedades", icon: Sparkles, badge: novedadesCount },
     { id: "precios", label: "Precios", icon: List },
     { id: "saldos", label: "Saldos", icon: Wallet },
@@ -411,6 +412,7 @@ export default function VendedorPanel() {
               <CardContent className="p-6">
                 {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
                 {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} />}
+                {activeTab === "ventas" && <VendedorMisVentasTab />}
                 {activeTab === "novedades" && <VendedorNovedadesTab />}
                 {activeTab === "precios" && <VendedorListaPreciosTab />}
                 {activeTab === "saldos" && <VendedorSaldosTab />}
@@ -425,6 +427,7 @@ export default function VendedorPanel() {
         <div className="pb-24">
           {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
           {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} />}
+          {activeTab === "ventas" && <VendedorMisVentasTab />}
           {activeTab === "novedades" && <VendedorNovedadesTab />}
           {activeTab === "precios" && <VendedorListaPreciosTab />}
           {activeTab === "saldos" && <VendedorSaldosTab />}
