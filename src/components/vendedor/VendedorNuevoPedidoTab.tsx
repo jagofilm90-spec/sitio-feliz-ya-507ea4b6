@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { calcularDesgloseImpuestos, redondear, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
+import { captureDeviceInfo, getPublicIP } from "@/lib/auditoria-pedidos";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -769,6 +770,66 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       } catch (clientEmailError) {
         console.error("Error sending email to client:", clientEmailError);
         // No mostrar error al usuario - es notificación secundaria
+      }
+
+      // Audit log for order creation
+      try {
+        const deviceInfo = captureDeviceInfo();
+        const ipAddress = await getPublicIP();
+        
+        const auditDetails = {
+          folio: folio,
+          cliente_id: selectedClienteId,
+          cliente_nombre: clienteNombre,
+          sucursal_id: selectedSucursalId || null,
+          total: totales.total,
+          subtotal: totales.subtotal,
+          impuestos: totales.impuestos,
+          peso_total_kg: totales.pesoTotalKg,
+          num_productos: lineas.length,
+          productos: lineas.map(l => ({
+            producto_id: l.producto.id,
+            codigo: l.producto.codigo,
+            nombre: l.producto.nombre,
+            cantidad: l.cantidad,
+            precio_unitario: l.precioUnitario,
+            descuento: l.descuento,
+            subtotal: l.subtotal,
+            requiere_autorizacion: l.requiereAutorizacion,
+            autorizacion_status: l.autorizacionStatus || null
+          })),
+          termino_credito: terminoCredito,
+          status_inicial: pedido.status,
+          tiene_descuentos_pendientes: lineas.some(
+            l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente'
+          ),
+          notas: notas || null,
+          device: {
+            userAgent: deviceInfo.userAgent,
+            platform: deviceInfo.platform,
+            language: deviceInfo.language,
+            screenResolution: deviceInfo.screenResolution,
+            timezone: deviceInfo.timezone,
+            isMobile: deviceInfo.isMobile,
+            vendor: deviceInfo.vendor,
+            cookiesEnabled: deviceInfo.cookiesEnabled,
+            onLine: deviceInfo.onLine,
+          },
+          session_draft_restored: hasDraft
+        };
+        
+        await supabase.from("security_audit_log").insert([{
+          user_id: user.id,
+          action: "pedido_creado",
+          table_name: "pedidos",
+          record_id: pedido.id,
+          ip_address: ipAddress,
+          details: auditDetails
+        }]);
+        console.log("Audit log created for order:", folio);
+      } catch (auditError) {
+        console.error("Error creating audit log:", auditError);
+        // No bloquear creación de pedido si falla auditoría
       }
 
       // Clear draft after successful submission
