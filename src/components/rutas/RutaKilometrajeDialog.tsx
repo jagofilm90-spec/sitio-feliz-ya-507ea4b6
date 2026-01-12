@@ -98,6 +98,52 @@ const RutaKilometrajeDialog = ({
           title: "Ruta iniciada",
           description: `Kilometraje inicial registrado: ${km.toLocaleString()} km`,
         });
+
+        // Notify clients their orders are en_ruta
+        try {
+          const { data: entregas } = await supabase
+            .from("entregas")
+            .select(`
+              id,
+              pedido:pedidos!inner(
+                folio,
+                cliente_id
+              )
+            `)
+            .eq("ruta_id", ruta.id)
+            .neq("status_entrega", "entregado");
+
+          if (entregas && entregas.length > 0) {
+            const clientesUnicos = new Map<string, { folio: string }>();
+            
+            for (const entrega of entregas) {
+              const pedido = entrega.pedido as any;
+              const clienteId = pedido?.cliente_id;
+              const folio = pedido?.folio;
+              
+              if (clienteId && !clientesUnicos.has(clienteId)) {
+                clientesUnicos.set(clienteId, { folio });
+              }
+            }
+
+            for (const [clienteId, data] of clientesUnicos) {
+              supabase.functions.invoke("send-client-notification", {
+                body: {
+                  clienteId,
+                  tipo: "en_ruta",
+                  data: {
+                    pedidoFolio: data.folio,
+                    choferNombre: ruta.chofer?.full_name || "Nuestro repartidor",
+                  },
+                },
+              }).catch(err => console.error("Error sending en_ruta notification:", err));
+            }
+            
+            console.log(`En ruta notifications sent to ${clientesUnicos.size} clients`);
+          }
+        } catch (notifError) {
+          console.error("Error sending en_ruta notifications:", notifError);
+        }
       } else {
         const { error } = await supabase
           .from("rutas")
