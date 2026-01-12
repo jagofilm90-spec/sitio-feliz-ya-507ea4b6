@@ -753,6 +753,24 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
         console.error("Error sending email to secretarias:", emailError);
       }
 
+      // Send email notification to client about their new order
+      try {
+        await supabase.functions.invoke('send-client-notification', {
+          body: {
+            clienteId: selectedClienteId,
+            tipo: 'pedido_confirmado',
+            data: {
+              pedidoFolio: folio,
+              total: totales.total
+            }
+          }
+        });
+        console.log("Client notification sent for order:", folio);
+      } catch (clientEmailError) {
+        console.error("Error sending email to client:", clientEmailError);
+        // No mostrar error al usuario - es notificación secundaria
+      }
+
       // Clear draft after successful submission
       clearCartDraft();
 
