@@ -2,13 +2,16 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Package, Calendar, TrendingUp, DollarSign, Receipt } from "lucide-react";
+import { Package, Calendar, TrendingUp, DollarSign, Receipt, Eye, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
+import { CancelarPedidoDialog } from "./CancelarPedidoDialog";
+import { PedidoDetalleVendedorDialog } from "./PedidoDetalleVendedorDialog";
 import {
   Select,
   SelectContent,
@@ -68,6 +71,11 @@ export function VendedorMisVentasTab() {
     ticketPromedio: 0,
     comisionEstimada: 0
   });
+  
+  // Dialogs state
+  const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null);
+  const [showDetalle, setShowDetalle] = useState(false);
+  const [showCancelar, setShowCancelar] = useState(false);
 
   useEffect(() => {
     fetchPedidos();
@@ -360,6 +368,36 @@ export function VendedorMisVentasTab() {
                         </p>
                       </div>
                     </div>
+                    
+                    {/* Action buttons */}
+                    <div className="flex gap-2 mt-4 pt-3 border-t">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          setSelectedPedido(pedido);
+                          setShowDetalle(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver detalle
+                      </Button>
+                      {(pedido.status === "por_autorizar" || pedido.status === "pendiente") && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => {
+                            setSelectedPedido(pedido);
+                            setShowCancelar(true);
+                          }}
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Cancelar
+                        </Button>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               ))
@@ -367,6 +405,23 @@ export function VendedorMisVentasTab() {
           </div>
         </ScrollArea>
       </div>
+
+      {/* Dialogs */}
+      {selectedPedido && (
+        <>
+          <PedidoDetalleVendedorDialog
+            open={showDetalle}
+            onOpenChange={setShowDetalle}
+            pedidoId={selectedPedido.id}
+          />
+          <CancelarPedidoDialog
+            open={showCancelar}
+            onOpenChange={setShowCancelar}
+            pedido={selectedPedido}
+            onPedidoCancelado={fetchPedidos}
+          />
+        </>
+      )}
     </div>
   );
 }

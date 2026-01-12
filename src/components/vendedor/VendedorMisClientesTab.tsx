@@ -8,10 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Search, Plus, MapPin, Phone, Building2, MessageCircle, ShoppingCart, History, Navigation, AlertTriangle, MapPinned } from "lucide-react";
+import { Search, Plus, MapPin, Phone, Building2, MessageCircle, ShoppingCart, History, Navigation, AlertTriangle, MapPinned, Pencil } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { VendedorNuevoClienteSheet } from "./VendedorNuevoClienteSheet";
 import { GeocodificarSucursalSheet } from "./GeocodificarSucursalSheet";
+import { EditarClienteSheet } from "./EditarClienteSheet";
 
 interface Props {
   onClienteCreado: () => void;
@@ -71,6 +72,10 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
   // Geocodificación
   const [showGeocodificar, setShowGeocodificar] = useState(false);
   const [selectedSucursal, setSelectedSucursal] = useState<Sucursal | null>(null);
+  
+  // Editar cliente
+  const [showEditarCliente, setShowEditarCliente] = useState(false);
+  const [selectedClienteId, setSelectedClienteId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchClientes();
@@ -418,7 +423,7 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
                   )}
 
                   {/* Action Buttons - Large and tactile */}
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-4 gap-2">
                     <Button 
                       variant="outline" 
                       className="h-12 flex-col gap-1 p-2"
@@ -455,6 +460,17 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
                       <History className="h-4 w-4" />
                       <span className="text-[10px]">Historial</span>
                     </Button>
+                    <Button 
+                      variant="outline"
+                      className="h-12 flex-col gap-1 p-2"
+                      onClick={() => {
+                        setSelectedClienteId(cliente.id);
+                        setShowEditarCliente(true);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      <span className="text-[10px]">Editar</span>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -481,6 +497,16 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
           latitudActual={selectedSucursal.latitud}
           longitudActual={selectedSucursal.longitud}
           onGeocodificado={handleGeocodificado}
+        />
+      )}
+
+      {/* Editar Cliente Sheet */}
+      {selectedClienteId && (
+        <EditarClienteSheet
+          open={showEditarCliente}
+          onOpenChange={setShowEditarCliente}
+          clienteId={selectedClienteId}
+          onClienteActualizado={fetchClientes}
         />
       )}
     </div>
