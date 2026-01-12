@@ -327,9 +327,21 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
 
         // Auto-asignar zona basándose en el municipio de la CSF
         if (csfData.nombre_municipio && zonas.length > 0) {
-          const zonaMatch = buscarZonaPorMunicipio(csfData.nombre_municipio);
+          // Primero buscar por municipio exacto
+          let zonaMatch = buscarZonaPorMunicipio(csfData.nombre_municipio);
           
-          if (zonaMatch) {
+          // Si no encuentra, buscar por estado como fallback
+          if (!zonaMatch && csfData.nombre_entidad_federativa) {
+            zonaMatch = buscarZonaPorMunicipio(csfData.nombre_entidad_federativa);
+            
+            if (zonaMatch) {
+              setZonaId(zonaMatch.id);
+              setZonaAutoAsignada(true);
+              toast.success(`Datos extraídos • Zona: ${zonaMatch.nombre} (por estado)`);
+            } else {
+              toast.success("Datos fiscales extraídos correctamente");
+            }
+          } else if (zonaMatch) {
             setZonaId(zonaMatch.id);
             setZonaAutoAsignada(true);
             toast.success(`Datos extraídos • Zona: ${zonaMatch.nombre}`);
