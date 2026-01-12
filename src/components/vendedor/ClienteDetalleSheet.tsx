@@ -31,7 +31,9 @@ import {
   CheckCircle,
   Clock,
   MessageCircle,
-  ExternalLink
+  ExternalLink,
+  Send,
+  XCircle
 } from "lucide-react";
 import { RegistrarPagoDialog } from "./RegistrarPagoDialog";
 
@@ -88,6 +90,15 @@ interface Pago {
   status: string;
 }
 
+interface NotificacionEnviada {
+  id: string;
+  tipo: string;
+  destinatario: string;
+  asunto: string;
+  fecha_envio: string | null;
+  error: string | null;
+}
+
 export function ClienteDetalleSheet({ 
   open, 
   onOpenChange, 
@@ -99,6 +110,7 @@ export function ClienteDetalleSheet({
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [pagos, setPagos] = useState<Pago[]>([]);
+  const [notificaciones, setNotificaciones] = useState<NotificacionEnviada[]>([]);
   const [showRegistrarPago, setShowRegistrarPago] = useState(false);
 
   useEffect(() => {
@@ -164,6 +176,26 @@ export function ClienteDetalleSheet({
         .limit(20);
 
       setPagos(pagosData || []);
+
+      // Fetch emails del cliente para buscar notificaciones
+      const { data: emailsCliente } = await supabase
+        .from("cliente_correos")
+        .select("email")
+        .eq("cliente_id", clienteId);
+
+      if (emailsCliente && emailsCliente.length > 0) {
+        const emails = emailsCliente.map(e => e.email);
+        const { data: correosData } = await supabase
+          .from("correos_enviados")
+          .select("id, tipo, destinatario, asunto, fecha_envio, error")
+          .in("destinatario", emails)
+          .order("fecha_envio", { ascending: false })
+          .limit(50);
+
+        setNotificaciones(correosData || []);
+      } else {
+        setNotificaciones([]);
+      }
 
     } catch (error) {
       console.error("Error:", error);
@@ -241,11 +273,15 @@ export function ClienteDetalleSheet({
 
           <ScrollArea className="flex-1 mt-4">
             <Tabs defaultValue="info" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="info">Info</TabsTrigger>
                 <TabsTrigger value="pedidos">Pedidos</TabsTrigger>
                 <TabsTrigger value="facturas">Facturas</TabsTrigger>
                 <TabsTrigger value="pagos">Pagos</TabsTrigger>
+                <TabsTrigger value="emails" className="flex items-center gap-1">
+                  <Send className="h-3 w-3" />
+                  Emails
+                </TabsTrigger>
               </TabsList>
 
               {/* Info Tab */}
@@ -483,6 +519,59 @@ export function ClienteDetalleSheet({
                             <p className="font-semibold text-green-600">
                               +{formatCurrency(pago.monto_total)}
                             </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Emails Tab */}
+              <TabsContent value="emails" className="mt-4">
+                {notificaciones.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Send className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Sin notificaciones enviadas</p>
+                    <p className="text-xs mt-1">Los emails se envían a direcciones con propósito "pedidos" o "todo"</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {notificaciones.map((notif) => (
+                      <Card 
+                        key={notif.id} 
+                        className={`hover:bg-muted/50 transition-colors ${notif.error ? "border-destructive/50" : ""}`}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                {notif.error ? (
+                                  <XCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+                                ) : (
+                                  <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                )}
+                                <span className="font-medium truncate">{notif.asunto}</span>
+                              </div>
+                              <p className="text-sm text-muted-foreground truncate">
+                                {notif.destinatario}
+                              </p>
+                              {notif.error && (
+                                <p className="text-xs text-destructive mt-1 line-clamp-2">
+                                  Error: {notif.error}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <Badge variant="outline" className="text-xs">
+                                {notif.tipo.replace(/_/g, " ")}
+                              </Badge>
+                              {notif.fecha_envio && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {format(new Date(notif.fecha_envio), "d MMM HH:mm", { locale: es })}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
