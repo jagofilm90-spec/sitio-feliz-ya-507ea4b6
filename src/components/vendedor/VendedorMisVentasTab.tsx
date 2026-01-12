@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Package, Calendar, TrendingUp, DollarSign, Receipt, Eye, X } from "lucide-react";
+import { Package, Calendar, TrendingUp, DollarSign, Receipt, Eye, X, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { CancelarPedidoDialog } from "./CancelarPedidoDialog";
 import { PedidoDetalleVendedorDialog } from "./PedidoDetalleVendedorDialog";
+import { EliminarPedidoDialog } from "./EliminarPedidoDialog";
 import {
   Select,
   SelectContent,
@@ -76,6 +77,7 @@ export function VendedorMisVentasTab() {
   const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null);
   const [showDetalle, setShowDetalle] = useState(false);
   const [showCancelar, setShowCancelar] = useState(false);
+  const [showEliminar, setShowEliminar] = useState(false);
 
   useEffect(() => {
     fetchPedidos();
@@ -384,18 +386,31 @@ export function VendedorMisVentasTab() {
                         Ver detalle
                       </Button>
                       {(pedido.status === "por_autorizar" || pedido.status === "pendiente") && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => {
-                            setSelectedPedido(pedido);
-                            setShowCancelar(true);
-                          }}
-                        >
-                          <X className="h-4 w-4 mr-1" />
-                          Cancelar
-                        </Button>
+                        <>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="text-amber-600 hover:text-amber-700 border-amber-300 hover:border-amber-400"
+                            onClick={() => {
+                              setSelectedPedido(pedido);
+                              setShowCancelar(true);
+                            }}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Cancelar
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPedido(pedido);
+                              setShowEliminar(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Eliminar
+                          </Button>
+                        </>
                       )}
                     </div>
                   </CardContent>
@@ -419,6 +434,12 @@ export function VendedorMisVentasTab() {
             onOpenChange={setShowCancelar}
             pedido={selectedPedido}
             onPedidoCancelado={fetchPedidos}
+          />
+          <EliminarPedidoDialog
+            open={showEliminar}
+            onOpenChange={setShowEliminar}
+            pedido={selectedPedido}
+            onPedidoEliminado={fetchPedidos}
           />
         </>
       )}
