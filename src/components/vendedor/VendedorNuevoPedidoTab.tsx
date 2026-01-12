@@ -1184,6 +1184,11 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
                   const excedeLimite = linea.descuento > descuentoMaximo;
                   const tieneDescuento = linea.descuento > 0;
                   
+                  // Bultos/Kg calculations for precio_por_kilo products
+                  const esPorKilo = linea.producto.precio_por_kilo;
+                  const presentacionKg = parseFloat(linea.producto.presentacion || "0") || 0;
+                  const kilosTotales = esPorKilo && presentacionKg > 0 ? linea.cantidad * presentacionKg : 0;
+                  
                   return (
                     <div 
                       key={linea.producto.id} 
@@ -1250,9 +1255,11 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
                           </div>
                         </div>
 
-                        {/* Price display */}
+                        {/* Price display with unit label */}
                         <div className="space-y-1 text-right">
-                          <Label className="text-xs text-muted-foreground">Precio</Label>
+                          <Label className="text-xs text-muted-foreground">
+                            {esPorKilo ? "Precio/kg" : "Precio/pza"}
+                          </Label>
                           <div>
                             {tieneDescuento && (
                               <span className="text-xs line-through text-muted-foreground mr-2">
@@ -1266,38 +1273,58 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
                         </div>
                       </div>
 
-                      {/* Quantity and subtotal row */}
+                      {/* Quantity row with bultos label for precio_por_kilo */}
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            className="h-8 w-8"
-                            onClick={() => actualizarCantidad(linea.producto.id, linea.cantidad - 1)}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <Input
-                            className="w-14 h-8 text-center text-sm font-medium"
-                            value={linea.cantidad}
-                            onChange={(e) => {
-                              const val = parseInt(e.target.value) || 0;
-                              actualizarCantidad(linea.producto.id, val);
-                            }}
-                          />
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            className="h-8 w-8"
-                            onClick={() => actualizarCantidad(linea.producto.id, linea.cantidad + 1)}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">
+                            {esPorKilo ? `Bultos (${linea.producto.unidad || 'unidades'})` : "Cantidad"}
+                          </Label>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-8 w-8"
+                              onClick={() => actualizarCantidad(linea.producto.id, linea.cantidad - 1)}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <Input
+                              className="w-14 h-8 text-center text-sm font-medium"
+                              value={linea.cantidad}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value) || 0;
+                                actualizarCantidad(linea.producto.id, val);
+                              }}
+                            />
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-8 w-8"
+                              onClick={() => actualizarCantidad(linea.producto.id, linea.cantidad + 1)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
                         <p className="font-bold text-lg">
                           {formatCurrency(linea.subtotal)}
                         </p>
                       </div>
+
+                      {/* Kilos breakdown for precio_por_kilo products */}
+                      {esPorKilo && presentacionKg > 0 && (
+                        <div className="flex items-center justify-between text-sm bg-blue-50 dark:bg-blue-950/30 rounded-lg p-2 mt-3 border border-blue-200 dark:border-blue-800">
+                          <div className="flex items-center gap-2">
+                            <Package className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            <span className="text-muted-foreground">
+                              {linea.cantidad} {linea.producto.unidad || 'bultos'} × {presentacionKg} kg
+                            </span>
+                          </div>
+                          <span className="font-semibold text-blue-700 dark:text-blue-400">
+                            = {kilosTotales.toLocaleString()} kg
+                          </span>
+                        </div>
+                      )}
 
                       {/* Authorization warning */}
                       {excedeLimite && linea.autorizacionStatus !== 'aprobado' && (
