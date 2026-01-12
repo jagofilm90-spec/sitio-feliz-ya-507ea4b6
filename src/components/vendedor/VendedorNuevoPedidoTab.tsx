@@ -651,7 +651,10 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado }: Props) {
           subtotal: totales.subtotal,
           impuestos: totales.impuestos,
           total: totales.total,
-          status: "por_autorizar",
+          // Intelligent status: if no pending discounts, go straight to pendiente
+          status: lineas.some(l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente') 
+            ? "por_autorizar" 
+            : "pendiente",
           notas: notas || null,
           termino_credito: terminoCredito as any
         })
