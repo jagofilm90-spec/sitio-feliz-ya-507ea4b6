@@ -17,6 +17,7 @@ import logoAlmasa from "@/assets/logo-almasa.png";
 // Sidebar & Navigation
 import { SecretariaSidebar } from "@/components/secretaria/SecretariaSidebar";
 import { SecretariaMobileNav } from "@/components/secretaria/SecretariaMobileNav";
+import { SecretariaBienvenidaDialog } from "@/components/secretaria/SecretariaBienvenidaDialog";
 
 // Tab Components
 import { SecretariaProductosTab } from "@/components/secretaria/SecretariaProductosTab";
@@ -34,13 +35,14 @@ const SecretariaPanel = () => {
   const [activeTab, setActiveTab] = useState("pedidos");
   const [user, setUser] = useState<any>(null);
   const [userName, setUserName] = useState("");
+  const [showBienvenida, setShowBienvenida] = useState(false);
   const navigate = useNavigate();
   const { roles, isLoading: rolesLoading, hasRole } = useUserRoles();
   const { totalUnread: totalUnreadEmails } = useUnreadEmails();
   const { pendingCount: ventasMostradorPendientes } = useSolicitudesVenta();
   const chatUnreadCount = useUnreadMessages();
 
-  // Verify session
+  // Verify session and show welcome dialog
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
@@ -54,7 +56,16 @@ const SecretariaPanel = () => {
           .eq("id", session.user.id)
           .single()
           .then(({ data }) => {
-            setUserName(data?.full_name || session.user.email?.split("@")[0] || "Secretaria");
+            const name = data?.full_name || session.user.email?.split("@")[0] || "Secretaria";
+            setUserName(name);
+            
+            // Check if should show welcome dialog (first visit of the day)
+            const today = new Date().toDateString();
+            const lastVisit = localStorage.getItem("secretaria_last_visit");
+            if (lastVisit !== today) {
+              setShowBienvenida(true);
+              localStorage.setItem("secretaria_last_visit", today);
+            }
           });
       }
     });
@@ -227,6 +238,14 @@ const SecretariaPanel = () => {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         counters={counters}
+      />
+
+      {/* Welcome Dialog */}
+      <SecretariaBienvenidaDialog
+        open={showBienvenida}
+        onOpenChange={setShowBienvenida}
+        secretariaNombre={userName}
+        onNavigate={setActiveTab}
       />
     </div>
   );
