@@ -100,6 +100,14 @@ const Auth = () => {
         return;
       }
 
+      // Solo secretaria (sin admin) -> panel secretaria
+      const isOnlySecretaria = roles.includes("secretaria") && !roles.includes("admin");
+      if (isOnlySecretaria) {
+        console.log("Redirecting to /secretaria");
+        navigate("/secretaria", { replace: true });
+        return;
+      }
+
       navigate("/dashboard", { replace: true });
     } catch (error) {
       console.error("Error checking user role:", error);

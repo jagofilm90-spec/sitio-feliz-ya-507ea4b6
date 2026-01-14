@@ -43,12 +43,16 @@ const ProtectedRoute = ({
     // Redirigir según el rol del usuario
     const isOnlyAlmacen = roles.length === 1 && roles.includes("almacen");
     const isOnlyChofer = roles.length === 1 && roles.includes("chofer");
+    const isOnlySecretaria = roles.includes("secretaria") && !roles.includes("admin");
     
     if (isOnlyAlmacen) {
       return <Navigate to="/almacen-tablet" replace />;
     }
     if (isOnlyChofer) {
       return <Navigate to="/chofer" replace />;
+    }
+    if (isOnlySecretaria) {
+      return <Navigate to="/secretaria" replace />;
     }
     
     return <Navigate to={redirectTo} replace />;
