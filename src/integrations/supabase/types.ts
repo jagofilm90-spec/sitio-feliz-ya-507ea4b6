@@ -3720,6 +3720,67 @@ export type Database = {
           },
         ]
       }
+      productos_historial_costos: {
+        Row: {
+          costo_anterior: number | null
+          costo_nuevo: number
+          created_at: string | null
+          fuente: string
+          id: string
+          notas: string | null
+          producto_id: string
+          proveedor_id: string | null
+          referencia_id: string | null
+          usuario_id: string | null
+        }
+        Insert: {
+          costo_anterior?: number | null
+          costo_nuevo: number
+          created_at?: string | null
+          fuente?: string
+          id?: string
+          notas?: string | null
+          producto_id: string
+          proveedor_id?: string | null
+          referencia_id?: string | null
+          usuario_id?: string | null
+        }
+        Update: {
+          costo_anterior?: number | null
+          costo_nuevo?: number
+          created_at?: string | null
+          fuente?: string
+          id?: string
+          notas?: string | null
+          producto_id?: string
+          proveedor_id?: string | null
+          referencia_id?: string | null
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "productos_historial_costos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_historial_costos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_historial_costos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       productos_historial_estado: {
         Row: {
           activo_anterior: boolean

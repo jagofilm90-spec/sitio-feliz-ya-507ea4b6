@@ -21,6 +21,7 @@ import { SecretariaBienvenidaDialog } from "@/components/secretaria/SecretariaBi
 
 // Tab Components
 import { SecretariaProductosTab } from "@/components/secretaria/SecretariaProductosTab";
+import { SecretariaCostosTab } from "@/components/secretaria/SecretariaCostosTab";
 import { SecretariaListaPreciosTab } from "@/components/secretaria/SecretariaListaPreciosTab";
 import { SecretariaPedidosTab } from "@/components/secretaria/SecretariaPedidosTab";
 import { SecretariaComprasTab } from "@/components/secretaria/SecretariaComprasTab";
@@ -139,6 +140,8 @@ const SecretariaPanel = () => {
     switch (activeTab) {
       case "productos":
         return <SecretariaProductosTab />;
+      case "costos":
+        return <SecretariaCostosTab />;
       case "precios":
         return <SecretariaListaPreciosTab />;
       case "pedidos":

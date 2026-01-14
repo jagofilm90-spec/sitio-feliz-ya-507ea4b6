@@ -49,7 +49,6 @@ interface Producto {
   presentacion: string | null;
   unidad: string;
   precio_venta: number;
-  precio_compra: number;
   stock_actual: number;
   stock_minimo: number;
   activo: boolean;
@@ -77,7 +76,6 @@ export const SecretariaProductosTab = () => {
     presentacion: "",
     unidad: "bulto" as const,
     precio_venta: "",
-    precio_compra: "",
     stock_minimo: "",
     maneja_caducidad: false,
     aplica_iva: false,
@@ -125,7 +123,6 @@ export const SecretariaProductosTab = () => {
       presentacion: "",
       unidad: "bulto",
       precio_venta: "",
-      precio_compra: "",
       stock_minimo: "",
       maneja_caducidad: false,
       aplica_iva: false,
@@ -148,7 +145,6 @@ export const SecretariaProductosTab = () => {
       presentacion: producto.presentacion || "",
       unidad: producto.unidad as any,
       precio_venta: producto.precio_venta.toString(),
-      precio_compra: producto.precio_compra.toString(),
       stock_minimo: producto.stock_minimo.toString(),
       maneja_caducidad: producto.maneja_caducidad,
       aplica_iva: producto.aplica_iva,
@@ -172,7 +168,6 @@ export const SecretariaProductosTab = () => {
         presentacion: data.presentacion || null,
         unidad: data.unidad,
         precio_venta: parseFloat(data.precio_venta) || 0,
-        precio_compra: parseFloat(data.precio_compra) || 0,
         stock_minimo: parseInt(data.stock_minimo) || 0,
         maneja_caducidad: data.maneja_caducidad,
         aplica_iva: data.aplica_iva,
@@ -384,16 +379,6 @@ export const SecretariaProductosTab = () => {
                     </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="precio_compra">Precio de Compra</Label>
-                  <Input
-                    id="precio_compra"
-                    type="number"
-                    step="0.01"
-                    value={formData.precio_compra}
-                    onChange={(e) => setFormData({ ...formData, precio_compra: e.target.value })}
-                  />
-                </div>
               </div>
 
               {/* Sección 4: Impuestos */}
@@ -509,7 +494,7 @@ export const SecretariaProductosTab = () => {
                   <TableHead className="hidden lg:table-cell">Presentación</TableHead>
                   <TableHead>Unidad</TableHead>
                   <TableHead className="text-center">Stock</TableHead>
-                  <TableHead className="text-center hidden sm:table-cell">Min</TableHead>
+                  <TableHead className="text-center hidden sm:table-cell">Stock Min</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
