@@ -215,7 +215,6 @@ const Productos = () => {
     presentacion: string;
     unidad: "bulto" | "caja" | "churla" | "costal" | "cubeta" | "kg" | "litro" | "pieza" | "balón";
     precio_por_kilo: boolean;
-    kg_por_unidad: string;
     piezas_por_unidad: string;
     precio_venta: string;
     precio_compra: string;
@@ -240,7 +239,6 @@ const Productos = () => {
     presentacion: "",
     unidad: "bulto",
     precio_por_kilo: false,
-    kg_por_unidad: "",
     piezas_por_unidad: "1",
     precio_venta: "",
     precio_compra: "",
@@ -327,10 +325,9 @@ const Productos = () => {
         nombre: formData.nombre,
         marca: formData.marca || null,
         categoria: formData.categoria || null,
-        presentacion: formData.presentacion || null,
+        presentacion: formData.presentacion ? parseFloat(formData.presentacion) : null,
         unidad: formData.unidad,
         precio_por_kilo: formData.precio_por_kilo,
-        kg_por_unidad: formData.kg_por_unidad ? parseFloat(formData.kg_por_unidad) : null,
         piezas_por_unidad: formData.piezas_por_unidad ? parseInt(formData.piezas_por_unidad) : 1,
         precio_venta: parseFloat(formData.precio_venta),
         precio_compra: parseFloat(formData.precio_compra) || 0,
@@ -458,10 +455,9 @@ const Productos = () => {
       nombre: product.nombre,
       marca: product.marca || "",
       categoria: product.categoria || "",
-      presentacion: product.presentacion || "",
+      presentacion: product.presentacion?.toString() || "",
       unidad: product.unidad,
       precio_por_kilo: product.precio_por_kilo || false,
-      kg_por_unidad: product.kg_por_unidad?.toString() || "",
       piezas_por_unidad: product.piezas_por_unidad?.toString() || "1",
       precio_venta: product.precio_venta.toString(),
       precio_compra: product.precio_compra.toString(),
@@ -516,7 +512,6 @@ const Productos = () => {
       presentacion: "",
       unidad: "bulto",
       precio_por_kilo: false,
-      kg_por_unidad: "",
       piezas_por_unidad: "1",
       precio_venta: "",
       precio_compra: "",
@@ -536,11 +531,12 @@ const Productos = () => {
   };
 
   const filteredProductos = productos.filter((p) => {
+    const presentacionStr = p.presentacion ? `${p.presentacion} kg` : '';
     const matchesSearch = 
       p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (p.marca && p.marca.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (p.presentacion && p.presentacion.toLowerCase().includes(searchTerm.toLowerCase()));
+      (presentacionStr.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesActiveFilter = tabActivo === "inactivos" ? p.activo === false : p.activo !== false;
     

@@ -358,7 +358,7 @@ const CrearCotizacionDialog = ({
 
     // Calcular kilos y subtotal para productos por kilo
     if (producto.precio_por_kilo && producto.presentacion) {
-      const kgPorUnidad = parseFloat(producto.presentacion);
+      const kgPorUnidad = producto.presentacion;
       kilosTotales = 1 * kgPorUnidad;
       subtotal = kilosTotales * precioAUsar;
     } else {
@@ -400,7 +400,7 @@ const CrearCotizacionDialog = ({
     
     // Recalcular kilos y subtotal según tipo de producto
     if (detalle.precio_por_kilo && detalle.presentacion) {
-      const kgPorUnidad = parseFloat(detalle.presentacion);
+      const kgPorUnidad = detalle.presentacion;
       detalle.kilos_totales = cantidad * kgPorUnidad;
       detalle.subtotal = detalle.kilos_totales * detalle.precio_unitario;
     } else {
@@ -418,7 +418,7 @@ const CrearCotizacionDialog = ({
     
     // Recalcular subtotal según tipo de producto
     if (detalle.precio_por_kilo && detalle.presentacion) {
-      const kgPorUnidad = parseFloat(detalle.presentacion);
+      const kgPorUnidad = detalle.presentacion;
       detalle.kilos_totales = detalle.cantidad * kgPorUnidad;
       detalle.subtotal = detalle.kilos_totales * precio;
     } else {
@@ -985,7 +985,7 @@ const CrearCotizacionDialog = ({
                 <TableBody>
                   {detalles.map((d, index) => {
                     const esPorKilo = d.precio_por_kilo && d.presentacion;
-                    const kgPorUnidad = esPorKilo ? parseFloat(d.presentacion!) : null;
+                    const kgPorUnidad = esPorKilo ? d.presentacion : null;
                     
                     return (
                       <TableRow key={d.producto_id}>

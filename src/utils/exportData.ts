@@ -125,7 +125,7 @@ export const productosColumns: ExportColumn[] = [
   { key: 'categoria', header: 'Categoría' },
   { key: 'unidad_comercial', header: 'Unidad' },
   { key: 'precio_unitario', header: 'Precio Unitario' },
-  { key: 'kg_por_unidad', header: 'Kg por Unidad' },
+  { key: 'presentacion', header: 'Peso (kg)' },
   { key: 'piezas_por_unidad', header: 'Piezas por Unidad' },
   { key: 'precio_por_kilo', header: 'Precio por Kilo', transform: (v) => v ? 'Sí' : 'No' },
   { key: 'stock_actual', header: 'Stock Actual' },
