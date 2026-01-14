@@ -91,13 +91,14 @@ export const SecretariaFacturacionTab = () => {
           subtotal,
           impuestos,
           total,
-          status,
+          pagada,
           cfdi_uuid,
+          cfdi_estado,
           cfdi_fecha_timbrado,
           cfdi_xml_url,
           cfdi_pdf_url,
           clientes (id, nombre, email, rfc),
-          pedido_id
+          pedidos:pedido_id (id, folio)
         `)
         .order("created_at", { ascending: false })
         .limit(100);
@@ -106,9 +107,19 @@ export const SecretariaFacturacionTab = () => {
       
       // Map to expected interface
       return (data || []).map(f => ({
-        ...f,
+        id: f.id,
+        folio: f.folio,
         fecha: f.created_at,
-        pedidos: null
+        subtotal: f.subtotal,
+        impuestos: f.impuestos,
+        total: f.total,
+        status: f.cfdi_estado || (f.pagada ? "pagada" : "activa"),
+        cfdi_uuid: f.cfdi_uuid,
+        cfdi_fecha_timbrado: f.cfdi_fecha_timbrado,
+        cfdi_xml_url: f.cfdi_xml_url,
+        cfdi_pdf_url: f.cfdi_pdf_url,
+        clientes: f.clientes,
+        pedidos: f.pedidos
       })) as Factura[];
     },
     refetchInterval: 30000,

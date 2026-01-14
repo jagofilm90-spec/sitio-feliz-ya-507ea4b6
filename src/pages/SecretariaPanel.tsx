@@ -114,12 +114,11 @@ const SecretariaPanel = () => {
   const { data: facturasPendientes = 0 } = useQuery({
     queryKey: ["kpi-facturas-pendientes"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { count } = await supabase
         .from("facturas")
-        .select("id")
-        .is("cfdi_uuid", null)
-        .eq("status", "activa");
-      return data?.length || 0;
+        .select("*", { count: "exact", head: true })
+        .is("cfdi_uuid", null);
+      return count || 0;
     },
     refetchInterval: 30000,
   });
