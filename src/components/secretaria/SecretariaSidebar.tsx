@@ -14,6 +14,7 @@ import {
   LogOut,
   LayoutDashboard,
   Store,
+  Coins,
 } from "lucide-react";
 import logoAlmasa from "@/assets/logo-almasa.png";
 
@@ -52,6 +53,7 @@ export const SecretariaSidebar = ({
 }: SecretariaSidebarProps) => {
   const navItems: NavItem[] = [
     { id: "productos", label: "Productos", icon: Package },
+    { id: "costos", label: "Costos", icon: Coins },
     { id: "precios", label: "Lista de Precios", icon: DollarSign },
     { id: "pedidos", label: "Pedidos", icon: ClipboardList, badge: counters.pedidos },
     { id: "mostrador", label: "Mostrador", icon: Store, badge: counters.mostrador },
