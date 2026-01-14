@@ -14,9 +14,8 @@ interface Producto {
   nombre: string;
   marca: string | null;
   categoria: string | null;
-  presentacion: string | null;
+  presentacion: number | null;
   unidad: string;
-  kg_por_unidad: number | null;
   stock_actual: number;
   stock_minimo: number;
   maneja_caducidad: boolean;
@@ -48,7 +47,6 @@ export const AlmacenProductosTab = () => {
           categoria,
           presentacion,
           unidad,
-          kg_por_unidad,
           stock_actual,
           stock_minimo,
           maneja_caducidad,
@@ -200,8 +198,7 @@ export const AlmacenProductosTab = () => {
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-sm">
-                            {producto.presentacion || producto.unidad}
-                            {producto.kg_por_unidad && ` (${producto.kg_por_unidad}kg)`}
+                            {producto.presentacion ? `${producto.presentacion} kg` : producto.unidad}
                           </span>
                           {producto.maneja_caducidad && (
                             <Badge variant="outline" className="text-xs">

@@ -28,10 +28,9 @@ interface Producto {
   nombre: string;
   marca: string | null;
   categoria: string | null;
-  presentacion: string | null;
+  presentacion: number | null;
   unidad: string;
   precio_venta: number;
-  kg_por_unidad: number | null;
   precio_por_kilo: boolean;
   stock_actual: number;
   activo: boolean;
@@ -47,7 +46,7 @@ export const SecretariaListaPreciosTab = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, marca, categoria, presentacion, unidad, precio_venta, kg_por_unidad, precio_por_kilo, stock_actual, activo")
+        .select("id, codigo, nombre, marca, categoria, presentacion, unidad, precio_venta, precio_por_kilo, stock_actual, activo")
         .eq("activo", true)
         .or("solo_uso_interno.is.null,solo_uso_interno.eq.false")
         .order("codigo");
@@ -75,8 +74,8 @@ export const SecretariaListaPreciosTab = () => {
   // Calculate price per kilo if applicable
   const getPrecioKilo = (producto: Producto) => {
     if (producto.precio_por_kilo) return producto.precio_venta;
-    if (producto.kg_por_unidad && producto.kg_por_unidad > 0) {
-      return producto.precio_venta / producto.kg_por_unidad;
+    if (producto.presentacion && producto.presentacion > 0) {
+      return producto.precio_venta / producto.presentacion;
     }
     return null;
   };

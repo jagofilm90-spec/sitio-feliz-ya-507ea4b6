@@ -53,7 +53,7 @@ interface DetalleProducto {
   cantidad_maxima: number | null;
   nota_linea: string | null;
   precio_por_kilo: boolean;
-  presentacion: string | null;
+  presentacion: number | null;
 }
 
 interface Cliente {
@@ -79,8 +79,7 @@ interface Producto {
   aplica_iva: boolean;
   aplica_ieps: boolean;
   precio_por_kilo: boolean;
-  kg_por_unidad: number | null;
-  presentacion: string | null;
+  presentacion: number | null;
 }
 
 interface CrearCotizacionDialogProps {
@@ -191,7 +190,7 @@ const CrearCotizacionDialog = ({
   const loadProductos = async () => {
     const { data, error } = await supabase
       .from("productos")
-      .select("id, nombre, codigo, unidad, marca, precio_venta, stock_actual, aplica_iva, aplica_ieps, precio_por_kilo, kg_por_unidad, presentacion")
+      .select("id, nombre, codigo, unidad, marca, precio_venta, stock_actual, aplica_iva, aplica_ieps, precio_por_kilo, presentacion")
       .eq("activo", true)
       .order("nombre");
 

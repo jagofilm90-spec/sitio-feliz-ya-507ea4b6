@@ -204,7 +204,7 @@ export default function ProcesarPedidoDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, nombre, codigo, precio_venta, unidad, precio_por_kilo, kg_por_unidad, aplica_iva, aplica_ieps")
+        .select("id, nombre, codigo, precio_venta, unidad, precio_por_kilo, presentacion, aplica_iva, aplica_ieps")
         .eq("activo", true)
         .order("nombre");
       if (error) throw error;
