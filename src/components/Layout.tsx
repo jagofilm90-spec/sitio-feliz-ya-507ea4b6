@@ -86,11 +86,22 @@ const Layout = ({ children }: LayoutProps) => {
     return roles.length === 1 && roles.includes("almacen");
   }, [roles]);
 
+  // Detectar si usuario es solo secretaria (sin admin)
+  const isOnlySecretaria = useMemo(() => {
+    return roles.includes("secretaria") && !roles.includes("admin");
+  }, [roles]);
+
   const allowedPagesForAlmacen = ["/almacen-tablet", "/chat"];
+  const allowedPagesForSecretaria = ["/secretaria", "/chat"];
 
   // Segunda capa de defensa: si roles están listos y es solo almacen, redirigir inmediatamente
   if (!rolesLoading && isOnlyAlmacen && !allowedPagesForAlmacen.includes(location.pathname)) {
     return <Navigate to="/almacen-tablet" replace />;
+  }
+
+  // Secretarias solo pueden estar en su panel exclusivo
+  if (!rolesLoading && isOnlySecretaria && !allowedPagesForSecretaria.includes(location.pathname)) {
+    return <Navigate to="/secretaria" replace />;
   }
 
   const handleLogout = async () => {
