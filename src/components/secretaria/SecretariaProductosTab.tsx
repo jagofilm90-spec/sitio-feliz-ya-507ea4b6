@@ -368,17 +368,20 @@ export const SecretariaProductosTab = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="descuento_maximo">Descuento Máximo (%)</Label>
-                    <Input
-                      id="descuento_maximo"
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="100"
-                      value={formData.descuento_maximo}
-                      onChange={(e) => setFormData({ ...formData, descuento_maximo: e.target.value })}
-                      placeholder="Ej: 10"
-                    />
+                    <Label htmlFor="descuento_maximo">Descuento Máximo ($)</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <Input
+                        id="descuento_maximo"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="pl-7"
+                        value={formData.descuento_maximo}
+                        onChange={(e) => setFormData({ ...formData, descuento_maximo: e.target.value })}
+                        placeholder="Ej: 5.00"
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="space-y-2">
