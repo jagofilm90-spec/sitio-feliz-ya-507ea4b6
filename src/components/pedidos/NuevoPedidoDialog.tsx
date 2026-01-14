@@ -63,9 +63,8 @@ interface Producto {
   aplica_iva: boolean;
   aplica_ieps: boolean;
   stock_actual: number;
-  kg_por_unidad: number | null;
   precio_por_kilo: boolean;
-  presentacion: string | null;
+  presentacion: number | null;
 }
 
 interface DetallePedido {
@@ -156,7 +155,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
   const loadProductos = async () => {
     const { data, error } = await supabase
       .from("productos")
-      .select("id, codigo, nombre, precio_venta, unidad, aplica_iva, aplica_ieps, stock_actual, kg_por_unidad, precio_por_kilo, presentacion")
+      .select("id, codigo, nombre, precio_venta, unidad, aplica_iva, aplica_ieps, stock_actual, precio_por_kilo, presentacion")
       .eq("activo", true)
       .order("nombre");
 
@@ -173,7 +172,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
         producto_id,
         cantidad,
         notas,
-        producto:productos(id, codigo, nombre, precio_venta, unidad, aplica_iva, aplica_ieps, stock_actual, kg_por_unidad)
+        producto:productos(id, codigo, nombre, precio_venta, unidad, aplica_iva, aplica_ieps, stock_actual, presentacion)
       `)
       .eq("cliente_id", clienteId)
       .eq("activo", true);
@@ -215,7 +214,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
     let subtotal: number;
 
     if (producto.precio_por_kilo && producto.presentacion) {
-      const kgPorUnidad = parseFloat(producto.presentacion);
+      const kgPorUnidad = producto.presentacion;
       kilosTotales = cantidad * kgPorUnidad;
       precioUnitario = producto.precio_venta; // Precio por kg
       subtotal = kilosTotales * precioUnitario;
@@ -262,7 +261,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
     
     // Recalcular kilos y subtotal según tipo de producto
     if (detalle.producto.precio_por_kilo && detalle.producto.presentacion) {
-      const kgPorUnidad = parseFloat(detalle.producto.presentacion);
+      const kgPorUnidad = detalle.producto.presentacion;
       detalle.kilos_totales = detalle.cantidad * kgPorUnidad;
       detalle.subtotal = detalle.kilos_totales * detalle.precio_unitario;
     } else {
@@ -330,8 +329,8 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
   const calcularPesoTotal = () => {
     let pesoTotal = 0;
     detalles.forEach(d => {
-      if (d.producto.kg_por_unidad) {
-        pesoTotal += d.cantidad * d.producto.kg_por_unidad;
+      if (d.producto.presentacion) {
+        pesoTotal += d.cantidad * d.producto.presentacion;
       }
     });
     return pesoTotal;
@@ -579,7 +578,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
                 <TableBody>
                   {detalles.map((d, idx) => {
                     const esPorKilo = d.producto.precio_por_kilo && d.producto.presentacion;
-                    const kgPorUnidad = esPorKilo ? parseFloat(d.producto.presentacion!) : null;
+                    const kgPorUnidad = esPorKilo ? d.producto.presentacion! : null;
                     
                     return (
                       <TableRow key={idx}>

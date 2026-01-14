@@ -16,8 +16,7 @@ interface Producto {
   categoria: string | null;
   precio_venta: number | null;
   unidad: string | null;
-  presentacion: string | null;
-  kg_por_unidad: number | null;
+  presentacion: number | null;
   precio_por_kilo: boolean | null;
   descuento_maximo: number | null;
   precio_anterior?: number | null;
@@ -68,7 +67,6 @@ export function VendedorListaPreciosTab() {
           precio_venta,
           unidad,
           presentacion,
-          kg_por_unidad,
           precio_por_kilo,
           descuento_maximo
         `)

@@ -24,7 +24,7 @@ interface ProductoFumigacion {
   codigo: string;
   nombre: string;
   marca: string | null;
-  presentacion: string | null;
+  presentacion: number | null;
   stock_actual: number;
   fecha_ultima_fumigacion: string | null;
   proximaFumigacion: Date | null;

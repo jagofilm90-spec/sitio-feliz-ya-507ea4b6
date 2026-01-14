@@ -46,7 +46,7 @@ interface Producto {
   nombre: string;
   marca: string | null;
   categoria: string | null;
-  presentacion: string | null;
+  presentacion: number | null;
   unidad: string;
   precio_venta: number;
   stock_actual: number;
@@ -55,7 +55,6 @@ interface Producto {
   maneja_caducidad: boolean;
   aplica_iva: boolean;
   aplica_ieps: boolean;
-  kg_por_unidad: number | null;
   precio_por_kilo: boolean;
   descuento_maximo: number | null;
 }
@@ -80,7 +79,6 @@ export const SecretariaProductosTab = () => {
     maneja_caducidad: false,
     aplica_iva: false,
     aplica_ieps: false,
-    kg_por_unidad: "",
     precio_por_kilo: false,
     descuento_maximo: "",
     activo: true,
@@ -127,7 +125,6 @@ export const SecretariaProductosTab = () => {
       maneja_caducidad: false,
       aplica_iva: false,
       aplica_ieps: false,
-      kg_por_unidad: "",
       precio_por_kilo: false,
       descuento_maximo: "",
       activo: true,
@@ -142,14 +139,13 @@ export const SecretariaProductosTab = () => {
       nombre: producto.nombre,
       marca: producto.marca || "",
       categoria: producto.categoria || "",
-      presentacion: producto.presentacion || "",
+      presentacion: producto.presentacion?.toString() || "",
       unidad: producto.unidad as any,
       precio_venta: producto.precio_venta.toString(),
       stock_minimo: producto.stock_minimo.toString(),
       maneja_caducidad: producto.maneja_caducidad,
       aplica_iva: producto.aplica_iva,
       aplica_ieps: producto.aplica_ieps,
-      kg_por_unidad: producto.kg_por_unidad?.toString() || "",
       precio_por_kilo: producto.precio_por_kilo,
       descuento_maximo: producto.descuento_maximo?.toString() || "",
       activo: producto.activo,
@@ -165,14 +161,13 @@ export const SecretariaProductosTab = () => {
         nombre: data.nombre,
         marca: data.marca || null,
         categoria: data.categoria || null,
-        presentacion: data.presentacion || null,
+        presentacion: data.presentacion ? parseFloat(data.presentacion) : null,
         unidad: data.unidad,
         precio_venta: parseFloat(data.precio_venta) || 0,
         stock_minimo: parseInt(data.stock_minimo) || 0,
         maneja_caducidad: data.maneja_caducidad,
         aplica_iva: data.aplica_iva,
         aplica_ieps: data.aplica_ieps,
-        kg_por_unidad: data.kg_por_unidad ? parseFloat(data.kg_por_unidad) : null,
         precio_por_kilo: data.precio_por_kilo,
         descuento_maximo: data.descuento_maximo ? parseFloat(data.descuento_maximo) : null,
         activo: data.activo,

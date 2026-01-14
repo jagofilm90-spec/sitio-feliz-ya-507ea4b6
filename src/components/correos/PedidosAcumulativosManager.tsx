@@ -227,12 +227,12 @@ export function PedidosAcumulativosManager() {
       let pesoTotal = 0;
       for (const det of detallesDelPedido) {
         const precioPorKilo = det.productos?.precio_por_kilo ?? false;
-        const kgPorUnidad = det.productos?.kg_por_unidad ?? 1;
+        const presentacion = det.productos?.presentacion ?? 1;
         
         if (precioPorKilo) {
           pesoTotal += det.cantidad;
         } else {
-          pesoTotal += det.cantidad * kgPorUnidad;
+          pesoTotal += det.cantidad * presentacion;
         }
       }
       
@@ -624,7 +624,7 @@ export function PedidosAcumulativosManager() {
           *, 
           pedidos_acumulativos_detalles(
             *,
-            productos:producto_id(nombre, precio_por_kilo, kg_por_unidad)
+            productos:producto_id(nombre, precio_por_kilo, presentacion)
           )
         `)
         .in("id", pedidoIds);
