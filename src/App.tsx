@@ -33,6 +33,7 @@ import AlmacenTablet from "./pages/AlmacenTablet";
 import ChoferPanel from "./pages/ChoferPanel";
 import VendedorPanel from "./pages/VendedorPanel";
 import VendedorAnalisisVentas from "./pages/VendedorAnalisisVentas";
+import SecretariaPanel from "./pages/SecretariaPanel";
 import AppMobileGuide from "./pages/AppMobileGuide";
 import TestFirma from "./pages/TestFirma";
 
@@ -117,8 +118,12 @@ const App = () => (
               <Route path="/chofer" element={<ChoferPanel />} />
               <Route path="/vendedor" element={<VendedorPanel />} />
               <Route path="/vendedor/analisis" element={<VendedorAnalisisVentas />} />
+              <Route path="/secretaria" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria']} redirectTo="/auth">
+                  <SecretariaPanel />
+                </ProtectedRoute>
+              } />
               <Route path="/app-mobile" element={<AppMobileGuide />} />
-              <Route path="/test-firma" element={<TestFirma />} />
               <Route path="/test-firma" element={<TestFirma />} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
