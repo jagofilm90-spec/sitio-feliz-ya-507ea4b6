@@ -53,7 +53,6 @@ interface PedidoDetalle {
       nombre: string;
       marca: string | null;
       unidad: string;
-      kg_por_unidad: number | null;
       precio_por_kilo: boolean;
       presentacion: number | null;
     };
@@ -126,7 +125,6 @@ export default function PedidoDetalleDialog({
               nombre,
               marca,
               unidad,
-              kg_por_unidad,
               precio_por_kilo,
               presentacion
             )
@@ -252,10 +250,6 @@ export default function PedidoDetalleDialog({
                       // Tenemos presentacion pero no kilos_totales guardados - mostrar presentación del producto
                       const plural = detalle.cantidad !== 1 ? 's' : '';
                       presentacionDisplay = `${detalle.cantidad.toLocaleString()} ${unidadComercial}${plural} de ${producto.presentacion} kg`;
-                    } else if (producto.kg_por_unidad && producto.kg_por_unidad > 0) {
-                      // Fallback: calcular con kg_por_unidad
-                      const kilosCalc = detalle.cantidad * producto.kg_por_unidad;
-                      presentacionDisplay = `${detalle.cantidad} × ${producto.kg_por_unidad} kg = ${kilosCalc.toLocaleString()} kg`;
                     } else {
                       // Producto sin conversión a kilos - mostrar guion
                       presentacionDisplay = "-";

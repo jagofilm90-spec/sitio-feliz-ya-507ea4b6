@@ -69,9 +69,8 @@ interface ProductoFrecuente {
     stock_actual: number;
     aplica_iva: boolean;
     aplica_ieps: boolean;
-    kg_por_unidad: number | null;
+    presentacion: number | null;
     precio_por_kilo: boolean;
-    presentacion: string | null;
   };
 }
 
@@ -112,7 +111,7 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
     try {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, nombre, codigo, unidad, precio_venta, stock_actual, aplica_iva, aplica_ieps, kg_por_unidad, precio_por_kilo, presentacion")
+        .select("id, nombre, codigo, unidad, precio_venta, stock_actual, aplica_iva, aplica_ieps, presentacion, precio_por_kilo")
         .eq("activo", true)
         .gt("stock_actual", 0)
         .order("nombre");
@@ -137,7 +136,7 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
           id,
           producto_id,
           es_especial,
-          producto:productos(id, nombre, codigo, unidad, precio_venta, stock_actual, aplica_iva, aplica_ieps, kg_por_unidad, precio_por_kilo, presentacion)
+          producto:productos(id, nombre, codigo, unidad, precio_venta, stock_actual, aplica_iva, aplica_ieps, presentacion, precio_por_kilo)
         `)
         .eq("cliente_id", clienteId)
         .eq("activo", true)
@@ -355,7 +354,7 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
         if (producto.precio_por_kilo) {
           pesoTotal += d.cantidad;
         } else {
-          pesoTotal += d.cantidad * (producto.kg_por_unidad || 1);
+          pesoTotal += d.cantidad * (producto.presentacion || 1);
         }
       } else {
         // Fallback: buscar en productos generales
@@ -364,7 +363,7 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
           if (prod.precio_por_kilo) {
             pesoTotal += d.cantidad;
           } else {
-            pesoTotal += d.cantidad * (prod.kg_por_unidad || 1);
+            pesoTotal += d.cantidad * (prod.presentacion || 1);
           }
         }
       }

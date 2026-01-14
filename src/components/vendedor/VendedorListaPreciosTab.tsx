@@ -350,9 +350,9 @@ export function VendedorListaPreciosTab() {
                           </div>
                           <div className="col-span-2 text-sm capitalize">
                             {producto.unidad || "—"}
-                            {producto.kg_por_unidad && (
+                            {producto.presentacion && (
                               <span className="text-xs text-muted-foreground block">
-                                ({producto.kg_por_unidad} kg)
+                                ({producto.presentacion} kg)
                               </span>
                             )}
                           </div>

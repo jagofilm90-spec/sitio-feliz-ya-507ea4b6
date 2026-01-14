@@ -20,7 +20,7 @@ import { calcularSubtotal, calcularDesgloseImpuestos as calcularDesgloseImpuesto
 import { formatCurrency } from "@/lib/utils";
 
 // Solo Piloncillo requiere verificación manual obligatoria (peso variable por caja)
-// Anís, Canela Molida y Bicarbonato se convierten automáticamente usando kg_por_unidad
+// Anís, Canela Molida y Bicarbonato se convierten automáticamente usando presentacion
 const PRODUCTOS_VERIFICACION_OBLIGATORIA = ['piloncillo'];
 
 // Helper para calcular peso total de un pedido basado en sus detalles
@@ -28,14 +28,14 @@ const calcularPesoTotalKg = (detalles: any[]): number => {
   let pesoTotal = 0;
   for (const det of detalles) {
     const precioPorKilo = det.productos?.precio_por_kilo ?? false;
-    const kgPorUnidad = det.productos?.kg_por_unidad ?? 1;
+    const presentacion = det.productos?.presentacion ?? 1;
     
     if (precioPorKilo) {
       // Si es precio por kilo, la cantidad ya está en kg
       pesoTotal += det.cantidad;
     } else {
-      // Si no es precio por kilo, multiplicar cantidad por kg_por_unidad
-      pesoTotal += det.cantidad * kgPorUnidad;
+      // Si no es precio por kilo, multiplicar cantidad por presentacion
+      pesoTotal += det.cantidad * presentacion;
     }
   }
   return redondear(pesoTotal);
@@ -129,7 +129,7 @@ export function PedidosAcumulativosManager() {
         .from("pedidos_acumulativos_detalles")
         .select(`
           *,
-          productos:producto_id(codigo, nombre, unidad, precio_por_kilo, kg_por_unidad, aplica_iva, aplica_ieps)
+          productos:producto_id(codigo, nombre, unidad, precio_por_kilo, presentacion, aplica_iva, aplica_ieps)
         `)
         .eq("pedido_acumulativo_id", selectedPedido);
 
@@ -153,7 +153,7 @@ export function PedidosAcumulativosManager() {
           pedido_acumulativo_id,
           cantidad,
           verificado,
-          productos:producto_id(nombre, precio_por_kilo, kg_por_unidad)
+          productos:producto_id(nombre, precio_por_kilo, presentacion)
         `)
         .in("pedido_acumulativo_id", pedidoIds);
 
@@ -441,7 +441,7 @@ export function PedidosAcumulativosManager() {
           *, 
           pedidos_acumulativos_detalles(
             *,
-            productos:producto_id(nombre, precio_por_kilo, kg_por_unidad)
+            productos:producto_id(nombre, precio_por_kilo, presentacion)
           )
         `)
         .eq("id", pedidoAcumulativoId)
@@ -520,7 +520,7 @@ export function PedidosAcumulativosManager() {
             *, 
             pedidos_acumulativos_detalles(
               *,
-              productos:producto_id(nombre, precio_por_kilo, kg_por_unidad)
+              productos:producto_id(nombre, precio_por_kilo, presentacion)
             )
           `)
           .eq("id", pedidoAcumulativoId)

@@ -241,7 +241,7 @@ export default function ProcesarPedidoDialog({
               codigo,
               unidad,
               precio_por_kilo,
-              kg_por_unidad,
+              presentacion,
               aplica_iva,
               aplica_ieps
             )
@@ -597,7 +597,7 @@ export default function ProcesarPedidoDialog({
                     producto_id: rosticeriaProductOverride.producto_id,
                     nombre_producto: rosticeriaProductOverride.nombre,
                     precio_unitario: rosticeriaProductOverride.precio_unitario,
-                    kg_por_unidad: matchedByCotizacion.kg_por_unidad,
+                    presentacion: matchedByCotizacion.presentacion,
                     precio_por_kilo: matchedByCotizacion.precio_por_kilo,
                   };
                 }
@@ -617,7 +617,7 @@ export default function ProcesarPedidoDialog({
                     : matchedByCotizacion.precio_venta;
 
                   const unidadCatalogo = matchedByCotizacion.unidad;
-                  const kgPorUnidad = matchedByCotizacion.kg_por_unidad;
+                  const kgPorUnidad = matchedByCotizacion.presentacion;
                   const unidadVentaLower = (unidadCatalogo || '').toLowerCase();
 
                   // Determinar cuántos KILOS pidió el cliente
@@ -1300,7 +1300,7 @@ export default function ProcesarPedidoDialog({
               precio_unitario: producto.precio_venta,
               // FUENTE DE VERDAD: Base de datos
               precio_por_kilo: producto.precio_por_kilo,
-              kg_por_unidad: producto.kg_por_unidad,
+              presentacion: producto.presentacion,
               aplica_iva: producto.aplica_iva,
               aplica_ieps: producto.aplica_ieps,
               unidad: producto.unidad,

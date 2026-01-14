@@ -174,11 +174,14 @@ export interface ResultadoConversion {
  * Convierte kilos a unidades comerciales según configuración del producto
  * REGLAS:
  * 1. Si precio_por_kilo = true → SIEMPRE trabajar en kilos, NO convertir
- * 2. Si precio_por_kilo = false → convertir kilos a unidades usando kg_por_unidad
- * 3. Si falta kg_por_unidad para conversión → ERROR, no asumir valores
+ * 2. Si precio_por_kilo = false → convertir kilos a unidades usando presentacion (peso en kg)
+ * 3. Si falta presentacion para conversión → ERROR, no asumir valores
  */
 export function convertirUnidades(params: ConversionUnidadParams): ResultadoConversion {
   const { cantidad_kilos, kg_por_unidad, precio_por_kilo, unidad_comercial, nombre_producto } = params;
+  
+  // kg_por_unidad ahora es presentacion
+  const presentacion = kg_por_unidad;
 
   // Validación inicial
   if (cantidad_kilos <= 0) {
@@ -210,30 +213,30 @@ export function convertirUnidades(params: ConversionUnidadParams): ResultadoConv
     return resultado;
   }
 
-  // REGLA 2: Productos por unidad comercial requieren kg_por_unidad
-  if (!kg_por_unidad || kg_por_unidad <= 0) {
+  // REGLA 2: Productos por unidad comercial requieren presentacion (peso)
+  if (!presentacion || presentacion <= 0) {
     return {
       cantidad_final: 0,
       unidad_final: unidad_comercial,
       formula_usada: 'ERROR',
       valido: false,
-      error: `Falta kg_por_unidad para producto "${nombre_producto}". No se puede convertir ${cantidad_kilos} kg a ${unidad_comercial}.`
+      error: `Falta peso (presentación) para producto "${nombre_producto}". No se puede convertir ${cantidad_kilos} kg a ${unidad_comercial}.`
     };
   }
 
   // REGLA 3: Convertir kilos → unidades comerciales
-  const cantidad_unidades = cantidad_kilos / kg_por_unidad;
+  const cantidad_unidades = cantidad_kilos / presentacion;
   const cantidad_redondeada = Math.round(cantidad_unidades); // Redondear a entero
 
   const resultado = {
     cantidad_final: cantidad_redondeada,
     unidad_final: unidad_comercial,
-    formula_usada: `${cantidad_kilos} kg / ${kg_por_unidad} kg_por_unidad = ${cantidad_unidades.toFixed(4)} → ${cantidad_redondeada} ${unidad_comercial}`,
+    formula_usada: `${cantidad_kilos} kg / ${presentacion} kg = ${cantidad_unidades.toFixed(4)} → ${cantidad_redondeada} ${unidad_comercial}`,
     valido: true
   };
 
   auditoriaCalculos.registrar('conversion_unidades', {
-    entrada: { cantidad_kilos, kg_por_unidad, unidad_comercial },
+    entrada: { cantidad_kilos, presentacion, unidad_comercial },
     salida: resultado,
     valido: true,
     contexto: { producto: nombre_producto }
