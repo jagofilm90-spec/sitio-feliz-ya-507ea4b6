@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { formatCurrency } from "@/lib/utils";
 import {
   Plus,
   Search,
@@ -56,8 +55,10 @@ interface Producto {
   activo: boolean;
   maneja_caducidad: boolean;
   aplica_iva: boolean;
+  aplica_ieps: boolean;
   kg_por_unidad: number | null;
   precio_por_kilo: boolean;
+  descuento_maximo: number | null;
 }
 
 export const SecretariaProductosTab = () => {
@@ -80,8 +81,10 @@ export const SecretariaProductosTab = () => {
     stock_minimo: "",
     maneja_caducidad: false,
     aplica_iva: false,
+    aplica_ieps: false,
     kg_por_unidad: "",
     precio_por_kilo: false,
+    descuento_maximo: "",
     activo: true,
   });
 
@@ -126,8 +129,10 @@ export const SecretariaProductosTab = () => {
       stock_minimo: "",
       maneja_caducidad: false,
       aplica_iva: false,
+      aplica_ieps: false,
       kg_por_unidad: "",
       precio_por_kilo: false,
+      descuento_maximo: "",
       activo: true,
     });
   };
@@ -147,8 +152,10 @@ export const SecretariaProductosTab = () => {
       stock_minimo: producto.stock_minimo.toString(),
       maneja_caducidad: producto.maneja_caducidad,
       aplica_iva: producto.aplica_iva,
+      aplica_ieps: producto.aplica_ieps,
       kg_por_unidad: producto.kg_por_unidad?.toString() || "",
       precio_por_kilo: producto.precio_por_kilo,
+      descuento_maximo: producto.descuento_maximo?.toString() || "",
       activo: producto.activo,
     });
     setDialogOpen(true);
@@ -169,8 +176,10 @@ export const SecretariaProductosTab = () => {
         stock_minimo: parseInt(data.stock_minimo) || 0,
         maneja_caducidad: data.maneja_caducidad,
         aplica_iva: data.aplica_iva,
+        aplica_ieps: data.aplica_ieps,
         kg_por_unidad: data.kg_por_unidad ? parseFloat(data.kg_por_unidad) : null,
         precio_por_kilo: data.precio_por_kilo,
+        descuento_maximo: data.descuento_maximo ? parseFloat(data.descuento_maximo) : null,
         activo: data.activo,
       };
 
@@ -247,49 +256,53 @@ export const SecretariaProductosTab = () => {
                 Completa la información del producto
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSave} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSave} className="space-y-6">
+              {/* Sección 1: Identificación */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-sm text-muted-foreground border-b pb-2">
+                  Identificación
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="codigo">Código *</Label>
+                    <Input
+                      id="codigo"
+                      value={formData.codigo}
+                      onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="unidad">Unidad *</Label>
+                    <Select
+                      value={formData.unidad}
+                      onValueChange={(v) => setFormData({ ...formData, unidad: v as any })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bulto">Bulto</SelectItem>
+                        <SelectItem value="caja">Caja</SelectItem>
+                        <SelectItem value="costal">Costal</SelectItem>
+                        <SelectItem value="cubeta">Cubeta</SelectItem>
+                        <SelectItem value="kg">Kilogramo</SelectItem>
+                        <SelectItem value="pieza">Pieza</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="codigo">Código *</Label>
+                  <Label htmlFor="nombre">Nombre *</Label>
                   <Input
-                    id="codigo"
-                    value={formData.codigo}
-                    onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
+                    id="nombre"
+                    value={formData.nombre}
+                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="unidad">Unidad *</Label>
-                  <Select
-                    value={formData.unidad}
-                    onValueChange={(v) => setFormData({ ...formData, unidad: v as any })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bulto">Bulto</SelectItem>
-                      <SelectItem value="caja">Caja</SelectItem>
-                      <SelectItem value="costal">Costal</SelectItem>
-                      <SelectItem value="cubeta">Cubeta</SelectItem>
-                      <SelectItem value="kg">Kilogramo</SelectItem>
-                      <SelectItem value="pieza">Pieza</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="nombre">Nombre *</Label>
-                <Input
-                  id="nombre"
-                  value={formData.nombre}
-                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="marca">Marca</Label>
                   <Input
@@ -298,87 +311,34 @@ export const SecretariaProductosTab = () => {
                     onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="presentacion">Presentación</Label>
-                  <Input
-                    id="presentacion"
-                    value={formData.presentacion}
-                    onChange={(e) => setFormData({ ...formData, presentacion: e.target.value })}
-                    placeholder="Ej: 10kg, 500g"
-                  />
-                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="precio_venta">Precio Venta *</Label>
-                  <Input
-                    id="precio_venta"
-                    type="number"
-                    step="0.01"
-                    value={formData.precio_venta}
-                    onChange={(e) => setFormData({ ...formData, precio_venta: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="precio_compra">Precio Compra</Label>
-                  <Input
-                    id="precio_compra"
-                    type="number"
-                    step="0.01"
-                    value={formData.precio_compra}
-                    onChange={(e) => setFormData({ ...formData, precio_compra: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="stock_minimo">Stock Mínimo</Label>
-                  <Input
-                    id="stock_minimo"
-                    type="number"
-                    value={formData.stock_minimo}
-                    onChange={(e) => setFormData({ ...formData, stock_minimo: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="kg_por_unidad">Kg por Unidad</Label>
-                  <Input
-                    id="kg_por_unidad"
-                    type="number"
-                    step="0.01"
-                    value={formData.kg_por_unidad}
-                    onChange={(e) => setFormData({ ...formData, kg_por_unidad: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-6">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="activo"
-                    checked={formData.activo}
-                    onCheckedChange={(v) => setFormData({ ...formData, activo: v })}
-                  />
-                  <Label htmlFor="activo">Activo</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="aplica_iva"
-                    checked={formData.aplica_iva}
-                    onCheckedChange={(v) => setFormData({ ...formData, aplica_iva: v })}
-                  />
-                  <Label htmlFor="aplica_iva">Aplica IVA</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="maneja_caducidad"
-                    checked={formData.maneja_caducidad}
-                    onCheckedChange={(v) => setFormData({ ...formData, maneja_caducidad: v })}
-                  />
-                  <Label htmlFor="maneja_caducidad">Maneja Caducidad</Label>
+              {/* Sección 2: Presentación y Peso */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-sm text-muted-foreground border-b pb-2">
+                  Presentación y Peso
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="presentacion">Presentación</Label>
+                    <Input
+                      id="presentacion"
+                      value={formData.presentacion}
+                      onChange={(e) => setFormData({ ...formData, presentacion: e.target.value })}
+                      placeholder="Ej: 10kg, 500g, 20 piezas"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="kg_por_unidad">Kg por Unidad</Label>
+                    <Input
+                      id="kg_por_unidad"
+                      type="number"
+                      step="0.01"
+                      value={formData.kg_por_unidad}
+                      onChange={(e) => setFormData({ ...formData, kg_por_unidad: e.target.value })}
+                      placeholder="Peso en kg"
+                    />
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Switch
@@ -390,7 +350,109 @@ export const SecretariaProductosTab = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-4">
+              {/* Sección 3: Precios (confidencial - se captura pero no se muestra en lista) */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-sm text-muted-foreground border-b pb-2">
+                  Precios <span className="text-xs text-pink-600">(confidencial)</span>
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="precio_venta">Precio de Venta *</Label>
+                    <Input
+                      id="precio_venta"
+                      type="number"
+                      step="0.01"
+                      value={formData.precio_venta}
+                      onChange={(e) => setFormData({ ...formData, precio_venta: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="descuento_maximo">Descuento Máximo (%)</Label>
+                    <Input
+                      id="descuento_maximo"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      value={formData.descuento_maximo}
+                      onChange={(e) => setFormData({ ...formData, descuento_maximo: e.target.value })}
+                      placeholder="Ej: 10"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="precio_compra">Precio de Compra</Label>
+                  <Input
+                    id="precio_compra"
+                    type="number"
+                    step="0.01"
+                    value={formData.precio_compra}
+                    onChange={(e) => setFormData({ ...formData, precio_compra: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Sección 4: Impuestos */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-sm text-muted-foreground border-b pb-2">
+                  Impuestos
+                </h3>
+                <div className="flex flex-wrap gap-6">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="aplica_iva"
+                      checked={formData.aplica_iva}
+                      onCheckedChange={(v) => setFormData({ ...formData, aplica_iva: v })}
+                    />
+                    <Label htmlFor="aplica_iva">Aplica IVA 16%</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="aplica_ieps"
+                      checked={formData.aplica_ieps}
+                      onCheckedChange={(v) => setFormData({ ...formData, aplica_ieps: v })}
+                    />
+                    <Label htmlFor="aplica_ieps">Aplica IEPS 8%</Label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sección 5: Control de Inventario */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-sm text-muted-foreground border-b pb-2">
+                  Control de Inventario
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="stock_minimo">Stock Mínimo</Label>
+                    <Input
+                      id="stock_minimo"
+                      type="number"
+                      value={formData.stock_minimo}
+                      onChange={(e) => setFormData({ ...formData, stock_minimo: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 pt-6">
+                    <Switch
+                      id="maneja_caducidad"
+                      checked={formData.maneja_caducidad}
+                      onCheckedChange={(v) => setFormData({ ...formData, maneja_caducidad: v })}
+                    />
+                    <Label htmlFor="maneja_caducidad">Maneja Caducidad</Label>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="activo"
+                    checked={formData.activo}
+                    onCheckedChange={(v) => setFormData({ ...formData, activo: v })}
+                  />
+                  <Label htmlFor="activo">Producto Activo</Label>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t">
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                   Cancelar
                 </Button>
@@ -431,7 +493,7 @@ export const SecretariaProductosTab = () => {
         />
       </div>
 
-      {/* Products Table */}
+      {/* Products Table - SIN PRECIO (confidencial, solo en Lista de Precios) */}
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -440,9 +502,11 @@ export const SecretariaProductosTab = () => {
                 <TableRow>
                   <TableHead>Código</TableHead>
                   <TableHead>Nombre</TableHead>
-                  <TableHead className="hidden md:table-cell">Presentación</TableHead>
-                  <TableHead className="text-right">Precio Venta</TableHead>
-                  <TableHead className="text-right hidden sm:table-cell">Stock</TableHead>
+                  <TableHead className="hidden md:table-cell">Marca</TableHead>
+                  <TableHead className="hidden lg:table-cell">Presentación</TableHead>
+                  <TableHead>Unidad</TableHead>
+                  <TableHead className="text-center">Stock</TableHead>
+                  <TableHead className="text-center hidden sm:table-cell">Min</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -452,23 +516,24 @@ export const SecretariaProductosTab = () => {
                     <TableRow key={producto.id}>
                       <TableCell className="font-mono font-medium">{producto.codigo}</TableCell>
                       <TableCell>
-                        <div>
-                          <p className="font-medium">{producto.nombre}</p>
-                          {producto.marca && (
-                            <p className="text-xs text-muted-foreground">{producto.marca}</p>
-                          )}
-                        </div>
+                        <p className="font-medium">{producto.nombre}</p>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">
+                      <TableCell className="hidden md:table-cell text-muted-foreground">
+                        {producto.marca || "—"}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         {producto.presentacion || "—"}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatCurrency(producto.precio_venta)}
+                      <TableCell className="capitalize">
+                        {producto.unidad}
                       </TableCell>
-                      <TableCell className="text-right hidden sm:table-cell">
+                      <TableCell className="text-center">
                         <Badge variant={producto.stock_actual <= producto.stock_minimo ? "destructive" : "secondary"}>
                           {producto.stock_actual}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-center hidden sm:table-cell text-muted-foreground">
+                        {producto.stock_minimo}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -483,7 +548,7 @@ export const SecretariaProductosTab = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       No se encontraron productos
                     </TableCell>
                   </TableRow>
