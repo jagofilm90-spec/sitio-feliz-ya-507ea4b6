@@ -101,3 +101,6 @@ verify_jwt = false
 
 [functions.lookup-postal-code]
 verify_jwt = true
+
+[functions.normalize-product]
+verify_jwt = true

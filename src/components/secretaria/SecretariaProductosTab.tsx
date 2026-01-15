@@ -38,7 +38,9 @@ import {
   Edit,
   Loader2,
   Package,
+  Sparkles,
 } from "lucide-react";
+import { MigracionProductosDialog } from "./MigracionProductosDialog";
 
 interface Producto {
   id: string;
@@ -64,6 +66,7 @@ export const SecretariaProductosTab = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [tabActivo, setTabActivo] = useState<"activos" | "inactivos">("activos");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [migracionDialogOpen, setMigracionDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -249,13 +252,22 @@ export const SecretariaProductosTab = () => {
             {activeCount} activos, {inactiveCount} inactivos
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button className="bg-pink-600 hover:bg-pink-700">
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo Producto
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setMigracionDialogOpen(true)}
+            className="border-pink-200 text-pink-700 hover:bg-pink-50"
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            Normalizar con IA
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button className="bg-pink-600 hover:bg-pink-700">
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Producto
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
@@ -479,7 +491,14 @@ export const SecretariaProductosTab = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
+      {/* Dialog de migración */}
+      <MigracionProductosDialog 
+        open={migracionDialogOpen} 
+        onOpenChange={setMigracionDialogOpen} 
+      />
 
       {/* Tabs */}
       <Tabs value={tabActivo} onValueChange={(v) => setTabActivo(v as any)}>
