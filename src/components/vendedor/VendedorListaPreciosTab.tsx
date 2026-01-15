@@ -12,6 +12,7 @@ interface Producto {
   id: string;
   codigo: string;
   nombre: string;
+  especificaciones: string | null;
   marca: string | null;
   categoria: string | null;
   precio_venta: number | null;
@@ -62,6 +63,7 @@ export function VendedorListaPreciosTab() {
           id,
           codigo,
           nombre,
+          especificaciones,
           marca,
           categoria,
           precio_venta,
@@ -123,6 +125,7 @@ export function VendedorListaPreciosTab() {
     return productos.filter(p =>
       p.codigo?.toLowerCase().includes(term) ||
       p.nombre?.toLowerCase().includes(term) ||
+      p.especificaciones?.toLowerCase().includes(term) ||
       p.categoria?.toLowerCase().includes(term) ||
       p.marca?.toLowerCase().includes(term)
     );
@@ -270,7 +273,14 @@ export function VendedorListaPreciosTab() {
                         <div className="sm:hidden space-y-2">
                           <div className="flex justify-between items-start gap-2">
                             <div>
-                              <p className="font-medium">{producto.nombre}</p>
+                              <p className="font-medium">
+                                {producto.nombre}
+                                {producto.especificaciones && (
+                                  <span className="text-muted-foreground font-normal ml-1">
+                                    {producto.especificaciones}
+                                  </span>
+                                )}
+                              </p>
                               <p className="text-xs text-muted-foreground">{producto.codigo}</p>
                             </div>
                             <div className="text-right shrink-0">
@@ -336,8 +346,13 @@ export function VendedorListaPreciosTab() {
                             </code>
                           </div>
                           <div className="col-span-3">
-                            <p className="font-medium truncate" title={producto.nombre}>
+                            <p className="font-medium truncate" title={`${producto.nombre} ${producto.especificaciones || ''}`}>
                               {producto.nombre}
+                              {producto.especificaciones && (
+                                <span className="text-muted-foreground font-normal ml-1">
+                                  {producto.especificaciones}
+                                </span>
+                              )}
                             </p>
                             {producto.peso_kg && (
                               <p className="text-xs text-muted-foreground truncate">
