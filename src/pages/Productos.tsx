@@ -770,7 +770,7 @@ const Productos = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="especificaciones">Especificaciones</Label>
+                    <Label htmlFor="especificaciones">Presentación / Especificaciones</Label>
                     <Input
                       id="especificaciones"
                       value={formData.especificaciones}
@@ -779,11 +779,11 @@ const Productos = () => {
                         setFormData({ ...formData, especificaciones });
                         setDuplicateWarning(checkDuplicateProduct(formData.nombre, formData.marca, especificaciones, formData.unidad));
                       }}
-                      placeholder="Ej: 50/60 Deshuesada, Premium"
+                      placeholder="Ej: 25kg, 6/2.800kg, 50/60 Deshuesada"
                       autoComplete="off"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Calibre, formato o variante
+                      Texto que aparece en facturas y remisiones
                     </p>
                   </div>
                   <div className="space-y-2">

@@ -322,21 +322,21 @@ export const SecretariaProductosTab = () => {
                 </div>
               </div>
 
-              {/* Sección 2: Especificaciones y Peso */}
+              {/* Sección 2: Presentación y Peso */}
               <div className="space-y-4">
                 <h3 className="font-medium text-sm text-muted-foreground border-b pb-2">
-                  Especificaciones y Peso
+                  Presentación y Peso
                 </h3>
                 <div className="space-y-2">
-                  <Label htmlFor="especificaciones">Especificaciones</Label>
+                  <Label htmlFor="especificaciones">Presentación / Especificaciones</Label>
                   <Input
                     id="especificaciones"
                     value={formData.especificaciones}
                     onChange={(e) => setFormData({ ...formData, especificaciones: e.target.value })}
-                    placeholder="Ej: 50/60 Deshuesada, 24/800gr, Premium"
+                    placeholder="Ej: 25kg, 6/2.800kg, 50/60 Deshuesada"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Calibre, formato o variante del producto
+                    Texto que aparece en facturas y remisiones junto al nombre
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
