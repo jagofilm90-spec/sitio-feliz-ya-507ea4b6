@@ -90,10 +90,25 @@ Responde ÚNICAMENTE con un JSON válido (sin markdown, sin texto adicional):
       throw new Error(`AI gateway error: ${response.status}`);
     }
 
-    const aiResponse = await response.json();
+    const responseText = await response.text();
+    console.log("AI Gateway raw response:", responseText.substring(0, 500));
+    
+    if (!responseText || responseText.trim() === "") {
+      throw new Error("Empty response from AI gateway");
+    }
+
+    let aiResponse;
+    try {
+      aiResponse = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error("Failed to parse AI gateway response:", responseText.substring(0, 200));
+      throw new Error("Invalid JSON from AI gateway");
+    }
+
     const content = aiResponse.choices?.[0]?.message?.content;
 
     if (!content) {
+      console.error("No content in AI response:", JSON.stringify(aiResponse).substring(0, 300));
       throw new Error("No response from AI");
     }
 
@@ -103,7 +118,13 @@ Responde ÚNICAMENTE con un JSON válido (sin markdown, sin texto adicional):
       cleanedContent = cleanedContent.replace(/```json?\n?/g, "").replace(/```$/g, "").trim();
     }
 
-    const suggestion = JSON.parse(cleanedContent);
+    let suggestion;
+    try {
+      suggestion = JSON.parse(cleanedContent);
+    } catch (parseError) {
+      console.error("Failed to parse AI content:", cleanedContent.substring(0, 200));
+      throw new Error("Invalid JSON in AI content");
+    }
 
     return new Response(JSON.stringify(suggestion), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
