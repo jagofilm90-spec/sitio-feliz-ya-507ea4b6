@@ -47,6 +47,7 @@ interface Producto {
   marca: string | null;
   categoria: string | null;
   peso_kg: number | null;
+  especificaciones: string | null;
   unidad: string;
   precio_venta: number;
   stock_actual: number;
@@ -72,7 +73,8 @@ export const SecretariaProductosTab = () => {
     nombre: "",
     marca: "",
     categoria: "",
-    presentacion: "",
+    especificaciones: "",
+    peso_kg: "",
     unidad: "bulto" as const,
     precio_venta: "",
     stock_minimo: "",
@@ -118,7 +120,8 @@ export const SecretariaProductosTab = () => {
       nombre: "",
       marca: "",
       categoria: "",
-      presentacion: "",
+      especificaciones: "",
+      peso_kg: "",
       unidad: "bulto",
       precio_venta: "",
       stock_minimo: "",
@@ -139,7 +142,8 @@ export const SecretariaProductosTab = () => {
       nombre: producto.nombre,
       marca: producto.marca || "",
       categoria: producto.categoria || "",
-      presentacion: producto.peso_kg?.toString() || "",
+      especificaciones: producto.especificaciones || "",
+      peso_kg: producto.peso_kg?.toString() || "",
       unidad: producto.unidad as any,
       precio_venta: producto.precio_venta.toString(),
       stock_minimo: producto.stock_minimo.toString(),
@@ -161,7 +165,8 @@ export const SecretariaProductosTab = () => {
         nombre: data.nombre,
         marca: data.marca || null,
         categoria: data.categoria || null,
-        presentacion: data.presentacion ? parseFloat(data.presentacion) : null,
+        especificaciones: data.especificaciones || null,
+        peso_kg: data.peso_kg ? parseFloat(data.peso_kg) : null,
         unidad: data.unidad,
         precio_venta: parseFloat(data.precio_venta) || 0,
         stock_minimo: parseInt(data.stock_minimo) || 0,
@@ -303,45 +308,51 @@ export const SecretariaProductosTab = () => {
                 </div>
               </div>
 
-              {/* Sección 2: Presentación y Peso */}
+              {/* Sección 2: Especificaciones y Peso */}
               <div className="space-y-4">
                 <h3 className="font-medium text-sm text-muted-foreground border-b pb-2">
-                  Presentación y Peso
+                  Especificaciones y Peso
                 </h3>
+                <div className="space-y-2">
+                  <Label htmlFor="especificaciones">Especificaciones</Label>
+                  <Input
+                    id="especificaciones"
+                    value={formData.especificaciones}
+                    onChange={(e) => setFormData({ ...formData, especificaciones: e.target.value })}
+                    placeholder="Ej: 50/60 Deshuesada, 24/800gr, Premium"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Calibre, formato o variante del producto
+                  </p>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="presentacion">Presentación</Label>
-                    <Input
-                      id="presentacion"
-                      value={formData.presentacion}
-                      onChange={(e) => setFormData({ ...formData, presentacion: e.target.value })}
-                      placeholder="Ej: 10kg, 500g, 20 piezas"
-                    />
-                  </div>
-                <div className="space-y-2">
-                    <Label htmlFor="presentacion">Peso (kg)</Label>
+                    <Label htmlFor="peso_kg">Peso por unidad (kg)</Label>
                     <div className="relative">
                       <Input
-                        id="presentacion"
+                        id="peso_kg"
                         type="number"
                         step="0.01"
                         min="0"
-                        value={formData.presentacion}
-                        onChange={(e) => setFormData({ ...formData, presentacion: e.target.value })}
-                        placeholder="Peso en kg por unidad"
+                        value={formData.peso_kg}
+                        onChange={(e) => setFormData({ ...formData, peso_kg: e.target.value })}
+                        placeholder="10.00"
                         className="pr-10"
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">kg</span>
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      Peso del bulto/caja para cálculos
+                    </p>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="precio_por_kilo"
-                    checked={formData.precio_por_kilo}
-                    onCheckedChange={(v) => setFormData({ ...formData, precio_por_kilo: v })}
-                  />
-                  <Label htmlFor="precio_por_kilo">Precio por Kilo</Label>
+                  <div className="flex items-center gap-2 pt-6">
+                    <Switch
+                      id="precio_por_kilo"
+                      checked={formData.precio_por_kilo}
+                      onCheckedChange={(v) => setFormData({ ...formData, precio_por_kilo: v })}
+                    />
+                    <Label htmlFor="precio_por_kilo">Precio por Kilo</Label>
+                  </div>
                 </div>
               </div>
 

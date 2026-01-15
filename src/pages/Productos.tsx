@@ -178,10 +178,10 @@ const Productos = () => {
   };
 
   // Función para verificar productos duplicados (ahora también compara sin acentos)
-  const checkDuplicateProduct = (nombre: string, marca: string, presentacion: string, unidad: string): string | null => {
+  const checkDuplicateProduct = (nombre: string, marca: string, especificaciones: string, unidad: string): string | null => {
     const normalizedNombre = normalizeText(nombre);
     const normalizedMarca = normalizeText(marca || '');
-    const normalizedPresentacion = (presentacion || '').trim();
+    const normalizedEspecificaciones = (especificaciones || '').trim().toLowerCase();
     const normalizedUnidad = unidad;
 
     const duplicate = productos.find(p => {
@@ -190,13 +190,13 @@ const Productos = () => {
 
       const pNombre = normalizeText(p.nombre || '');
       const pMarca = normalizeText(p.marca || '');
-      const pPresentacion = (p.presentacion || '').trim();
+      const pEspecificaciones = (p.especificaciones || '').trim().toLowerCase();
       const pUnidad = p.unidad;
 
-      // Es duplicado si coinciden nombre, marca, presentación Y unidad (ignorando acentos)
+      // Es duplicado si coinciden nombre, marca, especificaciones Y unidad (ignorando acentos)
       return pNombre === normalizedNombre &&
              pMarca === normalizedMarca &&
-             pPresentacion === normalizedPresentacion &&
+             pEspecificaciones === normalizedEspecificaciones &&
              pUnidad === normalizedUnidad;
     });
 
@@ -212,7 +212,8 @@ const Productos = () => {
     nombre: string;
     marca: string;
     categoria: string;
-    presentacion: string;
+    especificaciones: string;
+    peso_kg: string;
     unidad: "bulto" | "caja" | "churla" | "costal" | "cubeta" | "kg" | "litro" | "pieza" | "balón";
     precio_por_kilo: boolean;
     piezas_por_unidad: string;
@@ -236,7 +237,8 @@ const Productos = () => {
     nombre: "",
     marca: "",
     categoria: "",
-    presentacion: "",
+    especificaciones: "",
+    peso_kg: "",
     unidad: "bulto",
     precio_por_kilo: false,
     piezas_por_unidad: "1",
@@ -307,7 +309,7 @@ const Productos = () => {
     e.preventDefault();
     
     // Verificar producto duplicado
-    const duplicateError = checkDuplicateProduct(formData.nombre, formData.marca, formData.presentacion, formData.unidad);
+    const duplicateError = checkDuplicateProduct(formData.nombre, formData.marca, formData.especificaciones, formData.unidad);
     if (duplicateError) {
       setDuplicateWarning(duplicateError);
       toast({
@@ -325,7 +327,8 @@ const Productos = () => {
         nombre: formData.nombre,
         marca: formData.marca || null,
         categoria: formData.categoria || null,
-        presentacion: formData.presentacion ? parseFloat(formData.presentacion) : null,
+        especificaciones: formData.especificaciones || null,
+        peso_kg: formData.peso_kg ? parseFloat(formData.peso_kg) : null,
         unidad: formData.unidad,
         precio_por_kilo: formData.precio_por_kilo,
         piezas_por_unidad: formData.piezas_por_unidad ? parseInt(formData.piezas_por_unidad) : 1,
@@ -455,7 +458,8 @@ const Productos = () => {
       nombre: product.nombre,
       marca: product.marca || "",
       categoria: product.categoria || "",
-      presentacion: product.presentacion?.toString() || "",
+      especificaciones: product.especificaciones || "",
+      peso_kg: product.peso_kg?.toString() || "",
       unidad: product.unidad,
       precio_por_kilo: product.precio_por_kilo || false,
       piezas_por_unidad: product.piezas_por_unidad?.toString() || "1",
@@ -509,7 +513,8 @@ const Productos = () => {
       nombre: "",
       marca: "",
       categoria: "",
-      presentacion: "",
+      especificaciones: "",
+      peso_kg: "",
       unidad: "bulto",
       precio_por_kilo: false,
       piezas_por_unidad: "1",
@@ -531,12 +536,14 @@ const Productos = () => {
   };
 
   const filteredProductos = productos.filter((p) => {
-    const presentacionStr = p.presentacion ? `${p.presentacion} kg` : '';
+    const pesoStr = p.peso_kg ? `${p.peso_kg} kg` : '';
+    const especStr = p.especificaciones || '';
     const matchesSearch = 
       p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (p.marca && p.marca.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (presentacionStr.toLowerCase().includes(searchTerm.toLowerCase()));
+      pesoStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      especStr.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesActiveFilter = tabActivo === "inactivos" ? p.activo === false : p.activo !== false;
     
@@ -547,11 +554,11 @@ const Productos = () => {
   const productosInactivos = productos.filter(p => p.activo === false).length;
 
   const calcularPrecioTotal = () => {
-    if (!formData.precio_por_kilo || !formData.precio_venta || !formData.presentacion) {
+    if (!formData.precio_por_kilo || !formData.precio_venta || !formData.peso_kg) {
       return null;
     }
     const precioUnitario = parseFloat(formData.precio_venta);
-    const kilos = parseFloat(formData.presentacion);
+    const kilos = parseFloat(formData.peso_kg);
     if (isNaN(precioUnitario) || isNaN(kilos)) return null;
     return (precioUnitario * kilos).toFixed(2);
   };
@@ -648,7 +655,7 @@ const Productos = () => {
                       onValueChange={(value: "bulto" | "caja" | "churla" | "costal" | "cubeta" | "kg" | "litro" | "pieza" | "balón") => {
                         const newFormData = { ...formData, unidad: value };
                         setFormData(newFormData);
-                        setDuplicateWarning(checkDuplicateProduct(newFormData.nombre, newFormData.marca, newFormData.presentacion, value));
+                        setDuplicateWarning(checkDuplicateProduct(newFormData.nombre, newFormData.marca, newFormData.especificaciones, value));
                       }}
                     >
                       <SelectTrigger>
@@ -676,7 +683,7 @@ const Productos = () => {
                     onChange={(e) => {
                       const nombre = e.target.value;
                       setFormData({ ...formData, nombre });
-                      setDuplicateWarning(checkDuplicateProduct(nombre, formData.marca, formData.presentacion, formData.unidad));
+                      setDuplicateWarning(checkDuplicateProduct(nombre, formData.marca, formData.especificaciones, formData.unidad));
                       setSimilarNameSuggestion(checkSimilarProductName(nombre));
                     }}
                     required
@@ -723,11 +730,11 @@ const Productos = () => {
                     <Input
                       id="marca"
                       value={formData.marca}
-                      onChange={(e) => {
-                        const marca = e.target.value;
-                        setFormData({ ...formData, marca });
-                        setDuplicateWarning(checkDuplicateProduct(formData.nombre, marca, formData.presentacion, formData.unidad));
-                      }}
+                    onChange={(e) => {
+                      const marca = e.target.value;
+                      setFormData({ ...formData, marca });
+                      setDuplicateWarning(checkDuplicateProduct(formData.nombre, marca, formData.especificaciones, formData.unidad));
+                    }}
                       placeholder="Ej: Morelos, Purina"
                       autoComplete="off"
                       spellCheck={true}
@@ -763,22 +770,41 @@ const Productos = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="presentacion">Presentación (Kilos) *</Label>
+                    <Label htmlFor="especificaciones">Especificaciones</Label>
                     <Input
-                      id="presentacion"
-                      type="number"
-                      step="0.01"
-                      value={formData.presentacion}
+                      id="especificaciones"
+                      value={formData.especificaciones}
                       onChange={(e) => {
-                        const presentacion = e.target.value;
-                        setFormData({ ...formData, presentacion });
-                        setDuplicateWarning(checkDuplicateProduct(formData.nombre, formData.marca, presentacion, formData.unidad));
+                        const especificaciones = e.target.value;
+                        setFormData({ ...formData, especificaciones });
+                        setDuplicateWarning(checkDuplicateProduct(formData.nombre, formData.marca, especificaciones, formData.unidad));
                       }}
-                      placeholder="Ej: 25, 50"
+                      placeholder="Ej: 50/60 Deshuesada, Premium"
                       autoComplete="off"
-                      required
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Calibre, formato o variante
+                    </p>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="peso_kg">Peso (kg) *</Label>
+                    <div className="relative">
+                      <Input
+                        id="peso_kg"
+                        type="number"
+                        step="0.01"
+                        value={formData.peso_kg}
+                        onChange={(e) => setFormData({ ...formData, peso_kg: e.target.value })}
+                        placeholder="Ej: 25, 50"
+                        autoComplete="off"
+                        required
+                        className="pr-10"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">kg</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
                   {!editingProduct && (
                     <div className="space-y-2">
                       <Label htmlFor="proveedor">Proveedor</Label>
@@ -865,7 +891,7 @@ const Productos = () => {
                           ${calcularPrecioTotal()}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          = ${formData.precio_venta}/kg × {formData.presentacion} kg
+                          = ${formData.precio_venta}/kg × {formData.peso_kg} kg
                         </p>
                       </div>
                     )}
