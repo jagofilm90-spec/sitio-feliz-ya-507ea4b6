@@ -19,7 +19,7 @@ interface ProductoDetalle {
     codigo: string;
     nombre: string;
     unidad: string;
-    presentacion: number | null;
+    peso_kg: number | null;
   };
 }
 
@@ -50,7 +50,7 @@ export const PedidoPreviewPopover = ({ pedidoId, folio, children }: PedidoPrevie
             codigo,
             nombre,
             unidad,
-            presentacion
+            peso_kg
           )
         `)
         .eq("pedido_id", pedidoId);
@@ -74,8 +74,8 @@ export const PedidoPreviewPopover = ({ pedidoId, folio, children }: PedidoPrevie
   };
 
   const totalPeso = productos.reduce((sum, p) => {
-    const presentacion = p.producto?.presentacion || 0;
-    return sum + (p.cantidad * presentacion);
+    const pesoKg = p.producto?.peso_kg || 0;
+    return sum + (p.cantidad * pesoKg);
   }, 0);
 
   const totalMonto = productos.reduce((sum, p) => sum + (p.subtotal || 0), 0);

@@ -70,19 +70,19 @@ interface PedidoPorAutorizar {
       codigo: string;
       precio_venta: number;
       unidad: string;
-      presentacion: number | null;
+      peso_kg: number | null;
       precio_por_kilo: boolean;
     } | null;
   }[];
 }
 
 // Calcular peso total de un pedido
-// Peso total: siempre cantidad (bultos) × presentacion (kg/bulto)
+// Peso total: siempre cantidad (bultos) × peso_kg (kg/bulto)
 const calcularPesoTotalPedido = (detalles: PedidoPorAutorizar["pedidos_detalles"]) => {
   let pesoTotal = 0;
   for (const det of detalles) {
-    const presentacion = det.productos?.presentacion ?? 1;
-    pesoTotal += det.cantidad * presentacion;
+    const pesoKg = det.productos?.peso_kg ?? 1;
+    pesoTotal += det.cantidad * pesoKg;
   }
   return Math.round(pesoTotal * 100) / 100;
 };
@@ -123,7 +123,7 @@ export function PedidosPorAutorizarTab() {
             cantidad,
             precio_unitario,
             subtotal,
-            productos (id, nombre, codigo, precio_venta, unidad, presentacion, precio_por_kilo)
+            productos (id, nombre, codigo, precio_venta, unidad, peso_kg, precio_por_kilo)
           )
         `)
         .eq("status", "por_autorizar")

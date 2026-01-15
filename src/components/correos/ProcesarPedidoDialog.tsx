@@ -204,7 +204,7 @@ export default function ProcesarPedidoDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, nombre, codigo, precio_venta, unidad, precio_por_kilo, presentacion, aplica_iva, aplica_ieps")
+        .select("id, nombre, codigo, precio_venta, unidad, precio_por_kilo, peso_kg, aplica_iva, aplica_ieps")
         .eq("activo", true)
         .order("nombre");
       if (error) throw error;
@@ -241,7 +241,7 @@ export default function ProcesarPedidoDialog({
               codigo,
               unidad,
               precio_por_kilo,
-              presentacion,
+              peso_kg,
               aplica_iva,
               aplica_ieps
             )
@@ -597,7 +597,7 @@ export default function ProcesarPedidoDialog({
                     producto_id: rosticeriaProductOverride.producto_id,
                     nombre_producto: rosticeriaProductOverride.nombre,
                     precio_unitario: rosticeriaProductOverride.precio_unitario,
-                    presentacion: matchedByCotizacion.presentacion,
+                    peso_kg: matchedByCotizacion.peso_kg,
                     precio_por_kilo: matchedByCotizacion.precio_por_kilo,
                   };
                 }
@@ -617,7 +617,7 @@ export default function ProcesarPedidoDialog({
                     : matchedByCotizacion.precio_venta;
 
                   const unidadCatalogo = matchedByCotizacion.unidad;
-                  const kgPorUnidad = matchedByCotizacion.presentacion;
+                  const kgPorUnidad = matchedByCotizacion.peso_kg;
                   const unidadVentaLower = (unidadCatalogo || '').toLowerCase();
 
                   // Determinar cuántos KILOS pidió el cliente

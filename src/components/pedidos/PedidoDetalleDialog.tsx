@@ -54,7 +54,7 @@ interface PedidoDetalle {
       marca: string | null;
       unidad: string;
       precio_por_kilo: boolean;
-      presentacion: number | null;
+      peso_kg: number | null;
     };
   }>;
 }
@@ -126,7 +126,7 @@ export default function PedidoDetalleDialog({
               marca,
               unidad,
               precio_por_kilo,
-              presentacion
+              peso_kg
             )
           )
         `)
