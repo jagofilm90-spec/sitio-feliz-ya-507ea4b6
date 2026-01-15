@@ -18,7 +18,7 @@ interface Lote {
   producto: {
     codigo: string;
     nombre: string;
-    presentacion: string | null;
+    especificaciones: string | null;
     unidad: string;
     stock_actual: number;
     stock_minimo: number;
@@ -49,7 +49,7 @@ export const AlmacenInventarioTab = () => {
           producto:producto_id (
             codigo,
             nombre,
-            presentacion,
+            especificaciones,
             unidad,
             stock_actual,
             stock_minimo
@@ -185,7 +185,7 @@ export const AlmacenInventarioTab = () => {
                       <div>
                         <CardTitle className="text-base">{producto.nombre}</CardTitle>
                         <p className="text-sm text-muted-foreground">
-                          {producto.codigo} • {producto.presentacion || producto.unidad}
+                          {producto.codigo} • {producto.especificaciones || producto.unidad}
                         </p>
                       </div>
                     </div>

@@ -440,7 +440,7 @@ const PedidosContent = () => {
       
       const productos = pedido.pedidos_detalles.map((detalle: any) => {
         const producto = detalle.productos;
-        const descripcion = `${producto.nombre}${producto.marca ? ` ${producto.marca}` : ''}${producto.presentacion ? ` (${producto.presentacion}KG)` : ''}`;
+        const descripcion = `${producto.nombre}${producto.especificaciones ? ` ${producto.especificaciones}` : ''}${producto.marca ? ` (${producto.marca})` : ''}`;
         const nombreLower = producto.nombre.toLowerCase();
         const cantidadNum = Number(detalle.cantidad);
         
