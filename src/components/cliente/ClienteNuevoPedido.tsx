@@ -69,7 +69,7 @@ interface ProductoFrecuente {
     stock_actual: number;
     aplica_iva: boolean;
     aplica_ieps: boolean;
-    presentacion: number | null;
+    peso_kg: number | null;
     precio_por_kilo: boolean;
   };
 }
@@ -111,7 +111,7 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
     try {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, nombre, codigo, unidad, precio_venta, stock_actual, aplica_iva, aplica_ieps, presentacion, precio_por_kilo")
+        .select("id, nombre, codigo, unidad, precio_venta, stock_actual, aplica_iva, aplica_ieps, peso_kg, precio_por_kilo")
         .eq("activo", true)
         .gt("stock_actual", 0)
         .order("nombre");
@@ -136,7 +136,7 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
           id,
           producto_id,
           es_especial,
-          producto:productos(id, nombre, codigo, unidad, precio_venta, stock_actual, aplica_iva, aplica_ieps, presentacion, precio_por_kilo)
+          producto:productos(id, nombre, codigo, unidad, precio_venta, stock_actual, aplica_iva, aplica_ieps, peso_kg, precio_por_kilo)
         `)
         .eq("cliente_id", clienteId)
         .eq("activo", true)
@@ -352,12 +352,12 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
     detalles.forEach(d => {
       const producto = productosFrecuentes.find(pf => pf.producto_id === d.productoId)?.producto;
       if (producto) {
-        pesoTotal += d.cantidad * (producto.presentacion || 1);
+        pesoTotal += d.cantidad * (producto.peso_kg || 1);
       } else {
         // Fallback: buscar en productos generales
         const prod = productos.find(p => p.id === d.productoId);
         if (prod) {
-          pesoTotal += d.cantidad * (prod.presentacion || 1);
+          pesoTotal += d.cantidad * (prod.peso_kg || 1);
         }
       }
     });

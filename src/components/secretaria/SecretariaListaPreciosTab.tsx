@@ -28,7 +28,7 @@ interface Producto {
   nombre: string;
   marca: string | null;
   categoria: string | null;
-  presentacion: number | null;
+  peso_kg: number | null;
   unidad: string;
   precio_venta: number;
   precio_por_kilo: boolean;
@@ -46,7 +46,7 @@ export const SecretariaListaPreciosTab = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, marca, categoria, presentacion, unidad, precio_venta, precio_por_kilo, stock_actual, activo")
+        .select("id, codigo, nombre, marca, categoria, peso_kg, unidad, precio_venta, precio_por_kilo, stock_actual, activo")
         .eq("activo", true)
         .or("solo_uso_interno.is.null,solo_uso_interno.eq.false")
         .order("codigo");
@@ -74,8 +74,8 @@ export const SecretariaListaPreciosTab = () => {
   // Calculate price per kilo if applicable
   const getPrecioKilo = (producto: Producto) => {
     if (producto.precio_por_kilo) return producto.precio_venta;
-    if (producto.presentacion && producto.presentacion > 0) {
-      return producto.precio_venta / producto.presentacion;
+    if (producto.peso_kg && producto.peso_kg > 0) {
+      return producto.precio_venta / producto.peso_kg;
     }
     return null;
   };
@@ -162,8 +162,8 @@ export const SecretariaListaPreciosTab = () => {
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           <div className="flex items-center gap-2">
-                            {producto.presentacion && (
-                              <span>{producto.presentacion}</span>
+                            {producto.peso_kg && (
+                              <span>{producto.peso_kg} kg</span>
                             )}
                             <Badge variant="outline" className="text-xs">
                               {producto.unidad}

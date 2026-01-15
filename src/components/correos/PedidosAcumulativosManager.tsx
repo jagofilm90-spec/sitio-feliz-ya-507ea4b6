@@ -218,7 +218,7 @@ export function PedidosAcumulativosManager() {
       
       let pesoTotal = 0;
       for (const det of detallesDelPedido) {
-        const pesoKg = det.productos?.peso_kg ?? 1;
+        const pesoKg = (det.productos as any)?.peso_kg ?? 1;
         pesoTotal += det.cantidad * pesoKg;
       }
       
@@ -610,7 +610,7 @@ export function PedidosAcumulativosManager() {
           *, 
           pedidos_acumulativos_detalles(
             *,
-            productos:producto_id(nombre, precio_por_kilo, presentacion)
+            productos:producto_id(nombre, precio_por_kilo, peso_kg)
           )
         `)
         .in("id", pedidoIds);

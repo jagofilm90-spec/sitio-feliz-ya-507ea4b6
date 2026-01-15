@@ -360,7 +360,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       // Fetch ALL active products (removed stock filter)
       const { data: productosData } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, presentacion, descuento_maximo")
+        .select("id, codigo, nombre, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
         .eq("activo", true)
         .order("nombre");
 
@@ -432,7 +432,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       // Fetch product details for frequent products
       const { data: productosFrec } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, presentacion, descuento_maximo")
+        .select("id, codigo, nombre, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
         .in("id", topProductoIds)
         .eq("activo", true);
 
@@ -476,7 +476,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
     const precio = obtenerPrecioUnitarioVenta({
       precio_venta: producto.precio_venta,
       precio_por_kilo: producto.precio_por_kilo,
-      presentacion: producto.presentacion
+      peso_kg: producto.peso_kg
     });
 
     setLineas([...lineas, {
@@ -585,7 +585,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       totalIeps += resultado.ieps;
       
       // Calcular peso según tipo de producto
-      const pesoUnitario = l.producto.presentacion || 0;
+      const pesoUnitario = l.producto.peso_kg || 0;
       pesoTotalKg += l.cantidad * pesoUnitario;
       
       // Contar unidades
@@ -1083,7 +1083,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
                       {/* Columna: Presentación (peso) */}
                       <div className="w-16 text-center hidden sm:block">
                         <p className="text-xs text-muted-foreground">
-                          {producto.presentacion ? `${producto.presentacion} kg` : '-'}
+                          {producto.peso_kg ? `${producto.peso_kg} kg` : '-'}
                         </p>
                       </div>
                       
@@ -1183,7 +1183,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
                   
                   // Bultos/Kg calculations for precio_por_kilo products
                   const esPorKilo = linea.producto.precio_por_kilo;
-                  const presentacionKg = linea.producto.presentacion || 0;
+                  const presentacionKg = linea.producto.peso_kg || 0;
                   const kilosTotales = esPorKilo && presentacionKg > 0 ? linea.cantidad * presentacionKg : 0;
                   
                   return (

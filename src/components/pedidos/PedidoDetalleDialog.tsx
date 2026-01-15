@@ -239,17 +239,17 @@ export default function PedidoDetalleDialog({
                     if (esProductoBolsas5kg(producto.nombre)) {
                       const numBolsas = calcularNumeroBolsas(detalle.cantidad, KG_POR_BOLSA);
                       presentacionDisplay = `${numBolsas} bolsa${numBolsas !== 1 ? 's' : ''}`;
-                    } else if (detalle.kilos_totales && producto.presentacion) {
-                      // CASO PRINCIPAL: Tenemos kilos_totales y presentacion guardados
+                    } else if (detalle.kilos_totales && producto.peso_kg) {
+                      // CASO PRINCIPAL: Tenemos kilos_totales y peso_kg guardados
                       const plural = detalle.cantidad !== 1 ? 's' : '';
-                      presentacionDisplay = `${detalle.cantidad.toLocaleString()} ${unidadComercial}${plural} de ${producto.presentacion} kg`;
+                      presentacionDisplay = `${detalle.cantidad.toLocaleString()} ${unidadComercial}${plural} de ${producto.peso_kg} kg`;
                     } else if (detalle.kilos_totales) {
-                      // Solo tenemos kilos_totales (sin presentacion del producto)
+                      // Solo tenemos kilos_totales (sin peso_kg del producto)
                       presentacionDisplay = `${detalle.kilos_totales.toLocaleString()} kg total`;
-                    } else if (producto.presentacion) {
-                      // Tenemos presentacion pero no kilos_totales guardados - mostrar presentación del producto
+                    } else if (producto.peso_kg) {
+                      // Tenemos peso_kg pero no kilos_totales guardados - mostrar presentación del producto
                       const plural = detalle.cantidad !== 1 ? 's' : '';
-                      presentacionDisplay = `${detalle.cantidad.toLocaleString()} ${unidadComercial}${plural} de ${producto.presentacion} kg`;
+                      presentacionDisplay = `${detalle.cantidad.toLocaleString()} ${unidadComercial}${plural} de ${producto.peso_kg} kg`;
                     } else {
                       // Producto sin conversión a kilos - mostrar guion
                       presentacionDisplay = "-";
@@ -263,8 +263,8 @@ export default function PedidoDetalleDialog({
                           {producto.marca && <span className="text-muted-foreground ml-1">({producto.marca})</span>}
                         </TableCell>
                         <TableCell className="text-right">
-                          {/* Si tiene presentacion, la cantidad son unidades comerciales */}
-                          {producto.presentacion && producto.precio_por_kilo
+                          {/* Si tiene peso_kg, la cantidad son unidades comerciales */}
+                          {producto.peso_kg && producto.precio_por_kilo
                             ? `${detalle.cantidad} ${unidadComercial}${detalle.cantidad !== 1 ? 's' : ''}`
                             : producto.precio_por_kilo
                               ? `${detalle.cantidad} kg`

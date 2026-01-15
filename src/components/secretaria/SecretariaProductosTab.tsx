@@ -46,7 +46,7 @@ interface Producto {
   nombre: string;
   marca: string | null;
   categoria: string | null;
-  presentacion: number | null;
+  peso_kg: number | null;
   unidad: string;
   precio_venta: number;
   stock_actual: number;
@@ -139,7 +139,7 @@ export const SecretariaProductosTab = () => {
       nombre: producto.nombre,
       marca: producto.marca || "",
       categoria: producto.categoria || "",
-      presentacion: producto.presentacion?.toString() || "",
+      presentacion: producto.peso_kg?.toString() || "",
       unidad: producto.unidad as any,
       precio_venta: producto.precio_venta.toString(),
       stock_minimo: producto.stock_minimo.toString(),
@@ -510,7 +510,7 @@ export const SecretariaProductosTab = () => {
                         {producto.marca || "—"}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
-                        {producto.presentacion || "—"}
+                        {producto.peso_kg ? `${producto.peso_kg} kg` : "—"}
                       </TableCell>
                       <TableCell className="capitalize">
                         {producto.unidad}
