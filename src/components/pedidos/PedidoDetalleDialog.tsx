@@ -52,6 +52,7 @@ interface PedidoDetalle {
       codigo: string;
       nombre: string;
       marca: string | null;
+      especificaciones: string | null;
       unidad: string;
       precio_por_kilo: boolean;
       peso_kg: number | null;
@@ -124,6 +125,7 @@ export default function PedidoDetalleDialog({
               codigo,
               nombre,
               marca,
+              especificaciones,
               unidad,
               precio_por_kilo,
               peso_kg
@@ -260,6 +262,7 @@ export default function PedidoDetalleDialog({
                         <TableCell className="font-mono text-sm">{producto.codigo}</TableCell>
                         <TableCell>
                           {producto.nombre}
+                          {producto.especificaciones && <span className="text-muted-foreground ml-1">{producto.especificaciones}</span>}
                           {producto.marca && <span className="text-muted-foreground ml-1">({producto.marca})</span>}
                         </TableCell>
                         <TableCell className="text-right">

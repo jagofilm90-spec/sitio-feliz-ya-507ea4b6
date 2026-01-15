@@ -47,7 +47,7 @@ const ImprimirCotizacionDialog = ({
             nota_linea,
             tipo_precio,
             kilos_totales,
-            producto:productos(nombre, codigo, unidad, aplica_iva, aplica_ieps, precio_por_kilo, presentacion)
+            producto:productos(nombre, codigo, unidad, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, especificaciones, marca)
           )
         `)
         .eq("id", cotizacionId)
@@ -203,13 +203,16 @@ const ImprimirCotizacionDialog = ({
       direccion: cotizacion.sucursal.direccion || undefined,
     } : undefined,
     productos: cotizacion.detalles?.map((d: any) => {
-      // Fallback para kilos_totales: si no viene de BD, calcular con presentacion
+      // Fallback para kilos_totales: si no viene de BD, calcular con peso_kg
       const kilosTotalesCalculado = d.kilos_totales ?? 
-        (d.producto?.presentacion ? Number(d.cantidad) * Number(d.producto.presentacion) : null);
+        (d.producto?.peso_kg ? Number(d.cantidad) * Number(d.producto.peso_kg) : null);
+      
+      // Construir nombre completo con especificaciones y marca
+      const nombreCompleto = `${d.producto?.nombre || "Producto"}${d.producto?.especificaciones ? ` ${d.producto.especificaciones}` : ''}${d.producto?.marca ? ` (${d.producto.marca})` : ''}`;
       
       return {
         codigo: d.producto?.codigo || "",
-        nombre: d.producto?.nombre || "Producto",
+        nombre: nombreCompleto,
         unidad: d.producto?.unidad || "pieza",
         cantidad: d.cantidad || 0,
         precio_unitario: d.precio_unitario || 0,
@@ -219,7 +222,7 @@ const ImprimirCotizacionDialog = ({
         tipo_precio: d.tipo_precio || null,
         kilos_totales: kilosTotalesCalculado,
         precio_por_kilo: d.producto?.precio_por_kilo || false,
-        presentacion: d.producto?.presentacion || null,
+        peso_kg: d.producto?.peso_kg || null,
       };
     }) || [],
     subtotal: impuestosDesglosados.subtotal,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Popover,
   PopoverContent,
@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package, Info } from "lucide-react";
+import { Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ProductoDetalle {
@@ -18,6 +18,8 @@ interface ProductoDetalle {
   producto: {
     codigo: string;
     nombre: string;
+    especificaciones: string | null;
+    marca: string | null;
     unidad: string;
     peso_kg: number | null;
   };
@@ -49,6 +51,8 @@ export const PedidoPreviewPopover = ({ pedidoId, folio, children }: PedidoPrevie
           producto:producto_id (
             codigo,
             nombre,
+            especificaciones,
+            marca,
             unidad,
             peso_kg
           )
@@ -115,7 +119,11 @@ export const PedidoPreviewPopover = ({ pedidoId, folio, children }: PedidoPrevie
                       <p className="font-medium text-xs text-muted-foreground">
                         {p.producto?.codigo}
                       </p>
-                      <p className="truncate">{p.producto?.nombre}</p>
+                      <p className="truncate">
+                        {p.producto?.nombre}
+                        {p.producto?.especificaciones && ` ${p.producto.especificaciones}`}
+                        {p.producto?.marca && ` (${p.producto.marca})`}
+                      </p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="font-medium">
