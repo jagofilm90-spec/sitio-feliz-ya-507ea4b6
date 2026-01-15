@@ -179,16 +179,30 @@ export const SecretariaProductosTab = () => {
       };
 
       if (editingProduct) {
-        const { error } = await supabase
+        const { data: updatedData, error } = await supabase
           .from("productos")
           .update(productData)
-          .eq("id", editingProduct.id);
+          .eq("id", editingProduct.id)
+          .select("id");
+        
         if (error) throw error;
+        
+        // Check if any row was actually updated
+        if (!updatedData || updatedData.length === 0) {
+          throw new Error("No se pudo actualizar el producto. Verifica que tienes permisos suficientes.");
+        }
       } else {
-        const { error } = await supabase
+        const { data: insertedData, error } = await supabase
           .from("productos")
-          .insert([productData]);
+          .insert([productData])
+          .select("id");
+        
         if (error) throw error;
+        
+        // Check if any row was actually inserted
+        if (!insertedData || insertedData.length === 0) {
+          throw new Error("No se pudo crear el producto. Verifica que tienes permisos suficientes.");
+        }
       }
     },
     onSuccess: () => {
@@ -199,8 +213,8 @@ export const SecretariaProductosTab = () => {
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Error al guardar",
+        description: error.message || "Ocurrió un error inesperado",
         variant: "destructive",
       });
     },
