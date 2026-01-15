@@ -213,8 +213,8 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
     let precioUnitario = producto.precio_venta;
     let subtotal: number;
 
-    if (producto.precio_por_kilo && producto.presentacion) {
-      const kgPorUnidad = producto.presentacion;
+    if (producto.precio_por_kilo && producto.peso_kg) {
+      const kgPorUnidad = producto.peso_kg;
       kilosTotales = cantidad * kgPorUnidad;
       precioUnitario = producto.precio_venta; // Precio por kg
       subtotal = kilosTotales * precioUnitario;
@@ -223,7 +223,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
       precioUnitario = obtenerPrecioUnitarioVenta({
         precio_venta: producto.precio_venta,
         precio_por_kilo: producto.precio_por_kilo,
-        presentacion: producto.presentacion
+        peso_kg: producto.peso_kg
       });
       subtotal = precioUnitario;
     }
@@ -260,8 +260,8 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
     detalle[field] = value;
     
     // Recalcular kilos y subtotal según tipo de producto
-    if (detalle.producto.precio_por_kilo && detalle.producto.presentacion) {
-      const kgPorUnidad = detalle.producto.presentacion;
+    if (detalle.producto.precio_por_kilo && detalle.producto.peso_kg) {
+      const kgPorUnidad = detalle.producto.peso_kg;
       detalle.kilos_totales = detalle.cantidad * kgPorUnidad;
       detalle.subtotal = detalle.kilos_totales * detalle.precio_unitario;
     } else {
@@ -329,8 +329,8 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
   const calcularPesoTotal = () => {
     let pesoTotal = 0;
     detalles.forEach(d => {
-      if (d.producto.presentacion) {
-        pesoTotal += d.cantidad * d.producto.presentacion;
+      if (d.producto.peso_kg) {
+        pesoTotal += d.cantidad * d.producto.peso_kg;
       }
     });
     return pesoTotal;
@@ -577,8 +577,8 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
                 </TableHeader>
                 <TableBody>
                   {detalles.map((d, idx) => {
-                    const esPorKilo = d.producto.precio_por_kilo && d.producto.presentacion;
-                    const kgPorUnidad = esPorKilo ? d.producto.presentacion! : null;
+                    const esPorKilo = d.producto.precio_por_kilo && d.producto.peso_kg;
+                    const kgPorUnidad = esPorKilo ? d.producto.peso_kg! : null;
                     
                     return (
                       <TableRow key={idx}>

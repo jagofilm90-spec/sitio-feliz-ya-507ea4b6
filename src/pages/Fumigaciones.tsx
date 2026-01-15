@@ -24,7 +24,7 @@ interface ProductoFumigacion {
   codigo: string;
   nombre: string;
   marca: string | null;
-  presentacion: number | null;
+  peso_kg: number | null;
   stock_actual: number;
   fecha_ultima_fumigacion: string | null;
   proximaFumigacion: Date | null;
@@ -49,7 +49,7 @@ const Fumigaciones = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, marca, presentacion, stock_actual, fecha_ultima_fumigacion, requiere_fumigacion")
+        .select("id, codigo, nombre, marca, peso_kg, stock_actual, fecha_ultima_fumigacion, requiere_fumigacion")
         .eq("requiere_fumigacion", true)
         .eq("activo", true)
         .order("nombre");
@@ -238,7 +238,7 @@ const Fumigaciones = () => {
                             <TableCell className="font-medium">{producto.codigo}</TableCell>
                             <TableCell>{producto.nombre}</TableCell>
                             <TableCell>{producto.marca || "-"}</TableCell>
-                            <TableCell>{producto.presentacion || "-"}</TableCell>
+                            <TableCell>{producto.peso_kg ? `${producto.peso_kg} kg` : "-"}</TableCell>
                             <TableCell>{producto.stock_actual}</TableCell>
                             <TableCell>
                               {editingId === producto.id ? (

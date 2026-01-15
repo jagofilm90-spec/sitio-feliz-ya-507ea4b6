@@ -1300,7 +1300,7 @@ export default function ProcesarPedidoDialog({
               precio_unitario: producto.precio_venta,
               // FUENTE DE VERDAD: Base de datos
               precio_por_kilo: producto.precio_por_kilo,
-              presentacion: producto.presentacion,
+              peso_kg: producto.peso_kg,
               aplica_iva: producto.aplica_iva,
               aplica_ieps: producto.aplica_ieps,
               unidad: producto.unidad,

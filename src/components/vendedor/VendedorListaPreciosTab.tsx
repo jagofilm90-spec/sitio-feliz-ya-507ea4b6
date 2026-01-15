@@ -16,7 +16,7 @@ interface Producto {
   categoria: string | null;
   precio_venta: number | null;
   unidad: string | null;
-  presentacion: number | null;
+  peso_kg: number | null;
   precio_por_kilo: boolean | null;
   descuento_maximo: number | null;
   precio_anterior?: number | null;
@@ -66,7 +66,7 @@ export function VendedorListaPreciosTab() {
           categoria,
           precio_venta,
           unidad,
-          presentacion,
+          peso_kg,
           precio_por_kilo,
           descuento_maximo
         `)
@@ -319,10 +319,10 @@ export function VendedorListaPreciosTab() {
                             {producto.unidad && (
                               <span className="capitalize">{producto.unidad}</span>
                             )}
-                            {producto.presentacion && (
+                            {producto.peso_kg && (
                               <>
                                 <span>•</span>
-                                <span>{producto.presentacion}</span>
+                                <span>{producto.peso_kg} kg</span>
                               </>
                             )}
                           </div>
@@ -339,9 +339,9 @@ export function VendedorListaPreciosTab() {
                             <p className="font-medium truncate" title={producto.nombre}>
                               {producto.nombre}
                             </p>
-                            {producto.presentacion && (
+                            {producto.peso_kg && (
                               <p className="text-xs text-muted-foreground truncate">
-                                {producto.presentacion}
+                                {producto.peso_kg} kg
                               </p>
                             )}
                           </div>
@@ -350,9 +350,9 @@ export function VendedorListaPreciosTab() {
                           </div>
                           <div className="col-span-2 text-sm capitalize">
                             {producto.unidad || "—"}
-                            {producto.presentacion && (
+                            {producto.peso_kg && (
                               <span className="text-xs text-muted-foreground block">
-                                ({producto.presentacion} kg)
+                                ({producto.peso_kg} kg)
                               </span>
                             )}
                           </div>

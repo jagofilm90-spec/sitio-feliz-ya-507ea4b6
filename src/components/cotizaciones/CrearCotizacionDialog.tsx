@@ -190,7 +190,7 @@ const CrearCotizacionDialog = ({
   const loadProductos = async () => {
     const { data, error } = await supabase
       .from("productos")
-      .select("id, nombre, codigo, unidad, marca, precio_venta, stock_actual, aplica_iva, aplica_ieps, precio_por_kilo, presentacion")
+      .select("id, nombre, codigo, unidad, marca, precio_venta, stock_actual, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg")
       .eq("activo", true)
       .order("nombre");
 
@@ -216,7 +216,7 @@ const CrearCotizacionDialog = ({
             cantidad_maxima,
             nota_linea,
             producto:productos(
-              id, nombre, codigo, unidad, marca, precio_venta, aplica_iva, aplica_ieps, precio_por_kilo, presentacion
+              id, nombre, codigo, unidad, marca, precio_venta, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg
             )
           )
         `)
@@ -274,7 +274,7 @@ const CrearCotizacionDialog = ({
         cantidad_maxima: d.cantidad_maxima || null,
         nota_linea: d.nota_linea || null,
         precio_por_kilo: d.producto.precio_por_kilo || false,
-        presentacion: d.producto.presentacion || null,
+        peso_kg: d.producto.peso_kg || null,
       }));
 
       setDetalles(detallesFormateados);
@@ -352,13 +352,13 @@ const CrearCotizacionDialog = ({
         : obtenerPrecioUnitarioVenta({
             precio_venta: producto.precio_venta,
             precio_por_kilo: producto.precio_por_kilo,
-            presentacion: producto.presentacion
+            peso_kg: producto.peso_kg
           });
     }
 
     // Calcular kilos y subtotal para productos por kilo
-    if (producto.precio_por_kilo && producto.presentacion) {
-      const kgPorUnidad = producto.presentacion;
+    if (producto.precio_por_kilo && producto.peso_kg) {
+      const kgPorUnidad = producto.peso_kg;
       kilosTotales = 1 * kgPorUnidad;
       subtotal = kilosTotales * precioAUsar;
     } else {
@@ -385,7 +385,7 @@ const CrearCotizacionDialog = ({
         cantidad_maxima: null,
         nota_linea: null,
         precio_por_kilo: producto.precio_por_kilo,
-        presentacion: producto.presentacion,
+        peso_kg: producto.peso_kg,
       },
     ]);
     // Limpiar búsqueda pero mantener el dropdown abierto para seguir agregando
@@ -399,8 +399,8 @@ const CrearCotizacionDialog = ({
     detalle.cantidad = cantidad;
     
     // Recalcular kilos y subtotal según tipo de producto
-    if (detalle.precio_por_kilo && detalle.presentacion) {
-      const kgPorUnidad = detalle.presentacion;
+    if (detalle.precio_por_kilo && detalle.peso_kg) {
+      const kgPorUnidad = detalle.peso_kg;
       detalle.kilos_totales = cantidad * kgPorUnidad;
       detalle.subtotal = detalle.kilos_totales * detalle.precio_unitario;
     } else {
@@ -417,8 +417,8 @@ const CrearCotizacionDialog = ({
     detalle.precio_unitario = precio;
     
     // Recalcular subtotal según tipo de producto
-    if (detalle.precio_por_kilo && detalle.presentacion) {
-      const kgPorUnidad = detalle.presentacion;
+    if (detalle.precio_por_kilo && detalle.peso_kg) {
+      const kgPorUnidad = detalle.peso_kg;
       detalle.kilos_totales = detalle.cantidad * kgPorUnidad;
       detalle.subtotal = detalle.kilos_totales * precio;
     } else {
@@ -984,8 +984,8 @@ const CrearCotizacionDialog = ({
                 </TableHeader>
                 <TableBody>
                   {detalles.map((d, index) => {
-                    const esPorKilo = d.precio_por_kilo && d.presentacion;
-                    const kgPorUnidad = esPorKilo ? d.presentacion : null;
+                    const esPorKilo = d.precio_por_kilo && d.peso_kg;
+                    const kgPorUnidad = esPorKilo ? d.peso_kg : null;
                     
                     return (
                       <TableRow key={d.producto_id}>
