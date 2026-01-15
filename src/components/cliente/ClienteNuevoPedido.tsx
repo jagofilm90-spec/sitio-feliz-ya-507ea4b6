@@ -346,25 +346,18 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
     };
   };
 
+  // Peso total: siempre cantidad (bultos) × presentacion (kg/bulto)
   const calcularPesoTotal = () => {
     let pesoTotal = 0;
     detalles.forEach(d => {
       const producto = productosFrecuentes.find(pf => pf.producto_id === d.productoId)?.producto;
       if (producto) {
-        if (producto.precio_por_kilo) {
-          pesoTotal += d.cantidad;
-        } else {
-          pesoTotal += d.cantidad * (producto.presentacion || 1);
-        }
+        pesoTotal += d.cantidad * (producto.presentacion || 1);
       } else {
         // Fallback: buscar en productos generales
         const prod = productos.find(p => p.id === d.productoId);
         if (prod) {
-          if (prod.precio_por_kilo) {
-            pesoTotal += d.cantidad;
-          } else {
-            pesoTotal += d.cantidad * (prod.presentacion || 1);
-          }
+          pesoTotal += d.cantidad * (prod.presentacion || 1);
         }
       }
     });

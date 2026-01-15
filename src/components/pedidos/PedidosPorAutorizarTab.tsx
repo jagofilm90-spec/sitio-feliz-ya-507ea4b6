@@ -77,17 +77,12 @@ interface PedidoPorAutorizar {
 }
 
 // Calcular peso total de un pedido
+// Peso total: siempre cantidad (bultos) × presentacion (kg/bulto)
 const calcularPesoTotalPedido = (detalles: PedidoPorAutorizar["pedidos_detalles"]) => {
   let pesoTotal = 0;
   for (const det of detalles) {
-    const precioPorKilo = det.productos?.precio_por_kilo ?? false;
     const presentacion = det.productos?.presentacion ?? 1;
-    
-    if (precioPorKilo) {
-      pesoTotal += det.cantidad;
-    } else {
-      pesoTotal += det.cantidad * presentacion;
-    }
+    pesoTotal += det.cantidad * presentacion;
   }
   return Math.round(pesoTotal * 100) / 100;
 };

@@ -23,20 +23,12 @@ import { formatCurrency } from "@/lib/utils";
 // Anís, Canela Molida y Bicarbonato se convierten automáticamente usando presentacion
 const PRODUCTOS_VERIFICACION_OBLIGATORIA = ['piloncillo'];
 
-// Helper para calcular peso total de un pedido basado en sus detalles
+// Peso total: siempre cantidad (bultos) × presentacion (kg/bulto)
 const calcularPesoTotalKg = (detalles: any[]): number => {
   let pesoTotal = 0;
   for (const det of detalles) {
-    const precioPorKilo = det.productos?.precio_por_kilo ?? false;
     const presentacion = det.productos?.presentacion ?? 1;
-    
-    if (precioPorKilo) {
-      // Si es precio por kilo, la cantidad ya está en kg
-      pesoTotal += det.cantidad;
-    } else {
-      // Si no es precio por kilo, multiplicar cantidad por presentacion
-      pesoTotal += det.cantidad * presentacion;
-    }
+    pesoTotal += det.cantidad * presentacion;
   }
   return redondear(pesoTotal);
 };
