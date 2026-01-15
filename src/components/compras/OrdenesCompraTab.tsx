@@ -1790,9 +1790,9 @@ const OrdenesCompraTab = () => {
                         if (prod?.ultimo_costo_compra) {
                           setPrecioUnitario(prod.ultimo_costo_compra.toString());
                         }
-                        // Auto-fill kg_por_unidad from presentacion if product has it
-                        if (prod?.presentacion) {
-                          setKgPorUnidad(prod.presentacion.toString());
+                        // Auto-fill kg_por_unidad from peso_kg if product has it
+                        if (prod?.peso_kg) {
+                          setKgPorUnidad(prod.peso_kg.toString());
                         } else {
                           setKgPorUnidad("");
                         }

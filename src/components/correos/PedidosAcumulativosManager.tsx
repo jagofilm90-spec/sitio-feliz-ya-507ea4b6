@@ -20,15 +20,15 @@ import { calcularSubtotal, calcularDesgloseImpuestos as calcularDesgloseImpuesto
 import { formatCurrency } from "@/lib/utils";
 
 // Solo Piloncillo requiere verificación manual obligatoria (peso variable por caja)
-// Anís, Canela Molida y Bicarbonato se convierten automáticamente usando presentacion
+// Anís, Canela Molida y Bicarbonato se convierten automáticamente usando peso_kg
 const PRODUCTOS_VERIFICACION_OBLIGATORIA = ['piloncillo'];
 
-// Peso total: siempre cantidad (bultos) × presentacion (kg/bulto)
+// Peso total: siempre cantidad (bultos) × peso_kg (kg/bulto)
 const calcularPesoTotalKg = (detalles: any[]): number => {
   let pesoTotal = 0;
   for (const det of detalles) {
-    const presentacion = det.productos?.presentacion ?? 1;
-    pesoTotal += det.cantidad * presentacion;
+    const pesoKg = det.productos?.peso_kg ?? 1;
+    pesoTotal += det.cantidad * pesoKg;
   }
   return redondear(pesoTotal);
 };
@@ -218,14 +218,8 @@ export function PedidosAcumulativosManager() {
       
       let pesoTotal = 0;
       for (const det of detallesDelPedido) {
-        const precioPorKilo = det.productos?.precio_por_kilo ?? false;
-        const presentacion = det.productos?.presentacion ?? 1;
-        
-        if (precioPorKilo) {
-          pesoTotal += det.cantidad;
-        } else {
-          pesoTotal += det.cantidad * presentacion;
-        }
+        const pesoKg = det.productos?.peso_kg ?? 1;
+        pesoTotal += det.cantidad * pesoKg;
       }
       
       pesos[pedido.id] = redondear(pesoTotal);

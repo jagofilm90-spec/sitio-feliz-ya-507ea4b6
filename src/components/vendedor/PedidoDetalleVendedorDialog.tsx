@@ -29,7 +29,7 @@ interface PedidoDetalle {
   producto: {
     nombre: string;
     unidad: string;
-    presentacion: string;
+    peso_kg: string;
   };
 }
 
@@ -82,7 +82,7 @@ export function PedidoDetalleVendedorDialog({ open, onOpenChange, pedidoId }: Pr
           sucursal:cliente_sucursales(nombre),
           detalles:pedidos_detalles(
             id, cantidad, precio_unitario, subtotal,
-            producto:productos(nombre, unidad, presentacion)
+            producto:productos(nombre, unidad, peso_kg)
           )
         `)
         .eq("id", pedidoId)
@@ -95,7 +95,7 @@ export function PedidoDetalleVendedorDialog({ open, onOpenChange, pedidoId }: Pr
         cliente: data.cliente || { nombre: "Sin cliente" },
         detalles: (data.detalles || []).map((d: any) => ({
           ...d,
-          producto: d.producto || { nombre: "Producto", unidad: "", presentacion: "" }
+          producto: d.producto || { nombre: "Producto", unidad: "", peso_kg: "" }
         }))
       } as Pedido);
     } catch (error) {

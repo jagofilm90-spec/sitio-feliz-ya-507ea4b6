@@ -53,7 +53,7 @@ interface DetalleProducto {
   cantidad_maxima: number | null;
   nota_linea: string | null;
   precio_por_kilo: boolean;
-  presentacion: number | null;
+  peso_kg: number | null;
 }
 
 interface Cliente {
@@ -79,7 +79,7 @@ interface Producto {
   aplica_iva: boolean;
   aplica_ieps: boolean;
   precio_por_kilo: boolean;
-  presentacion: number | null;
+  peso_kg: number | null;
 }
 
 interface CrearCotizacionDialogProps {

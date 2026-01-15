@@ -71,7 +71,7 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
     queryFn: async () => {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, nombre, codigo, marca, presentacion")
+        .select("id, nombre, codigo, marca, peso_kg")
         .eq("activo", true)
         .order("nombre");
       if (error) throw error;
@@ -329,7 +329,7 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
                           SKU: {config.codigo_proveedor}
                         </Badge>
                       )}
-                      {producto.presentacion && <span>• {producto.presentacion}kg</span>}
+                      {producto.peso_kg && <span>• {producto.peso_kg}kg</span>}
                     </div>
                   </div>
                   

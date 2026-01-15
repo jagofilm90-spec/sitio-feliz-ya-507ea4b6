@@ -102,7 +102,7 @@ export function redondear(valor: number): number {
 export interface ProductoPrecioParams {
   precio_venta: number;
   precio_por_kilo?: boolean;
-  presentacion?: string | number | null;
+  peso_kg?: string | number | null;
 }
 
 /**
@@ -123,14 +123,14 @@ export function obtenerPrecioUnitarioVenta(producto: ProductoPrecioParams): numb
     return producto.precio_venta;
   }
   
-  // Usar SOLO la presentación para obtener los kilos
-  const kilos = typeof producto.presentacion === 'number'
-    ? producto.presentacion
-    : parseFloat(producto.presentacion || "0");
+  // Usar SOLO peso_kg para obtener los kilos
+  const kilos = typeof producto.peso_kg === 'number'
+    ? producto.peso_kg
+    : parseFloat(producto.peso_kg || "0");
   
   if (!kilos || kilos <= 0) {
     console.warn(
-      `Producto con precio_por_kilo=true pero sin presentación definida. ` +
+      `Producto con precio_por_kilo=true pero sin peso_kg definido. ` +
       `Usando precio_venta sin multiplicar: ${producto.precio_venta}`
     );
     return producto.precio_venta;
@@ -142,7 +142,7 @@ export function obtenerPrecioUnitarioVenta(producto: ProductoPrecioParams): numb
     entrada: { 
       precio_venta: producto.precio_venta, 
       precio_por_kilo: producto.precio_por_kilo,
-      presentacion_kg: kilos 
+      peso_kg: kilos 
     },
     salida: { precio_calculado: precioCalculado },
     valido: true,
@@ -180,8 +180,8 @@ export interface ResultadoConversion {
 export function convertirUnidades(params: ConversionUnidadParams): ResultadoConversion {
   const { cantidad_kilos, kg_por_unidad, precio_por_kilo, unidad_comercial, nombre_producto } = params;
   
-  // kg_por_unidad ahora es presentacion
-  const presentacion = kg_por_unidad;
+  // kg_por_unidad ahora es peso_kg
+  const pesoKg = kg_por_unidad;
 
   // Validación inicial
   if (cantidad_kilos <= 0) {
@@ -213,30 +213,30 @@ export function convertirUnidades(params: ConversionUnidadParams): ResultadoConv
     return resultado;
   }
 
-  // REGLA 2: Productos por unidad comercial requieren presentacion (peso)
-  if (!presentacion || presentacion <= 0) {
+  // REGLA 2: Productos por unidad comercial requieren peso_kg
+  if (!pesoKg || pesoKg <= 0) {
     return {
       cantidad_final: 0,
       unidad_final: unidad_comercial,
       formula_usada: 'ERROR',
       valido: false,
-      error: `Falta peso (presentación) para producto "${nombre_producto}". No se puede convertir ${cantidad_kilos} kg a ${unidad_comercial}.`
+      error: `Falta peso (peso_kg) para producto "${nombre_producto}". No se puede convertir ${cantidad_kilos} kg a ${unidad_comercial}.`
     };
   }
 
   // REGLA 3: Convertir kilos → unidades comerciales
-  const cantidad_unidades = cantidad_kilos / presentacion;
+  const cantidad_unidades = cantidad_kilos / pesoKg;
   const cantidad_redondeada = Math.round(cantidad_unidades); // Redondear a entero
 
   const resultado = {
     cantidad_final: cantidad_redondeada,
     unidad_final: unidad_comercial,
-    formula_usada: `${cantidad_kilos} kg / ${presentacion} kg = ${cantidad_unidades.toFixed(4)} → ${cantidad_redondeada} ${unidad_comercial}`,
+    formula_usada: `${cantidad_kilos} kg / ${pesoKg} kg = ${cantidad_unidades.toFixed(4)} → ${cantidad_redondeada} ${unidad_comercial}`,
     valido: true
   };
 
   auditoriaCalculos.registrar('conversion_unidades', {
-    entrada: { cantidad_kilos, presentacion, unidad_comercial },
+    entrada: { cantidad_kilos, peso_kg: pesoKg, unidad_comercial },
     salida: resultado,
     valido: true,
     contexto: { producto: nombre_producto }

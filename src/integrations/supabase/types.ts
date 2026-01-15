@@ -3627,17 +3627,18 @@ export type Database = {
           created_at: string
           descripcion: string | null
           descuento_maximo: number | null
+          especificaciones: string | null
           fecha_ultima_compra: string | null
           fecha_ultima_fumigacion: string | null
           id: string
           maneja_caducidad: boolean | null
           marca: string | null
           nombre: string
+          peso_kg: number | null
           piezas_por_unidad: number | null
           precio_compra: number
           precio_por_kilo: boolean
           precio_venta: number
-          presentacion: number | null
           proveedor_preferido_id: string | null
           requiere_fumigacion: boolean
           solo_uso_interno: boolean | null
@@ -3657,17 +3658,18 @@ export type Database = {
           created_at?: string
           descripcion?: string | null
           descuento_maximo?: number | null
+          especificaciones?: string | null
           fecha_ultima_compra?: string | null
           fecha_ultima_fumigacion?: string | null
           id?: string
           maneja_caducidad?: boolean | null
           marca?: string | null
           nombre: string
+          peso_kg?: number | null
           piezas_por_unidad?: number | null
           precio_compra?: number
           precio_por_kilo?: boolean
           precio_venta?: number
-          presentacion?: number | null
           proveedor_preferido_id?: string | null
           requiere_fumigacion?: boolean
           solo_uso_interno?: boolean | null
@@ -3687,17 +3689,18 @@ export type Database = {
           created_at?: string
           descripcion?: string | null
           descuento_maximo?: number | null
+          especificaciones?: string | null
           fecha_ultima_compra?: string | null
           fecha_ultima_fumigacion?: string | null
           id?: string
           maneja_caducidad?: boolean | null
           marca?: string | null
           nombre?: string
+          peso_kg?: number | null
           piezas_por_unidad?: number | null
           precio_compra?: number
           precio_por_kilo?: boolean
           precio_venta?: number
-          presentacion?: number | null
           proveedor_preferido_id?: string | null
           requiere_fumigacion?: boolean
           solo_uso_interno?: boolean | null

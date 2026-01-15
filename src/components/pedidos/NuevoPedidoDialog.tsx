@@ -64,14 +64,14 @@ interface Producto {
   aplica_ieps: boolean;
   stock_actual: number;
   precio_por_kilo: boolean;
-  presentacion: number | null;
+  peso_kg: number | null;
 }
 
 interface DetallePedido {
   producto_id: string;
   producto: Producto;
   cantidad: number;
-  kilos_totales: number | null; // cantidad × presentacion para productos precio_por_kilo
+  kilos_totales: number | null; // cantidad × peso_kg para productos precio_por_kilo
   precio_unitario: number; // precio por kg si precio_por_kilo, sino precio por unidad
   subtotal: number;
   es_cortesia: boolean;
@@ -155,7 +155,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
   const loadProductos = async () => {
     const { data, error } = await supabase
       .from("productos")
-      .select("id, codigo, nombre, precio_venta, unidad, aplica_iva, aplica_ieps, stock_actual, precio_por_kilo, presentacion")
+      .select("id, codigo, nombre, precio_venta, unidad, aplica_iva, aplica_ieps, stock_actual, precio_por_kilo, peso_kg")
       .eq("activo", true)
       .order("nombre");
 
@@ -172,7 +172,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
         producto_id,
         cantidad,
         notas,
-        producto:productos(id, codigo, nombre, precio_venta, unidad, aplica_iva, aplica_ieps, stock_actual, presentacion)
+        producto:productos(id, codigo, nombre, precio_venta, unidad, aplica_iva, aplica_ieps, stock_actual, peso_kg)
       `)
       .eq("cliente_id", clienteId)
       .eq("activo", true);
