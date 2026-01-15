@@ -26,6 +26,7 @@ interface Producto {
   id: string;
   codigo: string;
   nombre: string;
+  especificaciones: string | null;
   marca: string | null;
   categoria: string | null;
   peso_kg: number | null;
@@ -46,7 +47,7 @@ export const SecretariaListaPreciosTab = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, marca, categoria, peso_kg, unidad, precio_venta, precio_por_kilo, stock_actual, activo")
+        .select("id, codigo, nombre, especificaciones, marca, categoria, peso_kg, unidad, precio_venta, precio_por_kilo, stock_actual, activo")
         .eq("activo", true)
         .or("solo_uso_interno.is.null,solo_uso_interno.eq.false")
         .order("codigo");
@@ -61,10 +62,12 @@ export const SecretariaListaPreciosTab = () => {
 
   // Filter products
   const filteredProductos = productos?.filter((p) => {
+    const term = searchTerm.toLowerCase();
     const matchesSearch =
-      p.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (p.marca?.toLowerCase() || "").includes(searchTerm.toLowerCase());
+      p.codigo.toLowerCase().includes(term) ||
+      p.nombre.toLowerCase().includes(term) ||
+      (p.especificaciones?.toLowerCase() || "").includes(term) ||
+      (p.marca?.toLowerCase() || "").includes(term);
 
     const matchesCategoria = categoriaFilter === "all" || p.categoria === categoriaFilter;
 
@@ -154,7 +157,14 @@ export const SecretariaListaPreciosTab = () => {
                         </TableCell>
                         <TableCell>
                           <div>
-                            <p className="font-medium">{producto.nombre}</p>
+                            <p className="font-medium">
+                              {producto.nombre}
+                              {producto.especificaciones && (
+                                <span className="text-muted-foreground font-normal ml-1">
+                                  {producto.especificaciones}
+                                </span>
+                              )}
+                            </p>
                             {producto.marca && (
                               <p className="text-xs text-muted-foreground">{producto.marca}</p>
                             )}
