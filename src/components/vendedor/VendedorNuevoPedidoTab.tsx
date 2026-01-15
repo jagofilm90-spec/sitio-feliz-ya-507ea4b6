@@ -109,6 +109,8 @@ interface Producto {
   id: string;
   codigo: string;
   nombre: string;
+  especificaciones: string | null;
+  marca: string | null;
   unidad: string;
   precio_venta: number;
   stock_actual: number;
@@ -360,7 +362,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       // Fetch ALL active products (removed stock filter)
       const { data: productosData } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
+        .select("id, codigo, nombre, especificaciones, marca, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
         .eq("activo", true)
         .order("nombre");
 
@@ -432,7 +434,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       // Fetch product details for frequent products
       const { data: productosFrec } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
+        .select("id, codigo, nombre, especificaciones, marca, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
         .in("id", topProductoIds)
         .eq("activo", true);
 
@@ -452,10 +454,13 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
 
   // Filter products excluding frequent ones to avoid duplicates
   const productosFiltrados = productos
-    .filter(p =>
-      p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.codigo.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    .filter(p => {
+      const term = searchTerm.toLowerCase();
+      return p.nombre.toLowerCase().includes(term) ||
+        p.codigo.toLowerCase().includes(term) ||
+        (p.especificaciones?.toLowerCase() || "").includes(term) ||
+        (p.marca?.toLowerCase() || "").includes(term);
+    })
     .filter(p => !productosFrecuentes.some(f => f.id === p.id));
 
   const agregarProducto = (producto: Producto) => {
@@ -1006,7 +1011,14 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
                         } ${producto.stock_actual <= 0 ? 'opacity-75' : ''}`}
                         onClick={() => !yaEnCarrito && agregarProducto(producto)}
                       >
-                        <p className="font-medium text-sm truncate mb-1">{producto.nombre}</p>
+                        <p className="font-medium text-sm truncate mb-1">
+                          {producto.nombre}
+                          {producto.especificaciones && (
+                            <span className="text-muted-foreground font-normal ml-1 text-xs">
+                              {producto.especificaciones}
+                            </span>
+                          )}
+                        </p>
                         <p className="text-lg font-bold text-primary mb-2">
                           {formatCurrency(producto.precio_venta)}
                         </p>
@@ -1066,9 +1078,19 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
                       } ${producto.stock_actual <= 0 ? 'opacity-75' : ''}`}
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{producto.nombre}</p>
+                        <p className="font-medium text-sm truncate">
+                          {producto.nombre}
+                          {producto.especificaciones && (
+                            <span className="text-muted-foreground font-normal ml-1">
+                              {producto.especificaciones}
+                            </span>
+                          )}
+                        </p>
                         <div className="flex items-center gap-2 mt-1">
                           <p className="text-xs text-muted-foreground">{producto.codigo}</p>
+                          {producto.marca && (
+                            <span className="text-xs text-muted-foreground">({producto.marca})</span>
+                          )}
                           <StockBadge producto={producto} />
                         </div>
                       </div>
@@ -1198,9 +1220,19 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
                       {/* Product header */}
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{linea.producto.nombre}</p>
+                          <p className="font-medium truncate">
+                            {linea.producto.nombre}
+                            {linea.producto.especificaciones && (
+                              <span className="text-muted-foreground font-normal ml-1">
+                                {linea.producto.especificaciones}
+                              </span>
+                            )}
+                          </p>
                           <div className="flex items-center gap-2 mt-1">
                             <p className="text-xs text-muted-foreground">{linea.producto.codigo}</p>
+                            {linea.producto.marca && (
+                              <span className="text-xs text-muted-foreground">({linea.producto.marca})</span>
+                            )}
                             <StockBadge producto={linea.producto} />
                           </div>
                         </div>

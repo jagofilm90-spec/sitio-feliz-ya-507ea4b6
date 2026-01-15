@@ -58,6 +58,8 @@ interface Producto {
   id: string;
   codigo: string;
   nombre: string;
+  especificaciones: string | null;
+  marca: string | null;
   precio_venta: number;
   unidad: string;
   aplica_iva: boolean;
@@ -155,7 +157,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
   const loadProductos = async () => {
     const { data, error } = await supabase
       .from("productos")
-      .select("id, codigo, nombre, precio_venta, unidad, aplica_iva, aplica_ieps, stock_actual, precio_por_kilo, peso_kg")
+      .select("id, codigo, nombre, especificaciones, marca, precio_venta, unidad, aplica_iva, aplica_ieps, stock_actual, precio_por_kilo, peso_kg")
       .eq("activo", true)
       .order("nombre");
 
@@ -191,19 +193,25 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
     }
   };
 
-  const filteredProductos = productos.filter(p =>
-    !detalles.some(d => d.producto_id === p.id) &&
-    !cortesias.some(c => c.producto_id === p.id) &&
-    (p.nombre.toLowerCase().includes(searchProducto.toLowerCase()) ||
-     p.codigo.toLowerCase().includes(searchProducto.toLowerCase()))
-  );
+  const filteredProductos = productos.filter(p => {
+    const term = searchProducto.toLowerCase();
+    return !detalles.some(d => d.producto_id === p.id) &&
+      !cortesias.some(c => c.producto_id === p.id) &&
+      (p.nombre.toLowerCase().includes(term) ||
+       p.codigo.toLowerCase().includes(term) ||
+       (p.especificaciones?.toLowerCase() || "").includes(term) ||
+       (p.marca?.toLowerCase() || "").includes(term));
+  });
 
-  const filteredCortesias = productos.filter(p =>
-    !detalles.some(d => d.producto_id === p.id) &&
-    !cortesias.some(c => c.producto_id === p.id) &&
-    (p.nombre.toLowerCase().includes(searchCortesia.toLowerCase()) ||
-     p.codigo.toLowerCase().includes(searchCortesia.toLowerCase()))
-  );
+  const filteredCortesias = productos.filter(p => {
+    const term = searchCortesia.toLowerCase();
+    return !detalles.some(d => d.producto_id === p.id) &&
+      !cortesias.some(c => c.producto_id === p.id) &&
+      (p.nombre.toLowerCase().includes(term) ||
+       p.codigo.toLowerCase().includes(term) ||
+       (p.especificaciones?.toLowerCase() || "").includes(term) ||
+       (p.marca?.toLowerCase() || "").includes(term));
+  });
 
   const addProducto = (producto: Producto) => {
     // Para productos precio_por_kilo: mantener precio original (por kg)
@@ -554,6 +562,12 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
                     <span>
                       <span className="font-mono text-xs mr-2">{p.codigo}</span>
                       {p.nombre}
+                      {p.especificaciones && (
+                        <span className="text-muted-foreground ml-1">{p.especificaciones}</span>
+                      )}
+                      {p.marca && (
+                        <span className="text-muted-foreground ml-1">({p.marca})</span>
+                      )}
                     </span>
                     <span className="text-sm text-muted-foreground">
                       ${formatCurrency(p.precio_venta)} / {p.unidad}
@@ -586,7 +600,13 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
                           <div>
                             <span className="font-mono text-xs mr-2">{d.producto.codigo}</span>
                             {d.producto.nombre}
+                            {d.producto.especificaciones && (
+                              <span className="text-muted-foreground ml-1">{d.producto.especificaciones}</span>
+                            )}
                           </div>
+                          {d.producto.marca && (
+                            <div className="text-xs text-muted-foreground mb-1">({d.producto.marca})</div>
+                          )}
                           <div className="text-xs text-muted-foreground space-x-1">
                             {esPorKilo && (
                               <Badge variant="secondary" className="text-xs">
@@ -698,6 +718,9 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
                         <span>
                           <span className="font-mono text-xs mr-2">{p.codigo}</span>
                           {p.nombre}
+                          {p.especificaciones && (
+                            <span className="text-muted-foreground ml-1">{p.especificaciones}</span>
+                          )}
                         </span>
                         <Badge className="bg-amber-500 text-white">Sin Cargo</Badge>
                       </button>
@@ -711,10 +734,15 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
                 {cortesias.map((c, idx) => (
                   <div key={idx} className="flex items-center justify-between gap-3 bg-white p-2 rounded border border-amber-100">
-                    <div className="flex items-center gap-2 flex-1">
+                    <div className="flex items-center gap-2 flex-1 flex-wrap">
                       <Gift className="h-4 w-4 text-amber-500" />
                       <span className="font-mono text-xs">{c.producto.codigo}</span>
-                      <span className="text-sm">{c.producto.nombre}</span>
+                      <span className="text-sm">
+                        {c.producto.nombre}
+                        {c.producto.especificaciones && (
+                          <span className="text-muted-foreground ml-1">{c.producto.especificaciones}</span>
+                        )}
+                      </span>
                       <Badge className="bg-amber-500 text-white text-xs">CORTESÍA</Badge>
                     </div>
                     <div className="flex items-center gap-2">
