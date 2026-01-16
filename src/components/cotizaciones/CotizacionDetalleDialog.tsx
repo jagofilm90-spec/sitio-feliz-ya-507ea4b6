@@ -53,6 +53,7 @@ import { es } from "date-fns/locale";
 import { formatCurrency } from "@/lib/utils";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import { useGmailPermisos, logEmailAction } from "@/hooks/useGmailPermisos";
+import { getDisplayName } from "@/lib/productUtils";
 
 // Helper function to convert image to base64
 const getLogoBase64 = async (): Promise<string> => {
@@ -133,7 +134,7 @@ const CotizacionDetalleDialog = ({
             cantidad_maxima,
             nota_linea,
             tipo_precio,
-            producto:productos(nombre, codigo, unidad, precio_por_kilo, presentacion)
+            producto:productos(nombre, codigo, unidad, precio_por_kilo, presentacion, especificaciones, marca, contenido_empaque, peso_kg)
           )
         `)
         .eq("id", cotizacionId)
@@ -1028,7 +1029,7 @@ const CotizacionDetalleDialog = ({
                     <TableRow key={d.id}>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{d.producto?.nombre}</p>
+                          <p className="font-medium">{d.producto ? getDisplayName(d.producto) : "—"}</p>
                           <p className="text-xs text-muted-foreground space-x-1">
                             <span>{d.producto?.codigo} • {d.producto?.unidad}</span>
                             {esPorKilo && (

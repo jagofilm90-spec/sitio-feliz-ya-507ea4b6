@@ -20,6 +20,7 @@ import { calcularDesgloseImpuestos, redondear, obtenerPrecioUnitarioVenta } from
 import { captureDeviceInfo, getPublicIP } from "@/lib/auditoria-pedidos";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+import { getDisplayName } from "@/lib/productUtils";
 
 // Storage key for persistent cart
 const CART_STORAGE_KEY = 'vendedor_cart_draft';
@@ -111,6 +112,7 @@ interface Producto {
   nombre: string;
   especificaciones: string | null;
   marca: string | null;
+  contenido_empaque: string | null;
   unidad: string;
   precio_venta: number;
   stock_actual: number;
@@ -362,7 +364,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       // Fetch ALL active products (removed stock filter)
       const { data: productosData } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, especificaciones, marca, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
+        .select("id, codigo, nombre, especificaciones, marca, contenido_empaque, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
         .eq("activo", true)
         .order("nombre");
 
@@ -434,7 +436,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       // Fetch product details for frequent products
       const { data: productosFrec } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, especificaciones, marca, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
+        .select("id, codigo, nombre, especificaciones, marca, contenido_empaque, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
         .in("id", topProductoIds)
         .eq("activo", true);
 
@@ -1012,12 +1014,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
                         onClick={() => !yaEnCarrito && agregarProducto(producto)}
                       >
                         <p className="font-medium text-sm truncate mb-1">
-                          {producto.nombre}
-                          {producto.especificaciones && (
-                            <span className="text-muted-foreground font-normal ml-1 text-xs">
-                              {producto.especificaciones}
-                            </span>
-                          )}
+                          {getDisplayName(producto)}
                         </p>
                         <p className="text-lg font-bold text-primary mb-2">
                           {formatCurrency(producto.precio_venta)}
@@ -1079,18 +1076,10 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
                     >
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">
-                          {producto.nombre}
-                          {producto.especificaciones && (
-                            <span className="text-muted-foreground font-normal ml-1">
-                              {producto.especificaciones}
-                            </span>
-                          )}
+                          {getDisplayName(producto)}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
                           <p className="text-xs text-muted-foreground">{producto.codigo}</p>
-                          {producto.marca && (
-                            <span className="text-xs text-muted-foreground">({producto.marca})</span>
-                          )}
                           <StockBadge producto={producto} />
                         </div>
                       </div>

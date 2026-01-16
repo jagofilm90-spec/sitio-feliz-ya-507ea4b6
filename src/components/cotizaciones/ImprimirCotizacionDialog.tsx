@@ -13,6 +13,7 @@ import { CotizacionPrintTemplate } from "./CotizacionPrintTemplate";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { getDisplayName } from "@/lib/productUtils";
 
 interface ImprimirCotizacionDialogProps {
   cotizacionId: string;
@@ -47,7 +48,7 @@ const ImprimirCotizacionDialog = ({
             nota_linea,
             tipo_precio,
             kilos_totales,
-            producto:productos(nombre, codigo, unidad, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, especificaciones, marca)
+            producto:productos(nombre, codigo, unidad, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, especificaciones, marca, contenido_empaque)
           )
         `)
         .eq("id", cotizacionId)
@@ -207,8 +208,8 @@ const ImprimirCotizacionDialog = ({
       const kilosTotalesCalculado = d.kilos_totales ?? 
         (d.producto?.peso_kg ? Number(d.cantidad) * Number(d.producto.peso_kg) : null);
       
-      // Construir nombre completo con especificaciones y marca
-      const nombreCompleto = `${d.producto?.nombre || "Producto"}${d.producto?.especificaciones ? ` ${d.producto.especificaciones}` : ''}${d.producto?.marca ? ` (${d.producto.marca})` : ''}`;
+      // Usar función centralizada para nombre completo
+      const nombreCompleto = d.producto ? getDisplayName(d.producto) : "Producto";
       
       return {
         codigo: d.producto?.codigo || "",

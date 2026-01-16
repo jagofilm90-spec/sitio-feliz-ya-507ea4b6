@@ -14,6 +14,7 @@ import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Package, Calendar, FileText } from "lucide-react";
+import { getDisplayName } from "@/lib/productUtils";
 
 interface Props {
   open: boolean;
@@ -28,8 +29,11 @@ interface PedidoDetalle {
   subtotal: number;
   producto: {
     nombre: string;
+    marca: string | null;
+    especificaciones: string | null;
+    contenido_empaque: string | null;
     unidad: string;
-    peso_kg: string;
+    peso_kg: number | null;
   };
 }
 
@@ -82,7 +86,7 @@ export function PedidoDetalleVendedorDialog({ open, onOpenChange, pedidoId }: Pr
           sucursal:cliente_sucursales(nombre),
           detalles:pedidos_detalles(
             id, cantidad, precio_unitario, subtotal,
-            producto:productos(nombre, unidad, peso_kg)
+            producto:productos(nombre, marca, especificaciones, contenido_empaque, unidad, peso_kg)
           )
         `)
         .eq("id", pedidoId)
@@ -95,7 +99,7 @@ export function PedidoDetalleVendedorDialog({ open, onOpenChange, pedidoId }: Pr
         cliente: data.cliente || { nombre: "Sin cliente" },
         detalles: (data.detalles || []).map((d: any) => ({
           ...d,
-          producto: d.producto || { nombre: "Producto", unidad: "", peso_kg: "" }
+          producto: d.producto || { nombre: "Producto", marca: null, especificaciones: null, contenido_empaque: null, unidad: "", peso_kg: null }
         }))
       } as Pedido);
     } catch (error) {
@@ -155,7 +159,7 @@ export function PedidoDetalleVendedorDialog({ open, onOpenChange, pedidoId }: Pr
                   {pedido.detalles.map((detalle) => (
                     <div key={detalle.id} className="flex justify-between items-start text-sm">
                       <div className="flex-1">
-                        <p className="font-medium">{detalle.producto.nombre}</p>
+                        <p className="font-medium">{getDisplayName(detalle.producto)}</p>
                         <p className="text-xs text-muted-foreground">
                           {detalle.cantidad} × {formatCurrency(detalle.precio_unitario)}
                         </p>
