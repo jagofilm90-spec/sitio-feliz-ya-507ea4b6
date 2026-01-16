@@ -59,6 +59,7 @@ import PedidoDetalleDialog from "@/components/pedidos/PedidoDetalleDialog";
 import GenerarFacturaDialog from "@/components/pedidos/GenerarFacturaDialog";
 import { formatCurrency } from "@/lib/utils";
 import { ordenarProductosAzucarPrimero } from "@/lib/calculos";
+import { getDisplayName } from "@/lib/productUtils";
 
 interface PedidoConCotizacion {
   id: string;
@@ -440,7 +441,7 @@ const PedidosContent = () => {
       
       const productos = pedido.pedidos_detalles.map((detalle: any) => {
         const producto = detalle.productos;
-        const descripcion = `${producto.nombre}${producto.especificaciones ? ` ${producto.especificaciones}` : ''}${producto.marca ? ` (${producto.marca})` : ''}`;
+        const descripcion = getDisplayName(producto);
         const nombreLower = producto.nombre.toLowerCase();
         const cantidadNum = Number(detalle.cantidad);
         

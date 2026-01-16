@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { getDisplayName } from "@/lib/productUtils";
 
 interface ProductoDetalle {
   id: string;
@@ -20,6 +21,7 @@ interface ProductoDetalle {
     nombre: string;
     especificaciones: string | null;
     marca: string | null;
+    contenido_empaque: string | null;
     unidad: string;
     peso_kg: number | null;
   };
@@ -53,6 +55,7 @@ export const PedidoPreviewPopover = ({ pedidoId, folio, children }: PedidoPrevie
             nombre,
             especificaciones,
             marca,
+            contenido_empaque,
             unidad,
             peso_kg
           )
@@ -120,9 +123,7 @@ export const PedidoPreviewPopover = ({ pedidoId, folio, children }: PedidoPrevie
                         {p.producto?.codigo}
                       </p>
                       <p className="truncate">
-                        {p.producto?.nombre}
-                        {p.producto?.especificaciones && ` ${p.producto.especificaciones}`}
-                        {p.producto?.marca && ` (${p.producto.marca})`}
+                        {p.producto ? getDisplayName(p.producto) : "Producto"}
                       </p>
                     </div>
                     <div className="text-right shrink-0">

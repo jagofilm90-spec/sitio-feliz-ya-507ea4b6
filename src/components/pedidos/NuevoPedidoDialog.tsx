@@ -32,6 +32,7 @@ import { Plus, Trash2, Search, ShoppingCart, Building2, AlertTriangle, Gift } fr
 import { formatCurrency } from "@/lib/utils";
 import { calcularSubtotal, calcularDesgloseImpuestos, validarAntesDeGuardar, redondear, LineaPedido, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getDisplayName } from "@/lib/productUtils";
 
 interface NuevoPedidoDialogProps {
   open: boolean;
@@ -60,6 +61,7 @@ interface Producto {
   nombre: string;
   especificaciones: string | null;
   marca: string | null;
+  contenido_empaque: string | null;
   precio_venta: number;
   unidad: string;
   aplica_iva: boolean;
@@ -157,7 +159,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
   const loadProductos = async () => {
     const { data, error } = await supabase
       .from("productos")
-      .select("id, codigo, nombre, especificaciones, marca, precio_venta, unidad, aplica_iva, aplica_ieps, stock_actual, precio_por_kilo, peso_kg")
+      .select("id, codigo, nombre, especificaciones, marca, contenido_empaque, precio_venta, unidad, aplica_iva, aplica_ieps, stock_actual, precio_por_kilo, peso_kg")
       .eq("activo", true)
       .order("nombre");
 
@@ -561,13 +563,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
                   >
                     <span>
                       <span className="font-mono text-xs mr-2">{p.codigo}</span>
-                      {p.nombre}
-                      {p.especificaciones && (
-                        <span className="text-muted-foreground ml-1">{p.especificaciones}</span>
-                      )}
-                      {p.marca && (
-                        <span className="text-muted-foreground ml-1">({p.marca})</span>
-                      )}
+                      {getDisplayName(p)}
                     </span>
                     <span className="text-sm text-muted-foreground">
                       ${formatCurrency(p.precio_venta)} / {p.unidad}
@@ -599,14 +595,8 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
                         <TableCell>
                           <div>
                             <span className="font-mono text-xs mr-2">{d.producto.codigo}</span>
-                            {d.producto.nombre}
-                            {d.producto.especificaciones && (
-                              <span className="text-muted-foreground ml-1">{d.producto.especificaciones}</span>
-                            )}
+                            {getDisplayName(d.producto)}
                           </div>
-                          {d.producto.marca && (
-                            <div className="text-xs text-muted-foreground mb-1">({d.producto.marca})</div>
-                          )}
                           <div className="text-xs text-muted-foreground space-x-1">
                             {esPorKilo && (
                               <Badge variant="secondary" className="text-xs">
