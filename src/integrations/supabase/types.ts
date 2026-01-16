@@ -3624,6 +3624,7 @@ export type Database = {
           categoria: string | null
           codigo: string
           codigo_sat: string | null
+          contenido_empaque: string | null
           created_at: string
           descripcion: string | null
           descuento_maximo: number | null
@@ -3646,6 +3647,7 @@ export type Database = {
           stock_minimo: number
           ultimo_costo_compra: number | null
           unidad: Database["public"]["Enums"]["unit_type"]
+          unidad_sat: string | null
           updated_at: string
         }
         Insert: {
@@ -3655,6 +3657,7 @@ export type Database = {
           categoria?: string | null
           codigo: string
           codigo_sat?: string | null
+          contenido_empaque?: string | null
           created_at?: string
           descripcion?: string | null
           descuento_maximo?: number | null
@@ -3677,6 +3680,7 @@ export type Database = {
           stock_minimo?: number
           ultimo_costo_compra?: number | null
           unidad?: Database["public"]["Enums"]["unit_type"]
+          unidad_sat?: string | null
           updated_at?: string
         }
         Update: {
@@ -3686,6 +3690,7 @@ export type Database = {
           categoria?: string | null
           codigo?: string
           codigo_sat?: string | null
+          contenido_empaque?: string | null
           created_at?: string
           descripcion?: string | null
           descuento_maximo?: number | null
@@ -3708,6 +3713,7 @@ export type Database = {
           stock_minimo?: number
           ultimo_costo_compra?: number | null
           unidad?: Database["public"]["Enums"]["unit_type"]
+          unidad_sat?: string | null
           updated_at?: string
         }
         Relationships: [

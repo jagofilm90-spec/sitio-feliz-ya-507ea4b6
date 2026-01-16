@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Search, ChevronDown, ChevronRight, Package, ChevronsUpDown, Scale } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { getDisplayName } from "@/lib/productUtils";
 
 interface Producto {
   id: string;
@@ -18,6 +19,7 @@ interface Producto {
   precio_venta: number | null;
   unidad: string | null;
   peso_kg: number | null;
+  contenido_empaque: string | null;
   precio_por_kilo: boolean | null;
   descuento_maximo: number | null;
   precio_anterior?: number | null;
@@ -69,6 +71,7 @@ export function VendedorListaPreciosTab() {
           precio_venta,
           unidad,
           peso_kg,
+          contenido_empaque,
           precio_por_kilo,
           descuento_maximo
         `)
@@ -273,15 +276,10 @@ export function VendedorListaPreciosTab() {
                         <div className="sm:hidden space-y-2">
                           <div className="flex justify-between items-start gap-2">
                             <div>
-                              <p className="font-medium">
-                                {producto.nombre}
-                                {producto.especificaciones && (
-                                  <span className="text-muted-foreground font-normal ml-1">
-                                    {producto.especificaciones}
-                                  </span>
-                                )}
-                              </p>
-                              <p className="text-xs text-muted-foreground">{producto.codigo}</p>
+                            <p className="font-medium">
+                              {getDisplayName(producto)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">{producto.codigo}</p>
                             </div>
                             <div className="text-right shrink-0">
                               <p className="font-bold text-primary">
@@ -324,17 +322,9 @@ export function VendedorListaPreciosTab() {
                             </div>
                           </div>
                           <div className="flex gap-2 text-xs text-muted-foreground">
-                            {producto.marca && <span>{producto.marca}</span>}
-                            {producto.marca && producto.unidad && <span>•</span>}
-                            {producto.unidad && (
-                              <span className="capitalize">{producto.unidad}</span>
-                            )}
-                            {producto.peso_kg && (
-                              <>
-                                <span>•</span>
-                                <span>{producto.peso_kg} kg</span>
-                              </>
-                            )}
+                            {producto.contenido_empaque && <span>{producto.contenido_empaque}</span>}
+                            {!producto.contenido_empaque && producto.peso_kg && <span>{producto.peso_kg} kg</span>}
+                            {producto.unidad && <span>• {producto.unidad}</span>}
                           </div>
                         </div>
 
@@ -346,30 +336,15 @@ export function VendedorListaPreciosTab() {
                             </code>
                           </div>
                           <div className="col-span-3">
-                            <p className="font-medium truncate" title={`${producto.nombre} ${producto.especificaciones || ''}`}>
-                              {producto.nombre}
-                              {producto.especificaciones && (
-                                <span className="text-muted-foreground font-normal ml-1">
-                                  {producto.especificaciones}
-                                </span>
-                              )}
+                            <p className="font-medium truncate" title={getDisplayName(producto)}>
+                              {getDisplayName(producto)}
                             </p>
-                            {producto.peso_kg && (
-                              <p className="text-xs text-muted-foreground truncate">
-                                {producto.peso_kg} kg
-                              </p>
-                            )}
                           </div>
                           <div className="col-span-2 text-muted-foreground text-sm truncate">
-                            {producto.marca || "—"}
+                            {producto.contenido_empaque || (producto.peso_kg ? `${producto.peso_kg} kg` : "—")}
                           </div>
                           <div className="col-span-2 text-sm capitalize">
                             {producto.unidad || "—"}
-                            {producto.peso_kg && (
-                              <span className="text-xs text-muted-foreground block">
-                                ({producto.peso_kg} kg)
-                              </span>
-                            )}
                           </div>
                           <div className="col-span-1 text-right text-muted-foreground text-sm">
                             {producto.precio_anterior && producto.precio_venta ? (() => {
