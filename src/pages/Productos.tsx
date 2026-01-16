@@ -29,11 +29,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, Calculator } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Calculator, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { LotesDesglose } from "@/components/productos/LotesDesglose";
 import { NotificacionesSistema } from "@/components/NotificacionesSistema";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { getDisplayName, UNIDADES_SAT } from "@/lib/productUtils";
 
 const Productos = () => {
   const [productos, setProductos] = useState<any[]>([]);
@@ -213,6 +214,8 @@ const Productos = () => {
     marca: string;
     categoria: string;
     especificaciones: string;
+    contenido_empaque: string;
+    unidad_sat: string;
     peso_kg: string;
     unidad: "bulto" | "caja" | "churla" | "costal" | "cubeta" | "kg" | "litro" | "pieza" | "balón";
     precio_por_kilo: boolean;
@@ -238,6 +241,8 @@ const Productos = () => {
     marca: "",
     categoria: "",
     especificaciones: "",
+    contenido_empaque: "",
+    unidad_sat: "",
     peso_kg: "",
     unidad: "bulto",
     precio_por_kilo: false,
@@ -328,6 +333,8 @@ const Productos = () => {
         marca: formData.marca || null,
         categoria: formData.categoria || null,
         especificaciones: formData.especificaciones || null,
+        contenido_empaque: formData.contenido_empaque || null,
+        unidad_sat: formData.unidad_sat || null,
         peso_kg: formData.peso_kg ? parseFloat(formData.peso_kg) : null,
         unidad: formData.unidad,
         precio_por_kilo: formData.precio_por_kilo,
@@ -459,6 +466,8 @@ const Productos = () => {
       marca: product.marca || "",
       categoria: product.categoria || "",
       especificaciones: product.especificaciones || "",
+      contenido_empaque: product.contenido_empaque || "",
+      unidad_sat: product.unidad_sat || "",
       peso_kg: product.peso_kg?.toString() || "",
       unidad: product.unidad,
       precio_por_kilo: product.precio_por_kilo || false,
@@ -514,6 +523,8 @@ const Productos = () => {
       marca: "",
       categoria: "",
       especificaciones: "",
+      contenido_empaque: "",
+      unidad_sat: "",
       peso_kg: "",
       unidad: "bulto",
       precio_por_kilo: false,

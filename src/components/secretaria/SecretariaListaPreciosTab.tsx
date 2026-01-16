@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/utils";
 import { Search, Loader2, DollarSign } from "lucide-react";
+import { getDisplayName } from "@/lib/productUtils";
 
 interface Producto {
   id: string;
@@ -30,6 +31,7 @@ interface Producto {
   marca: string | null;
   categoria: string | null;
   peso_kg: number | null;
+  contenido_empaque: string | null;
   unidad: string;
   precio_venta: number;
   precio_por_kilo: boolean;
@@ -47,7 +49,7 @@ export const SecretariaListaPreciosTab = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, especificaciones, marca, categoria, peso_kg, unidad, precio_venta, precio_por_kilo, stock_actual, activo")
+        .select("id, codigo, nombre, especificaciones, marca, categoria, peso_kg, contenido_empaque, unidad, precio_venta, precio_por_kilo, stock_actual, activo")
         .eq("activo", true)
         .or("solo_uso_interno.is.null,solo_uso_interno.eq.false")
         .order("codigo");
@@ -158,23 +160,13 @@ export const SecretariaListaPreciosTab = () => {
                         <TableCell>
                           <div>
                             <p className="font-medium">
-                              {producto.nombre}
-                              {producto.especificaciones && (
-                                <span className="text-muted-foreground font-normal ml-1">
-                                  {producto.especificaciones}
-                                </span>
-                              )}
+                              {getDisplayName(producto)}
                             </p>
-                            {producto.marca && (
-                              <p className="text-xs text-muted-foreground">{producto.marca}</p>
-                            )}
                           </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           <div className="flex items-center gap-2">
-                            {producto.peso_kg && (
-                              <span>{producto.peso_kg} kg</span>
-                            )}
+                            {producto.contenido_empaque || (producto.peso_kg && `${producto.peso_kg} kg`) || "—"}
                             <Badge variant="outline" className="text-xs">
                               {producto.unidad}
                             </Badge>

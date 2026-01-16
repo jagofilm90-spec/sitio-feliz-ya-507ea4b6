@@ -39,8 +39,10 @@ import {
   Loader2,
   Package,
   Sparkles,
+  Eye,
 } from "lucide-react";
 import { MigracionProductosDialog } from "./MigracionProductosDialog";
+import { getDisplayName, UNIDADES_SAT } from "@/lib/productUtils";
 
 interface Producto {
   id: string;
@@ -50,6 +52,8 @@ interface Producto {
   categoria: string | null;
   peso_kg: number | null;
   especificaciones: string | null;
+  contenido_empaque: string | null;
+  unidad_sat: string | null;
   unidad: string;
   precio_venta: number;
   stock_actual: number;
@@ -77,6 +81,8 @@ export const SecretariaProductosTab = () => {
     marca: "",
     categoria: "",
     especificaciones: "",
+    contenido_empaque: "",
+    unidad_sat: "",
     peso_kg: "",
     unidad: "bulto" as const,
     precio_venta: "",
@@ -124,6 +130,8 @@ export const SecretariaProductosTab = () => {
       marca: "",
       categoria: "",
       especificaciones: "",
+      contenido_empaque: "",
+      unidad_sat: "",
       peso_kg: "",
       unidad: "bulto",
       precio_venta: "",
@@ -146,6 +154,8 @@ export const SecretariaProductosTab = () => {
       marca: producto.marca || "",
       categoria: producto.categoria || "",
       especificaciones: producto.especificaciones || "",
+      contenido_empaque: producto.contenido_empaque || "",
+      unidad_sat: producto.unidad_sat || "",
       peso_kg: producto.peso_kg?.toString() || "",
       unidad: producto.unidad as any,
       precio_venta: producto.precio_venta.toString(),
@@ -169,6 +179,8 @@ export const SecretariaProductosTab = () => {
         marca: data.marca || null,
         categoria: data.categoria || null,
         especificaciones: data.especificaciones || null,
+        contenido_empaque: data.contenido_empaque || null,
+        unidad_sat: data.unidad_sat || null,
         peso_kg: data.peso_kg ? parseFloat(data.peso_kg) : null,
         unidad: data.unidad,
         precio_venta: parseFloat(data.precio_venta) || 0,
@@ -334,26 +346,38 @@ export const SecretariaProductosTab = () => {
                 </div>
               </div>
 
-              {/* Sección 2: Presentación y Peso */}
+              {/* Sección 2: Empaque */}
               <div className="space-y-4">
                 <h3 className="font-medium text-sm text-muted-foreground border-b pb-2">
-                  Presentación y Peso
+                  Empaque y Presentación
                 </h3>
                 <div className="space-y-2">
-                  <Label htmlFor="especificaciones">Presentación / Especificaciones</Label>
+                  <Label htmlFor="especificaciones">Variantes / Calibre</Label>
                   <Input
                     id="especificaciones"
                     value={formData.especificaciones}
                     onChange={(e) => setFormData({ ...formData, especificaciones: e.target.value })}
-                    placeholder="Ej: 25kg, 6/2.800kg, 50/60 Deshuesada"
+                    placeholder="Ej: 30/40, Jumbo 22/64, 14 rodajas"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Texto que aparece en facturas y remisiones junto al nombre
+                    Calibre, conteo o variante del producto
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="peso_kg">Peso por unidad (kg)</Label>
+                    <Label htmlFor="contenido_empaque">Contenido por empaque</Label>
+                    <Input
+                      id="contenido_empaque"
+                      value={formData.contenido_empaque}
+                      onChange={(e) => setFormData({ ...formData, contenido_empaque: e.target.value })}
+                      placeholder="Ej: 25 kg, 24×800g, 10 kg"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Peso o contenido por unidad de venta
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="peso_kg">Peso numérico (kg)</Label>
                     <div className="relative">
                       <Input
                         id="peso_kg"
@@ -362,13 +386,36 @@ export const SecretariaProductosTab = () => {
                         min="0"
                         value={formData.peso_kg}
                         onChange={(e) => setFormData({ ...formData, peso_kg: e.target.value })}
-                        placeholder="10.00"
+                        placeholder="25.00"
                         className="pr-10"
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">kg</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Peso del bulto/caja para cálculos
+                      Para cálculos de peso y precio por kilo
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="unidad_sat">Unidad SAT</Label>
+                    <Select
+                      value={formData.unidad_sat}
+                      onValueChange={(v) => setFormData({ ...formData, unidad_sat: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {UNIDADES_SAT.map((u) => (
+                          <SelectItem key={u.clave} value={u.clave}>
+                            {u.clave} - {u.descripcion}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Clave para facturación electrónica
                     </p>
                   </div>
                   <div className="flex items-center gap-2 pt-6">
@@ -379,6 +426,24 @@ export const SecretariaProductosTab = () => {
                     />
                     <Label htmlFor="precio_por_kilo">Precio por Kilo</Label>
                   </div>
+                </div>
+                
+                {/* Preview del Display Name */}
+                <div className="p-3 bg-muted/50 rounded-lg border">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                    <Eye className="h-3 w-3" />
+                    Vista previa del nombre (Display Name)
+                  </div>
+                  <p className="font-medium text-sm">
+                    {getDisplayName({
+                      nombre: formData.nombre || "Nombre del producto",
+                      marca: formData.marca || null,
+                      especificaciones: formData.especificaciones || null,
+                      unidad: formData.unidad,
+                      contenido_empaque: formData.contenido_empaque || null,
+                      peso_kg: formData.peso_kg ? parseFloat(formData.peso_kg) : null,
+                    })}
+                  </p>
                 </div>
               </div>
 
