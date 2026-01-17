@@ -79,6 +79,33 @@ export function getDisplayNameWithBrand(producto: ProductoBase): string {
   return name;
 }
 
+/**
+ * Genera una versión compacta del nombre para espacios muy reducidos (tablets, listas móviles):
+ * {Nombre base} {Marca} {Especificaciones} {Contenido}
+ * Sin el separador "—"
+ */
+export function getCompactDisplayName(producto: ProductoBase): string {
+  const parts: string[] = [producto.nombre];
+  
+  if (producto.marca) {
+    parts.push(producto.marca);
+  }
+  
+  if (producto.especificaciones) {
+    parts.push(producto.especificaciones);
+  }
+  
+  // Agregar empaque compacto
+  const empaque = producto.contenido_empaque || 
+    (producto.peso_kg ? `${producto.peso_kg}kg` : null);
+  
+  if (empaque) {
+    parts.push(empaque);
+  }
+  
+  return parts.join(' ');
+}
+
 function capitalizeFirst(str: string): string {
   if (!str) return '';
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();

@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import { format, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
+import { getDisplayName } from "@/lib/productUtils";
 
 interface EvidenciaConTipo {
   url: string;
@@ -39,6 +40,10 @@ interface RecepcionData {
     producto: {
       codigo: string;
       nombre: string;
+      marca?: string | null;
+      especificaciones?: string | null;
+      contenido_empaque?: string | null;
+      peso_kg?: number | null;
     };
   }>;
   evidenciasConTipos?: EvidenciaConTipo[];
@@ -299,8 +304,8 @@ export const generarRecepcionPDF = async (data: RecepcionData) => {
     doc.setFontSize(8);
     doc.text(p.producto?.codigo || "", 17, yPos);
     
-    // Truncate product name if too long
-    const nombreProducto = p.producto?.nombre || "";
+    // Use getDisplayName for consistent product formatting
+    const nombreProducto = p.producto ? getDisplayName(p.producto) : "";
     const nombreTruncado = nombreProducto.length > 40 
       ? nombreProducto.substring(0, 37) + "..." 
       : nombreProducto;

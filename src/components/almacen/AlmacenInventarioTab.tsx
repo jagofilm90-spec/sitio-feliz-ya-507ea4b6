@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Package, AlertTriangle, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getDisplayName } from "@/lib/productUtils";
 
 interface Lote {
   id: string;
@@ -18,7 +19,10 @@ interface Lote {
   producto: {
     codigo: string;
     nombre: string;
+    marca: string | null;
     especificaciones: string | null;
+    contenido_empaque: string | null;
+    peso_kg: number | null;
     unidad: string;
     stock_actual: number;
     stock_minimo: number;
@@ -49,7 +53,10 @@ export const AlmacenInventarioTab = () => {
           producto:producto_id (
             codigo,
             nombre,
+            marca,
             especificaciones,
+            contenido_empaque,
+            peso_kg,
             unidad,
             stock_actual,
             stock_minimo
@@ -183,9 +190,9 @@ export const AlmacenInventarioTab = () => {
                         <Package className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <CardTitle className="text-base">{producto.nombre}</CardTitle>
+                        <CardTitle className="text-base">{getDisplayName(producto)}</CardTitle>
                         <p className="text-sm text-muted-foreground">
-                          {producto.codigo} • {producto.especificaciones || producto.unidad}
+                          {producto.codigo}
                         </p>
                       </div>
                     </div>

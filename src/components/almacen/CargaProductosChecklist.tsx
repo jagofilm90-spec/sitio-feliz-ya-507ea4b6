@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Package, ChevronDown, AlertTriangle, Calendar, Gift, Warehouse } from "lucide-react";
+import { getCompactDisplayName } from "@/lib/productUtils";
 
 interface LoteDisponible {
   id: string;
@@ -39,6 +40,10 @@ interface ProductoCarga {
     id: string;
     codigo: string;
     nombre: string;
+    marca: string | null;
+    especificaciones: string | null;
+    contenido_empaque: string | null;
+    peso_kg: number | null;
     unidad: string;
   };
   lotes_disponibles: LoteDisponible[];
@@ -169,7 +174,7 @@ const ProductoItem = ({
               )}
             </div>
             <p className="text-sm text-muted-foreground truncate">
-              {producto.producto.nombre}
+              {getCompactDisplayName(producto.producto)}
             </p>
           </div>
 

@@ -39,54 +39,41 @@ export const KPICards = () => {
       const inicioAnio = new Date(now.getFullYear(), 0, 1).toISOString();
       const hoy = new Date().toISOString().split('T')[0];
 
-      const [
-        ventasMesRes,
-        ventasAnioRes,
-        clientesRes,
-        facturasVencidasRes,
-        stockBajoRes,
-        pedidosPendientesRes
-      ] = await Promise.all([
-        // Ventas del mes
-        supabase
-          .from("pedidos")
-          .select("total")
-          .gte("created_at", inicioMes)
-          .in("status", ["entregado", "en_ruta"]),
-        
-        // Ventas del año
-        supabase
-          .from("pedidos")
-          .select("total")
-          .gte("created_at", inicioAnio)
-          .in("status", ["entregado", "en_ruta"]),
-        
-        // Clientes con saldo y límite de crédito
-        supabase
-          .from("clientes")
-          .select("id, saldo_pendiente, limite_credito")
-          .gt("saldo_pendiente", 0),
-        
-        // Facturas vencidas - using explicit type cast to avoid deep instantiation error
-        (supabase
-          .from("facturas")
-          .select("total, fecha_vencimiento, cliente_id")
-          .lt("fecha_vencimiento", hoy)
-          .eq("status", "vigente")) as unknown as Promise<{ data: { total: number | null; fecha_vencimiento: string | null; cliente_id: string | null }[] | null }>,
-        
-        // Stock bajo
-        supabase
-          .from("productos")
-          .select("id", { count: "exact", head: true })
-          .filter("stock_actual", "lte", "stock_minimo")
-          .eq("activo", true),
-        
-        // Pedidos pendientes
-        supabase
-          .from("pedidos")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "pendiente")
-      ]);
+      // Execute queries separately to avoid deep instantiation
+      const ventasMesRes = await supabase
+        .from("pedidos")
+        .select("total")
+        .gte("created_at", inicioMes)
+        .in("status", ["entregado", "en_ruta"]);
+      
+      const ventasAnioRes = await supabase
+        .from("pedidos")
+        .select("total")
+        .gte("created_at", inicioAnio)
+        .in("status", ["entregado", "en_ruta"]);
+      
+      const clientesRes = await supabase
+        .from("clientes")
+        .select("id, saldo_pendiente, limite_credito")
+        .gt("saldo_pendiente", 0);
+      
+      // @ts-expect-error - Supabase deep type instantiation workaround
+      const facturasVencidasRes = await supabase
+        .from("facturas")
+        .select("total, fecha_vencimiento, cliente_id")
+        .lt("fecha_vencimiento", hoy)
+        .eq("status", "vigente");
+      
+      const stockBajoRes = await supabase
+        .from("productos")
+        .select("id", { count: "exact", head: true })
+        .filter("stock_actual", "lte", "stock_minimo")
+        .eq("activo", true);
+      
+      const pedidosPendientesRes = await supabase
+        .from("pedidos")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pendiente");
 
       // Calcular ventas del mes
       const ventasMes = ventasMesRes.data?.reduce((sum, p) => sum + (p.total || 0), 0) || 0;

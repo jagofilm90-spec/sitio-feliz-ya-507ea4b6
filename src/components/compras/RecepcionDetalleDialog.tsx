@@ -29,6 +29,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { generarRecepcionPDF } from "@/utils/recepcionPdfGenerator";
+import { getDisplayName } from "@/lib/productUtils";
 
 interface RecepcionDetalleDialogProps {
   entregaId: string | null;
@@ -84,6 +85,10 @@ interface ProductoRecibido {
   producto: {
     codigo: string;
     nombre: string;
+    marca: string | null;
+    especificaciones: string | null;
+    contenido_empaque: string | null;
+    peso_kg: number | null;
   };
 }
 
@@ -153,7 +158,7 @@ export const RecepcionDetalleDialog = ({
         .from("ordenes_compra_detalles")
         .select(`
           id, cantidad_ordenada, cantidad_recibida, razon_diferencia, notas_diferencia,
-          producto:productos(codigo, nombre)
+          producto:productos(codigo, nombre, marca, especificaciones, contenido_empaque, peso_kg)
         `)
         .eq("orden_compra_id", (entrega as any).orden_compra.id);
 
@@ -399,7 +404,7 @@ export const RecepcionDetalleDialog = ({
                               className={`border-t ${hasDiferencia ? "bg-destructive/10" : ""}`}
                             >
                               <td className="p-2 font-mono text-xs">{p.producto?.codigo}</td>
-                              <td className="p-2">{p.producto?.nombre}</td>
+                              <td className="p-2">{p.producto ? getDisplayName(p.producto) : '-'}</td>
                               <td className="p-2 text-right">{p.cantidad_ordenada}</td>
                               <td className={`p-2 text-right font-medium ${hasDiferencia ? "text-destructive" : ""}`}>
                                 {p.cantidad_recibida}

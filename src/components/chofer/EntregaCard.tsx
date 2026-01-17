@@ -17,6 +17,7 @@ import {
   Gift
 } from "lucide-react";
 import { RegistrarEntregaSheet } from "./RegistrarEntregaSheet";
+import { getCompactDisplayName } from "@/lib/productUtils";
 
 interface EntregaCardProps {
   entrega: {
@@ -54,6 +55,10 @@ interface EntregaCardProps {
         producto: {
           id: string;
           nombre: string;
+          marca: string | null;
+          especificaciones: string | null;
+          contenido_empaque: string | null;
+          peso_kg: number | null;
           unidad: string;
         };
       }>;
@@ -190,7 +195,7 @@ export function EntregaCard({ entrega, onEntregaActualizada }: EntregaCardProps)
               <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                 {productos.map((detalle) => (
                   <div key={detalle.id} className="flex justify-between text-sm">
-                    <span className="truncate pr-2">{detalle.producto.nombre}</span>
+                    <span className="truncate pr-2">{getCompactDisplayName(detalle.producto)}</span>
                     <span className="font-medium whitespace-nowrap">
                       {detalle.cantidad} {detalle.producto.unidad}
                     </span>
@@ -207,7 +212,7 @@ export function EntregaCard({ entrega, onEntregaActualizada }: EntregaCardProps)
                   </div>
                   {cortesias.map((detalle) => (
                     <div key={detalle.id} className="flex justify-between text-sm">
-                      <span className="truncate pr-2">{detalle.producto.nombre}</span>
+                      <span className="truncate pr-2">{getCompactDisplayName(detalle.producto)}</span>
                       <span className="font-medium whitespace-nowrap">
                       {detalle.cantidad} {detalle.producto.unidad}
                     </span>
