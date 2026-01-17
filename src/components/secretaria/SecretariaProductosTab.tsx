@@ -42,6 +42,7 @@ import {
   Eye,
 } from "lucide-react";
 import { MigracionProductosDialog } from "./MigracionProductosDialog";
+import { MigracionLoteDialog } from "./MigracionLoteDialog";
 import { getDisplayName, UNIDADES_SAT } from "@/lib/productUtils";
 
 interface Producto {
@@ -71,6 +72,7 @@ export const SecretariaProductosTab = () => {
   const [tabActivo, setTabActivo] = useState<"activos" | "inactivos">("activos");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [migracionDialogOpen, setMigracionDialogOpen] = useState(false);
+  const [migracionLoteOpen, setMigracionLoteOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -267,11 +269,18 @@ export const SecretariaProductosTab = () => {
         <div className="flex gap-2">
           <Button 
             variant="outline" 
-            onClick={() => setMigracionDialogOpen(true)}
+            onClick={() => setMigracionLoteOpen(true)}
             className="border-pink-200 text-pink-700 hover:bg-pink-50"
           >
             <Sparkles className="h-4 w-4 mr-2" />
-            Normalizar con IA
+            Migración en Lote
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => setMigracionDialogOpen(true)}
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            Uno por Uno
           </Button>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
@@ -559,10 +568,14 @@ export const SecretariaProductosTab = () => {
         </div>
       </div>
 
-      {/* Dialog de migración */}
+      {/* Dialogs de migración */}
       <MigracionProductosDialog 
         open={migracionDialogOpen} 
         onOpenChange={setMigracionDialogOpen} 
+      />
+      <MigracionLoteDialog
+        open={migracionLoteOpen}
+        onOpenChange={setMigracionLoteOpen}
       />
 
       {/* Tabs */}

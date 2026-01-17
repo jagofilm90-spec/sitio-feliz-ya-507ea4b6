@@ -2598,6 +2598,87 @@ export type Database = {
           },
         ]
       }
+      migracion_productos_sugerencias: {
+        Row: {
+          aprobado_por: string | null
+          cambios_detectados: boolean | null
+          contenido_empaque_sugerido: string | null
+          created_at: string | null
+          especificaciones_actual: string | null
+          especificaciones_sugerida: string | null
+          estado: string | null
+          explicacion: string | null
+          fecha_aprobacion: string | null
+          id: string
+          marca_actual: string | null
+          marca_sugerida: string | null
+          nombre_actual: string
+          nombre_sugerido: string
+          peso_kg_actual: number | null
+          peso_kg_sugerido: number | null
+          producto_id: string
+          unidad_sat_sugerida: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          aprobado_por?: string | null
+          cambios_detectados?: boolean | null
+          contenido_empaque_sugerido?: string | null
+          created_at?: string | null
+          especificaciones_actual?: string | null
+          especificaciones_sugerida?: string | null
+          estado?: string | null
+          explicacion?: string | null
+          fecha_aprobacion?: string | null
+          id?: string
+          marca_actual?: string | null
+          marca_sugerida?: string | null
+          nombre_actual: string
+          nombre_sugerido: string
+          peso_kg_actual?: number | null
+          peso_kg_sugerido?: number | null
+          producto_id: string
+          unidad_sat_sugerida?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          aprobado_por?: string | null
+          cambios_detectados?: boolean | null
+          contenido_empaque_sugerido?: string | null
+          created_at?: string | null
+          especificaciones_actual?: string | null
+          especificaciones_sugerida?: string | null
+          estado?: string | null
+          explicacion?: string | null
+          fecha_aprobacion?: string | null
+          id?: string
+          marca_actual?: string | null
+          marca_sugerida?: string | null
+          nombre_actual?: string
+          nombre_sugerido?: string
+          peso_kg_actual?: number | null
+          peso_kg_sugerido?: number | null
+          producto_id?: string
+          unidad_sat_sugerida?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "migracion_productos_sugerencias_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "migracion_productos_sugerencias_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_permissions: {
         Row: {
           created_at: string | null

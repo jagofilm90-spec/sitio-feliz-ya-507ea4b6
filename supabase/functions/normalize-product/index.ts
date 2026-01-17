@@ -5,6 +5,36 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Catálogo de unidades SAT comunes para sugerencias
+const UNIDADES_SAT_SUGERENCIAS = [
+  { clave: 'XSA', palabras: ['costal', 'saco', 'bulto'] },
+  { clave: 'XBX', palabras: ['caja'] },
+  { clave: 'KGM', palabras: ['kg', 'kilogramo', 'kilo'] },
+  { clave: 'XCU', palabras: ['cubeta'] },
+  { clave: 'H87', palabras: ['pieza', 'pza'] },
+  { clave: 'XPK', palabras: ['paquete', 'pack'] },
+  { clave: 'XBA', palabras: ['bolsa'] },
+  { clave: 'XBT', palabras: ['botella'] },
+  { clave: 'LTR', palabras: ['litro', 'lt'] },
+];
+
+function suggestUnidadSAT(unidad: string | undefined, nombre: string): string {
+  const text = `${unidad || ''} ${nombre}`.toLowerCase();
+  
+  for (const sat of UNIDADES_SAT_SUGERENCIAS) {
+    if (sat.palabras.some(p => text.includes(p))) {
+      return sat.clave;
+    }
+  }
+  
+  // Default based on common product types
+  if (text.includes('azúcar') || text.includes('azucar') || text.includes('harina')) {
+    return 'XSA'; // Saco/Costal para granos
+  }
+  
+  return 'XSA'; // Default para productos a granel
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -18,36 +48,66 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const prompt = `Analiza este producto de una distribuidora de alimentos y sugiere cómo separar sus datos correctamente.
+    // Sugerir unidad SAT basada en el producto
+    const unidadSATSugerida = suggestUnidadSAT(unidad, nombre);
+
+    const prompt = `Analiza este producto de una distribuidora de alimentos mexicana y sugiere cómo separar sus datos correctamente para facturación CFDI 4.0.
 
 Datos actuales:
 - Nombre: "${nombre}"
 - Especificaciones: "${especificaciones || 'vacío'}"
 - Marca: "${marca || 'vacío'}"
 - Peso: ${peso_kg || 'no especificado'}kg
-- Unidad: ${unidad}
+- Unidad de venta: ${unidad || 'no especificada'}
 
 REGLAS ESTRICTAS:
-1. El NOMBRE debe ser SOLO el producto base sin calibres ni formatos (ej: "Ciruela Pasa", "Azúcar Estándar", "Girasol Argentino")
-2. Las ESPECIFICACIONES deben incluir:
-   - Calibre si existe (ej: 50/60, 22/64, H1, 4/0, Jumbo, Extra Grande)
-   - Formato/Presentación (ej: Deshuesada, Con Hueso, Pelada)
-   - Peso en kg si está en el nombre (ej: 25kg, 5kg)
-3. La MARCA es el fabricante/proveedor (déjala como está si ya existe)
-4. Extrae del nombre actual: calibres, formatos, pesos y muévelos a especificaciones
+
+1. **NOMBRE (nombre_sugerido)**: 
+   - SOLO el producto base, SIN calibres, formatos ni pesos
+   - Ejemplos correctos: "Ciruela Pasa", "Girasol Argentino", "Azúcar Estándar"
+   - Ejemplos incorrectos: "Ciruela Pasa 50/60", "Girasol 22/64 25kg"
+
+2. **ESPECIFICACIONES (especificaciones_sugerida)**: 
+   - Calibre si existe: 50/60, 22/64, H1, 4/0, Jumbo, Extra Grande
+   - Formato/Presentación: Deshuesada, Con Hueso, Pelada, Sin Sal
+   - NO incluir peso aquí (va en contenido_empaque)
+   - Si solo hay peso en especificaciones actuales, dejar vacío
+
+3. **MARCA (marca_sugerida)**: 
+   - Fabricante/proveedor (déjala como está si ya existe y es correcta)
+
+4. **CONTENIDO DE EMPAQUE (contenido_empaque_sugerido)**:
+   - Formato legible del peso/contenido por unidad de venta
+   - Ejemplos: "25 kg", "10 kg", "24×800 g", "12×500 ml"
+   - Calcular del peso_kg si está disponible
+
+5. **PESO EN KG (peso_kg_sugerido)**:
+   - Número decimal del peso en kilogramos
+   - Usar el peso_kg existente si ya es correcto
+   - Extraer del nombre/especificaciones si no existe
+
+6. **UNIDAD SAT (unidad_sat_sugerida)**:
+   - Clave SAT para facturación: XSA (Saco/Costal/Bulto), XBX (Caja), KGM (Kilogramo), XCU (Cubeta), H87 (Pieza), XPK (Paquete)
+   - Basarse en la unidad de venta del producto
 
 EJEMPLOS:
-- "Girasol Argentino Jumbo 22/64" → nombre: "Girasol Argentino", especificaciones: "Jumbo 22/64"
-- "Ciruela Pasa 50/60 Deshuesada" → nombre: "Ciruela Pasa", especificaciones: "50/60 Deshuesada"
-- "Azúcar Estándar" (con espec: "25") → nombre: "Azúcar Estándar", especificaciones: "25kg"
-- "Arandano Deshidratado Endulzado" → nombre: "Arándano", especificaciones: "Deshidratado Endulzado"
+
+| Input | Output |
+|-------|--------|
+| "Girasol Argentino Jumbo 22/64 25kg" | nombre: "Girasol Argentino", espec: "Jumbo 22/64", contenido: "25 kg", peso: 25 |
+| "Ciruela Pasa 50/60 Deshuesada" | nombre: "Ciruela Pasa", espec: "50/60 Deshuesada", contenido: null (usar peso), peso: existente |
+| "Azúcar Estándar" (espec: "25") | nombre: "Azúcar Estándar", espec: null, contenido: "25 kg", peso: 25 |
+| "Arándano Deshidratado Endulzado 5kg" | nombre: "Arándano", espec: "Deshidratado Endulzado", contenido: "5 kg", peso: 5 |
 
 Responde ÚNICAMENTE con un JSON válido (sin markdown, sin texto adicional):
 {
   "nombre_sugerido": "nombre limpio del producto base",
-  "especificaciones_sugerida": "calibre formato peso",
+  "especificaciones_sugerida": "calibre y formato (sin peso) o null",
   "marca_sugerida": "marca o null",
-  "cambios_detectados": true o false,
+  "contenido_empaque_sugerido": "peso/contenido formateado (ej: '25 kg') o null",
+  "peso_kg_sugerido": numero_decimal_o_null,
+  "unidad_sat_sugerida": "${unidadSATSugerida}",
+  "cambios_detectados": true_o_false,
   "explicacion": "breve explicación de los cambios realizados"
 }`;
 
@@ -62,7 +122,7 @@ Responde ÚNICAMENTE con un JSON válido (sin markdown, sin texto adicional):
         messages: [
           {
             role: "system",
-            content: "Eres un experto en catalogación de productos alimenticios. Tu tarea es normalizar nombres de productos separando correctamente nombre base, especificaciones y marca. Responde SOLO con JSON válido."
+            content: "Eres un experto en catalogación de productos alimenticios para facturación electrónica CFDI 4.0 en México. Tu tarea es normalizar nombres de productos separando correctamente nombre base, especificaciones (calibres/formatos), marca, contenido de empaque, peso y unidad SAT. Responde SOLO con JSON válido."
           },
           { role: "user", content: prompt }
         ],
@@ -124,6 +184,16 @@ Responde ÚNICAMENTE con un JSON válido (sin markdown, sin texto adicional):
     } catch (parseError) {
       console.error("Failed to parse AI content:", cleanedContent.substring(0, 200));
       throw new Error("Invalid JSON in AI content");
+    }
+
+    // Ensure unidad_sat is always present
+    if (!suggestion.unidad_sat_sugerida) {
+      suggestion.unidad_sat_sugerida = unidadSATSugerida;
+    }
+
+    // Format contenido_empaque if we have peso_kg but no contenido
+    if (!suggestion.contenido_empaque_sugerido && suggestion.peso_kg_sugerido) {
+      suggestion.contenido_empaque_sugerido = `${suggestion.peso_kg_sugerido} kg`;
     }
 
     return new Response(JSON.stringify(suggestion), {
