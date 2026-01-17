@@ -20,6 +20,41 @@ interface ClienteMoroso {
   excedeCredito: boolean;
 }
 
+interface FacturaVencida {
+  total: number;
+  fecha_vencimiento: string;
+  cliente_id: string;
+}
+
+interface ClienteData {
+  id: string;
+  nombre: string;
+  codigo: string;
+  telefono: string | null;
+  saldo_pendiente: number | null;
+  limite_credito: number | null;
+}
+
+// Helper function to avoid TypeScript deep instantiation error
+async function fetchFacturasVencidas(hoy: string): Promise<FacturaVencida[]> {
+  // @ts-expect-error - Supabase types cause deep instantiation with .lt().eq() chain
+  const { data } = await supabase
+    .from("facturas")
+    .select("total, fecha_vencimiento, cliente_id")
+    .lt("fecha_vencimiento", hoy)
+    .eq("status", "vigente");
+  return (data || []) as FacturaVencida[];
+}
+
+async function fetchClientesByIds(ids: string[]): Promise<ClienteData[]> {
+  if (ids.length === 0) return [];
+  const { data } = await supabase
+    .from("clientes")
+    .select("id, nombre, codigo, telefono, saldo_pendiente, limite_credito")
+    .in("id", ids);
+  return (data || []) as ClienteData[];
+}
+
 export const CobranzaCriticaPanel = () => {
   const navigate = useNavigate();
   const [clientes, setClientes] = useState<ClienteMoroso[]>([]);
@@ -32,18 +67,9 @@ export const CobranzaCriticaPanel = () => {
   const loadMorosos = async () => {
     try {
       const hoy = new Date().toISOString().split('T')[0];
-
-      // Obtener facturas vencidas
-      const { data: facturas, error: facturasError } = await supabase
-        .from("facturas")
-        .select("total, fecha_vencimiento, cliente_id")
-        .lt("fecha_vencimiento", hoy)
-        .eq("status", "vigente");
-
-      if (facturasError) throw facturasError;
-
-      // Obtener IDs únicos de clientes
-      const clienteIds = [...new Set(facturas?.map(f => f.cliente_id) || [])];
+      
+      const facturas = await fetchFacturasVencidas(hoy);
+      const clienteIds = [...new Set(facturas.map(f => f.cliente_id))];
       
       if (clienteIds.length === 0) {
         setClientes([]);
@@ -51,17 +77,11 @@ export const CobranzaCriticaPanel = () => {
         return;
       }
 
-      // Obtener datos de clientes
-      const { data: clientesData } = await supabase
-        .from("clientes")
-        .select("id, nombre, codigo, telefono, saldo_pendiente, limite_credito")
-        .in("id", clienteIds);
-
-      // Agrupar por cliente
+      const clientesData = await fetchClientesByIds(clienteIds);
       const clientesMap = new Map<string, ClienteMoroso>();
 
-      facturas?.forEach(f => {
-        const cliente = clientesData?.find(c => c.id === f.cliente_id);
+      facturas.forEach(f => {
+        const cliente = clientesData.find(c => c.id === f.cliente_id);
         if (!cliente) return;
 
         const diasVencido = Math.floor(
@@ -106,13 +126,18 @@ export const CobranzaCriticaPanel = () => {
     window.open(`https://wa.me/52${telefono.replace(/\D/g, '')}?text=${mensaje}`, '_blank');
   };
 
-  const getBadgeVariant = (dias: number) => dias > 30 ? "destructive" : dias > 15 ? "default" : "secondary";
+  const getBadgeVariant = (dias: number): "destructive" | "default" | "secondary" => 
+    dias > 30 ? "destructive" : dias > 15 ? "default" : "secondary";
 
   if (loading) {
     return (
       <Card>
         <CardHeader><Skeleton className="h-6 w-40" /></CardHeader>
-        <CardContent><div className="space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div></CardContent>
+        <CardContent>
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+          </div>
+        </CardContent>
       </Card>
     );
   }
@@ -142,25 +167,54 @@ export const CobranzaCriticaPanel = () => {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium truncate">{cliente.nombre}</span>
                         <span className="text-xs text-muted-foreground">{cliente.codigo}</span>
-                        {cliente.excedeCredito && <Badge variant="destructive" className="text-xs">Crédito excedido</Badge>}
+                        {cliente.excedeCredito && (
+                          <Badge variant="destructive" className="text-xs">Crédito excedido</Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 mt-1 text-sm">
-                        <span className="text-destructive font-semibold">Vencido: {formatCurrency(cliente.montoVencido)}</span>
-                        <Badge variant={getBadgeVariant(cliente.diasVencido)}>{cliente.diasVencido} días</Badge>
+                        <span className="text-destructive font-semibold">
+                          Vencido: {formatCurrency(cliente.montoVencido)}
+                        </span>
+                        <Badge variant={getBadgeVariant(cliente.diasVencido)}>
+                          {cliente.diasVencido} días
+                        </Badge>
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
                         Saldo total: {formatCurrency(cliente.saldoPendiente)}
-                        {cliente.limiteCredito && <span> • Límite: {formatCurrency(cliente.limiteCredito)}</span>}
+                        {cliente.limiteCredito && (
+                          <span> • Límite: {formatCurrency(cliente.limiteCredito)}</span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
                       {cliente.telefono && (
                         <>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(`tel:${cliente.telefono}`, '_blank')}><Phone className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={() => handleWhatsApp(cliente.telefono!, cliente.nombre)}><MessageCircle className="h-4 w-4" /></Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => window.open(`tel:${cliente.telefono}`, '_blank')}
+                          >
+                            <Phone className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-green-600"
+                            onClick={() => handleWhatsApp(cliente.telefono!, cliente.nombre)}
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </Button>
                         </>
                       )}
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/clientes?id=${cliente.id}`)}><ExternalLink className="h-4 w-4" /></Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => navigate(`/clientes?id=${cliente.id}`)}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 </div>
