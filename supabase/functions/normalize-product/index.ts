@@ -68,47 +68,49 @@ REGLAS ESTRICTAS:
    - Ejemplos incorrectos: "Ciruela Pasa 50/60", "Girasol 22/64 25kg"
 
 2. **ESPECIFICACIONES (especificaciones_sugerida)**: 
-   - Calibre si existe: 50/60, 22/64, H1, 4/0, Jumbo, Extra Grande
-   - Formato/Presentación: Deshuesada, Con Hueso, Pelada, Sin Sal
-   - NO incluir peso aquí (va en contenido_empaque)
-   - Si solo hay peso en especificaciones actuales, dejar vacío
+   - ⚠️ NUNCA incluir peso aquí (kg, g, ml, lt) - eso va en contenido_empaque
+   - SOLO usar para: Calibre (50/60, 22/64), Tipo (Deshuesada, Pelada), Variedad (Jumbo, Extra)
+   - Si el campo actual solo tiene peso como "25kg" o "10 kg" → dejar NULL
+   - Si tiene "Original 20kg" → extraer solo "Original"
+   - Ejemplos CORRECTOS: "50/60 Deshuesada", "Jumbo 22/64", "Original", null
+   - Ejemplos INCORRECTOS: "25kg", "25 kg", "Original 20kg"
 
 3. **MARCA (marca_sugerida)**: 
    - Fabricante/proveedor (déjala como está si ya existe y es correcta)
 
 4. **CONTENIDO DE EMPAQUE (contenido_empaque_sugerido)**:
-   - Formato legible del peso/contenido por unidad de venta
-   - Ejemplos: "25 kg", "10 kg", "24×800 g", "12×500 ml"
-   - Calcular del peso_kg si está disponible
+   - TODO el peso va aquí, formateado legiblemente
+   - Formato: número + espacio + unidad (ej: "25 kg", "10 kg", "500 g")
+   - Para múltiples: "24×800 g", "12×500 ml"
+   - OBLIGATORIO si hay peso en cualquier campo
 
 5. **PESO EN KG (peso_kg_sugerido)**:
-   - Número decimal del peso en kilogramos
-   - Usar el peso_kg existente si ya es correcto
-   - Extraer del nombre/especificaciones si no existe
+   - Número decimal del peso total en kilogramos
+   - Extraer de donde esté (nombre, especificaciones, peso_kg)
 
 6. **UNIDAD SAT (unidad_sat_sugerida)**:
-   - Clave SAT para facturación: XSA (Saco/Costal/Bulto), XBX (Caja), KGM (Kilogramo), XCU (Cubeta), H87 (Pieza), XPK (Paquete)
-   - Basarse en la unidad de venta del producto
+   - Clave SAT: XSA (Saco/Bulto), XBX (Caja), KGM (Kilogramo), XCU (Cubeta), H87 (Pieza)
 
-EJEMPLOS:
+EJEMPLOS DE SEPARACIÓN:
 
-| Input | Output |
-|-------|--------|
-| "Girasol Argentino Jumbo 22/64 25kg" | nombre: "Girasol Argentino", espec: "Jumbo 22/64", contenido: "25 kg", peso: 25 |
-| "Ciruela Pasa 50/60 Deshuesada" | nombre: "Ciruela Pasa", espec: "50/60 Deshuesada", contenido: null (usar peso), peso: existente |
-| "Azúcar Estándar" (espec: "25") | nombre: "Azúcar Estándar", espec: null, contenido: "25 kg", peso: 25 |
-| "Arándano Deshidratado Endulzado 5kg" | nombre: "Arándano", espec: "Deshidratado Endulzado", contenido: "5 kg", peso: 5 |
+| Entrada | especificaciones_sugerida | contenido_empaque_sugerido |
+|---------|---------------------------|----------------------------|
+| espec: "25kg" | null | "25 kg" |
+| espec: "Original 20kg" | "Original" | "20 kg" |
+| espec: "50/60" | "50/60" | (usar peso_kg) |
+| espec: "Deshuesada" | "Deshuesada" | (usar peso_kg) |
+| nombre: "Azúcar 25kg" | null | "25 kg" |
 
-Responde ÚNICAMENTE con un JSON válido (sin markdown, sin texto adicional):
+Responde ÚNICAMENTE con JSON válido (sin markdown):
 {
-  "nombre_sugerido": "nombre limpio del producto base",
-  "especificaciones_sugerida": "calibre y formato (sin peso) o null",
+  "nombre_sugerido": "producto base sin peso ni calibre",
+  "especificaciones_sugerida": "SOLO calibre/tipo/variedad, SIN PESO, o null",
   "marca_sugerida": "marca o null",
-  "contenido_empaque_sugerido": "peso/contenido formateado (ej: '25 kg') o null",
+  "contenido_empaque_sugerido": "peso formateado (OBLIGATORIO si hay peso)",
   "peso_kg_sugerido": numero_decimal_o_null,
   "unidad_sat_sugerida": "${unidadSATSugerida}",
   "cambios_detectados": true_o_false,
-  "explicacion": "breve explicación de los cambios realizados"
+  "explicacion": "breve explicación"
 }`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
