@@ -105,6 +105,10 @@ interface ProductoCarga {
     id: string;
     codigo: string;
     nombre: string;
+    marca: string | null;
+    especificaciones: string | null;
+    contenido_empaque: string | null;
+    peso_kg: number | null;
     unidad: string;
   };
   lotes_disponibles: LoteDisponible[];
@@ -294,6 +298,10 @@ export const RutaCargaSheet = ({
                 id,
                 codigo,
                 nombre,
+                marca,
+                especificaciones,
+                contenido_empaque,
+                peso_kg,
                 unidad
               )
             `)
@@ -337,6 +345,10 @@ export const RutaCargaSheet = ({
               id: "",
               codigo: "N/A",
               nombre: "Producto no encontrado",
+              marca: null,
+              especificaciones: null,
+              contenido_empaque: null,
+              peso_kg: null,
               unidad: "unidad",
             },
             lotes_disponibles: lotesConBodega,

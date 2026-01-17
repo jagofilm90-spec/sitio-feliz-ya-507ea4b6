@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { esProductoBolsas5kg, redondearABolsasCompletas, calcularNumeroBolsas, KG_POR_BOLSA, ordenarProductosAzucarPrimero } from "@/lib/calculos";
 import { Loader2 } from "lucide-react";
+import { getDisplayName } from "@/lib/productUtils";
 
 interface PedidoDetalleDialogProps {
   pedidoId: string | null;
@@ -53,6 +54,7 @@ interface PedidoDetalle {
       nombre: string;
       marca: string | null;
       especificaciones: string | null;
+      contenido_empaque: string | null;
       unidad: string;
       precio_por_kilo: boolean;
       peso_kg: number | null;
@@ -126,6 +128,7 @@ export default function PedidoDetalleDialog({
               nombre,
               marca,
               especificaciones,
+              contenido_empaque,
               unidad,
               precio_por_kilo,
               peso_kg
@@ -261,9 +264,7 @@ export default function PedidoDetalleDialog({
                       <TableRow key={detalle.id}>
                         <TableCell className="font-mono text-sm">{producto.codigo}</TableCell>
                         <TableCell>
-                          {producto.nombre}
-                          {producto.especificaciones && <span className="text-muted-foreground ml-1">{producto.especificaciones}</span>}
-                          {producto.marca && <span className="text-muted-foreground ml-1">({producto.marca})</span>}
+                          {getDisplayName(producto)}
                         </TableCell>
                         <TableCell className="text-right">
                           {/* Si tiene peso_kg, la cantidad son unidades comerciales */}
