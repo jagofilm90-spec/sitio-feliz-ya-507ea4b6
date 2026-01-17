@@ -67,12 +67,12 @@ export const KPICards = () => {
           .select("id, saldo_pendiente, limite_credito")
           .gt("saldo_pendiente", 0),
         
-        // Facturas vencidas
-        supabase
+        // Facturas vencidas - using explicit type cast to avoid deep instantiation error
+        (supabase
           .from("facturas")
           .select("total, fecha_vencimiento, cliente_id")
           .lt("fecha_vencimiento", hoy)
-          .eq("status", "vigente"),
+          .eq("status", "vigente")) as unknown as Promise<{ data: { total: number | null; fecha_vencimiento: string | null; cliente_id: string | null }[] | null }>,
         
         // Stock bajo
         supabase

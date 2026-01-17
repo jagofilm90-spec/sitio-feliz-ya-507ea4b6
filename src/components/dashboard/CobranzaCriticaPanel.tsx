@@ -37,13 +37,13 @@ interface ClienteData {
 
 // Helper function to avoid TypeScript deep instantiation error
 async function fetchFacturasVencidas(hoy: string): Promise<FacturaVencida[]> {
-  // @ts-expect-error - Supabase types cause deep instantiation with .lt().eq() chain
-  const { data } = await supabase
+  // Use any to break the type chain
+  const result = await (supabase as any)
     .from("facturas")
     .select("total, fecha_vencimiento, cliente_id")
     .lt("fecha_vencimiento", hoy)
     .eq("status", "vigente");
-  return (data || []) as FacturaVencida[];
+  return (result.data || []) as FacturaVencida[];
 }
 
 async function fetchClientesByIds(ids: string[]): Promise<ClienteData[]> {
