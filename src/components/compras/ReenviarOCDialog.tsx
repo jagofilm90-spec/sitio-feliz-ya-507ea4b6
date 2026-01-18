@@ -12,7 +12,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Mail, Building2, AlertCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, Mail, Building2, AlertCircle, UserPlus } from "lucide-react";
 import { registrarCorreoEnviado } from "./HistorialCorreosOC";
 import logoAlmasa from "@/assets/logo-almasa.png";
 
@@ -43,6 +45,10 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [enviando, setEnviando] = useState(false);
+  const [correoAdicional, setCorreoAdicional] = useState("");
+  const [mostrarGuardarContacto, setMostrarGuardarContacto] = useState(false);
+  const [guardandoContacto, setGuardandoContacto] = useState(false);
+  const [correoParaGuardar, setCorreoParaGuardar] = useState("");
 
   // Fetch contact that receives orders for this supplier
   const { data: contactoOrden, isLoading: loadingContacto } = useQuery({
@@ -310,11 +316,28 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
     `;
   };
 
+  // Validate email format
+  const isValidEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
   const handleReenviar = async () => {
-    if (!emailDestinatario) {
+    const destinatarioPrincipal = emailDestinatario;
+    const destinatarioAdicional = correoAdicional.trim();
+
+    if (!destinatarioPrincipal && !destinatarioAdicional) {
       toast({
         title: "Sin correo",
-        description: "Este proveedor no tiene correo configurado para recibir órdenes",
+        description: "Debe haber al menos un correo para enviar la orden",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (destinatarioAdicional && !isValidEmail(destinatarioAdicional)) {
+      toast({
+        title: "Correo inválido",
+        description: "El correo adicional no tiene un formato válido",
         variant: "destructive",
       });
       return;
@@ -422,12 +445,17 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
         }
       ];
 
+      // Determine recipients - if we have both, send to both (CC the additional)
+      const toRecipient = destinatarioPrincipal || destinatarioAdicional;
+      const ccRecipient = destinatarioPrincipal && destinatarioAdicional ? destinatarioAdicional : undefined;
+
       // Send email
       const { data, error } = await supabase.functions.invoke('gmail-api', {
         body: {
           action: 'send',
           email: 'compras@almasa.com.mx',
-          to: emailDestinatario,
+          to: toRecipient,
+          cc: ccRecipient,
           subject: `[REENVÍO] Orden de Compra ${orden.folio} - Abarrotes La Manita`,
           body: htmlBody,
           attachments: attachments,
@@ -435,12 +463,13 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
       });
 
       const asunto = `[REENVÍO] Orden de Compra ${orden.folio} - Abarrotes La Manita`;
+      const destinatariosTexto = ccRecipient ? `${toRecipient}, ${ccRecipient}` : toRecipient;
       
       if (error) {
         await registrarCorreoEnviado({
           tipo: "reenvio_oc",
           referencia_id: orden.id,
-          destinatario: emailDestinatario,
+          destinatario: destinatariosTexto,
           asunto: asunto,
           gmail_message_id: null,
           error: error.message || "Error desconocido",
@@ -452,7 +481,7 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
       await registrarCorreoEnviado({
         tipo: "reenvio_oc",
         referencia_id: orden.id,
-        destinatario: emailDestinatario,
+        destinatario: destinatariosTexto,
         asunto: asunto,
         gmail_message_id: data?.messageId || null,
         contenido_preview: `Orden de compra reenviada a ${nombreProveedor}. Total: $${orden.total?.toLocaleString('es-MX')}`,
@@ -464,10 +493,17 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
 
       toast({
         title: "OC reenviada",
-        description: `La orden se reenvió exitosamente a ${emailDestinatario}`,
+        description: `La orden se reenvió exitosamente a ${destinatariosTexto}`,
       });
       
-      onOpenChange(false);
+      // If there was an additional email, ask if they want to save it
+      if (destinatarioAdicional) {
+        setCorreoParaGuardar(destinatarioAdicional);
+        setMostrarGuardarContacto(true);
+      } else {
+        setCorreoAdicional("");
+        onOpenChange(false);
+      }
     } catch (error: any) {
       console.error('Error resending OC:', error);
       toast({
@@ -480,73 +516,179 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
     }
   };
 
+  const handleGuardarContacto = async () => {
+    if (!orden?.proveedor_id || !correoParaGuardar) return;
+    
+    setGuardandoContacto(true);
+    try {
+      const { error } = await supabase.from("proveedor_contactos").insert({
+        proveedor_id: orden.proveedor_id,
+        nombre: "Contacto adicional",
+        telefono: "",
+        email: correoParaGuardar,
+        recibe_ordenes: true,
+        activo: true,
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Contacto guardado",
+        description: `El correo ${correoParaGuardar} fue agregado a los contactos del proveedor`,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["proveedor-contactos"] });
+      queryClient.invalidateQueries({ queryKey: ["proveedor-contacto-ordenes", orden.proveedor_id] });
+    } catch (error: any) {
+      console.error("Error saving contact:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo guardar el contacto",
+        variant: "destructive",
+      });
+    } finally {
+      setGuardandoContacto(false);
+      setMostrarGuardarContacto(false);
+      setCorreoAdicional("");
+      setCorreoParaGuardar("");
+      onOpenChange(false);
+    }
+  };
+
+  const handleCerrarSinGuardar = () => {
+    setMostrarGuardarContacto(false);
+    setCorreoAdicional("");
+    setCorreoParaGuardar("");
+    onOpenChange(false);
+  };
+
   if (!orden) return null;
 
+  const puedeEnviar = emailDestinatario || (correoAdicional.trim() && isValidEmail(correoAdicional.trim()));
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5 text-primary" />
-            Reenviar Orden de Compra
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            ¿Desea reenviar la OC <strong>{orden.folio}</strong> al destinatario?
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+    <>
+      <AlertDialog open={open} onOpenChange={onOpenChange}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Reenviar Orden de Compra
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Desea reenviar la OC <strong>{orden.folio}</strong> al destinatario?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
 
-        <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">
-              <strong>Proveedor:</strong> {nombreProveedor}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">
-              <strong>Correo:</strong>{" "}
-              {loadingContacto ? (
-                <span className="text-muted-foreground">Cargando...</span>
-              ) : emailDestinatario ? (
-                emailDestinatario
-              ) : (
-                <span className="text-destructive flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  Sin correo configurado
-                </span>
-              )}
-            </span>
-          </div>
-          {contactoOrden?.nombre && (
-            <div className="text-xs text-muted-foreground ml-6">
-              Contacto: {contactoOrden.nombre}
+          <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">
+                <strong>Proveedor:</strong> {nombreProveedor}
+              </span>
             </div>
-          )}
-        </div>
-
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={enviando}>Cancelar</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={(e) => {
-              e.preventDefault();
-              handleReenviar();
-            }}
-            disabled={enviando || !emailDestinatario}
-            className="bg-primary hover:bg-primary/90"
-          >
-            {enviando ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Enviando...
-              </>
-            ) : (
-              "Confirmar Reenvío"
+            <div className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">
+                <strong>Correo:</strong>{" "}
+                {loadingContacto ? (
+                  <span className="text-muted-foreground">Cargando...</span>
+                ) : emailDestinatario ? (
+                  emailDestinatario
+                ) : (
+                  <span className="text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Sin correo configurado
+                  </span>
+                )}
+              </span>
+            </div>
+            {contactoOrden?.nombre && (
+              <div className="text-xs text-muted-foreground ml-6">
+                Contacto: {contactoOrden.nombre}
+              </div>
             )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="correo-adicional" className="text-sm font-medium">
+              Agregar otro correo (opcional)
+            </Label>
+            <Input
+              id="correo-adicional"
+              type="email"
+              placeholder="otro@proveedor.com"
+              value={correoAdicional}
+              onChange={(e) => setCorreoAdicional(e.target.value)}
+              disabled={enviando}
+            />
+            <p className="text-xs text-muted-foreground">
+              Este correo también recibirá la OC
+            </p>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={enviando}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleReenviar();
+              }}
+              disabled={enviando || !puedeEnviar}
+              className="bg-primary hover:bg-primary/90"
+            >
+              {enviando ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                "Confirmar Reenvío"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog to save additional contact */}
+      <AlertDialog open={mostrarGuardarContacto} onOpenChange={setMostrarGuardarContacto}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-primary" />
+              ¿Guardar contacto?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Desea guardar el correo <strong>{correoParaGuardar}</strong> en los 
+              contactos de <strong>{nombreProveedor}</strong> para futuros envíos?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCerrarSinGuardar} disabled={guardandoContacto}>
+              No, solo esta vez
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleGuardarContacto();
+              }}
+              disabled={guardandoContacto}
+              className="bg-primary hover:bg-primary/90"
+            >
+              {guardandoContacto ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                "Sí, guardar"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
