@@ -2,6 +2,7 @@ import { jsPDF } from "jspdf";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { ordenarProductosAzucarPrimero } from "@/lib/calculos";
+import { COMPANY_DATA } from "@/constants/companyData";
 
 interface ProductoCotizacion {
   codigo: string;
@@ -165,13 +166,15 @@ export const generarCotizacionPDF = async (datos: DatosCotizacion): Promise<stri
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(...grayText);
-  doc.text("Calle: MELCHOR OCAMPO No.Ext: 59", margin, y);
+  doc.text(`Calle: ${COMPANY_DATA.direccion.calle} No.Ext: ${COMPANY_DATA.direccion.numeroExterior}`, margin, y);
   y += 4;
-  doc.text("Colonia: MAGDALENA MIXIUHCA", margin, y);
+  doc.text(`Colonia: ${COMPANY_DATA.direccion.colonia}`, margin, y);
   y += 4;
-  doc.text("Municipio: VENUSTIANO CARRANZA C.P.: 15850", margin, y);
+  doc.text(`Municipio: ${COMPANY_DATA.direccion.municipio} C.P.: ${COMPANY_DATA.direccion.codigoPostal}`, margin, y);
   y += 4;
-  doc.text("Tel: (55) 56-00-77-81 / (55) 56-94-97-92", margin, y);
+  doc.text(`RFC: ${COMPANY_DATA.rfc}`, margin, y);
+  y += 4;
+  doc.text(`Tel: ${COMPANY_DATA.telefonosAlternos}`, margin, y);
 
   // RIGHT: Vigencia (at same starting Y as Dirección Fiscal)
   const rightX = margin + colWidth + 10;
@@ -435,13 +438,13 @@ export const generarCotizacionPDF = async (datos: DatosCotizacion): Promise<stri
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.setTextColor(...darkText);
-  doc.text("ABARROTES LA MANITA S.A. DE C.V.", pageWidth / 2, y, { align: "center" });
+  doc.text(COMPANY_DATA.razonSocialLarga, pageWidth / 2, y, { align: "center" });
 
   y += 5;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(...grayText);
-  doc.text("Email: 1904@almasa.com.mx | Tel: (55) 56-00-77-81", pageWidth / 2, y, { align: "center" });
+  doc.text(`Email: ${COMPANY_DATA.emails.ventas} | Tel: ${COMPANY_DATA.telefonos.alterno1}`, pageWidth / 2, y, { align: "center" });
 
   y += 5;
   doc.setFont("helvetica", "italic");

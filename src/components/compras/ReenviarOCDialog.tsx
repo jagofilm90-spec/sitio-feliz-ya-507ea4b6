@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { COMPANY_DATA } from "@/constants/companyData";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -246,11 +247,11 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
         <div class="header">
           <div class="company-info">
             ${logoBase64 ? `<img src="${logoBase64}" alt="Almasa" style="max-width: 180px; margin-bottom: 10px;">` : '<div class="company-logo">ALMASA</div>'}
-            <div class="company-subtitle">Abarrotes La Manita SA de CV</div>
+            <div class="company-subtitle">${COMPANY_DATA.razonSocial}</div>
             <div class="company-details">
-              <strong>RFC:</strong> ALM050901PB9<br>
-              <strong>Dirección:</strong> Poniente 128 # 633, Col. Nueva Vallejo, CP 07750<br>
-              <strong>Tel:</strong> 55 5552-0168 | <strong>Email:</strong> compras@almasa.com.mx
+              <strong>RFC:</strong> ${COMPANY_DATA.rfc}<br>
+              <strong>Dirección:</strong> ${COMPANY_DATA.direccionCompleta}<br>
+              <strong>Tel:</strong> ${COMPANY_DATA.telefonosFormateados} | <strong>Email:</strong> ${COMPANY_DATA.emails.compras}
             </div>
           </div>
           <div class="order-box">
@@ -309,7 +310,7 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
 
         <div class="footer">
           <p>Documento generado el ${new Date().toLocaleString('es-MX')}</p>
-          <p><strong>Abarrotes la Manita SA de CV</strong> | compras@almasa.com.mx | Tel: 55 5552-0168</p>
+          <p><strong>${COMPANY_DATA.razonSocial}</strong> | ${COMPANY_DATA.emails.compras} | Tel: ${COMPANY_DATA.telefonos.principal}</p>
         </div>
       </body>
       </html>

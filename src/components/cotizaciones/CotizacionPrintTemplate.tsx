@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { COMPANY_DATA } from "@/constants/companyData";
 
 interface ProductoCotizacion {
   codigo: string;
@@ -82,10 +83,11 @@ export const CotizacionPrintTemplate = ({ datos }: CotizacionPrintTemplateProps)
       <div className="grid grid-cols-2 gap-6 mb-4 text-xs">
         <div>
           <p className="font-semibold">Dirección Fiscal:</p>
-          <p>Calle: MELCHOR OCAMPO No.Ext: 59</p>
-          <p>Colonia: MAGDALENA MIXIUHCA</p>
-          <p>Municipio: VENUSTIANO CARRANZA C.P.:15850</p>
-          <p className="mt-1">Tel: (55) 56-00-77-81 / (55) 56-94-97-92</p>
+          <p>Calle: {COMPANY_DATA.direccion.calle} No.Ext: {COMPANY_DATA.direccion.numeroExterior}</p>
+          <p>Colonia: {COMPANY_DATA.direccion.colonia}</p>
+          <p>Municipio: {COMPANY_DATA.direccion.municipio} C.P.: {COMPANY_DATA.direccion.codigoPostal}</p>
+          <p>RFC: {COMPANY_DATA.rfc}</p>
+          <p className="mt-1">Tel: {COMPANY_DATA.telefonosAlternos}</p>
         </div>
         <div>
           <p className="font-semibold text-primary">Vigencia de la cotización:</p>
@@ -262,8 +264,8 @@ export const CotizacionPrintTemplate = ({ datos }: CotizacionPrintTemplateProps)
 
       {/* Footer */}
       <div className="text-center text-xs text-gray-600 border-t pt-3">
-        <p className="font-bold">ABARROTES LA MANITA S.A. DE C.V.</p>
-        <p>Email: 1904@almasa.com.mx | Tel: (55) 56-00-77-81</p>
+        <p className="font-bold">{COMPANY_DATA.razonSocialLarga}</p>
+        <p>Email: {COMPANY_DATA.emails.ventas} | Tel: {COMPANY_DATA.telefonos.alterno1}</p>
         <p className="mt-1 italic">Gracias por su preferencia</p>
       </div>
     </div>

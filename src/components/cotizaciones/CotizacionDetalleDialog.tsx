@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { COMPANY_DATA } from "@/constants/companyData";
 import {
   Dialog,
   DialogContent,
@@ -807,12 +808,11 @@ const CotizacionDetalleDialog = ({
             <div class="company-info">
               ${logoBase64 ? `<img src="${logoBase64}" alt="ALMASA" style="height: 70px; margin-bottom: 10px;">` : ''}
               <div class="company-details">
-                <strong>Abarrotes la Manita SA de CV</strong><br>
-                RFC: AMA 700701GI8<br>
-                Melchor Ocampo #59, Magdalena Mixiuhca<br>
-                Venustiano Carranza, 15850, CDMX<br>
-                Tel: 55 5552-0168 / 55 5552-7887<br>
-                compras@almasa.com.mx
+                <strong>${COMPANY_DATA.razonSocial}</strong><br>
+                RFC: ${COMPANY_DATA.rfc}<br>
+                ${COMPANY_DATA.direccionCorta}<br>
+                Tel: ${COMPANY_DATA.telefonosFormateados}<br>
+                ${COMPANY_DATA.emails.compras}
               </div>
             </div>
             <div class="order-box">
@@ -899,7 +899,7 @@ const CotizacionDetalleDialog = ({
 
           <div class="footer">
             <p>Documento generado el ${new Date().toLocaleString('es-MX')}</p>
-            <p><strong>Abarrotes la Manita SA de CV</strong> | compras@almasa.com.mx | Tel: 55 5552-0168</p>
+            <p><strong>${COMPANY_DATA.razonSocial}</strong> | ${COMPANY_DATA.emails.compras} | Tel: ${COMPANY_DATA.telefonos.principal}</p>
           </div>
         </body>
         </html>

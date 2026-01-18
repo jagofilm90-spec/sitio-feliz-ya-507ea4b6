@@ -4,6 +4,7 @@ import { es } from "date-fns/locale";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { COMPANY_DATA } from "@/constants/companyData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -840,11 +841,10 @@ const CrearOrdenCompraWizard = ({
                   ${logoBase64 ? `<img src="${logoBase64}" alt="Almasa">` : '<strong>ALMASA</strong>'}
                 </div>
                 <div class="company-info">
-                  <strong>COMERCIALIZADORA LA MANITA S DE RL DE CV</strong><br>
-                  RFC: CMA160209TNA<br>
-                  Blvd. Durango 1500, Col. Ciénega<br>
-                  Durango, Dgo. CP 34090<br>
-                  Tel: (618) 123-4567
+                  <strong>${COMPANY_DATA.razonSocial}</strong><br>
+                  RFC: ${COMPANY_DATA.rfc}<br>
+                  ${COMPANY_DATA.direccionCompleta}<br>
+                  Tel: ${COMPANY_DATA.telefonosFormateados}
                 </div>
               </div>
 

@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import { format, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { getDisplayName } from "@/lib/productUtils";
+import { COMPANY_DATA } from "@/constants/companyData";
 
 interface EvidenciaConTipo {
   url: string;
@@ -142,7 +143,9 @@ export const generarRecepcionPDF = async (data: RecepcionData) => {
   
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text("ABARROTES LA MANITA SA DE CV", 105, 28, { align: "center" });
+  doc.text(COMPANY_DATA.razonSocial, 105, 28, { align: "center" });
+  doc.setFontSize(8);
+  doc.text(`RFC: ${COMPANY_DATA.rfc} | ${COMPANY_DATA.direccionCompleta}`, 105, 33, { align: "center" });
   
   // Date and document info
   doc.setFontSize(9);
