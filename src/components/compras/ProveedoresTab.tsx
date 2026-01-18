@@ -70,6 +70,181 @@ interface Proveedor {
   created_at: string;
 }
 
+// =====================================================================
+// COMPONENTES AUXILIARES (fuera del componente principal para evitar re-mount)
+// =====================================================================
+
+// Render de badges de responsabilidades
+const renderResponsabilidades = (contacto: ContactoProveedor) => {
+  const badges = [];
+  if (contacto.recibe_ordenes) badges.push(<Badge key="ord" variant="default" className="text-xs">Órdenes</Badge>);
+  if (contacto.recibe_pagos) badges.push(<Badge key="pag" variant="secondary" className="text-xs">Pagos</Badge>);
+  if (contacto.recibe_devoluciones) badges.push(<Badge key="dev" variant="destructive" className="text-xs">Devoluciones</Badge>);
+  if (contacto.recibe_logistica) badges.push(<Badge key="log" variant="outline" className="text-xs">Logística</Badge>);
+  return badges.length > 0 ? badges : <span className="text-xs text-muted-foreground">Sin asignar</span>;
+};
+
+// Form de agregar contacto reutilizable - DEBE estar fuera para no perder foco
+const ContactoForm = ({ 
+  contacto, 
+  setContacto, 
+  onAdd, 
+  disabled,
+  prefix = "contacto"
+}: { 
+  contacto: ContactoProveedor; 
+  setContacto: (c: ContactoProveedor) => void; 
+  onAdd: () => void; 
+  disabled: boolean;
+  prefix?: string;
+}) => (
+  <div className="space-y-3 border rounded-lg p-4 bg-muted/20">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="space-y-1">
+        <Label className="text-xs">Nombre *</Label>
+        <Input
+          placeholder="Nombre del contacto"
+          value={contacto.nombre}
+          onChange={(e) => setContacto({ ...contacto, nombre: e.target.value })}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Teléfono</Label>
+        <Input
+          placeholder="55 1234 5678"
+          value={contacto.telefono}
+          onChange={(e) => setContacto({ ...contacto, telefono: e.target.value })}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Correo</Label>
+        <Input
+          type="email"
+          placeholder="correo@ejemplo.com"
+          value={contacto.email}
+          onChange={(e) => setContacto({ ...contacto, email: e.target.value })}
+        />
+      </div>
+    </div>
+    <div className="flex flex-wrap items-center gap-4">
+      <Label className="text-xs text-muted-foreground">Recibe comunicaciones de:</Label>
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id={`${prefix}-recibe_ordenes`}
+          checked={contacto.recibe_ordenes}
+          onCheckedChange={(c) => setContacto({ ...contacto, recibe_ordenes: c === true })}
+        />
+        <Label htmlFor={`${prefix}-recibe_ordenes`} className="text-sm font-normal cursor-pointer">Órdenes</Label>
+      </div>
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id={`${prefix}-recibe_pagos`}
+          checked={contacto.recibe_pagos}
+          onCheckedChange={(c) => setContacto({ ...contacto, recibe_pagos: c === true })}
+        />
+        <Label htmlFor={`${prefix}-recibe_pagos`} className="text-sm font-normal cursor-pointer">Pagos</Label>
+      </div>
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id={`${prefix}-recibe_devoluciones`}
+          checked={contacto.recibe_devoluciones}
+          onCheckedChange={(c) => setContacto({ ...contacto, recibe_devoluciones: c === true })}
+        />
+        <Label htmlFor={`${prefix}-recibe_devoluciones`} className="text-sm font-normal cursor-pointer">Devoluciones</Label>
+      </div>
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id={`${prefix}-recibe_logistica`}
+          checked={contacto.recibe_logistica}
+          onCheckedChange={(c) => setContacto({ ...contacto, recibe_logistica: c === true })}
+        />
+        <Label htmlFor={`${prefix}-recibe_logistica`} className="text-sm font-normal cursor-pointer">Logística</Label>
+      </div>
+      <Button type="button" variant="outline" size="sm" onClick={onAdd} disabled={disabled} className="ml-auto">
+        <Plus className="h-4 w-4 mr-1" />
+        Agregar
+      </Button>
+    </div>
+  </div>
+);
+
+// Lista de contactos reutilizable - DEBE estar fuera para no perder foco
+const ContactosList = ({ 
+  contactos, 
+  onRemove, 
+  onSetPrincipal 
+}: { 
+  contactos: ContactoProveedor[]; 
+  onRemove: (index: number) => void; 
+  onSetPrincipal: (index: number) => void;
+}) => (
+  <div className="space-y-2">
+    {contactos.map((contacto, index) => (
+      <div key={contacto.id || index} className="flex items-start justify-between gap-2 p-3 border rounded-lg bg-background">
+        <div className="flex-1 min-w-0 space-y-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="font-medium">{contacto.nombre}</span>
+            {contacto.es_principal && (
+              <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 shrink-0" />
+            )}
+          </div>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+            {contacto.telefono && (
+              <span className="flex items-center gap-1">
+                <Phone className="h-3 w-3" />
+                {contacto.telefono}
+              </span>
+            )}
+            {contacto.email && (
+              <span className="flex items-center gap-1">
+                <Mail className="h-3 w-3" />
+                {contacto.email}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1 flex-wrap">
+            {renderResponsabilidades(contacto)}
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {!contacto.es_principal && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => onSetPrincipal(index)}
+                  >
+                    <Star className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Marcar como principal</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+            onClick={() => onRemove(index)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+// =====================================================================
+// FIN COMPONENTES AUXILIARES
+// =====================================================================
+
 const ProveedoresTab = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -554,172 +729,8 @@ const ProveedoresTab = () => {
       (p.rfc && p.rfc.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Render de badges de responsabilidades
-  const renderResponsabilidades = (contacto: ContactoProveedor) => {
-    const badges = [];
-    if (contacto.recibe_ordenes) badges.push(<Badge key="ord" variant="default" className="text-xs">Órdenes</Badge>);
-    if (contacto.recibe_pagos) badges.push(<Badge key="pag" variant="secondary" className="text-xs">Pagos</Badge>);
-    if (contacto.recibe_devoluciones) badges.push(<Badge key="dev" variant="destructive" className="text-xs">Devoluciones</Badge>);
-    if (contacto.recibe_logistica) badges.push(<Badge key="log" variant="outline" className="text-xs">Logística</Badge>);
-    return badges.length > 0 ? badges : <span className="text-xs text-muted-foreground">Sin asignar</span>;
-  };
-
-  // Form de agregar contacto reutilizable
-  const ContactoForm = ({ 
-    contacto, 
-    setContacto, 
-    onAdd, 
-    disabled,
-    prefix = "contacto"
-  }: { 
-    contacto: ContactoProveedor; 
-    setContacto: (c: ContactoProveedor) => void; 
-    onAdd: () => void; 
-    disabled: boolean;
-    prefix?: string;
-  }) => (
-    <div className="space-y-3 border rounded-lg p-4 bg-muted/20">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="space-y-1">
-          <Label className="text-xs">Nombre *</Label>
-          <Input
-            placeholder="Nombre del contacto"
-            value={contacto.nombre}
-            onChange={(e) => setContacto({ ...contacto, nombre: e.target.value })}
-          />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Teléfono</Label>
-          <Input
-            placeholder="55 1234 5678"
-            value={contacto.telefono}
-            onChange={(e) => setContacto({ ...contacto, telefono: e.target.value })}
-          />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Correo</Label>
-          <Input
-            type="email"
-            placeholder="correo@ejemplo.com"
-            value={contacto.email}
-            onChange={(e) => setContacto({ ...contacto, email: e.target.value })}
-          />
-        </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-4">
-        <Label className="text-xs text-muted-foreground">Recibe comunicaciones de:</Label>
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id={`${prefix}-recibe_ordenes`}
-            checked={contacto.recibe_ordenes}
-            onCheckedChange={(c) => setContacto({ ...contacto, recibe_ordenes: c === true })}
-          />
-          <Label htmlFor={`${prefix}-recibe_ordenes`} className="text-sm font-normal cursor-pointer">Órdenes</Label>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id={`${prefix}-recibe_pagos`}
-            checked={contacto.recibe_pagos}
-            onCheckedChange={(c) => setContacto({ ...contacto, recibe_pagos: c === true })}
-          />
-          <Label htmlFor={`${prefix}-recibe_pagos`} className="text-sm font-normal cursor-pointer">Pagos</Label>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id={`${prefix}-recibe_devoluciones`}
-            checked={contacto.recibe_devoluciones}
-            onCheckedChange={(c) => setContacto({ ...contacto, recibe_devoluciones: c === true })}
-          />
-          <Label htmlFor={`${prefix}-recibe_devoluciones`} className="text-sm font-normal cursor-pointer">Devoluciones</Label>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id={`${prefix}-recibe_logistica`}
-            checked={contacto.recibe_logistica}
-            onCheckedChange={(c) => setContacto({ ...contacto, recibe_logistica: c === true })}
-          />
-          <Label htmlFor={`${prefix}-recibe_logistica`} className="text-sm font-normal cursor-pointer">Logística</Label>
-        </div>
-        <Button type="button" variant="outline" size="sm" onClick={onAdd} disabled={disabled} className="ml-auto">
-          <Plus className="h-4 w-4 mr-1" />
-          Agregar
-        </Button>
-      </div>
-    </div>
-  );
-
-  // Lista de contactos reutilizable
-  const ContactosList = ({ 
-    contactos, 
-    onRemove, 
-    onSetPrincipal 
-  }: { 
-    contactos: ContactoProveedor[]; 
-    onRemove: (index: number) => void; 
-    onSetPrincipal: (index: number) => void;
-  }) => (
-    <div className="space-y-2">
-      {contactos.map((contacto, index) => (
-        <div key={contacto.id || index} className="flex items-start justify-between gap-2 p-3 border rounded-lg bg-background">
-          <div className="flex-1 min-w-0 space-y-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <User className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="font-medium">{contacto.nombre}</span>
-              {contacto.es_principal && (
-                <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 shrink-0" />
-              )}
-            </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-              {contacto.telefono && (
-                <span className="flex items-center gap-1">
-                  <Phone className="h-3 w-3" />
-                  {contacto.telefono}
-                </span>
-              )}
-              {contacto.email && (
-                <span className="flex items-center gap-1">
-                  <Mail className="h-3 w-3" />
-                  {contacto.email}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-1 flex-wrap">
-              {renderResponsabilidades(contacto)}
-            </div>
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {!contacto.es_principal && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => onSetPrincipal(index)}
-                    >
-                      <Star className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Marcar como principal</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-              onClick={() => onRemove(index)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  // Nota: renderResponsabilidades, ContactoForm y ContactosList están definidos
+  // FUERA del componente para evitar re-mount y pérdida de foco en inputs
 
   return (
     <Card className="p-6">
