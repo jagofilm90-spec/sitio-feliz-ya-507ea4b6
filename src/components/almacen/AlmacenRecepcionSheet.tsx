@@ -942,8 +942,11 @@ export const AlmacenRecepcionSheet = ({
             const duracionFormateada = duracionMinutos < 60 
               ? `${duracionMinutos} minutos` 
               : `${Math.floor(duracionMinutos / 60)}h ${duracionMinutos % 60}min`;
+            const nombreProveedor = entrega.orden_compra.proveedor?.nombre 
+              || entrega.orden_compra.proveedor_nombre_manual 
+              || "Proveedor";
             
-            const asunto = `✅ Descarga completada - OC ${entrega.orden_compra.folio}`;
+            const asunto = `✅ Descarga completada - OC ${entrega.orden_compra.folio} - ${nombreProveedor}`;
             const htmlBody = `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #16a34a;">✅ Descarga Completada</h2>
@@ -951,18 +954,22 @@ export const AlmacenRecepcionSheet = ({
                 <p>Le informamos que la descarga de su unidad ha finalizado exitosamente.</p>
                 <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
                   <tr style="background: #f3f4f6;">
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Proveedor:</strong></td>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${nombreProveedor}</td>
+                  </tr>
+                  <tr>
                     <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Orden de Compra:</strong></td>
                     <td style="padding: 8px; border: 1px solid #e5e7eb;">${entrega.orden_compra.folio}</td>
                   </tr>
-                  <tr>
+                  <tr style="background: #f3f4f6;">
                     <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Hora de inicio:</strong></td>
                     <td style="padding: 8px; border: 1px solid #e5e7eb;">${horaInicio}</td>
                   </tr>
-                  <tr style="background: #f3f4f6;">
+                  <tr>
                     <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Hora de finalización:</strong></td>
                     <td style="padding: 8px; border: 1px solid #e5e7eb;">${horaFin}</td>
                   </tr>
-                  <tr>
+                  <tr style="background: #f3f4f6;">
                     <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Duración total:</strong></td>
                     <td style="padding: 8px; border: 1px solid #e5e7eb;">${duracionFormateada}</td>
                   </tr>
