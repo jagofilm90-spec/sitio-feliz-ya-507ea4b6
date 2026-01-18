@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { registrarCorreoEnviado } from "@/components/compras/HistorialCorreosOC";
+import { getEmailsInternos, enviarCopiaInterna } from "@/lib/emailNotificationsUtils";
 import {
   Sheet,
   SheetContent,
@@ -609,6 +610,17 @@ export const RegistrarLlegadaSheet = ({
 
             if (!emailError) {
               console.log("Notificación de inicio de descarga enviada a:", contactoLogistica.email);
+            }
+
+            // Enviar copia a usuarios internos (admin y secretaria)
+            const emailsInternos = await getEmailsInternos();
+            if (emailsInternos.length > 0) {
+              await enviarCopiaInterna({
+                asunto: asunto,
+                htmlBody: htmlBody,
+                emailsDestinatarios: emailsInternos
+              });
+              console.log("Copias internas de logística enviadas a:", emailsInternos.length, "usuarios");
             }
           }
         }

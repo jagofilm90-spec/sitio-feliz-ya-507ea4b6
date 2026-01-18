@@ -718,14 +718,28 @@ const CrearOrdenCompraWizard = ({
         let emailProveedor: string | null = null;
         
         if (tipoProveedor === 'catalogo' && proveedorId) {
-          const { data: contacto } = await supabase
+          // Buscar contacto con recibe_ordenes = true primero
+          let { data: contacto } = await supabase
             .from("proveedor_contactos")
             .select("email")
             .eq("proveedor_id", proveedorId)
-            .eq("es_principal", true)
+            .eq("recibe_ordenes", true)
             .not("email", "is", null)
             .limit(1)
             .single();
+          
+          // Fallback al contacto principal si no hay recibe_ordenes
+          if (!contacto?.email) {
+            const { data: contactoPrincipal } = await supabase
+              .from("proveedor_contactos")
+              .select("email")
+              .eq("proveedor_id", proveedorId)
+              .eq("es_principal", true)
+              .not("email", "is", null)
+              .limit(1)
+              .single();
+            contacto = contactoPrincipal;
+          }
           emailProveedor = contacto?.email || null;
         } else if (tipoProveedor === 'manual') {
           emailProveedor = proveedorEmailManual || null;
