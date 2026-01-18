@@ -4277,42 +4277,69 @@ export type Database = {
       proveedores: {
         Row: {
           activo: boolean
+          calle: string | null
+          codigo_postal: string | null
+          colonia: string | null
           created_at: string
           direccion: string | null
           email: string | null
+          estado: string | null
           id: string
+          municipio: string | null
           nombre: string
+          nombre_comercial: string | null
           nombre_contacto: string | null
           notas: string | null
+          numero_exterior: string | null
+          numero_interior: string | null
           pais: string
+          regimen_fiscal: string | null
           rfc: string | null
           telefono: string | null
           updated_at: string
         }
         Insert: {
           activo?: boolean
+          calle?: string | null
+          codigo_postal?: string | null
+          colonia?: string | null
           created_at?: string
           direccion?: string | null
           email?: string | null
+          estado?: string | null
           id?: string
+          municipio?: string | null
           nombre: string
+          nombre_comercial?: string | null
           nombre_contacto?: string | null
           notas?: string | null
+          numero_exterior?: string | null
+          numero_interior?: string | null
           pais?: string
+          regimen_fiscal?: string | null
           rfc?: string | null
           telefono?: string | null
           updated_at?: string
         }
         Update: {
           activo?: boolean
+          calle?: string | null
+          codigo_postal?: string | null
+          colonia?: string | null
           created_at?: string
           direccion?: string | null
           email?: string | null
+          estado?: string | null
           id?: string
+          municipio?: string | null
           nombre?: string
+          nombre_comercial?: string | null
           nombre_contacto?: string | null
           notas?: string | null
+          numero_exterior?: string | null
+          numero_interior?: string | null
           pais?: string
+          regimen_fiscal?: string | null
           rfc?: string | null
           telefono?: string | null
           updated_at?: string

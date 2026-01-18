@@ -5,6 +5,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { COMPANY_DATA } from "@/constants/companyData";
+import { formatDireccionFiscal } from "@/lib/proveedorUtils";
+import { getRegimenDescripcion } from "@/constants/catalogoSAT";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -83,6 +85,17 @@ interface Proveedor {
   id: string;
   nombre: string;
   email?: string;
+  telefono?: string;
+  direccion?: string;
+  rfc?: string;
+  regimen_fiscal?: string;
+  calle?: string;
+  numero_exterior?: string;
+  numero_interior?: string;
+  colonia?: string;
+  municipio?: string;
+  estado?: string;
+  codigo_postal?: string;
 }
 
 interface Producto {
@@ -858,7 +871,6 @@ const CrearOrdenCompraWizard = ({
                   <span><strong>Fecha:</strong> ${format(new Date(), "dd/MM/yyyy", { locale: es })}</span>
                 </div>
                 <div class="info-row">
-                  <span><strong>Proveedor:</strong> ${proveedorNombreNotif}</span>
                   <span><strong>Tipo Pago:</strong> ${tipoPago === 'anticipado' ? 'Pago Anticipado' : 'Contra Entrega'}</span>
                 </div>
                 ${tipoEntrega === 'unica' && fechaEntregaUnica ? `
@@ -867,6 +879,30 @@ const CrearOrdenCompraWizard = ({
                   </div>
                 ` : ''}
               </div>
+
+              ${tipoProveedor === 'catalogo' ? (() => {
+                const proveedorData = proveedores.find(p => p.id === proveedorId);
+                const direccionFiscal = proveedorData ? formatDireccionFiscal(proveedorData) : '';
+                const regimenDesc = proveedorData?.regimen_fiscal ? getRegimenDescripcion(proveedorData.regimen_fiscal) : '';
+                return `
+                  <div class="info-box" style="background: #f0f9ff;">
+                    <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #0369a1;">🏢 Proveedor</h3>
+                    <p style="margin: 0; font-weight: bold; font-size: 13px;">${proveedorData?.nombre || proveedorNombreNotif}</p>
+                    ${proveedorData?.rfc ? `<p style="margin: 4px 0 0 0;"><strong>RFC:</strong> ${proveedorData.rfc}</p>` : ''}
+                    ${regimenDesc ? `<p style="margin: 2px 0 0 0; font-size: 10px;"><strong>Régimen:</strong> ${regimenDesc}</p>` : ''}
+                    ${direccionFiscal ? `<p style="margin: 6px 0 0 0; font-size: 10px;">${direccionFiscal}</p>` : ''}
+                    ${proveedorData?.telefono ? `<p style="margin: 4px 0 0 0;">📞 ${proveedorData.telefono}</p>` : ''}
+                    ${proveedorData?.email ? `<p style="margin: 2px 0 0 0;">📧 ${proveedorData.email}</p>` : ''}
+                  </div>
+                `;
+              })() : `
+                <div class="info-box" style="background: #f0f9ff;">
+                  <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #0369a1;">🏢 Proveedor</h3>
+                  <p style="margin: 0; font-weight: bold;">${proveedorNombreManual || 'Proveedor manual'}</p>
+                  ${proveedorTelefonoManual ? `<p style="margin: 4px 0 0 0;">📞 ${proveedorTelefonoManual}</p>` : ''}
+                  ${proveedorEmailManual ? `<p style="margin: 4px 0 0 0;">📧 ${proveedorEmailManual}</p>` : ''}
+                </div>
+              `}
 
               <table>
                 <thead>

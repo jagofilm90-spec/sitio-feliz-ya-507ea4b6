@@ -293,6 +293,16 @@ const ProveedoresTab = () => {
     pais: "México",
     rfc: "",
     notas: "",
+    // Campos fiscales estructurados
+    regimen_fiscal: "",
+    nombre_comercial: "",
+    calle: "",
+    numero_exterior: "",
+    numero_interior: "",
+    colonia: "",
+    municipio: "",
+    estado: "",
+    codigo_postal: "",
   });
 
   const { toast } = useToast();
@@ -629,6 +639,15 @@ const ProveedoresTab = () => {
         pais: "México",
         rfc: "",
         notas: "",
+        regimen_fiscal: "",
+        nombre_comercial: "",
+        calle: "",
+        numero_exterior: "",
+        numero_interior: "",
+        colonia: "",
+        municipio: "",
+        estado: "",
+        codigo_postal: "",
       });
       setContactosNuevos([]);
       resetNuevoContacto();

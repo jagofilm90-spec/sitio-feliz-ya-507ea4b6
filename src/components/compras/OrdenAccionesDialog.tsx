@@ -4,6 +4,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { COMPANY_DATA } from "@/constants/companyData";
+import { getProveedorFiscalHTML } from "@/lib/proveedorUtils";
 import {
   Dialog,
   DialogContent,
@@ -668,10 +669,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
         <div class="info-grid">
           <div class="info-box">
             <h3>Proveedor</h3>
-            <p class="highlight">${orden.proveedores?.nombre || 'Sin proveedor'}</p>
-            ${orden.proveedores?.direccion ? `<p>${orden.proveedores.direccion}</p>` : ''}
-            ${orden.proveedores?.email ? `<p>📧 ${orden.proveedores.email}</p>` : ''}
-            ${orden.proveedores?.telefono ? `<p>📞 ${orden.proveedores.telefono}</p>` : ''}
+            ${getProveedorFiscalHTML(orden.proveedores)}
           </div>
           ${!orden.entregas_multiples ? `
             <div class="info-box delivery">
