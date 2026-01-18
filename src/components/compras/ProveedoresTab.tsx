@@ -853,6 +853,11 @@ const ProveedoresTab = () => {
                     onSetPrincipal={handleSetPrincipalContactoNuevo}
                   />
                 )}
+                {nuevoContacto.nombre.trim() && (
+                  <p className="text-xs text-yellow-600 dark:text-yellow-500">
+                    ⚠️ Tienes un contacto pendiente. Se agregará automáticamente al guardar.
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground">
                   Agrega contactos con nombre, teléfono, correo y selecciona qué comunicaciones reciben. ⭐ indica el contacto principal.
                 </p>
@@ -884,7 +889,31 @@ const ProveedoresTab = () => {
 
               <Button
                 onClick={() => {
-                  const contactoPrincipal = getContactoPrincipal(contactosNuevos);
+                  // Auto-agregar contacto pendiente si tiene nombre
+                  let contactosFinales = [...contactosNuevos];
+                  if (nuevoContacto.nombre.trim()) {
+                    const esPrincipal = contactosFinales.length === 0;
+                    contactosFinales.push({
+                      ...nuevoContacto,
+                      nombre: nuevoContacto.nombre.trim(),
+                      telefono: nuevoContacto.telefono.trim(),
+                      email: nuevoContacto.email.trim(),
+                      es_principal: esPrincipal,
+                    });
+                    // Actualizar el estado para reflejar el cambio
+                    setContactosNuevos(contactosFinales);
+                    setNuevoContacto({
+                      nombre: "",
+                      telefono: "",
+                      email: "",
+                      es_principal: false,
+                      recibe_ordenes: true,
+                      recibe_pagos: false,
+                      recibe_devoluciones: false,
+                      recibe_logistica: false,
+                    });
+                  }
+                  const contactoPrincipal = getContactoPrincipal(contactosFinales);
                   createProveedor.mutate({ 
                     ...newProveedor, 
                     email: contactoPrincipal.email || "",
@@ -1066,6 +1095,11 @@ const ProveedoresTab = () => {
                         onSetPrincipal={handleSetPrincipalContactoEdit}
                       />
                     )}
+                    {editContacto.nombre.trim() && (
+                      <p className="text-xs text-yellow-600 dark:text-yellow-500">
+                        ⚠️ Tienes un contacto pendiente. Se agregará automáticamente al guardar.
+                      </p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       Agrega contactos con nombre, teléfono, correo y selecciona qué comunicaciones reciben. ⭐ indica el contacto principal.
                     </p>
@@ -1120,6 +1154,30 @@ const ProveedoresTab = () => {
               <Button
                 onClick={() => {
                   if (editingProveedor) {
+                    // Auto-agregar contacto pendiente si tiene nombre
+                    let contactosFinales = [...contactosEdit];
+                    if (editContacto.nombre.trim()) {
+                      const esPrincipal = contactosFinales.length === 0;
+                      contactosFinales.push({
+                        ...editContacto,
+                        nombre: editContacto.nombre.trim(),
+                        telefono: editContacto.telefono.trim(),
+                        email: editContacto.email.trim(),
+                        es_principal: esPrincipal,
+                      });
+                      // Actualizar el estado para reflejar el cambio
+                      setContactosEdit(contactosFinales);
+                      setEditContacto({
+                        nombre: "",
+                        telefono: "",
+                        email: "",
+                        es_principal: false,
+                        recibe_ordenes: true,
+                        recibe_pagos: false,
+                        recibe_devoluciones: false,
+                        recibe_logistica: false,
+                      });
+                    }
                     updateProveedor.mutate(editingProveedor);
                   }
                 }}
