@@ -214,9 +214,14 @@ export const RemisionPrintTemplate = ({ datos }: RemisionPrintTemplateProps) => 
       <div className="grid grid-cols-2 gap-6 mb-4">
         <div className="text-xs space-y-2">
           <div className="border p-2 rounded">
-            <p className="font-semibold mb-1">Para Depósito o Transferencia Bancaria a Nombre de:</p>
-            <p>ABARROTES LA MANITA S.A. DE C.V.</p>
+            <p className="font-semibold mb-1">Para Depósito o Transferencia Bancaria:</p>
+            <p><span className="font-semibold">Beneficiario:</span> {COMPANY_DATA.datosBancarios.beneficiario}</p>
+            <p><span className="font-semibold">Banco:</span> {COMPANY_DATA.datosBancarios.banco}</p>
+            <p><span className="font-semibold">Sucursal:</span> {COMPANY_DATA.datosBancarios.sucursal} (Plaza {COMPANY_DATA.datosBancarios.plaza})</p>
+            <p><span className="font-semibold">Cuenta:</span> {COMPANY_DATA.datosBancarios.cuenta}</p>
+            <p><span className="font-semibold">CLABE:</span> {COMPANY_DATA.datosBancarios.clabe}</p>
             <p className="mt-1"><span className="font-semibold">Referencia:</span> {datos.folio}</p>
+            <p className="text-xs mt-1">Enviar comprobante a: {COMPANY_DATA.emails.pagos}</p>
           </div>
           <div className="border p-2 rounded">
             <p><span className="font-semibold">Condiciones de Crédito:</span> {datos.condiciones_credito}</p>
