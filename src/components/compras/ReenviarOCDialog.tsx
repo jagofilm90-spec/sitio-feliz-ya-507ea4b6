@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { COMPANY_DATA } from "@/constants/companyData";
+import { getProveedorFiscalHTML } from "@/lib/proveedorUtils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -264,9 +265,7 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
         <div class="info-grid">
           <div class="info-box">
             <h3>🏢 Proveedor</h3>
-            <p><strong>${nombreProveedor}</strong></p>
-            ${orden.proveedores?.telefono ? `<p>Tel: ${orden.proveedores.telefono}</p>` : ''}
-            ${orden.proveedores?.email ? `<p>Email: ${orden.proveedores.email}</p>` : ''}
+            ${getProveedorFiscalHTML(orden.proveedores)}
           </div>
           <div class="info-box delivery">
             <h3>📅 Entrega</h3>
