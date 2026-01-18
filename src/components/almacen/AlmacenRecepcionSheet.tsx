@@ -62,6 +62,8 @@ import { EvidenciaCapture, EvidenciasPreviewGrid } from "@/components/compras/Ev
 import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
 import { DevolucionProveedorDialog } from "./DevolucionProveedorDialog";
 import { registrarCorreoEnviado } from "@/components/compras/HistorialCorreosOC";
+import { getEmailsInternos, enviarCopiaInterna } from "@/lib/emailNotificationsUtils";
+import { generarRecepcionPDF } from "@/utils/recepcionPdfGenerator";
 
 // Razones de diferencia para cuando la cantidad recibida no coincide con la ordenada
 const RAZONES_DIFERENCIA = [
@@ -1003,11 +1005,136 @@ export const AlmacenRecepcionSheet = ({
             if (!emailError) {
               console.log("Notificación de fin de descarga enviada a:", contactoLogistica.email);
             }
+
+            // Enviar copia a usuarios internos (admin y secretaria)
+            const emailsInternos = await getEmailsInternos();
+            if (emailsInternos.length > 0) {
+              await enviarCopiaInterna({
+                asunto: asunto,
+                htmlBody: htmlBody,
+                emailsDestinatarios: emailsInternos
+              });
+              console.log("Copias internas de logística (fin) enviadas a:", emailsInternos.length, "usuarios");
+            }
           }
         }
       } catch (emailErr) {
         console.error("Error enviando notificación de logística:", emailErr);
         // No bloqueamos el flujo principal por error de email
+      }
+
+      // ========== NOTIFICACIÓN DE DEVOLUCIONES/FALTANTES ==========
+      try {
+        const productosConDiferencia = getProductosConDiferencia();
+        if (productosConDiferencia.length > 0) {
+          const proveedorId = entrega.orden_compra?.proveedor?.id;
+          const nombreProveedor = entrega.orden_compra?.proveedor?.nombre 
+            || entrega.orden_compra?.proveedor_nombre_manual 
+            || "Proveedor";
+
+          // Buscar contacto que recibe devoluciones
+          let emailDevoluciones: string | null = null;
+          if (proveedorId) {
+            const { data: contactoDevol } = await supabase
+              .from("proveedor_contactos")
+              .select("nombre, email")
+              .eq("proveedor_id", proveedorId)
+              .eq("recibe_devoluciones", true)
+              .not("email", "is", null)
+              .limit(1)
+              .single();
+            emailDevoluciones = contactoDevol?.email || null;
+          }
+
+          // Construir tabla de diferencias
+          const tablaProductos = productosConDiferencia.map(p => {
+            const faltante = p.cantidad_ordenada - p.cantidad_recibida;
+            const recibido = getCantidadNumerica(p.id);
+            const diferencia = faltante - recibido;
+            const razon = razonesDiferencia[p.id] || "No especificada";
+            const razonLabel = RAZONES_DIFERENCIA.find(r => r.value === razon)?.label || razon;
+            
+            return `
+              <tr>
+                <td style="padding: 8px; border: 1px solid #e5e7eb;">${p.producto.nombre}</td>
+                <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${faltante}</td>
+                <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${recibido}</td>
+                <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; color: #dc2626; font-weight: bold;">${diferencia}</td>
+                <td style="padding: 8px; border: 1px solid #e5e7eb;">${razonLabel}</td>
+              </tr>
+            `;
+          }).join("");
+
+          const asuntoDevoluciones = `⚠️ Devolución/Faltante - OC ${entrega.orden_compra.folio} - ${nombreProveedor}`;
+          const htmlBodyDevoluciones = `
+            <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto;">
+              <h2 style="color: #dc2626;">⚠️ Notificación de Devolución/Faltante</h2>
+              <p>Se registró una recepción con diferencias en la siguiente orden de compra:</p>
+              
+              <div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+                <p><strong>Proveedor:</strong> ${nombreProveedor}</p>
+                <p><strong>Orden de Compra:</strong> ${entrega.orden_compra.folio}</p>
+                <p><strong>Entrega #:</strong> ${entrega.numero_entrega}</p>
+                <p><strong>Fecha de recepción:</strong> ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: es })}</p>
+              </div>
+
+              <h3 style="color: #374151;">Productos con Diferencia:</h3>
+              <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                <thead>
+                  <tr style="background: #f3f4f6;">
+                    <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: left;">Producto</th>
+                    <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">Esperados</th>
+                    <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">Recibidos</th>
+                    <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">Diferencia</th>
+                    <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: left;">Razón</th>
+                  </tr>
+                </thead>
+                <tbody>${tablaProductos}</tbody>
+              </table>
+
+              <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+                Este es un correo automático del sistema de ALMASA. Las evidencias fotográficas están disponibles en el sistema.
+              </p>
+            </div>
+          `;
+
+          // Enviar al proveedor si tiene contacto de devoluciones
+          if (emailDevoluciones) {
+            const { data: emailDevData, error: emailDevError } = await supabase.functions.invoke("gmail-api", {
+              body: {
+                action: "send",
+                email: "compras@almasa.com.mx",
+                to: emailDevoluciones,
+                subject: asuntoDevoluciones,
+                body: htmlBodyDevoluciones
+              }
+            });
+
+            await registrarCorreoEnviado({
+              tipo: "devolucion_proveedor",
+              referencia_id: entrega.orden_compra.id,
+              destinatario: emailDevoluciones,
+              asunto: asuntoDevoluciones,
+              gmail_message_id: emailDevData?.messageId || null,
+              error: emailDevError?.message || null
+            });
+
+            console.log("Notificación de devolución enviada a proveedor:", emailDevoluciones);
+          }
+
+          // Enviar copia a usuarios internos (admin y secretaria)
+          const emailsInternos = await getEmailsInternos();
+          if (emailsInternos.length > 0) {
+            await enviarCopiaInterna({
+              asunto: asuntoDevoluciones,
+              htmlBody: htmlBodyDevoluciones,
+              emailsDestinatarios: emailsInternos
+            });
+            console.log("Copias internas de devolución enviadas a:", emailsInternos.length, "usuarios");
+          }
+        }
+      } catch (devolErr) {
+        console.error("Error enviando notificación de devoluciones:", devolErr);
       }
 
       onRecepcionCompletada();
