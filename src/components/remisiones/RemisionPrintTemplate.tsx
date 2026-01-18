@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { abreviarUnidad } from "@/lib/utils";
+import { COMPANY_DATA } from "@/constants/companyData";
 
 interface ProductoRemision {
   cantidad: number;
@@ -79,16 +80,17 @@ export const RemisionPrintTemplate = ({ datos }: RemisionPrintTemplateProps) => 
       <div className="grid grid-cols-2 gap-6 mb-4 text-xs">
         <div>
           <p className="font-semibold">Dirección Fiscal:</p>
-          <p>Calle: MELCHOR OCAMPO No.Ext: 59</p>
-          <p>Colonia: MAGDALENA MIXIUHCA</p>
-          <p>Municipio: VENUSTIANO CARRANZA C.P.:15850</p>
-          <p className="mt-1">Tel: (55) 56-00-77-81 / (55) 56-94-97-92</p>
+          <p>Calle: {COMPANY_DATA.direccion.calle} No.Ext: {COMPANY_DATA.direccion.numeroExterior}</p>
+          <p>Colonia: {COMPANY_DATA.direccion.colonia}</p>
+          <p>Municipio: {COMPANY_DATA.direccion.municipio} C.P.: {COMPANY_DATA.direccion.codigoPostal}</p>
+          <p>RFC: {COMPANY_DATA.rfc}</p>
+          <p className="mt-1">Tel: {COMPANY_DATA.telefonosAlternos}</p>
         </div>
         <div>
           <p className="font-semibold">Dirección Entrega:</p>
-          <p>Calle: MELCHOR OCAMPO No.Ext: 59</p>
-          <p>Colonia: MAGDALENA MIXIUHCA</p>
-          <p>Municipio: VENUSTIANO CARRANZA C.P.:15850</p>
+          <p>Calle: {COMPANY_DATA.direccion.calle} No.Ext: {COMPANY_DATA.direccion.numeroExterior}</p>
+          <p>Colonia: {COMPANY_DATA.direccion.colonia}</p>
+          <p>Municipio: {COMPANY_DATA.direccion.municipio} C.P.: {COMPANY_DATA.direccion.codigoPostal}</p>
         </div>
       </div>
 
