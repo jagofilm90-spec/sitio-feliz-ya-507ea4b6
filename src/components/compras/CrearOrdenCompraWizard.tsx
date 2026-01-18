@@ -988,7 +988,7 @@ const CrearOrdenCompraWizard = ({
               </div>
               
               <div style="background: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: #666;">
-                <p style="margin: 0;">Comercializadora La Manita S de RL de CV</p>
+                <p style="margin: 0;">${COMPANY_DATA.razonSocial}</p>
                 <p style="margin: 5px 0;">Este correo fue enviado automáticamente desde el sistema ERP</p>
               </div>
             </div>

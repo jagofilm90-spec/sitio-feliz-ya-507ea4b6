@@ -271,7 +271,7 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
           <div class="info-box delivery">
             <h3>📅 Entrega</h3>
             <p><strong>${orden.entregas_multiples ? 'Ver calendario de entregas' : fechaEntrega}</strong></p>
-            <p>Lugar: Bodega Almasa - Poniente 128 # 633</p>
+            <p>Lugar: ${COMPANY_DATA.direccionCompleta}</p>
           </div>
         </div>
 
