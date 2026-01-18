@@ -48,6 +48,13 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
+// Helper para parsear fechas evitando problemas de zona horaria
+const parseDateLocal = (dateStr: string) => {
+  if (!dateStr) return new Date();
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
 import { formatCurrency } from "@/lib/utils";
 import { sendPushNotification } from "@/services/pushNotifications";
 import { registrarCorreoEnviado } from "@/components/compras/HistorialCorreosOC";
@@ -781,7 +788,7 @@ const CrearOrdenCompraWizard = ({
               <tr>
                 <td style="border: 1px solid #e2e8f0; padding: 6px; text-align: center;">Entrega ${e.numero_entrega}</td>
                 <td style="border: 1px solid #e2e8f0; padding: 6px; text-align: center;">${e.cantidad_bultos.toLocaleString('es-MX')} bultos</td>
-                <td style="border: 1px solid #e2e8f0; padding: 6px; text-align: center;">${e.fecha_programada ? format(new Date(e.fecha_programada), "dd/MM/yyyy") : 'Por confirmar'}</td>
+                <td style="border: 1px solid #e2e8f0; padding: 6px; text-align: center;">${e.fecha_programada ? format(parseDateLocal(e.fecha_programada), "dd/MM/yyyy") : 'Por confirmar'}</td>
               </tr>
             `).join('');
             entregasSection = `
@@ -856,7 +863,7 @@ const CrearOrdenCompraWizard = ({
                 </div>
                 ${tipoEntrega === 'unica' && fechaEntregaUnica ? `
                   <div class="info-row">
-                    <span><strong>Fecha de Entrega:</strong> ${format(new Date(fechaEntregaUnica), "EEEE dd 'de' MMMM yyyy", { locale: es })}</span>
+                    <span><strong>Fecha de Entrega:</strong> ${format(parseDateLocal(fechaEntregaUnica), "EEEE dd 'de' MMMM yyyy", { locale: es })}</span>
                   </div>
                 ` : ''}
               </div>
@@ -922,10 +929,10 @@ const CrearOrdenCompraWizard = ({
           // 7. Construir fechas para el email
           const fechasEntregaHtml = tipoEntrega === 'multiple'
             ? `<ul style="margin: 10px 0; padding-left: 20px;">${entregasProgramadas.map(e => 
-                `<li style="margin: 5px 0;">${e.fecha_programada ? format(new Date(e.fecha_programada), "EEEE dd 'de' MMMM yyyy", { locale: es }) : 'Por confirmar'} - ${e.cantidad_bultos.toLocaleString()} bultos</li>`
+                `<li style="margin: 5px 0;">${e.fecha_programada ? format(parseDateLocal(e.fecha_programada), "EEEE dd 'de' MMMM yyyy", { locale: es }) : 'Por confirmar'} - ${e.cantidad_bultos.toLocaleString()} bultos</li>`
               ).join('')}</ul>`
             : fechaEntregaUnica 
-              ? `<p style="margin: 10px 0; font-size: 16px;"><strong>${format(new Date(fechaEntregaUnica), "EEEE dd 'de' MMMM yyyy", { locale: es })}</strong></p>`
+              ? `<p style="margin: 10px 0; font-size: 16px;"><strong>${format(parseDateLocal(fechaEntregaUnica), "EEEE dd 'de' MMMM yyyy", { locale: es })}</strong></p>`
               : '<p>Por confirmar</p>';
 
           // 8. HTML del correo
