@@ -40,6 +40,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import OrdenAccionesDialog from "./OrdenAccionesDialog";
+import ReenviarOCDialog from "./ReenviarOCDialog";
 import AutorizacionOCDialog from "./AutorizacionOCDialog";
 import OCAutorizadaAlert from "./OCAutorizadaAlert";
 import EntregasPopover from "./EntregasPopover";
@@ -76,6 +77,8 @@ const OrdenesCompraTab = () => {
   const [accionesDialogOpen, setAccionesDialogOpen] = useState(false);
   const [autorizacionDialogOpen, setAutorizacionDialogOpen] = useState(false);
   const [ordenSeleccionada, setOrdenSeleccionada] = useState<any>(null);
+  const [reenviarDialogOpen, setReenviarDialogOpen] = useState(false);
+  const [ordenParaReenvio, setOrdenParaReenvio] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [editingOrdenId, setEditingOrdenId] = useState<string | null>(null);
   
@@ -1309,8 +1312,8 @@ const OrdenesCompraTab = () => {
                           className="h-8 w-8"
                           title="Reenviar OC"
                           onClick={() => {
-                            setOrdenSeleccionada(orden);
-                            setAccionesDialogOpen(true);
+                            setOrdenParaReenvio(orden);
+                            setReenviarDialogOpen(true);
                           }}
                         >
                           <Send className="h-4 w-4" />
@@ -2050,7 +2053,11 @@ const OrdenesCompraTab = () => {
               )}
             </div>
 
-
+      <ReenviarOCDialog
+        open={reenviarDialogOpen}
+        onOpenChange={setReenviarDialogOpen}
+        orden={ordenParaReenvio}
+      />
             {/* Multiple Deliveries Section */}
             {productosEnOrden.length > 0 && (
               <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
@@ -2220,6 +2227,12 @@ const OrdenesCompraTab = () => {
         onOpenChange={setAccionesDialogOpen}
         orden={ordenSeleccionada}
         onEdit={handleEditOrden}
+      />
+
+      <ReenviarOCDialog
+        open={reenviarDialogOpen}
+        onOpenChange={setReenviarDialogOpen}
+        orden={ordenParaReenvio}
       />
 
       <AutorizacionOCDialog
