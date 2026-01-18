@@ -677,6 +677,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
             <div class="info-box delivery">
               <h3>Entrega Programada</h3>
               <p class="highlight">${fechaEntrega}</p>
+              <p style="font-size: 11px; margin-top: 5px;">Lugar: ${COMPANY_DATA.direccionCompleta}</p>
             </div>
           ` : ''}
         </div>

@@ -70,6 +70,28 @@ export const COMPANY_DATA = {
     beneficiario: "ABARROTES LA MANITA, S.A. DE C.V.",
   },
   
+  // Ubicaciones de Entrega para OC
+  ubicacionesEntrega: [
+    {
+      id: "bodega_1",
+      nombre: "Bodega 1 (Principal)",
+      direccion: "Melchor Ocampo #59, Col. Magdalena Mixiuhca, Venustiano Carranza, C.P. 15850, CDMX",
+      esDefault: true,
+    },
+    {
+      id: "bodega_2",
+      nombre: "Bodega 2",
+      direccion: "Guillermo Prieto, CDMX",
+      esDefault: false,
+    },
+    {
+      id: "almacenes",
+      nombre: "Almacenes (Terceros)",
+      direccion: "Por definir",
+      esDefault: false,
+    }
+  ],
+  
   // Datos para documentos
   nombreComercial: "ALMASA",
   sitioWeb: "https://almasa.com.mx",
