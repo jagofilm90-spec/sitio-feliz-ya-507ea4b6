@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { registrarCorreoEnviado } from "@/components/compras/HistorialCorreosOC";
 import {
   Sheet,
   SheetContent,
@@ -531,6 +534,81 @@ export const RegistrarLlegadaSheet = ({
         title: "Llegada registrada",
         description: "Puedes proceder con la descarga. Cuando termines, completa la recepción."
       });
+
+      // Notificar al contacto de logística del proveedor (si existe)
+      try {
+        const proveedorId = entrega.orden_compra?.proveedor?.id;
+        if (proveedorId) {
+          const { data: contactoLogistica } = await supabase
+            .from("proveedor_contactos")
+            .select("nombre, email")
+            .eq("proveedor_id", proveedorId)
+            .eq("recibe_logistica", true)
+            .not("email", "is", null)
+            .limit(1)
+            .single();
+
+          if (contactoLogistica?.email) {
+            const horaInicio = format(new Date(), "HH:mm 'del' dd/MM/yyyy", { locale: es });
+            const asunto = `🚛 Inicio de descarga - OC ${entrega.orden_compra.folio}`;
+            const htmlBody = `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #f97316;">🚛 Inicio de Descarga</h2>
+                <p>Estimado(a) ${contactoLogistica.nombre},</p>
+                <p>Le informamos que su unidad ha llegado a nuestro almacén y se ha iniciado la descarga.</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                  <tr style="background: #f3f4f6;">
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Orden de Compra:</strong></td>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${entrega.orden_compra.folio}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Hora de inicio:</strong></td>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${horaInicio}</td>
+                  </tr>
+                  <tr style="background: #f3f4f6;">
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Chofer:</strong></td>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${nombreChofer.trim()}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Placas:</strong></td>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${placasManual.trim()}</td>
+                  </tr>
+                </table>
+                <p>Le notificaremos cuando la descarga haya finalizado.</p>
+                <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+                  Este es un correo automático del sistema de ALMASA.
+                </p>
+              </div>
+            `;
+
+            const { data: emailData, error: emailError } = await supabase.functions.invoke("gmail-api", {
+              body: {
+                action: "send",
+                email: "compras@almasa.com.mx",
+                to: contactoLogistica.email,
+                subject: asunto,
+                body: htmlBody
+              }
+            });
+
+            await registrarCorreoEnviado({
+              tipo: "logistica_inicio",
+              referencia_id: entrega.orden_compra.id,
+              destinatario: contactoLogistica.email,
+              asunto: asunto,
+              gmail_message_id: emailData?.messageId || null,
+              error: emailError?.message || null
+            });
+
+            if (!emailError) {
+              console.log("Notificación de inicio de descarga enviada a:", contactoLogistica.email);
+            }
+          }
+        }
+      } catch (emailErr) {
+        console.error("Error enviando notificación de logística:", emailErr);
+        // No bloqueamos el flujo principal por error de email
+      }
 
       // Limpiar estado
       setNombreChofer("");

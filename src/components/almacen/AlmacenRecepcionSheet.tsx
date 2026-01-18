@@ -61,6 +61,7 @@ import {
 import { EvidenciaCapture, EvidenciasPreviewGrid } from "@/components/compras/EvidenciaCapture";
 import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
 import { DevolucionProveedorDialog } from "./DevolucionProveedorDialog";
+import { registrarCorreoEnviado } from "@/components/compras/HistorialCorreosOC";
 
 // Razones de diferencia para cuando la cantidad recibida no coincide con la ordenada
 const RAZONES_DIFERENCIA = [
@@ -920,6 +921,87 @@ export const AlmacenRecepcionSheet = ({
         title: "Recepción registrada",
         description: "Mercancía ingresada al inventario correctamente"
       });
+
+      // Notificar al contacto de logística del proveedor (si existe)
+      try {
+        const proveedorId = entrega.orden_compra?.proveedor?.id;
+        if (proveedorId && entrega.llegada_registrada_en) {
+          const { data: contactoLogistica } = await supabase
+            .from("proveedor_contactos")
+            .select("nombre, email")
+            .eq("proveedor_id", proveedorId)
+            .eq("recibe_logistica", true)
+            .not("email", "is", null)
+            .limit(1)
+            .single();
+
+          if (contactoLogistica?.email) {
+            const horaInicio = format(new Date(entrega.llegada_registrada_en), "HH:mm", { locale: es });
+            const horaFin = format(new Date(), "HH:mm", { locale: es });
+            const duracionMinutos = differenceInMinutes(new Date(), new Date(entrega.llegada_registrada_en));
+            const duracionFormateada = duracionMinutos < 60 
+              ? `${duracionMinutos} minutos` 
+              : `${Math.floor(duracionMinutos / 60)}h ${duracionMinutos % 60}min`;
+            
+            const asunto = `✅ Descarga completada - OC ${entrega.orden_compra.folio}`;
+            const htmlBody = `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #16a34a;">✅ Descarga Completada</h2>
+                <p>Estimado(a) ${contactoLogistica.nombre},</p>
+                <p>Le informamos que la descarga de su unidad ha finalizado exitosamente.</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                  <tr style="background: #f3f4f6;">
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Orden de Compra:</strong></td>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${entrega.orden_compra.folio}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Hora de inicio:</strong></td>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${horaInicio}</td>
+                  </tr>
+                  <tr style="background: #f3f4f6;">
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Hora de finalización:</strong></td>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${horaFin}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Duración total:</strong></td>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${duracionFormateada}</td>
+                  </tr>
+                </table>
+                <p><strong>Su unidad puede retirarse.</strong></p>
+                <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+                  Este es un correo automático del sistema de ALMASA.
+                </p>
+              </div>
+            `;
+
+            const { data: emailData, error: emailError } = await supabase.functions.invoke("gmail-api", {
+              body: {
+                action: "send",
+                email: "compras@almasa.com.mx",
+                to: contactoLogistica.email,
+                subject: asunto,
+                body: htmlBody
+              }
+            });
+
+            await registrarCorreoEnviado({
+              tipo: "logistica_fin",
+              referencia_id: entrega.orden_compra.id,
+              destinatario: contactoLogistica.email,
+              asunto: asunto,
+              gmail_message_id: emailData?.messageId || null,
+              error: emailError?.message || null
+            });
+
+            if (!emailError) {
+              console.log("Notificación de fin de descarga enviada a:", contactoLogistica.email);
+            }
+          }
+        }
+      } catch (emailErr) {
+        console.error("Error enviando notificación de logística:", emailErr);
+        // No bloqueamos el flujo principal por error de email
+      }
 
       onRecepcionCompletada();
     } catch (error) {
