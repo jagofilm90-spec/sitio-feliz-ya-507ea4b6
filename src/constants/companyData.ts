@@ -57,6 +57,17 @@ export const COMPANY_DATA = {
     ventas: "1904@almasa.com.mx",
     pedidos: "pedidos@almasa.com.mx",
     contacto: "contacto@almasa.com.mx",
+    pagos: "pagos@almasa.com.mx",
+  },
+  
+  // Datos Bancarios para Pagos
+  datosBancarios: {
+    banco: "BBVA BANCOMER, S.A.",
+    plaza: "JAMAICA",
+    sucursal: "0122",
+    cuenta: "0442413388",
+    clabe: "012180004424133881",
+    beneficiario: "ABARROTES LA MANITA, S.A. DE C.V.",
   },
   
   // Datos para documentos
@@ -115,4 +126,20 @@ export const getCompanyFooterHTML = () => `
 export const getCotizacionFooterHTML = () => `
   <p><strong>${COMPANY_DATA.razonSocialLarga}</strong></p>
   <p>Email: ${COMPANY_DATA.emails.ventas} | Tel: ${COMPANY_DATA.telefonos.alterno1}</p>
+`;
+
+/**
+ * Helper: Generar bloque HTML con datos bancarios para PDFs
+ */
+export const getBankInfoHTML = (referencia?: string) => `
+  <div class="bank-info">
+    <p><strong>Para Depósito o Transferencia Bancaria:</strong></p>
+    <p><strong>Beneficiario:</strong> ${COMPANY_DATA.datosBancarios.beneficiario}</p>
+    <p><strong>Banco:</strong> ${COMPANY_DATA.datosBancarios.banco}</p>
+    <p><strong>Sucursal:</strong> ${COMPANY_DATA.datosBancarios.sucursal} (Plaza ${COMPANY_DATA.datosBancarios.plaza})</p>
+    <p><strong>Cuenta:</strong> ${COMPANY_DATA.datosBancarios.cuenta}</p>
+    <p><strong>CLABE:</strong> ${COMPANY_DATA.datosBancarios.clabe}</p>
+    ${referencia ? `<p><strong>Referencia:</strong> ${referencia}</p>` : ''}
+    <p style="margin-top: 8px; font-size: 10px;">Enviar comprobante a: ${COMPANY_DATA.emails.pagos}</p>
+  </div>
 `;
