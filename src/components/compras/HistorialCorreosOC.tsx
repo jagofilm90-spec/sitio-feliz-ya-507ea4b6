@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Mail, Check, AlertTriangle, Send, CreditCard, Bell, RefreshCw, Loader2 } from "lucide-react";
+import { Mail, Check, AlertTriangle, Send, CreditCard, Bell, RefreshCw, Loader2, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -46,6 +46,16 @@ const tipoConfig: Record<string, { label: string; icon: React.ReactNode; color: 
     label: "Recepción", 
     icon: <Check className="h-3 w-3" />, 
     color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200" 
+  },
+  logistica_inicio: { 
+    label: "Inicio descarga", 
+    icon: <Truck className="h-3 w-3" />, 
+    color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" 
+  },
+  logistica_fin: { 
+    label: "Fin descarga", 
+    icon: <Check className="h-3 w-3" />, 
+    color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" 
   },
 };
 
