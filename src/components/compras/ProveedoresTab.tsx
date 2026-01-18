@@ -569,12 +569,14 @@ const ProveedoresTab = () => {
     contacto, 
     setContacto, 
     onAdd, 
-    disabled 
+    disabled,
+    prefix = "contacto"
   }: { 
     contacto: ContactoProveedor; 
     setContacto: (c: ContactoProveedor) => void; 
     onAdd: () => void; 
     disabled: boolean;
+    prefix?: string;
   }) => (
     <div className="space-y-3 border rounded-lg p-4 bg-muted/20">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -608,35 +610,35 @@ const ProveedoresTab = () => {
         <Label className="text-xs text-muted-foreground">Recibe comunicaciones de:</Label>
         <div className="flex items-center space-x-2">
           <Checkbox
-            id="recibe_ordenes"
+            id={`${prefix}-recibe_ordenes`}
             checked={contacto.recibe_ordenes}
             onCheckedChange={(c) => setContacto({ ...contacto, recibe_ordenes: c === true })}
           />
-          <Label htmlFor="recibe_ordenes" className="text-sm font-normal cursor-pointer">Órdenes</Label>
+          <Label htmlFor={`${prefix}-recibe_ordenes`} className="text-sm font-normal cursor-pointer">Órdenes</Label>
         </div>
         <div className="flex items-center space-x-2">
           <Checkbox
-            id="recibe_pagos"
+            id={`${prefix}-recibe_pagos`}
             checked={contacto.recibe_pagos}
             onCheckedChange={(c) => setContacto({ ...contacto, recibe_pagos: c === true })}
           />
-          <Label htmlFor="recibe_pagos" className="text-sm font-normal cursor-pointer">Pagos</Label>
+          <Label htmlFor={`${prefix}-recibe_pagos`} className="text-sm font-normal cursor-pointer">Pagos</Label>
         </div>
         <div className="flex items-center space-x-2">
           <Checkbox
-            id="recibe_devoluciones"
+            id={`${prefix}-recibe_devoluciones`}
             checked={contacto.recibe_devoluciones}
             onCheckedChange={(c) => setContacto({ ...contacto, recibe_devoluciones: c === true })}
           />
-          <Label htmlFor="recibe_devoluciones" className="text-sm font-normal cursor-pointer">Devoluciones</Label>
+          <Label htmlFor={`${prefix}-recibe_devoluciones`} className="text-sm font-normal cursor-pointer">Devoluciones</Label>
         </div>
         <div className="flex items-center space-x-2">
           <Checkbox
-            id="recibe_logistica"
+            id={`${prefix}-recibe_logistica`}
             checked={contacto.recibe_logistica}
             onCheckedChange={(c) => setContacto({ ...contacto, recibe_logistica: c === true })}
           />
-          <Label htmlFor="recibe_logistica" className="text-sm font-normal cursor-pointer">Logística</Label>
+          <Label htmlFor={`${prefix}-recibe_logistica`} className="text-sm font-normal cursor-pointer">Logística</Label>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={onAdd} disabled={disabled} className="ml-auto">
           <Plus className="h-4 w-4 mr-1" />
@@ -827,6 +829,7 @@ const ProveedoresTab = () => {
               <div className="space-y-3">
                 <Label>Contactos del proveedor</Label>
                 <ContactoForm
+                  prefix="nuevo"
                   contacto={nuevoContacto}
                   setContacto={setNuevoContacto}
                   onAdd={handleAddContactoNuevo}
@@ -1039,6 +1042,7 @@ const ProveedoresTab = () => {
                 ) : (
                   <>
                     <ContactoForm
+                      prefix="edit"
                       contacto={editContacto}
                       setContacto={setEditContacto}
                       onAdd={handleAddContactoEdit}
