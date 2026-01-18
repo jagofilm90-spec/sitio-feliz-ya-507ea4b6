@@ -50,6 +50,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { formatCurrency } from "@/lib/utils";
 import { sendPushNotification } from "@/services/pushNotifications";
+import { registrarCorreoEnviado } from "@/components/compras/HistorialCorreosOC";
 
 interface ProductoEnOrden {
   producto_id: string;
@@ -690,11 +691,11 @@ const CrearOrdenCompraWizard = ({
         ? fechaEntregaUnica 
         : entregasProgramadas[0]?.fecha_programada;
       
+      const proveedorNombreNotif = tipoProveedor === 'catalogo' 
+        ? proveedores.find(p => p.id === proveedorId)?.nombre || 'Proveedor'
+        : proveedorNombreManual || 'Proveedor';
+      
       if (fechaEntregaReal) {
-        const proveedorNombreNotif = tipoProveedor === 'catalogo' 
-          ? proveedores.find(p => p.id === proveedorId)?.nombre || 'Proveedor'
-          : proveedorNombreManual || 'Proveedor';
-        
         const esParaHoy = format(new Date(fechaEntregaReal), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
         
         const fechaNotif = format(new Date(fechaEntregaReal), "dd/MM/yyyy", { locale: es });
@@ -710,6 +711,322 @@ const CrearOrdenCompraWizard = ({
           }
         });
       }
+      
+      // ========== ENVIAR CORREO AUTOMÁTICO AL PROVEEDOR CON PDF ADJUNTO ==========
+      try {
+        // Determinar email del proveedor
+        let emailProveedor: string | null = null;
+        
+        if (tipoProveedor === 'catalogo' && proveedorId) {
+          const { data: contacto } = await supabase
+            .from("proveedor_contactos")
+            .select("email")
+            .eq("proveedor_id", proveedorId)
+            .eq("es_principal", true)
+            .not("email", "is", null)
+            .limit(1)
+            .single();
+          emailProveedor = contacto?.email || null;
+        } else if (tipoProveedor === 'manual') {
+          emailProveedor = proveedorEmailManual || null;
+        }
+
+        if (emailProveedor) {
+          // 1. Obtener logo en Base64
+          let logoBase64 = '';
+          try {
+            const response = await fetch('/logo-almasa-pdf.png');
+            const blob = await response.blob();
+            logoBase64 = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+          } catch (logoErr) {
+            console.warn("No se pudo cargar el logo para el PDF:", logoErr);
+          }
+
+          // 2. Construir tabla de productos para el PDF
+          const productosTableRows = productosEnOrden.map(p => {
+            const productoData = productos.find(pr => pr.id === p.producto_id);
+            return `
+              <tr>
+                <td style="border: 1px solid #e2e8f0; padding: 8px;">${productoData?.unidad || '-'}</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px;">${p.nombre}</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px; text-align: center;">${p.cantidad.toLocaleString('es-MX')}</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px; text-align: right;">$${p.precio_unitario.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px; text-align: right;">$${p.subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+              </tr>
+            `;
+          }).join('');
+
+          // 3. Construir sección de entregas
+          let entregasSection = '';
+          if (tipoEntrega === 'multiple' && entregasProgramadas.length > 0) {
+            const entregasRows = entregasProgramadas.map(e => `
+              <tr>
+                <td style="border: 1px solid #e2e8f0; padding: 6px; text-align: center;">Entrega ${e.numero_entrega}</td>
+                <td style="border: 1px solid #e2e8f0; padding: 6px; text-align: center;">${e.cantidad_bultos.toLocaleString('es-MX')} bultos</td>
+                <td style="border: 1px solid #e2e8f0; padding: 6px; text-align: center;">${e.fecha_programada ? format(new Date(e.fecha_programada), "dd/MM/yyyy") : 'Por confirmar'}</td>
+              </tr>
+            `).join('');
+            entregasSection = `
+              <div style="margin-top: 20px;">
+                <h3 style="color: #2e7d32; margin-bottom: 10px;">Programa de Entregas</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                  <thead>
+                    <tr style="background: #f0f0f0;">
+                      <th style="border: 1px solid #e2e8f0; padding: 8px;">Entrega</th>
+                      <th style="border: 1px solid #e2e8f0; padding: 8px;">Cantidad</th>
+                      <th style="border: 1px solid #e2e8f0; padding: 8px;">Fecha Programada</th>
+                    </tr>
+                  </thead>
+                  <tbody>${entregasRows}</tbody>
+                </table>
+              </div>
+            `;
+          }
+
+          // 4. Generar PDF HTML completo
+          const pdfHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="UTF-8">
+              <style>
+                body { font-family: Arial, sans-serif; padding: 20px; font-size: 12px; color: #333; }
+                .header { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #C8102E; padding-bottom: 15px; }
+                .logo img { max-height: 60px; }
+                .company-info { text-align: right; font-size: 10px; color: #666; }
+                .title { text-align: center; margin: 20px 0; }
+                .title h1 { color: #C8102E; font-size: 18px; margin: 0; }
+                .info-box { background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 15px 0; }
+                .info-row { display: flex; justify-content: space-between; margin: 5px 0; }
+                table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+                th { background: #C8102E; color: white; padding: 10px; text-align: left; }
+                td { border: 1px solid #e2e8f0; padding: 8px; }
+                .totals { text-align: right; margin-top: 15px; }
+                .totals-row { margin: 5px 0; }
+                .total-final { font-size: 16px; font-weight: bold; color: #C8102E; }
+                .footer { margin-top: 40px; display: flex; justify-content: space-around; }
+                .signature-box { text-align: center; width: 200px; }
+                .signature-line { border-top: 1px solid #333; margin-top: 50px; padding-top: 5px; }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <div class="logo">
+                  ${logoBase64 ? `<img src="${logoBase64}" alt="Almasa">` : '<strong>ALMASA</strong>'}
+                </div>
+                <div class="company-info">
+                  <strong>COMERCIALIZADORA LA MANITA S DE RL DE CV</strong><br>
+                  RFC: CMA160209TNA<br>
+                  Blvd. Durango 1500, Col. Ciénega<br>
+                  Durango, Dgo. CP 34090<br>
+                  Tel: (618) 123-4567
+                </div>
+              </div>
+
+              <div class="title">
+                <h1>ORDEN DE COMPRA</h1>
+              </div>
+
+              <div class="info-box">
+                <div class="info-row">
+                  <span><strong>Folio:</strong> ${orden.folio}</span>
+                  <span><strong>Fecha:</strong> ${format(new Date(), "dd/MM/yyyy", { locale: es })}</span>
+                </div>
+                <div class="info-row">
+                  <span><strong>Proveedor:</strong> ${proveedorNombreNotif}</span>
+                  <span><strong>Tipo Pago:</strong> ${tipoPago === 'anticipado' ? 'Pago Anticipado' : 'Contra Entrega'}</span>
+                </div>
+                ${tipoEntrega === 'unica' && fechaEntregaUnica ? `
+                  <div class="info-row">
+                    <span><strong>Fecha de Entrega:</strong> ${format(new Date(fechaEntregaUnica), "EEEE dd 'de' MMMM yyyy", { locale: es })}</span>
+                  </div>
+                ` : ''}
+              </div>
+
+              <table>
+                <thead>
+                  <tr>
+                    <th>Unidad</th>
+                    <th>Producto</th>
+                    <th style="text-align: center;">Cantidad</th>
+                    <th style="text-align: right;">P. Unitario</th>
+                    <th style="text-align: right;">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${productosTableRows}
+                </tbody>
+              </table>
+
+              <div class="totals">
+                <div class="totals-row"><strong>Subtotal:</strong> $${totalesOrden.subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+                ${totalesOrden.iva > 0 ? `<div class="totals-row"><strong>IVA (16%):</strong> $${totalesOrden.iva.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>` : ''}
+                ${totalesOrden.ieps > 0 ? `<div class="totals-row"><strong>IEPS (8%):</strong> $${totalesOrden.ieps.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>` : ''}
+                <div class="totals-row total-final"><strong>TOTAL:</strong> $${totalesOrden.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+              </div>
+
+              ${entregasSection}
+
+              ${notas ? `
+                <div style="margin-top: 20px; padding: 10px; background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 4px;">
+                  <strong>Notas:</strong> ${notas}
+                </div>
+              ` : ''}
+
+              <div class="footer">
+                <div class="signature-box">
+                  <div class="signature-line">Elaboró</div>
+                </div>
+                <div class="signature-box">
+                  <div class="signature-line">Autorizó</div>
+                </div>
+                <div class="signature-box">
+                  <div class="signature-line">Recibió Proveedor</div>
+                </div>
+              </div>
+            </body>
+            </html>
+          `;
+
+          // 5. Convertir PDF a Base64
+          const pdfBase64 = btoa(unescape(encodeURIComponent(pdfHtml)));
+
+          // 6. Generar URLs de confirmación
+          const { data: confirmUrlData } = await supabase.functions.invoke(
+            'generate-oc-confirmation-url',
+            { body: { ordenId: orden.id, action: 'confirm' } }
+          );
+          const { data: proposeDateUrlData } = await supabase.functions.invoke(
+            'generate-oc-confirmation-url',
+            { body: { ordenId: orden.id, action: 'propose-date' } }
+          );
+
+          // 7. Construir fechas para el email
+          const fechasEntregaHtml = tipoEntrega === 'multiple'
+            ? `<ul style="margin: 10px 0; padding-left: 20px;">${entregasProgramadas.map(e => 
+                `<li style="margin: 5px 0;">${e.fecha_programada ? format(new Date(e.fecha_programada), "EEEE dd 'de' MMMM yyyy", { locale: es }) : 'Por confirmar'} - ${e.cantidad_bultos.toLocaleString()} bultos</li>`
+              ).join('')}</ul>`
+            : fechaEntregaUnica 
+              ? `<p style="margin: 10px 0; font-size: 16px;"><strong>${format(new Date(fechaEntregaUnica), "EEEE dd 'de' MMMM yyyy", { locale: es })}</strong></p>`
+              : '<p>Por confirmar</p>';
+
+          // 8. HTML del correo
+          const htmlBody = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+              <div style="background: #C8102E; padding: 20px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">Nueva Orden de Compra</h1>
+              </div>
+              
+              <div style="padding: 30px;">
+                <p style="font-size: 16px;">Estimado proveedor <strong>${proveedorNombreNotif}</strong>,</p>
+                <p>Hemos generado una nueva orden de compra para su empresa. Adjunto encontrará el documento completo con el detalle de productos.</p>
+                
+                <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 25px 0;">
+                  <table style="width: 100%;">
+                    <tr>
+                      <td style="padding: 5px 0;"><strong>Folio:</strong></td>
+                      <td style="text-align: right; font-size: 18px; color: #C8102E;"><strong>${orden.folio}</strong></td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 5px 0;"><strong>Total:</strong></td>
+                      <td style="text-align: right; font-size: 18px;"><strong>$${orden.total?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong></td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 5px 0;"><strong>Tipo de Pago:</strong></td>
+                      <td style="text-align: right;">${tipoPago === 'anticipado' ? 'Pago Anticipado' : 'Contra Entrega'}</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div style="margin: 25px 0;">
+                  <h3 style="color: #2e7d32; margin-bottom: 10px;">📅 Fecha(s) de Entrega Programadas:</h3>
+                  ${fechasEntregaHtml}
+                </div>
+                
+                <div style="text-align: center; margin: 35px 0; padding: 25px; background: #f0f9ff; border-radius: 8px;">
+                  <p style="font-size: 16px; margin-bottom: 20px;"><strong>¿Puede cumplir con la(s) fecha(s) de entrega?</strong></p>
+                  <div>
+                    <a href="${confirmUrlData?.url || '#'}" 
+                       style="display: inline-block; background: #22c55e; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 5px;">
+                      ✓ Confirmar Fechas
+                    </a>
+                    <a href="${proposeDateUrlData?.url || '#'}" 
+                       style="display: inline-block; background: #f59e0b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 5px;">
+                      📅 Proponer Otra Fecha
+                    </a>
+                  </div>
+                </div>
+                
+                <p style="color: #666; font-size: 14px;">
+                  <strong>📎 Adjunto:</strong> Orden de Compra ${orden.folio} con detalle completo de productos.
+                </p>
+              </div>
+              
+              <div style="background: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: #666;">
+                <p style="margin: 0;">Comercializadora La Manita S de RL de CV</p>
+                <p style="margin: 5px 0;">Este correo fue enviado automáticamente desde el sistema ERP</p>
+              </div>
+            </div>
+          `;
+
+          // 9. Preparar adjunto
+          const attachments = [{
+            filename: `Orden_Compra_${orden.folio}.html`,
+            content: pdfBase64,
+            mimeType: 'text/html'
+          }];
+
+          // 10. Enviar correo via gmail-api
+          const { data: emailResult, error: emailError } = await supabase.functions.invoke('gmail-api', {
+            body: {
+              action: 'send',
+              email: 'compras@almasa.com.mx',
+              to: emailProveedor,
+              subject: `Nueva Orden de Compra ${orden.folio} - Abarrotes La Manita`,
+              body: htmlBody,
+              attachments: attachments,
+            }
+          });
+
+          // 11. Registrar en correos_enviados
+          await registrarCorreoEnviado({
+            tipo: "orden_compra",
+            referencia_id: orden.id,
+            destinatario: emailProveedor,
+            asunto: `Nueva Orden de Compra ${orden.folio} - Abarrotes La Manita`,
+            gmail_message_id: emailResult?.messageId || null,
+            error: emailError?.message || null,
+          });
+
+          if (!emailError) {
+            toast({
+              title: "📧 Correo enviado al proveedor",
+              description: `Se notificó a ${emailProveedor} con la OC adjunta`,
+            });
+          } else {
+            console.error("Error enviando correo al proveedor:", emailError);
+            toast({
+              title: "Advertencia",
+              description: "La OC se creó pero hubo un error al enviar el correo",
+              variant: "destructive",
+            });
+          }
+        } else {
+          // No hay email configurado
+          toast({
+            title: "OC creada sin notificación",
+            description: "El proveedor no tiene email configurado para recibir la orden",
+          });
+        }
+      } catch (emailErr) {
+        console.error("Error en envío automático de correo:", emailErr);
+        // No bloquear - la OC ya se creó exitosamente
+      }
+      // ========== FIN ENVÍO AUTOMÁTICO ==========
       
       resetForm();
       onOpenChange(false);
