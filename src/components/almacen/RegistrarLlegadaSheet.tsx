@@ -550,7 +550,10 @@ export const RegistrarLlegadaSheet = ({
 
           if (contactoLogistica?.email) {
             const horaInicio = format(new Date(), "HH:mm 'del' dd/MM/yyyy", { locale: es });
-            const asunto = `🚛 Inicio de descarga - OC ${entrega.orden_compra.folio}`;
+            const nombreProveedor = entrega.orden_compra.proveedor?.nombre 
+              || entrega.orden_compra.proveedor_nombre_manual 
+              || "Proveedor";
+            const asunto = `🚛 Inicio de descarga - OC ${entrega.orden_compra.folio} - ${nombreProveedor}`;
             const htmlBody = `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #f97316;">🚛 Inicio de Descarga</h2>
@@ -558,18 +561,22 @@ export const RegistrarLlegadaSheet = ({
                 <p>Le informamos que su unidad ha llegado a nuestro almacén y se ha iniciado la descarga.</p>
                 <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
                   <tr style="background: #f3f4f6;">
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Proveedor:</strong></td>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${nombreProveedor}</td>
+                  </tr>
+                  <tr>
                     <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Orden de Compra:</strong></td>
                     <td style="padding: 8px; border: 1px solid #e5e7eb;">${entrega.orden_compra.folio}</td>
                   </tr>
-                  <tr>
+                  <tr style="background: #f3f4f6;">
                     <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Hora de inicio:</strong></td>
                     <td style="padding: 8px; border: 1px solid #e5e7eb;">${horaInicio}</td>
                   </tr>
-                  <tr style="background: #f3f4f6;">
+                  <tr>
                     <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Chofer:</strong></td>
                     <td style="padding: 8px; border: 1px solid #e5e7eb;">${nombreChofer.trim()}</td>
                   </tr>
-                  <tr>
+                  <tr style="background: #f3f4f6;">
                     <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Placas:</strong></td>
                     <td style="padding: 8px; border: 1px solid #e5e7eb;">${placasManual.trim()}</td>
                   </tr>
