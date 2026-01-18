@@ -1643,23 +1643,23 @@ const CrearOrdenCompraWizard = ({
                           <>
                             <div className="flex justify-between">
                               <span>Base:</span>
-                              <span className="font-medium">${formatCurrency(base)}</span>
+                              <span className="font-medium">{formatCurrency(base)}</span>
                             </div>
                             {productoSeleccionadoData.aplica_iva && (
                               <div className="flex justify-between text-blue-600 dark:text-blue-400">
                                 <span>IVA (16%) {precioIncluyeIva ? "incluido" : ""}:</span>
-                                <span>${formatCurrency(iva)}</span>
+                                <span>{formatCurrency(iva)}</span>
                               </div>
                             )}
                             {productoSeleccionadoData.aplica_ieps && (
                               <div className="flex justify-between text-amber-600 dark:text-amber-400">
                                 <span>IEPS (8%) {precioIncluyeIeps ? "incluido" : ""}:</span>
-                                <span>${formatCurrency(ieps)}</span>
+                                <span>{formatCurrency(ieps)}</span>
                               </div>
                             )}
                             <div className="flex justify-between border-t pt-1 font-semibold">
                               <span>Total:</span>
-                              <span>${formatCurrency(total)}</span>
+                              <span>{formatCurrency(total)}</span>
                             </div>
                           </>
                         );
@@ -1705,8 +1705,8 @@ const CrearOrdenCompraWizard = ({
                             </div>
                           </TableCell>
                           <TableCell className="text-right">{p.cantidad.toLocaleString()}</TableCell>
-                          <TableCell className="text-right">${formatCurrency(p.precio_unitario)}</TableCell>
-                          <TableCell className="text-right">${formatCurrency(p.subtotal)}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(p.precio_unitario)}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(p.subtotal)}</TableCell>
                           <TableCell>
                             <Button
                               type="button"
@@ -2015,8 +2015,8 @@ const CrearOrdenCompraWizard = ({
                       <TableRow key={index}>
                         <TableCell>{p.nombre}</TableCell>
                         <TableCell className="text-right">{p.cantidad.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">${formatCurrency(p.precio_unitario)}</TableCell>
-                        <TableCell className="text-right">${formatCurrency(p.subtotal)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(p.precio_unitario)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(p.subtotal)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -2028,23 +2028,23 @@ const CrearOrdenCompraWizard = ({
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>${formatCurrency(totalesOrden.subtotal)}</span>
+                    <span>{formatCurrency(totalesOrden.subtotal)}</span>
                   </div>
                   {totalesOrden.iva > 0 && (
                     <div className="flex justify-between">
                       <span>IVA (16%):</span>
-                      <span>${formatCurrency(totalesOrden.iva)}</span>
+                      <span>{formatCurrency(totalesOrden.iva)}</span>
                     </div>
                   )}
                   {totalesOrden.ieps > 0 && (
                     <div className="flex justify-between">
                       <span>IEPS (8%):</span>
-                      <span>${formatCurrency(totalesOrden.ieps)}</span>
+                      <span>{formatCurrency(totalesOrden.ieps)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-xl pt-2 border-t">
                     <span>Total:</span>
-                    <span className="text-primary">${formatCurrency(totalesOrden.total)}</span>
+                    <span className="text-primary">{formatCurrency(totalesOrden.total)}</span>
                   </div>
                 </div>
               </div>
