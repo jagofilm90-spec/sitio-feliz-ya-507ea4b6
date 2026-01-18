@@ -252,7 +252,12 @@ const OrdenesCompraTab = () => {
         .from("ordenes_compra")
         .select(`
           *,
-          proveedores (nombre, email),
+          proveedores (
+            id, nombre, rfc, regimen_fiscal,
+            calle, numero_exterior, numero_interior,
+            colonia, municipio, estado, codigo_postal,
+            direccion, email, telefono
+          ),
           ordenes_compra_detalles (
             *,
             productos (nombre, codigo)
