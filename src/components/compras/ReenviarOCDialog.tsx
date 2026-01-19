@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Mail, Building2, AlertCircle, UserPlus } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Mail, Building2, AlertCircle, UserPlus, CheckCircle2 } from "lucide-react";
 import { registrarCorreoEnviado } from "./HistorialCorreosOC";
 import logoAlmasa from "@/assets/logo-almasa.png";
 
@@ -51,6 +52,10 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
   const [mostrarGuardarContacto, setMostrarGuardarContacto] = useState(false);
   const [guardandoContacto, setGuardandoContacto] = useState(false);
   const [correoParaGuardar, setCorreoParaGuardar] = useState("");
+  const [nombreContactoNuevo, setNombreContactoNuevo] = useState("");
+  const [recibeOrdenes, setRecibeOrdenes] = useState(true);
+  const [recibePagos, setRecibePagos] = useState(false);
+  const [correosEnviados, setCorreosEnviados] = useState<string[]>([]);
 
   // Fetch contact that receives orders for this supplier
   const { data: contactoOrden, isLoading: loadingContacto } = useQuery({
@@ -498,7 +503,16 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
       
       // If there was an additional email, ask if they want to save it
       if (destinatarioAdicional) {
+        // Build list of emails sent
+        const listaCorreos: string[] = [];
+        if (destinatarioPrincipal) listaCorreos.push(destinatarioPrincipal);
+        listaCorreos.push(destinatarioAdicional);
+        setCorreosEnviados(listaCorreos);
+        
         setCorreoParaGuardar(destinatarioAdicional);
+        setNombreContactoNuevo("");
+        setRecibeOrdenes(true);
+        setRecibePagos(false);
         setMostrarGuardarContacto(true);
       } else {
         setCorreoAdicional("");
@@ -523,10 +537,11 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
     try {
       const { error } = await supabase.from("proveedor_contactos").insert({
         proveedor_id: orden.proveedor_id,
-        nombre: "Contacto adicional",
+        nombre: nombreContactoNuevo.trim() || "Contacto adicional",
         telefono: "",
         email: correoParaGuardar,
-        recibe_ordenes: true,
+        recibe_ordenes: recibeOrdenes,
+        recibe_pagos: recibePagos,
         activo: true,
       });
       
@@ -551,6 +566,8 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
       setMostrarGuardarContacto(false);
       setCorreoAdicional("");
       setCorreoParaGuardar("");
+      setNombreContactoNuevo("");
+      setCorreosEnviados([]);
       onOpenChange(false);
     }
   };
@@ -559,6 +576,8 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
     setMostrarGuardarContacto(false);
     setCorreoAdicional("");
     setCorreoParaGuardar("");
+    setNombreContactoNuevo("");
+    setCorreosEnviados([]);
     onOpenChange(false);
   };
 
@@ -658,13 +677,67 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
               <UserPlus className="h-5 w-5 text-primary" />
               ¿Guardar contacto?
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              ¿Desea guardar el correo <strong>{correoParaGuardar}</strong> en los 
-              contactos de <strong>{nombreProveedor}</strong> para futuros envíos?
-            </AlertDialogDescription>
           </AlertDialogHeader>
+          
+          {/* Success summary */}
+          <div className="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
+            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-green-800 dark:text-green-300">
+                Orden enviada exitosamente
+              </p>
+              <p className="text-green-600 dark:text-green-400 text-xs mt-1">
+                Se envió a: {correosEnviados.join(", ")}
+              </p>
+            </div>
+          </div>
 
-          <AlertDialogFooter>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              ¿Desea guardar <strong className="text-foreground">{correoParaGuardar}</strong> como 
+              contacto de <strong className="text-foreground">{nombreProveedor}</strong>?
+            </p>
+
+            {/* Contact name field */}
+            <div className="space-y-2">
+              <Label htmlFor="nombre-contacto" className="text-sm font-medium">
+                Nombre del contacto
+              </Label>
+              <Input
+                id="nombre-contacto"
+                placeholder="Ej: Juan Pérez - Ventas"
+                value={nombreContactoNuevo}
+                onChange={(e) => setNombreContactoNuevo(e.target.value)}
+                className="h-9"
+                disabled={guardandoContacto}
+              />
+            </div>
+
+            {/* Responsibility checkboxes */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Este contacto recibe:</Label>
+              <div className="flex flex-wrap gap-4">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox 
+                    checked={recibeOrdenes} 
+                    onCheckedChange={(checked) => setRecibeOrdenes(checked === true)}
+                    disabled={guardandoContacto}
+                  />
+                  <span>Órdenes de compra</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox 
+                    checked={recibePagos} 
+                    onCheckedChange={(checked) => setRecibePagos(checked === true)}
+                    disabled={guardandoContacto}
+                  />
+                  <span>Comprobantes de pago</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <AlertDialogFooter className="mt-2">
             <AlertDialogCancel onClick={handleCerrarSinGuardar} disabled={guardandoContacto}>
               No, solo esta vez
             </AlertDialogCancel>
@@ -682,7 +755,7 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
                   Guardando...
                 </>
               ) : (
-                "Sí, guardar"
+                "Sí, guardar contacto"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
