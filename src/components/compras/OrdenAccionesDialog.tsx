@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { COMPANY_DATA } from "@/constants/companyData";
 import { getProveedorFiscalHTML } from "@/lib/proveedorUtils";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -12,11 +13,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera, Scissors, History } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera, Scissors, History, AlertTriangle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +81,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   const [convertirEntregasOpen, setConvertirEntregasOpen] = useState(false);
   const [dividirEntregaOpen, setDividirEntregaOpen] = useState(false);
   const [evidenciasGalleryOpen, setEvidenciasGalleryOpen] = useState(false);
+  const [confirmEditOpen, setConfirmEditOpen] = useState(false);
   
   // Email CC functionality
   const [emailTo, setEmailTo] = useState("");
@@ -106,6 +118,27 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       return data;
     },
     enabled: !!orden?.id && orden?.status === "enviada",
+  });
+
+  // Query to check if there are active receptions (blocks editing)
+  const { data: tieneRecepcionesActivas = false } = useQuery({
+    queryKey: ["recepciones-activas-oc", orden?.id],
+    queryFn: async () => {
+      if (!orden?.id) return false;
+      const { data, error } = await supabase
+        .from("ordenes_compra_entregas")
+        .select("id")
+        .eq("orden_compra_id", orden.id)
+        .or("llegada_registrada_en.not.is.null,recepcion_finalizada_en.not.is.null")
+        .limit(1);
+      
+      if (error) {
+        console.error("Error checking recepciones:", error);
+        return false;
+      }
+      return (data?.length || 0) > 0;
+    },
+    enabled: !!orden?.id,
   });
 
   // Fetch current user info
@@ -1434,14 +1467,39 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
               {onEdit && (
                 <Button
                   variant="outline"
-                  className="w-full justify-start"
+                  className={cn(
+                    "w-full justify-start",
+                    tieneRecepcionesActivas && "opacity-50 cursor-not-allowed"
+                  )}
+                  disabled={tieneRecepcionesActivas}
                   onClick={() => {
+                    if (tieneRecepcionesActivas) {
+                      toast({
+                        title: "No se puede editar",
+                        description: "Ya hay recepciones registradas en almacén",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    
+                    // If sent or confirmed, show warning
+                    if (orden?.status === "enviada" || orden?.status === "confirmada") {
+                      setConfirmEditOpen(true);
+                      return;
+                    }
+                    
+                    // Edit directly
                     onOpenChange(false);
                     onEdit(orden);
                   }}
                 >
                   <Pencil className="mr-2 h-4 w-4" />
                   Editar Orden
+                  {tieneRecepcionesActivas && (
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      Bloqueado
+                    </Badge>
+                  )}
                 </Button>
               )}
               
@@ -1956,6 +2014,38 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       open={evidenciasGalleryOpen}
       onOpenChange={setEvidenciasGalleryOpen}
     />
+
+    {/* Alert dialog for editing sent/confirmed orders */}
+    <AlertDialog open={confirmEditOpen} onOpenChange={setConfirmEditOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            Orden ya enviada al proveedor
+          </AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div>
+              <p className="mb-2">Esta orden ya fue enviada al proveedor. Si realizas cambios:</p>
+              <ul className="list-disc ml-4 space-y-1 text-sm">
+                <li>Los cambios <strong>no se enviarán automáticamente</strong></li>
+                <li>Deberás reenviar la orden manualmente si es necesario</li>
+                <li>El proveedor tiene la versión anterior</li>
+              </ul>
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={() => {
+            setConfirmEditOpen(false);
+            onOpenChange(false);
+            if (onEdit) onEdit(orden);
+          }}>
+            Continuar editando
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 };
