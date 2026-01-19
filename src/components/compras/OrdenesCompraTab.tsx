@@ -47,6 +47,7 @@ import EntregasPopover from "./EntregasPopover";
 import ProveedorFacturasDialog from "./ProveedorFacturasDialog";
 import { MarcarPagadoDialog } from "./MarcarPagadoDialog";
 import CrearOrdenCompraWizard from "./CrearOrdenCompraWizard";
+import NotificarCambiosOCDialog, { CambioDetectado } from "./NotificarCambiosOCDialog";
 import { formatCurrency } from "@/lib/utils";
 import { sendPushNotification } from "@/services/pushNotifications";
 
@@ -144,7 +145,121 @@ const OrdenesCompraTab = () => {
   const [comprobantePagoUrl, setComprobantePagoUrl] = useState("");
   const [uploadingComprobante, setUploadingComprobante] = useState(false);
 
-  // Function to generate next folio
+  // Estado para notificación de cambios post-edición
+  const [notificarCambiosOpen, setNotificarCambiosOpen] = useState(false);
+  const [cambiosDetectados, setCambiosDetectados] = useState<CambioDetectado[]>([]);
+  const [ordenEditadaInfo, setOrdenEditadaInfo] = useState<{
+    id: string;
+    folio: string;
+    proveedorId: string | null;
+    proveedorNombre: string;
+    statusAnterior: string;
+  } | null>(null);
+  const [ordenAnteriorSnapshot, setOrdenAnteriorSnapshot] = useState<{
+    productosEnOrden: ProductoEnOrden[];
+    fechaEntrega: string;
+    entregasProgramadas: EntregaProgramada[];
+  } | null>(null);
+
+  // Función para detectar cambios entre versión anterior y nueva de la OC
+  const detectarCambiosOC = (
+    anterior: { productosEnOrden: ProductoEnOrden[]; fechaEntrega: string; entregasProgramadas: EntregaProgramada[] },
+    nuevo: { productosEnOrden: ProductoEnOrden[]; fechaEntrega: string; entregasProgramadas: EntregaProgramada[] }
+  ): CambioDetectado[] => {
+    const cambios: CambioDetectado[] = [];
+
+    // Detectar cambios en fecha de entrega (única)
+    if (anterior.fechaEntrega && nuevo.fechaEntrega && anterior.fechaEntrega !== nuevo.fechaEntrega) {
+      const formatFecha = (f: string) => {
+        if (!f) return '-';
+        const [y, m, d] = f.split('-').map(Number);
+        return new Date(y, m - 1, d).toLocaleDateString('es-MX');
+      };
+      cambios.push({
+        tipo: 'fecha',
+        descripcion: 'Fecha de entrega modificada',
+        valorAnterior: formatFecha(anterior.fechaEntrega),
+        valorNuevo: formatFecha(nuevo.fechaEntrega),
+      });
+    }
+
+    // Detectar cambios en fechas de entregas múltiples
+    if (anterior.entregasProgramadas.length > 0 || nuevo.entregasProgramadas.length > 0) {
+      anterior.entregasProgramadas.forEach(ea => {
+        const en = nuevo.entregasProgramadas.find(e => e.numero_entrega === ea.numero_entrega);
+        if (en && ea.fecha_programada !== en.fecha_programada) {
+          const formatFecha = (f: string) => {
+            if (!f) return 'Sin fecha';
+            const [y, m, d] = f.split('-').map(Number);
+            return new Date(y, m - 1, d).toLocaleDateString('es-MX');
+          };
+          cambios.push({
+            tipo: 'fecha',
+            descripcion: `Entrega #${ea.numero_entrega}: fecha modificada`,
+            valorAnterior: formatFecha(ea.fecha_programada),
+            valorNuevo: formatFecha(en.fecha_programada),
+          });
+        }
+      });
+    }
+
+    // Crear mapas de productos por ID para comparación
+    const productosAnteriores = new Map(anterior.productosEnOrden.map(p => [p.producto_id, p]));
+    const productosNuevos = new Map(nuevo.productosEnOrden.map(p => [p.producto_id, p]));
+
+    // Detectar productos eliminados
+    anterior.productosEnOrden.forEach(pa => {
+      if (!productosNuevos.has(pa.producto_id)) {
+        cambios.push({
+          tipo: 'producto_eliminado',
+          producto: pa.nombre,
+          descripcion: `Producto eliminado: ${pa.nombre}`,
+          valorAnterior: `${pa.cantidad} unidades`,
+          valorNuevo: '0',
+        });
+      }
+    });
+
+    // Detectar productos agregados y cambios en cantidad/precio
+    nuevo.productosEnOrden.forEach(pn => {
+      const pa = productosAnteriores.get(pn.producto_id);
+      
+      if (!pa) {
+        // Producto agregado
+        cambios.push({
+          tipo: 'producto_agregado',
+          producto: pn.nombre,
+          descripcion: `Producto agregado: ${pn.nombre}`,
+          valorAnterior: '0',
+          valorNuevo: `${pn.cantidad} unidades`,
+        });
+      } else {
+        // Detectar cambio de cantidad
+        if (pa.cantidad !== pn.cantidad) {
+          cambios.push({
+            tipo: 'cantidad',
+            producto: pn.nombre,
+            descripcion: `Cantidad modificada: ${pn.nombre}`,
+            valorAnterior: pa.cantidad,
+            valorNuevo: pn.cantidad,
+          });
+        }
+        // Detectar cambio de precio
+        if (Math.abs(pa.precio_unitario - pn.precio_unitario) > 0.01) {
+          cambios.push({
+            tipo: 'precio',
+            producto: pn.nombre,
+            descripcion: `Precio modificado: ${pn.nombre}`,
+            valorAnterior: `$${pa.precio_unitario.toFixed(2)}`,
+            valorNuevo: `$${pn.precio_unitario.toFixed(2)}`,
+          });
+        }
+      }
+    });
+
+    return cambios;
+  };
+
   const generateNextFolio = async () => {
     setGeneratingFolio(true);
     try {
@@ -856,10 +971,35 @@ const OrdenesCompraTab = () => {
       queryClient.invalidateQueries({ queryKey: ["ordenes_compra"] });
       queryClient.invalidateQueries({ queryKey: ["ordenes_calendario"] });
       queryClient.invalidateQueries({ queryKey: ["proveedores-manuales-autocomplete"] });
-      toast({
-        title: "Orden actualizada",
-        description: "La orden de compra se ha actualizado exitosamente",
-      });
+      
+      // Detectar cambios si la orden ya fue enviada al proveedor
+      if (ordenAnteriorSnapshot && ordenEditadaInfo) {
+        const cambios = detectarCambiosOC(
+          ordenAnteriorSnapshot,
+          {
+            productosEnOrden,
+            fechaEntrega,
+            entregasProgramadas,
+          }
+        );
+
+        if (cambios.length > 0) {
+          setCambiosDetectados(cambios);
+          setNotificarCambiosOpen(true);
+          // El toast se mostrará después de cerrar el diálogo de notificación
+        } else {
+          toast({
+            title: "Orden actualizada",
+            description: "La orden de compra se ha actualizado exitosamente",
+          });
+        }
+      } else {
+        toast({
+          title: "Orden actualizada",
+          description: "La orden de compra se ha actualizado exitosamente",
+        });
+      }
+      
       resetForm();
       setDialogOpen(false);
     },
@@ -913,6 +1053,7 @@ const OrdenesCompraTab = () => {
     setProductosEnOrden(productos);
     
     // Load entregas if multiple
+    let entregasData: EntregaProgramada[] = [];
     if (orden.entregas_multiples) {
       const { data: entregas } = await supabase
         .from("ordenes_compra_entregas")
@@ -921,12 +1062,33 @@ const OrdenesCompraTab = () => {
         .order("numero_entrega");
       
       if (entregas && entregas.length > 0) {
-        setEntregasProgramadas(entregas.map(e => ({
+        entregasData = entregas.map(e => ({
           numero_entrega: e.numero_entrega,
           cantidad_bultos: e.cantidad_bultos,
           fecha_programada: e.fecha_programada,
-        })));
+        }));
+        setEntregasProgramadas(entregasData);
       }
+    }
+
+    // Guardar snapshot de la orden original ANTES de editar
+    // Solo si la orden ya fue enviada al proveedor
+    if (orden.status === 'enviada' || orden.status === 'confirmada') {
+      setOrdenEditadaInfo({
+        id: orden.id,
+        folio: orden.folio,
+        proveedorId: orden.proveedor_id,
+        proveedorNombre: orden.proveedores?.nombre || orden.proveedor_nombre_manual || "Proveedor",
+        statusAnterior: orden.status,
+      });
+      setOrdenAnteriorSnapshot({
+        productosEnOrden: productos,
+        fechaEntrega: orden.fecha_entrega_programada || "",
+        entregasProgramadas: entregasData,
+      });
+    } else {
+      setOrdenEditadaInfo(null);
+      setOrdenAnteriorSnapshot(null);
     }
     
     setDialogOpen(true);
@@ -2264,6 +2426,25 @@ const OrdenesCompraTab = () => {
         proveedores={proveedores}
         productos={productos}
         proveedoresManuales={proveedoresManuales}
+      />
+
+      <NotificarCambiosOCDialog
+        open={notificarCambiosOpen}
+        onOpenChange={setNotificarCambiosOpen}
+        ordenId={ordenEditadaInfo?.id || ""}
+        folio={ordenEditadaInfo?.folio || ""}
+        proveedorId={ordenEditadaInfo?.proveedorId || null}
+        proveedorNombre={ordenEditadaInfo?.proveedorNombre || ""}
+        cambios={cambiosDetectados}
+        onNotificacionEnviada={() => {
+          setOrdenAnteriorSnapshot(null);
+          setOrdenEditadaInfo(null);
+          setCambiosDetectados([]);
+          toast({
+            title: "Orden actualizada",
+            description: "La orden de compra se ha actualizado y el proveedor fue notificado",
+          });
+        }}
       />
     </Card>
   );
