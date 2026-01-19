@@ -16,12 +16,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera, Scissors, History, RefreshCw } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera, Scissors, History } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import ProgramarEntregasDialog from "./ProgramarEntregasDialog";
-import RegistrarRecepcionDialog from "./RegistrarRecepcionDialog";
+
 import ConvertirEntregasMultiplesDialog from "./ConvertirEntregasMultiplesDialog";
 import DividirEntregaDialog from "./DividirEntregaDialog";
 import { EvidenciasGallery, EvidenciasBadge } from "./EvidenciasGallery";
@@ -66,7 +66,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [programarEntregasOpen, setProgramarEntregasOpen] = useState(false);
-  const [registrarRecepcionOpen, setRegistrarRecepcionOpen] = useState(false);
+  
   const [convertirEntregasOpen, setConvertirEntregasOpen] = useState(false);
   const [dividirEntregaOpen, setDividirEntregaOpen] = useState(false);
   const [evidenciasGalleryOpen, setEvidenciasGalleryOpen] = useState(false);
@@ -1292,8 +1292,6 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   const canRequestAuthorization = orden?.status === "pendiente" && !isAdmin;
   const canAuthorize = isAdmin && orden?.status === "pendiente_autorizacion";
   const canSendToSupplier = orden?.status === "autorizada";
-  const canSendDirectly = isAdmin && orden?.status === "pendiente";
-  const canResendToSupplier = ["enviada", "confirmada", "parcial"].includes(orden?.status || "");
   const proveedorTieneEmail = !!(orden?.proveedores?.email || orden?.proveedor_email_manual);
 
   // Mark as sent without email (for informal suppliers) - still sends internal copy
@@ -1496,63 +1494,22 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
               </>
             )}
 
-            {/* Button to send to supplier - visible when authorized */}
-            {canSendToSupplier && proveedorTieneEmail && (
+            {/* Unified send button - shown for authorized orders */}
+            {canSendToSupplier && (
               <Button
                 variant="outline"
                 className="w-full justify-start text-green-600 hover:text-green-700 border-green-200"
-                onClick={() => setAccion("enviar_email")}
+                onClick={proveedorTieneEmail ? () => setAccion("enviar_email") : handleMarcarComoEnviada}
+                disabled={enviandoEmail}
               >
-                <Mail className="mr-2 h-4 w-4" />
-                Enviar al Proveedor
-              </Button>
-            )}
-
-            {/* Button to mark as sent without email - for informal suppliers */}
-            {canSendToSupplier && !proveedorTieneEmail && (
-              <Button
-                variant="outline"
-                className="w-full justify-start text-green-600 hover:text-green-700 border-green-200"
-                onClick={handleMarcarComoEnviada}
-              >
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Marcar como Enviada (control interno)
-              </Button>
-            )}
-
-            {/* Admin can send directly without authorization */}
-            {canSendDirectly && proveedorTieneEmail && (
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => setAccion("enviar_email")}
-              >
-                <Mail className="mr-2 h-4 w-4" />
-                Enviar Orden al Proveedor (sin autorizar)
-              </Button>
-            )}
-
-            {/* Admin can mark as sent without email */}
-            {canSendDirectly && !proveedorTieneEmail && (
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={handleMarcarComoEnviada}
-              >
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Marcar como Enviada (control interno)
-              </Button>
-            )}
-
-            {/* Resend to supplier - for orders already sent */}
-            {canResendToSupplier && proveedorTieneEmail && (
-              <Button
-                variant="outline"
-                className="w-full justify-start text-cyan-600 hover:text-cyan-700 border-cyan-200"
-                onClick={() => setAccion("reenviar_email")}
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Reenviar OC al Proveedor
+                {enviandoEmail ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : proveedorTieneEmail ? (
+                  <Mail className="mr-2 h-4 w-4" />
+                ) : (
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                )}
+                {proveedorTieneEmail ? "Enviar al Proveedor" : "Marcar como Enviada"}
               </Button>
             )}
             </div>
@@ -1606,20 +1563,28 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
               <CalendarIcon className="mr-2 h-4 w-4" />
               Cambiar Fecha de Entrega
             </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => setRegistrarRecepcionOpen(true)}
-              disabled={orden?.status === "recibida"}
-            >
-              <Package className="mr-2 h-4 w-4" />
-              Registrar Recepción
-              {orden?.status === "parcial" && (
-                <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700">
-                  Parcial
-                </Badge>
-              )}
-            </Button>
+            
+            {/* Read-only reception status - actual registration is done by warehouse */}
+            {(orden?.status === "enviada" || orden?.status === "confirmada" || orden?.status === "parcial" || orden?.status === "recibida") && (
+              <Button
+                variant="outline"
+                className="w-full justify-start text-muted-foreground"
+                onClick={() => setEvidenciasGalleryOpen(true)}
+              >
+                <Package className="mr-2 h-4 w-4" />
+                Ver Estado de Recepciones
+                {orden?.status === "parcial" && (
+                  <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700">
+                    Parcial
+                  </Badge>
+                )}
+                {orden?.status === "recibida" && (
+                  <Badge variant="default" className="ml-2 bg-green-100 text-green-700">
+                    Completa
+                  </Badge>
+                )}
+              </Button>
+            )}
             </div>
 
             <Separator />
@@ -1973,11 +1938,6 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       orden={orden}
     />
 
-    <RegistrarRecepcionDialog
-      open={registrarRecepcionOpen}
-      onOpenChange={setRegistrarRecepcionOpen}
-      orden={orden}
-    />
 
     <ConvertirEntregasMultiplesDialog
       open={convertirEntregasOpen}
