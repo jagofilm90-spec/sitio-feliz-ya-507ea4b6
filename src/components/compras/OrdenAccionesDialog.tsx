@@ -16,11 +16,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera, Scissors, History, ChevronDown, RefreshCw } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera, Scissors, History, RefreshCw } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import ProgramarEntregasDialog from "./ProgramarEntregasDialog";
 import RegistrarRecepcionDialog from "./RegistrarRecepcionDialog";
@@ -1461,9 +1459,11 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
 
             <Separator />
 
+            {/* ====== AUTORIZACIÓN Y ENVÍO ====== */}
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Autorización y Envío</p>
-            {/* Authorization workflow buttons */}
+              
+              {/* Authorization workflow buttons */}
             {canRequestAuthorization && (
               <Button
                 variant="outline"
@@ -1555,8 +1555,15 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                 Reenviar OC al Proveedor
               </Button>
             )}
+            </div>
 
-            {orden?.entregas_multiples ? (
+            <Separator />
+
+            {/* ====== ENTREGAS Y RECEPCIÓN ====== */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Entregas y Recepción</p>
+
+              {orden?.entregas_multiples ? (
               <>
                 <Button
                   variant="outline"
@@ -1613,53 +1620,63 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                 </Badge>
               )}
             </Button>
-            
-            {/* View photo evidences button */}
-            {(orden?.status === "recibida" || orden?.status === "parcial") && (
-              <Button
-                variant="outline"
-                className="w-full justify-start text-emerald-600 hover:text-emerald-700 border-emerald-200"
-                onClick={() => setEvidenciasGalleryOpen(true)}
-              >
-                <Camera className="mr-2 h-4 w-4" />
-                Ver Evidencias Fotográficas
-                <EvidenciasBadge 
-                  ordenCompraId={orden?.id} 
-                  onClick={() => setEvidenciasGalleryOpen(true)} 
-                />
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => setAccion("devolver")}
-            >
-              <XCircle className="mr-2 h-4 w-4" />
-              Marcar como Devuelta
-            </Button>
-            {(orden?.status === "pendiente" || isAdmin) && (
-              <Button
-                variant="outline"
-                className="w-full justify-start text-destructive hover:text-destructive"
-                onClick={() => setAccion("eliminar")}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Eliminar Orden
-              </Button>
-            )}
+            </div>
 
-            {/* Historial de correos enviados */}
-            <Collapsible className="w-full">
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground">
-                  <History className="mr-2 h-4 w-4" />
-                  Historial de Correos Enviados
+            <Separator />
+
+            {/* ====== OTRAS ACCIONES ====== */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Otras Acciones</p>
+              
+              {/* View photo evidences button */}
+              {(orden?.status === "recibida" || orden?.status === "parcial") && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-emerald-600 hover:text-emerald-700 border-emerald-200"
+                  onClick={() => setEvidenciasGalleryOpen(true)}
+                >
+                  <Camera className="mr-2 h-4 w-4" />
+                  Ver Evidencias Fotográficas
+                  <EvidenciasBadge 
+                    ordenCompraId={orden?.id} 
+                    onClick={() => setEvidenciasGalleryOpen(true)} 
+                  />
                 </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2 border rounded-lg p-3 bg-muted/30">
-                <HistorialCorreosOC ordenId={orden?.id} />
-              </CollapsibleContent>
-            </Collapsible>
+              )}
+              
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => setAccion("devolver")}
+              >
+                <XCircle className="mr-2 h-4 w-4" />
+                Marcar como Devuelta
+              </Button>
+              
+              {(orden?.status === "pendiente" || isAdmin) && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-destructive hover:text-destructive"
+                  onClick={() => setAccion("eliminar")}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Eliminar Orden
+                </Button>
+              )}
+
+              {/* Historial de correos enviados */}
+              <Collapsible className="w-full">
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground">
+                    <History className="mr-2 h-4 w-4" />
+                    Historial de Correos Enviados
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2 border rounded-lg p-3 bg-muted/30">
+                  <HistorialCorreosOC ordenId={orden?.id} />
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
           </div>
         ) : accion === "solicitar_autorizacion" ? (
           <div className="space-y-4">
