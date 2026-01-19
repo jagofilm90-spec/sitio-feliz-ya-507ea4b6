@@ -16,7 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera, Scissors, History, RefreshCw } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera, Scissors, History, ChevronDown, RefreshCw } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -1429,29 +1430,39 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
         </DialogHeader>
 
         {!accion ? (
-          <div className="space-y-3">
-            {onEdit && (
+          <div className="space-y-4">
+            {/* ====== ACCIONES PRINCIPALES ====== */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Acciones Principales</p>
+              
+              {onEdit && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => {
+                    onOpenChange(false);
+                    onEdit(orden);
+                  }}
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Editar Orden
+                </Button>
+              )}
+              
               <Button
                 variant="outline"
                 className="w-full justify-start"
-                onClick={() => {
-                  onOpenChange(false);
-                  onEdit(orden);
-                }}
+                onClick={handleGenerarPDF}
               >
-                <Pencil className="mr-2 h-4 w-4" />
-                Editar Orden de Compra
+                <FileText className="mr-2 h-4 w-4" />
+                Generar PDF
               </Button>
-            )}
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={handleGenerarPDF}
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              Generar PDF para Imprimir
-            </Button>
+            </div>
 
+            <Separator />
+
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Autorización y Envío</p>
             {/* Authorization workflow buttons */}
             {canRequestAuthorization && (
               <Button
