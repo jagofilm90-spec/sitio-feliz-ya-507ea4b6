@@ -251,7 +251,7 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
             <div class="company-subtitle">${COMPANY_DATA.razonSocial}</div>
             <div class="company-details">
               <strong>RFC:</strong> ${COMPANY_DATA.rfc}<br>
-              <strong>Dirección:</strong> ${COMPANY_DATA.direccionCompleta}<br>
+              <strong>Dirección:</strong> ${COMPANY_DATA.direccionCompletaMayusculas}<br>
               <strong>Tel:</strong> ${COMPANY_DATA.telefonosFormateados} | <strong>Email:</strong> ${COMPANY_DATA.emails.compras}
             </div>
           </div>
@@ -270,7 +270,7 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
           <div class="info-box delivery">
             <h3>📅 Entrega</h3>
             <p><strong>${orden.entregas_multiples ? 'Ver calendario de entregas' : fechaEntrega}</strong></p>
-            <p>Lugar: ${COMPANY_DATA.direccionCompleta}</p>
+            <p>Lugar: ${COMPANY_DATA.direccionCompletaMayusculas}</p>
           </div>
         </div>
 
