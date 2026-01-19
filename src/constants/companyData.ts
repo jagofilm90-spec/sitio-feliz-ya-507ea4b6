@@ -34,7 +34,9 @@ export const COMPANY_DATA = {
   
   // Formatos de dirección para diferentes usos
   direccionCompleta: "Melchor Ocampo #59, Col. Magdalena Mixiuhca, Venustiano Carranza, C.P. 15850, CDMX",
+  direccionCompletaMayusculas: "MELCHOR OCAMPO #59, COL. MAGDALENA MIXIUHCA, VENUSTIANO CARRANZA, C.P. 15850, CDMX",
   direccionCorta: "Melchor Ocampo #59, Magdalena Mixiuhca, Venustiano Carranza, 15850, CDMX",
+  direccionCortaMayusculas: "MELCHOR OCAMPO #59, MAGDALENA MIXIUHCA, VENUSTIANO CARRANZA, 15850, CDMX",
   direccionMultilinea: [
     "Calle: MELCHOR OCAMPO No.Ext: 59",
     "Colonia: MAGDALENA MIXIUHCA",
@@ -70,24 +72,24 @@ export const COMPANY_DATA = {
     beneficiario: "ABARROTES LA MANITA, S.A. DE C.V.",
   },
   
-  // Ubicaciones de Entrega para OC
+  // Ubicaciones de Entrega para OC (direcciones en mayúsculas para PDFs)
   ubicacionesEntrega: [
     {
       id: "bodega_1",
       nombre: "Bodega 1 (Principal)",
-      direccion: "Melchor Ocampo #59, Col. Magdalena Mixiuhca, Venustiano Carranza, C.P. 15850, CDMX",
+      direccion: "MELCHOR OCAMPO #59, COL. MAGDALENA MIXIUHCA, VENUSTIANO CARRANZA, C.P. 15850, CDMX",
       esDefault: true,
     },
     {
       id: "bodega_2",
       nombre: "Bodega 2",
-      direccion: "Guillermo Prieto, CDMX",
+      direccion: "GUILLERMO PRIETO, CDMX",
       esDefault: false,
     },
     {
       id: "almacenes",
       nombre: "Almacenes (Terceros)",
-      direccion: "Por definir",
+      direccion: "POR DEFINIR",
       esDefault: false,
     }
   ],

@@ -856,7 +856,7 @@ const CrearOrdenCompraWizard = ({
                 <div class="company-info">
                   <strong>${COMPANY_DATA.razonSocial}</strong><br>
                   RFC: ${COMPANY_DATA.rfc}<br>
-                  ${COMPANY_DATA.direccionCompleta}<br>
+                  ${COMPANY_DATA.direccionCompletaMayusculas}<br>
                   Tel: ${COMPANY_DATA.telefonosFormateados}
                 </div>
               </div>

@@ -653,7 +653,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
             <div class="company-details">
               <strong>${COMPANY_DATA.razonSocial}</strong><br>
               RFC: ${COMPANY_DATA.rfc}<br>
-              ${COMPANY_DATA.direccionCorta}<br>
+              ${COMPANY_DATA.direccionCortaMayusculas}<br>
               Tel: ${COMPANY_DATA.telefonosFormateados}<br>
               ${COMPANY_DATA.emails.compras}
             </div>
@@ -675,7 +675,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
             <div class="info-box delivery">
               <h3>Entrega Programada</h3>
               <p class="highlight">${fechaEntrega}</p>
-              <p style="font-size: 11px; margin-top: 5px;">Lugar: ${COMPANY_DATA.direccionCompleta}</p>
+              <p style="font-size: 11px; margin-top: 5px;">Lugar: ${COMPANY_DATA.direccionCompletaMayusculas}</p>
             </div>
           ` : ''}
         </div>
