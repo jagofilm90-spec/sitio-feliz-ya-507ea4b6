@@ -5,7 +5,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { COMPANY_DATA } from "@/constants/companyData";
 import { getProveedorFiscalHTML } from "@/lib/proveedorUtils";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -1576,6 +1585,78 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
             )}
           </DialogDescription>
         </DialogHeader>
+
+        {/* ====== RESUMEN DE LA ORDEN ====== */}
+        <div className="bg-muted/30 border rounded-lg p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Package className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Resumen de la Orden</span>
+          </div>
+          
+          {/* Info del proveedor y fecha */}
+          <div className="text-sm space-y-1">
+            <p>
+              <span className="text-muted-foreground">Proveedor:</span>{" "}
+              {orden?.proveedores?.nombre || orden?.proveedor_nombre_manual || "Sin proveedor"}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Fecha entrega:</span>{" "}
+              {orden?.fecha_entrega_programada 
+                ? (() => {
+                    const [year, month, day] = orden.fecha_entrega_programada.split('-').map(Number);
+                    const fecha = new Date(year, month - 1, day);
+                    return fecha.toLocaleDateString('es-MX', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    });
+                  })()
+                : "Por confirmar"
+              }
+            </p>
+          </div>
+          
+          {/* Tabla de productos - scrollable si hay muchos */}
+          {orden?.ordenes_compra_detalles && orden.ordenes_compra_detalles.length > 0 && (
+            <ScrollArea className="max-h-[180px]">
+              <Table>
+                <TableHeader>
+                  <TableRow className="text-xs">
+                    <TableHead className="py-2">Producto</TableHead>
+                    <TableHead className="text-center w-16 py-2">Cant</TableHead>
+                    <TableHead className="text-right w-24 py-2">P.Unit</TableHead>
+                    <TableHead className="text-right w-24 py-2">Subtotal</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orden.ordenes_compra_detalles.map((d: any) => (
+                    <TableRow key={d.id} className="text-xs">
+                      <TableCell className="truncate max-w-[200px] py-1.5">
+                        {d.productos?.nombre || d.producto_nombre_manual || "Producto"}
+                      </TableCell>
+                      <TableCell className="text-center py-1.5">{d.cantidad_ordenada}</TableCell>
+                      <TableCell className="text-right py-1.5">{formatCurrency(d.precio_unitario_compra)}</TableCell>
+                      <TableCell className="text-right py-1.5">{formatCurrency(d.subtotal)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          )}
+          
+          {/* Totales */}
+          <div className="flex justify-between items-start pt-2 border-t">
+            <span className="text-xs text-muted-foreground">
+              {orden?.ordenes_compra_detalles?.length || 0} producto(s)
+            </span>
+            <div className="text-right text-sm space-y-0.5">
+              <div className="text-muted-foreground">Subtotal: {formatCurrency(orden?.subtotal || 0)}</div>
+              <div className="text-muted-foreground">IVA 16%: {formatCurrency(orden?.impuestos || 0)}</div>
+              <div className="font-bold text-base">Total: {formatCurrency(orden?.total || 0)}</div>
+            </div>
+          </div>
+        </div>
 
         {!accion ? (
           <div className="space-y-4">
