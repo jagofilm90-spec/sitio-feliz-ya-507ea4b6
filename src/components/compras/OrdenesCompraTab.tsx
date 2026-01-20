@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { registrarCorreoEnviado } from "./HistorialCorreosOC";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -32,6 +31,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Plus, Trash2, Search, MoreVertical, Loader2, Truck, Send, Bell, CalendarCheck, CalendarX, RefreshCw, Calendar as CalendarIcon, Receipt, Check, CreditCard, Clock, FileCheck, Hash, Upload, ExternalLink, X } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -50,6 +59,26 @@ import CrearOrdenCompraWizard from "./CrearOrdenCompraWizard";
 import NotificarCambiosOCDialog, { CambioDetectado } from "./NotificarCambiosOCDialog";
 import { formatCurrency } from "@/lib/utils";
 import { sendPushNotification } from "@/services/pushNotifications";
+import { registrarCorreoEnviado } from "./HistorialCorreosOC";
+import { COMPANY_DATA } from "@/constants/companyData";
+import logoAlmasa from "@/assets/logo-almasa.png";
+
+// Helper function to convert image to base64
+const getLogoBase64 = async (): Promise<string> => {
+  try {
+    const response = await fetch(logoAlmasa);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Error loading logo:', error);
+    return '';
+  }
+};
 
 interface ProductoEnOrden {
   producto_id: string;
@@ -160,6 +189,11 @@ const OrdenesCompraTab = () => {
     fechaEntrega: string;
     entregasProgramadas: EntregaProgramada[];
   } | null>(null);
+
+  // Estado para eliminar OC
+  const [confirmarEliminacionOpen, setConfirmarEliminacionOpen] = useState(false);
+  const [ordenParaEliminar, setOrdenParaEliminar] = useState<any>(null);
+  const [eliminandoOrden, setEliminandoOrden] = useState(false);
 
   // Función para detectar cambios entre versión anterior y nueva de la OC
   const detectarCambiosOC = (
@@ -1290,6 +1324,196 @@ const OrdenesCompraTab = () => {
     }
   };
 
+  // Función para eliminar OC con notificación al proveedor
+  const handleEliminarOrden = async () => {
+    if (!ordenParaEliminar) return;
+    
+    setEliminandoOrden(true);
+    
+    try {
+      const orden = ordenParaEliminar;
+      const emailDestinatario = orden?.proveedores?.email || orden?.proveedor_email_manual;
+      const proveedorNombre = orden?.proveedores?.nombre || orden?.proveedor_nombre_manual || 'Proveedor';
+      
+      // Si la orden fue enviada, notificar al proveedor
+      if (emailDestinatario && (orden.status === 'enviada' || orden.status === 'confirmada')) {
+        try {
+          const logoBase64 = await getLogoBase64();
+          
+          // Construir tabla de productos
+          const detalles = orden.ordenes_compra_detalles || [];
+          const productosHTML = detalles.map((d: any) => 
+            `<tr>
+              <td style="padding: 10px; border: 1px solid #ddd;">${d.productos?.codigo || '-'}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${d.productos?.nombre || 'Producto'}</td>
+              <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${d.cantidad_ordenada}</td>
+              <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">$${d.precio_unitario_compra?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+              <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">$${d.subtotal?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+            </tr>`
+          ).join('');
+
+          // Formato de fecha de entrega
+          let fechaEntregaStr = 'Por confirmar';
+          if (orden.fecha_entrega_programada) {
+            const [year, month, day] = orden.fecha_entrega_programada.split('-').map(Number);
+            const fechaLocal = new Date(year, month - 1, day);
+            fechaEntregaStr = fechaLocal.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+          }
+
+          // Construir email de cancelación
+          const htmlBody = `
+            <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 20px;">
+              <div style="text-align: center; margin-bottom: 20px;">
+                ${logoBase64 ? `<img src="${logoBase64}" alt="ALMASA" style="height: 60px;" />` : '<h1 style="color: #B22234;">ALMASA</h1>'}
+              </div>
+              
+              <div style="background-color: #FEE2E2; border: 2px solid #EF4444; border-radius: 8px; padding: 20px; margin-bottom: 20px; text-align: center;">
+                <h2 style="color: #DC2626; margin: 0;">❌ ORDEN CANCELADA: ${orden.folio}</h2>
+              </div>
+              
+              <div style="background-color: #f8f9fa; border-left: 4px solid #1e3a5f; padding: 15px; margin-bottom: 20px;">
+                <h4 style="margin: 0 0 8px 0; color: #1e3a5f;">🏢 ${COMPANY_DATA.razonSocial}</h4>
+                <p style="margin: 3px 0; font-size: 13px;">RFC: ${COMPANY_DATA.rfc}</p>
+                <p style="margin: 3px 0; font-size: 13px;">${COMPANY_DATA.direccionCompletaMayusculas}</p>
+                <p style="margin: 3px 0; font-size: 13px;">Tel: ${COMPANY_DATA.telefonosFormateados} | ${COMPANY_DATA.emails.compras}</p>
+              </div>
+
+              <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin-bottom: 20px;">
+                <h4 style="margin: 0 0 8px 0; color: #dc2626;">📦 Proveedor: ${proveedorNombre.toUpperCase()}</h4>
+                ${orden.proveedores?.rfc ? `<p style="margin: 3px 0; font-size: 13px;">RFC: ${orden.proveedores.rfc}</p>` : ''}
+              </div>
+
+              <div style="background-color: #fee2e2; border: 2px solid #ef4444; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <p style="margin: 0; font-size: 16px; color: #dc2626; text-align: center;">
+                  <strong>⚠️ IMPORTANTE: Esta orden ha sido CANCELADA y ya NO debe ser procesada.</strong>
+                </p>
+              </div>
+
+              <h4 style="color: #1e3a5f; border-bottom: 2px solid #1e3a5f; padding-bottom: 5px;">📋 Productos que estaban en la orden:</h4>
+              <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                <thead>
+                  <tr style="background-color: #6b7280; color: white;">
+                    <th style="padding: 10px; border: 1px solid #6b7280;">Código</th>
+                    <th style="padding: 10px; border: 1px solid #6b7280;">Producto</th>
+                    <th style="padding: 10px; border: 1px solid #6b7280; text-align: center;">Cantidad</th>
+                    <th style="padding: 10px; border: 1px solid #6b7280; text-align: right;">P. Unit.</th>
+                    <th style="padding: 10px; border: 1px solid #6b7280; text-align: right;">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody style="color: #6b7280;">
+                  ${productosHTML}
+                </tbody>
+              </table>
+
+              <div style="display: flex; justify-content: flex-end; margin: 20px 0;">
+                <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; min-width: 200px; color: #6b7280;">
+                  <div style="display: flex; justify-content: space-between; margin: 5px 0; text-decoration: line-through;">
+                    <span>Subtotal:</span>
+                    <span>$${orden.subtotal?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin: 5px 0; text-decoration: line-through;">
+                    <span>IVA (16%):</span>
+                    <span>$${orden.impuestos?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin: 8px 0; padding-top: 8px; border-top: 2px solid #9ca3af; text-decoration: line-through;">
+                    <span>TOTAL:</span>
+                    <span>$${orden.total?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+              </div>
+
+              <p style="color: #666; margin-top: 30px;">
+                Si tiene alguna duda sobre esta cancelación, favor de comunicarse con nuestro departamento de compras.
+              </p>
+              
+              <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;" />
+              <p style="color: #666; font-size: 12px; text-align: center;">
+                Este correo fue enviado automáticamente desde el sistema de ${COMPANY_DATA.razonSocial}.<br/>
+                Para cualquier duda, favor de comunicarse al ${COMPANY_DATA.emails.compras}
+              </p>
+            </div>
+          `;
+
+          const asunto = `❌ ORDEN CANCELADA: ${orden.folio} - ${proveedorNombre.toUpperCase()}`;
+
+          // Enviar correo de cancelación
+          const { error: emailError } = await supabase.functions.invoke('gmail-api', {
+            body: {
+              action: 'send',
+              email: 'compras@almasa.com.mx',
+              to: emailDestinatario,
+              subject: asunto,
+              body: htmlBody,
+            },
+          });
+
+          // Registrar correo en historial
+          await registrarCorreoEnviado({
+            tipo: "cancelacion_oc",
+            referencia_id: orden.id,
+            destinatario: emailDestinatario,
+            asunto: asunto,
+            error: emailError?.message || null,
+          });
+
+          if (emailError) {
+            console.error('Error sending cancellation email:', emailError);
+          }
+        } catch (emailErr) {
+          console.error('Error preparing cancellation email:', emailErr);
+          // Continuar con la eliminación aunque falle el email
+        }
+      }
+
+      // Eliminar notificaciones relacionadas
+      await supabase
+        .from("notificaciones")
+        .delete()
+        .eq("orden_compra_id", orden.id);
+
+      // Eliminar entregas múltiples
+      await supabase
+        .from("ordenes_compra_entregas")
+        .delete()
+        .eq("orden_compra_id", orden.id);
+
+      // Eliminar detalles de la orden
+      const { error: detallesError } = await supabase
+        .from("ordenes_compra_detalles")
+        .delete()
+        .eq("orden_compra_id", orden.id);
+      if (detallesError) throw detallesError;
+
+      // Finalmente eliminar la orden
+      const { error } = await supabase
+        .from("ordenes_compra")
+        .delete()
+        .eq("id", orden.id);
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["ordenes_compra"] });
+      queryClient.invalidateQueries({ queryKey: ["ordenes_calendario"] });
+      
+      toast({
+        title: "Orden eliminada",
+        description: orden.status === 'enviada' || orden.status === 'confirmada'
+          ? "La orden de compra se eliminó y se notificó al proveedor"
+          : "La orden de compra se eliminó correctamente",
+      });
+      
+      setConfirmarEliminacionOpen(false);
+      setOrdenParaEliminar(null);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo eliminar la orden",
+        variant: "destructive",
+      });
+    } finally {
+      setEliminandoOrden(false);
+    }
+  };
+
   const filteredOrdenes = ordenes.filter(
     (orden) => {
       const proveedorNombre = orden.proveedor_id 
@@ -1498,6 +1722,18 @@ const OrdenesCompraTab = () => {
                           ) : (
                             <Bell className="h-4 w-4" />
                           )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          title="Eliminar OC"
+                          onClick={() => {
+                            setOrdenParaEliminar(orden);
+                            setConfirmarEliminacionOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -2446,6 +2682,59 @@ const OrdenesCompraTab = () => {
           });
         }}
       />
+
+      {/* AlertDialog para confirmar eliminación de OC */}
+      <AlertDialog open={confirmarEliminacionOpen} onOpenChange={setConfirmarEliminacionOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              ¿Eliminar Orden de Compra?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Estás a punto de eliminar la orden <strong>{ordenParaEliminar?.folio}</strong> 
+                  {" "}del proveedor <strong>{ordenParaEliminar?.proveedores?.nombre || ordenParaEliminar?.proveedor_nombre_manual}</strong>.
+                </p>
+                {(ordenParaEliminar?.status === 'enviada' || ordenParaEliminar?.status === 'confirmada') && (
+                  <div className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <p className="text-amber-700 dark:text-amber-400 text-sm font-medium">
+                      ⚠️ Una vez eliminada, se le notificará al proveedor por correo electrónico 
+                      que esta orden ha sido cancelada.
+                    </p>
+                  </div>
+                )}
+                <p className="text-muted-foreground text-sm">
+                  Esta acción no se puede deshacer.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={eliminandoOrden}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleEliminarOrden}
+              disabled={eliminandoOrden}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {eliminandoOrden ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Eliminando...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {(ordenParaEliminar?.status === 'enviada' || ordenParaEliminar?.status === 'confirmada') 
+                    ? "Eliminar y Notificar" 
+                    : "Eliminar"}
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
