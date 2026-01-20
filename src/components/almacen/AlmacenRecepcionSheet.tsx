@@ -63,7 +63,7 @@ import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
 import { DevolucionProveedorDialog } from "./DevolucionProveedorDialog";
 import { registrarCorreoEnviado } from "@/components/compras/HistorialCorreosOC";
 import { getEmailsInternos, enviarCopiaInterna } from "@/lib/emailNotificationsUtils";
-import { generarRecepcionPDF } from "@/utils/recepcionPdfGenerator";
+import { generarRecepcionPDF, generarRecepcionPDFBase64 } from "@/utils/recepcionPdfGenerator";
 
 // Razones de diferencia para cuando la cantidad recibida no coincide con la ordenada
 const RAZONES_DIFERENCIA = [
@@ -925,8 +925,98 @@ export const AlmacenRecepcionSheet = ({
       });
 
       // Notificar al contacto de logística del proveedor (si existe)
+      // Generamos el PDF para adjuntarlo al correo
+      let pdfBase64Data: { base64: string; fileName: string } | null = null;
+      
       try {
         const proveedorId = entrega.orden_compra?.proveedor?.id;
+        const nombreProveedor = entrega.orden_compra.proveedor?.nombre 
+          || entrega.orden_compra.proveedor_nombre_manual 
+          || "Proveedor";
+
+        // Obtener el usuario actual para el nombre del almacenista
+        const { data: { user } } = await supabase.auth.getUser();
+        let currentUserName = "Almacenista";
+        if (user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", user.id)
+            .single();
+          if (profile?.full_name) currentUserName = profile.full_name;
+        }
+
+        // Cargar las evidencias fotográficas con URLs firmadas para el PDF
+        const { data: evidenciasDB } = await supabase
+          .from("ordenes_compra_entregas_evidencias" as any)
+          .select("tipo_evidencia, ruta_storage")
+          .eq("entrega_id", entrega.id);
+        
+        const evidenciasConTipos: { url: string; tipo: string }[] = [];
+        if (evidenciasDB) {
+          for (const ev of evidenciasDB as any[]) {
+            const { data: signedData } = await supabase.storage
+              .from("recepciones-evidencias")
+              .createSignedUrl(ev.ruta_storage, 3600);
+            if (signedData?.signedUrl) {
+              evidenciasConTipos.push({
+                url: signedData.signedUrl,
+                tipo: ev.tipo_evidencia
+              });
+            }
+          }
+        }
+
+        // Preparar datos de productos para el PDF
+        const productosParaPDF = productos.map(p => ({
+          id: p.id,
+          cantidad_ordenada: p.cantidad_ordenada,
+          cantidad_recibida: getCantidadNumerica(p.id),
+          razon_diferencia: razonesDiferencia[p.id] || null,
+          notas_diferencia: notasDiferencia[p.id] || null,
+          producto: {
+            codigo: p.producto.codigo,
+            nombre: p.producto.nombre,
+            marca: (p.producto as any).marca || null,
+            especificaciones: (p.producto as any).especificaciones || null,
+            contenido_empaque: (p.producto as any).contenido_empaque || null,
+            peso_kg: (p.producto as any).peso_kg || null
+          }
+        }));
+
+        // Generar PDF como base64 para adjuntar al correo
+        console.log("Generando PDF de recepción para adjuntar al correo...");
+        pdfBase64Data = await generarRecepcionPDFBase64({
+          recepcion: {
+            id: entrega.id,
+            numero_entrega: entrega.numero_entrega,
+            cantidad_bultos: entrega.cantidad_bultos || 0,
+            fecha_programada: entrega.fecha_programada,
+            fecha_entrega_real: new Date().toISOString(),
+            status: "completada",
+            notas: notas || null,
+            firma_chofer_conformidad: firmaChoferConformidad,
+            firma_almacenista: firmaAlmacenista,
+            recibido_por_profile: { full_name: currentUserName },
+            orden_compra: {
+              id: entrega.orden_compra.id,
+              folio: entrega.orden_compra.folio,
+              proveedor: entrega.orden_compra.proveedor,
+              proveedor_nombre_manual: entrega.orden_compra.proveedor_nombre_manual
+            }
+          },
+          productos: productosParaPDF,
+          evidenciasConTipos: evidenciasConTipos,
+          firmaChofer: firmaChoferConformidad,
+          firmaAlmacenista: firmaAlmacenista,
+          llegadaRegistradaEn: entrega.llegada_registrada_en,
+          recepcionFinalizadaEn: new Date().toISOString(),
+          placasVehiculo: entrega.placas_vehiculo,
+          nombreChoferProveedor: entrega.nombre_chofer_proveedor,
+          numeroRemisionProveedor: (entrega as any).numero_remision_proveedor || numeroRemisionProveedor || null
+        });
+        console.log("PDF generado:", pdfBase64Data.fileName);
+
         if (proveedorId && entrega.llegada_registrada_en) {
           const { data: contactoLogistica } = await supabase
             .from("proveedor_contactos")
@@ -944,9 +1034,6 @@ export const AlmacenRecepcionSheet = ({
             const duracionFormateada = duracionMinutos < 60 
               ? `${duracionMinutos} minutos` 
               : `${Math.floor(duracionMinutos / 60)}h ${duracionMinutos % 60}min`;
-            const nombreProveedor = entrega.orden_compra.proveedor?.nombre 
-              || entrega.orden_compra.proveedor_nombre_manual 
-              || "Proveedor";
             
             const asunto = `✅ Descarga completada - OC ${entrega.orden_compra.folio} - ${nombreProveedor}`;
             const htmlBody = `
@@ -978,18 +1065,24 @@ export const AlmacenRecepcionSheet = ({
                 </table>
                 <p><strong>Su unidad puede retirarse.</strong></p>
                 <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
-                  Este es un correo automático del sistema de ALMASA.
+                  Este es un correo automático del sistema de ALMASA. Adjunto encontrará el comprobante de recepción con evidencias fotográficas y firmas.
                 </p>
               </div>
             `;
 
+            // Enviar email CON PDF adjunto
             const { data: emailData, error: emailError } = await supabase.functions.invoke("gmail-api", {
               body: {
                 action: "send",
                 email: "compras@almasa.com.mx",
                 to: contactoLogistica.email,
                 subject: asunto,
-                body: htmlBody
+                body: htmlBody,
+                attachments: pdfBase64Data ? [{
+                  filename: pdfBase64Data.fileName,
+                  content: pdfBase64Data.base64,
+                  mimeType: "application/pdf"
+                }] : undefined
               }
             });
 
@@ -1003,7 +1096,7 @@ export const AlmacenRecepcionSheet = ({
             });
 
             if (!emailError) {
-              console.log("Notificación de fin de descarga enviada a:", contactoLogistica.email);
+              console.log("Notificación de fin de descarga con PDF enviada a:", contactoLogistica.email);
             }
 
             // Enviar copia a usuarios internos (admin y secretaria)
@@ -1012,9 +1105,14 @@ export const AlmacenRecepcionSheet = ({
               await enviarCopiaInterna({
                 asunto: asunto,
                 htmlBody: htmlBody,
-                emailsDestinatarios: emailsInternos
+                emailsDestinatarios: emailsInternos,
+                attachments: pdfBase64Data ? [{
+                  filename: pdfBase64Data.fileName,
+                  content: pdfBase64Data.base64,
+                  mimeType: "application/pdf"
+                }] : undefined
               });
-              console.log("Copias internas de logística (fin) enviadas a:", emailsInternos.length, "usuarios");
+              console.log("Copias internas de logística (fin) con PDF enviadas a:", emailsInternos.length, "usuarios");
             }
           }
         }
@@ -1093,7 +1191,7 @@ export const AlmacenRecepcionSheet = ({
               </table>
 
               <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
-                Este es un correo automático del sistema de ALMASA. Las evidencias fotográficas están disponibles en el sistema.
+                Este es un correo automático del sistema de ALMASA. Adjunto encontrará el comprobante de recepción con evidencias fotográficas y firmas.
               </p>
             </div>
           `;
@@ -1106,7 +1204,12 @@ export const AlmacenRecepcionSheet = ({
                 email: "compras@almasa.com.mx",
                 to: emailDevoluciones,
                 subject: asuntoDevoluciones,
-                body: htmlBodyDevoluciones
+                body: htmlBodyDevoluciones,
+                attachments: pdfBase64Data ? [{
+                  filename: pdfBase64Data.fileName,
+                  content: pdfBase64Data.base64,
+                  mimeType: "application/pdf"
+                }] : undefined
               }
             });
 
@@ -1119,7 +1222,7 @@ export const AlmacenRecepcionSheet = ({
               error: emailDevError?.message || null
             });
 
-            console.log("Notificación de devolución enviada a proveedor:", emailDevoluciones);
+            console.log("Notificación de devolución con PDF enviada a proveedor:", emailDevoluciones);
           }
 
           // Enviar copia a usuarios internos (admin y secretaria)
@@ -1128,9 +1231,14 @@ export const AlmacenRecepcionSheet = ({
             await enviarCopiaInterna({
               asunto: asuntoDevoluciones,
               htmlBody: htmlBodyDevoluciones,
-              emailsDestinatarios: emailsInternos
+              emailsDestinatarios: emailsInternos,
+              attachments: pdfBase64Data ? [{
+                filename: pdfBase64Data.fileName,
+                content: pdfBase64Data.base64,
+                mimeType: "application/pdf"
+              }] : undefined
             });
-            console.log("Copias internas de devolución enviadas a:", emailsInternos.length, "usuarios");
+            console.log("Copias internas de devolución con PDF enviadas a:", emailsInternos.length, "usuarios");
           }
         }
       } catch (devolErr) {
