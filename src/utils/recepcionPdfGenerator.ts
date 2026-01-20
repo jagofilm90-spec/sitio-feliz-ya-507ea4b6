@@ -82,6 +82,11 @@ const RAZON_LABELS: Record<string, string> = {
   otro: "Otro",
 };
 
+// Brand colors (RGB)
+const BRAND_RED = { r: 180, g: 30, b: 30 };
+const BRAND_DARK = { r: 40, g: 40, b: 40 };
+const BRAND_GRAY = { r: 100, g: 100, b: 100 };
+
 // Helper function to load image as base64
 const loadImageAsBase64 = async (url: string): Promise<string | null> => {
   try {
@@ -101,6 +106,12 @@ const loadImageAsBase64 = async (url: string): Promise<string | null> => {
   }
 };
 
+// Detect image format from base64 string
+const getImageFormat = (base64: string): "JPEG" | "PNG" => {
+  if (base64.includes("data:image/png")) return "PNG";
+  return "JPEG";
+};
+
 // Helper to format duration in hours and minutes
 const formatDuration = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
@@ -109,6 +120,17 @@ const formatDuration = (minutes: number): string => {
     return `${hours}h ${mins}min`;
   }
   return `${mins} minutos`;
+};
+
+// Get status display info
+const getStatusDisplay = (status: string): { text: string; color: { r: number; g: number; b: number } } => {
+  const statusMap: Record<string, { text: string; color: { r: number; g: number; b: number } }> = {
+    recibida: { text: "✓ RECIBIDA", color: { r: 34, g: 139, b: 34 } },
+    en_descarga: { text: "⏳ EN DESCARGA", color: { r: 255, g: 140, b: 0 } },
+    programada: { text: "📅 PROGRAMADA", color: { r: 70, g: 130, b: 180 } },
+    cancelada: { text: "✕ CANCELADA", color: { r: 178, g: 34, b: 34 } },
+  };
+  return statusMap[status] || { text: status.toUpperCase(), color: BRAND_GRAY };
 };
 
 // Función interna que genera el documento PDF y lo retorna
@@ -137,281 +159,372 @@ const generarDocumentoPDF = async (data: RecepcionData): Promise<{ doc: jsPDF; f
                           recepcion.orden_compra?.proveedor_nombre_manual || 
                           "Proveedor";
   
-  // Truncar nombre de proveedor si es muy largo
-  const proveedorTruncado = proveedorNombre.length > 32 
-    ? proveedorNombre.substring(0, 29) + "..." 
-    : proveedorNombre;
+  // ================ HEADER WITH BRAND BAR ================
+  // Red top bar
+  doc.setFillColor(BRAND_RED.r, BRAND_RED.g, BRAND_RED.b);
+  doc.rect(0, 0, 210, 8, "F");
   
   // Load and add logo
+  let logoLoaded = false;
   try {
     const logoUrl = `${window.location.origin}/logo-almasa-pdf.png`;
     const logoBase64 = await loadImageAsBase64(logoUrl);
     if (logoBase64) {
-      doc.addImage(logoBase64, "PNG", 15, 8, 30, 12);
+      doc.addImage(logoBase64, "PNG", 15, 12, 35, 14);
+      logoLoaded = true;
     }
   } catch (logoError) {
     console.warn("No se pudo cargar el logo:", logoError);
   }
   
-  // Header - ajustado para dar espacio al logo
-  doc.setFontSize(16);
+  // Title and company info - right aligned
+  doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.text("COMPROBANTE DE RECEPCIÓN", 120, 14, { align: "center" });
+  doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+  doc.text("COMPROBANTE DE RECEPCIÓN", 195, 18, { align: "right" });
   
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text(COMPANY_DATA.razonSocial, 120, 21, { align: "center" });
+  doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
+  doc.text(COMPANY_DATA.razonSocial, 195, 24, { align: "right" });
   doc.setFontSize(7);
-  doc.text(`RFC: ${COMPANY_DATA.rfc} | ${COMPANY_DATA.direccionCompleta}`, 120, 26, { align: "center" });
+  doc.text(`RFC: ${COMPANY_DATA.rfc}`, 195, 28, { align: "right" });
   
-  // Date and document info
+  // Horizontal line
+  doc.setDrawColor(220, 220, 220);
+  doc.setLineWidth(0.5);
+  doc.line(15, 34, 195, 34);
+  
+  // ================ DOCUMENT INFO SECTION ================
+  let yPos = 42;
+  
+  // OC Folio badge (larger, prominent)
+  doc.setFillColor(BRAND_RED.r, BRAND_RED.g, BRAND_RED.b);
+  doc.roundedRect(15, yPos - 5, 55, 12, 2, 2, "F");
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  doc.text(recepcion.orden_compra.folio, 42.5, yPos + 2, { align: "center" });
+  
+  // Entrega badge
+  doc.setFillColor(70, 130, 180);
+  doc.roundedRect(75, yPos - 5, 35, 12, 2, 2, "F");
+  doc.setFontSize(10);
+  doc.text(`Entrega #${recepcion.numero_entrega}`, 92.5, yPos + 2, { align: "center" });
+  
+  // Status badge
+  const statusInfo = getStatusDisplay(recepcion.status);
+  doc.setFillColor(statusInfo.color.r, statusInfo.color.g, statusInfo.color.b);
+  doc.roundedRect(145, yPos - 5, 50, 12, 2, 2, "F");
   doc.setFontSize(9);
-  doc.text(`Fecha de generación: ${format(new Date(), "PPP 'a las' HH:mm", { locale: es })}`, 15, 34);
+  doc.text(statusInfo.text, 170, yPos + 2, { align: "center" });
   
-  // Document details box
-  doc.setDrawColor(200, 200, 200);
-  doc.setFillColor(245, 245, 245);
-  doc.roundedRect(15, 40, 180, 38, 3, 3, "FD");
+  yPos += 18;
+  doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
   
-  doc.setFontSize(9);
+  // ================ MAIN INFO BOX ================
+  doc.setFillColor(250, 250, 250);
+  doc.setDrawColor(230, 230, 230);
+  doc.roundedRect(15, yPos, 180, 42, 3, 3, "FD");
+  
+  yPos += 8;
+  
+  // Left column
+  doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
-  doc.text("Orden de Compra:", 20, 48);
+  doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
+  doc.text("PROVEEDOR", 20, yPos);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text(recepcion.orden_compra.folio, 58, 48);
+  doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+  // Truncar proveedor si es muy largo
+  const proveedorTruncado = proveedorNombre.length > 35 
+    ? proveedorNombre.substring(0, 32) + "..." 
+    : proveedorNombre;
+  doc.text(proveedorTruncado, 20, yPos + 5);
   
+  doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
-  doc.text("Proveedor:", 20, 55);
-  doc.setFont("helvetica", "normal");
-  doc.text(proveedorTruncado, 48, 55);
+  doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
+  doc.text("RECIBIDO POR", 20, yPos + 14);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold"); // Importante destacar
+  doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+  const recibidoPorNombre = recepcion.recibido_por_profile?.full_name || "—";
+  doc.text(recibidoPorNombre.length > 30 ? recibidoPorNombre.substring(0, 27) + "..." : recibidoPorNombre, 20, yPos + 19);
   
+  doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
-  doc.text("Entrega #:", 20, 62);
-  doc.setFont("helvetica", "normal");
-  doc.text(String(recepcion.numero_entrega), 48, 62);
-  
+  doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
+  doc.text("BULTOS", 20, yPos + 28);
+  doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text("Recibido por:", 20, 69);
-  doc.setFont("helvetica", "normal");
-  const recibidoPorNombre = recepcion.recibido_por_profile?.full_name || "No registrado";
-  doc.text(recibidoPorNombre.length > 25 ? recibidoPorNombre.substring(0, 22) + "..." : recibidoPorNombre, 52, 69);
+  doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+  doc.text(recepcion.cantidad_bultos?.toLocaleString() || "—", 20, yPos + 34);
   
-  // Columna derecha
-  doc.setFont("helvetica", "bold");
-  doc.text("Estado:", 115, 48);
-  doc.setFont("helvetica", "normal");
-  doc.text(recepcion.status.toUpperCase(), 138, 48);
-  
-  // Usar recepcionFinalizadaEn para fecha correcta (evita bug de timezone)
+  // Right column
+  // Fecha recepción usando timestamp correcto
   const fechaRecepcionDisplay = recepcionFinalizadaEn 
     ? format(new Date(recepcionFinalizadaEn), "dd/MM/yyyy")
     : recepcion.fecha_entrega_real 
       ? format(new Date(recepcion.fecha_entrega_real + "T12:00:00"), "dd/MM/yyyy")
-      : "N/A";
+      : "—";
   
+  const horaRecepcion = recepcionFinalizadaEn 
+    ? format(new Date(recepcionFinalizadaEn), "HH:mm")
+    : "—";
+  
+  doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
-  doc.text("Fecha recepción:", 115, 55);
-  doc.setFont("helvetica", "normal");
-  doc.text(fechaRecepcionDisplay, 155, 55);
-  
+  doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
+  doc.text("FECHA RECEPCIÓN", 120, yPos);
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text("Bultos:", 115, 62);
+  doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+  doc.text(fechaRecepcionDisplay, 120, yPos + 7);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text(recepcion.cantidad_bultos?.toLocaleString() || "N/A", 138, 62);
+  doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
+  doc.text(`a las ${horaRecepcion}`, 120, yPos + 13);
   
-  // Arrival and timing data section
-  let yPos = 88;
+  // Tiempo de descarga (si existe)
+  if (llegadaRegistradaEn && recepcionFinalizadaEn) {
+    const duracionMin = differenceInMinutes(new Date(recepcionFinalizadaEn), new Date(llegadaRegistradaEn));
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
+    doc.text("TIEMPO DESCARGA", 120, yPos + 22);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+    doc.text(formatDuration(duracionMin), 120, yPos + 28);
+  }
   
-  const hasTimingData = llegadaRegistradaEn || recepcionFinalizadaEn || placasVehiculo || nombreChoferProveedor || numeroRemisionProveedor;
+  yPos += 48;
+  
+  // ================ DATOS DE LLEGADA (si existen) ================
+  const hasTimingData = placasVehiculo || nombreChoferProveedor || numeroRemisionProveedor;
   
   if (hasTimingData) {
-    doc.setFillColor(255, 250, 240);
-    doc.roundedRect(15, yPos - 5, 180, 40, 3, 3, "FD");
+    doc.setFillColor(255, 248, 240);
+    doc.setDrawColor(255, 200, 150);
+    doc.roundedRect(15, yPos, 180, 24, 3, 3, "FD");
     
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(180, 100, 0);
-    doc.text("DATOS DE LLEGADA Y DESCARGA", 20, yPos + 2);
-    doc.setTextColor(0, 0, 0);
-    
-    yPos += 10;
     doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(180, 100, 40);
+    doc.text("🚛 DATOS DEL TRANSPORTE", 20, yPos + 7);
     
-    // Left column
-    if (llegadaRegistradaEn) {
-      doc.setFont("helvetica", "bold");
-      doc.text("Hora llegada:", 20, yPos);
-      doc.setFont("helvetica", "normal");
-      doc.text(format(new Date(llegadaRegistradaEn), "dd/MM/yyyy HH:mm", { locale: es }), 55, yPos);
-    }
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
     
-    if (recepcionFinalizadaEn) {
-      doc.setFont("helvetica", "bold");
-      doc.text("Hora finalización:", 20, yPos + 7);
-      doc.setFont("helvetica", "normal");
-      doc.text(format(new Date(recepcionFinalizadaEn), "dd/MM/yyyy HH:mm", { locale: es }), 55, yPos + 7);
-    }
-    
-    if (llegadaRegistradaEn && recepcionFinalizadaEn) {
-      const duracionMin = differenceInMinutes(new Date(recepcionFinalizadaEn), new Date(llegadaRegistradaEn));
-      doc.setFont("helvetica", "bold");
-      doc.text("Tiempo descarga:", 20, yPos + 14);
-      doc.setFont("helvetica", "normal");
-      doc.text(formatDuration(duracionMin), 55, yPos + 14);
-    }
-    
-    // Right column
+    let xInfo = 20;
     if (placasVehiculo) {
       doc.setFont("helvetica", "bold");
-      doc.text("Placas:", 110, yPos);
+      doc.text("Placas:", xInfo, yPos + 16);
       doc.setFont("helvetica", "normal");
-      doc.text(placasVehiculo, 135, yPos);
+      doc.text(placasVehiculo, xInfo + 18, yPos + 16);
+      xInfo += 50;
     }
     
     if (nombreChoferProveedor) {
       doc.setFont("helvetica", "bold");
-      doc.text("Chofer:", 110, yPos + 7);
+      doc.text("Chofer:", xInfo, yPos + 16);
       doc.setFont("helvetica", "normal");
-      const nombreTruncado = nombreChoferProveedor.length > 25 
-        ? nombreChoferProveedor.substring(0, 22) + "..." 
+      const nombreTruncado = nombreChoferProveedor.length > 20 
+        ? nombreChoferProveedor.substring(0, 17) + "..." 
         : nombreChoferProveedor;
-      doc.text(nombreTruncado, 135, yPos + 7);
+      doc.text(nombreTruncado, xInfo + 18, yPos + 16);
+      xInfo += 55;
     }
     
     if (numeroRemisionProveedor) {
       doc.setFont("helvetica", "bold");
-      doc.text("Remisión:", 110, yPos + 14);
+      doc.text("Remisión:", xInfo, yPos + 16);
       doc.setFont("helvetica", "normal");
-      doc.text(numeroRemisionProveedor, 135, yPos + 14);
+      doc.text(numeroRemisionProveedor, xInfo + 22, yPos + 16);
     }
     
-    yPos += 35;
+    yPos += 30;
   }
   
-  // Products table
+  // ================ PRODUCTOS TABLE ================
+  yPos += 5;
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
+  doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
   doc.text("PRODUCTOS RECIBIDOS", 15, yPos);
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
+  doc.text(`(${productos.length} productos)`, 72, yPos);
   
   yPos += 8;
   
   // Table header
-  doc.setFillColor(41, 128, 185);
+  doc.setFillColor(BRAND_RED.r, BRAND_RED.g, BRAND_RED.b);
+  doc.rect(15, yPos - 4, 180, 8, "F");
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
   doc.setTextColor(255, 255, 255);
-  doc.rect(15, yPos - 5, 180, 8, "F");
-  doc.setFontSize(9);
-  doc.text("Código", 17, yPos);
-  doc.text("Producto", 45, yPos);
-  doc.text("Ordenado", 135, yPos);
-  doc.text("Recibido", 165, yPos);
+  doc.text("CÓDIGO", 17, yPos + 1);
+  doc.text("PRODUCTO", 42, yPos + 1);
+  doc.text("ORD.", 142, yPos + 1, { align: "right" });
+  doc.text("REC.", 162, yPos + 1, { align: "right" });
+  doc.text("DIF.", 182, yPos + 1, { align: "right" });
   
   // Table rows
-  doc.setTextColor(0, 0, 0);
-  doc.setFont("helvetica", "normal");
   yPos += 8;
   
   productos.forEach((p, index) => {
     // Check if we need a new page
-    if (yPos > 260) {
+    if (yPos > 265) {
       doc.addPage();
       yPos = 20;
+      
+      // Repeat header on new page
+      doc.setFillColor(BRAND_RED.r, BRAND_RED.g, BRAND_RED.b);
+      doc.rect(15, yPos - 4, 180, 8, "F");
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text("CÓDIGO", 17, yPos + 1);
+      doc.text("PRODUCTO", 42, yPos + 1);
+      doc.text("ORD.", 142, yPos + 1, { align: "right" });
+      doc.text("REC.", 162, yPos + 1, { align: "right" });
+      doc.text("DIF.", 182, yPos + 1, { align: "right" });
+      yPos += 8;
     }
     
-    const hasDiferencia = p.cantidad_recibida < p.cantidad_ordenada;
+    const diferencia = p.cantidad_recibida - p.cantidad_ordenada;
+    const hasDiferencia = diferencia !== 0;
     
-    // Alternating row colors - highlight differences in red
+    // Alternating row colors - highlight differences
     if (hasDiferencia) {
-      doc.setFillColor(255, 235, 235);
+      doc.setFillColor(255, 240, 240);
     } else if (index % 2 === 0) {
-      doc.setFillColor(248, 248, 248);
+      doc.setFillColor(250, 250, 250);
     } else {
       doc.setFillColor(255, 255, 255);
     }
-    doc.rect(15, yPos - 4, 180, 7, "F");
+    doc.rect(15, yPos - 3, 180, 7, "F");
     
-    doc.setFontSize(8);
-    doc.text(p.producto?.codigo || "", 17, yPos);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+    doc.text(p.producto?.codigo || "", 17, yPos + 1);
     
     // Use getDisplayName for consistent product formatting
     const nombreProducto = p.producto ? getDisplayName(p.producto) : "";
-    const nombreTruncado = nombreProducto.length > 40 
-      ? nombreProducto.substring(0, 37) + "..." 
+    const nombreTruncado = nombreProducto.length > 48 
+      ? nombreProducto.substring(0, 45) + "..." 
       : nombreProducto;
-    doc.text(nombreTruncado, 45, yPos);
+    doc.text(nombreTruncado, 42, yPos + 1);
     
-    doc.text(String(p.cantidad_ordenada), 130, yPos, { align: "right" });
+    doc.text(String(p.cantidad_ordenada), 142, yPos + 1, { align: "right" });
     
-    // Show received with color if different
+    // Received with color if different
     if (hasDiferencia) {
-      doc.setTextColor(200, 0, 0);
+      doc.setTextColor(180, 30, 30);
+      doc.setFont("helvetica", "bold");
     }
-    doc.text(String(p.cantidad_recibida), 150, yPos, { align: "right" });
-    doc.setTextColor(0, 0, 0);
+    doc.text(String(p.cantidad_recibida), 162, yPos + 1, { align: "right" });
     
-    // Show razón if exists
-    if (p.razon_diferencia) {
-      doc.setFontSize(7);
-      doc.setTextColor(150, 100, 0);
-      doc.text(RAZON_LABELS[p.razon_diferencia] || p.razon_diferencia, 160, yPos);
-      doc.setTextColor(0, 0, 0);
+    // Difference column
+    if (diferencia !== 0) {
+      const difText = diferencia > 0 ? `+${diferencia}` : String(diferencia);
+      doc.text(difText, 182, yPos + 1, { align: "right" });
+      
+      // Show razón if exists
+      if (p.razon_diferencia) {
+        doc.setFontSize(6);
+        doc.setTextColor(150, 100, 50);
+        doc.text(`(${RAZON_LABELS[p.razon_diferencia] || p.razon_diferencia})`, 188, yPos + 1);
+      }
     }
+    
+    doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+    doc.setFont("helvetica", "normal");
     
     yPos += 7;
   });
   
-  // Notes section
+  // ================ NOTES SECTION ================
   if (recepcion.notas) {
-    yPos += 10;
+    yPos += 8;
     if (yPos > 250) {
       doc.addPage();
       yPos = 20;
     }
     
-    doc.setFontSize(10);
+    doc.setFillColor(245, 245, 255);
+    doc.setDrawColor(200, 200, 230);
+    
+    // Calculate height needed
+    doc.setFontSize(8);
+    const notasLines = doc.splitTextToSize(recepcion.notas, 168);
+    const notasHeight = 12 + (notasLines.length * 4);
+    
+    doc.roundedRect(15, yPos, 180, notasHeight, 3, 3, "FD");
+    
+    doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text("NOTAS:", 15, yPos);
-    yPos += 6;
+    doc.setTextColor(70, 70, 130);
+    doc.text("📝 NOTAS", 20, yPos + 7);
     
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
+    doc.setFontSize(8);
+    doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
     
-    // Parse notes for key information
-    const notasLines = doc.splitTextToSize(recepcion.notas, 170);
+    let notaY = yPos + 14;
     notasLines.forEach((line: string) => {
-      if (yPos > 280) {
-        doc.addPage();
-        yPos = 20;
-      }
-      doc.text(line, 15, yPos);
-      yPos += 5;
+      doc.text(line, 20, notaY);
+      notaY += 4;
     });
+    
+    yPos += notasHeight + 5;
   }
   
-  // Evidencias fotográficas section
+  // ================ EVIDENCIAS FOTOGRÁFICAS ================
   if (evidenciasConTipos && evidenciasConTipos.length > 0) {
     doc.addPage();
-    yPos = 20;
     
-    doc.setFontSize(14);
+    // Header bar for photos page
+    doc.setFillColor(BRAND_RED.r, BRAND_RED.g, BRAND_RED.b);
+    doc.rect(0, 0, 210, 8, "F");
+    
+    let photoY = 18;
+    
+    doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("EVIDENCIAS FOTOGRÁFICAS", 105, yPos, { align: "center" });
-    yPos += 15;
+    doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+    doc.text("EVIDENCIAS FOTOGRÁFICAS", 105, photoY, { align: "center" });
+    
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
+    doc.text(`${recepcion.orden_compra.folio} - Entrega #${recepcion.numero_entrega}`, 105, photoY + 6, { align: "center" });
+    
+    photoY += 18;
     
     const imgWidth = 85;
     const imgHeight = 65;
     const margin = 15;
-    const colWidth = imgWidth + 5;
+    const colWidth = imgWidth + 10;
     
     let col = 0;
-    let startY = yPos;
+    let startY = photoY;
     
     for (let i = 0; i < evidenciasConTipos.length; i++) {
       const { url, tipo } = evidenciasConTipos[i];
       
       // Check if we need a new page
-      if (startY + imgHeight > 280) {
+      if (startY + imgHeight + 20 > 285) {
         doc.addPage();
+        doc.setFillColor(BRAND_RED.r, BRAND_RED.g, BRAND_RED.b);
+        doc.rect(0, 0, 210, 8, "F");
         startY = 20;
-        yPos = 20;
         col = 0;
       }
       
@@ -421,81 +534,155 @@ const generarDocumentoPDF = async (data: RecepcionData): Promise<{ doc: jsPDF; f
         const base64Image = await loadImageAsBase64(url);
         
         if (base64Image) {
-          // Draw border
+          // Shadow effect
+          doc.setFillColor(230, 230, 230);
+          doc.roundedRect(xPos + 2, startY + 2, imgWidth, imgHeight, 3, 3, "F");
+          
+          // Image container with border
+          doc.setFillColor(255, 255, 255);
           doc.setDrawColor(200, 200, 200);
-          doc.rect(xPos - 2, startY - 2, imgWidth + 4, imgHeight + 4);
+          doc.roundedRect(xPos - 2, startY - 2, imgWidth + 4, imgHeight + 4, 3, 3, "FD");
           
-          // Add image
-          doc.addImage(base64Image, "JPEG", xPos, startY, imgWidth, imgHeight);
+          // Add image with auto-detect format
+          const imgFormat = getImageFormat(base64Image);
+          doc.addImage(base64Image, imgFormat, xPos, startY, imgWidth, imgHeight);
           
-          // Add descriptive label
-          doc.setFontSize(8);
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(60, 60, 60);
+          // Label badge below image
           const label = TIPO_EVIDENCIA_LABELS[tipo] || tipo;
-          doc.text(label, xPos + (imgWidth / 2), startY + imgHeight + 8, { align: "center" });
-          doc.setTextColor(0, 0, 0);
+          doc.setFillColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+          const labelWidth = Math.min(label.length * 2.5 + 8, imgWidth);
+          doc.roundedRect(xPos + (imgWidth - labelWidth) / 2, startY + imgHeight + 4, labelWidth, 7, 2, 2, "F");
+          
+          doc.setFontSize(7);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(255, 255, 255);
+          doc.text(label, xPos + (imgWidth / 2), startY + imgHeight + 9, { align: "center" });
+          doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
           doc.setFont("helvetica", "normal");
         } else {
           // Draw placeholder if image failed to load
-          doc.setFillColor(240, 240, 240);
-          doc.rect(xPos, startY, imgWidth, imgHeight, "F");
+          doc.setFillColor(245, 245, 245);
+          doc.setDrawColor(200, 200, 200);
+          doc.roundedRect(xPos, startY, imgWidth, imgHeight, 3, 3, "FD");
           doc.setFontSize(8);
+          doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
           doc.text("Imagen no disponible", xPos + (imgWidth / 2), startY + (imgHeight / 2), { align: "center" });
         }
       } catch (error) {
         console.error("Error adding image to PDF:", error);
         // Draw placeholder
-        doc.setFillColor(240, 240, 240);
-        doc.rect(xPos, startY, imgWidth, imgHeight, "F");
+        doc.setFillColor(255, 240, 240);
+        doc.setDrawColor(200, 150, 150);
+        doc.roundedRect(xPos, startY, imgWidth, imgHeight, 3, 3, "FD");
         doc.setFontSize(8);
+        doc.setTextColor(180, 100, 100);
         doc.text("Error cargando imagen", xPos + (imgWidth / 2), startY + (imgHeight / 2), { align: "center" });
       }
       
       col++;
       if (col >= 2) {
         col = 0;
-        startY += imgHeight + 20;
+        startY += imgHeight + 25;
       }
     }
     
-    yPos = startY + imgHeight + 25;
+    yPos = startY + imgHeight + 30;
   }
   
-  // Footer signature area
-  yPos += 20;
-  if (yPos > 220) {
+  // ================ SIGNATURES SECTION ================
+  // Start on new page or continue if space
+  if (yPos > 200 || evidenciasConTipos.length > 0) {
     doc.addPage();
-    yPos = 20;
+    doc.setFillColor(BRAND_RED.r, BRAND_RED.g, BRAND_RED.b);
+    doc.rect(0, 0, 210, 8, "F");
+    yPos = 30;
+  } else {
+    yPos += 20;
   }
   
-  const signatureWidth = 60;
-  const signatureHeight = 30;
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+  doc.text("FIRMAS DE CONFORMIDAD", 105, yPos, { align: "center" });
   
-  // Firma Almacenista
+  yPos += 15;
+  
+  const signatureWidth = 65;
+  const signatureHeight = 35;
+  
+  // Firma Almacenista box
+  doc.setFillColor(250, 250, 250);
+  doc.setDrawColor(220, 220, 220);
+  doc.roundedRect(25, yPos, signatureWidth + 10, signatureHeight + 25, 3, 3, "FD");
+  
   if (firmaAlmacenista) {
     try {
-      doc.addImage(firmaAlmacenista, "PNG", 20, yPos, signatureWidth, signatureHeight);
+      doc.addImage(firmaAlmacenista, "PNG", 30, yPos + 5, signatureWidth, signatureHeight);
     } catch (e) {
       console.error("Error adding almacenista signature:", e);
     }
   }
-  doc.setDrawColor(150, 150, 150);
-  doc.line(20, yPos + signatureHeight + 5, 80, yPos + signatureHeight + 5);
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  doc.text("Firma Almacenista", 50, yPos + signatureHeight + 12, { align: "center" });
   
-  // Firma Proveedor/Transportista
+  doc.setDrawColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+  doc.line(30, yPos + signatureHeight + 8, 30 + signatureWidth, yPos + signatureHeight + 8);
+  
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+  doc.text("ALMACENISTA", 30 + signatureWidth / 2, yPos + signatureHeight + 15, { align: "center" });
+  
+  // Nombre del almacenista debajo
+  if (recepcion.recibido_por_profile?.full_name) {
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
+    doc.text(recepcion.recibido_por_profile.full_name, 30 + signatureWidth / 2, yPos + signatureHeight + 20, { align: "center" });
+  }
+  
+  // Firma Proveedor/Transportista box
+  doc.setFillColor(250, 250, 250);
+  doc.roundedRect(115, yPos, signatureWidth + 10, signatureHeight + 25, 3, 3, "FD");
+  
   if (firmaChofer) {
     try {
-      doc.addImage(firmaChofer, "PNG", 120, yPos, signatureWidth, signatureHeight);
+      doc.addImage(firmaChofer, "PNG", 120, yPos + 5, signatureWidth, signatureHeight);
     } catch (e) {
       console.error("Error adding driver signature:", e);
     }
   }
-  doc.line(120, yPos + signatureHeight + 5, 180, yPos + signatureHeight + 5);
-  doc.text("Firma Proveedor/Transportista", 150, yPos + signatureHeight + 12, { align: "center" });
+  
+  doc.line(120, yPos + signatureHeight + 8, 120 + signatureWidth, yPos + signatureHeight + 8);
+  
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+  doc.text("PROVEEDOR / TRANSPORTISTA", 120 + signatureWidth / 2, yPos + signatureHeight + 15, { align: "center" });
+  
+  // Nombre del chofer debajo
+  if (nombreChoferProveedor) {
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
+    doc.text(nombreChoferProveedor, 120 + signatureWidth / 2, yPos + signatureHeight + 20, { align: "center" });
+  }
+  
+  // ================ FOOTER ================
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    
+    // Footer line
+    doc.setDrawColor(220, 220, 220);
+    doc.line(15, 285, 195, 285);
+    
+    // Footer text
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
+    doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: es })}`, 15, 290);
+    doc.text(`Página ${i} de ${pageCount}`, 195, 290, { align: "right" });
+    doc.text(COMPANY_DATA.direccionCompleta, 105, 290, { align: "center" });
+  }
   
   // Generate filename
   const fileName = `Recepcion_${recepcion.orden_compra.folio}_E${recepcion.numero_entrega}_${format(new Date(), "yyyyMMdd")}.pdf`;
