@@ -396,7 +396,21 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
       );
     }
   } else if (isSingleDelivery) {
-    if (orden.fecha_entrega_programada) {
+    // Check if single delivery was received
+    const entregaRecibidaSingle = entregasOrden.find(e => 
+      e.status === "recibida" || e.recepcion_finalizada_en
+    );
+    
+    if (entregaRecibidaSingle) {
+      badgeVariant = "default";
+      badgeClassName = "bg-green-600 hover:bg-green-700 cursor-pointer";
+      badgeContent = (
+        <>
+          <CheckCircle className="h-3 w-3" />
+          Recibida
+        </>
+      );
+    } else if (orden.fecha_entrega_programada) {
       badgeVariant = "default";
       badgeClassName = "bg-green-600 hover:bg-green-700 cursor-pointer";
       badgeContent = (
@@ -444,65 +458,101 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
           
           {isSingleDelivery ? (
             // Single delivery order
-            <div className="flex items-center justify-between p-2 rounded-md bg-muted/50">
-              <div className="flex-1">
-                <div className="text-sm font-medium">Entrega única</div>
-                {editingId === "single" ? (
-                  <div className="flex items-center gap-2 mt-1">
-                    <Input
-                      type="date"
-                      value={editingFecha}
-                      onChange={(e) => setEditingFecha(e.target.value)}
-                      className="h-8 text-sm"
-                    />
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8"
-                      onClick={handleSaveSingleDelivery}
-                      disabled={saving}
-                    >
-                      {saving ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Check className="h-4 w-4 text-green-600" />
+            (() => {
+              const entregaRecibidaSingle = entregasOrden.find(e => 
+                e.status === "recibida" || e.recepcion_finalizada_en
+              );
+              
+              return (
+                <div className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium flex items-center gap-2">
+                      Entrega única
+                      {entregaRecibidaSingle && (
+                        <Badge variant="outline" className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Recibida
+                        </Badge>
                       )}
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8"
-                      onClick={() => {
-                        setEditingFecha("");
-                        handleSaveSingleDelivery();
-                      }}
-                      disabled={saving}
-                    >
-                      <X className="h-4 w-4 text-destructive" />
-                    </Button>
+                    </div>
+                    
+                    {entregaRecibidaSingle ? (
+                      // Already received - show date and PDF button
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <span className="text-xs text-muted-foreground">
+                          Recibida el {format(new Date(entregaRecibidaSingle.recepcion_finalizada_en!), "dd/MM/yyyy HH:mm", { locale: es })}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs gap-1"
+                          onClick={() => {
+                            setEntregaParaPDF(entregaRecibidaSingle.id);
+                            setRecepcionDialogOpen(true);
+                          }}
+                        >
+                          <FileText className="h-3 w-3" />
+                          Ver Recepción
+                        </Button>
+                      </div>
+                    ) : editingId === "single" ? (
+                      <div className="flex items-center gap-2 mt-1">
+                        <Input
+                          type="date"
+                          value={editingFecha}
+                          onChange={(e) => setEditingFecha(e.target.value)}
+                          className="h-8 text-sm"
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={handleSaveSingleDelivery}
+                          disabled={saving}
+                        >
+                          {saving ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Check className="h-4 w-4 text-green-600" />
+                          )}
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            setEditingFecha("");
+                            handleSaveSingleDelivery();
+                          }}
+                          disabled={saving}
+                        >
+                          <X className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-sm text-muted-foreground">
+                        {orden.fecha_entrega_programada 
+                            ? format(parseDateLocal(orden.fecha_entrega_programada), "dd/MM/yyyy")
+                            : "Sin fecha"}
+                        </span>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6"
+                          onClick={() => {
+                            setEditingId("single");
+                            setEditingFecha(orden.fecha_entrega_programada || "");
+                          }}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-sm text-muted-foreground">
-                    {orden.fecha_entrega_programada 
-                        ? format(parseDateLocal(orden.fecha_entrega_programada), "dd/MM/yyyy")
-                        : "Sin fecha"}
-                    </span>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6"
-                      onClick={() => {
-                        setEditingId("single");
-                        setEditingFecha(orden.fecha_entrega_programada || "");
-                      }}
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
+                </div>
+              );
+            })()
           ) : entregasOrden.length > 0 ? (
             // Multiple deliveries
             <div className="space-y-2 max-h-60 overflow-y-auto">
