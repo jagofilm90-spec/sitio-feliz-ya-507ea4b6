@@ -146,7 +146,7 @@ export const RecepcionDetalleDialog = ({
           id, numero_entrega, cantidad_bultos, fecha_programada, fecha_entrega_real, status, notas,
           firma_chofer_conformidad, firma_almacenista,
           llegada_registrada_en, recepcion_finalizada_en, placas_vehiculo, nombre_chofer_proveedor, numero_remision_proveedor,
-          recibido_por_profile:recibido_por(full_name),
+          recibido_por,
           orden_compra:ordenes_compra(
             id, folio, proveedor_nombre_manual,
             proveedor:proveedores(id, nombre)
@@ -156,7 +156,28 @@ export const RecepcionDetalleDialog = ({
         .single();
 
       if (entregaError) throw entregaError;
-      setRecepcion(entrega as unknown as RecepcionDetalle);
+      
+      // Fetch recibido_por profile separately to ensure we get the name
+      let recibidoPorProfile: { full_name: string } | null = null;
+      if ((entrega as any).recibido_por) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", (entrega as any).recibido_por)
+          .single();
+        
+        if (profile) {
+          recibidoPorProfile = { full_name: profile.full_name };
+        }
+      }
+      
+      // Merge the profile data
+      const entregaConProfile = {
+        ...entrega,
+        recibido_por_profile: recibidoPorProfile
+      };
+      
+      setRecepcion(entregaConProfile as unknown as RecepcionDetalle);
 
       // Load products from order
       const { data: productosData } = await supabase
@@ -180,18 +201,30 @@ export const RecepcionDetalleDialog = ({
         .order("created_at", { ascending: false });
 
       setEvidencias((evidenciasData as unknown as EvidenciaRecepcion[]) || []);
+      
+      console.log("Evidencias encontradas:", evidenciasData?.length, evidenciasData);
 
       // Get signed URLs for evidences
       const urls: Record<string, string> = {};
       for (const ev of evidenciasData || []) {
-        const { data: signedUrl } = await supabase.storage
+        const rutaStorage = (ev as any).ruta_storage;
+        console.log(`Generando URL para evidencia ${(ev as any).tipo_evidencia}:`, rutaStorage);
+        
+        const { data: signedUrl, error: urlError } = await supabase.storage
           .from("recepciones-evidencias")
-          .createSignedUrl((ev as any).ruta_storage, 3600);
+          .createSignedUrl(rutaStorage, 3600);
+        
+        if (urlError) {
+          console.error(`Error generando URL para ${rutaStorage}:`, urlError);
+        }
+        
         if (signedUrl?.signedUrl) {
           urls[(ev as any).id] = signedUrl.signedUrl;
+          console.log(`URL generada para ${(ev as any).tipo_evidencia}:`, signedUrl.signedUrl.substring(0, 100) + "...");
         }
       }
       setEvidenciasUrls(urls);
+      console.log("Total URLs generadas:", Object.keys(urls).length);
 
     } catch (error) {
       console.error("Error cargando recepción:", error);

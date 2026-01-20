@@ -137,66 +137,89 @@ const generarDocumentoPDF = async (data: RecepcionData): Promise<{ doc: jsPDF; f
                           recepcion.orden_compra?.proveedor_nombre_manual || 
                           "Proveedor";
   
-  // Header
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.text("COMPROBANTE DE RECEPCIÓN", 105, 20, { align: "center" });
+  // Truncar nombre de proveedor si es muy largo
+  const proveedorTruncado = proveedorNombre.length > 32 
+    ? proveedorNombre.substring(0, 29) + "..." 
+    : proveedorNombre;
   
-  doc.setFontSize(10);
+  // Load and add logo
+  try {
+    const logoUrl = `${window.location.origin}/logo-almasa-pdf.png`;
+    const logoBase64 = await loadImageAsBase64(logoUrl);
+    if (logoBase64) {
+      doc.addImage(logoBase64, "PNG", 15, 8, 30, 12);
+    }
+  } catch (logoError) {
+    console.warn("No se pudo cargar el logo:", logoError);
+  }
+  
+  // Header - ajustado para dar espacio al logo
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.text("COMPROBANTE DE RECEPCIÓN", 120, 14, { align: "center" });
+  
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text(COMPANY_DATA.razonSocial, 105, 28, { align: "center" });
-  doc.setFontSize(8);
-  doc.text(`RFC: ${COMPANY_DATA.rfc} | ${COMPANY_DATA.direccionCompleta}`, 105, 33, { align: "center" });
+  doc.text(COMPANY_DATA.razonSocial, 120, 21, { align: "center" });
+  doc.setFontSize(7);
+  doc.text(`RFC: ${COMPANY_DATA.rfc} | ${COMPANY_DATA.direccionCompleta}`, 120, 26, { align: "center" });
   
   // Date and document info
   doc.setFontSize(9);
-  doc.text(`Fecha de generación: ${format(new Date(), "PPP 'a las' HH:mm", { locale: es })}`, 15, 40);
+  doc.text(`Fecha de generación: ${format(new Date(), "PPP 'a las' HH:mm", { locale: es })}`, 15, 34);
   
   // Document details box
   doc.setDrawColor(200, 200, 200);
   doc.setFillColor(245, 245, 245);
-  doc.roundedRect(15, 48, 180, 35, 3, 3, "FD");
+  doc.roundedRect(15, 40, 180, 38, 3, 3, "FD");
   
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("Orden de Compra:", 20, 56);
+  doc.text("Orden de Compra:", 20, 48);
   doc.setFont("helvetica", "normal");
-  doc.text(recepcion.orden_compra.folio, 70, 56);
-  
-  doc.setFont("helvetica", "bold");
-  doc.text("Proveedor:", 20, 63);
-  doc.setFont("helvetica", "normal");
-  doc.text(proveedorNombre, 70, 63);
+  doc.text(recepcion.orden_compra.folio, 58, 48);
   
   doc.setFont("helvetica", "bold");
-  doc.text("Entrega #:", 20, 70);
+  doc.text("Proveedor:", 20, 55);
   doc.setFont("helvetica", "normal");
-  doc.text(String(recepcion.numero_entrega), 70, 70);
+  doc.text(proveedorTruncado, 48, 55);
   
   doc.setFont("helvetica", "bold");
-  doc.text("Estado:", 110, 56);
+  doc.text("Entrega #:", 20, 62);
   doc.setFont("helvetica", "normal");
-  doc.text(recepcion.status.toUpperCase(), 140, 56);
-  
-  if (recepcion.fecha_entrega_real) {
-    doc.setFont("helvetica", "bold");
-    doc.text("Fecha recepción:", 110, 63);
-    doc.setFont("helvetica", "normal");
-    doc.text(format(new Date(recepcion.fecha_entrega_real), "dd/MM/yyyy"), 155, 63);
-  }
+  doc.text(String(recepcion.numero_entrega), 48, 62);
   
   doc.setFont("helvetica", "bold");
-  doc.text("Bultos:", 110, 70);
+  doc.text("Recibido por:", 20, 69);
   doc.setFont("helvetica", "normal");
-  doc.text(recepcion.cantidad_bultos?.toLocaleString() || "N/A", 140, 70);
+  const recibidoPorNombre = recepcion.recibido_por_profile?.full_name || "No registrado";
+  doc.text(recibidoPorNombre.length > 25 ? recibidoPorNombre.substring(0, 22) + "..." : recibidoPorNombre, 52, 69);
+  
+  // Columna derecha
+  doc.setFont("helvetica", "bold");
+  doc.text("Estado:", 115, 48);
+  doc.setFont("helvetica", "normal");
+  doc.text(recepcion.status.toUpperCase(), 138, 48);
+  
+  // Usar recepcionFinalizadaEn para fecha correcta (evita bug de timezone)
+  const fechaRecepcionDisplay = recepcionFinalizadaEn 
+    ? format(new Date(recepcionFinalizadaEn), "dd/MM/yyyy")
+    : recepcion.fecha_entrega_real 
+      ? format(new Date(recepcion.fecha_entrega_real + "T12:00:00"), "dd/MM/yyyy")
+      : "N/A";
   
   doc.setFont("helvetica", "bold");
-  doc.text("Recibido por:", 110, 77);
+  doc.text("Fecha recepción:", 115, 55);
   doc.setFont("helvetica", "normal");
-  doc.text(recepcion.recibido_por_profile?.full_name || "No registrado", 150, 77);
+  doc.text(fechaRecepcionDisplay, 155, 55);
+  
+  doc.setFont("helvetica", "bold");
+  doc.text("Bultos:", 115, 62);
+  doc.setFont("helvetica", "normal");
+  doc.text(recepcion.cantidad_bultos?.toLocaleString() || "N/A", 138, 62);
   
   // Arrival and timing data section
-  let yPos = 95;
+  let yPos = 88;
   
   const hasTimingData = llegadaRegistradaEn || recepcionFinalizadaEn || placasVehiculo || nombreChoferProveedor || numeroRemisionProveedor;
   
