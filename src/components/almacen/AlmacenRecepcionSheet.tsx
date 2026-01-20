@@ -1097,6 +1097,17 @@ export const AlmacenRecepcionSheet = ({
 
             if (!emailError) {
               console.log("Notificación de fin de descarga con PDF enviada a:", contactoLogistica.email);
+              toast({
+                title: "📧 Correo enviado al proveedor",
+                description: `Se notificó a ${contactoLogistica.email} con el PDF de recepción (fotos y firmas incluidas)`,
+              });
+            } else {
+              console.error("Error enviando correo de logística:", emailError);
+              toast({
+                title: "Error al enviar correo",
+                description: `No se pudo notificar a ${contactoLogistica.email}. La recepción se guardó correctamente.`,
+                variant: "destructive"
+              });
             }
 
             // Enviar copia a usuarios internos (admin y secretaria)
@@ -1222,7 +1233,20 @@ export const AlmacenRecepcionSheet = ({
               error: emailDevError?.message || null
             });
 
-            console.log("Notificación de devolución con PDF enviada a proveedor:", emailDevoluciones);
+            if (!emailDevError) {
+              console.log("Notificación de devolución con PDF enviada a proveedor:", emailDevoluciones);
+              toast({
+                title: "📧 Notificación de diferencias enviada",
+                description: `Se informó al proveedor (${emailDevoluciones}) sobre faltantes/devoluciones con PDF adjunto`,
+              });
+            } else {
+              console.error("Error enviando correo de devoluciones:", emailDevError);
+              toast({
+                title: "Error al notificar diferencias",
+                description: "No se pudo enviar la notificación de faltantes al proveedor",
+                variant: "destructive"
+              });
+            }
           }
 
           // Enviar copia a usuarios internos (admin y secretaria)
