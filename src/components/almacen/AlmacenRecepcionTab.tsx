@@ -21,6 +21,8 @@ import {
 import { 
   Package, 
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Truck,
   Calendar,
   Clock,
@@ -483,6 +485,56 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
   );
 };
 
+// Componente para lista de productos expandible
+const ProductosEntregaList = ({ productos }: { productos?: ProductoEntrega[] }) => {
+  const [expandido, setExpandido] = useState(false);
+
+  if (!productos || productos.length === 0) return null;
+
+  const productosVisibles = expandido ? productos : productos.slice(0, 3);
+  const tienesMas = productos.length > 3;
+
+  return (
+    <div className="mt-2 space-y-1">
+      <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+        <Box className="w-3 h-3" />
+        Productos ({productos.length}):
+      </span>
+      <div className="pl-4 space-y-0.5">
+        {productosVisibles.map((prod) => (
+          <div key={prod.id} className="text-sm flex items-center gap-2">
+            <span className="text-muted-foreground">•</span>
+            <span className="truncate flex-1">
+              {getCompactDisplayName(prod.producto)}
+            </span>
+            <Badge variant="outline" className="text-xs flex-shrink-0">
+              {prod.cantidad_ordenada.toLocaleString()}
+            </Badge>
+          </div>
+        ))}
+        {tienesMas && (
+          <button
+            onClick={() => setExpandido(!expandido)}
+            className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
+          >
+            {expandido ? (
+              <>
+                <ChevronUp className="w-3 h-3" />
+                Ver menos
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-3 h-3" />
+                +{productos.length - 3} más...
+              </>
+            )}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Componente interno para cada entrega
 interface EntregaCardProps {
   entrega: EntregaCompra;
@@ -541,33 +593,8 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
             </span>
           </div>
 
-          {/* Productos de la entrega */}
-          {entrega.productos && entrega.productos.length > 0 && (
-            <div className="mt-2 space-y-1">
-              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                <Box className="w-3 h-3" />
-                Productos:
-              </span>
-              <div className="pl-4 space-y-0.5">
-                {entrega.productos.slice(0, 3).map((prod) => (
-                  <div key={prod.id} className="text-sm flex items-center gap-2">
-                    <span className="text-muted-foreground">•</span>
-                    <span className="truncate flex-1">
-                      {getCompactDisplayName(prod.producto)}
-                    </span>
-                    <Badge variant="outline" className="text-xs flex-shrink-0">
-                      {prod.cantidad_ordenada.toLocaleString()}
-                    </Badge>
-                  </div>
-                ))}
-                {entrega.productos.length > 3 && (
-                  <div className="text-xs text-muted-foreground pl-4">
-                    +{entrega.productos.length - 3} más...
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Productos de la entrega - expandible */}
+          <ProductosEntregaList productos={entrega.productos} />
 
           {/* Info de descarga en curso */}
           {esEnDescarga && entrega.llegada_registrada_en && (
