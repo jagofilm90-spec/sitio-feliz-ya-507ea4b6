@@ -4,12 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import Layout from "@/components/Layout";
-import { Package, Truck, Calendar, BarChart3, History } from "lucide-react";
+import { Package, Truck, Calendar, BarChart3, History, AlertTriangle } from "lucide-react";
 import ProveedoresTab from "@/components/compras/ProveedoresTab";
 import OrdenesCompraTab from "@/components/compras/OrdenesCompraTab";
 import CalendarioEntregasTab from "@/components/compras/CalendarioEntregasTab";
 import ComprasAnalyticsTab from "@/components/compras/ComprasAnalyticsTab";
 import HistorialComprasProductoTab from "@/components/compras/HistorialComprasProductoTab";
+import DevolucionesPendientesTab from "@/components/compras/DevolucionesPendientesTab";
 import { supabase } from "@/integrations/supabase/client";
 
 const Compras = () => {
@@ -49,6 +50,25 @@ const Compras = () => {
     refetchInterval: 30000,
   });
 
+  // Fetch count of pending devoluciones
+  const { data: devolucionesPendientesCount = 0 } = useQuery({
+    queryKey: ["devoluciones-pendientes-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("devoluciones_proveedor")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pendiente");
+
+      if (error) {
+        console.error("Error fetching devoluciones count:", error);
+        return 0;
+      }
+
+      return count || 0;
+    },
+    refetchInterval: 60000,
+  });
+
   // Auto-switch to ordenes tab when ?aprobar= param is present
   useEffect(() => {
     if (searchParams.get("aprobar")) {
@@ -67,7 +87,7 @@ const Compras = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="proveedores" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
               Proveedores
@@ -87,6 +107,18 @@ const Compras = () => {
             <TabsTrigger value="calendario" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               Calendario
+            </TabsTrigger>
+            <TabsTrigger value="devoluciones" className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Devoluciones
+              {devolucionesPendientesCount > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="ml-1 h-5 min-w-5 px-1.5 text-xs font-bold"
+                >
+                  {devolucionesPendientesCount}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="historial" className="flex items-center gap-2">
               <History className="h-4 w-4" />
@@ -108,6 +140,10 @@ const Compras = () => {
 
           <TabsContent value="calendario">
             <CalendarioEntregasTab />
+          </TabsContent>
+
+          <TabsContent value="devoluciones">
+            <DevolucionesPendientesTab />
           </TabsContent>
 
           <TabsContent value="historial">
