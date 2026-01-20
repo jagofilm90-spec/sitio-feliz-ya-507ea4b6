@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
@@ -1160,8 +1160,8 @@ export const AlmacenRecepcionSheet = ({
   return (
     <>
       <Sheet open={open && !showFirmaDialog && !showDevolucionDialog && !showFirmaChoferConformidadDialog && !showFirmaAlmacenistaDialog} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-full sm:max-w-xl">
-          <SheetHeader>
+        <SheetContent side="right" className="w-full sm:max-w-xl flex flex-col overflow-hidden">
+          <SheetHeader className="flex-shrink-0">
             <SheetTitle className="flex items-center gap-2">
               <Package className="w-5 h-5" />
               Completar Recepción: {entrega.orden_compra?.folio}
@@ -1173,13 +1173,14 @@ export const AlmacenRecepcionSheet = ({
             </div>
           </SheetHeader>
 
-          <ScrollArea className="h-[calc(100vh-180px)] mt-4 pr-4">
+          {/* Scroll nativo para mejor soporte en tablets */}
+          <div className="flex-1 mt-4 pr-4 -mr-2 overflow-y-auto overscroll-contain">
             {loading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full" />)}
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-6 pb-8">
                 {/* Info de llegada - datos ya capturados en Fase 1 */}
                 <div className="p-3 bg-muted/50 border rounded-lg space-y-3">
                   <div className="flex items-center justify-between">
@@ -1790,7 +1791,7 @@ export const AlmacenRecepcionSheet = ({
                 </Button>
               </div>
             )}
-          </ScrollArea>
+          </div>
         </SheetContent>
       </Sheet>
 
