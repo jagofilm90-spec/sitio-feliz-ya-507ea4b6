@@ -32,9 +32,11 @@ import {
   UserCheck,
   RefreshCw,
   Box,
+  XCircle,
 } from "lucide-react";
 import { RegistrarLlegadaSheet } from "./RegistrarLlegadaSheet";
 import { AlmacenRecepcionSheet } from "./AlmacenRecepcionSheet";
+import { CancelarDescargaDialog } from "./CancelarDescargaDialog";
 import { getCompactDisplayName } from "@/lib/productUtils";
 
 interface TrabajandoPor {
@@ -99,6 +101,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [tomarRecepcionEntrega, setTomarRecepcionEntrega] = useState<EntregaCompra | null>(null);
   const [tomandoRecepcion, setTomandoRecepcion] = useState(false);
+  const [cancelarDescargaEntrega, setCancelarDescargaEntrega] = useState<EntregaCompra | null>(null);
   const { toast } = useToast();
 
   // Obtener usuario actual
@@ -409,6 +412,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                         onRegistrarLlegada={handleRegistrarLlegada}
                         onCompletarRecepcion={handleCompletarRecepcion}
                         onTomarRecepcion={setTomarRecepcionEntrega}
+                        onCancelarDescarga={setCancelarDescargaEntrega}
                       />
                     ))}
                   </div>
@@ -424,6 +428,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                   onRegistrarLlegada={handleRegistrarLlegada}
                   onCompletarRecepcion={handleCompletarRecepcion}
                   onTomarRecepcion={setTomarRecepcionEntrega}
+                  onCancelarDescarga={setCancelarDescargaEntrega}
                 />
               ))}
             </div>
@@ -481,6 +486,19 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog para cancelar/pausar descarga */}
+      <CancelarDescargaDialog
+        open={!!cancelarDescargaEntrega}
+        onOpenChange={(open) => !open && setCancelarDescargaEntrega(null)}
+        entregaId={cancelarDescargaEntrega?.id || ""}
+        proveedorNombre={
+          cancelarDescargaEntrega?.orden_compra?.proveedor_id 
+            ? (cancelarDescargaEntrega?.orden_compra?.proveedor?.nombre || "Sin proveedor")
+            : (cancelarDescargaEntrega?.orden_compra?.proveedor_nombre_manual || "Sin proveedor")
+        }
+        onDescargaCancelada={loadEntregas}
+      />
     </>
   );
 };
@@ -542,9 +560,10 @@ interface EntregaCardProps {
   onRegistrarLlegada: (entrega: EntregaCompra) => void;
   onCompletarRecepcion: (entrega: EntregaCompra) => void;
   onTomarRecepcion: (entrega: EntregaCompra) => void;
+  onCancelarDescarga: (entrega: EntregaCompra) => void;
 }
 
-const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRecepcion, onTomarRecepcion }: EntregaCardProps) => {
+const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRecepcion, onTomarRecepcion, onCancelarDescarga }: EntregaCardProps) => {
   const estado = getEstadoConfigStatic(entrega.status);
   const esEnDescarga = entrega.status === "en_descarga";
   const Icon = estado.icon;
@@ -633,6 +652,18 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
           <div className="flex gap-2 pt-1 flex-wrap">
             {esEnDescarga ? (
               <>
+                {/* Botón para cancelar/pausar */}
+                {(!otroUsuarioTrabajando || yoEstoyTrabajando) && (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => onCancelarDescarga(entrega)}
+                    className="gap-2 text-destructive border-destructive/50 hover:bg-destructive/10"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Cancelar/Pausar
+                  </Button>
+                )}
                 {/* Solo mostrar botón de completar si soy yo o no hay nadie asignado */}
                 {(!otroUsuarioTrabajando || timeoutExpirado) && (
                   <Button 
