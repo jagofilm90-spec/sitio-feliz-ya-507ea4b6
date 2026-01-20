@@ -33,8 +33,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import ProgramarEntregasDialog from "./ProgramarEntregasDialog";
 
-import ConvertirEntregasMultiplesDialog from "./ConvertirEntregasMultiplesDialog";
-import DividirEntregaDialog from "./DividirEntregaDialog";
+// ConvertirEntregasMultiplesDialog and DividirEntregaDialog removed - rarely used
 import { EvidenciasGallery, EvidenciasBadge } from "./EvidenciasGallery";
 import { HistorialCorreosOC, registrarCorreoEnviado } from "./HistorialCorreosOC";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -67,9 +66,7 @@ interface OrdenAccionesDialogProps {
 const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccionesDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [accion, setAccion] = useState<"cambiar_fecha" | "recibir" | "devolver" | "enviar_email" | "reenviar_email" | "eliminar" | "solicitar_autorizacion" | "autorizar" | "rechazar" | null>(null);
-  const [nuevaFecha, setNuevaFecha] = useState("");
-  const [motivoDevolucion, setMotivoDevolucion] = useState("");
+  const [accion, setAccion] = useState<"enviar_email" | "reenviar_email" | "eliminar" | "solicitar_autorizacion" | "autorizar" | "rechazar" | null>(null);
   const [motivoRechazo, setMotivoRechazo] = useState("");
   const [enviandoEmail, setEnviandoEmail] = useState(false);
   const [solicitandoAutorizacion, setSolicitandoAutorizacion] = useState(false);
@@ -78,8 +75,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   const [isAdmin, setIsAdmin] = useState(false);
   const [programarEntregasOpen, setProgramarEntregasOpen] = useState(false);
   
-  const [convertirEntregasOpen, setConvertirEntregasOpen] = useState(false);
-  const [dividirEntregaOpen, setDividirEntregaOpen] = useState(false);
+  // Removed: convertirEntregasOpen, dividirEntregaOpen - rarely used functionality
   const [evidenciasGalleryOpen, setEvidenciasGalleryOpen] = useState(false);
   const [confirmEditOpen, setConfirmEditOpen] = useState(false);
   
@@ -419,8 +415,6 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
 
   const resetForm = () => {
     setAccion(null);
-    setNuevaFecha("");
-    setMotivoDevolucion("");
     setMotivoRechazo("");
     setEmailTo("");
     setCcEmails([]);
@@ -450,39 +444,10 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
     setCcEmails(ccEmails.filter(e => e !== emailToRemove));
   };
 
-  const handleCambiarFecha = () => {
-    if (!nuevaFecha) {
-      toast({
-        title: "Fecha requerida",
-        description: "Selecciona una nueva fecha de entrega",
-        variant: "destructive",
-      });
-      return;
-    }
-    updateOrden.mutate({ fecha_entrega_programada: nuevaFecha });
-  };
+  // handleCambiarFecha and handleMarcarDevuelta removed - editing is done via onEdit
+  // handleMarcarRecibida removed - reception is done by warehouse
 
-  const handleMarcarRecibida = () => {
-    updateOrden.mutate({
-      status: "recibida",
-      fecha_entrega_real: new Date().toISOString(),
-    });
-  };
 
-  const handleMarcarDevuelta = () => {
-    if (!motivoDevolucion.trim()) {
-      toast({
-        title: "Motivo requerido",
-        description: "Indica el motivo de la devolución",
-        variant: "destructive",
-      });
-      return;
-    }
-    updateOrden.mutate({
-      status: "devuelta",
-      motivo_devolucion: motivoDevolucion,
-    });
-  };
 
   const generarPDFContent = async (incluirAutorizacion: boolean = false) => {
     // Fetch logo as base64
@@ -1728,12 +1693,11 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
 
             <Separator />
 
-            {/* ====== ENTREGAS Y RECEPCIÓN ====== */}
+            {/* ====== SEGUIMIENTO ====== */}
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Entregas y Recepción</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Seguimiento</p>
 
-              {orden?.entregas_multiples ? (
-              <>
+              {orden?.entregas_multiples && (
                 <Button
                   variant="outline"
                   className={`w-full justify-start ${entregasPendientes > 0 ? "border-amber-300 text-amber-600 hover:bg-amber-50" : ""}`}
@@ -1747,34 +1711,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                     </Badge>
                   )}
                 </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-violet-600 hover:text-violet-700 border-violet-200"
-                  onClick={() => setDividirEntregaOpen(true)}
-                >
-                  <Scissors className="mr-2 h-4 w-4" />
-                  Dividir Entrega
-                </Button>
-              </>
-            ) : (orden?.status === "enviada" || orden?.status === "confirmada" || orden?.status === "parcial") && (
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => setConvertirEntregasOpen(true)}
-              >
-                <Truck className="mr-2 h-4 w-4" />
-                Dividir en Entregas Múltiples
-              </Button>
-            )}
-
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => setAccion("cambiar_fecha")}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              Cambiar Fecha de Entrega
-            </Button>
+              )}
             
             {/* Read-only reception status - actual registration is done by warehouse */}
             {(orden?.status === "enviada" || orden?.status === "confirmada" || orden?.status === "parcial" || orden?.status === "recibida") && (
@@ -1821,26 +1758,6 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                 </Button>
               )}
               
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => setAccion("devolver")}
-              >
-                <XCircle className="mr-2 h-4 w-4" />
-                Marcar como Devuelta
-              </Button>
-              
-              {(orden?.status === "pendiente" || isAdmin) && (
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-destructive hover:text-destructive"
-                  onClick={() => setAccion("eliminar")}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Eliminar Orden
-                </Button>
-              )}
-
               {/* Historial de correos enviados */}
               <Collapsible className="w-full">
                 <CollapsibleTrigger asChild>
@@ -2083,63 +2000,6 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
               </Button>
             </div>
           </div>
-        ) : accion === "cambiar_fecha" ? (
-          <div className="space-y-4">
-            <div>
-              <Label>Nueva Fecha de Entrega</Label>
-              <p className="text-sm text-muted-foreground mb-3">
-                Fecha actual: {orden?.fecha_entrega_programada
-                  ? format(new Date(orden.fecha_entrega_programada), "dd/MM/yyyy")
-                  : "Sin programar"}
-              </p>
-              {/* Calendario inline para evitar conflictos de z-index con Dialog */}
-              <div className="border rounded-md">
-                <Calendar
-                  mode="single"
-                  selected={nuevaFecha ? new Date(nuevaFecha + "T12:00:00") : undefined}
-                  onSelect={(date) => setNuevaFecha(date ? format(date, "yyyy-MM-dd") : "")}
-                  className="rounded-md pointer-events-auto"
-                />
-              </div>
-              {nuevaFecha && (
-                <p className="text-sm text-green-600 mt-2">
-                  Nueva fecha seleccionada: {format(new Date(nuevaFecha + "T12:00:00"), "dd/MM/yyyy")}
-                </p>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={handleCambiarFecha} disabled={updateOrden.isPending || !nuevaFecha}>
-                Actualizar Fecha
-              </Button>
-              <Button variant="ghost" onClick={() => setAccion(null)}>
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        ) : accion === "devolver" ? (
-          <div className="space-y-4">
-            <div>
-              <Label>Motivo de Devolución</Label>
-              <Textarea
-                value={motivoDevolucion}
-                onChange={(e) => setMotivoDevolucion(e.target.value)}
-                placeholder="Describe por qué se devuelve la mercancía..."
-                rows={3}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={handleMarcarDevuelta}
-                disabled={updateOrden.isPending}
-                variant="destructive"
-              >
-                Registrar Devolución
-              </Button>
-              <Button variant="ghost" onClick={() => setAccion(null)}>
-                Cancelar
-              </Button>
-            </div>
-          </div>
         ) : null}
       </DialogContent>
     </Dialog>
@@ -2150,18 +2010,8 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       orden={orden}
     />
 
+    {/* ConvertirEntregasMultiplesDialog and DividirEntregaDialog removed - rarely used */}
 
-    <ConvertirEntregasMultiplesDialog
-      open={convertirEntregasOpen}
-      onOpenChange={setConvertirEntregasOpen}
-      orden={orden}
-    />
-
-    <DividirEntregaDialog
-      open={dividirEntregaOpen}
-      onOpenChange={setDividirEntregaOpen}
-      orden={orden}
-    />
 
     <EvidenciasGallery
       ordenCompraId={orden?.id || ""}
