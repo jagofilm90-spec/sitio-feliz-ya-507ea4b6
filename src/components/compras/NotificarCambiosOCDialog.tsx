@@ -452,36 +452,159 @@ const NotificarCambiosOCDialog = ({
         `;
       }).join('');
 
+      // Build products table for email body
+      const detalles = ordenCompleta.ordenes_compra_detalles || [];
+      const productosEmailHTML = detalles.map((d: any) => 
+        `<tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">${d.productos?.codigo || '-'}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${d.productos?.nombre || 'Producto'}</td>
+          <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${d.cantidad_ordenada}</td>
+          <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">$${d.precio_unitario_compra?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+          <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">$${d.subtotal?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+        </tr>`
+      ).join('');
+
+      // Format delivery date
+      let fechaEntregaEmail = 'Por confirmar';
+      if (ordenCompleta.fecha_entrega_programada) {
+        const [year, month, day] = ordenCompleta.fecha_entrega_programada.split('-').map(Number);
+        const fechaLocal = new Date(year, month - 1, day);
+        fechaEntregaEmail = fechaLocal.toLocaleDateString('es-MX', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+      }
+
+      // Build deliveries section for email
+      let entregasEmailHTML = '';
+      const entregasProgramadas = ordenCompleta.ordenes_compra_entregas || [];
+      if (entregasProgramadas.length > 0) {
+        const entregasRows = entregasProgramadas.map((e: any) => {
+          let fecha = '<span style="color: #d4a024;">Pendiente</span>';
+          if (e.fecha_programada) {
+            const [year, month, day] = e.fecha_programada.split('-').map(Number);
+            const fechaLocal = new Date(year, month - 1, day);
+            fecha = fechaLocal.toLocaleDateString('es-MX', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+          }
+          return `<tr>
+            <td style="padding: 8px; border: 1px solid #d4a024; text-align: center;">${e.numero_entrega}</td>
+            <td style="padding: 8px; border: 1px solid #d4a024;">${fecha}</td>
+            <td style="padding: 8px; border: 1px solid #d4a024; text-align: center;">${e.cantidad_bultos} bultos</td>
+          </tr>`;
+        }).join('');
+
+        entregasEmailHTML = `
+          <div style="background-color: #fffbeb; border: 1px solid #d4a024; border-radius: 8px; padding: 15px; margin: 20px 0;">
+            <h4 style="color: #92400e; margin: 0 0 10px 0;">📅 Calendario de Entregas</h4>
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background-color: #d4a024; color: white;">
+                  <th style="padding: 8px; border: 1px solid #d4a024;">Entrega #</th>
+                  <th style="padding: 8px; border: 1px solid #d4a024;">Fecha</th>
+                  <th style="padding: 8px; border: 1px solid #d4a024;">Cantidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${entregasRows}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
       const htmlBody = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 20px;">
+          <!-- Header -->
           <div style="text-align: center; margin-bottom: 20px;">
             ${logoBase64 ? `<img src="${logoBase64}" alt="ALMASA" style="height: 60px;" />` : '<h1 style="color: #B22234;">ALMASA</h1>'}
           </div>
           
-          <div style="background-color: #FEF3C7; border: 2px solid #F59E0B; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-            <h2 style="color: #92400E; margin-top: 0;">⚠️ MODIFICACIÓN - Orden de Compra: ${folio}</h2>
+          <!-- Alert Banner -->
+          <div style="background-color: #FEF3C7; border: 2px solid #F59E0B; border-radius: 8px; padding: 20px; margin-bottom: 20px; text-align: center;">
+            <h2 style="color: #92400E; margin: 0;">⚠️ MODIFICACIÓN - Orden de Compra: ${folio}</h2>
           </div>
           
-          <p>Estimado proveedor <strong>${proveedorNombre.toUpperCase()}</strong>,</p>
-          <p>Le informamos que la Orden de Compra <strong>${folio}</strong> ha sido modificada. A continuación los cambios realizados:</p>
-          
-          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <!-- Company Info -->
+          <div style="background-color: #f8f9fa; border-left: 4px solid #1e3a5f; padding: 15px; margin-bottom: 20px;">
+            <h4 style="margin: 0 0 8px 0; color: #1e3a5f;">🏢 ${COMPANY_DATA.razonSocial}</h4>
+            <p style="margin: 3px 0; font-size: 13px;">RFC: ${COMPANY_DATA.rfc}</p>
+            <p style="margin: 3px 0; font-size: 13px;">${COMPANY_DATA.direccionCompletaMayusculas}</p>
+            <p style="margin: 3px 0; font-size: 13px;">Tel: ${COMPANY_DATA.telefonosFormateados} | ${COMPANY_DATA.emails.compras}</p>
+          </div>
+
+          <!-- Supplier Info -->
+          <div style="background-color: #f0f9ff; border-left: 4px solid #0284c7; padding: 15px; margin-bottom: 20px;">
+            <h4 style="margin: 0 0 8px 0; color: #0369a1;">📦 Proveedor: ${proveedorNombre.toUpperCase()}</h4>
+            ${ordenCompleta.proveedores?.rfc ? `<p style="margin: 3px 0; font-size: 13px;">RFC: ${ordenCompleta.proveedores.rfc}</p>` : ''}
+          </div>
+
+          <!-- Delivery Info -->
+          <div style="background-color: #fef3c7; border-left: 4px solid #d4a024; padding: 15px; margin-bottom: 20px;">
+            <h4 style="margin: 0 0 8px 0; color: #92400e;">📅 Fecha de Entrega</h4>
+            <p style="margin: 0; font-size: 14px; font-weight: bold;">${ordenCompleta.entregas_multiples ? 'Ver calendario de entregas abajo' : fechaEntregaEmail}</p>
+            <p style="margin: 5px 0 0 0; font-size: 12px; color: #666;">Lugar: ${COMPANY_DATA.direccionCompletaMayusculas}</p>
+          </div>
+
+          <!-- Products Table -->
+          <h4 style="color: #1e3a5f; border-bottom: 2px solid #1e3a5f; padding-bottom: 5px;">📋 Productos</h4>
+          <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
             <thead>
-              <tr style="background-color: #f8f9fa;">
-                <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Producto</th>
-                <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Cambio</th>
-                <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Anterior</th>
-                <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Nuevo</th>
+              <tr style="background-color: #1e3a5f; color: white;">
+                <th style="padding: 10px; border: 1px solid #1e3a5f;">Código</th>
+                <th style="padding: 10px; border: 1px solid #1e3a5f;">Producto</th>
+                <th style="padding: 10px; border: 1px solid #1e3a5f; text-align: center;">Cantidad</th>
+                <th style="padding: 10px; border: 1px solid #1e3a5f; text-align: right;">P. Unit.</th>
+                <th style="padding: 10px; border: 1px solid #1e3a5f; text-align: right;">Subtotal</th>
               </tr>
             </thead>
             <tbody>
-              ${cambiosHTML}
+              ${productosEmailHTML}
             </tbody>
           </table>
+
+          <!-- Totals -->
+          <div style="display: flex; justify-content: flex-end; margin: 20px 0;">
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; min-width: 200px;">
+              <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                <span>Subtotal:</span>
+                <span>$${ordenCompleta.subtotal?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                <span>IVA (16%):</span>
+                <span>$${ordenCompleta.impuestos?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin: 8px 0; padding-top: 8px; border-top: 2px solid #1e3a5f; font-weight: bold; font-size: 16px; color: #1e3a5f;">
+                <span>TOTAL:</span>
+                <span>$${ordenCompleta.total?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+              </div>
+            </div>
+          </div>
+
+          ${entregasEmailHTML}
+
+          <!-- Changes Section -->
+          <div style="background-color: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <h4 style="color: #dc2626; margin: 0 0 15px 0;">🔄 CAMBIOS REALIZADOS EN ESTA ORDEN:</h4>
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background-color: #fee2e2;">
+                  <th style="padding: 10px; border: 1px solid #fca5a5; text-align: left;">Producto</th>
+                  <th style="padding: 10px; border: 1px solid #fca5a5; text-align: left;">Cambio</th>
+                  <th style="padding: 10px; border: 1px solid #fca5a5; text-align: center;">Anterior</th>
+                  <th style="padding: 10px; border: 1px solid #fca5a5; text-align: center;">Nuevo</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${cambiosHTML}
+              </tbody>
+            </table>
+          </div>
           
           ${mensajeAdicional ? `
             <div style="background-color: #f0f9ff; border-left: 4px solid #0284c7; padding: 15px; margin: 20px 0;">
-              <p style="margin: 0; color: #0369a1;"><strong>Nota adicional:</strong></p>
+              <p style="margin: 0; color: #0369a1;"><strong>📝 Nota adicional:</strong></p>
               <p style="margin: 10px 0 0 0;">${mensajeAdicional}</p>
             </div>
           ` : ''}
@@ -497,9 +620,9 @@ const NotificarCambiosOCDialog = ({
           </p>
           
           <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;" />
-          <p style="color: #666; font-size: 12px;">
-            Este correo fue enviado automáticamente desde el sistema de Abarrotes La Manita.<br/>
-            Para cualquier duda, favor de comunicarse con nuestro departamento de compras.
+          <p style="color: #666; font-size: 12px; text-align: center;">
+            Este correo fue enviado automáticamente desde el sistema de ${COMPANY_DATA.razonSocial}.<br/>
+            Para cualquier duda, favor de comunicarse al ${COMPANY_DATA.emails.compras}
           </p>
         </div>
       `;

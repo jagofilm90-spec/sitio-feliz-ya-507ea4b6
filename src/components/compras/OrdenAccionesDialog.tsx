@@ -219,6 +219,159 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
 
   const deleteOrden = useMutation({
     mutationFn: async () => {
+      // Get supplier email before deleting
+      const emailDestinatario = orden?.proveedores?.email || orden?.proveedor_email_manual;
+      const proveedorNombre = orden?.proveedores?.nombre || orden?.proveedor_nombre_manual || 'Proveedor';
+      
+      // If order was sent, notify supplier of cancellation
+      if (emailDestinatario && (orden.status === 'enviada' || orden.status === 'confirmada')) {
+        try {
+          const logoBase64 = await getLogoBase64();
+          
+          // Build products table for cancellation email
+          const detalles = orden.ordenes_compra_detalles || [];
+          const productosHTML = detalles.map((d: any) => 
+            `<tr>
+              <td style="padding: 10px; border: 1px solid #ddd;">${d.productos?.codigo || '-'}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${d.productos?.nombre || 'Producto'}</td>
+              <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${d.cantidad_ordenada}</td>
+              <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">$${d.precio_unitario_compra?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+              <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">$${d.subtotal?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+            </tr>`
+          ).join('');
+
+          // Format delivery date
+          let fechaEntrega = 'Por confirmar';
+          if (orden.fecha_entrega_programada) {
+            const [year, month, day] = orden.fecha_entrega_programada.split('-').map(Number);
+            const fechaLocal = new Date(year, month - 1, day);
+            fechaEntrega = fechaLocal.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+          }
+
+          // Build cancellation email
+          const htmlBody = `
+            <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 20px;">
+              <div style="text-align: center; margin-bottom: 20px;">
+                ${logoBase64 ? `<img src="${logoBase64}" alt="ALMASA" style="height: 60px;" />` : '<h1 style="color: #B22234;">ALMASA</h1>'}
+              </div>
+              
+              <div style="background-color: #FEE2E2; border: 2px solid #EF4444; border-radius: 8px; padding: 20px; margin-bottom: 20px; text-align: center;">
+                <h2 style="color: #DC2626; margin: 0;">❌ ORDEN CANCELADA: ${orden.folio}</h2>
+              </div>
+              
+              <div style="background-color: #f8f9fa; border-left: 4px solid #1e3a5f; padding: 15px; margin-bottom: 20px;">
+                <h4 style="margin: 0 0 8px 0; color: #1e3a5f;">🏢 ${COMPANY_DATA.razonSocial}</h4>
+                <p style="margin: 3px 0; font-size: 13px;">RFC: ${COMPANY_DATA.rfc}</p>
+                <p style="margin: 3px 0; font-size: 13px;">${COMPANY_DATA.direccionCompletaMayusculas}</p>
+                <p style="margin: 3px 0; font-size: 13px;">Tel: ${COMPANY_DATA.telefonosFormateados} | ${COMPANY_DATA.emails.compras}</p>
+              </div>
+
+              <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin-bottom: 20px;">
+                <h4 style="margin: 0 0 8px 0; color: #dc2626;">📦 Proveedor: ${proveedorNombre.toUpperCase()}</h4>
+                ${orden.proveedores?.rfc ? `<p style="margin: 3px 0; font-size: 13px;">RFC: ${orden.proveedores.rfc}</p>` : ''}
+              </div>
+
+              <div style="background-color: #fee2e2; border: 2px solid #ef4444; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <p style="margin: 0; font-size: 16px; color: #dc2626; text-align: center;">
+                  <strong>⚠️ IMPORTANTE: Esta orden ha sido CANCELADA y ya NO debe ser procesada.</strong>
+                </p>
+              </div>
+
+              <h4 style="color: #1e3a5f; border-bottom: 2px solid #1e3a5f; padding-bottom: 5px;">📋 Productos que estaban en la orden:</h4>
+              <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                <thead>
+                  <tr style="background-color: #6b7280; color: white;">
+                    <th style="padding: 10px; border: 1px solid #6b7280;">Código</th>
+                    <th style="padding: 10px; border: 1px solid #6b7280;">Producto</th>
+                    <th style="padding: 10px; border: 1px solid #6b7280; text-align: center;">Cantidad</th>
+                    <th style="padding: 10px; border: 1px solid #6b7280; text-align: right;">P. Unit.</th>
+                    <th style="padding: 10px; border: 1px solid #6b7280; text-align: right;">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody style="color: #6b7280;">
+                  ${productosHTML}
+                </tbody>
+              </table>
+
+              <div style="display: flex; justify-content: flex-end; margin: 20px 0;">
+                <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; min-width: 200px; color: #6b7280;">
+                  <div style="display: flex; justify-content: space-between; margin: 5px 0; text-decoration: line-through;">
+                    <span>Subtotal:</span>
+                    <span>$${orden.subtotal?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin: 5px 0; text-decoration: line-through;">
+                    <span>IVA (16%):</span>
+                    <span>$${orden.impuestos?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin: 8px 0; padding-top: 8px; border-top: 2px solid #9ca3af; text-decoration: line-through;">
+                    <span>TOTAL:</span>
+                    <span>$${orden.total?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+              </div>
+
+              <p style="color: #666; margin-top: 30px;">
+                Si tiene alguna duda sobre esta cancelación, favor de comunicarse con nuestro departamento de compras.
+              </p>
+              
+              <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;" />
+              <p style="color: #666; font-size: 12px; text-align: center;">
+                Este correo fue enviado automáticamente desde el sistema de ${COMPANY_DATA.razonSocial}.<br/>
+                Para cualquier duda, favor de comunicarse al ${COMPANY_DATA.emails.compras}
+              </p>
+            </div>
+          `;
+
+          // Generate PDF with CANCELLED watermark
+          const pdfContent = await generarPDFContent(true);
+          const cancelledPdfContent = pdfContent.replace(
+            '<div class="order-box">',
+            '<div class="order-box" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%) !important;">'
+          ).replace(
+            '</title>',
+            ' - CANCELADA</title>'
+          ).replace(
+            '<div class="order-title">Orden de Compra</div>',
+            '<div class="order-title">ORDEN CANCELADA</div><div style="background: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-top: 5px;">❌ CANCELADA</div>'
+          );
+          
+          const pdfBase64 = btoa(unescape(encodeURIComponent(cancelledPdfContent)));
+          const asunto = `❌ ORDEN CANCELADA: ${orden.folio} - ${proveedorNombre.toUpperCase()}`;
+
+          // Send cancellation email
+          const { error: emailError } = await supabase.functions.invoke('gmail-api', {
+            body: {
+              action: 'send',
+              email: 'compras@almasa.com.mx',
+              to: emailDestinatario,
+              subject: asunto,
+              body: htmlBody,
+              attachments: [{
+                filename: `OC_${orden.folio}_CANCELADA.html`,
+                content: pdfBase64,
+                mimeType: 'text/html'
+              }]
+            },
+          });
+
+          // Register email in history
+          await registrarCorreoEnviado({
+            tipo: "cancelacion_oc",
+            referencia_id: orden.id,
+            destinatario: emailDestinatario,
+            asunto: asunto,
+            error: emailError?.message || null,
+          });
+
+          if (emailError) {
+            console.error('Error sending cancellation email:', emailError);
+          }
+        } catch (emailErr) {
+          console.error('Error preparing cancellation email:', emailErr);
+          // Continue with deletion even if email fails
+        }
+      }
+
       // First delete related notifications
       await supabase
         .from("notificaciones")
@@ -250,7 +403,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       queryClient.invalidateQueries({ queryKey: ["ordenes_calendario"] });
       toast({
         title: "Orden eliminada",
-        description: "La orden de compra se ha eliminado correctamente",
+        description: "La orden de compra se ha eliminado y se notificó al proveedor",
       });
       onOpenChange(false);
       resetForm();
