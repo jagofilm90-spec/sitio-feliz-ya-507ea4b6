@@ -503,6 +503,55 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
   );
 };
 
+// Componente timer en tiempo real para descargas
+const TimerDescarga = ({ inicioDescarga }: { inicioDescarga: string }) => {
+  const [tiempoTranscurrido, setTiempoTranscurrido] = useState("");
+  const [colorClase, setColorClase] = useState("text-green-600 dark:text-green-400");
+
+  useEffect(() => {
+    const calcularTiempo = () => {
+      const inicio = new Date(inicioDescarga).getTime();
+      const ahora = Date.now();
+      const diffMs = ahora - inicio;
+      
+      const horas = Math.floor(diffMs / (1000 * 60 * 60));
+      const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      const segundos = Math.floor((diffMs % (1000 * 60)) / 1000);
+      
+      // Formato HH:MM:SS
+      const tiempo = [
+        horas.toString().padStart(2, '0'),
+        minutos.toString().padStart(2, '0'),
+        segundos.toString().padStart(2, '0')
+      ].join(':');
+      
+      setTiempoTranscurrido(tiempo);
+      
+      // Código de colores según urgencia
+      if (horas >= 2) {
+        setColorClase("text-red-600 dark:text-red-400"); // Crítico: +2 horas
+      } else if (horas >= 1) {
+        setColorClase("text-orange-600 dark:text-orange-400"); // Advertencia: +1 hora
+      } else if (minutos >= 30) {
+        setColorClase("text-amber-600 dark:text-amber-400"); // Atención: +30 min
+      } else {
+        setColorClase("text-green-600 dark:text-green-400"); // Normal: <30 min
+      }
+    };
+
+    calcularTiempo(); // Calcular inmediatamente
+    const interval = setInterval(calcularTiempo, 1000); // Actualizar cada segundo
+
+    return () => clearInterval(interval);
+  }, [inicioDescarga]);
+
+  return (
+    <span className={`font-mono font-bold ${colorClase}`}>
+      {tiempoTranscurrido}
+    </span>
+  );
+};
+
 // Componente para lista de productos expandible
 const ProductosEntregaList = ({ productos }: { productos?: ProductoEntrega[] }) => {
   const [expandido, setExpandido] = useState(false);
@@ -615,11 +664,12 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
           {/* Productos de la entrega - expandible */}
           <ProductosEntregaList productos={entrega.productos} />
 
-          {/* Info de descarga en curso */}
+          {/* Info de descarga en curso con timer en tiempo real */}
           {esEnDescarga && entrega.llegada_registrada_en && (
-            <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
-              <Clock className="w-4 h-4" />
-              Descargando desde hace {formatDistanceToNow(new Date(entrega.llegada_registrada_en), { locale: es })}
+            <div className="flex items-center gap-2 text-sm flex-wrap">
+              <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <span className="text-muted-foreground">Tiempo de descarga:</span>
+              <TimerDescarga inicioDescarga={entrega.llegada_registrada_en} />
               {entrega.nombre_chofer_proveedor && (
                 <span className="text-muted-foreground">• Chofer: {entrega.nombre_chofer_proveedor}</span>
               )}
