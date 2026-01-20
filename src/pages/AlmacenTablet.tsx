@@ -73,33 +73,57 @@ const AlmacenTablet = () => {
     loadEmpleadoId();
   }, []);
 
-  // Cargar stats de recepción al iniciar (para mostrar badge)
-  useEffect(() => {
-    const loadRecepcionStats = async () => {
-      const today = new Date().toISOString().split('T')[0];
-      
-      // Entregas pendientes (programada, en_descarga)
-      const { count: pendientes } = await supabase
-        .from("ordenes_compra_entregas")
-        .select("*", { count: "exact", head: true })
-        .in("status", ["programada", "en_descarga"])
-        .lte("fecha_programada", today);
-      
-      // Entregas recibidas hoy
-      const { count: recibidas } = await supabase
-        .from("ordenes_compra_entregas")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "recibida")
-        .gte("fecha_entrega_real", today);
-      
-      setRecepcionStats({
-        pendientes: pendientes || 0,
-        recibidas: recibidas || 0
-      });
-    };
+  // Cargar stats de recepción
+  const loadRecepcionStats = async () => {
+    const today = new Date().toISOString().split('T')[0];
     
+    // Entregas pendientes (programada, en_descarga)
+    const { count: pendientes } = await supabase
+      .from("ordenes_compra_entregas")
+      .select("*", { count: "exact", head: true })
+      .in("status", ["programada", "en_descarga"])
+      .lte("fecha_programada", today);
+    
+    // Entregas recibidas hoy
+    const { count: recibidas } = await supabase
+      .from("ordenes_compra_entregas")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "recibida")
+      .gte("fecha_entrega_real", today);
+    
+    setRecepcionStats({
+      pendientes: pendientes || 0,
+      recibidas: recibidas || 0
+    });
+  };
+
+  // Cargar stats al iniciar y cuando cambie refreshKey
+  useEffect(() => {
     loadRecepcionStats();
   }, [refreshKey]);
+
+  // Realtime subscription para sincronizar stats de recepciones
+  useEffect(() => {
+    const channel = supabase
+      .channel('almacen-tablet-entregas-sync')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ordenes_compra_entregas'
+        },
+        () => {
+          // Actualizar stats cuando hay cambios en entregas
+          loadRecepcionStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
