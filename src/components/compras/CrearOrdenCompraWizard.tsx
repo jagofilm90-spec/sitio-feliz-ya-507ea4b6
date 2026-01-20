@@ -1060,10 +1060,44 @@ const CrearOrdenCompraWizard = ({
           });
 
           if (!emailError) {
+            // Actualizar status a "enviada" automáticamente
+            await supabase
+              .from("ordenes_compra")
+              .update({ status: "enviada" })
+              .eq("id", orden.id);
+            
             toast({
-              title: "📧 Correo enviado al proveedor",
-              description: `Se notificó a ${emailProveedor} con la OC adjunta`,
+              title: "📧 OC enviada al proveedor",
+              description: `Se notificó a ${emailProveedor} y la orden quedó como "enviada"`,
             });
+
+            // Notificar a admins sobre la nueva OC
+            try {
+              const { data: adminRoles } = await supabase
+                .from("user_roles")
+                .select("user_id")
+                .eq("role", "admin");
+              
+              if (adminRoles && adminRoles.length > 0) {
+                const provNombre = tipoProveedor === 'catalogo' 
+                  ? proveedores.find(p => p.id === proveedorId)?.nombre 
+                  : proveedorNombreManual;
+                
+                for (const admin of adminRoles) {
+                  await supabase.functions.invoke('send-push-notification', {
+                    body: {
+                      userIds: [admin.user_id],
+                      title: "Nueva OC Enviada",
+                      body: `${orden.folio} - ${provNombre} - $${orden.total?.toLocaleString('es-MX')}`,
+                      data: { type: 'orden_compra', url: `/compras?ver=${orden.id}` }
+                    }
+                  });
+                }
+              }
+            } catch (pushErr) {
+              console.error("Error enviando push a admins:", pushErr);
+              // No bloquear - la OC ya se envió exitosamente
+            }
           } else {
             console.error("Error enviando correo al proveedor:", emailError);
             toast({

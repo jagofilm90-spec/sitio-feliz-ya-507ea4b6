@@ -1322,9 +1322,10 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const canRequestAuthorization = orden?.status === "pendiente" && !isAdmin;
-  const canAuthorize = isAdmin && orden?.status === "pendiente_autorizacion";
-  const canSendToSupplier = orden?.status === "autorizada";
+  // Flujo simplificado: No se requiere autorización, OCs se envían automáticamente al crear
+  const canRequestAuthorization = false; // Deshabilitado - flujo simplificado
+  const canAuthorize = false; // Deshabilitado - flujo simplificado
+  const canSendToSupplier = orden?.status === "pendiente"; // Permitir envío manual desde pendiente
   const proveedorTieneEmail = !!(orden?.proveedores?.email || orden?.proveedor_email_manual);
 
   // Mark as sent without email (for informal suppliers) - still sends internal copy
