@@ -698,54 +698,54 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
             </div>
           )}
 
-          {/* Botones de acción */}
-          <div className="flex gap-2 pt-1 flex-wrap">
+          {/* Botones de acción - optimizados para tablet/stylus */}
+          <div className="flex gap-3 pt-2 flex-wrap">
             {esEnDescarga ? (
               <>
                 {/* Botón para cancelar/pausar */}
                 {(!otroUsuarioTrabajando || yoEstoyTrabajando) && (
                   <Button 
-                    size="sm" 
+                    size="lg" 
                     variant="outline"
                     onClick={() => onCancelarDescarga(entrega)}
-                    className="gap-2 text-destructive border-destructive/50 hover:bg-destructive/10"
+                    className="gap-2 h-12 px-5 text-destructive border-destructive/50 hover:bg-destructive/10 touch-manipulation"
                   >
-                    <XCircle className="w-4 h-4" />
+                    <XCircle className="w-5 h-5" />
                     Cancelar/Pausar
                   </Button>
                 )}
                 {/* Solo mostrar botón de completar si soy yo o no hay nadie asignado */}
                 {(!otroUsuarioTrabajando || timeoutExpirado) && (
                   <Button 
-                    size="sm" 
+                    size="lg" 
                     onClick={() => onCompletarRecepcion(entrega)}
-                    className="gap-2"
+                    className="gap-2 h-12 px-5 touch-manipulation"
                   >
-                    <PackageCheck className="w-4 h-4" />
+                    <PackageCheck className="w-5 h-5" />
                     Completar Recepción
                   </Button>
                 )}
                 {/* Botón para tomar recepción de otro */}
                 {otroUsuarioTrabajando && (
                   <Button 
-                    size="sm" 
+                    size="lg" 
                     variant="outline"
                     onClick={() => onTomarRecepcion(entrega)}
-                    className="gap-2"
+                    className="gap-2 h-12 px-5 touch-manipulation"
                   >
-                    <RefreshCw className="w-4 h-4" />
+                    <RefreshCw className="w-5 h-5" />
                     Tomar recepción
                   </Button>
                 )}
               </>
             ) : (
               <Button 
-                size="sm" 
+                size="lg" 
                 variant="outline"
                 onClick={() => onRegistrarLlegada(entrega)}
-                className="gap-2"
+                className="gap-2 h-12 px-5 touch-manipulation"
               >
-                <Truck className="w-4 h-4" />
+                <Truck className="w-5 h-5" />
                 Registrar Llegada
               </Button>
             )}
