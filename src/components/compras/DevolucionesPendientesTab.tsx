@@ -44,7 +44,7 @@ import {
   Eye,
   FileText
 } from "lucide-react";
-import { EvidenciasGallery } from "./EvidenciasGallery";
+import { DevolucionesEvidenciasGallery } from "./DevolucionesEvidenciasGallery";
 import EnviarEvidenciasProveedorDialog from "./EnviarEvidenciasProveedorDialog";
 
 interface Devolucion {
@@ -77,7 +77,7 @@ const DevolucionesPendientesTab = () => {
   const [devolucionSeleccionada, setDevolucionSeleccionada] = useState<Devolucion | null>(null);
   const [resolucionNotas, setResolucionNotas] = useState("");
   const [evidenciasGalleryOpen, setEvidenciasGalleryOpen] = useState(false);
-  const [ordenIdEvidencias, setOrdenIdEvidencias] = useState<string>("");
+  const [devolucionIdEvidencias, setDevolucionIdEvidencias] = useState<string>("");
   const [enviarEvidenciasOpen, setEnviarEvidenciasOpen] = useState(false);
   const [devolucionParaEnviar, setDevolucionParaEnviar] = useState<Devolucion | null>(null);
 
@@ -175,7 +175,7 @@ const DevolucionesPendientesTab = () => {
   });
 
   const handleVerEvidencias = (devolucion: Devolucion) => {
-    setOrdenIdEvidencias(devolucion.orden_compra_id);
+    setDevolucionIdEvidencias(devolucion.id);
     setEvidenciasGalleryOpen(true);
   };
 
@@ -478,9 +478,9 @@ const DevolucionesPendientesTab = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Galería de evidencias */}
-      <EvidenciasGallery
-        ordenCompraId={ordenIdEvidencias}
+      {/* Galería de evidencias de devolución */}
+      <DevolucionesEvidenciasGallery
+        devolucionId={devolucionIdEvidencias}
         open={evidenciasGalleryOpen}
         onOpenChange={setEvidenciasGalleryOpen}
       />
