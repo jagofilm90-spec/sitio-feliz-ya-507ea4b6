@@ -3036,10 +3036,15 @@ export type Database = {
       }
       ordenes_compra_entregas: {
         Row: {
+          cancelacion_descripcion: string | null
+          cancelacion_firma_almacenista: string | null
+          cancelacion_firma_chofer: string | null
+          cancelacion_tipo: string | null
           cantidad_bultos: number
           created_at: string
           descarga_cancelada_en: string | null
           descarga_cancelada_por: string | null
+          devolucion_generada_id: string | null
           fecha_entrega_real: string | null
           fecha_programada: string | null
           firma_almacenista: string | null
@@ -3071,10 +3076,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cancelacion_descripcion?: string | null
+          cancelacion_firma_almacenista?: string | null
+          cancelacion_firma_chofer?: string | null
+          cancelacion_tipo?: string | null
           cantidad_bultos: number
           created_at?: string
           descarga_cancelada_en?: string | null
           descarga_cancelada_por?: string | null
+          devolucion_generada_id?: string | null
           fecha_entrega_real?: string | null
           fecha_programada?: string | null
           firma_almacenista?: string | null
@@ -3106,10 +3116,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cancelacion_descripcion?: string | null
+          cancelacion_firma_almacenista?: string | null
+          cancelacion_firma_chofer?: string | null
+          cancelacion_tipo?: string | null
           cantidad_bultos?: number
           created_at?: string
           descarga_cancelada_en?: string | null
           descarga_cancelada_por?: string | null
+          devolucion_generada_id?: string | null
           fecha_entrega_real?: string | null
           fecha_programada?: string | null
           firma_almacenista?: string | null
@@ -3153,6 +3168,13 @@ export type Database = {
             columns: ["descarga_cancelada_por"]
             isOneToOne: false
             referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordenes_compra_entregas_devolucion_generada_id_fkey"
+            columns: ["devolucion_generada_id"]
+            isOneToOne: false
+            referencedRelation: "devoluciones_proveedor"
             referencedColumns: ["id"]
           },
           {
