@@ -27,9 +27,12 @@ import {
   Clock,
   PenTool,
   AlertTriangle,
+  Mail,
+  Loader2,
 } from "lucide-react";
-import { generarRecepcionPDF } from "@/utils/recepcionPdfGenerator";
+import { generarRecepcionPDF, generarRecepcionPDFBase64 } from "@/utils/recepcionPdfGenerator";
 import { getDisplayName } from "@/lib/productUtils";
+import { getEmailsInternos, enviarCopiaInterna } from "@/lib/emailNotificationsUtils";
 
 interface RecepcionDetalleDialogProps {
   entregaId: string | null;
@@ -70,6 +73,7 @@ interface RecepcionDetalle {
     id: string;
     folio: string;
     proveedor: {
+      id: string;
       nombre: string;
     } | null;
     proveedor_nombre_manual: string | null;
@@ -122,6 +126,7 @@ export const RecepcionDetalleDialog = ({
   const [evidenciasUrls, setEvidenciasUrls] = useState<Record<string, string>>({});
   const [imagenExpandida, setImagenExpandida] = useState<string | null>(null);
   const [generandoPdf, setGenerandoPdf] = useState(false);
+  const [reenviandoCorreo, setReenviandoCorreo] = useState(false);
 
   useEffect(() => {
     if (open && entregaId) {
@@ -144,7 +149,7 @@ export const RecepcionDetalleDialog = ({
           recibido_por_profile:recibido_por(full_name),
           orden_compra:ordenes_compra(
             id, folio, proveedor_nombre_manual,
-            proveedor:proveedores(nombre)
+            proveedor:proveedores(id, nombre)
           )
         `)
         .eq("id", entregaId)
@@ -243,6 +248,132 @@ export const RecepcionDetalleDialog = ({
       otro: "Otro",
     };
     return labels[tipo] || tipo;
+  };
+
+  const handleReenviarCorreo = async () => {
+    if (!recepcion) return;
+    setReenviandoCorreo(true);
+    
+    try {
+      // 1. Buscar contacto de logística del proveedor
+      const proveedorId = recepcion.orden_compra.proveedor?.id;
+      if (!proveedorId) {
+        toast.error("No se encontró información del proveedor");
+        return;
+      }
+
+      const { data: contactoLogistica } = await supabase
+        .from("proveedor_contactos")
+        .select("email, nombre")
+        .eq("proveedor_id", proveedorId)
+        .eq("recibe_ordenes", true)
+        .maybeSingle();
+      
+      if (!contactoLogistica?.email) {
+        toast.error("No se encontró un contacto de logística para este proveedor");
+        return;
+      }
+      
+      // 2. Generar PDF como base64
+      const evidenciasConTipos = evidencias.map(ev => ({
+        url: evidenciasUrls[ev.id] || "",
+        tipo: ev.tipo_evidencia,
+      })).filter(e => e.url);
+      
+      const pdfData = await generarRecepcionPDFBase64({
+        recepcion,
+        productos,
+        evidenciasConTipos,
+        firmaChofer: recepcion.firma_chofer_conformidad,
+        firmaAlmacenista: recepcion.firma_almacenista,
+        llegadaRegistradaEn: recepcion.llegada_registrada_en,
+        recepcionFinalizadaEn: recepcion.recepcion_finalizada_en,
+        placasVehiculo: recepcion.placas_vehiculo,
+        nombreChoferProveedor: recepcion.nombre_chofer_proveedor,
+        numeroRemisionProveedor: recepcion.numero_remision_proveedor,
+      });
+      
+      // 3. Construir HTML del correo
+      const provNombre = recepcion.orden_compra.proveedor?.nombre || 
+                         recepcion.orden_compra.proveedor_nombre_manual || "Proveedor";
+      const fechaRecepcion = recepcion.fecha_entrega_real 
+        ? format(new Date(recepcion.fecha_entrega_real), "dd/MM/yyyy HH:mm")
+        : "N/A";
+      
+      const asunto = `[REENVÍO] Confirmación de Recepción - ${recepcion.orden_compra.folio} - Entrega #${recepcion.numero_entrega}`;
+      
+      const htmlBody = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px;">
+          <h2 style="color: #333;">Confirmación de Recepción de Mercancía</h2>
+          <p>Estimado proveedor <strong>${provNombre}</strong>,</p>
+          <p>Le reenviamos la confirmación de recepción de la entrega correspondiente a:</p>
+          <ul style="line-height: 1.8;">
+            <li><strong>Orden de Compra:</strong> ${recepcion.orden_compra.folio}</li>
+            <li><strong>Entrega #:</strong> ${recepcion.numero_entrega}</li>
+            <li><strong>Fecha de recepción:</strong> ${fechaRecepcion}</li>
+            <li><strong>Bultos recibidos:</strong> ${recepcion.cantidad_bultos || "N/A"}</li>
+            ${recepcion.placas_vehiculo ? `<li><strong>Placas vehículo:</strong> ${recepcion.placas_vehiculo}</li>` : ""}
+            ${recepcion.nombre_chofer_proveedor ? `<li><strong>Chofer:</strong> ${recepcion.nombre_chofer_proveedor}</li>` : ""}
+          </ul>
+          <p>Adjunto encontrará el documento PDF con el detalle completo de la recepción, 
+          incluyendo fotos de evidencia y firmas de conformidad.</p>
+          <p style="margin-top: 30px;">Saludos cordiales,<br/>
+          <strong>Departamento de Compras</strong><br/>
+          ABARROTESLA MANITA S.A. DE C.V.</p>
+        </div>
+      `;
+      
+      // 4. Enviar correo con PDF adjunto
+      const { error: emailError } = await supabase.functions.invoke("gmail-api", {
+        body: {
+          action: "send",
+          email: "compras@almasa.com.mx",
+          to: contactoLogistica.email,
+          subject: asunto,
+          body: htmlBody,
+          attachments: [{
+            filename: pdfData.fileName,
+            content: pdfData.base64,
+            mimeType: "application/pdf"
+          }]
+        }
+      });
+      
+      if (emailError) throw emailError;
+      
+      // 5. Enviar copia interna a admin/secretaria
+      const emailsInternos = await getEmailsInternos();
+      if (emailsInternos.length > 0) {
+        await enviarCopiaInterna({
+          asunto,
+          htmlBody,
+          emailsDestinatarios: emailsInternos,
+          attachments: [{
+            filename: pdfData.fileName,
+            content: pdfData.base64,
+            mimeType: "application/pdf"
+          }]
+        });
+      }
+      
+      // 6. Registrar en historial de correos
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from("correos_enviados").insert({
+        tipo: "reenvio_recepcion",
+        referencia_id: recepcion.id,
+        destinatario: contactoLogistica.email,
+        asunto: asunto,
+        enviado_por: user?.id
+      });
+      
+      toast.success(`Correo reenviado exitosamente a ${contactoLogistica.email}`);
+      
+    } catch (error) {
+      console.error("Error reenviando correo:", error);
+      toast.error("Error al reenviar el correo. Intente nuevamente.");
+    } finally {
+      setReenviandoCorreo(false);
+    }
   };
 
   const proveedorNombre = recepcion?.orden_compra?.proveedor?.nombre || 
@@ -519,6 +650,22 @@ export const RecepcionDetalleDialog = ({
                   >
                     <Download className="w-4 h-4 mr-2" />
                     {generandoPdf ? "Generando..." : "Exportar PDF"}
+                  </Button>
+                  <Button
+                    onClick={handleReenviarCorreo}
+                    disabled={reenviandoCorreo}
+                  >
+                    {reenviandoCorreo ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-4 h-4 mr-2" />
+                        Reenviar a Proveedor
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
