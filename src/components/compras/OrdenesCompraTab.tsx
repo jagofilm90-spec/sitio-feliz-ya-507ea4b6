@@ -479,6 +479,30 @@ const OrdenesCompraTab = () => {
     },
   });
 
+  // Realtime subscription to sync delivery status updates from warehouse
+  useEffect(() => {
+    const channel = supabase
+      .channel('ordenes-entregas-sync')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ordenes_compra_entregas'
+        },
+        () => {
+          // Invalidate queries to refresh delivery statuses
+          queryClient.invalidateQueries({ queryKey: ["ordenes_compra_entregas_all"] });
+          queryClient.invalidateQueries({ queryKey: ["ordenes_compra"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   // Create a map of order ID to scheduling status { total, programadas, recibidas }
   const entregasStatusPorOrden = useMemo(() => {
     const mapa: Record<string, { total: number; programadas: number; recibidas: number }> = {};
