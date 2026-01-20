@@ -160,13 +160,17 @@ export const RecepcionDetalleDialog = ({
       // Fetch recibido_por profile separately to ensure we get the name
       let recibidoPorProfile: { full_name: string } | null = null;
       if ((entrega as any).recibido_por) {
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("full_name")
           .eq("id", (entrega as any).recibido_por)
-          .single();
+          .maybeSingle();
         
-        if (profile) {
+        if (profileError) {
+          console.warn("Error cargando perfil de almacenista:", profileError.message);
+        }
+        
+        if (profile?.full_name) {
           recibidoPorProfile = { full_name: profile.full_name };
         }
       }
@@ -190,44 +194,66 @@ export const RecepcionDetalleDialog = ({
 
       setProductos((productosData as unknown as ProductoRecibido[]) || []);
 
-      // Load evidences from correct table
-      const { data: evidenciasData } = await supabase
+      // Load evidences from correct table - ALL types, no filter
+      const { data: evidenciasData, error: evidenciasError } = await supabase
         .from("ordenes_compra_entregas_evidencias")
         .select(`
           id, tipo_evidencia, ruta_storage, nombre_archivo, created_at,
           capturado_por_profile:capturado_por(full_name)
         `)
         .eq("entrega_id", entregaId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: true }); // ascending to show in order: llegada -> recepcion
 
-      setEvidencias((evidenciasData as unknown as EvidenciaRecepcion[]) || []);
+      if (evidenciasError) {
+        console.error("Error cargando evidencias:", evidenciasError.message, evidenciasError.code);
+        toast.error("No se pudieron cargar las evidencias fotográficas");
+      }
       
-      console.log("Evidencias encontradas:", evidenciasData?.length, evidenciasData);
+      const evidenciasList = (evidenciasData as unknown as EvidenciaRecepcion[]) || [];
+      setEvidencias(evidenciasList);
+      
+      console.log("Evidencias encontradas:", evidenciasList.length, evidenciasList);
 
-      // Get signed URLs for evidences
+      // Get signed URLs for evidences - with better error handling
       const urls: Record<string, string> = {};
-      for (const ev of evidenciasData || []) {
-        const rutaStorage = (ev as any).ruta_storage;
-        console.log(`Generando URL para evidencia ${(ev as any).tipo_evidencia}:`, rutaStorage);
-        
-        const { data: signedUrl, error: urlError } = await supabase.storage
-          .from("recepciones-evidencias")
-          .createSignedUrl(rutaStorage, 3600);
-        
-        if (urlError) {
-          console.error(`Error generando URL para ${rutaStorage}:`, urlError);
-        }
-        
-        if (signedUrl?.signedUrl) {
-          urls[(ev as any).id] = signedUrl.signedUrl;
-          console.log(`URL generada para ${(ev as any).tipo_evidencia}:`, signedUrl.signedUrl.substring(0, 100) + "...");
+      
+      if (evidenciasList.length > 0) {
+        for (const ev of evidenciasList) {
+          const rutaStorage = ev.ruta_storage;
+          
+          if (!rutaStorage) {
+            console.warn(`Evidencia ${ev.id} sin ruta_storage`);
+            continue;
+          }
+          
+          console.log(`Generando URL para evidencia ${ev.tipo_evidencia}:`, rutaStorage);
+          
+          try {
+            const { data: signedUrl, error: urlError } = await supabase.storage
+              .from("recepciones-evidencias")
+              .createSignedUrl(rutaStorage, 3600);
+            
+            if (urlError) {
+              console.error(`Error generando URL para ${rutaStorage}:`, urlError.message);
+              continue;
+            }
+            
+            if (signedUrl?.signedUrl) {
+              urls[ev.id] = signedUrl.signedUrl;
+              console.log(`✓ URL generada para ${ev.tipo_evidencia}`);
+            }
+          } catch (urlGenError) {
+            console.error(`Excepción generando URL para ${rutaStorage}:`, urlGenError);
+          }
         }
       }
+      
       setEvidenciasUrls(urls);
-      console.log("Total URLs generadas:", Object.keys(urls).length);
+      console.log(`Total URLs generadas: ${Object.keys(urls).length} de ${evidenciasList.length} evidencias`);
 
     } catch (error) {
       console.error("Error cargando recepción:", error);
+      toast.error("Error al cargar los detalles de la recepción");
     } finally {
       setLoading(false);
     }
