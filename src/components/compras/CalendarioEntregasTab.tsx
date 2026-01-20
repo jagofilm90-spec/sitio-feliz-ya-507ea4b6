@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import {
@@ -14,13 +14,14 @@ import { Button } from "@/components/ui/button";
 import { Calendar as CalendarIcon, List, MoreVertical, Truck, ChevronLeft, ChevronRight, RotateCcw, Eye, Banknote } from "lucide-react";
 import OrdenAccionesDialog from "./OrdenAccionesDialog";
 import { RecepcionDetalleDialog } from "./RecepcionDetalleDialog";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 const CalendarioEntregasTab = () => {
+  const queryClient = useQueryClient();
   const [accionesDialogOpen, setAccionesDialogOpen] = useState(false);
   const [ordenSeleccionada, setOrdenSeleccionada] = useState<any>(null);
   const [vistaCalendario, setVistaCalendario] = useState(true);
@@ -29,6 +30,29 @@ const CalendarioEntregasTab = () => {
   const [dialogDiaOpen, setDialogDiaOpen] = useState(false);
   const [recepcionDetalleId, setRecepcionDetalleId] = useState<string | null>(null);
   const [recepcionDialogOpen, setRecepcionDialogOpen] = useState(false);
+
+  // Realtime subscription para sincronizar calendario de entregas
+  useEffect(() => {
+    const channel = supabase
+      .channel('calendario-entregas-sync')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ordenes_compra_entregas'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["entregas_programadas_calendario"] });
+          queryClient.invalidateQueries({ queryKey: ["ordenes_calendario_simples"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   // Fetch scheduled deliveries from ordenes_compra_entregas
   const { data: entregasProgramadas = [] } = useQuery({
