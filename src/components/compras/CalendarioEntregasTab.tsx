@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { LiveIndicator } from "@/components/ui/live-indicator";
 
 const CalendarioEntregasTab = () => {
   const queryClient = useQueryClient();
@@ -253,9 +254,10 @@ const CalendarioEntregasTab = () => {
     <Card className="p-6">
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <CalendarIcon className="h-6 w-6" />
             <h2 className="text-2xl font-bold">Calendario de Entregas</h2>
+            <LiveIndicator />
           </div>
           <div className="flex gap-2">
             <Button
