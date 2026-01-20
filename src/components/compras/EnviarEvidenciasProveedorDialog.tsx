@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -119,11 +119,11 @@ const EnviarEvidenciasProveedorDialog = ({
   });
 
   // Select all evidencias by default when loaded
-  useState(() => {
+  useEffect(() => {
     if (evidencias.length > 0 && selectedEvidencias.size === 0) {
       setSelectedEvidencias(new Set(evidencias.map(e => e.id)));
     }
-  });
+  }, [evidencias]);
 
   const toggleEvidencia = (id: string) => {
     const newSelected = new Set(selectedEvidencias);
