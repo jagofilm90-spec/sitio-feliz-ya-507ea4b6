@@ -11,6 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarCheck, CalendarX, Check, Loader2, Pencil, X, Mail } from "lucide-react";
 import { registrarCorreoEnviado } from "./HistorialCorreosOC";
 
+// Helper para parsear fechas evitando problemas de zona horaria
+const parseDateLocal = (dateStr: string) => {
+  if (!dateStr) return new Date();
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 interface Entrega {
   id: string;
   orden_compra_id: string;
@@ -72,8 +79,8 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
       if (isDateChange && scheduledEntregas.length === 1 && oldDate) {
         // Single delivery date change
         const entrega = scheduledEntregas[0];
-        const oldDateFormatted = format(new Date(oldDate), "dd/MM/yyyy", { locale: es });
-        const newDateFormatted = format(new Date(entrega.fecha_programada!), "dd/MM/yyyy", { locale: es });
+        const oldDateFormatted = format(parseDateLocal(oldDate), "dd/MM/yyyy", { locale: es });
+        const newDateFormatted = format(parseDateLocal(entrega.fecha_programada!), "dd/MM/yyyy", { locale: es });
         
         subject = `[ALMASA] Cambio de fecha de entrega - ${orden.folio}`;
         introText = `Le informamos que <strong>ALMASA</strong> ha modificado la fecha de entrega #${entrega.numero_entrega} de la orden de compra:`;
@@ -85,7 +92,7 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
       } else {
         // New scheduling (single or multiple)
         entregasText = scheduledEntregas
-          .map(e => `Entrega #${e.numero_entrega}: ${format(new Date(e.fecha_programada!), "dd/MM/yyyy", { locale: es })} (${e.cantidad_bultos} bultos)`)
+          .map(e => `Entrega #${e.numero_entrega}: ${format(parseDateLocal(e.fecha_programada!), "dd/MM/yyyy", { locale: es })} (${e.cantidad_bultos} bultos)`)
           .join("<br>");
 
         const isPartial = programadasCount < totalEntregas;
@@ -96,7 +103,7 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
         entregasText = `
           <p><strong>Entregas programadas:</strong></p>
           <div style="background: #f5f5f5; padding: 15px; border-radius: 4px;">
-            ${scheduledEntregas.map(e => `Entrega #${e.numero_entrega}: ${format(new Date(e.fecha_programada!), "dd/MM/yyyy", { locale: es })} (${e.cantidad_bultos} bultos)`).join("<br>")}
+            ${scheduledEntregas.map(e => `Entrega #${e.numero_entrega}: ${format(parseDateLocal(e.fecha_programada!), "dd/MM/yyyy", { locale: es })} (${e.cantidad_bultos} bultos)`).join("<br>")}
           </div>
         `;
       }
@@ -448,7 +455,7 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-sm text-muted-foreground">
                     {orden.fecha_entrega_programada 
-                        ? format(new Date(orden.fecha_entrega_programada), "dd/MM/yyyy")
+                        ? format(parseDateLocal(orden.fecha_entrega_programada), "dd/MM/yyyy")
                         : "Sin fecha"}
                     </span>
                     <Button
@@ -524,7 +531,7 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-sm text-muted-foreground">
                             {entrega.fecha_programada 
-                              ? format(new Date(entrega.fecha_programada), "dd MMM yyyy", { locale: es })
+                              ? format(parseDateLocal(entrega.fecha_programada), "dd MMM yyyy", { locale: es })
                               : "Sin fecha"}
                           </span>
                           <Button
