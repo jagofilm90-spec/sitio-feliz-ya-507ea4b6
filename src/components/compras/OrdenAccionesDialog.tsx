@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -142,6 +142,37 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
         return false;
       }
       return (data?.length || 0) > 0;
+    },
+    enabled: !!orden?.id,
+  });
+
+  // Query para obtener entregas y calcular resumen de estados
+  const { data: entregasResumen } = useQuery({
+    queryKey: ["entregas-resumen-oc", orden?.id],
+    queryFn: async () => {
+      if (!orden?.id) return { total: 0, pendientes: 0, enProceso: 0, completadas: 0, rechazadas: 0 };
+      const { data, error } = await supabase
+        .from("ordenes_compra_entregas")
+        .select("id, status, llegada_registrada_en, recepcion_finalizada_en")
+        .eq("orden_compra_id", orden.id);
+      
+      if (error) {
+        console.error("Error fetching entregas resumen:", error);
+        return { total: 0, pendientes: 0, enProceso: 0, completadas: 0, rechazadas: 0 };
+      }
+      
+      const entregas = data || [];
+      const pendientes = entregas.filter(e => 
+        e.status === "programada" || e.status === "pendiente_fecha"
+      ).length;
+      const enProceso = entregas.filter(e => 
+        e.llegada_registrada_en && !e.recepcion_finalizada_en && 
+        e.status !== "rechazada" && e.status !== "recibida"
+      ).length;
+      const completadas = entregas.filter(e => e.status === "recibida").length;
+      const rechazadas = entregas.filter(e => e.status === "rechazada").length;
+      
+      return { total: entregas.length, pendientes, enProceso, completadas, rechazadas };
     },
     enabled: !!orden?.id,
   });
@@ -1615,6 +1646,38 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                 : "Por confirmar"
               }
             </p>
+            
+            {/* Indicador de Entregas Programadas */}
+            {entregasResumen && entregasResumen.total > 0 && (
+              <div className="flex flex-wrap items-center gap-2 pt-2 mt-2 border-t border-border/50">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Truck className="h-3.5 w-3.5" />
+                  <span>{entregasResumen.total} entrega{entregasResumen.total > 1 ? 's' : ''}</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {entregasResumen.pendientes > 0 && (
+                    <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-400 dark:border-yellow-800">
+                      {entregasResumen.pendientes} pendiente{entregasResumen.pendientes > 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                  {entregasResumen.enProceso > 0 && (
+                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800">
+                      {entregasResumen.enProceso} en proceso
+                    </Badge>
+                  )}
+                  {entregasResumen.completadas > 0 && (
+                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800">
+                      {entregasResumen.completadas} completada{entregasResumen.completadas > 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                  {entregasResumen.rechazadas > 0 && (
+                    <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800">
+                      {entregasResumen.rechazadas} rechazada{entregasResumen.rechazadas > 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           
           {/* Tabla de productos - scrollable si hay muchos */}
