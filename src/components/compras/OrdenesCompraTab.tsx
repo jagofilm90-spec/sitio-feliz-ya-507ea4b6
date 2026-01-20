@@ -473,21 +473,24 @@ const OrdenesCompraTab = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ordenes_compra_entregas")
-        .select("id, orden_compra_id, numero_entrega, cantidad_bultos, fecha_programada, status");
+        .select("id, orden_compra_id, numero_entrega, cantidad_bultos, fecha_programada, status, recepcion_finalizada_en");
       if (error) throw error;
       return data;
     },
   });
 
-  // Create a map of order ID to scheduling status { total, programadas }
+  // Create a map of order ID to scheduling status { total, programadas, recibidas }
   const entregasStatusPorOrden = useMemo(() => {
-    const mapa: Record<string, { total: number; programadas: number }> = {};
+    const mapa: Record<string, { total: number; programadas: number; recibidas: number }> = {};
     todasEntregas.forEach((e) => {
       if (!mapa[e.orden_compra_id]) {
-        mapa[e.orden_compra_id] = { total: 0, programadas: 0 };
+        mapa[e.orden_compra_id] = { total: 0, programadas: 0, recibidas: 0 };
       }
       mapa[e.orden_compra_id].total++;
-      if (e.fecha_programada) {
+      // Considerar como recibida si tiene status "recibida" o recepcion_finalizada_en
+      if (e.status === "recibida" || e.recepcion_finalizada_en) {
+        mapa[e.orden_compra_id].recibidas++;
+      } else if (e.fecha_programada) {
         mapa[e.orden_compra_id].programadas++;
       }
     });

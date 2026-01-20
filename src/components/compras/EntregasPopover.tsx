@@ -8,8 +8,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { CalendarCheck, CalendarX, Check, Loader2, Pencil, X, Mail } from "lucide-react";
+import { CalendarCheck, CalendarX, Check, Loader2, Pencil, X, Mail, CheckCircle, FileText, Package } from "lucide-react";
 import { registrarCorreoEnviado } from "./HistorialCorreosOC";
+import { RecepcionDetalleDialog } from "./RecepcionDetalleDialog";
 
 // Helper para parsear fechas evitando problemas de zona horaria
 const parseDateLocal = (dateStr: string) => {
@@ -25,12 +26,13 @@ interface Entrega {
   cantidad_bultos: number;
   fecha_programada: string | null;
   status: string;
+  recepcion_finalizada_en: string | null;
 }
 
 interface EntregasPopoverProps {
   orden: any;
   entregas: Entrega[];
-  entregasStatus: { total: number; programadas: number } | undefined;
+  entregasStatus: { total: number; programadas: number; recibidas: number } | undefined;
 }
 
 const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverProps) => {
@@ -40,6 +42,8 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
   const [editingFecha, setEditingFecha] = useState("");
   const [saving, setSaving] = useState(false);
   const [open, setOpen] = useState(false);
+  const [entregaParaPDF, setEntregaParaPDF] = useState<string | null>(null);
+  const [recepcionDialogOpen, setRecepcionDialogOpen] = useState(false);
 
   // Filter entregas for this order
   const entregasOrden = entregas.filter(e => e.orden_compra_id === orden.id);
@@ -324,16 +328,42 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
   if (orden.entregas_multiples) {
     // Calculate status directly from entregasOrden as fallback
     const total = entregasStatus?.total ?? entregasOrden.length;
-    const programadas = entregasStatus?.programadas ?? entregasOrden.filter(e => e.fecha_programada).length;
+    const recibidas = entregasStatus?.recibidas ?? entregasOrden.filter(e => 
+      e.status === "recibida" || e.recepcion_finalizada_en
+    ).length;
+    const programadas = entregasStatus?.programadas ?? entregasOrden.filter(e => 
+      e.fecha_programada && e.status !== "recibida" && !e.recepcion_finalizada_en
+    ).length;
     
     if (total > 0) {
-      if (programadas === total) {
+      // TODAS RECIBIDAS - Verde con check
+      if (recibidas === total) {
         badgeVariant = "default";
         badgeClassName = "bg-green-600 hover:bg-green-700 cursor-pointer";
         badgeContent = (
           <>
+            <CheckCircle className="h-3 w-3" />
+            {recibidas}/{total} Recibidas
+          </>
+        );
+      // ALGUNAS RECIBIDAS - Mostrar progreso
+      } else if (recibidas > 0) {
+        badgeVariant = "default";
+        badgeClassName = "bg-blue-600 hover:bg-blue-700 cursor-pointer";
+        badgeContent = (
+          <>
+            <Package className="h-3 w-3" />
+            {recibidas}/{total} Recibidas
+          </>
+        );
+      // TODAS PROGRAMADAS (sin recepciones)
+      } else if (programadas === total) {
+        badgeVariant = "secondary";
+        badgeClassName = "cursor-pointer";
+        badgeContent = (
+          <>
             <CalendarCheck className="h-3 w-3" />
-            {programadas}/{total}
+            {programadas}/{total} Programadas
           </>
         );
       } else if (programadas === 0) {
@@ -478,83 +508,121 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {entregasOrden
                 .sort((a, b) => a.numero_entrega - b.numero_entrega)
-                .map((entrega) => (
-                  <div 
-                    key={entrega.id} 
-                    className="flex items-center justify-between p-2 rounded-md bg-muted/50"
-                  >
-                    <div className="flex-1">
-                      <div className="text-sm font-medium flex items-center gap-2">
-                        Entrega #{entrega.numero_entrega}
-                        <span className="font-normal text-muted-foreground">
-                          ({entrega.cantidad_bultos} bultos)
-                        </span>
-                        {entrega.status === "confirmado" && (
-                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                            <Check className="h-3 w-3 mr-1" />
-                            Confirmada
-                          </Badge>
+                .map((entrega) => {
+                  const esRecibida = entrega.status === "recibida" || entrega.recepcion_finalizada_en;
+                  
+                  return (
+                    <div 
+                      key={entrega.id} 
+                      className={`flex items-center justify-between p-2 rounded-md ${
+                        esRecibida ? "bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800" : "bg-muted/50"
+                      }`}
+                    >
+                      <div className="flex-1">
+                        <div className="text-sm font-medium flex items-center gap-2 flex-wrap">
+                          Entrega #{entrega.numero_entrega}
+                          <span className="font-normal text-muted-foreground">
+                            ({entrega.cantidad_bultos} bultos)
+                          </span>
+                          {esRecibida && (
+                            <Badge variant="outline" className="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Recibida
+                            </Badge>
+                          )}
+                          {!esRecibida && entrega.status === "confirmado" && (
+                            <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700">
+                              <Check className="h-3 w-3 mr-1" />
+                              Confirmada
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {/* Si está recibida, mostrar fecha y botón PDF */}
+                        {esRecibida ? (
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="text-xs text-green-600 dark:text-green-400">
+                              Recibida el {entrega.recepcion_finalizada_en 
+                                ? format(new Date(entrega.recepcion_finalizada_en), "dd/MM/yyyy HH:mm")
+                                : "—"}
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-6 text-xs"
+                              onClick={() => {
+                                setEntregaParaPDF(entrega.id);
+                                setRecepcionDialogOpen(true);
+                              }}
+                            >
+                              <FileText className="h-3 w-3 mr-1" />
+                              Ver PDF
+                            </Button>
+                          </div>
+                        ) : editingId === entrega.id ? (
+                          <div className="flex items-center gap-2 mt-1">
+                            <Input
+                              type="date"
+                              value={editingFecha}
+                              onChange={(e) => setEditingFecha(e.target.value)}
+                              className="h-8 text-sm"
+                            />
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              onClick={() => handleSave(entrega.id)}
+                              disabled={saving}
+                            >
+                              {saving ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Check className="h-4 w-4 text-green-600" />
+                              )}
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              onClick={() => handleClearDate(entrega.id)}
+                              disabled={saving}
+                            >
+                              <X className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-sm text-muted-foreground">
+                              {entrega.fecha_programada 
+                                ? format(parseDateLocal(entrega.fecha_programada), "dd MMM yyyy", { locale: es })
+                                : "Sin fecha"}
+                            </span>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6"
+                              onClick={() => {
+                                setEditingId(entrega.id);
+                                setEditingFecha(entrega.fecha_programada || "");
+                              }}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          </div>
                         )}
                       </div>
-                      {editingId === entrega.id ? (
-                        <div className="flex items-center gap-2 mt-1">
-                          <Input
-                            type="date"
-                            value={editingFecha}
-                            onChange={(e) => setEditingFecha(e.target.value)}
-                            className="h-8 text-sm"
-                          />
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => handleSave(entrega.id)}
-                            disabled={saving}
-                          >
-                            {saving ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Check className="h-4 w-4 text-green-600" />
-                            )}
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => handleClearDate(entrega.id)}
-                            disabled={saving}
-                          >
-                            <X className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
+                      
+                      {/* Icono de estado */}
+                      {esRecibida ? (
+                        <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      ) : entrega.fecha_programada ? (
+                        <CalendarCheck className="h-4 w-4 text-amber-500 flex-shrink-0" />
                       ) : (
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-sm text-muted-foreground">
-                            {entrega.fecha_programada 
-                              ? format(parseDateLocal(entrega.fecha_programada), "dd MMM yyyy", { locale: es })
-                              : "Sin fecha"}
-                          </span>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-6 w-6"
-                            onClick={() => {
-                              setEditingId(entrega.id);
-                              setEditingFecha(entrega.fecha_programada || "");
-                            }}
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                        </div>
+                        <CalendarX className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       )}
                     </div>
-                    {entrega.fecha_programada ? (
-                      <CalendarCheck className="h-4 w-4 text-green-600 flex-shrink-0" />
-                    ) : (
-                      <CalendarX className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
             </div>
           ) : (
             <div className="text-sm text-muted-foreground py-2">
@@ -570,6 +638,16 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
           )}
         </div>
       </PopoverContent>
+      
+      {/* Dialog para ver PDF de recepción */}
+      <RecepcionDetalleDialog
+        entregaId={entregaParaPDF}
+        open={recepcionDialogOpen}
+        onOpenChange={(open) => {
+          setRecepcionDialogOpen(open);
+          if (!open) setEntregaParaPDF(null);
+        }}
+      />
     </Popover>
   );
 };
