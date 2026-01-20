@@ -17,6 +17,13 @@ import { Separator } from "@/components/ui/separator";
 import { CheckCircle, XCircle, Loader2, Package, Building2, Calendar, DollarSign, Truck } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
+// Helper para parsear fechas evitando problemas de zona horaria
+const parseDateLocal = (dateStr: string) => {
+  if (!dateStr) return new Date();
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 interface AutorizacionOCDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -286,7 +293,7 @@ const AutorizacionOCDialog = ({ open, onOpenChange, orden }: AutorizacionOCDialo
                         <td className="text-center p-2">{e.cantidad_bultos?.toLocaleString()}</td>
                         <td className="text-right p-2 font-medium">
                           {e.fecha_programada ? (
-                            new Date(e.fecha_programada).toLocaleDateString("es-MX", {
+                            parseDateLocal(e.fecha_programada).toLocaleDateString("es-MX", {
                               day: "numeric",
                               month: "short",
                               year: "numeric",

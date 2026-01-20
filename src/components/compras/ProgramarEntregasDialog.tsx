@@ -19,6 +19,13 @@ import { Calendar, Truck, Send, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { registrarCorreoEnviado } from "./HistorialCorreosOC";
 
+// Helper para parsear fechas evitando problemas de zona horaria
+const parseDateLocal = (dateStr: string) => {
+  if (!dateStr) return new Date();
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 interface ProgramarEntregasDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -259,7 +266,7 @@ const ProgramarEntregasDialog = ({ open, onOpenChange, orden }: ProgramarEntrega
                           {entrega.cantidad_bultos?.toLocaleString()} bultos
                         </span>
                         <span className="text-sm font-medium">
-                          {format(new Date(entrega.fecha_programada), "dd/MM/yyyy")}
+                          {format(parseDateLocal(entrega.fecha_programada), "dd/MM/yyyy")}
                         </span>
                       </div>
                     ))}
