@@ -694,14 +694,15 @@ export const RegistrarLlegadaSheet = ({
 
               {/* Nombre del chofer */}
               <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <User className="w-4 h-4" />
+                <Label className="flex items-center gap-2 text-base">
+                  <User className="w-5 h-5" />
                   Nombre del chofer *
                 </Label>
                 <Input
                   value={nombreChofer}
                   onChange={(e) => setNombreChofer(e.target.value)}
                   placeholder="Nombre del chofer del proveedor"
+                  className="h-12 text-base touch-manipulation"
                 />
               </div>
 
@@ -754,15 +755,15 @@ export const RegistrarLlegadaSheet = ({
                       
                       {/* Input para placas (siempre visible, pre-llenado si AI detectó) */}
                       <div className="space-y-1">
-                        <Label className="text-xs">Número de placas *</Label>
+                        <Label className="text-sm">Número de placas *</Label>
                         <Input
                           value={placasManual}
                           onChange={(e) => setPlacasManual(e.target.value.toUpperCase())}
                           placeholder="ABC-123"
-                          className="uppercase"
+                          className="uppercase h-12 text-base touch-manipulation"
                         />
                         {deteccionFallida && (
-                          <p className="text-xs text-amber-600">
+                          <p className="text-sm text-amber-600">
                             AI no pudo detectar, ingresa manualmente
                           </p>
                         )}
@@ -800,11 +801,11 @@ export const RegistrarLlegadaSheet = ({
                     />
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
+                      size="lg"
+                      className="h-12 w-12 p-0 touch-manipulation"
                       onClick={() => handleRemoveEvidencia("identificacion")}
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-5 w-5" />
                     </Button>
                   </div>
                 ) : (
@@ -844,11 +845,11 @@ export const RegistrarLlegadaSheet = ({
                           />
                           <Button
                             variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
+                            size="lg"
+                            className="h-12 w-12 p-0 touch-manipulation"
                             onClick={() => handleRemoveEvidencia("sello_1")}
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-5 w-5" />
                           </Button>
                         </div>
                       ) : (
@@ -880,11 +881,11 @@ export const RegistrarLlegadaSheet = ({
                           />
                           <Button
                             variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
+                            size="lg"
+                            className="h-12 w-12 p-0 touch-manipulation"
                             onClick={() => handleRemoveEvidencia("sello_2")}
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-5 w-5" />
                           </Button>
                         </div>
                       ) : (
@@ -897,23 +898,24 @@ export const RegistrarLlegadaSheet = ({
                   </div>
                 )}
 
-                {/* Opción sin sellos */}
+                {/* Opción sin sellos - optimizado para tablet */}
                 <div className={cn(
-                  "p-3 border rounded-lg",
+                  "p-4 border rounded-lg",
                   sinSellos ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20" : "border-border"
                 )}>
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center gap-4 touch-manipulation">
                     <Checkbox
                       id="sin-sellos"
                       checked={sinSellos}
                       onCheckedChange={(checked) => handleSinSellosChange(!!checked)}
                       disabled={!!fotoSelloPuerta1 || !!fotoSelloPuerta2}
+                      className="h-6 w-6 border-2"
                     />
                     <label 
                       htmlFor="sin-sellos"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2"
+                      className="text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2 cursor-pointer py-2"
                     >
-                      <ShieldX className="w-4 h-4 text-amber-600" />
+                      <ShieldX className="w-5 h-5 text-amber-600" />
                       El camión NO trae sellos de seguridad
                     </label>
                   </div>
@@ -936,21 +938,23 @@ export const RegistrarLlegadaSheet = ({
                             <CheckCircle2 className="w-4 h-4" />
                             Firmado
                           </div>
-                          <Button
+                        <Button
                             variant="ghost"
-                            size="sm"
+                            size="lg"
+                            className="touch-manipulation"
                             onClick={() => setFirmaChoferSinSellos(null)}
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-5 w-5" />
                           </Button>
                         </div>
                       ) : (
                         <Button
                           variant="outline"
+                          size="lg"
                           onClick={() => setShowFirmaDialog(true)}
-                          className="w-full"
+                          className="w-full h-14 text-base gap-3 touch-manipulation"
                         >
-                          <PenLine className="w-4 h-4 mr-2" />
+                          <PenLine className="w-5 h-5" />
                           Obtener firma del chofer
                         </Button>
                       )}
@@ -959,23 +963,24 @@ export const RegistrarLlegadaSheet = ({
                 </div>
               </div>
 
-              {/* RECHAZO TOTAL */}
+              {/* RECHAZO TOTAL - optimizado para tablet */}
               <div className={cn(
                 "p-4 border rounded-lg",
                 rechazoTotal ? "border-red-500 bg-red-50 dark:bg-red-950/20" : "border-border"
               )}>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center gap-4 touch-manipulation">
                   <Checkbox
                     id="rechazo-total"
                     checked={rechazoTotal}
                     onCheckedChange={(checked) => handleRechazoTotalChange(!!checked)}
                     disabled={sinSellos || !!fotoSelloPuerta1}
+                    className="h-6 w-6 border-2"
                   />
                   <label 
                     htmlFor="rechazo-total"
-                    className="text-sm font-medium leading-none flex items-center gap-2 text-red-700 dark:text-red-400"
+                    className="text-base font-medium leading-none flex items-center gap-2 text-red-700 dark:text-red-400 cursor-pointer py-2"
                   >
-                    <Ban className="w-4 h-4" />
+                    <Ban className="w-5 h-5" />
                     Rechazar entrega completa
                   </label>
                 </div>
@@ -983,33 +988,33 @@ export const RegistrarLlegadaSheet = ({
                 {rechazoTotal && (
                   <div className="mt-4 space-y-4">
                     <Select value={motivoRechazo} onValueChange={setMotivoRechazo}>
-                      <SelectTrigger className={cn(!motivoRechazo && "border-destructive")}>
+                      <SelectTrigger className={cn("h-12 text-base touch-manipulation", !motivoRechazo && "border-destructive")}>
                         <SelectValue placeholder="Selecciona motivo del rechazo *" />
                       </SelectTrigger>
                       <SelectContent>
                         {MOTIVOS_RECHAZO_TOTAL.map(m => (
-                          <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                          <SelectItem key={m.value} value={m.value} className="py-3 text-base">{m.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
 
-                    <div className="space-y-2">
-                      <Label className="text-sm">Fotos de evidencia * (mínimo 1)</Label>
+                    <div className="space-y-3">
+                      <Label className="text-base">Fotos de evidencia * (mínimo 1)</Label>
                       <EvidenciaCapture
                         tipo="rechazo_total"
                         onCapture={(file, preview) => handleFotoRechazoCapture("rechazo_total", file, preview)}
                       />
                       {fotosRechazo.length > 0 && (
-                        <div className="grid grid-cols-3 gap-2 mt-2">
+                        <div className="grid grid-cols-3 gap-3 mt-3">
                           {fotosRechazo.map((foto, idx) => (
                             <div key={idx} className="relative">
-                              <img src={foto.preview} alt="Evidencia" className="h-16 w-full object-cover rounded border" />
+                              <img src={foto.preview} alt="Evidencia" className="h-20 w-full object-cover rounded border-2" />
                               <button
                                 type="button"
                                 onClick={() => handleRemoveFotoRechazo(idx)}
-                                className="absolute -top-1 -right-1 p-0.5 rounded-full bg-destructive text-destructive-foreground"
+                                className="absolute -top-2 -right-2 p-2 rounded-full bg-destructive text-destructive-foreground touch-manipulation"
                               >
-                                <X className="h-3 w-3" />
+                                <X className="h-4 w-4" />
                               </button>
                             </div>
                           ))}
@@ -1024,13 +1029,13 @@ export const RegistrarLlegadaSheet = ({
                           <CheckCircle2 className="w-4 h-4" />
                           Chofer firmó rechazo
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => setFirmaChoferRechazo(null)}>
-                          <X className="h-4 w-4" />
+                        <Button variant="ghost" size="lg" className="touch-manipulation" onClick={() => setFirmaChoferRechazo(null)}>
+                          <X className="h-5 w-5" />
                         </Button>
                       </div>
                     ) : (
-                      <Button variant="outline" onClick={() => setShowFirmaRechazoDialog(true)} className="w-full">
-                        <PenLine className="w-4 h-4 mr-2" />
+                      <Button variant="outline" size="lg" onClick={() => setShowFirmaRechazoDialog(true)} className="w-full h-14 text-base gap-3 touch-manipulation">
+                        <PenLine className="w-5 h-5" />
                         Firma del chofer (confirma rechazo) *
                       </Button>
                     )}
@@ -1060,19 +1065,19 @@ export const RegistrarLlegadaSheet = ({
             <Button
               onClick={handleConfirmarLlegada}
               disabled={saving || detectandoPlacas}
-              className={cn("w-full", rechazoTotal && "bg-destructive hover:bg-destructive/90")}
+              className={cn("w-full h-14 text-base touch-manipulation", rechazoTotal && "bg-destructive hover:bg-destructive/90")}
               size="lg"
             >
               {saving ? (
                 "Guardando..."
               ) : rechazoTotal ? (
                 <>
-                  <Ban className="w-5 h-5 mr-2" />
+                  <Ban className="w-6 h-6 mr-2" />
                   Confirmar Rechazo Total
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="w-5 h-5 mr-2" />
+                  <CheckCircle2 className="w-6 h-6 mr-2" />
                   Confirmar Llegada e Iniciar Descarga
                 </>
               )}

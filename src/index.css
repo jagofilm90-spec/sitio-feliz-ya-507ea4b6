@@ -148,3 +148,62 @@
     transition: none !important;
   }
 }
+
+/* ============================================
+   TABLET OPTIMIZATIONS - Samsung Galaxy Tab S Pen
+   ============================================ */
+
+/* Touch manipulation for all interactive elements in almacen-tablet */
+.almacen-tablet button,
+.almacen-tablet [role="button"],
+.almacen-tablet input,
+.almacen-tablet textarea,
+.almacen-tablet select,
+.almacen-tablet [role="checkbox"],
+.almacen-tablet label {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Minimum touch targets for S Pen precision */
+.almacen-tablet button:not(.btn-icon-only),
+.almacen-tablet [role="button"]:not(.btn-icon-only) {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Checkbox enlargement for stylus */
+.almacen-tablet [role="checkbox"] {
+  min-height: 24px;
+  min-width: 24px;
+}
+
+/* Better active state feedback */
+.almacen-tablet button:active,
+.almacen-tablet [role="button"]:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
+/* S Pen hover detection feedback */
+@media (pointer: fine) {
+  .almacen-tablet button:hover:not(:active),
+  .almacen-tablet [role="button"]:hover:not(:active) {
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.25);
+  }
+  
+  .almacen-tablet [role="checkbox"]:hover:not(:active) {
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.25);
+  }
+}
+
+/* Larger text for tablet readability */
+.almacen-tablet .text-tablet-base {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* Spacing between interactive elements */
+.almacen-tablet .interactive-spacing > * + * {
+  margin-top: 0.75rem;
+}
