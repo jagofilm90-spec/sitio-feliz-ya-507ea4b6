@@ -17,6 +17,7 @@ import {
   Coins,
 } from "lucide-react";
 import logoAlmasa from "@/assets/logo-almasa.png";
+import { LiveIndicator } from "@/components/ui/live-indicator";
 
 interface NavItem {
   id: string;
@@ -126,6 +127,11 @@ export const SecretariaSidebar = ({
           );
         })}
       </nav>
+
+      {/* Live indicator */}
+      <div className="px-4 py-2 border-t border-gray-700/50">
+        <LiveIndicator label="Sincronizado" className="text-gray-400" />
+      </div>
 
       {/* Footer */}
       <div className="p-3 border-t border-gray-700/50 space-y-2">

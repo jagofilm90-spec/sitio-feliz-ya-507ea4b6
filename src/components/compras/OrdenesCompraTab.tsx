@@ -62,6 +62,7 @@ import { sendPushNotification } from "@/services/pushNotifications";
 import { registrarCorreoEnviado } from "./HistorialCorreosOC";
 import { COMPANY_DATA } from "@/constants/companyData";
 import logoAlmasa from "@/assets/logo-almasa.png";
+import { LiveIndicator } from "@/components/ui/live-indicator";
 
 // Helper function to convert image to base64
 const getLogoBase64 = async (): Promise<string> => {
@@ -1570,7 +1571,10 @@ const OrdenesCompraTab = () => {
     <Card className="p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-2xl font-bold">Órdenes de Compra</h2>
+          <div className="flex items-center gap-3 mb-1">
+            <h2 className="text-2xl font-bold">Órdenes de Compra</h2>
+            <LiveIndicator />
+          </div>
           <p className="text-muted-foreground">
             Gestiona tus órdenes de compra y recepciones
           </p>

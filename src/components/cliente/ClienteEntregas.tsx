@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Truck, MapPin, Calendar } from "lucide-react";
+import { LiveIndicator } from "@/components/ui/live-indicator";
 
 interface ClienteEntregasProps {
   clienteId: string;
@@ -134,6 +135,7 @@ const ClienteEntregas = ({ clienteId }: ClienteEntregasProps) => {
             <CardTitle className="flex items-center gap-2">
               <Truck className="h-5 w-5 text-blue-600 animate-pulse" />
               Entregas en Ruta
+              <LiveIndicator size="sm" />
             </CardTitle>
           </CardHeader>
           <CardContent>

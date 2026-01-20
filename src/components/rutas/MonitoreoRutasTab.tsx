@@ -13,6 +13,7 @@ import { useMonitoreoRutas, type RutaMonitoreo } from '@/hooks/useMonitoreoRutas
 import { RutaMonitorCard } from './RutaMonitorCard';
 import { AlertasPanel } from './AlertasPanel';
 import { RutaDetalleSheet } from './RutaDetalleSheet';
+import { LiveIndicator } from '@/components/ui/live-indicator';
 
 const StatCard = ({ 
   icon: Icon, 
@@ -93,9 +94,8 @@ export const MonitoreoRutasTab = () => {
     <div className="space-y-6">
       {/* Header con última actualización */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Activity className="h-4 w-4 text-green-500 animate-pulse" />
-          <span>Monitoreo en tiempo real</span>
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <LiveIndicator />
           <span>•</span>
           <span>
             Última actualización: {format(lastUpdate, "HH:mm:ss", { locale: es })}

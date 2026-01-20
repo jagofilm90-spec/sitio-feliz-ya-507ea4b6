@@ -16,6 +16,7 @@ import { EntregaCard } from "@/components/chofer/EntregaCard";
 import { ResumenRuta } from "@/components/chofer/ResumenRuta";
 import { GpsTrackingIndicator } from "@/components/rutas/GpsTrackingIndicator";
 import PushNotificationSetup from "@/components/PushNotificationSetup";
+import { LiveIndicator } from "@/components/ui/live-indicator";
 
 export default function ChoferPanel() {
   const navigate = useNavigate();
@@ -137,11 +138,12 @@ export default function ChoferPanel() {
           </Button>
         </div>
         {choferNombre && <div className="flex items-center gap-2 mt-2 text-sm"><User className="h-4 w-4" /><span>{choferNombre}</span></div>}
-        {isRutaActiva && (
-          <div className="mt-2">
+        <div className="mt-2 flex items-center gap-4">
+          {isRutaActiva && (
             <GpsTrackingIndicator isTracking={isTracking} accuracy={accuracy} error={gpsError} />
-          </div>
-        )}
+          )}
+          <LiveIndicator label="Ruta en vivo" className="text-primary-foreground/90" />
+        </div>
       </header>
 
       <main className="p-4 pb-24">

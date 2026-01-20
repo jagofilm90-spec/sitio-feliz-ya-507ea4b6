@@ -28,6 +28,7 @@ import { AlmacenFumigacionesTab } from "@/components/almacen/AlmacenFumigaciones
 import { AlmacenInventarioTab } from "@/components/almacen/AlmacenInventarioTab";
 import { AlmacenProductosTab } from "@/components/almacen/AlmacenProductosTab";
 import { AlmacenVentasMostradorTab } from "@/components/almacen/AlmacenVentasMostradorTab";
+import { LiveIndicator } from "@/components/ui/live-indicator";
 
 const AlmacenTablet = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -143,6 +144,7 @@ const AlmacenTablet = () => {
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">
               Almacén
             </h1>
+            <LiveIndicator size="md" />
             <Badge variant={isOnline ? "default" : "destructive"} className="h-8 px-3 text-sm">
               {isOnline ? (
                 <><Wifi className="w-4 h-4 mr-1" /> Conectado</>
