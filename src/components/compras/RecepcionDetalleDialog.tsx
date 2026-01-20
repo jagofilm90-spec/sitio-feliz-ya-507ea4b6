@@ -197,12 +197,9 @@ export const RecepcionDetalleDialog = ({
       // Load evidences from correct table - ALL types, no filter
       const { data: evidenciasData, error: evidenciasError } = await supabase
         .from("ordenes_compra_entregas_evidencias")
-        .select(`
-          id, tipo_evidencia, ruta_storage, nombre_archivo, created_at,
-          capturado_por_profile:capturado_por(full_name)
-        `)
+        .select(`id, tipo_evidencia, ruta_storage, nombre_archivo, created_at, fase`)
         .eq("entrega_id", entregaId)
-        .order("created_at", { ascending: true }); // ascending to show in order: llegada -> recepcion
+        .order("created_at", { ascending: true });
 
       if (evidenciasError) {
         console.error("Error cargando evidencias:", evidenciasError.message, evidenciasError.code);
