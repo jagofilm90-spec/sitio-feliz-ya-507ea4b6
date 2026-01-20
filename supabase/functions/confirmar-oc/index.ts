@@ -159,7 +159,7 @@ serve(async (req: Request) => {
     // Get order details
     const { data: orden, error: ordenError } = await supabase
       .from("ordenes_compra")
-      .select("folio, proveedores(nombre), fecha_entrega")
+      .select("folio, proveedores(nombre), fecha_entrega_programada")
       .eq("id", ordenId)
       .single();
 
@@ -185,7 +185,7 @@ serve(async (req: Request) => {
     if (action === "propose-date") {
       console.log(`Showing date proposal form for OC: ${ordenId}`);
       
-      const fechaOriginalDisplay = fechaOriginal || orden.fecha_entrega || "No especificada";
+      const fechaOriginalDisplay = fechaOriginal || orden.fecha_entrega_programada || "No especificada";
       
       return new Response(generateProposeDateForm(
         ordenId,
@@ -411,7 +411,7 @@ serve(async (req: Request) => {
       .insert({
         orden_compra_id: ordenId,
         tipo_respuesta: "confirmado",
-        fecha_original: orden.fecha_entrega || null,
+        fecha_original: orden.fecha_entrega_programada || null,
         ip_address: ipAddress,
         user_agent: userAgent,
       });
