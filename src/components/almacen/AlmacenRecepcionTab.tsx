@@ -29,13 +29,29 @@ import {
   User,
   UserCheck,
   RefreshCw,
+  Box,
 } from "lucide-react";
 import { RegistrarLlegadaSheet } from "./RegistrarLlegadaSheet";
 import { AlmacenRecepcionSheet } from "./AlmacenRecepcionSheet";
+import { getCompactDisplayName } from "@/lib/productUtils";
 
 interface TrabajandoPor {
   id: string;
   full_name: string;
+}
+
+interface ProductoEntrega {
+  id: string;
+  cantidad_ordenada: number;
+  producto: {
+    id: string;
+    nombre: string;
+    marca: string | null;
+    especificaciones: string | null;
+    unidad: string | null;
+    contenido_empaque: string | null;
+    peso_kg: number | null;
+  };
 }
 
 interface EntregaCompra {
@@ -55,6 +71,7 @@ interface EntregaCompra {
   trabajando_por: string | null;
   trabajando_desde: string | null;
   trabajando_por_profile?: TrabajandoPor | null;
+  productos?: ProductoEntrega[];
   orden_compra: {
     id: string;
     folio: string;
@@ -137,21 +154,49 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
       
       const allProfileIds = [...new Set([...trabajandoPorIds, ...llegadaRegistradaPorIds])];
       
-      if (allProfileIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", allProfileIds);
-        
-        if (profiles) {
-          const profileMap = new Map(profiles.map(p => [p.id, p]));
-          entregasData = entregasData.map(e => ({
-            ...e,
-            trabajando_por_profile: e.trabajando_por ? profileMap.get(e.trabajando_por) : null,
-            llegada_registrada_por_profile: e.llegada_registrada_por ? profileMap.get(e.llegada_registrada_por) : null
-          }));
-        }
-      }
+      // Cargar productos de las órdenes de compra
+      const ordenIds = entregasData
+        .map(e => e.orden_compra?.id)
+        .filter(Boolean) as string[];
+      
+      // Ejecutar queries en paralelo
+      const [profilesResult, detallesResult] = await Promise.all([
+        allProfileIds.length > 0 
+          ? supabase.from("profiles").select("id, full_name").in("id", allProfileIds)
+          : Promise.resolve({ data: null }),
+        ordenIds.length > 0
+          ? supabase
+              .from("ordenes_compra_detalles")
+              .select(`
+                id,
+                orden_compra_id,
+                cantidad_ordenada,
+                producto:productos(id, nombre, marca, especificaciones, unidad, contenido_empaque, peso_kg)
+              `)
+              .in("orden_compra_id", ordenIds)
+          : Promise.resolve({ data: null })
+      ]);
+      
+      // Mapear perfiles
+      const profileMap = new Map(
+        (profilesResult.data || []).map(p => [p.id, p])
+      );
+      
+      // Mapear productos por orden_compra_id
+      const productosPorOrden = new Map<string, ProductoEntrega[]>();
+      (detallesResult.data || []).forEach((d: any) => {
+        const list = productosPorOrden.get(d.orden_compra_id) || [];
+        list.push(d);
+        productosPorOrden.set(d.orden_compra_id, list);
+      });
+      
+      // Combinar todo
+      entregasData = entregasData.map(e => ({
+        ...e,
+        trabajando_por_profile: e.trabajando_por ? profileMap.get(e.trabajando_por) : null,
+        llegada_registrada_por_profile: e.llegada_registrada_por ? profileMap.get(e.llegada_registrada_por) : null,
+        productos: e.orden_compra?.id ? productosPorOrden.get(e.orden_compra.id) || [] : []
+      }));
       
       setEntregas(entregasData);
       
@@ -495,6 +540,34 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
               {entrega.orden_compra?.folio} - Entrega #{entrega.numero_entrega}
             </span>
           </div>
+
+          {/* Productos de la entrega */}
+          {entrega.productos && entrega.productos.length > 0 && (
+            <div className="mt-2 space-y-1">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <Box className="w-3 h-3" />
+                Productos:
+              </span>
+              <div className="pl-4 space-y-0.5">
+                {entrega.productos.slice(0, 3).map((prod) => (
+                  <div key={prod.id} className="text-sm flex items-center gap-2">
+                    <span className="text-muted-foreground">•</span>
+                    <span className="truncate flex-1">
+                      {getCompactDisplayName(prod.producto)}
+                    </span>
+                    <Badge variant="outline" className="text-xs flex-shrink-0">
+                      {prod.cantidad_ordenada.toLocaleString()}
+                    </Badge>
+                  </div>
+                ))}
+                {entrega.productos.length > 3 && (
+                  <div className="text-xs text-muted-foreground pl-4">
+                    +{entrega.productos.length - 3} más...
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Info de descarga en curso */}
           {esEnDescarga && entrega.llegada_registrada_en && (
