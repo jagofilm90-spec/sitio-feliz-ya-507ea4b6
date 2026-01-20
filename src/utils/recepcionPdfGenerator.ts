@@ -111,7 +111,8 @@ const formatDuration = (minutes: number): string => {
   return `${mins} minutos`;
 };
 
-export const generarRecepcionPDF = async (data: RecepcionData) => {
+// Función interna que genera el documento PDF y lo retorna
+const generarDocumentoPDF = async (data: RecepcionData): Promise<{ doc: jsPDF; fileName: string }> => {
   console.log("Iniciando generación de PDF de recepción...", { 
     recepcionId: data.recepcion?.id, 
     productosCount: data.productos?.length,
@@ -476,6 +477,13 @@ export const generarRecepcionPDF = async (data: RecepcionData) => {
   // Generate filename
   const fileName = `Recepcion_${recepcion.orden_compra.folio}_E${recepcion.numero_entrega}_${format(new Date(), "yyyyMMdd")}.pdf`;
   
+  return { doc, fileName };
+};
+
+// Función pública que genera y descarga el PDF
+export const generarRecepcionPDF = async (data: RecepcionData): Promise<string> => {
+  const { doc, fileName } = await generarDocumentoPDF(data);
+  
   // Download using blob method (works in iframes)
   try {
     const pdfBlob = doc.output('blob');
@@ -506,4 +514,22 @@ export const generarRecepcionPDF = async (data: RecepcionData) => {
   }
   
   return fileName;
+};
+
+// Nueva función que retorna el PDF como base64 para adjuntar a correos
+export const generarRecepcionPDFBase64 = async (data: RecepcionData): Promise<{
+  base64: string;
+  fileName: string;
+}> => {
+  console.log("Generando PDF como base64 para email...");
+  
+  const { doc, fileName } = await generarDocumentoPDF(data);
+  
+  // Obtener como data URI y extraer solo el base64
+  const dataUri = doc.output('datauristring');
+  const base64 = dataUri.split(',')[1]; // Remover "data:application/pdf;base64,"
+  
+  console.log("PDF base64 generado:", fileName, "longitud:", base64.length);
+  
+  return { base64, fileName };
 };
