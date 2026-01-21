@@ -5494,6 +5494,7 @@ export type Database = {
         | "secretaria"
         | "cliente"
         | "contadora"
+        | "gerente_almacen"
       conversation_type:
         | "individual"
         | "grupo_personalizado"
@@ -5675,6 +5676,7 @@ export const Constants = {
         "secretaria",
         "cliente",
         "contadora",
+        "gerente_almacen",
       ],
       conversation_type: [
         "individual",
