@@ -68,16 +68,27 @@ const CalendarioEntregasTab = () => {
             id,
             folio,
             total,
+            subtotal,
+            impuestos,
             status,
             proveedor_id,
             proveedor_nombre_manual,
+            proveedor_email_manual,
             tipo_pago,
             status_pago,
             entregas_multiples,
-            proveedores (nombre),
+            fecha_entrega_programada,
+            creado_por,
+            autorizado_por,
+            notas,
+            proveedores (id, nombre, email, rfc),
             ordenes_compra_detalles (
+              id,
               cantidad_ordenada,
-              productos (nombre)
+              precio_unitario_compra,
+              subtotal,
+              producto_nombre_manual,
+              productos (id, codigo, nombre)
             )
           )
         `
@@ -100,10 +111,14 @@ const CalendarioEntregasTab = () => {
         .select(
           `
           *,
-          proveedores (nombre),
+          proveedores (id, nombre, email, rfc),
           ordenes_compra_detalles (
+            id,
             cantidad_ordenada,
-            productos (nombre)
+            precio_unitario_compra,
+            subtotal,
+            producto_nombre_manual,
+            productos (id, codigo, nombre)
           ),
           ordenes_compra_entregas (
             fecha_entrega_real,
