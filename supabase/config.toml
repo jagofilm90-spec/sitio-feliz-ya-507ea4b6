@@ -104,3 +104,6 @@ verify_jwt = true
 
 [functions.normalize-product]
 verify_jwt = true
+
+[functions.send-checkup-report]
+verify_jwt = false
