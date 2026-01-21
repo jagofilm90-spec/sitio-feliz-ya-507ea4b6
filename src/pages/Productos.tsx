@@ -1112,32 +1112,26 @@ const Productos = () => {
                   <TableHead>Marca</TableHead>
                   <TableHead>Presentación</TableHead>
                   <TableHead>Unidad</TableHead>
-                  <TableHead>Precio</TableHead>
-                  <TableHead>Desc. Máx</TableHead>
-                  <TableHead>Stock</TableHead>
+                  <TableHead className="text-center">IVA/IEPS</TableHead>
+                  <TableHead className="text-center">Stock Mín</TableHead>
                   <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center">
+                    <TableCell colSpan={8} className="text-center">
                       Cargando...
                     </TableCell>
                   </TableRow>
                 ) : filteredProductos.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center">
+                    <TableCell colSpan={8} className="text-center">
                       No hay productos registrados
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredProductos.map((producto) => {
-                    const precioMostrar = producto.precio_por_kilo && producto.presentacion
-                      ? `$${producto.precio_venta.toFixed(2)}/kg ($${(producto.precio_venta * parseFloat(producto.presentacion)).toFixed(2)})`
-                      : `$${producto.precio_venta.toFixed(2)}`;
-                    
-                    return (
+                  filteredProductos.map((producto) => (
                       <TableRow key={producto.id} className={producto.activo === false ? "opacity-50" : ""}>
                         <TableCell className="font-medium">
                           {producto.codigo}
@@ -1148,50 +1142,30 @@ const Productos = () => {
                         <TableCell>
                           <div className="flex items-center gap-1 flex-wrap">
                             <span>{producto.nombre}</span>
-                            {producto.aplica_iva && (
-                              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-blue-50 text-blue-700 border-blue-200">
-                                IVA
-                              </Badge>
-                            )}
-                            {producto.aplica_ieps && (
-                              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-amber-50 text-amber-700 border-amber-200">
-                                IEPS
-                              </Badge>
-                            )}
                             {producto.maneja_caducidad && <span className="ml-1">📅</span>}
                             {producto.requiere_fumigacion && <span>🦠</span>}
                           </div>
                         </TableCell>
                         <TableCell>{producto.marca || "-"}</TableCell>
-                        <TableCell>{producto.presentacion ? `${producto.presentacion} kg` : "-"}</TableCell>
+                        <TableCell>{producto.peso_kg ? `${producto.peso_kg} kg` : "-"}</TableCell>
                         <TableCell className="uppercase">{producto.unidad}</TableCell>
-                        <TableCell className="font-medium">{precioMostrar}</TableCell>
-                        <TableCell>
-                          {producto.descuento_maximo && producto.descuento_maximo > 0 ? (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950/50 dark:text-green-400 dark:border-green-800">
-                              -${producto.descuento_maximo.toFixed(2)}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-2">
-                            {producto.stock_actual === 0 ? (
-                              <Badge variant="destructive" className="text-xs">
-                                Sin Stock
-                              </Badge>
-                            ) : (
-                              <Badge variant={producto.stock_actual <= producto.stock_minimo ? "destructive" : "default"}>
-                                {producto.stock_actual}
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            {producto.aplica_iva && (
+                              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800">
+                                IVA
                               </Badge>
                             )}
-                            <LotesDesglose
-                              productoId={producto.id}
-                              productoNombre={producto.nombre}
-                              stockTotal={producto.stock_actual}
-                            />
+                            {producto.aplica_ieps && (
+                              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800">
+                                IEPS
+                              </Badge>
+                            )}
+                            {!producto.aplica_iva && !producto.aplica_ieps && "-"}
                           </div>
+                        </TableCell>
+                        <TableCell className="text-center text-muted-foreground">
+                          {producto.stock_minimo}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
@@ -1212,8 +1186,7 @@ const Productos = () => {
                           </div>
                         </TableCell>
                       </TableRow>
-                    );
-                  })
+                    ))
                 )}
               </TableBody>
             </Table>
