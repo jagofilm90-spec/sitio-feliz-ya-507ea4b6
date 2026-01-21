@@ -42,6 +42,7 @@ import {
   mapToLegacyFields,
 } from "./checklistConfig";
 import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
+import { DiagramaDanosVehiculo, DanoMarcado } from "./DiagramaDanosVehiculo";
 
 interface Vehiculo {
   id: string;
@@ -80,6 +81,7 @@ export const VehiculoCheckupDialog = ({
   const [horaInspeccion, setHoraInspeccion] = useState<string>("");
   const [observaciones, setObservaciones] = useState("");
   const [observacionesGolpes, setObservacionesGolpes] = useState("");
+  const [danosVehiculo, setDanosVehiculo] = useState<DanoMarcado[]>([]);
   const [firmaConductor, setFirmaConductor] = useState<string | null>(null);
   const [firmaSupervisor, setFirmaSupervisor] = useState<string | null>(null);
   const [notificarMecanico, setNotificarMecanico] = useState(false);
@@ -137,6 +139,7 @@ export const VehiculoCheckupDialog = ({
     setHoraInspeccion("");
     setObservaciones("");
     setObservacionesGolpes("");
+    setDanosVehiculo([]);
     setFirmaConductor(null);
     setFirmaSupervisor(null);
     setNotificarMecanico(false);
@@ -174,6 +177,14 @@ export const VehiculoCheckupDialog = ({
       // Map to legacy fields for compatibility
       const legacyFields = mapToLegacyFields(checklist);
 
+      // Serialize damage diagram data with text observations
+      const danosData = danosVehiculo.length > 0 || observacionesGolpes 
+        ? JSON.stringify({
+            danos: danosVehiculo,
+            notas: observacionesGolpes || null,
+          })
+        : observacionesGolpes || null;
+
       const checkupData = {
         vehiculo_id: selectedVehiculo,
         chofer_id: selectedChofer || null,
@@ -188,7 +199,7 @@ export const VehiculoCheckupDialog = ({
         firma_conductor: firmaConductor,
         firma_supervisor: firmaSupervisor,
         fallas_detectadas: observaciones || null,
-        observaciones_golpes: observacionesGolpes || null,
+        observaciones_golpes: danosData,
         tiene_items_nn_fallados: !nnValidation.isValid,
         requiere_reparacion: counts.mal > 0,
         prioridad: !nnValidation.isValid
@@ -492,12 +503,18 @@ export const VehiculoCheckupDialog = ({
                 />
               </div>
 
+              {/* Interactive Damage Diagram */}
+              <DiagramaDanosVehiculo
+                danos={danosVehiculo}
+                onDanosChange={setDanosVehiculo}
+              />
+
               <div className="space-y-2">
-                <Label>Observaciones de Golpes y Raspaduras</Label>
+                <Label>Notas Adicionales de Golpes</Label>
                 <Textarea
                   value={observacionesGolpes}
                   onChange={(e) => setObservacionesGolpes(e.target.value)}
-                  placeholder="Describe golpes, raspaduras o daños en la carrocería..."
+                  placeholder="Notas adicionales sobre golpes, raspaduras o daños..."
                   rows={2}
                   className="min-h-[60px]"
                 />
