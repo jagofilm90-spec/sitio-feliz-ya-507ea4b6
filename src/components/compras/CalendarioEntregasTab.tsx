@@ -104,6 +104,10 @@ const CalendarioEntregasTab = () => {
           ordenes_compra_detalles (
             cantidad_ordenada,
             productos (nombre)
+          ),
+          ordenes_compra_entregas (
+            fecha_entrega_real,
+            status
           )
         `
         )
@@ -165,25 +169,33 @@ const CalendarioEntregasTab = () => {
       esCompletada: entrega.status === 'recibida' || entrega.ordenes_compra?.status === 'completada',
     })),
     // Simple delivery entries
-    ...ordenesSimples.map((orden: any) => ({
-      id: orden.id,
-      fecha: orden.fecha_entrega_programada,
-      folio: orden.folio,
-      proveedor: orden.proveedor_id 
-        ? orden.proveedores?.nombre 
-        : orden.proveedor_nombre_manual,
-      esProveedorManual: !orden.proveedor_id,
-      productos: orden.ordenes_compra_detalles,
-      total: orden.total,
-      status: orden.status,
-      orden: orden,
-      numeroEntrega: null,
-      cantidadBultos: null,
-      esMultiple: false,
-      reprogramada: esReprogramada(orden.notas),
-      estadoPago: getEstadoPago(orden),
-      esCompletada: orden.status === 'completada' || orden.status === 'recibida',
-    })),
+    ...ordenesSimples.map((orden: any) => {
+      // Para órdenes completadas, usar la fecha real de la entrega si está disponible
+      const entregaAsociada = orden.ordenes_compra_entregas?.[0];
+      const esCompletadaOrden = orden.status === 'completada' || orden.status === 'recibida';
+      const fechaReal = entregaAsociada?.fecha_entrega_real;
+      const fechaMostrar = (esCompletadaOrden && fechaReal) ? fechaReal : orden.fecha_entrega_programada;
+      
+      return {
+        id: orden.id,
+        fecha: fechaMostrar,
+        folio: orden.folio,
+        proveedor: orden.proveedor_id 
+          ? orden.proveedores?.nombre 
+          : orden.proveedor_nombre_manual,
+        esProveedorManual: !orden.proveedor_id,
+        productos: orden.ordenes_compra_detalles,
+        total: orden.total,
+        status: orden.status,
+        orden: orden,
+        numeroEntrega: null,
+        cantidadBultos: null,
+        esMultiple: false,
+        reprogramada: esReprogramada(orden.notas),
+        estadoPago: getEstadoPago(orden),
+        esCompletada: orden.status === 'completada' || orden.status === 'recibida',
+      };
+    }),
   ], [entregasProgramadas, ordenesSimples]);
 
   // Helper to parse date string without timezone issues

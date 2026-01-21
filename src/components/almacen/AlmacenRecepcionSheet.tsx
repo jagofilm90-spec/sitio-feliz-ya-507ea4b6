@@ -876,10 +876,14 @@ export const AlmacenRecepcionSheet = ({
         .neq("status", "recibida");
 
       // Si no hay entregas pendientes, marcar la orden como completada
+      // y sincronizar la fecha_entrega_programada con la fecha real de recepción
       if (!entregasPendientes || entregasPendientes.length === 0) {
         await supabase
           .from("ordenes_compra")
-          .update({ status: "completada" })
+          .update({ 
+            status: "completada",
+            fecha_entrega_programada: new Date().toISOString().split("T")[0]
+          })
           .eq("id", entrega.orden_compra.id);
       }
 
