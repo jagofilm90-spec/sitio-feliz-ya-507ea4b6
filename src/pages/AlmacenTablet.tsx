@@ -37,6 +37,8 @@ import PersonalFlotillaTab from "@/components/almacen/PersonalFlotillaTab";
 import VehiculosTab from "@/components/rutas/VehiculosTab";
 import DisponibilidadPersonalTab from "@/components/rutas/DisponibilidadPersonalTab";
 import AyudantesExternosTab from "@/components/rutas/AyudantesExternosTab";
+import { AlertasFlotillaPanel } from "@/components/almacen/AlertasFlotillaPanel";
+import { VehiculoCheckupsTab } from "@/components/almacen/VehiculoCheckupsTab";
 import { LiveIndicator } from "@/components/ui/live-indicator";
 import { useUserRoles } from "@/hooks/useUserRoles";
 
@@ -133,7 +135,7 @@ const AlmacenTablet = () => {
   const handleRefresh = () => setRefreshKey(prev => prev + 1);
 
   // Calcular número de columnas para el grid de tabs
-  const tabCount = showFlotillaTabs ? 11 : 7;
+  const tabCount = showFlotillaTabs ? 13 : 7;
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
@@ -191,7 +193,7 @@ const AlmacenTablet = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`w-full grid h-14 mb-4 ${showFlotillaTabs ? 'grid-cols-11' : 'grid-cols-7'}`}>
+        <TabsList className={`w-full grid h-14 mb-4 ${showFlotillaTabs ? 'grid-cols-13' : 'grid-cols-7'}`}>
           <TabsTrigger value="rutas" className="text-sm h-12 gap-1"><Truck className="w-4 h-4" /><span className="hidden lg:inline">Rutas</span></TabsTrigger>
           <TabsTrigger value="ventas" className="text-sm h-12 gap-1 relative"><ShoppingCart className="w-4 h-4" /><span className="hidden lg:inline">Ventas</span>{ventasStats.pendientes > 0 && <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">{ventasStats.pendientes}</span>}</TabsTrigger>
           <TabsTrigger value="recepcion" className="text-sm h-12 gap-1 relative"><Package className="w-4 h-4" /><span className="hidden lg:inline">Recepción</span>{recepcionStats.pendientes > 0 && <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">{recepcionStats.pendientes}</span>}</TabsTrigger>
@@ -202,6 +204,8 @@ const AlmacenTablet = () => {
           
           {showFlotillaTabs && (
             <>
+              <TabsTrigger value="alertas" className="text-sm h-12 gap-1 bg-destructive/10"><AlertTriangle className="w-4 h-4" /><span className="hidden lg:inline">Alertas</span></TabsTrigger>
+              <TabsTrigger value="checkups" className="text-sm h-12 gap-1 bg-secondary/30"><CheckCircle2 className="w-4 h-4" /><span className="hidden lg:inline">Checkups</span></TabsTrigger>
               <TabsTrigger value="vehiculos" className="text-sm h-12 gap-1 bg-secondary/30"><Car className="w-4 h-4" /><span className="hidden lg:inline">Vehículos</span></TabsTrigger>
               <TabsTrigger value="personal" className="text-sm h-12 gap-1 bg-secondary/30"><Users className="w-4 h-4" /><span className="hidden lg:inline">Personal</span></TabsTrigger>
               <TabsTrigger value="disponibilidad" className="text-sm h-12 gap-1 bg-secondary/30"><CalendarCheck className="w-4 h-4" /><span className="hidden lg:inline">Disp.</span></TabsTrigger>
@@ -220,6 +224,8 @@ const AlmacenTablet = () => {
         
         {showFlotillaTabs && (
           <>
+            <TabsContent value="alertas" className="mt-0"><AlertasFlotillaPanel key={`alertas-${refreshKey}`} /></TabsContent>
+            <TabsContent value="checkups" className="mt-0">{empleadoId && <VehiculoCheckupsTab empleadoId={empleadoId} refreshKey={refreshKey} />}</TabsContent>
             <TabsContent value="vehiculos" className="mt-0"><VehiculosTab key={`vehiculos-${refreshKey}`} /></TabsContent>
             <TabsContent value="personal" className="mt-0"><PersonalFlotillaTab key={`personal-${refreshKey}`} /></TabsContent>
             <TabsContent value="disponibilidad" className="mt-0"><DisponibilidadPersonalTab key={`disp-${refreshKey}`} /></TabsContent>

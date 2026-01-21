@@ -1031,6 +1031,30 @@ export type Database = {
         }
         Relationships: []
       }
+      configuracion_flotilla: {
+        Row: {
+          clave: string
+          descripcion: string | null
+          id: string
+          updated_at: string | null
+          valor: string
+        }
+        Insert: {
+          clave: string
+          descripcion?: string | null
+          id?: string
+          updated_at?: string | null
+          valor: string
+        }
+        Update: {
+          clave?: string
+          descripcion?: string | null
+          id?: string
+          updated_at?: string | null
+          valor?: string
+        }
+        Relationships: []
+      }
       conversacion_participantes: {
         Row: {
           conversacion_id: string
@@ -2723,6 +2747,7 @@ export type Database = {
           pedido_id: string | null
           tipo: string
           titulo: string
+          vehiculo_id: string | null
         }
         Insert: {
           cotizacion_id?: string | null
@@ -2737,6 +2762,7 @@ export type Database = {
           pedido_id?: string | null
           tipo: string
           titulo: string
+          vehiculo_id?: string | null
         }
         Update: {
           cotizacion_id?: string | null
@@ -2751,6 +2777,7 @@ export type Database = {
           pedido_id?: string | null
           tipo?: string
           titulo?: string
+          vehiculo_id?: string | null
         }
         Relationships: [
           {
@@ -2793,6 +2820,13 @@ export type Database = {
             columns: ["pedido_id"]
             isOneToOne: false
             referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notificaciones_vehiculo_id_fkey"
+            columns: ["vehiculo_id"]
+            isOneToOne: false
+            referencedRelation: "vehiculos"
             referencedColumns: ["id"]
           },
         ]
@@ -5162,6 +5196,129 @@ export type Database = {
           },
         ]
       }
+      vehiculos_checkups: {
+        Row: {
+          aceite_ok: boolean | null
+          anticongelante_ok: boolean | null
+          bateria_ok: boolean | null
+          chofer_id: string | null
+          cinturones_ok: boolean | null
+          created_at: string | null
+          direccion_ok: boolean | null
+          escape_ok: boolean | null
+          espejos_ok: boolean | null
+          fallas_detectadas: string | null
+          fecha_checkup: string | null
+          frenos_ok: boolean | null
+          id: string
+          limpiadores_ok: boolean | null
+          llantas_ok: boolean | null
+          luces_ok: boolean | null
+          notas_resolucion: string | null
+          notificado_en: string | null
+          notificado_mecanico: boolean | null
+          prioridad: string | null
+          realizado_por: string
+          requiere_reparacion: boolean | null
+          resuelto: boolean | null
+          resuelto_en: string | null
+          suspension_ok: boolean | null
+          vehiculo_id: string
+        }
+        Insert: {
+          aceite_ok?: boolean | null
+          anticongelante_ok?: boolean | null
+          bateria_ok?: boolean | null
+          chofer_id?: string | null
+          cinturones_ok?: boolean | null
+          created_at?: string | null
+          direccion_ok?: boolean | null
+          escape_ok?: boolean | null
+          espejos_ok?: boolean | null
+          fallas_detectadas?: string | null
+          fecha_checkup?: string | null
+          frenos_ok?: boolean | null
+          id?: string
+          limpiadores_ok?: boolean | null
+          llantas_ok?: boolean | null
+          luces_ok?: boolean | null
+          notas_resolucion?: string | null
+          notificado_en?: string | null
+          notificado_mecanico?: boolean | null
+          prioridad?: string | null
+          realizado_por: string
+          requiere_reparacion?: boolean | null
+          resuelto?: boolean | null
+          resuelto_en?: string | null
+          suspension_ok?: boolean | null
+          vehiculo_id: string
+        }
+        Update: {
+          aceite_ok?: boolean | null
+          anticongelante_ok?: boolean | null
+          bateria_ok?: boolean | null
+          chofer_id?: string | null
+          cinturones_ok?: boolean | null
+          created_at?: string | null
+          direccion_ok?: boolean | null
+          escape_ok?: boolean | null
+          espejos_ok?: boolean | null
+          fallas_detectadas?: string | null
+          fecha_checkup?: string | null
+          frenos_ok?: boolean | null
+          id?: string
+          limpiadores_ok?: boolean | null
+          llantas_ok?: boolean | null
+          luces_ok?: boolean | null
+          notas_resolucion?: string | null
+          notificado_en?: string | null
+          notificado_mecanico?: boolean | null
+          prioridad?: string | null
+          realizado_por?: string
+          requiere_reparacion?: boolean | null
+          resuelto?: boolean | null
+          resuelto_en?: string | null
+          suspension_ok?: boolean | null
+          vehiculo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehiculos_checkups_chofer_id_fkey"
+            columns: ["chofer_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehiculos_checkups_chofer_id_fkey"
+            columns: ["chofer_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehiculos_checkups_realizado_por_fkey"
+            columns: ["realizado_por"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehiculos_checkups_realizado_por_fkey"
+            columns: ["realizado_por"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehiculos_checkups_vehiculo_id_fkey"
+            columns: ["vehiculo_id"]
+            isOneToOne: false
+            referencedRelation: "vehiculos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehiculos_mantenimientos: {
         Row: {
           created_at: string
@@ -5196,6 +5353,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "vehiculos_mantenimientos_vehiculo_id_fkey"
+            columns: ["vehiculo_id"]
+            isOneToOne: false
+            referencedRelation: "vehiculos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehiculos_verificaciones: {
+        Row: {
+          anio: number
+          certificado_url: string | null
+          created_at: string | null
+          fecha_verificacion: string | null
+          id: string
+          notificado: boolean | null
+          proximo_periodo_fin: string | null
+          proximo_periodo_inicio: string | null
+          resultado: string | null
+          semestre: number | null
+          updated_at: string | null
+          vehiculo_id: string
+        }
+        Insert: {
+          anio: number
+          certificado_url?: string | null
+          created_at?: string | null
+          fecha_verificacion?: string | null
+          id?: string
+          notificado?: boolean | null
+          proximo_periodo_fin?: string | null
+          proximo_periodo_inicio?: string | null
+          resultado?: string | null
+          semestre?: number | null
+          updated_at?: string | null
+          vehiculo_id: string
+        }
+        Update: {
+          anio?: number
+          certificado_url?: string | null
+          created_at?: string | null
+          fecha_verificacion?: string | null
+          id?: string
+          notificado?: boolean | null
+          proximo_periodo_fin?: string | null
+          proximo_periodo_inicio?: string | null
+          resultado?: string | null
+          semestre?: number | null
+          updated_at?: string | null
+          vehiculo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehiculos_verificaciones_vehiculo_id_fkey"
             columns: ["vehiculo_id"]
             isOneToOne: false
             referencedRelation: "vehiculos"
