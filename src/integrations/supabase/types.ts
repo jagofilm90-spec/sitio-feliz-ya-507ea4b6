@@ -5210,6 +5210,7 @@ export type Database = {
           aceite_ok: boolean | null
           anticongelante_ok: boolean | null
           bateria_ok: boolean | null
+          checklist_detalle: Json | null
           chofer_id: string | null
           cinturones_ok: boolean | null
           created_at: string | null
@@ -5218,26 +5219,35 @@ export type Database = {
           espejos_ok: boolean | null
           fallas_detectadas: string | null
           fecha_checkup: string | null
+          firma_conductor: string | null
+          firma_supervisor: string | null
           frenos_ok: boolean | null
+          hora_inspeccion: string | null
           id: string
+          kilometraje_final: number | null
+          kilometraje_inicial: number | null
           limpiadores_ok: boolean | null
           llantas_ok: boolean | null
           luces_ok: boolean | null
           notas_resolucion: string | null
           notificado_en: string | null
           notificado_mecanico: boolean | null
+          observaciones_golpes: string | null
           prioridad: string | null
           realizado_por: string
           requiere_reparacion: boolean | null
           resuelto: boolean | null
           resuelto_en: string | null
+          supervisor_id: string | null
           suspension_ok: boolean | null
+          tiene_items_nn_fallados: boolean | null
           vehiculo_id: string
         }
         Insert: {
           aceite_ok?: boolean | null
           anticongelante_ok?: boolean | null
           bateria_ok?: boolean | null
+          checklist_detalle?: Json | null
           chofer_id?: string | null
           cinturones_ok?: boolean | null
           created_at?: string | null
@@ -5246,26 +5256,35 @@ export type Database = {
           espejos_ok?: boolean | null
           fallas_detectadas?: string | null
           fecha_checkup?: string | null
+          firma_conductor?: string | null
+          firma_supervisor?: string | null
           frenos_ok?: boolean | null
+          hora_inspeccion?: string | null
           id?: string
+          kilometraje_final?: number | null
+          kilometraje_inicial?: number | null
           limpiadores_ok?: boolean | null
           llantas_ok?: boolean | null
           luces_ok?: boolean | null
           notas_resolucion?: string | null
           notificado_en?: string | null
           notificado_mecanico?: boolean | null
+          observaciones_golpes?: string | null
           prioridad?: string | null
           realizado_por: string
           requiere_reparacion?: boolean | null
           resuelto?: boolean | null
           resuelto_en?: string | null
+          supervisor_id?: string | null
           suspension_ok?: boolean | null
+          tiene_items_nn_fallados?: boolean | null
           vehiculo_id: string
         }
         Update: {
           aceite_ok?: boolean | null
           anticongelante_ok?: boolean | null
           bateria_ok?: boolean | null
+          checklist_detalle?: Json | null
           chofer_id?: string | null
           cinturones_ok?: boolean | null
           created_at?: string | null
@@ -5274,20 +5293,28 @@ export type Database = {
           espejos_ok?: boolean | null
           fallas_detectadas?: string | null
           fecha_checkup?: string | null
+          firma_conductor?: string | null
+          firma_supervisor?: string | null
           frenos_ok?: boolean | null
+          hora_inspeccion?: string | null
           id?: string
+          kilometraje_final?: number | null
+          kilometraje_inicial?: number | null
           limpiadores_ok?: boolean | null
           llantas_ok?: boolean | null
           luces_ok?: boolean | null
           notas_resolucion?: string | null
           notificado_en?: string | null
           notificado_mecanico?: boolean | null
+          observaciones_golpes?: string | null
           prioridad?: string | null
           realizado_por?: string
           requiere_reparacion?: boolean | null
           resuelto?: boolean | null
           resuelto_en?: string | null
+          supervisor_id?: string | null
           suspension_ok?: boolean | null
+          tiene_items_nn_fallados?: boolean | null
           vehiculo_id?: string
         }
         Relationships: [
@@ -5315,6 +5342,20 @@ export type Database = {
           {
             foreignKeyName: "vehiculos_checkups_realizado_por_fkey"
             columns: ["realizado_por"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehiculos_checkups_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehiculos_checkups_supervisor_id_fkey"
+            columns: ["supervisor_id"]
             isOneToOne: false
             referencedRelation: "empleados_vista_segura"
             referencedColumns: ["id"]

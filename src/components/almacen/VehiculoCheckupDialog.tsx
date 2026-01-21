@@ -1,14 +1,47 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { CheckCircle2, XCircle, Send, Car, User } from "lucide-react";
+import {
+  Car,
+  ChevronDown,
+  AlertTriangle,
+  CheckCircle2,
+  Send,
+  Clock,
+} from "lucide-react";
+import { ChecklistItemRow, ChecklistStatus } from "./ChecklistItemRow";
+import {
+  CHECKLIST_CATEGORIES,
+  createInitialChecklist,
+  validateNNItems,
+  countItemsByStatus,
+  mapToLegacyFields,
+} from "./checklistConfig";
+import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
 
 interface Vehiculo {
   id: string;
@@ -29,27 +62,6 @@ interface VehiculoCheckupDialogProps {
   onSuccess?: () => void;
 }
 
-interface ChecklistItem {
-  key: string;
-  label: string;
-  checked: boolean;
-}
-
-const CHECKLIST_ITEMS: { key: string; label: string }[] = [
-  { key: "frenos_ok", label: "Sistema de Frenos" },
-  { key: "luces_ok", label: "Luces (todas)" },
-  { key: "llantas_ok", label: "Estado de Llantas" },
-  { key: "aceite_ok", label: "Nivel de Aceite" },
-  { key: "anticongelante_ok", label: "Anticongelante" },
-  { key: "espejos_ok", label: "Espejos" },
-  { key: "limpiadores_ok", label: "Limpiadores" },
-  { key: "bateria_ok", label: "Batería" },
-  { key: "direccion_ok", label: "Dirección" },
-  { key: "suspension_ok", label: "Suspensión" },
-  { key: "escape_ok", label: "Sistema de Escape" },
-  { key: "cinturones_ok", label: "Cinturones de Seguridad" },
-];
-
 export const VehiculoCheckupDialog = ({
   open,
   onOpenChange,
@@ -61,12 +73,23 @@ export const VehiculoCheckupDialog = ({
   const [choferes, setChoferes] = useState<Empleado[]>([]);
   const [selectedVehiculo, setSelectedVehiculo] = useState<string>("");
   const [selectedChofer, setSelectedChofer] = useState<string>("");
-  const [checklist, setChecklist] = useState<Record<string, boolean>>({});
-  const [fallasDetectadas, setFallasDetectadas] = useState("");
-  const [prioridad, setPrioridad] = useState<string>("media");
-  const [requiereReparacion, setRequiereReparacion] = useState(false);
+  const [checklist, setChecklist] = useState<Record<string, ChecklistStatus>>(
+    createInitialChecklist()
+  );
+  const [kilometrajeInicial, setKilometrajeInicial] = useState<string>("");
+  const [horaInspeccion, setHoraInspeccion] = useState<string>("");
+  const [observaciones, setObservaciones] = useState("");
+  const [observacionesGolpes, setObservacionesGolpes] = useState("");
+  const [firmaConductor, setFirmaConductor] = useState<string | null>(null);
+  const [firmaSupervisor, setFirmaSupervisor] = useState<string | null>(null);
   const [notificarMecanico, setNotificarMecanico] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<
+    Record<string, boolean>
+  >({});
+  const [firmaDialogOpen, setFirmaDialogOpen] = useState<
+    "conductor" | "supervisor" | null
+  >(null);
 
   useEffect(() => {
     if (open) {
@@ -75,11 +98,21 @@ export const VehiculoCheckupDialog = ({
       if (vehiculo) {
         setSelectedVehiculo(vehiculo.id);
       }
+      // Set current time
+      const now = new Date();
+      setHoraInspeccion(
+        `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`
+      );
+      // Expand all categories by default
+      const expanded: Record<string, boolean> = {};
+      CHECKLIST_CATEGORIES.forEach((cat) => {
+        expanded[cat.key] = true;
+      });
+      setExpandedCategories(expanded);
     }
   }, [open, vehiculo]);
 
   const loadData = async () => {
-    // Cargar vehículos activos
     const { data: vehiculosData } = await supabase
       .from("vehiculos")
       .select("id, nombre, placa")
@@ -88,7 +121,6 @@ export const VehiculoCheckupDialog = ({
 
     if (vehiculosData) setVehiculos(vehiculosData);
 
-    // Cargar choferes activos
     const { data: choferesData } = await supabase
       .from("empleados")
       .select("id, nombre_completo")
@@ -100,26 +132,31 @@ export const VehiculoCheckupDialog = ({
   };
 
   const resetForm = () => {
-    const initialChecklist: Record<string, boolean> = {};
-    CHECKLIST_ITEMS.forEach(item => {
-      initialChecklist[item.key] = true; // Por defecto todo OK
-    });
-    setChecklist(initialChecklist);
-    setFallasDetectadas("");
-    setPrioridad("media");
-    setRequiereReparacion(false);
+    setChecklist(createInitialChecklist());
+    setKilometrajeInicial("");
+    setHoraInspeccion("");
+    setObservaciones("");
+    setObservacionesGolpes("");
+    setFirmaConductor(null);
+    setFirmaSupervisor(null);
     setNotificarMecanico(false);
     if (!vehiculo) setSelectedVehiculo("");
     setSelectedChofer("");
   };
 
-  const toggleItem = (key: string) => {
-    setChecklist(prev => ({ ...prev, [key]: !prev[key] }));
+  const handleChecklistChange = (key: string, value: ChecklistStatus) => {
+    setChecklist((prev) => ({ ...prev, [key]: value }));
   };
 
-  const getItemsFallados = () => {
-    return Object.entries(checklist).filter(([_, ok]) => !ok).length;
+  const toggleCategory = (categoryKey: string) => {
+    setExpandedCategories((prev) => ({
+      ...prev,
+      [categoryKey]: !prev[categoryKey],
+    }));
   };
+
+  const nnValidation = validateNNItems(checklist);
+  const counts = countItemsByStatus(checklist);
 
   const handleSave = async () => {
     if (!selectedVehiculo) {
@@ -127,16 +164,38 @@ export const VehiculoCheckupDialog = ({
       return;
     }
 
+    if (!firmaConductor) {
+      toast.error("Se requiere la firma del conductor");
+      return;
+    }
+
     setSaving(true);
     try {
+      // Map to legacy fields for compatibility
+      const legacyFields = mapToLegacyFields(checklist);
+
       const checkupData = {
         vehiculo_id: selectedVehiculo,
         chofer_id: selectedChofer || null,
         realizado_por: empleadoId,
-        ...checklist,
-        fallas_detectadas: fallasDetectadas || null,
-        prioridad: getItemsFallados() > 0 ? prioridad : null,
-        requiere_reparacion: requiereReparacion,
+        ...legacyFields,
+        // New professional format fields
+        kilometraje_inicial: kilometrajeInicial
+          ? parseInt(kilometrajeInicial)
+          : null,
+        hora_inspeccion: horaInspeccion || null,
+        checklist_detalle: checklist,
+        firma_conductor: firmaConductor,
+        firma_supervisor: firmaSupervisor,
+        fallas_detectadas: observaciones || null,
+        observaciones_golpes: observacionesGolpes || null,
+        tiene_items_nn_fallados: !nnValidation.isValid,
+        requiere_reparacion: counts.mal > 0,
+        prioridad: !nnValidation.isValid
+          ? "urgente"
+          : counts.mal > 0
+            ? "alta"
+            : null,
         notificado_mecanico: false,
       };
 
@@ -148,8 +207,16 @@ export const VehiculoCheckupDialog = ({
 
       if (error) throw error;
 
-      // Si requiere notificar al mecánico, enviar correo
-      if (notificarMecanico && requiereReparacion && checkup) {
+      // Auto-notify mechanic if NN items failed
+      if (!nnValidation.isValid && checkup) {
+        await enviarNotificacionMecanico(checkup.id);
+        toast.warning(
+          "⚠️ Vehículo con fallas No Negociables - Mecánico notificado",
+          {
+            duration: 5000,
+          }
+        );
+      } else if (notificarMecanico && counts.mal > 0 && checkup) {
         await enviarNotificacionMecanico(checkup.id);
       }
 
@@ -166,29 +233,29 @@ export const VehiculoCheckupDialog = ({
 
   const enviarNotificacionMecanico = async (checkupId: string) => {
     try {
-      // Obtener email del mecánico de la configuración
       const { data: config } = await supabase
         .from("configuracion_flotilla")
         .select("valor")
         .eq("clave", "email_mecanico")
-        .single();
+        .maybeSingle();
 
       if (!config?.valor) {
         toast.warning("No hay email de mecánico configurado");
         return;
       }
 
-      // Invocar edge function para enviar correo
       const { error } = await supabase.functions.invoke("send-checkup-report", {
         body: { checkupId, emailMecanico: config.valor },
       });
 
       if (error) throw error;
 
-      // Marcar como notificado
       await supabase
         .from("vehiculos_checkups")
-        .update({ notificado_mecanico: true, notificado_en: new Date().toISOString() })
+        .update({
+          notificado_mecanico: true,
+          notificado_en: new Date().toISOString(),
+        })
         .eq("id", checkupId);
 
       toast.success("Notificación enviada al mecánico");
@@ -198,169 +265,388 @@ export const VehiculoCheckupDialog = ({
     }
   };
 
-  const selectedVehiculoData = vehiculos.find(v => v.id === selectedVehiculo);
-  const itemsFallados = getItemsFallados();
+  const selectedVehiculoData = vehiculos.find((v) => v.id === selectedVehiculo);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Car className="h-5 w-5" />
-            Checkup de Vehículo
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-3xl max-h-[95vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Car className="h-5 w-5" />
+              CHECK LIST - REVISIÓN DE SALIDA DE UNIDAD
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Selección de vehículo y chofer */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Vehículo *</Label>
-              <Select value={selectedVehiculo} onValueChange={setSelectedVehiculo}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar vehículo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {vehiculos.map(v => (
-                    <SelectItem key={v.id} value={v.id}>
-                      {v.nombre} {v.placa ? `(${v.placa})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-4">
+            {/* Header Info */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 rounded-lg bg-muted">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Unidad</Label>
+                <Select
+                  value={selectedVehiculo}
+                  onValueChange={setSelectedVehiculo}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Seleccionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vehiculos.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <Label>Chofer (opcional)</Label>
-              <Select value={selectedChofer} onValueChange={setSelectedChofer}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar chofer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {choferes.map(c => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.nombre_completo}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  Operador
+                </Label>
+                <Select
+                  value={selectedChofer}
+                  onValueChange={setSelectedChofer}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Seleccionar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {choferes.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nombre_completo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {/* Info del vehículo seleccionado */}
-          {selectedVehiculoData && (
-            <div className="p-3 rounded-lg bg-muted flex items-center gap-3">
-              <Car className="h-8 w-8 text-muted-foreground" />
-              <div>
-                <p className="font-medium">{selectedVehiculoData.nombre}</p>
-                <p className="text-sm text-muted-foreground">
-                  Placa: {selectedVehiculoData.placa || 'Sin placa'}
-                </p>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  Km Inicial
+                </Label>
+                <Input
+                  type="number"
+                  value={kilometrajeInicial}
+                  onChange={(e) => setKilometrajeInicial(e.target.value)}
+                  placeholder="123456"
+                  className="h-10"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Hora</Label>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="time"
+                    value={horaInspeccion}
+                    onChange={(e) => setHoraInspeccion(e.target.value)}
+                    className="h-10"
+                  />
+                </div>
               </div>
             </div>
-          )}
 
-          {/* Checklist */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-base font-semibold">Checklist de Revisión</Label>
-              <Badge variant={itemsFallados > 0 ? "destructive" : "secondary"}>
-                {12 - itemsFallados}/12 OK
-              </Badge>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              {CHECKLIST_ITEMS.map(item => (
-                <div
-                  key={item.key}
-                  onClick={() => toggleItem(item.key)}
-                  className={`
-                    p-3 rounded-lg border cursor-pointer transition-all
-                    ${checklist[item.key] 
-                      ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800' 
-                      : 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800'}
-                  `}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{item.label}</span>
-                    {checklist[item.key] ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    ) : (
-                      <XCircle className="h-5 w-5 text-red-600" />
-                    )}
+            {/* Vehicle Info */}
+            {selectedVehiculoData && (
+              <div className="p-3 rounded-lg border bg-muted/50 flex items-center gap-3">
+                <Car className="h-8 w-8 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">{selectedVehiculoData.nombre}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Placa: {selectedVehiculoData.placa || "Sin placa"}
+                  </p>
+                </div>
+                <div className="ml-auto flex gap-2">
+                  <Badge
+                    variant="outline"
+                    className="bg-green-50 text-green-700 border-green-200"
+                  >
+                    B: {counts.bueno}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className="bg-red-50 text-red-700 border-red-200"
+                  >
+                    M: {counts.mal}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className="bg-gray-50 text-gray-700 border-gray-200"
+                  >
+                    NA: {counts.na}
+                  </Badge>
+                </div>
+              </div>
+            )}
+
+            {/* NN Warning Alert */}
+            {!nnValidation.isValid && (
+              <div className="p-4 rounded-lg bg-red-100 border-2 border-red-400 dark:bg-red-950 dark:border-red-700">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-red-800 dark:text-red-200">
+                      ⚠️ ALERTA: {nnValidation.failedItems.length} punto(s) No
+                      Negociable(s) con falla
+                    </p>
+                    <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                      El vehículo NO puede salir hasta su corrección:
+                    </p>
+                    <ul className="mt-2 space-y-1">
+                      {nnValidation.failedItems.map((item) => (
+                        <li
+                          key={item.key}
+                          className="text-sm font-medium text-red-800 dark:text-red-200"
+                        >
+                          • {item.label}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Legend */}
+            <div className="flex items-center gap-4 p-2 rounded-lg bg-muted/50 text-xs">
+              <span className="font-semibold">LEYENDA:</span>
+              <span className="flex items-center gap-1">
+                <span className="w-5 h-5 rounded bg-green-500 text-white font-bold flex items-center justify-center text-[10px]">
+                  B
+                </span>
+                Bueno
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-5 h-5 rounded bg-red-500 text-white font-bold flex items-center justify-center text-[10px]">
+                  M
+                </span>
+                Mal
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-5 h-5 rounded bg-gray-400 text-white font-bold flex items-center justify-center text-[10px]">
+                  NA
+                </span>
+                No Aplica
+              </span>
+              <span className="flex items-center gap-1 ml-2">
+                <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                  NN
+                </span>
+                No Negociable
+              </span>
+            </div>
+
+            {/* Checklist Categories */}
+            <div className="space-y-2">
+              {CHECKLIST_CATEGORIES.map((category) => (
+                <Collapsible
+                  key={category.key}
+                  open={expandedCategories[category.key]}
+                  onOpenChange={() => toggleCategory(category.key)}
+                >
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-between p-3 h-auto font-semibold text-left bg-muted hover:bg-muted/80"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span>{category.icon}</span>
+                        {category.label}
+                        <Badge variant="secondary" className="ml-2">
+                          {category.items.length} items
+                        </Badge>
+                      </span>
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform ${expandedCategories[category.key] ? "rotate-180" : ""}`}
+                      />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-1 pt-1">
+                    {category.items.map((item) => (
+                      <ChecklistItemRow
+                        key={item.key}
+                        itemKey={item.key}
+                        label={item.label}
+                        value={checklist[item.key]}
+                        onChange={handleChecklistChange}
+                        isNN={item.isNN}
+                      />
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
               ))}
             </div>
-          </div>
 
-          {/* Fallas detectadas */}
-          <div className="space-y-2">
-            <Label>Fallas Detectadas / Observaciones</Label>
-            <Textarea
-              value={fallasDetectadas}
-              onChange={(e) => setFallasDetectadas(e.target.value)}
-              placeholder="Describe las fallas encontradas o cualquier observación..."
-              rows={3}
-            />
-          </div>
-
-          {/* Prioridad (solo si hay fallas) */}
-          {itemsFallados > 0 && (
-            <div className="space-y-2">
-              <Label>Prioridad de Reparación</Label>
-              <Select value={prioridad} onValueChange={setPrioridad}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="baja">Baja - Puede esperar</SelectItem>
-                  <SelectItem value="media">Media - Atender pronto</SelectItem>
-                  <SelectItem value="alta">Alta - Atender esta semana</SelectItem>
-                  <SelectItem value="urgente">Urgente - Atender hoy</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Opciones de seguimiento */}
-          <div className="space-y-3 p-4 rounded-lg border bg-muted/50">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="requiere_reparacion"
-                checked={requiereReparacion}
-                onCheckedChange={(checked) => setRequiereReparacion(!!checked)}
-              />
-              <Label htmlFor="requiere_reparacion" className="cursor-pointer">
-                Requiere reparación
-              </Label>
-            </div>
-
-            {requiereReparacion && (
-              <div className="flex items-center space-x-2 ml-6">
-                <Checkbox
-                  id="notificar_mecanico"
-                  checked={notificarMecanico}
-                  onCheckedChange={(checked) => setNotificarMecanico(!!checked)}
+            {/* Observations */}
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label>Observaciones Generales</Label>
+                <Textarea
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  placeholder="Describe cualquier observación o falla encontrada..."
+                  rows={2}
+                  className="min-h-[60px]"
                 />
-                <Label htmlFor="notificar_mecanico" className="cursor-pointer flex items-center gap-2">
+              </div>
+
+              <div className="space-y-2">
+                <Label>Observaciones de Golpes y Raspaduras</Label>
+                <Textarea
+                  value={observacionesGolpes}
+                  onChange={(e) => setObservacionesGolpes(e.target.value)}
+                  placeholder="Describe golpes, raspaduras o daños en la carrocería..."
+                  rows={2}
+                  className="min-h-[60px]"
+                />
+              </div>
+            </div>
+
+            {/* Signatures Section */}
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-lg border bg-muted/30">
+              <div className="space-y-2">
+                <Label className="font-semibold">Firma Conductor *</Label>
+                {firmaConductor ? (
+                  <div className="relative">
+                    <img
+                      src={firmaConductor}
+                      alt="Firma conductor"
+                      className="h-24 w-full object-contain border rounded-lg bg-white"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-1 right-1"
+                      onClick={() => setFirmaConductor(null)}
+                    >
+                      Borrar
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="w-full h-24 border-dashed"
+                    onClick={() => setFirmaDialogOpen("conductor")}
+                  >
+                    <div className="text-center">
+                      <p className="font-medium">Tocar para firmar</p>
+                      <p className="text-xs text-muted-foreground">
+                        CONDUCTOR
+                      </p>
+                    </div>
+                  </Button>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label className="font-semibold">Firma Supervisor</Label>
+                {firmaSupervisor ? (
+                  <div className="relative">
+                    <img
+                      src={firmaSupervisor}
+                      alt="Firma supervisor"
+                      className="h-24 w-full object-contain border rounded-lg bg-white"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-1 right-1"
+                      onClick={() => setFirmaSupervisor(null)}
+                    >
+                      Borrar
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="w-full h-24 border-dashed"
+                    onClick={() => setFirmaDialogOpen("supervisor")}
+                  >
+                    <div className="text-center">
+                      <p className="font-medium">Tocar para firmar</p>
+                      <p className="text-xs text-muted-foreground">
+                        SUPERVISOR
+                      </p>
+                    </div>
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Notify mechanic option */}
+            {counts.mal > 0 && nnValidation.isValid && (
+              <div className="flex items-center gap-3 p-3 rounded-lg border bg-amber-50 dark:bg-amber-950">
+                <input
+                  type="checkbox"
+                  id="notificar"
+                  checked={notificarMecanico}
+                  onChange={(e) => setNotificarMecanico(e.target.checked)}
+                  className="h-5 w-5"
+                />
+                <label
+                  htmlFor="notificar"
+                  className="flex items-center gap-2 cursor-pointer"
+                >
                   <Send className="h-4 w-4" />
                   Notificar al mecánico por correo
-                </Label>
+                </label>
               </div>
             )}
           </div>
-        </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} disabled={saving || !selectedVehiculo}>
-            {saving ? "Guardando..." : "Guardar Checkup"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={saving || !selectedVehiculo || !firmaConductor}
+              className={
+                !nnValidation.isValid
+                  ? "bg-red-600 hover:bg-red-700"
+                  : undefined
+              }
+            >
+              {saving ? (
+                "Guardando..."
+              ) : !nnValidation.isValid ? (
+                <>
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Guardar (Con Fallas NN)
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Guardar Checkup
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Signature Dialog */}
+      <FirmaDigitalDialog
+        open={firmaDialogOpen !== null}
+        onOpenChange={(open) => {
+          if (!open) setFirmaDialogOpen(null);
+        }}
+        titulo={
+          firmaDialogOpen === "conductor"
+            ? "Firma del Conductor"
+            : "Firma del Supervisor"
+        }
+        onConfirm={(firma) => {
+          if (firmaDialogOpen === "conductor") {
+            setFirmaConductor(firma);
+          } else {
+            setFirmaSupervisor(firma);
+          }
+          setFirmaDialogOpen(null);
+        }}
+      />
+    </>
   );
 };
