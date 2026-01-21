@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     }
 
     if (newPassword.length < 6) {
-      throw new Error('Password must be at least 6 characters')
+      throw new Error('La contraseña debe tener al menos 6 caracteres')
     }
 
     // Actualizar contraseña usando admin API

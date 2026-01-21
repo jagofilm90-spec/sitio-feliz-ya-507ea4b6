@@ -38,9 +38,9 @@ export function CrearAccesoPortalDialog({
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
-  // Generate secure password
+  // Generate password
   const handleGeneratePassword = () => {
-    setPassword(generateSecurePassword(14));
+    setPassword(generateSecurePassword(8));
     setShowPassword(true);
   };
 
@@ -51,7 +51,7 @@ export function CrearAccesoPortalDialog({
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen && cliente) {
       setEmail(cliente.email || "");
-      setPassword(generateSecurePassword(14));
+      setPassword(generateSecurePassword(8));
       setShowPassword(true);
       setCopied(false);
     }
@@ -154,9 +154,9 @@ export function CrearAccesoPortalDialog({
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Contraseña segura"
+                  placeholder="Contraseña"
                   required
-                  minLength={12}
+                  minLength={6}
                   className={password && !passwordValidation.valid ? "border-destructive" : ""}
                 />
                 <Button
