@@ -117,6 +117,36 @@ interface Producto {
   categoria?: string;
   contenido_empaque?: string;
   requiere_fumigacion?: boolean;
+  // Campos adicionales para herencia completa en variantes promocionales
+  codigo_sat?: string;
+  unidad_sat?: string;
+  descuento_maximo?: number;
+  proveedor_preferido_id?: string;
+  maneja_caducidad?: boolean;
+  piezas_por_unidad?: number;
+  especificaciones?: string;
+  solo_uso_interno?: boolean;
+  precio_venta?: number;
+  precio_compra?: number;
+}
+
+// Calcula precio de venta sugerido manteniendo el mismo margen del producto base
+function calcularPrecioVentaSugerido(productoBase: Producto, costoPromo: string): number {
+  const costo = parseFloat(costoPromo);
+  if (isNaN(costo) || costo <= 0) return 0;
+  
+  // Si el producto base tiene precio de venta y costo, calcular el margen
+  const precioVentaBase = productoBase.precio_venta || 0;
+  const costoBase = productoBase.precio_compra || productoBase.ultimo_costo_compra || 0;
+  
+  if (precioVentaBase > 0 && costoBase > 0) {
+    const margenPorcentaje = (precioVentaBase - costoBase) / costoBase;
+    // Aplicar el mismo margen al costo promocional
+    return Math.round(costo * (1 + margenPorcentaje) * 100) / 100;
+  }
+  
+  // Si no hay datos suficientes, usar el mismo precio de venta del base
+  return precioVentaBase;
 }
 
 interface ProveedorConfig {
@@ -638,30 +668,54 @@ const CrearOrdenCompraWizard = ({
       const baseCode = pendingProductForPromo.codigo || pendingProductForPromo.id.slice(0, 6).toUpperCase();
       const promoCode = `${baseCode}-PROMO-${Date.now().toString(36).toUpperCase().slice(-4)}`;
       
-      // Create the promotional variant product
+      // Create the promotional variant product with full field inheritance
+      const precioVentaSugerido = calcularPrecioVentaSugerido(pendingProductForPromo, promoPrecio);
+      
       const { data: newVariant, error } = await supabase
         .from("productos")
         .insert({
+          // Identificación
           codigo: promoCode,
           nombre: promoDescripcion.trim(),
+          
+          // Herencia de características básicas
           marca: pendingProductForPromo.marca,
           categoria: pendingProductForPromo.categoria,
           contenido_empaque: pendingProductForPromo.contenido_empaque,
+          especificaciones: pendingProductForPromo.especificaciones,
           unidad: pendingProductForPromo.unidad as any,
           peso_kg: pendingProductForPromo.peso_kg || pendingProductForPromo.kg_por_unidad,
+          piezas_por_unidad: pendingProductForPromo.piezas_por_unidad,
+          
+          // Herencia de configuración fiscal (SAT)
+          codigo_sat: pendingProductForPromo.codigo_sat,
+          unidad_sat: pendingProductForPromo.unidad_sat,
           aplica_iva: pendingProductForPromo.aplica_iva ?? false,
           aplica_ieps: pendingProductForPromo.aplica_ieps ?? false,
+          
+          // Herencia de configuración operativa
           requiere_fumigacion: pendingProductForPromo.requiere_fumigacion ?? false,
           precio_por_kilo: pendingProductForPromo.precio_por_kilo ?? false,
+          maneja_caducidad: pendingProductForPromo.maneja_caducidad,
+          proveedor_preferido_id: pendingProductForPromo.proveedor_preferido_id,
+          descuento_maximo: pendingProductForPromo.descuento_maximo,
+          solo_uso_interno: pendingProductForPromo.solo_uso_interno ?? false,
+          
+          // Costos y precios
           ultimo_costo_compra: parseFloat(promoPrecio),
           precio_compra: parseFloat(promoPrecio),
-          precio_venta: 0, // Will be set by admin
+          precio_venta: precioVentaSugerido, // Calculado con mismo margen del base
+          
+          // Stock
+          stock_actual: 0, // Se actualiza al recibir
+          stock_minimo: 0, // Las promos no necesitan mínimo
+          
+          // Identificación como variante promocional
           producto_base_id: pendingProductForPromo.id,
           es_promocion: true,
           descripcion_promocion: promoDescripcion.trim(),
           bloqueado_venta: promoBloqueado,
           activo: true,
-          stock_actual: 0, // Will be updated when received
         })
         .select()
         .single();
