@@ -39,6 +39,7 @@ import DisponibilidadPersonalTab from "@/components/rutas/DisponibilidadPersonal
 import AyudantesExternosTab from "@/components/rutas/AyudantesExternosTab";
 import { AlertasFlotillaPanel } from "@/components/almacen/AlertasFlotillaPanel";
 import { VehiculoCheckupsTab } from "@/components/almacen/VehiculoCheckupsTab";
+import { ConfiguracionFlotillaDialog } from "@/components/almacen/ConfiguracionFlotillaDialog";
 import { LiveIndicator } from "@/components/ui/live-indicator";
 import { useUserRoles } from "@/hooks/useUserRoles";
 
@@ -157,6 +158,7 @@ const AlmacenTablet = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {showFlotillaTabs && <ConfiguracionFlotillaDialog />}
           <Button variant="outline" size="lg" onClick={handleRefresh} className="h-14 px-6 text-lg">
             <RefreshCw className="w-5 h-5 mr-2" /> Actualizar
           </Button>
