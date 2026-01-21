@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,13 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -35,16 +42,34 @@ import {
   TrendingDown,
   Minus,
   History,
+  AlertTriangle,
+  Calculator,
+  Target,
+  ShieldAlert,
+  ShieldCheck,
+  ShieldMinus,
 } from "lucide-react";
+import { analizarMargen, calcularPrecioSugerido, simularPrecioPropuesto } from "@/lib/calculos";
 
-interface CostoProveedor {
+// Formateo de moneda
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+  }).format(amount);
+};
+
+interface ProductoConCostos {
   id: string;
-  producto_id: string;
-  producto_codigo: string;
-  producto_nombre: string;
-  proveedor_id: string;
-  proveedor_nombre: string;
-  costo_proveedor: number;
+  codigo: string;
+  nombre: string;
+  marca: string | null;
+  categoria: string | null;
+  ultimo_costo_compra: number;
+  costo_promedio_ponderado: number;
+  precio_venta: number;
+  descuento_maximo: number;
+  stock_actual: number;
 }
 
 interface HistorialCosto {
@@ -59,49 +84,50 @@ interface HistorialCosto {
   fuente: string;
   notas: string | null;
   created_at: string;
+  usuario_nombre: string | null;
 }
 
 export const SecretariaCostosTab = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("proveedores");
+  const [activeTab, setActiveTab] = useState("analisis");
+  const [categoriaFilter, setCategoriaFilter] = useState<string>("todas");
   const [editDialog, setEditDialog] = useState(false);
-  const [editingCosto, setEditingCosto] = useState<CostoProveedor | null>(null);
+  const [editingProducto, setEditingProducto] = useState<ProductoConCostos | null>(null);
   const [nuevoCosto, setNuevoCosto] = useState("");
   const [notas, setNotas] = useState("");
+  const [simuladorDialog, setSimuladorDialog] = useState(false);
+  const [simuladorProducto, setSimuladorProducto] = useState<ProductoConCostos | null>(null);
+  const [precioSimulado, setPrecioSimulado] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch costs by supplier
-  const { data: costosProveedores, isLoading: loadingCostos } = useQuery({
-    queryKey: ["costos-proveedores"],
+  // Fetch productos con costos y márgenes
+  const { data: productos, isLoading: loadingProductos } = useQuery({
+    queryKey: ["productos-costos-margen"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("proveedor_productos")
+        .from("productos")
         .select(`
           id,
-          producto_id,
-          proveedor_id,
-          costo_proveedor,
-          productos (codigo, nombre),
-          proveedores (nombre)
+          codigo,
+          nombre,
+          marca,
+          categoria,
+          ultimo_costo_compra,
+          costo_promedio_ponderado,
+          precio_venta,
+          descuento_maximo,
+          stock_actual
         `)
-        .order("producto_id");
+        .eq("activo", true)
+        .order("codigo");
 
       if (error) throw error;
-
-      return data?.map((item: any) => ({
-        id: item.id,
-        producto_id: item.producto_id,
-        producto_codigo: item.productos?.codigo || "",
-        producto_nombre: item.productos?.nombre || "",
-        proveedor_id: item.proveedor_id,
-        proveedor_nombre: item.proveedores?.nombre || "",
-        costo_proveedor: item.costo_proveedor || 0,
-      })) as CostoProveedor[];
+      return data as ProductoConCostos[];
     },
   });
 
-  // Fetch cost history
+  // Fetch historial de costos
   const { data: historialCostos, isLoading: loadingHistorial } = useQuery({
     queryKey: ["historial-costos"],
     queryFn: async () => {
@@ -116,8 +142,10 @@ export const SecretariaCostosTab = () => {
           fuente,
           notas,
           created_at,
+          usuario_id,
           productos (codigo, nombre),
-          proveedores (nombre)
+          proveedores (nombre),
+          profiles:usuario_id (full_name)
         `)
         .order("created_at", { ascending: false })
         .limit(100);
@@ -136,58 +164,87 @@ export const SecretariaCostosTab = () => {
         fuente: item.fuente,
         notas: item.notas,
         created_at: item.created_at,
+        usuario_nombre: item.profiles?.full_name || null,
       })) as HistorialCosto[];
     },
   });
 
-  // Filter costs
-  const filteredCostos = costosProveedores?.filter((c) =>
-    c.producto_codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.producto_nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.proveedor_nombre.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Obtener categorías únicas
+  const categorias = useMemo(() => {
+    const cats = new Set<string>();
+    productos?.forEach(p => {
+      if (p.categoria) cats.add(p.categoria);
+    });
+    return Array.from(cats).sort();
+  }, [productos]);
 
-  // Filter history
-  const filteredHistorial = historialCostos?.filter((h) =>
-    h.producto_codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    h.producto_nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (h.proveedor_nombre?.toLowerCase() || "").includes(searchTerm.toLowerCase())
-  );
+  // Filtrar productos
+  const filteredProductos = useMemo(() => {
+    let filtered = productos || [];
+    
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(p =>
+        p.codigo.toLowerCase().includes(term) ||
+        p.nombre.toLowerCase().includes(term) ||
+        (p.marca?.toLowerCase() || "").includes(term)
+      );
+    }
+    
+    if (categoriaFilter !== "todas") {
+      filtered = filtered.filter(p => p.categoria === categoriaFilter);
+    }
+    
+    return filtered;
+  }, [productos, searchTerm, categoriaFilter]);
 
-  // Edit cost mutation
+  // Agrupar por categoría
+  const productosPorCategoria = useMemo(() => {
+    const grupos: Record<string, ProductoConCostos[]> = {};
+    for (const producto of filteredProductos) {
+      const cat = producto.categoria || "Sin categoría";
+      if (!grupos[cat]) grupos[cat] = [];
+      grupos[cat].push(producto);
+    }
+    return Object.entries(grupos).sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredProductos]);
+
+  // Filtrar historial
+  const filteredHistorial = useMemo(() => {
+    if (!searchTerm) return historialCostos || [];
+    const term = searchTerm.toLowerCase();
+    return (historialCostos || []).filter(h =>
+      h.producto_codigo.toLowerCase().includes(term) ||
+      h.producto_nombre.toLowerCase().includes(term) ||
+      (h.proveedor_nombre?.toLowerCase() || "").includes(term)
+    );
+  }, [historialCostos, searchTerm]);
+
+  // Mutación para editar costo
   const editCostoMutation = useMutation({
     mutationFn: async () => {
-      if (!editingCosto) return;
+      if (!editingProducto) return;
 
-      const costoAnterior = editingCosto.costo_proveedor;
+      const costoAnterior = editingProducto.ultimo_costo_compra;
       const costoNuevo = parseFloat(nuevoCosto);
 
-      // Update proveedor_productos
-      const { error: updateError } = await supabase
-        .from("proveedor_productos")
-        .update({ costo_proveedor: costoNuevo })
-        .eq("id", editingCosto.id);
-
-      if (updateError) throw updateError;
-
-      // Also update ultimo_costo_compra in productos
+      // Actualizar ultimo_costo_compra en productos
       const { error: productoError } = await supabase
         .from("productos")
         .update({ ultimo_costo_compra: costoNuevo })
-        .eq("id", editingCosto.producto_id);
+        .eq("id", editingProducto.id);
 
       if (productoError) throw productoError;
 
-      // Get current user
+      // Obtener usuario actual
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Register in history
+      // Registrar en historial
       const { error: historyError } = await supabase
         .from("productos_historial_costos")
         .insert({
-          producto_id: editingCosto.producto_id,
-          proveedor_id: editingCosto.proveedor_id,
-          costo_anterior: costoAnterior,
+          producto_id: editingProducto.id,
+          costo_anterior: costoAnterior || 0,
           costo_nuevo: costoNuevo,
           fuente: "manual",
           notas: notas || null,
@@ -198,10 +255,10 @@ export const SecretariaCostosTab = () => {
     },
     onSuccess: () => {
       toast({ title: "Costo actualizado correctamente" });
-      queryClient.invalidateQueries({ queryKey: ["costos-proveedores"] });
+      queryClient.invalidateQueries({ queryKey: ["productos-costos-margen"] });
       queryClient.invalidateQueries({ queryKey: ["historial-costos"] });
       setEditDialog(false);
-      setEditingCosto(null);
+      setEditingProducto(null);
       setNuevoCosto("");
       setNotas("");
     },
@@ -214,11 +271,17 @@ export const SecretariaCostosTab = () => {
     },
   });
 
-  const handleEditClick = (costo: CostoProveedor) => {
-    setEditingCosto(costo);
-    setNuevoCosto(costo.costo_proveedor.toString());
+  const handleEditClick = (producto: ProductoConCostos) => {
+    setEditingProducto(producto);
+    setNuevoCosto(producto.ultimo_costo_compra?.toString() || "0");
     setNotas("");
     setEditDialog(true);
+  };
+
+  const handleSimuladorClick = (producto: ProductoConCostos) => {
+    setSimuladorProducto(producto);
+    setPrecioSimulado(producto.precio_venta.toString());
+    setSimuladorDialog(true);
   };
 
   const handleSaveCosto = () => {
@@ -235,14 +298,10 @@ export const SecretariaCostosTab = () => {
 
   const getFuenteLabel = (fuente: string) => {
     switch (fuente) {
-      case "manual":
-        return "Manual";
-      case "orden_compra":
-        return "Orden de Compra";
-      case "recepcion":
-        return "Recepción";
-      default:
-        return fuente;
+      case "manual": return "Manual";
+      case "orden_compra": return "Orden de Compra";
+      case "recepcion": return "Recepción";
+      default: return fuente;
     }
   };
 
@@ -253,7 +312,57 @@ export const SecretariaCostosTab = () => {
     return { diff, percent };
   };
 
-  const isLoading = loadingCostos || loadingHistorial;
+  const getMargenBadge = (estado: string) => {
+    switch (estado) {
+      case 'perdida':
+        return (
+          <Badge variant="destructive" className="gap-1">
+            <ShieldAlert className="h-3 w-3" />
+            PÉRDIDA
+          </Badge>
+        );
+      case 'critico':
+        return (
+          <Badge variant="outline" className="border-orange-500 text-orange-600 gap-1">
+            <AlertTriangle className="h-3 w-3" />
+            Crítico
+          </Badge>
+        );
+      case 'bajo':
+        return (
+          <Badge variant="outline" className="border-yellow-500 text-yellow-600 gap-1">
+            <ShieldMinus className="h-3 w-3" />
+            Bajo
+          </Badge>
+        );
+      case 'saludable':
+        return (
+          <Badge variant="outline" className="border-green-500 text-green-600 gap-1">
+            <ShieldCheck className="h-3 w-3" />
+            OK
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // Simulación de precio
+  const simulacion = useMemo(() => {
+    if (!simuladorProducto || !precioSimulado) return null;
+    const costo = simuladorProducto.costo_promedio_ponderado > 0 
+      ? simuladorProducto.costo_promedio_ponderado 
+      : simuladorProducto.ultimo_costo_compra;
+    
+    return simularPrecioPropuesto(
+      costo,
+      parseFloat(precioSimulado) || 0,
+      simuladorProducto.descuento_maximo || 0,
+      simuladorProducto.precio_venta
+    );
+  }, [simuladorProducto, precioSimulado]);
+
+  const isLoading = loadingProductos || loadingHistorial;
 
   if (isLoading) {
     return (
@@ -270,31 +379,44 @@ export const SecretariaCostosTab = () => {
         <div>
           <h2 className="text-xl font-semibold flex items-center gap-2">
             <Coins className="h-5 w-5 text-pink-600" />
-            Costos de Mercancía
+            Análisis Costo-Precio-Margen
           </h2>
           <p className="text-sm text-muted-foreground">
-            {costosProveedores?.length || 0} costos registrados
+            {productos?.length || 0} productos • Responde: "¿hasta dónde puedo bajar?"
           </p>
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por código, producto o proveedor..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
+      {/* Search + Filters */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por código, producto o marca..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={categoriaFilter} onValueChange={setCategoriaFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Categoría" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todas">Todas las categorías</SelectItem>
+            {categorias.map(cat => (
+              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="proveedores" className="gap-2">
-            <Coins className="h-4 w-4" />
-            Por Proveedor
+          <TabsTrigger value="analisis" className="gap-2">
+            <Target className="h-4 w-4" />
+            Análisis de Margen
           </TabsTrigger>
           <TabsTrigger value="historial" className="gap-2">
             <History className="h-4 w-4" />
@@ -302,50 +424,144 @@ export const SecretariaCostosTab = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* Tab: Por Proveedor */}
-        <TabsContent value="proveedores" className="mt-4">
+        {/* Tab: Análisis de Margen */}
+        <TabsContent value="analisis" className="mt-4">
           <Card>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Código</TableHead>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="w-20">Código</TableHead>
                       <TableHead>Producto</TableHead>
-                      <TableHead>Proveedor</TableHead>
-                      <TableHead className="text-right">Costo</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
+                      <TableHead className="text-right w-24">Últ. Costo</TableHead>
+                      <TableHead className="text-right w-24 hidden md:table-cell">Costo Prom.</TableHead>
+                      <TableHead className="text-right w-24">Precio Lista</TableHead>
+                      <TableHead className="text-center w-20">Margen</TableHead>
+                      <TableHead className="text-right w-24 hidden lg:table-cell">Piso Mín.</TableHead>
+                      <TableHead className="text-right w-24 hidden lg:table-cell">Espacio</TableHead>
+                      <TableHead className="w-20"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredCostos && filteredCostos.length > 0 ? (
-                      filteredCostos.map((costo) => (
-                        <TableRow key={costo.id}>
-                          <TableCell className="font-mono font-medium">
-                            {costo.producto_codigo}
-                          </TableCell>
-                          <TableCell>{costo.producto_nombre}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{costo.proveedor_nombre}</Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            ${costo.costo_proveedor.toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditClick(costo)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
+                    {productosPorCategoria.length > 0 ? (
+                      productosPorCategoria.map(([categoria, prods]) => (
+                        <>
+                          {/* Separador de categoría */}
+                          <TableRow key={`cat-${categoria}`} className="bg-muted/60 hover:bg-muted/60">
+                            <TableCell colSpan={9} className="py-1.5 px-2">
+                              <span className="font-semibold text-[11px] uppercase tracking-wide text-muted-foreground">
+                                {categoria} ({prods.length})
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                          {/* Productos */}
+                          {prods.map((producto) => {
+                            const analisis = analizarMargen({
+                              costo_promedio: producto.costo_promedio_ponderado || 0,
+                              costo_ultimo: producto.ultimo_costo_compra || 0,
+                              precio_venta: producto.precio_venta || 0,
+                              descuento_maximo: producto.descuento_maximo || 0,
+                            });
+                            
+                            const rowClass = analisis.estado_margen === 'perdida' 
+                              ? 'bg-red-50 dark:bg-red-950/20' 
+                              : analisis.estado_margen === 'critico'
+                              ? 'bg-orange-50 dark:bg-orange-950/20'
+                              : '';
+
+                            return (
+                              <TableRow key={producto.id} className={rowClass}>
+                                <TableCell className="py-1.5 px-2 font-mono text-xs">
+                                  {producto.codigo}
+                                </TableCell>
+                                <TableCell className="py-1.5 px-2">
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-medium truncate">{producto.nombre}</p>
+                                    {producto.marca && (
+                                      <p className="text-[10px] text-blue-600">{producto.marca}</p>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-1.5 px-2 text-right">
+                                  <span className="text-xs font-medium">
+                                    {formatCurrency(producto.ultimo_costo_compra || 0)}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="py-1.5 px-2 text-right hidden md:table-cell">
+                                  {producto.costo_promedio_ponderado > 0 ? (
+                                    <span className="text-xs text-muted-foreground">
+                                      {formatCurrency(producto.costo_promedio_ponderado)}
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">—</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="py-1.5 px-2 text-right">
+                                  <span className="text-xs font-bold">
+                                    {formatCurrency(producto.precio_venta)}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="py-1.5 px-2 text-center">
+                                  <div className="flex flex-col items-center gap-0.5">
+                                    <span className={`text-xs font-bold ${
+                                      analisis.margen_porcentaje < 0 ? 'text-red-600' :
+                                      analisis.margen_porcentaje < 5 ? 'text-orange-600' :
+                                      analisis.margen_porcentaje < 10 ? 'text-yellow-600' :
+                                      'text-green-600'
+                                    }`}>
+                                      {analisis.margen_porcentaje.toFixed(1)}%
+                                    </span>
+                                    <span className="text-[9px] text-muted-foreground">
+                                      {formatCurrency(analisis.margen_bruto)}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-1.5 px-2 text-right hidden lg:table-cell">
+                                  <span className="text-xs">
+                                    {formatCurrency(analisis.piso_minimo)}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="py-1.5 px-2 text-right hidden lg:table-cell">
+                                  <span className={`text-xs font-medium ${
+                                    analisis.espacio_negociacion < 0 ? 'text-red-600' :
+                                    analisis.espacio_negociacion < 20 ? 'text-yellow-600' :
+                                    'text-green-600'
+                                  }`}>
+                                    {analisis.espacio_negociacion >= 0 ? '+' : ''}{formatCurrency(analisis.espacio_negociacion)}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="py-1.5 px-1 text-center">
+                                  <div className="flex items-center justify-center gap-0.5">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="h-6 w-6 p-0" 
+                                      onClick={() => handleSimuladorClick(producto)}
+                                      title="Simular precio"
+                                    >
+                                      <Calculator className="h-3 w-3" />
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="h-6 w-6 p-0" 
+                                      onClick={() => handleEditClick(producto)}
+                                      title="Editar costo"
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                          No se encontraron costos
+                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                          No se encontraron productos
                         </TableCell>
                       </TableRow>
                     )}
@@ -354,6 +570,26 @@ export const SecretariaCostosTab = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Leyenda */}
+          <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mt-2">
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded bg-red-200 dark:bg-red-900" />
+              <span>Margen &lt; 0% (Pérdida)</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded bg-orange-200 dark:bg-orange-900" />
+              <span>Margen 0-5% (Crítico)</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-yellow-600 font-bold">●</span>
+              <span>Margen 5-10% (Bajo)</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-green-600 font-bold">●</span>
+              <span>Margen &gt;10% (Saludable)</span>
+            </div>
+          </div>
         </TabsContent>
 
         {/* Tab: Historial */}
@@ -371,10 +607,11 @@ export const SecretariaCostosTab = () => {
                       <TableHead className="text-right">Nuevo</TableHead>
                       <TableHead className="text-center hidden sm:table-cell">Cambio</TableHead>
                       <TableHead className="hidden lg:table-cell">Fuente</TableHead>
+                      <TableHead className="hidden lg:table-cell">Usuario</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredHistorial && filteredHistorial.length > 0 ? (
+                    {filteredHistorial.length > 0 ? (
                       filteredHistorial.map((item) => {
                         const diff = getCostoDiff(item.costo_anterior, item.costo_nuevo);
                         return (
@@ -396,10 +633,10 @@ export const SecretariaCostosTab = () => {
                               )}
                             </TableCell>
                             <TableCell className="text-right text-muted-foreground">
-                              {item.costo_anterior ? `$${item.costo_anterior.toFixed(2)}` : "—"}
+                              {item.costo_anterior ? formatCurrency(item.costo_anterior) : "—"}
                             </TableCell>
                             <TableCell className="text-right font-medium">
-                              ${item.costo_nuevo.toFixed(2)}
+                              {formatCurrency(item.costo_nuevo)}
                             </TableCell>
                             <TableCell className="text-center hidden sm:table-cell">
                               {diff ? (
@@ -430,12 +667,15 @@ export const SecretariaCostosTab = () => {
                                 {getFuenteLabel(item.fuente)}
                               </Badge>
                             </TableCell>
+                            <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
+                              {item.usuario_nombre || "—"}
+                            </TableCell>
                           </TableRow>
                         );
                       })
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                           No hay historial de cambios
                         </TableCell>
                       </TableRow>
@@ -448,21 +688,31 @@ export const SecretariaCostosTab = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Edit Dialog */}
+      {/* Dialog: Editar Costo */}
       <Dialog open={editDialog} onOpenChange={setEditDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar Costo</DialogTitle>
             <DialogDescription>
-              {editingCosto?.producto_nombre} - {editingCosto?.proveedor_nombre}
+              {editingProducto?.codigo} - {editingProducto?.nombre}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Costo Actual</Label>
-              <p className="text-2xl font-bold text-muted-foreground">
-                ${editingCosto?.costo_proveedor.toFixed(2)}
-              </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Último Costo</Label>
+                <p className="text-lg font-bold text-muted-foreground">
+                  {formatCurrency(editingProducto?.ultimo_costo_compra || 0)}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Costo Promedio</Label>
+                <p className="text-lg font-bold text-muted-foreground">
+                  {editingProducto?.costo_promedio_ponderado 
+                    ? formatCurrency(editingProducto.costo_promedio_ponderado) 
+                    : "—"}
+                </p>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="nuevoCosto">Nuevo Costo *</Label>
@@ -488,26 +738,155 @@ export const SecretariaCostosTab = () => {
                 id="notas"
                 value={notas}
                 onChange={(e) => setNotas(e.target.value)}
-                placeholder="Razón del cambio..."
+                placeholder="Ej: Cotización telefónica con proveedor"
                 rows={2}
               />
             </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setEditDialog(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleSaveCosto}
+                disabled={editCostoMutation.isPending}
+              >
+                {editCostoMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                Guardar
+              </Button>
+            </div>
           </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setEditDialog(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSaveCosto}
-              disabled={editCostoMutation.isPending}
-              className="bg-pink-600 hover:bg-pink-700"
-            >
-              {editCostoMutation.isPending && (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Simulador de Precio */}
+      <Dialog open={simuladorDialog} onOpenChange={setSimuladorDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calculator className="h-5 w-5 text-blue-600" />
+              Simulador de Precio
+            </DialogTitle>
+            <DialogDescription>
+              {simuladorProducto?.codigo} - {simuladorProducto?.nombre}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {simuladorProducto && (
+            <div className="space-y-4 py-4">
+              {/* Info actual */}
+              <div className="grid grid-cols-2 gap-4 p-3 bg-muted/50 rounded-lg">
+                <div>
+                  <p className="text-xs text-muted-foreground">Costo Referencia</p>
+                  <p className="font-bold">
+                    {formatCurrency(simuladorProducto.costo_promedio_ponderado > 0 
+                      ? simuladorProducto.costo_promedio_ponderado 
+                      : simuladorProducto.ultimo_costo_compra)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Precio Lista</p>
+                  <p className="font-bold">{formatCurrency(simuladorProducto.precio_venta)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Desc. Máximo</p>
+                  <p className="font-medium text-emerald-600">
+                    -{formatCurrency(simuladorProducto.descuento_maximo || 0)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Piso Mínimo</p>
+                  <p className="font-bold text-amber-600">
+                    {formatCurrency(simuladorProducto.precio_venta - (simuladorProducto.descuento_maximo || 0))}
+                  </p>
+                </div>
+              </div>
+
+              {/* Input precio propuesto */}
+              <div className="space-y-2">
+                <Label>Precio propuesto al cliente</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="pl-7 text-lg font-bold"
+                    value={precioSimulado}
+                    onChange={(e) => setPrecioSimulado(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              {/* Resultado de simulación */}
+              {simulacion && (
+                <div className={`p-4 rounded-lg border-2 ${
+                  simulacion.es_perdida 
+                    ? 'border-red-500 bg-red-50 dark:bg-red-950/30' 
+                    : simulacion.requiere_autorizacion
+                    ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/30'
+                    : 'border-green-500 bg-green-50 dark:bg-green-950/30'
+                }`}>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Margen resultante</p>
+                      <p className={`text-xl font-bold ${
+                        simulacion.es_perdida ? 'text-red-600' : 'text-green-600'
+                      }`}>
+                        {simulacion.margen_porcentaje.toFixed(1)}%
+                      </p>
+                      <p className={`text-sm ${
+                        simulacion.es_perdida ? 'text-red-600' : 'text-green-600'
+                      }`}>
+                        {formatCurrency(simulacion.margen_pesos)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Descuento otorgado</p>
+                      <p className="text-xl font-bold">
+                        {formatCurrency(simulacion.diferencia_vs_lista)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        vs máx. {formatCurrency(simuladorProducto.descuento_maximo || 0)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Alertas */}
+                  <div className="mt-3 pt-3 border-t">
+                    {simulacion.es_perdida ? (
+                      <div className="flex items-center gap-2 text-red-600">
+                        <ShieldAlert className="h-5 w-5" />
+                        <span className="font-medium">¡PÉRDIDA! No se recomienda este precio</span>
+                      </div>
+                    ) : simulacion.requiere_autorizacion ? (
+                      <div className="flex items-center gap-2 text-orange-600">
+                        <AlertTriangle className="h-5 w-5" />
+                        <span className="font-medium">
+                          Requiere autorización (rebasa desc. máximo por {formatCurrency(simulacion.diferencia_vs_lista - (simuladorProducto.descuento_maximo || 0))})
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-green-600">
+                        <ShieldCheck className="h-5 w-5" />
+                        <span className="font-medium">Precio dentro del rango autorizado</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
-              Guardar Cambio
-            </Button>
-          </div>
+
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={() => setSimuladorDialog(false)}
+              >
+                Cerrar
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

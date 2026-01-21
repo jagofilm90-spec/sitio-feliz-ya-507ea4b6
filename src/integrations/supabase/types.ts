@@ -3751,6 +3751,7 @@ export type Database = {
           codigo: string
           codigo_sat: string | null
           contenido_empaque: string | null
+          costo_promedio_ponderado: number | null
           created_at: string
           descripcion: string | null
           descuento_maximo: number | null
@@ -3784,6 +3785,7 @@ export type Database = {
           codigo: string
           codigo_sat?: string | null
           contenido_empaque?: string | null
+          costo_promedio_ponderado?: number | null
           created_at?: string
           descripcion?: string | null
           descuento_maximo?: number | null
@@ -3817,6 +3819,7 @@ export type Database = {
           codigo?: string
           codigo_sat?: string | null
           contenido_empaque?: string | null
+          costo_promedio_ponderado?: number | null
           created_at?: string
           descripcion?: string | null
           descuento_maximo?: number | null
@@ -5400,6 +5403,10 @@ export type Database = {
       }
     }
     Functions: {
+      calcular_costo_promedio_ponderado: {
+        Args: { p_producto_id: string }
+        Returns: number
+      }
       check_chofer_client_access: {
         Args: { p_chofer_id: string; p_cliente_id: string }
         Returns: boolean
