@@ -90,6 +90,8 @@ export const SecretariaProductosTab = () => {
     aplica_ieps: false,
     precio_por_kilo: false,
     activo: true,
+    requiere_fumigacion: false,
+    fecha_ultima_fumigacion: "",
   });
 
   // Fetch products
@@ -138,6 +140,8 @@ export const SecretariaProductosTab = () => {
       aplica_ieps: false,
       precio_por_kilo: false,
       activo: true,
+      requiere_fumigacion: false,
+      fecha_ultima_fumigacion: "",
     });
   };
 
@@ -166,6 +170,8 @@ export const SecretariaProductosTab = () => {
       aplica_ieps: producto.aplica_ieps,
       precio_por_kilo: producto.precio_por_kilo,
       activo: producto.activo,
+      requiere_fumigacion: (producto as any).requiere_fumigacion || false,
+      fecha_ultima_fumigacion: (producto as any).fecha_ultima_fumigacion || "",
     };
     setFormData(newFormData);
     setOriginalFormData(JSON.stringify(newFormData));
@@ -201,6 +207,8 @@ export const SecretariaProductosTab = () => {
         aplica_ieps: data.aplica_ieps,
         precio_por_kilo: data.precio_por_kilo,
         activo: data.activo,
+        requiere_fumigacion: data.requiere_fumigacion,
+        fecha_ultima_fumigacion: data.fecha_ultima_fumigacion || null,
       };
 
       if (editingProduct) {
@@ -717,6 +725,32 @@ export const SecretariaProductosTab = () => {
                   onCheckedChange={(v) => setFormData({ ...formData, activo: v })}
                 />
                 <Label htmlFor="activo">Producto Activo</Label>
+              </div>
+              
+              {/* Fumigación */}
+              <div className="space-y-3 p-3 bg-muted/50 rounded-lg border mt-4">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="requiere_fumigacion"
+                    checked={formData.requiere_fumigacion}
+                    onCheckedChange={(v) => setFormData({ ...formData, requiere_fumigacion: v })}
+                  />
+                  <Label htmlFor="requiere_fumigacion">Requiere fumigación cada 6 meses</Label>
+                </div>
+                {formData.requiere_fumigacion && (
+                  <div className="space-y-2 ml-6">
+                    <Label htmlFor="fecha_ultima_fumigacion">Fecha de última fumigación (opcional)</Label>
+                    <Input
+                      id="fecha_ultima_fumigacion"
+                      type="date"
+                      value={formData.fecha_ultima_fumigacion}
+                      onChange={(e) => setFormData({ ...formData, fecha_ultima_fumigacion: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Si no se conoce, se registrará al recibir el producto en inventario
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
