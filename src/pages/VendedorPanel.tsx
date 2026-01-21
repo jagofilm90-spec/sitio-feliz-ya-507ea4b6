@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useSystemPresence } from "@/hooks/useSystemPresence";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +28,10 @@ import logoBlanco from "@/assets/logos/logo-blanco.png";
 export default function VendedorPanel() {
   const navigate = useNavigate();
   const { isVendedor, isAdmin, isLoading: rolesLoading } = useUserRoles();
+  
+  // Track presence in vendedor panel
+  useSystemPresence('vendedor');
+  
   const [loading, setLoading] = useState(true);
   const [vendedorNombre, setVendedorNombre] = useState("");
   const [activeTab, setActiveTab] = useState("clientes");

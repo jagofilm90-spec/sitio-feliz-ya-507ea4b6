@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useSystemPresence } from "@/hooks/useSystemPresence";
 import { useUnreadEmails } from "@/hooks/useUnreadEmails";
 import { useSolicitudesVenta } from "@/hooks/useSolicitudesVenta";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
@@ -39,6 +40,10 @@ const SecretariaPanel = () => {
   const [showBienvenida, setShowBienvenida] = useState(false);
   const navigate = useNavigate();
   const { roles, isLoading: rolesLoading, hasRole } = useUserRoles();
+  
+  // Track presence in secretaria panel
+  useSystemPresence('secretaria');
+  
   const { totalUnread: totalUnreadEmails } = useUnreadEmails();
   const { pendingCount: ventasMostradorPendientes } = useSolicitudesVenta();
   const chatUnreadCount = useUnreadMessages();
