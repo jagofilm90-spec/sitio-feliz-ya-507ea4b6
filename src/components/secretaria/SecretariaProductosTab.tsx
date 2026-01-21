@@ -30,6 +30,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Search, Package, ChevronLeft, ChevronRight, Sparkles, Edit, Save, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -68,6 +69,7 @@ export const SecretariaProductosTab = () => {
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
   const [currentIndex, setCurrentIndex] = useState<number>(-1);
   const [isSaved, setIsSaved] = useState(false);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [originalFormData, setOriginalFormData] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -244,8 +246,12 @@ export const SecretariaProductosTab = () => {
     saveMutation.mutate(formData, {
       onSuccess: () => {
         if (editingProduct) {
-          // Para edición: no cerrar, mostrar "Guardado"
-          setIsSaved(true);
+          // Para edición: animación y mostrar "Guardado"
+          setShowSuccessAnimation(true);
+          setTimeout(() => {
+            setIsSaved(true);
+            setShowSuccessAnimation(false);
+          }, 400);
           setOriginalFormData(JSON.stringify(formData));
         } else {
           // Para nuevo producto: cerrar diálogo
@@ -722,22 +728,33 @@ export const SecretariaProductosTab = () => {
               <Button 
                 type="submit" 
                 disabled={saveMutation.isPending}
-                variant={isSaved && editingProduct ? "outline" : "default"}
-                className={isSaved && editingProduct ? "border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/20" : ""}
-              >
-                {saveMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : isSaved && editingProduct ? (
-                  <Check className="h-4 w-4 mr-2 text-green-500" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
+                variant={((isSaved || showSuccessAnimation) && editingProduct) ? "outline" : "default"}
+                className={cn(
+                  "transition-all duration-300 ease-out min-w-[140px]",
+                  (isSaved || showSuccessAnimation) && editingProduct && "border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/20",
+                  showSuccessAnimation && editingProduct && "animate-success-pulse bg-green-50 dark:bg-green-950/30"
                 )}
-                {saveMutation.isPending 
-                  ? "Guardando..." 
-                  : editingProduct 
-                    ? (isSaved ? "Guardado" : "Guardar Cambios")
-                    : "Crear Producto"
-                }
+              >
+                <span className="flex items-center justify-center">
+                  {saveMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : ((isSaved || showSuccessAnimation) && editingProduct) ? (
+                    <Check className={cn(
+                      "h-4 w-4 mr-2 text-green-500",
+                      showSuccessAnimation && "animate-check-bounce"
+                    )} />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  <span className="transition-opacity duration-200">
+                    {saveMutation.isPending 
+                      ? "Guardando..." 
+                      : editingProduct 
+                        ? ((isSaved || showSuccessAnimation) ? "Guardado" : "Guardar Cambios")
+                        : "Crear Producto"
+                    }
+                  </span>
+                </span>
               </Button>
             </div>
           </form>

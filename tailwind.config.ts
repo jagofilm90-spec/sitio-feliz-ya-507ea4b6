@@ -120,6 +120,30 @@ export default {
             transform: "translateX(0)",
           },
         },
+        "check-bounce": {
+          "0%": {
+            transform: "scale(0)",
+            opacity: "0",
+          },
+          "50%": {
+            transform: "scale(1.2)",
+          },
+          "100%": {
+            transform: "scale(1)",
+            opacity: "1",
+          },
+        },
+        "success-pulse": {
+          "0%": {
+            boxShadow: "0 0 0 0 rgba(34, 197, 94, 0.5)",
+          },
+          "70%": {
+            boxShadow: "0 0 0 12px rgba(34, 197, 94, 0)",
+          },
+          "100%": {
+            boxShadow: "0 0 0 0 rgba(34, 197, 94, 0)",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -127,6 +151,8 @@ export default {
         "fade-in": "fade-in 0.4s ease-out forwards",
         "fade-in-scale": "fade-in-scale 0.3s ease-out forwards",
         "slide-in-left": "slide-in-left 0.3s ease-out forwards",
+        "check-bounce": "check-bounce 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards",
+        "success-pulse": "success-pulse 0.6s ease-out",
       },
     },
   },
