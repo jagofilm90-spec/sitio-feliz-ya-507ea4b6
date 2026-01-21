@@ -530,12 +530,14 @@ export const SecretariaProductosTab = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="balón">Balón</SelectItem>
                       <SelectItem value="bulto">Bulto</SelectItem>
                       <SelectItem value="caja">Caja</SelectItem>
                       <SelectItem value="churla">Churla</SelectItem>
                       <SelectItem value="costal">Costal</SelectItem>
                       <SelectItem value="cubeta">Cubeta</SelectItem>
                       <SelectItem value="kg">Kilogramo</SelectItem>
+                      <SelectItem value="litro">Litro</SelectItem>
                       <SelectItem value="pieza">Pieza</SelectItem>
                     </SelectContent>
                   </Select>
