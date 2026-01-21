@@ -532,6 +532,7 @@ export const SecretariaProductosTab = () => {
                     <SelectContent>
                       <SelectItem value="bulto">Bulto</SelectItem>
                       <SelectItem value="caja">Caja</SelectItem>
+                      <SelectItem value="churla">Churla</SelectItem>
                       <SelectItem value="costal">Costal</SelectItem>
                       <SelectItem value="cubeta">Cubeta</SelectItem>
                       <SelectItem value="kg">Kilogramo</SelectItem>

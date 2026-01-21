@@ -576,10 +576,11 @@ const CrearProductoDialog = ({ open, onOpenChange, proveedorId, proveedorNombre,
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="bulto">Bulto</SelectItem>
-                  <SelectItem value="kg">Kilogramos</SelectItem>
                   <SelectItem value="caja">Caja</SelectItem>
-                  <SelectItem value="pieza">Pieza</SelectItem>
+                  <SelectItem value="churla">Churla</SelectItem>
                   <SelectItem value="costal">Costal</SelectItem>
+                  <SelectItem value="kg">Kilogramos</SelectItem>
+                  <SelectItem value="pieza">Pieza</SelectItem>
                 </SelectContent>
               </Select>
             </div>
