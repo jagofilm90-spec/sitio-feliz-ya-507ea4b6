@@ -38,6 +38,7 @@ interface Empleado {
 
 const ROLES = [
   { value: "admin", label: "Administrador", color: "destructive" },
+  { value: "gerente_almacen", label: "Gerente Almacén", color: "default" },
   { value: "secretaria", label: "Secretaria", color: "default" },
   { value: "vendedor", label: "Vendedor", color: "secondary" },
   { value: "almacen", label: "Almacén", color: "outline" },
