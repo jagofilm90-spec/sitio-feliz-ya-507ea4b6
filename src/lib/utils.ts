@@ -10,7 +10,10 @@ export function cn(...inputs: ClassValue[]) {
  * Formatea un número como moneda con separador de miles (comas) y 2 decimales
  * Ejemplo: 9100 -> "9,100.00"
  */
-export function formatCurrency(value: number): string {
+export function formatCurrency(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return '$0.00';
+  }
   return '$' + value.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
