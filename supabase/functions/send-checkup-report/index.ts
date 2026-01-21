@@ -6,6 +6,68 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Category labels for the checklist
+const CATEGORY_LABELS: Record<string, string> = {
+  sistema_luces: "Sistema de Luces",
+  parte_externa: "Parte Externa",
+  parte_interna: "Parte Interna",
+  estado_llantas: "Estado de Llantas",
+  accesorios_seguridad: "Accesorios de Seguridad",
+  tapas_otros: "Tapas y Otros",
+};
+
+// Item labels
+const ITEM_LABELS: Record<string, string> = {
+  luz_delantera_alta: "Luz Delantera Alta",
+  luz_delantera_baja: "Luz Delantera Baja",
+  luces_emergencia: "Luces de Emergencia",
+  luces_neblineros: "Luces Neblineros",
+  luz_direccional: "Luz Direccional",
+  luz_freno_posterior: "Luz de Freno Posterior",
+  luces_faros_piratas: "Luces de Faros Piratas",
+  parabrisas_delantero: "Parabrisas Delantero",
+  parabrisas_posterior: "Parabrisas Posterior",
+  limpia_parabrisas: "Limpia Parabrisas",
+  vidrio_parabrisas: "Vidrio Parabrisas",
+  espejo_retrovisor: "Espejo Retrovisor",
+  espejos_laterales: "Espejos Laterales",
+  tablero_indicadores: "Tablero / Indicadores",
+  freno_mano: "Freno de Mano",
+  freno_servicio: "Freno de Servicio",
+  cinturon_chofer: "Cinturón Chofer",
+  cinturon_copiloto: "Cinturón Copiloto",
+  cinturon_posterior: "Cinturón Posterior",
+  espejo_antideslumbrante: "Espejo Antideslumbrante",
+  linterna_mano: "Linterna de Mano",
+  orden_limpieza_cabina: "Orden y Limpieza Cabina",
+  direccion: "Dirección",
+  orden_limpieza_caja: "Orden y Limpieza Caja",
+  llanta_delantera_derecha: "Llanta Delantera Derecha",
+  llanta_delantera_izquierda: "Llanta Delantera Izquierda",
+  llanta_posterior_derecha: "Llanta Posterior Derecha",
+  llanta_posterior_izquierda: "Llanta Posterior Izquierda",
+  llanta_repuesto: "Llanta de Repuesto",
+  conos_seguridad: "Conos de Seguridad",
+  extintor: "Extintor",
+  alarma_retrocesos: "Alarma de Retrocesos",
+  claxon: "Claxon",
+  cunas_seguridad: "Cuñas de Seguridad",
+  tapa_tanque_gasolina: "Tapa Tanque Gasolina",
+  gata_hidraulica: "Gata Hidráulica",
+  herramientas_palanca: "Herramientas / Palanca",
+  cable_cadena_estrobo: "Cable / Cadena / Estrobo",
+  refrigeracion_thermo: "Refrigeración / Thermo King",
+};
+
+// NN (No Negociable) items
+const NN_ITEMS = [
+  "luz_delantera_alta", "luz_delantera_baja", "luces_emergencia",
+  "freno_mano", "freno_servicio", 
+  "cinturon_chofer", "cinturon_copiloto", "cinturon_posterior",
+  "espejo_antideslumbrante", "direccion",
+  "alarma_retrocesos", "claxon"
+];
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -24,7 +86,7 @@ serve(async (req) => {
 
     console.log(`Enviando reporte de checkup ${checkupId} a ${emailMecanico}`);
 
-    // Obtener datos del checkup
+    // Get checkup data
     const { data: checkup, error: checkupError } = await supabase
       .from("vehiculos_checkups")
       .select(`
@@ -40,29 +102,11 @@ serve(async (req) => {
       throw new Error(`Checkup no encontrado: ${checkupError?.message}`);
     }
 
-    // Preparar lista de items con fallas
-    const items = [
-      { key: "frenos_ok", label: "Sistema de Frenos", ok: checkup.frenos_ok },
-      { key: "luces_ok", label: "Luces", ok: checkup.luces_ok },
-      { key: "llantas_ok", label: "Llantas", ok: checkup.llantas_ok },
-      { key: "aceite_ok", label: "Aceite", ok: checkup.aceite_ok },
-      { key: "anticongelante_ok", label: "Anticongelante", ok: checkup.anticongelante_ok },
-      { key: "espejos_ok", label: "Espejos", ok: checkup.espejos_ok },
-      { key: "limpiadores_ok", label: "Limpiadores", ok: checkup.limpiadores_ok },
-      { key: "bateria_ok", label: "Batería", ok: checkup.bateria_ok },
-      { key: "direccion_ok", label: "Dirección", ok: checkup.direccion_ok },
-      { key: "suspension_ok", label: "Suspensión", ok: checkup.suspension_ok },
-      { key: "escape_ok", label: "Escape", ok: checkup.escape_ok },
-      { key: "cinturones_ok", label: "Cinturones", ok: checkup.cinturones_ok },
-    ];
-
-    const itemsConFalla = items.filter(item => !item.ok);
-    const itemsOk = items.filter(item => item.ok);
-
     const vehiculo = checkup.vehiculos as any;
     const chofer = checkup.chofer as any;
     const realizado = checkup.realizado as any;
 
+    // Determine priority styling
     const prioridadColorMap: Record<string, string> = {
       urgente: '#dc2626',
       alta: '#ea580c',
@@ -79,21 +123,108 @@ serve(async (req) => {
     };
     const prioridadTexto = prioridadTextoMap[checkup.prioridad || 'media'] || 'Media';
 
-    // Generar HTML del correo
+    // Generate checklist HTML based on new or legacy format
+    let checklistHtml = '';
+    let failedNNItems: string[] = [];
+    let failedItems: string[] = [];
+    
+    if (checkup.checklist_detalle && typeof checkup.checklist_detalle === 'object') {
+      // New professional format
+      const checklist = checkup.checklist_detalle as Record<string, string>;
+      
+      for (const [key, value] of Object.entries(checklist)) {
+        const label = ITEM_LABELS[key] || key;
+        const isNN = NN_ITEMS.includes(key);
+        
+        if (value === 'M') {
+          failedItems.push(label);
+          if (isNN) {
+            failedNNItems.push(label);
+          }
+        }
+      }
+      
+      // Generate categorized HTML
+      const categories = [
+        { key: 'sistema_luces', items: ['luz_delantera_alta', 'luz_delantera_baja', 'luces_emergencia', 'luces_neblineros', 'luz_direccional', 'luz_freno_posterior', 'luces_faros_piratas'] },
+        { key: 'parte_externa', items: ['parabrisas_delantero', 'parabrisas_posterior', 'limpia_parabrisas', 'vidrio_parabrisas', 'espejo_retrovisor', 'espejos_laterales'] },
+        { key: 'parte_interna', items: ['tablero_indicadores', 'freno_mano', 'freno_servicio', 'cinturon_chofer', 'cinturon_copiloto', 'cinturon_posterior', 'espejo_antideslumbrante', 'linterna_mano', 'orden_limpieza_cabina', 'direccion', 'orden_limpieza_caja'] },
+        { key: 'estado_llantas', items: ['llanta_delantera_derecha', 'llanta_delantera_izquierda', 'llanta_posterior_derecha', 'llanta_posterior_izquierda', 'llanta_repuesto'] },
+        { key: 'accesorios_seguridad', items: ['conos_seguridad', 'extintor', 'alarma_retrocesos', 'claxon', 'cunas_seguridad'] },
+        { key: 'tapas_otros', items: ['tapa_tanque_gasolina', 'gata_hidraulica', 'herramientas_palanca', 'cable_cadena_estrobo', 'refrigeracion_thermo'] },
+      ];
+
+      for (const cat of categories) {
+        const catLabel = CATEGORY_LABELS[cat.key] || cat.key;
+        const itemsHtml = cat.items.map(itemKey => {
+          const value = checklist[itemKey] || 'NA';
+          const label = ITEM_LABELS[itemKey] || itemKey;
+          const isNN = NN_ITEMS.includes(itemKey);
+          const statusColor = value === 'B' ? '#16a34a' : value === 'M' ? '#dc2626' : '#6b7280';
+          const statusText = value === 'B' ? '✓' : value === 'M' ? '✗' : '○';
+          const nnBadge = isNN ? '<span style="background:#fbbf24;color:#78350f;font-size:10px;padding:1px 4px;border-radius:3px;margin-left:4px;">NN</span>' : '';
+          
+          return `<tr>
+            <td style="padding:6px;border-bottom:1px solid #e5e7eb;">${label}${nnBadge}</td>
+            <td style="padding:6px;border-bottom:1px solid #e5e7eb;text-align:center;color:${statusColor};font-weight:bold;">${statusText} ${value}</td>
+          </tr>`;
+        }).join('');
+
+        checklistHtml += `
+          <div style="margin-bottom:15px;">
+            <h4 style="margin:0 0 8px 0;color:#1e3a5f;font-size:14px;">${catLabel}</h4>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              ${itemsHtml}
+            </table>
+          </div>
+        `;
+      }
+    } else {
+      // Legacy format (12 boolean fields)
+      const legacyItems = [
+        { key: "frenos_ok", label: "Sistema de Frenos", ok: checkup.frenos_ok },
+        { key: "luces_ok", label: "Luces", ok: checkup.luces_ok },
+        { key: "llantas_ok", label: "Llantas", ok: checkup.llantas_ok },
+        { key: "aceite_ok", label: "Aceite", ok: checkup.aceite_ok },
+        { key: "anticongelante_ok", label: "Anticongelante", ok: checkup.anticongelante_ok },
+        { key: "espejos_ok", label: "Espejos", ok: checkup.espejos_ok },
+        { key: "limpiadores_ok", label: "Limpiadores", ok: checkup.limpiadores_ok },
+        { key: "bateria_ok", label: "Batería", ok: checkup.bateria_ok },
+        { key: "direccion_ok", label: "Dirección", ok: checkup.direccion_ok },
+        { key: "suspension_ok", label: "Suspensión", ok: checkup.suspension_ok },
+        { key: "escape_ok", label: "Escape", ok: checkup.escape_ok },
+        { key: "cinturones_ok", label: "Cinturones", ok: checkup.cinturones_ok },
+      ];
+
+      failedItems = legacyItems.filter(item => !item.ok).map(item => item.label);
+      
+      checklistHtml = `
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          ${legacyItems.map(item => `
+            <tr>
+              <td style="padding:6px;border-bottom:1px solid #e5e7eb;">${item.label}</td>
+              <td style="padding:6px;border-bottom:1px solid #e5e7eb;text-align:center;color:${item.ok ? '#16a34a' : '#dc2626'};font-weight:bold;">${item.ok ? '✓ OK' : '✗ FALLA'}</td>
+            </tr>
+          `).join('')}
+        </table>
+      `;
+    }
+
+    // Generate HTML email
     const htmlBody = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 700px; margin: 0 auto; }
     .header { background: #1e3a5f; color: white; padding: 20px; text-align: center; }
     .content { padding: 20px; }
     .section { margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px; }
     .section-title { font-weight: bold; margin-bottom: 10px; color: #1e3a5f; }
     .priority { display: inline-block; padding: 4px 12px; border-radius: 4px; color: white; font-weight: bold; }
-    .falla { color: #dc2626; }
-    .ok { color: #16a34a; }
+    .alert-box { background: #fef2f2; border: 2px solid #dc2626; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
+    .alert-title { color: #dc2626; font-weight: bold; font-size: 16px; margin-bottom: 8px; }
     table { width: 100%; border-collapse: collapse; }
     td { padding: 8px; border-bottom: 1px solid #e5e7eb; }
     .footer { padding: 20px; text-align: center; color: #6b7280; font-size: 12px; }
@@ -101,10 +232,20 @@ serve(async (req) => {
 </head>
 <body>
   <div class="header">
-    <h1>🔧 Reporte de Checkup - Requiere Reparación</h1>
+    <h1>🔧 Reporte de Checkup - ${checkup.tiene_items_nn_fallados ? '🚨 PUNTOS NO NEGOCIABLES FALLADOS' : 'Requiere Atención'}</h1>
   </div>
   
   <div class="content">
+    ${checkup.tiene_items_nn_fallados && failedNNItems.length > 0 ? `
+    <div class="alert-box">
+      <div class="alert-title">⚠️ ALERTA: Puntos No Negociables con Falla</div>
+      <p style="margin:0 0 10px 0;font-size:14px;color:#7f1d1d;">El vehículo NO puede salir hasta corregir:</p>
+      <ul style="margin:0;padding-left:20px;color:#991b1b;">
+        ${failedNNItems.map(item => `<li><strong>${item}</strong></li>`).join('')}
+      </ul>
+    </div>
+    ` : ''}
+
     <div class="section">
       <div class="section-title">📋 Información del Vehículo</div>
       <table>
@@ -134,6 +275,18 @@ serve(async (req) => {
           <td><strong>Fecha:</strong></td>
           <td>${new Date(checkup.fecha_checkup).toLocaleString('es-MX')}</td>
         </tr>
+        ${checkup.kilometraje_inicial ? `
+        <tr>
+          <td><strong>Kilometraje:</strong></td>
+          <td>${checkup.kilometraje_inicial.toLocaleString()} km</td>
+        </tr>
+        ` : ''}
+        ${checkup.hora_inspeccion ? `
+        <tr>
+          <td><strong>Hora de Inspección:</strong></td>
+          <td>${checkup.hora_inspeccion}</td>
+        </tr>
+        ` : ''}
       </table>
     </div>
 
@@ -144,24 +297,33 @@ serve(async (req) => {
       </span>
     </div>
 
+    ${failedItems.length > 0 ? `
     <div class="section">
-      <div class="section-title">❌ Items con Falla (${itemsConFalla.length})</div>
-      <ul>
-        ${itemsConFalla.map(item => `<li class="falla"><strong>${item.label}</strong></li>`).join('')}
+      <div class="section-title">❌ Items con Falla (${failedItems.length})</div>
+      <ul style="margin:0;padding-left:20px;">
+        ${failedItems.map(item => `<li style="color:#dc2626;"><strong>${item}</strong></li>`).join('')}
       </ul>
-    </div>
-
-    ${checkup.fallas_detectadas ? `
-    <div class="section">
-      <div class="section-title">📝 Descripción de Fallas</div>
-      <p>${checkup.fallas_detectadas}</p>
     </div>
     ` : ''}
 
     <div class="section">
-      <div class="section-title">✅ Items OK (${itemsOk.length})</div>
-      <p class="ok">${itemsOk.map(item => item.label).join(', ')}</p>
+      <div class="section-title">📝 Checklist Completo</div>
+      ${checklistHtml}
     </div>
+
+    ${checkup.fallas_detectadas ? `
+    <div class="section">
+      <div class="section-title">📝 Observaciones</div>
+      <p style="margin:0;">${checkup.fallas_detectadas}</p>
+    </div>
+    ` : ''}
+
+    ${checkup.observaciones_golpes ? `
+    <div class="section">
+      <div class="section-title">🚗 Golpes y Raspaduras</div>
+      <p style="margin:0;">${checkup.observaciones_golpes}</p>
+    </div>
+    ` : ''}
   </div>
 
   <div class="footer">
@@ -172,13 +334,13 @@ serve(async (req) => {
 </html>
     `;
 
-    // Enviar correo usando gmail-api
+    // Send email using gmail-api
     const { error: emailError } = await supabase.functions.invoke("gmail-api", {
       body: {
         action: "send",
         email: "compras@almasa.com.mx",
         to: emailMecanico,
-        subject: `🔧 [${checkup.prioridad?.toUpperCase() || 'MEDIA'}] Reporte de Checkup - ${vehiculo?.nombre || 'Vehículo'}`,
+        subject: `🔧 [${checkup.prioridad?.toUpperCase() || 'MEDIA'}]${checkup.tiene_items_nn_fallados ? ' 🚨 NN FALLADOS' : ''} Reporte de Checkup - ${vehiculo?.nombre || 'Vehículo'}`,
         body: htmlBody,
       }
     });
@@ -188,7 +350,7 @@ serve(async (req) => {
       throw new Error(`Error al enviar correo: ${emailError.message}`);
     }
 
-    // Marcar como notificado
+    // Mark as notified
     await supabase
       .from("vehiculos_checkups")
       .update({ 
