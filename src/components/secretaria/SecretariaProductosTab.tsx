@@ -36,7 +36,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { MigracionProductosDialog } from "./MigracionProductosDialog";
 import { MigracionLoteDialog } from "./MigracionLoteDialog";
-import { getDisplayName, UNIDADES_SAT } from "@/lib/productUtils";
+import { getDisplayName, UNIDADES_SAT, UNIDADES_PRODUCTO } from "@/lib/productUtils";
 
 interface Producto {
   id: string;
@@ -530,15 +530,11 @@ export const SecretariaProductosTab = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="balón">Balón</SelectItem>
-                      <SelectItem value="bulto">Bulto</SelectItem>
-                      <SelectItem value="caja">Caja</SelectItem>
-                      <SelectItem value="churla">Churla</SelectItem>
-                      <SelectItem value="costal">Costal</SelectItem>
-                      <SelectItem value="cubeta">Cubeta</SelectItem>
-                      <SelectItem value="kg">Kilogramo</SelectItem>
-                      <SelectItem value="litro">Litro</SelectItem>
-                      <SelectItem value="pieza">Pieza</SelectItem>
+                      {UNIDADES_PRODUCTO.map(unidad => (
+                        <SelectItem key={unidad.value} value={unidad.value}>
+                          {unidad.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
