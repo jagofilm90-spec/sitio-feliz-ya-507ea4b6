@@ -137,8 +137,14 @@ const Layout = ({ children }: LayoutProps) => {
   const menuItems = useMemo(() => {
     if (permissionsLoading || allowedPaths.length === 0) return allMenuItems;
     
-    return allMenuItems.filter(item => checkAccess(item.path));
-  }, [allowedPaths, permissionsLoading, checkAccess]);
+    return allMenuItems.filter(item => {
+      // Ocultar /precios para secretarias (ya lo tienen en su panel dedicado)
+      if (item.path === '/precios' && isOnlySecretaria) {
+        return false;
+      }
+      return checkAccess(item.path);
+    });
+  }, [allowedPaths, permissionsLoading, checkAccess, isOnlySecretaria]);
 
   // Verificar si el usuario puede ver correos
   const canViewEmails = useMemo(() => {
