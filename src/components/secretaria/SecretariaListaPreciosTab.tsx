@@ -28,10 +28,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatCurrency } from "@/lib/utils";
-import { Search, Loader2, DollarSign, Edit, Save } from "lucide-react";
+import { Search, Loader2, DollarSign, Edit, Save, History, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { getDisplayName } from "@/lib/productUtils";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface Producto {
   id: string;
@@ -49,6 +52,15 @@ interface Producto {
   activo: boolean;
 }
 
+interface HistorialPrecio {
+  id: string;
+  precio_anterior: number;
+  precio_nuevo: number;
+  created_at: string;
+  usuario_id: string | null;
+  usuario_nombre?: string | null;
+}
+
 export const SecretariaListaPreciosTab = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoriaFilter, setCategoriaFilter] = useState<string>("all");
@@ -56,6 +68,8 @@ export const SecretariaListaPreciosTab = () => {
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
   const [precioVenta, setPrecioVenta] = useState("");
   const [descuentoMaximo, setDescuentoMaximo] = useState("");
+  const [historialDialogOpen, setHistorialDialogOpen] = useState(false);
+  const [selectedProductForHistory, setSelectedProductForHistory] = useState<Producto | null>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -76,19 +90,84 @@ export const SecretariaListaPreciosTab = () => {
     },
   });
 
+  // Fetch price history for selected product
+  const { data: historialPrecios, isLoading: isLoadingHistorial } = useQuery({
+    queryKey: ["historial-precios", selectedProductForHistory?.id],
+    queryFn: async () => {
+      if (!selectedProductForHistory?.id) return [];
+      
+      // Get history records
+      const { data: historial, error } = await supabase
+        .from("productos_historial_precios")
+        .select("id, precio_anterior, precio_nuevo, created_at, usuario_id")
+        .eq("producto_id", selectedProductForHistory.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      if (!historial || historial.length === 0) return [];
+
+      // Get unique user IDs
+      const userIds = [...new Set(historial.map(h => h.usuario_id).filter(Boolean))] as string[];
+      
+      // Fetch user names if there are any
+      let userMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", userIds);
+        
+        if (profiles) {
+          userMap = profiles.reduce((acc, p) => {
+            acc[p.id] = p.full_name || "Usuario";
+            return acc;
+          }, {} as Record<string, string>);
+        }
+      }
+
+      // Merge user names into history
+      return historial.map(h => ({
+        ...h,
+        usuario_nombre: h.usuario_id ? userMap[h.usuario_id] || "Usuario" : null
+      })) as HistorialPrecio[];
+    },
+    enabled: !!selectedProductForHistory?.id,
+  });
+
   // Update price mutation
   const updatePriceMutation = useMutation({
-    mutationFn: async ({ id, precio_venta, descuento_maximo }: { id: string; precio_venta: number; descuento_maximo: number | null }) => {
+    mutationFn: async ({ id, precio_venta, descuento_maximo, precio_anterior }: { id: string; precio_venta: number; descuento_maximo: number | null; precio_anterior: number }) => {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Update the product price
       const { error } = await supabase
         .from("productos")
         .update({ precio_venta, descuento_maximo })
         .eq("id", id);
       
       if (error) throw error;
+
+      // Save to history if price changed
+      if (precio_anterior !== precio_venta) {
+        const { error: historialError } = await supabase
+          .from("productos_historial_precios")
+          .insert({
+            producto_id: id,
+            precio_anterior,
+            precio_nuevo: precio_venta,
+            usuario_id: user?.id
+          });
+        
+        if (historialError) {
+          console.error("Error saving price history:", historialError);
+        }
+      }
     },
     onSuccess: () => {
       toast({ title: "Precio actualizado correctamente" });
       queryClient.invalidateQueries({ queryKey: ["secretaria-lista-precios"] });
+      queryClient.invalidateQueries({ queryKey: ["historial-precios"] });
       setEditDialogOpen(false);
       setEditingProduct(null);
     },
@@ -155,7 +234,14 @@ export const SecretariaListaPreciosTab = () => {
       id: editingProduct.id,
       precio_venta: precio,
       descuento_maximo: descuento,
+      precio_anterior: editingProduct.precio_venta,
     });
+  };
+
+  // Handle view history
+  const handleViewHistory = (producto: Producto) => {
+    setSelectedProductForHistory(producto);
+    setHistorialDialogOpen(true);
   };
 
   if (isLoading) {
@@ -273,13 +359,24 @@ export const SecretariaListaPreciosTab = () => {
                           )}
                         </TableCell>
                         <TableCell className="text-center">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(producto)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewHistory(producto)}
+                              title="Ver historial de precios"
+                            >
+                              <History className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(producto)}
+                              title="Editar precio"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -376,6 +473,96 @@ export const SecretariaListaPreciosTab = () => {
               Guardar
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Price History Dialog */}
+      <Dialog open={historialDialogOpen} onOpenChange={setHistorialDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Historial de Precios
+            </DialogTitle>
+            <DialogDescription>
+              {selectedProductForHistory && (
+                <span className="font-medium text-foreground">
+                  {selectedProductForHistory.codigo} - {getDisplayName(selectedProductForHistory)}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[400px] pr-4">
+            {isLoadingHistorial ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : historialPrecios && historialPrecios.length > 0 ? (
+              <div className="space-y-3">
+                {historialPrecios.map((registro) => {
+                  const diferencia = registro.precio_nuevo - registro.precio_anterior;
+                  const esAumento = diferencia > 0;
+                  const esMismo = diferencia === 0;
+                  
+                  return (
+                    <div
+                      key={registro.id}
+                      className="p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(registro.created_at), "d 'de' MMMM yyyy, HH:mm", { locale: es })}
+                          </p>
+                          {registro.usuario_nombre && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Por: {registro.usuario_nombre}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center gap-2 justify-end">
+                            <span className="text-sm text-muted-foreground font-mono">
+                              {formatCurrency(registro.precio_anterior)}
+                            </span>
+                            <span className="text-muted-foreground">→</span>
+                            <span className="font-semibold font-mono">
+                              {formatCurrency(registro.precio_nuevo)}
+                            </span>
+                          </div>
+                          <div className="mt-1">
+                            {esMismo ? (
+                              <Badge variant="outline" className="text-xs">
+                                <Minus className="h-3 w-3 mr-1" />
+                                Sin cambio
+                              </Badge>
+                            ) : esAumento ? (
+                              <Badge className="bg-destructive/10 text-destructive border-destructive/20 text-xs">
+                                <TrendingUp className="h-3 w-3 mr-1" />
+                                +{formatCurrency(diferencia)}
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400 text-xs">
+                                <TrendingDown className="h-3 w-3 mr-1" />
+                                {formatCurrency(diferencia)}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <History className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                <p>No hay historial de cambios</p>
+                <p className="text-xs mt-1">Los cambios de precio se registrarán aquí</p>
+              </div>
+            )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>
