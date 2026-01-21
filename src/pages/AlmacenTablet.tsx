@@ -38,6 +38,7 @@ const AlmacenTablet = () => {
   const [activeTab, setActiveTab] = useState("rutas");
   const [refreshKey, setRefreshKey] = useState(0);
   const [empleadoId, setEmpleadoId] = useState<string | null>(null);
+  const [empleadoNombre, setEmpleadoNombre] = useState<string>("");
   const navigate = useNavigate();
   const { isGerenteAlmacen, isAdmin } = useUserRoles();
 
@@ -63,23 +64,27 @@ const AlmacenTablet = () => {
     };
   }, []);
 
-  // Obtener el empleado_id del usuario actual
+  // Obtener el empleado_id y nombre del usuario actual
   useEffect(() => {
-    const loadEmpleadoId = async () => {
+    const loadEmpleadoData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: empleado } = await supabase
           .from("empleados")
-          .select("id")
+          .select("id, nombre, primer_apellido")
           .eq("user_id", user.id)
           .maybeSingle();
         
         if (empleado) {
           setEmpleadoId(empleado.id);
+          const nombreCompleto = [empleado.nombre, empleado.primer_apellido]
+            .filter(Boolean)
+            .join(" ");
+          setEmpleadoNombre(nombreCompleto || "Usuario");
         }
       }
     };
-    loadEmpleadoId();
+    loadEmpleadoData();
   }, []);
 
   // Cargar stats de recepción
@@ -230,6 +235,7 @@ const AlmacenTablet = () => {
         counters={counters}
         isOnline={isOnline}
         onLogout={handleLogout}
+        empleadoNombre={empleadoNombre}
       />
       
       {/* Contenido Principal */}
