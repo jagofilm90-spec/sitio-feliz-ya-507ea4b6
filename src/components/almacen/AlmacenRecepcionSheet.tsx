@@ -868,6 +868,21 @@ export const AlmacenRecepcionSheet = ({
         .update(updateEntrega)
         .eq("id", entrega.id);
 
+      // Verificar si TODAS las entregas de esta orden ya están recibidas
+      const { data: entregasPendientes } = await supabase
+        .from("ordenes_compra_entregas")
+        .select("id")
+        .eq("orden_compra_id", entrega.orden_compra.id)
+        .neq("status", "recibida");
+
+      // Si no hay entregas pendientes, marcar la orden como completada
+      if (!entregasPendientes || entregasPendientes.length === 0) {
+        await supabase
+          .from("ordenes_compra")
+          .update({ status: "completada" })
+          .eq("id", entrega.orden_compra.id);
+      }
+
       await supabase.from("recepciones_participantes").insert({
         entrega_id: entrega.id,
         user_id: user.id,

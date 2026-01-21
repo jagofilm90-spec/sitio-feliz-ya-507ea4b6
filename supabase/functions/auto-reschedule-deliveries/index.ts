@@ -117,6 +117,25 @@ Deno.serve(async (req) => {
 
     // 4. Reschedule overdue single-delivery orders
     for (const order of (pendingOrders || [])) {
+      // Verificar si la orden tiene una entrega ya recibida
+      const { data: entregaRecibida } = await supabase
+        .from('ordenes_compra_entregas')
+        .select('id')
+        .eq('orden_compra_id', order.id)
+        .eq('status', 'recibida')
+        .limit(1)
+        .maybeSingle()
+
+      // Si ya hay entrega recibida, actualizar status de la orden y NO reprogramar
+      if (entregaRecibida) {
+        console.log(`Order ${order.folio} already has received delivery, marking as completed`)
+        await supabase
+          .from('ordenes_compra')
+          .update({ status: 'completada' })
+          .eq('id', order.id)
+        continue // Saltar a la siguiente orden
+      }
+
       const currentNotas = (order as any).notas || ''
       const proveedorData = (order as any).proveedores as any
       
