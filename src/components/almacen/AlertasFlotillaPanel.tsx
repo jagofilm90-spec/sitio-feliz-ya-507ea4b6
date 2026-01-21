@@ -144,7 +144,7 @@ export const AlertasFlotillaPanel = () => {
               <FileWarning className="h-4 w-4" />
               Verificaciones Vehiculares
               {alertasVerificaciones.length > 0 && (
-                <Badge variant="warning">{alertasVerificaciones.length}</Badge>
+                <Badge className="bg-orange-500 text-white border-orange-500">{alertasVerificaciones.length}</Badge>
               )}
             </CardTitle>
           </CardHeader>
