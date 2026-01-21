@@ -29,7 +29,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, Calculator, Eye } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { LotesDesglose } from "@/components/productos/LotesDesglose";
 import { NotificacionesSistema } from "@/components/NotificacionesSistema";
@@ -218,11 +218,8 @@ const Productos = () => {
     unidad_sat: string;
     peso_kg: string;
     unidad: "bulto" | "caja" | "churla" | "costal" | "cubeta" | "kg" | "litro" | "pieza" | "balón";
-    precio_por_kilo: boolean;
     piezas_por_unidad: string;
-    precio_venta: string;
     precio_compra: string;
-    descuento_maximo: string;
     stock_minimo: string;
     maneja_caducidad: boolean;
     aplica_iva: boolean;
@@ -245,11 +242,8 @@ const Productos = () => {
     unidad_sat: "",
     peso_kg: "",
     unidad: "bulto",
-    precio_por_kilo: false,
     piezas_por_unidad: "1",
-    precio_venta: "",
     precio_compra: "",
-    descuento_maximo: "0",
     stock_minimo: "",
     maneja_caducidad: false,
     aplica_iva: false,
@@ -337,12 +331,9 @@ const Productos = () => {
         unidad_sat: formData.unidad_sat || null,
         peso_kg: formData.peso_kg ? parseFloat(formData.peso_kg) : null,
         unidad: formData.unidad,
-        precio_por_kilo: formData.precio_por_kilo,
         piezas_por_unidad: formData.piezas_por_unidad ? parseInt(formData.piezas_por_unidad) : 1,
-        precio_venta: parseFloat(formData.precio_venta),
         precio_compra: parseFloat(formData.precio_compra) || 0,
-        descuento_maximo: parseFloat(formData.descuento_maximo) || 0,
-        stock_minimo: parseInt(formData.stock_minimo),
+        stock_minimo: parseInt(formData.stock_minimo) || 0,
         maneja_caducidad: formData.maneja_caducidad,
         aplica_iva: formData.aplica_iva,
         aplica_ieps: formData.aplica_ieps,
@@ -470,12 +461,9 @@ const Productos = () => {
       unidad_sat: product.unidad_sat || "",
       peso_kg: product.peso_kg?.toString() || "",
       unidad: product.unidad,
-      precio_por_kilo: product.precio_por_kilo || false,
       piezas_por_unidad: product.piezas_por_unidad?.toString() || "1",
-      precio_venta: product.precio_venta.toString(),
-      precio_compra: product.precio_compra.toString(),
-      descuento_maximo: product.descuento_maximo?.toString() || "0",
-      stock_minimo: product.stock_minimo.toString(),
+      precio_compra: product.precio_compra?.toString() || "",
+      stock_minimo: product.stock_minimo?.toString() || "0",
       maneja_caducidad: product.maneja_caducidad,
       aplica_iva: product.aplica_iva || false,
       aplica_ieps: product.aplica_ieps || false,
@@ -527,11 +515,8 @@ const Productos = () => {
       unidad_sat: "",
       peso_kg: "",
       unidad: "bulto",
-      precio_por_kilo: false,
       piezas_por_unidad: "1",
-      precio_venta: "",
       precio_compra: "",
-      descuento_maximo: "0",
       stock_minimo: "",
       maneja_caducidad: false,
       aplica_iva: false,
@@ -564,15 +549,6 @@ const Productos = () => {
   const productosActivos = productos.filter(p => p.activo !== false).length;
   const productosInactivos = productos.filter(p => p.activo === false).length;
 
-  const calcularPrecioTotal = () => {
-    if (!formData.precio_por_kilo || !formData.precio_venta || !formData.peso_kg) {
-      return null;
-    }
-    const precioUnitario = parseFloat(formData.precio_venta);
-    const kilos = parseFloat(formData.peso_kg);
-    if (isNaN(precioUnitario) || isNaN(kilos)) return null;
-    return (precioUnitario * kilos).toFixed(2);
-  };
 
   return (
     <Layout>
@@ -847,21 +823,7 @@ const Productos = () => {
                   </p>
                 )}
                 
-                <div className="flex items-center gap-4 p-3 bg-muted rounded-md">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="precio_por_kilo"
-                      checked={formData.precio_por_kilo}
-                      onChange={(e) => setFormData({ ...formData, precio_por_kilo: e.target.checked })}
-                      className="rounded"
-                    />
-                    <Label htmlFor="precio_por_kilo" className="cursor-pointer">
-                      Precio por kilo
-                    </Label>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="precio_compra">Precio Compra</Label>
                     <Input
@@ -878,36 +840,6 @@ const Productos = () => {
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="precio_venta">
-                      {formData.precio_por_kilo ? "Precio por Kilo *" : "Precio Venta *"}
-                    </Label>
-                    <Input
-                      id="precio_venta"
-                      type="number"
-                      step="0.01"
-                      value={formData.precio_venta}
-                      onChange={(e) => setFormData({ ...formData, precio_venta: e.target.value })}
-                      required
-                      autoComplete="off"
-                    />
-                    {formData.precio_por_kilo && calcularPrecioTotal() && (
-                      <div className="mt-2 p-3 bg-primary/10 rounded-lg border border-primary/30">
-                        <div className="flex items-center gap-2">
-                          <Calculator className="h-4 w-4 text-primary" />
-                          <span className="text-sm font-medium text-primary">
-                            Precio por {formData.unidad}:
-                          </span>
-                        </div>
-                        <p className="text-2xl font-bold text-primary">
-                          ${calcularPrecioTotal()}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          = ${formData.precio_venta}/kg × {formData.peso_kg} kg
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-2">
                     <Label htmlFor="stock_minimo">Stock Mínimo *</Label>
                     <Input
                       id="stock_minimo"
@@ -918,36 +850,6 @@ const Productos = () => {
                       autoComplete="off"
                     />
                   </div>
-                </div>
-                
-                {/* Descuento Máximo Autorizado */}
-                <div className="space-y-2 p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-medium text-green-800 dark:text-green-300">💰 Descuento para Vendedores</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 items-end">
-                    <div className="space-y-2">
-                      <Label htmlFor="descuento_maximo">Descuento Máximo Autorizado ($)</Label>
-                      <Input
-                        id="descuento_maximo"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={formData.descuento_maximo}
-                        onChange={(e) => setFormData({ ...formData, descuento_maximo: e.target.value })}
-                        placeholder="0.00"
-                        autoComplete="off"
-                      />
-                    </div>
-                    {parseFloat(formData.precio_venta) > 0 && parseFloat(formData.descuento_maximo) > 0 && (
-                      <div className="text-sm text-green-700 dark:text-green-400">
-                        Precio mínimo sin autorización: <strong>${(parseFloat(formData.precio_venta) - parseFloat(formData.descuento_maximo)).toFixed(2)}</strong>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs text-green-700 dark:text-green-400 mt-2">
-                    ℹ️ El vendedor puede aplicar descuentos hasta este monto sin necesitar autorización adicional.
-                  </p>
                 </div>
                 <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
                   <div className="flex items-center space-x-2">
