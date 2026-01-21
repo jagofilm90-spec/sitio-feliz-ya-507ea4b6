@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Package, 
   Truck, 
@@ -14,17 +13,7 @@ import {
   RefreshCw,
   CheckCircle2,
   Clock,
-  LogOut,
-  Wifi,
-  WifiOff,
-  Bug,
   AlertTriangle,
-  Boxes,
-  ShoppingCart,
-  FileText,
-  Users,
-  Car,
-  CalendarCheck
 } from "lucide-react";
 import { AlmacenCargaRutasTab } from "@/components/almacen/AlmacenCargaRutasTab";
 import { AlmacenRecepcionTab } from "@/components/almacen/AlmacenRecepcionTab";
@@ -39,7 +28,8 @@ import DisponibilidadPersonalTab from "@/components/rutas/DisponibilidadPersonal
 import AyudantesExternosTab from "@/components/rutas/AyudantesExternosTab";
 import { AlertasFlotillaPanel } from "@/components/almacen/AlertasFlotillaPanel";
 import { VehiculoCheckupsTab } from "@/components/almacen/VehiculoCheckupsTab";
-import { ConfiguracionFlotillaDialog } from "@/components/almacen/ConfiguracionFlotillaDialog";
+import { AlmacenSidebar } from "@/components/almacen/AlmacenSidebar";
+import { AlmacenMobileNav } from "@/components/almacen/AlmacenMobileNav";
 import { LiveIndicator } from "@/components/ui/live-indicator";
 import { useUserRoles } from "@/hooks/useUserRoles";
 
@@ -59,6 +49,7 @@ const AlmacenTablet = () => {
   const [recepcionStats, setRecepcionStats] = useState({ pendientes: 0, recibidas: 0 });
   const [fumigacionStats, setFumigacionStats] = useState({ vencidas: 0, proximas: 0, vigentes: 0 });
   const [ventasStats, setVentasStats] = useState({ pendientes: 0, listas: 0, entregadas: 0 });
+  const [alertasCount, setAlertasCount] = useState(0);
 
   // Monitor de conexión
   useEffect(() => {
@@ -135,106 +126,156 @@ const AlmacenTablet = () => {
 
   const handleRefresh = () => setRefreshKey(prev => prev + 1);
 
-  // Calcular número de columnas para el grid de tabs
-  const tabCount = showFlotillaTabs ? 13 : 7;
+  // Counters para sidebar/nav
+  const counters = {
+    rutas: rutasStats.pendientes,
+    ventas: ventasStats.pendientes,
+    recepcion: recepcionStats.pendientes,
+    alertas: alertasCount
+  };
+
+  // Renderizar stats según tab activo
+  const renderStats = () => {
+    switch (activeTab) {
+      case "rutas":
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-primary/10"><Truck className="w-6 h-6 text-primary" /></div><div><p className="text-2xl font-bold">{rutasStats.total}</p><p className="text-sm text-muted-foreground">Mis Rutas</p></div></CardContent></Card>
+            <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-accent/50"><Clock className="w-6 h-6 text-accent-foreground" /></div><div><p className="text-2xl font-bold">{rutasStats.pendientes}</p><p className="text-sm text-muted-foreground">Pendientes</p></div></CardContent></Card>
+            <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-primary/10"><CheckCircle2 className="w-6 h-6 text-primary" /></div><div><p className="text-2xl font-bold">{rutasStats.completadas}</p><p className="text-sm text-muted-foreground">Completadas</p></div></CardContent></Card>
+            <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-muted"><Package className="w-6 h-6 text-muted-foreground" /></div><div><p className="text-2xl font-bold">{rutasStats.entregas}</p><p className="text-sm text-muted-foreground">Entregas</p></div></CardContent></Card>
+          </div>
+        );
+      case "recepcion":
+        return (
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-accent/50"><Clock className="w-6 h-6 text-accent-foreground" /></div><div><p className="text-2xl font-bold">{recepcionStats.pendientes}</p><p className="text-sm text-muted-foreground">Pendientes</p></div></CardContent></Card>
+            <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-primary/10"><CheckCircle2 className="w-6 h-6 text-primary" /></div><div><p className="text-2xl font-bold">{recepcionStats.recibidas}</p><p className="text-sm text-muted-foreground">Recibidas hoy</p></div></CardContent></Card>
+          </div>
+        );
+      case "fumigaciones":
+        return (
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-destructive/10"><AlertTriangle className="w-6 h-6 text-destructive" /></div><div><p className="text-2xl font-bold">{fumigacionStats.vencidas}</p><p className="text-sm text-muted-foreground">Vencidas</p></div></CardContent></Card>
+            <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-accent/50"><Clock className="w-6 h-6 text-accent-foreground" /></div><div><p className="text-2xl font-bold">{fumigacionStats.proximas}</p><p className="text-sm text-muted-foreground">Próximas</p></div></CardContent></Card>
+            <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-primary/10"><CheckCircle2 className="w-6 h-6 text-primary" /></div><div><p className="text-2xl font-bold">{fumigacionStats.vigentes}</p><p className="text-sm text-muted-foreground">Vigentes</p></div></CardContent></Card>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // Renderizar contenido del tab activo
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "rutas":
+        return <AlmacenCargaRutasTab key={`rutas-${refreshKey}`} onStatsUpdate={setRutasStats} empleadoId={empleadoId} />;
+      case "ventas":
+        return <AlmacenVentasMostradorTab key={`ventas-${refreshKey}`} empleadoId={empleadoId} onStatsUpdate={setVentasStats} />;
+      case "recepcion":
+        return <AlmacenRecepcionTab key={`recepcion-${refreshKey}`} onStatsUpdate={setRecepcionStats} />;
+      case "reporte":
+        return <ReporteRecepcionesDiaTab key={`reporte-${refreshKey}`} />;
+      case "inventario":
+        return <AlmacenInventarioTab key={`inventario-${refreshKey}`} />;
+      case "productos":
+        return <AlmacenProductosTab key={`productos-${refreshKey}`} />;
+      case "fumigaciones":
+        return <AlmacenFumigacionesTab key={`fumigaciones-${refreshKey}`} onStatsUpdate={setFumigacionStats} />;
+      case "alertas":
+        return showFlotillaTabs ? <AlertasFlotillaPanel key={`alertas-${refreshKey}`} /> : null;
+      case "checkups":
+        return showFlotillaTabs && empleadoId ? <VehiculoCheckupsTab empleadoId={empleadoId} refreshKey={refreshKey} /> : null;
+      case "vehiculos":
+        return showFlotillaTabs ? <VehiculosTab key={`vehiculos-${refreshKey}`} /> : null;
+      case "personal":
+        return showFlotillaTabs ? <PersonalFlotillaTab key={`personal-${refreshKey}`} /> : null;
+      case "disponibilidad":
+        return showFlotillaTabs ? <DisponibilidadPersonalTab key={`disp-${refreshKey}`} /> : null;
+      case "externos":
+        return showFlotillaTabs ? <AyudantesExternosTab key={`externos-${refreshKey}`} /> : null;
+      default:
+        return null;
+    }
+  };
+
+  // Obtener título del tab activo
+  const getTabTitle = () => {
+    const titles: Record<string, string> = {
+      rutas: "Carga de Rutas",
+      ventas: "Ventas Mostrador",
+      recepcion: "Recepción de Mercancía",
+      reporte: "Reporte del Día",
+      inventario: "Inventario",
+      productos: "Productos",
+      fumigaciones: "Fumigaciones",
+      alertas: "Alertas de Flotilla",
+      checkups: "Checkups de Vehículos",
+      vehiculos: "Vehículos",
+      personal: "Personal de Flotilla",
+      disponibilidad: "Disponibilidad",
+      externos: "Ayudantes Externos"
+    };
+    return titles[activeTab] || "Almacén";
+  };
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-              {showFlotillaTabs ? "Gerente Almacén" : "Almacén"}
-            </h1>
-            <LiveIndicator size="md" />
-            <Badge variant={isOnline ? "default" : "destructive"} className="h-8 px-3 text-sm">
-              {isOnline ? <><Wifi className="w-4 h-4 mr-1" /> Conectado</> : <><WifiOff className="w-4 h-4 mr-1" /> Sin conexión</>}
-            </Badge>
+    <div className="min-h-screen flex bg-background">
+      {/* Sidebar - visible en lg+ */}
+      <AlmacenSidebar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        showFlotillaTabs={showFlotillaTabs}
+        counters={counters}
+        isOnline={isOnline}
+        onLogout={handleLogout}
+      />
+      
+      {/* Contenido Principal */}
+      <main className="flex-1 lg:ml-64 p-4 md:p-6 pb-40 lg:pb-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+                {getTabTitle()}
+              </h1>
+              <LiveIndicator size="md" className="lg:hidden" />
+            </div>
+            <p className="text-muted-foreground mt-1 text-lg flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              {format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es })}
+            </p>
           </div>
-          <p className="text-muted-foreground mt-1 text-lg">
-            <Calendar className="inline-block w-5 h-5 mr-2" />
-            {format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es })}
-          </p>
+          <div className="flex items-center gap-3">
+            {/* Badge de conexión solo en móvil */}
+            <Badge 
+              variant={isOnline ? "default" : "destructive"} 
+              className="lg:hidden h-8 px-3 text-sm"
+            >
+              {isOnline ? "Online" : "Offline"}
+            </Badge>
+            <Button variant="outline" size="lg" onClick={handleRefresh} className="h-12 px-4 text-base">
+              <RefreshCw className="w-5 h-5 mr-2" /> Actualizar
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          {showFlotillaTabs && <ConfiguracionFlotillaDialog />}
-          <Button variant="outline" size="lg" onClick={handleRefresh} className="h-14 px-6 text-lg">
-            <RefreshCw className="w-5 h-5 mr-2" /> Actualizar
-          </Button>
-          <Button variant="ghost" size="lg" onClick={handleLogout} className="h-14 px-6 text-lg text-destructive hover:text-destructive hover:bg-destructive/10">
-            <LogOut className="w-5 h-5 mr-2" /> Salir
-          </Button>
-        </div>
-      </div>
 
-      {/* Stats según tab activo */}
-      {activeTab === "rutas" && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-primary/10"><Truck className="w-6 h-6 text-primary" /></div><div><p className="text-2xl font-bold">{rutasStats.total}</p><p className="text-sm text-muted-foreground">Mis Rutas</p></div></CardContent></Card>
-          <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-accent/50"><Clock className="w-6 h-6 text-accent-foreground" /></div><div><p className="text-2xl font-bold">{rutasStats.pendientes}</p><p className="text-sm text-muted-foreground">Pendientes</p></div></CardContent></Card>
-          <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-primary/10"><CheckCircle2 className="w-6 h-6 text-primary" /></div><div><p className="text-2xl font-bold">{rutasStats.completadas}</p><p className="text-sm text-muted-foreground">Completadas</p></div></CardContent></Card>
-          <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-muted"><Package className="w-6 h-6 text-muted-foreground" /></div><div><p className="text-2xl font-bold">{rutasStats.entregas}</p><p className="text-sm text-muted-foreground">Entregas</p></div></CardContent></Card>
-        </div>
-      )}
+        {/* Stats cards según tab activo */}
+        {renderStats()}
 
-      {activeTab === "recepcion" && (
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-accent/50"><Clock className="w-6 h-6 text-accent-foreground" /></div><div><p className="text-2xl font-bold">{recepcionStats.pendientes}</p><p className="text-sm text-muted-foreground">Pendientes</p></div></CardContent></Card>
-          <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-primary/10"><CheckCircle2 className="w-6 h-6 text-primary" /></div><div><p className="text-2xl font-bold">{recepcionStats.recibidas}</p><p className="text-sm text-muted-foreground">Recibidas hoy</p></div></CardContent></Card>
-        </div>
-      )}
-
-      {activeTab === "fumigaciones" && (
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-destructive/10"><AlertTriangle className="w-6 h-6 text-destructive" /></div><div><p className="text-2xl font-bold">{fumigacionStats.vencidas}</p><p className="text-sm text-muted-foreground">Vencidas</p></div></CardContent></Card>
-          <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-accent/50"><Clock className="w-6 h-6 text-accent-foreground" /></div><div><p className="text-2xl font-bold">{fumigacionStats.proximas}</p><p className="text-sm text-muted-foreground">Próximas</p></div></CardContent></Card>
-          <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-primary/10"><CheckCircle2 className="w-6 h-6 text-primary" /></div><div><p className="text-2xl font-bold">{fumigacionStats.vigentes}</p><p className="text-sm text-muted-foreground">Vigentes</p></div></CardContent></Card>
-        </div>
-      )}
-
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`w-full grid h-14 mb-4 ${showFlotillaTabs ? 'grid-cols-13' : 'grid-cols-7'}`}>
-          <TabsTrigger value="rutas" className="text-sm h-12 gap-1"><Truck className="w-4 h-4" /><span className="hidden lg:inline">Rutas</span></TabsTrigger>
-          <TabsTrigger value="ventas" className="text-sm h-12 gap-1 relative"><ShoppingCart className="w-4 h-4" /><span className="hidden lg:inline">Ventas</span>{ventasStats.pendientes > 0 && <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">{ventasStats.pendientes}</span>}</TabsTrigger>
-          <TabsTrigger value="recepcion" className="text-sm h-12 gap-1 relative"><Package className="w-4 h-4" /><span className="hidden lg:inline">Recepción</span>{recepcionStats.pendientes > 0 && <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">{recepcionStats.pendientes}</span>}</TabsTrigger>
-          <TabsTrigger value="reporte" className="text-sm h-12 gap-1"><FileText className="w-4 h-4" /><span className="hidden lg:inline">Reporte</span></TabsTrigger>
-          <TabsTrigger value="inventario" className="text-sm h-12 gap-1"><Boxes className="w-4 h-4" /><span className="hidden lg:inline">Inventario</span></TabsTrigger>
-          <TabsTrigger value="productos" className="text-sm h-12 gap-1"><Package className="w-4 h-4" /><span className="hidden lg:inline">Productos</span></TabsTrigger>
-          <TabsTrigger value="fumigaciones" className="text-sm h-12 gap-1"><Bug className="w-4 h-4" /><span className="hidden lg:inline">Fumig.</span></TabsTrigger>
-          
-          {showFlotillaTabs && (
-            <>
-              <TabsTrigger value="alertas" className="text-sm h-12 gap-1 bg-destructive/10"><AlertTriangle className="w-4 h-4" /><span className="hidden lg:inline">Alertas</span></TabsTrigger>
-              <TabsTrigger value="checkups" className="text-sm h-12 gap-1 bg-secondary/30"><CheckCircle2 className="w-4 h-4" /><span className="hidden lg:inline">Checkups</span></TabsTrigger>
-              <TabsTrigger value="vehiculos" className="text-sm h-12 gap-1 bg-secondary/30"><Car className="w-4 h-4" /><span className="hidden lg:inline">Vehículos</span></TabsTrigger>
-              <TabsTrigger value="personal" className="text-sm h-12 gap-1 bg-secondary/30"><Users className="w-4 h-4" /><span className="hidden lg:inline">Personal</span></TabsTrigger>
-              <TabsTrigger value="disponibilidad" className="text-sm h-12 gap-1 bg-secondary/30"><CalendarCheck className="w-4 h-4" /><span className="hidden lg:inline">Disp.</span></TabsTrigger>
-              <TabsTrigger value="externos" className="text-sm h-12 gap-1 bg-secondary/30"><Users className="w-4 h-4" /><span className="hidden lg:inline">Externos</span></TabsTrigger>
-            </>
-          )}
-        </TabsList>
-
-        <TabsContent value="rutas" className="mt-0"><AlmacenCargaRutasTab key={`rutas-${refreshKey}`} onStatsUpdate={setRutasStats} empleadoId={empleadoId} /></TabsContent>
-        <TabsContent value="ventas" className="mt-0"><AlmacenVentasMostradorTab key={`ventas-${refreshKey}`} empleadoId={empleadoId} onStatsUpdate={setVentasStats} /></TabsContent>
-        <TabsContent value="recepcion" className="mt-0"><AlmacenRecepcionTab key={`recepcion-${refreshKey}`} onStatsUpdate={setRecepcionStats} /></TabsContent>
-        <TabsContent value="reporte" className="mt-0"><ReporteRecepcionesDiaTab key={`reporte-${refreshKey}`} /></TabsContent>
-        <TabsContent value="inventario" className="mt-0"><AlmacenInventarioTab key={`inventario-${refreshKey}`} /></TabsContent>
-        <TabsContent value="productos" className="mt-0"><AlmacenProductosTab key={`productos-${refreshKey}`} /></TabsContent>
-        <TabsContent value="fumigaciones" className="mt-0"><AlmacenFumigacionesTab key={`fumigaciones-${refreshKey}`} onStatsUpdate={setFumigacionStats} /></TabsContent>
-        
-        {showFlotillaTabs && (
-          <>
-            <TabsContent value="alertas" className="mt-0"><AlertasFlotillaPanel key={`alertas-${refreshKey}`} /></TabsContent>
-            <TabsContent value="checkups" className="mt-0">{empleadoId && <VehiculoCheckupsTab empleadoId={empleadoId} refreshKey={refreshKey} />}</TabsContent>
-            <TabsContent value="vehiculos" className="mt-0"><VehiculosTab key={`vehiculos-${refreshKey}`} /></TabsContent>
-            <TabsContent value="personal" className="mt-0"><PersonalFlotillaTab key={`personal-${refreshKey}`} /></TabsContent>
-            <TabsContent value="disponibilidad" className="mt-0"><DisponibilidadPersonalTab key={`disp-${refreshKey}`} /></TabsContent>
-            <TabsContent value="externos" className="mt-0"><AyudantesExternosTab key={`externos-${refreshKey}`} /></TabsContent>
-          </>
-        )}
-      </Tabs>
+        {/* Contenido del tab */}
+        {renderTabContent()}
+      </main>
+      
+      {/* Navegación móvil - visible en < lg */}
+      <AlmacenMobileNav
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        showFlotillaTabs={showFlotillaTabs}
+        counters={counters}
+      />
     </div>
   );
 };
