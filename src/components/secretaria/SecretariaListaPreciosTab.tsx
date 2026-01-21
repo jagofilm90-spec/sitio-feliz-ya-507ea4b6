@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -19,9 +21,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils";
-import { Search, Loader2, DollarSign } from "lucide-react";
+import { Search, Loader2, DollarSign, Edit, Save } from "lucide-react";
 import { getDisplayName } from "@/lib/productUtils";
+import { useToast } from "@/hooks/use-toast";
 
 interface Producto {
   id: string;
@@ -35,13 +45,20 @@ interface Producto {
   unidad: string;
   precio_venta: number;
   precio_por_kilo: boolean;
-  stock_actual: number;
+  descuento_maximo: number | null;
   activo: boolean;
 }
 
 export const SecretariaListaPreciosTab = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoriaFilter, setCategoriaFilter] = useState<string>("all");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
+  const [precioVenta, setPrecioVenta] = useState("");
+  const [descuentoMaximo, setDescuentoMaximo] = useState("");
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch products
   const { data: productos, isLoading } = useQuery({
@@ -49,13 +66,38 @@ export const SecretariaListaPreciosTab = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, especificaciones, marca, categoria, peso_kg, contenido_empaque, unidad, precio_venta, precio_por_kilo, stock_actual, activo")
+        .select("id, codigo, nombre, especificaciones, marca, categoria, peso_kg, contenido_empaque, unidad, precio_venta, precio_por_kilo, descuento_maximo, activo")
         .eq("activo", true)
         .or("solo_uso_interno.is.null,solo_uso_interno.eq.false")
         .order("codigo");
 
       if (error) throw error;
       return data as Producto[];
+    },
+  });
+
+  // Update price mutation
+  const updatePriceMutation = useMutation({
+    mutationFn: async ({ id, precio_venta, descuento_maximo }: { id: string; precio_venta: number; descuento_maximo: number | null }) => {
+      const { error } = await supabase
+        .from("productos")
+        .update({ precio_venta, descuento_maximo })
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Precio actualizado correctamente" });
+      queryClient.invalidateQueries({ queryKey: ["secretaria-lista-precios"] });
+      setEditDialogOpen(false);
+      setEditingProduct(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error al actualizar precio",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -85,6 +127,37 @@ export const SecretariaListaPreciosTab = () => {
     return null;
   };
 
+  // Handle edit
+  const handleEdit = (producto: Producto) => {
+    setEditingProduct(producto);
+    setPrecioVenta(producto.precio_venta.toString());
+    setDescuentoMaximo(producto.descuento_maximo?.toString() || "");
+    setEditDialogOpen(true);
+  };
+
+  // Handle save
+  const handleSave = () => {
+    if (!editingProduct) return;
+    
+    const precio = parseFloat(precioVenta);
+    if (isNaN(precio) || precio <= 0) {
+      toast({
+        title: "Error",
+        description: "El precio debe ser un número mayor a 0",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const descuento = descuentoMaximo ? parseFloat(descuentoMaximo) : null;
+
+    updatePriceMutation.mutate({
+      id: editingProduct.id,
+      precio_venta: precio,
+      descuento_maximo: descuento,
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -98,11 +171,11 @@ export const SecretariaListaPreciosTab = () => {
       {/* Header */}
       <div>
         <h2 className="text-xl font-semibold flex items-center gap-2">
-          <DollarSign className="h-5 w-5 text-pink-600" />
+          <DollarSign className="h-5 w-5 text-primary" />
           Lista de Precios
         </h2>
         <p className="text-sm text-muted-foreground">
-          {productos?.length || 0} productos activos
+          {productos?.length || 0} productos activos • Click en editar para modificar precios
         </p>
       </div>
 
@@ -138,14 +211,15 @@ export const SecretariaListaPreciosTab = () => {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-pink-50 dark:bg-pink-950/20">
+                <TableRow className="bg-muted/50">
                   <TableHead>Código</TableHead>
                   <TableHead>Producto</TableHead>
                   <TableHead className="hidden md:table-cell">Presentación</TableHead>
                   <TableHead className="hidden lg:table-cell">Categoría</TableHead>
                   <TableHead className="text-right">Precio Unitario</TableHead>
                   <TableHead className="text-right hidden sm:table-cell">$/Kilo</TableHead>
-                  <TableHead className="text-right hidden sm:table-cell">Stock</TableHead>
+                  <TableHead className="text-right hidden sm:table-cell">Desc. Máx</TableHead>
+                  <TableHead className="text-center">Editar</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -154,7 +228,7 @@ export const SecretariaListaPreciosTab = () => {
                     const precioKilo = getPrecioKilo(producto);
                     return (
                       <TableRow key={producto.id} className="hover:bg-muted/50">
-                        <TableCell className="font-mono font-medium text-pink-600">
+                        <TableCell className="font-mono font-medium text-primary">
                           {producto.codigo}
                         </TableCell>
                         <TableCell>
@@ -190,18 +264,29 @@ export const SecretariaListaPreciosTab = () => {
                           )}
                         </TableCell>
                         <TableCell className="text-right hidden sm:table-cell">
-                          <Badge 
-                            variant={producto.stock_actual <= 0 ? "destructive" : "secondary"}
+                          {producto.descuento_maximo && producto.descuento_maximo > 0 ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950/50 dark:text-green-400 dark:border-green-800">
+                              -${producto.descuento_maximo.toFixed(2)}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(producto)}
                           >
-                            {producto.stock_actual}
-                          </Badge>
+                            <Edit className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       No se encontraron productos
                     </TableCell>
                   </TableRow>
@@ -211,6 +296,88 @@ export const SecretariaListaPreciosTab = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Price Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Precio</DialogTitle>
+            <DialogDescription>
+              {editingProduct && (
+                <span className="font-medium text-foreground">
+                  {editingProduct.codigo} - {getDisplayName(editingProduct)}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="precio_venta">Precio de Venta *</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input
+                  id="precio_venta"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="pl-7 text-lg font-mono"
+                  value={precioVenta}
+                  onChange={(e) => setPrecioVenta(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              {editingProduct?.precio_por_kilo && (
+                <p className="text-xs text-muted-foreground">
+                  Este producto se vende por kilo
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="descuento_maximo">Descuento Máximo Autorizado ($)</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input
+                  id="descuento_maximo"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="pl-7"
+                  value={descuentoMaximo}
+                  onChange={(e) => setDescuentoMaximo(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                El vendedor puede aplicar descuentos hasta este monto sin autorización
+              </p>
+            </div>
+
+            {precioVenta && descuentoMaximo && parseFloat(descuentoMaximo) > 0 && (
+              <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                <p className="text-sm text-green-700 dark:text-green-400">
+                  Precio mínimo sin autorización: <strong>${(parseFloat(precioVenta) - parseFloat(descuentoMaximo)).toFixed(2)}</strong>
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSave} disabled={updatePriceMutation.isPending}>
+              {updatePriceMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Guardar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
