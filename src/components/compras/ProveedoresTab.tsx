@@ -168,74 +168,182 @@ const ContactoForm = ({
   </div>
 );
 
-// Lista de contactos reutilizable - DEBE estar fuera para no perder foco
+// Lista de contactos reutilizable con edición inline - DEBE estar fuera para no perder foco
 const ContactosList = ({ 
   contactos, 
   onRemove, 
-  onSetPrincipal 
+  onSetPrincipal,
+  onEdit,
+  editingIndex,
+  editingContacto,
+  setEditingContacto,
+  onSaveEdit,
+  onCancelEdit,
 }: { 
   contactos: ContactoProveedor[]; 
   onRemove: (index: number) => void; 
   onSetPrincipal: (index: number) => void;
+  onEdit: (index: number) => void;
+  editingIndex: number | null;
+  editingContacto: ContactoProveedor | null;
+  setEditingContacto: (c: ContactoProveedor) => void;
+  onSaveEdit: () => void;
+  onCancelEdit: () => void;
 }) => (
   <div className="space-y-2">
     {contactos.map((contacto, index) => (
-      <div key={contacto.id || index} className="flex items-start justify-between gap-2 p-3 border rounded-lg bg-background">
-        <div className="flex-1 min-w-0 space-y-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <User className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <span className="font-medium">{contacto.nombre}</span>
-            {contacto.es_principal && (
-              <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 shrink-0" />
-            )}
+      <div key={contacto.id || index} className="p-3 border rounded-lg bg-background">
+        {editingIndex === index && editingContacto ? (
+          // Modo edición inline
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Nombre *</Label>
+                <Input
+                  placeholder="Nombre del contacto"
+                  value={editingContacto.nombre}
+                  onChange={(e) => setEditingContacto({ ...editingContacto, nombre: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Teléfono</Label>
+                <Input
+                  placeholder="55 1234 5678"
+                  value={editingContacto.telefono}
+                  onChange={(e) => setEditingContacto({ ...editingContacto, telefono: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Correo</Label>
+                <Input
+                  type="email"
+                  placeholder="correo@ejemplo.com"
+                  value={editingContacto.email}
+                  onChange={(e) => setEditingContacto({ ...editingContacto, email: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-4">
+              <Label className="text-xs text-muted-foreground">Recibe comunicaciones de:</Label>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id={`edit-inline-recibe_ordenes-${index}`}
+                  checked={editingContacto.recibe_ordenes}
+                  onCheckedChange={(c) => setEditingContacto({ ...editingContacto, recibe_ordenes: c === true })}
+                />
+                <Label htmlFor={`edit-inline-recibe_ordenes-${index}`} className="text-sm font-normal cursor-pointer">Órdenes</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id={`edit-inline-recibe_pagos-${index}`}
+                  checked={editingContacto.recibe_pagos}
+                  onCheckedChange={(c) => setEditingContacto({ ...editingContacto, recibe_pagos: c === true })}
+                />
+                <Label htmlFor={`edit-inline-recibe_pagos-${index}`} className="text-sm font-normal cursor-pointer">Pagos</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id={`edit-inline-recibe_devoluciones-${index}`}
+                  checked={editingContacto.recibe_devoluciones}
+                  onCheckedChange={(c) => setEditingContacto({ ...editingContacto, recibe_devoluciones: c === true })}
+                />
+                <Label htmlFor={`edit-inline-recibe_devoluciones-${index}`} className="text-sm font-normal cursor-pointer">Devoluciones</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id={`edit-inline-recibe_logistica-${index}`}
+                  checked={editingContacto.recibe_logistica}
+                  onCheckedChange={(c) => setEditingContacto({ ...editingContacto, recibe_logistica: c === true })}
+                />
+                <Label htmlFor={`edit-inline-recibe_logistica-${index}`} className="text-sm font-normal cursor-pointer">Logística</Label>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 justify-end">
+              <Button type="button" variant="outline" size="sm" onClick={onCancelEdit}>
+                Cancelar
+              </Button>
+              <Button type="button" size="sm" onClick={onSaveEdit} disabled={!editingContacto.nombre.trim()}>
+                <CheckCircle2 className="h-4 w-4 mr-1" />
+                Guardar
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-            {contacto.telefono && (
-              <span className="flex items-center gap-1">
-                <Phone className="h-3 w-3" />
-                {contacto.telefono}
-              </span>
-            )}
-            {contacto.email && (
-              <span className="flex items-center gap-1">
-                <Mail className="h-3 w-3" />
-                {contacto.email}
-              </span>
-            )}
+        ) : (
+          // Modo lectura
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0 space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="font-medium">{contacto.nombre}</span>
+                {contacto.es_principal && (
+                  <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 shrink-0" />
+                )}
+              </div>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                {contacto.telefono && (
+                  <span className="flex items-center gap-1">
+                    <Phone className="h-3 w-3" />
+                    {contacto.telefono}
+                  </span>
+                )}
+                {contacto.email && (
+                  <span className="flex items-center gap-1">
+                    <Mail className="h-3 w-3" />
+                    {contacto.email}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1 flex-wrap">
+                {renderResponsabilidades(contacto)}
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => onEdit(index)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Editar contacto</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              {!contacto.es_principal && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => onSetPrincipal(index)}
+                      >
+                        <Star className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Marcar como principal</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                onClick={() => onRemove(index)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-1 flex-wrap">
-            {renderResponsabilidades(contacto)}
-          </div>
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
-          {!contacto.es_principal && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={() => onSetPrincipal(index)}
-                  >
-                    <Star className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Marcar como principal</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-            onClick={() => onRemove(index)}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        )}
       </div>
     ))}
   </div>
@@ -286,6 +394,12 @@ const ProveedoresTab = () => {
     es_principal: false,
   });
   const [isLoadingContactos, setIsLoadingContactos] = useState(false);
+  
+  // Estado para edición inline de contactos
+  const [editingContactoNuevoIndex, setEditingContactoNuevoIndex] = useState<number | null>(null);
+  const [editingContactoNuevo, setEditingContactoNuevo] = useState<ContactoProveedor | null>(null);
+  const [editingContactoEditIndex, setEditingContactoEditIndex] = useState<number | null>(null);
+  const [editingContactoEdit, setEditingContactoEdit] = useState<ContactoProveedor | null>(null);
   
   const [newProveedor, setNewProveedor] = useState({
     nombre: "",
@@ -395,6 +509,46 @@ const ProveedoresTab = () => {
       ...c,
       es_principal: i === index
     })));
+  };
+
+  // Funciones para edición inline de contactos (formulario crear)
+  const handleStartEditContactoNuevo = (index: number) => {
+    setEditingContactoNuevoIndex(index);
+    setEditingContactoNuevo({ ...contactosNuevos[index] });
+  };
+
+  const handleSaveEditContactoNuevo = () => {
+    if (editingContactoNuevoIndex === null || !editingContactoNuevo) return;
+    const updated = [...contactosNuevos];
+    updated[editingContactoNuevoIndex] = { ...editingContactoNuevo };
+    setContactosNuevos(updated);
+    setEditingContactoNuevoIndex(null);
+    setEditingContactoNuevo(null);
+  };
+
+  const handleCancelEditContactoNuevo = () => {
+    setEditingContactoNuevoIndex(null);
+    setEditingContactoNuevo(null);
+  };
+
+  // Funciones para edición inline de contactos (formulario editar proveedor)
+  const handleStartEditContactoEdit = (index: number) => {
+    setEditingContactoEditIndex(index);
+    setEditingContactoEdit({ ...contactosEdit[index] });
+  };
+
+  const handleSaveEditContactoEdit = () => {
+    if (editingContactoEditIndex === null || !editingContactoEdit) return;
+    const updated = [...contactosEdit];
+    updated[editingContactoEditIndex] = { ...editingContactoEdit };
+    setContactosEdit(updated);
+    setEditingContactoEditIndex(null);
+    setEditingContactoEdit(null);
+  };
+
+  const handleCancelEditContactoEdit = () => {
+    setEditingContactoEditIndex(null);
+    setEditingContactoEdit(null);
   };
 
   // Cargar contactos existentes cuando se abre el diálogo de editar
@@ -870,6 +1024,12 @@ const ProveedoresTab = () => {
                     contactos={contactosNuevos}
                     onRemove={handleRemoveContactoNuevo}
                     onSetPrincipal={handleSetPrincipalContactoNuevo}
+                    onEdit={handleStartEditContactoNuevo}
+                    editingIndex={editingContactoNuevoIndex}
+                    editingContacto={editingContactoNuevo}
+                    setEditingContacto={setEditingContactoNuevo}
+                    onSaveEdit={handleSaveEditContactoNuevo}
+                    onCancelEdit={handleCancelEditContactoNuevo}
                   />
                 )}
                 {nuevoContacto.nombre.trim() && (
@@ -1112,6 +1272,12 @@ const ProveedoresTab = () => {
                         contactos={contactosEdit}
                         onRemove={handleRemoveContactoEdit}
                         onSetPrincipal={handleSetPrincipalContactoEdit}
+                        onEdit={handleStartEditContactoEdit}
+                        editingIndex={editingContactoEditIndex}
+                        editingContacto={editingContactoEdit}
+                        setEditingContacto={setEditingContactoEdit}
+                        onSaveEdit={handleSaveEditContactoEdit}
+                        onCancelEdit={handleCancelEditContactoEdit}
                       />
                     )}
                     {editContacto.nombre.trim() && (
