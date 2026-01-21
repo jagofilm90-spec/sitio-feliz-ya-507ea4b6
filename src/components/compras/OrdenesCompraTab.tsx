@@ -1360,6 +1360,15 @@ const OrdenesCompraTab = () => {
     
     try {
       const orden = ordenParaEliminar;
+      
+      // Block deletion of completed/received orders to protect inventory integrity
+      if (orden.status === 'completada' || orden.status === 'recibida') {
+        throw new Error(
+          "No se puede eliminar una orden que ya fue recibida. El inventario ya fue afectado. " +
+          "Contacte al administrador para realizar ajustes de inventario si es necesario."
+        );
+      }
+
       const emailDestinatario = orden?.proveedores?.email || orden?.proveedor_email_manual;
       const proveedorNombre = orden?.proveedores?.nombre || orden?.proveedor_nombre_manual || 'Proveedor';
       

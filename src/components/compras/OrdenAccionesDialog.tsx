@@ -255,6 +255,14 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
 
   const deleteOrden = useMutation({
     mutationFn: async () => {
+      // Block deletion of completed/received orders to protect inventory integrity
+      if (orden.status === 'completada' || orden.status === 'recibida') {
+        throw new Error(
+          "No se puede eliminar una orden que ya fue recibida. El inventario ya fue afectado. " +
+          "Contacte al administrador para realizar ajustes de inventario si es necesario."
+        );
+      }
+
       // Get supplier email before deleting
       const emailDestinatario = orden?.proveedores?.email || orden?.proveedor_email_manual;
       const proveedorNombre = orden?.proveedores?.nombre || orden?.proveedor_nombre_manual || 'Proveedor';
@@ -2030,29 +2038,47 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
           </div>
         ) : accion === "eliminar" ? (
           <div className="space-y-4">
-            <div className="bg-destructive/10 p-4 rounded-lg space-y-2">
-              <p className="font-medium text-destructive">¿Estás seguro de eliminar esta orden?</p>
-              <p className="text-sm text-muted-foreground">
-                Esta acción no se puede deshacer. Se eliminarán todos los detalles de la orden.
-              </p>
-              <div className="text-sm text-muted-foreground space-y-1 mt-2">
-                <p><strong>Folio:</strong> {orden?.folio}</p>
-                <p><strong>Proveedor:</strong> {orden?.proveedores?.nombre}</p>
-                <p><strong>Total:</strong> ${orden?.total?.toLocaleString()}</p>
+            {(orden?.status === 'completada' || orden?.status === 'recibida') ? (
+              <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg space-y-2">
+                <p className="font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  No se puede eliminar esta orden
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Esta orden ya fue recibida y el inventario fue afectado. Para mantener la integridad de los datos, 
+                  no es posible eliminarla directamente.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Si necesita realizar ajustes, contacte al administrador del sistema.
+                </p>
               </div>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => deleteOrden.mutate()} 
-                disabled={deleteOrden.isPending}
-                variant="destructive"
-              >
-                {deleteOrden.isPending ? "Eliminando..." : "Sí, eliminar"}
-              </Button>
-              <Button variant="ghost" onClick={() => setAccion(null)}>
-                No, cancelar
-              </Button>
-            </div>
+            ) : (
+              <>
+                <div className="bg-destructive/10 p-4 rounded-lg space-y-2">
+                  <p className="font-medium text-destructive">¿Estás seguro de eliminar esta orden?</p>
+                  <p className="text-sm text-muted-foreground">
+                    Esta acción no se puede deshacer. Se eliminarán todos los detalles de la orden.
+                  </p>
+                  <div className="text-sm text-muted-foreground space-y-1 mt-2">
+                    <p><strong>Folio:</strong> {orden?.folio}</p>
+                    <p><strong>Proveedor:</strong> {orden?.proveedores?.nombre || orden?.proveedor_nombre_manual}</p>
+                    <p><strong>Total:</strong> ${orden?.total?.toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => deleteOrden.mutate()} 
+                    disabled={deleteOrden.isPending}
+                    variant="destructive"
+                  >
+                    {deleteOrden.isPending ? "Eliminando..." : "Sí, eliminar"}
+                  </Button>
+                  <Button variant="ghost" onClick={() => setAccion(null)}>
+                    No, cancelar
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         ) : accion === "enviar_email" || accion === "reenviar_email" ? (
           <div className="space-y-4">
