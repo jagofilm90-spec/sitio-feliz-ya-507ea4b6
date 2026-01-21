@@ -1762,6 +1762,7 @@ export type Database = {
           fecha_baja: string | null
           fecha_ingreso: string
           fecha_nacimiento: string | null
+          foto_url: string | null
           id: string
           motivo_baja: string | null
           nivel_estudios: string | null
@@ -1797,6 +1798,7 @@ export type Database = {
           fecha_baja?: string | null
           fecha_ingreso?: string
           fecha_nacimiento?: string | null
+          foto_url?: string | null
           id?: string
           motivo_baja?: string | null
           nivel_estudios?: string | null
@@ -1832,6 +1834,7 @@ export type Database = {
           fecha_baja?: string | null
           fecha_ingreso?: string
           fecha_nacimiento?: string | null
+          foto_url?: string | null
           id?: string
           motivo_baja?: string | null
           nivel_estudios?: string | null

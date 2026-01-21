@@ -24,6 +24,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfiguracionFlotillaDialog } from "./ConfiguracionFlotillaDialog";
+import { AvatarEmpleadoPopover } from "./AvatarEmpleadoPopover";
 import logoBlanco from "@/assets/logos/logo-blanco.png";
 
 interface NavItem {
@@ -46,6 +47,11 @@ interface AlmacenSidebarProps {
   isOnline: boolean;
   onLogout: () => void;
   empleadoNombre: string;
+  empleadoId: string | null;
+  empleadoPuesto: string;
+  empleadoEmail?: string;
+  empleadoFotoUrl: string | null;
+  onFotoUpdated: (newUrl: string) => void;
 }
 
 export const AlmacenSidebar = ({
@@ -55,7 +61,12 @@ export const AlmacenSidebar = ({
   counters,
   isOnline,
   onLogout,
-  empleadoNombre
+  empleadoNombre,
+  empleadoId,
+  empleadoPuesto,
+  empleadoEmail,
+  empleadoFotoUrl,
+  onFotoUpdated
 }: AlmacenSidebarProps) => {
   const [configOpen, setConfigOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -112,7 +123,7 @@ export const AlmacenSidebar = ({
 
   return (
     <>
-      <aside className="hidden lg:flex flex-col w-56 bg-slate-900 fixed left-0 top-0 h-screen z-40">
+      <aside className="hidden lg:flex flex-col w-64 bg-slate-900 fixed left-0 top-0 h-screen z-40">
         {/* Header con Logo y Bienvenida */}
         <div className="border-b border-slate-700">
           {/* Logo */}
@@ -120,16 +131,28 @@ export const AlmacenSidebar = ({
             <img src={logoBlanco} alt="Almasa" className="h-7 w-auto" />
           </div>
           
-          {/* Bienvenida personalizada */}
-          <div className="p-3 space-y-2">
-            <div>
-              <p className="text-slate-400 text-[10px]">Bienvenido,</p>
-              <h2 className="text-white font-semibold text-sm truncate">
-                {empleadoNombre || "Usuario"}
-              </h2>
-              <p className="text-slate-500 text-[10px]">
-                {showFlotillaTabs ? "Gerente de Almacén" : "Almacenista"}
-              </p>
+          {/* Bienvenida personalizada con Avatar */}
+          <div className="p-3 space-y-3">
+            <div className="flex items-center gap-3">
+              {/* Avatar con popover */}
+              <AvatarEmpleadoPopover
+                empleadoId={empleadoId}
+                empleadoNombre={empleadoNombre}
+                empleadoPuesto={empleadoPuesto}
+                empleadoEmail={empleadoEmail}
+                fotoUrl={empleadoFotoUrl}
+                onFotoUpdated={onFotoUpdated}
+              />
+              
+              <div className="flex-1 min-w-0">
+                <p className="text-slate-400 text-[10px]">Bienvenido,</p>
+                <h2 className="text-white font-semibold text-sm truncate">
+                  {empleadoNombre || "Usuario"}
+                </h2>
+                <p className="text-slate-500 text-[10px]">
+                  {empleadoPuesto || (showFlotillaTabs ? "Gerente de Almacén" : "Almacenista")}
+                </p>
+              </div>
             </div>
             
             {/* Fecha y hora en vivo */}

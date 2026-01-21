@@ -39,6 +39,9 @@ const AlmacenTablet = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [empleadoId, setEmpleadoId] = useState<string | null>(null);
   const [empleadoNombre, setEmpleadoNombre] = useState<string>("");
+  const [empleadoPuesto, setEmpleadoPuesto] = useState<string>("");
+  const [empleadoEmail, setEmpleadoEmail] = useState<string>("");
+  const [empleadoFotoUrl, setEmpleadoFotoUrl] = useState<string | null>(null);
   const navigate = useNavigate();
   const { isGerenteAlmacen, isAdmin } = useUserRoles();
 
@@ -64,7 +67,7 @@ const AlmacenTablet = () => {
     };
   }, []);
 
-  // Obtener el empleado_id y nombre del usuario actual
+  // Obtener el empleado_id y datos del usuario actual
   useEffect(() => {
     const loadEmpleadoData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -72,7 +75,7 @@ const AlmacenTablet = () => {
         // Buscar en empleados primero
         const { data: empleado } = await supabase
           .from("empleados")
-          .select("id, nombre, primer_apellido")
+          .select("id, nombre, primer_apellido, puesto, email, foto_url")
           .eq("user_id", user.id)
           .maybeSingle();
         
@@ -83,6 +86,9 @@ const AlmacenTablet = () => {
           displayName = [empleado.nombre, empleado.primer_apellido]
             .filter(Boolean)
             .join(" ");
+          setEmpleadoPuesto(empleado.puesto || "");
+          setEmpleadoEmail(empleado.email || user.email || "");
+          setEmpleadoFotoUrl(empleado.foto_url || null);
         }
         
         // Si no hay nombre de empleado, buscar en profiles como fallback
@@ -251,6 +257,11 @@ const AlmacenTablet = () => {
         isOnline={isOnline}
         onLogout={handleLogout}
         empleadoNombre={empleadoNombre}
+        empleadoId={empleadoId}
+        empleadoPuesto={empleadoPuesto}
+        empleadoEmail={empleadoEmail}
+        empleadoFotoUrl={empleadoFotoUrl}
+        onFotoUpdated={setEmpleadoFotoUrl}
       />
       
       {/* Contenido Principal */}
