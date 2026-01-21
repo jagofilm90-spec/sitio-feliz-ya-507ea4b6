@@ -14,6 +14,7 @@ interface UseUserRolesReturn {
   isAlmacen: boolean;
   isContadora: boolean;
   isCliente: boolean;
+  isGerenteAlmacen: boolean;
   hasRole: (role: AppRole) => boolean;
   hasAnyRole: (roles: AppRole[]) => boolean;
 }
@@ -80,6 +81,7 @@ export const useUserRoles = (): UseUserRolesReturn => {
     isAlmacen: hasRole('almacen'),
     isContadora: hasRole('contadora'),
     isCliente: hasRole('cliente'),
+    isGerenteAlmacen: hasRole('gerente_almacen'),
     hasRole,
     hasAnyRole,
   };
@@ -90,22 +92,22 @@ export const useUserRoles = (): UseUserRolesReturn => {
 // Se redirigen automáticamente a sus interfaces dedicadas
 export const MODULE_PERMISSIONS: Record<string, AppRole[]> = {
   '/dashboard': ['admin', 'secretaria', 'vendedor', 'contadora'], // SIN almacen ni chofer
-  '/productos': ['admin', 'secretaria', 'almacen'],
-  '/fumigaciones': ['admin', 'secretaria', 'almacen'],
+  '/productos': ['admin', 'secretaria', 'almacen', 'gerente_almacen'],
+  '/fumigaciones': ['admin', 'secretaria', 'almacen', 'gerente_almacen'],
   '/clientes': ['admin', 'secretaria', 'vendedor'],
   '/pedidos': ['admin', 'secretaria', 'vendedor'],
   '/compras': ['admin', 'secretaria'],
-  '/inventario': ['admin', 'secretaria', 'almacen'],
+  '/inventario': ['admin', 'secretaria', 'almacen', 'gerente_almacen'],
   '/rentabilidad': ['admin', 'contadora'],
   '/rutas': ['admin', 'secretaria', 'chofer'],
   '/facturas': ['admin', 'secretaria', 'contadora'],
   '/empleados': ['admin', 'secretaria', 'contadora'],
   '/usuarios': ['admin'],
-  '/chat': ['admin', 'secretaria', 'vendedor', 'chofer', 'almacen', 'contadora'],
+  '/chat': ['admin', 'secretaria', 'vendedor', 'chofer', 'almacen', 'contadora', 'gerente_almacen'],
   '/correos': ['admin', 'secretaria'],
   '/generate-assets': ['admin'],
   '/permisos': ['admin'],
-  '/almacen-tablet': ['almacen'], // Interfaz dedicada para almacenistas
+  '/almacen-tablet': ['almacen', 'gerente_almacen'], // Interfaz dedicada para almacenistas y gerente
   '/chofer': ['chofer'], // Interfaz dedicada para choferes
   '/secretaria': ['admin', 'secretaria'], // Interfaz dedicada para secretarias
   '/vendedor': ['admin', 'vendedor'], // Interfaz dedicada para vendedores

@@ -42,10 +42,11 @@ const ProtectedRoute = ({
   if (!hasPermission) {
     // Redirigir según el rol del usuario
     const isOnlyAlmacen = roles.length === 1 && roles.includes("almacen");
+    const isOnlyGerenteAlmacen = roles.length === 1 && roles.includes("gerente_almacen");
     const isOnlyChofer = roles.length === 1 && roles.includes("chofer");
     const isOnlySecretaria = roles.includes("secretaria") && !roles.includes("admin");
     
-    if (isOnlyAlmacen) {
+    if (isOnlyAlmacen || isOnlyGerenteAlmacen) {
       return <Navigate to="/almacen-tablet" replace />;
     }
     if (isOnlyChofer) {
