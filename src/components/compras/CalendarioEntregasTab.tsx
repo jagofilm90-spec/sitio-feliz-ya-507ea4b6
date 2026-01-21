@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, List, MoreVertical, Truck, ChevronLeft, ChevronRight, RotateCcw, Eye, Banknote } from "lucide-react";
+import { Calendar as CalendarIcon, List, MoreVertical, Truck, ChevronLeft, ChevronRight, RotateCcw, Eye, Banknote, CheckCircle2 } from "lucide-react";
 import OrdenAccionesDialog from "./OrdenAccionesDialog";
 import { RecepcionDetalleDialog } from "./RecepcionDetalleDialog";
 import { useState, useMemo, useEffect } from "react";
@@ -109,7 +109,6 @@ const CalendarioEntregasTab = () => {
         )
         .eq("entregas_multiples", false)
         .not("fecha_entrega_programada", "is", null)
-        .not("status", "eq", "completada")
         .not("status", "eq", "cancelada")
         .order("fecha_entrega_programada");
 
@@ -163,6 +162,7 @@ const CalendarioEntregasTab = () => {
       esMultiple: true,
       reprogramada: esReprogramada(entrega.notas),
       estadoPago: getEstadoPago(entrega.ordenes_compra),
+      esCompletada: entrega.status === 'recibida' || entrega.ordenes_compra?.status === 'completada',
     })),
     // Simple delivery entries
     ...ordenesSimples.map((orden: any) => ({
@@ -182,6 +182,7 @@ const CalendarioEntregasTab = () => {
       esMultiple: false,
       reprogramada: esReprogramada(orden.notas),
       estadoPago: getEstadoPago(orden),
+      esCompletada: orden.status === 'completada' || orden.status === 'recibida',
     })),
   ], [entregasProgramadas, ordenesSimples]);
 
@@ -334,19 +335,28 @@ const CalendarioEntregasTab = () => {
                     {format(dia, "d")}
                   </span>
                   
-                  {/* Dots indicator - green: anticipado pagado, yellow: anticipado pendiente, red: contra entrega */}
+                  {/* Dots indicator - checkmark for completed, colored dots for pending */}
                   {tieneEntregas && (
                     <div className="flex justify-center gap-1 mt-1">
                       {entregas.slice(0, 3).map((entrega, idx) => (
-                        <span
-                          key={idx}
-                          className={cn(
-                            "w-2 h-2 rounded-full",
-                            entrega.estadoPago === 'anticipado_pagado' && "bg-green-500",
-                            entrega.estadoPago === 'anticipado_pendiente' && "bg-yellow-500",
-                            entrega.estadoPago === 'contra_entrega' && "bg-rose-500"
-                          )}
-                        />
+                        entrega.esCompletada ? (
+                          <span
+                            key={idx}
+                            className="w-4 h-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center"
+                          >
+                            <CheckCircle2 className="w-3 h-3 text-green-600 dark:text-green-400" />
+                          </span>
+                        ) : (
+                          <span
+                            key={idx}
+                            className={cn(
+                              "w-2 h-2 rounded-full",
+                              entrega.estadoPago === 'anticipado_pagado' && "bg-green-500",
+                              entrega.estadoPago === 'anticipado_pendiente' && "bg-yellow-500",
+                              entrega.estadoPago === 'contra_entrega' && "bg-rose-500"
+                            )}
+                          />
+                        )
                       ))}
                       {entregas.length > 3 && (
                         <span className="text-xs text-muted-foreground">+{entregas.length - 3}</span>
@@ -359,7 +369,13 @@ const CalendarioEntregasTab = () => {
           </div>
 
           {/* Legend */}
-          <div className="flex items-center justify-center gap-6 pt-4 text-sm text-muted-foreground">
+          <div className="flex items-center justify-center gap-6 pt-4 text-sm text-muted-foreground flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="w-4 h-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <CheckCircle2 className="w-3 h-3 text-green-600 dark:text-green-400" />
+              </span>
+              <span>Recibida</span>
+            </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-green-500" />
               <span>Anticipado pagado</span>
@@ -404,23 +420,32 @@ const CalendarioEntregasTab = () => {
                     </TableHeader>
                     <TableBody>
                       {entregas.map((entrega) => (
-                        <TableRow key={entrega.id}>
+                        <TableRow 
+                          key={entrega.id}
+                          className={cn(entrega.esCompletada && "opacity-60 bg-muted/30")}
+                        >
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2 flex-wrap">
                               {entrega.folio}
+                              {entrega.esCompletada && (
+                                <Badge className="text-xs bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Recibida
+                                </Badge>
+                              )}
                               {entrega.esMultiple && (
                                 <Badge variant="outline" className="text-xs">
                                   <Truck className="h-3 w-3 mr-1" />
                                   #{entrega.numeroEntrega}
                                 </Badge>
                               )}
-                              {entrega.estadoPago === 'anticipado_pagado' && (
+                              {!entrega.esCompletada && entrega.estadoPago === 'anticipado_pagado' && (
                                 <Badge className="text-xs bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
                                   <Banknote className="h-3 w-3 mr-1" />
                                   Anticipado pagado
                                 </Badge>
                               )}
-                              {entrega.estadoPago === 'anticipado_pendiente' && (
+                              {!entrega.esCompletada && entrega.estadoPago === 'anticipado_pendiente' && (
                                 <Badge className="text-xs bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-950/30 dark:text-yellow-400 dark:border-yellow-800">
                                   <Banknote className="h-3 w-3 mr-1" />
                                   Anticipo pendiente
@@ -512,24 +537,33 @@ const CalendarioEntregasTab = () => {
             {entregasDelDiaSeleccionado.map((entrega) => (
               <div
                 key={entrega.id}
-                className="p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                className={cn(
+                  "p-4 border rounded-lg hover:bg-accent/50 transition-colors",
+                  entrega.esCompletada && "opacity-60 bg-muted/30"
+                )}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold">{entrega.folio}</span>
+                    {entrega.esCompletada && (
+                      <Badge className="text-xs bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Recibida
+                      </Badge>
+                    )}
                     {entrega.esMultiple && (
                       <Badge variant="outline" className="text-xs">
                         <Truck className="h-3 w-3 mr-1" />
                         Entrega #{entrega.numeroEntrega}
                       </Badge>
                     )}
-                    {entrega.estadoPago === 'anticipado_pagado' && (
+                    {!entrega.esCompletada && entrega.estadoPago === 'anticipado_pagado' && (
                       <Badge className="text-xs bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
                         <Banknote className="h-3 w-3 mr-1" />
                         Anticipado pagado
                       </Badge>
                     )}
-                    {entrega.estadoPago === 'anticipado_pendiente' && (
+                    {!entrega.esCompletada && entrega.estadoPago === 'anticipado_pendiente' && (
                       <Badge className="text-xs bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-950/30 dark:text-yellow-400 dark:border-yellow-800">
                         <Banknote className="h-3 w-3 mr-1" />
                         Anticipo pendiente
