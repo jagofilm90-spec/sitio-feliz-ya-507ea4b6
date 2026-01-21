@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Pencil, Search, History, ChevronLeft, ChevronRight, DollarSign, TrendingUp, TrendingDown, Minus, Save, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -89,6 +90,7 @@ export const SecretariaListaPreciosTab = () => {
   const [historialDialogOpen, setHistorialDialogOpen] = useState(false);
   const [selectedProductForHistory, setSelectedProductForHistory] = useState<Producto | null>(null);
   const [isSaved, setIsSaved] = useState(false);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [originalPrecio, setOriginalPrecio] = useState("");
   const [originalDescuento, setOriginalDescuento] = useState("");
   
@@ -269,7 +271,11 @@ export const SecretariaListaPreciosTab = () => {
       precio_anterior: editingProduct.precio_venta,
     }, {
       onSuccess: () => {
-        setIsSaved(true);
+        setShowSuccessAnimation(true);
+        setTimeout(() => {
+          setIsSaved(true);
+          setShowSuccessAnimation(false);
+        }, 400);
         setOriginalPrecio(precioVenta);
         setOriginalDescuento(descuentoMaximo);
         // Actualizar el editingProduct con los nuevos valores
@@ -598,17 +604,28 @@ export const SecretariaListaPreciosTab = () => {
             <Button 
               onClick={handleSave} 
               disabled={updatePriceMutation.isPending}
-              variant={isSaved ? "outline" : "default"}
-              className={isSaved ? "border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/20" : ""}
-            >
-              {updatePriceMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : isSaved ? (
-                <Check className="h-4 w-4 mr-2 text-green-500" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
+              variant={(isSaved || showSuccessAnimation) ? "outline" : "default"}
+              className={cn(
+                "transition-all duration-300 ease-out min-w-[140px]",
+                (isSaved || showSuccessAnimation) && "border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/20",
+                showSuccessAnimation && "animate-success-pulse bg-green-50 dark:bg-green-950/30"
               )}
-              {updatePriceMutation.isPending ? "Guardando..." : isSaved ? "Guardado" : "Guardar Cambios"}
+            >
+              <span className="flex items-center justify-center">
+                {updatePriceMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (isSaved || showSuccessAnimation) ? (
+                  <Check className={cn(
+                    "h-4 w-4 mr-2 text-green-500",
+                    showSuccessAnimation && "animate-check-bounce"
+                  )} />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                <span className="transition-opacity duration-200">
+                  {updatePriceMutation.isPending ? "Guardando..." : (isSaved || showSuccessAnimation) ? "Guardado" : "Guardar Cambios"}
+                </span>
+              </span>
             </Button>
           </div>
         </DialogContent>
