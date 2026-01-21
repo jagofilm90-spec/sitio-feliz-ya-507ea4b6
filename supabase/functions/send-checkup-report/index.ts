@@ -68,6 +68,98 @@ const NN_ITEMS = [
   "alarma_retrocesos", "claxon"
 ];
 
+// Damage type configuration
+const DANO_CONFIG: Record<string, { label: string; color: string; icon: string }> = {
+  golpe: { label: "Golpe", color: "#dc2626", icon: "🔴" },
+  raspadura: { label: "Raspadura", color: "#d97706", icon: "🟡" },
+  grieta: { label: "Grieta", color: "#2563eb", icon: "🔵" },
+};
+
+// Generate damage section HTML
+function generateDanosSection(observacionesGolpes: string | null): string {
+  if (!observacionesGolpes) return '';
+  
+  // Try to parse as JSON (new format)
+  try {
+    const data = JSON.parse(observacionesGolpes);
+    const danos = data.danos || [];
+    const notas = data.notas || '';
+    
+    if (danos.length === 0 && !notas) return '';
+    
+    let html = `
+    <div class="section">
+      <div class="section-title">🚗 Golpes y Raspaduras</div>
+    `;
+    
+    if (danos.length > 0) {
+      html += `
+      <p style="margin:0 0 10px 0;font-size:14px;"><strong>${danos.length} daño(s) documentado(s):</strong></p>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:#f3f4f6;">
+            <th style="padding:8px;text-align:left;border-bottom:2px solid #e5e7eb;">#</th>
+            <th style="padding:8px;text-align:left;border-bottom:2px solid #e5e7eb;">Tipo</th>
+            <th style="padding:8px;text-align:left;border-bottom:2px solid #e5e7eb;">Ubicación Aprox.</th>
+          </tr>
+        </thead>
+        <tbody>
+      `;
+      
+      danos.forEach((dano: any, index: number) => {
+        const config = DANO_CONFIG[dano.tipo] || DANO_CONFIG.golpe;
+        const ubicacion = getAreaLabel(dano.posicionX, dano.posicionY);
+        html += `
+          <tr>
+            <td style="padding:6px;border-bottom:1px solid #e5e7eb;">${index + 1}</td>
+            <td style="padding:6px;border-bottom:1px solid #e5e7eb;">
+              <span style="color:${config.color};font-weight:bold;">${config.icon} ${config.label}</span>
+            </td>
+            <td style="padding:6px;border-bottom:1px solid #e5e7eb;">${ubicacion}</td>
+          </tr>
+        `;
+      });
+      
+      html += `
+        </tbody>
+      </table>
+      `;
+    }
+    
+    if (notas) {
+      html += `<p style="margin:10px 0 0 0;font-style:italic;color:#6b7280;">Notas: ${notas}</p>`;
+    }
+    
+    html += `</div>`;
+    return html;
+    
+  } catch {
+    // Legacy format - plain text
+    return `
+    <div class="section">
+      <div class="section-title">🚗 Golpes y Raspaduras</div>
+      <p style="margin:0;">${observacionesGolpes}</p>
+    </div>
+    `;
+  }
+}
+
+// Helper to determine area label from coordinates
+function getAreaLabel(x: number, y: number): string {
+  let vertical = "";
+  let horizontal = "";
+  
+  if (y < 30) vertical = "Frente";
+  else if (y > 70) vertical = "Trasera";
+  else vertical = "Centro";
+  
+  if (x < 35) horizontal = "Izquierda";
+  else if (x > 65) horizontal = "Derecha";
+  else horizontal = "";
+  
+  return `${vertical}${horizontal ? ` ${horizontal}` : ""}`;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -318,12 +410,7 @@ serve(async (req) => {
     </div>
     ` : ''}
 
-    ${checkup.observaciones_golpes ? `
-    <div class="section">
-      <div class="section-title">🚗 Golpes y Raspaduras</div>
-      <p style="margin:0;">${checkup.observaciones_golpes}</p>
-    </div>
-    ` : ''}
+    ${generateDanosSection(checkup.observaciones_golpes)}
   </div>
 
   <div class="footer">
