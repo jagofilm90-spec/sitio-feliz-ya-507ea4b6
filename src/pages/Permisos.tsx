@@ -22,6 +22,7 @@ const ROLES = [
   { value: "secretaria", label: "Secretaria" },
   { value: "vendedor", label: "Vendedor" },
   { value: "almacen", label: "Almacén" },
+  { value: "gerente_almacen", label: "Gerente Almacén" },
   { value: "chofer", label: "Chofer" },
   { value: "contadora", label: "Contadores" },
   { value: "cliente", label: "Cliente" },
