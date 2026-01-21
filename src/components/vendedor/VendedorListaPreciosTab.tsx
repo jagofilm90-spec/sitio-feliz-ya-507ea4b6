@@ -136,7 +136,8 @@ export function VendedorListaPreciosTab() {
                   <TableHead className="w-[70px] py-2 px-2 text-[10px]">Código</TableHead>
                   <TableHead className="py-2 px-2 text-[10px]">Producto</TableHead>
                   <TableHead className="w-[80px] py-2 px-2 text-[10px] text-right">Precio</TableHead>
-                  <TableHead className="w-[60px] py-2 px-2 text-[10px] text-right">-Máx</TableHead>
+                  <TableHead className="w-[50px] py-2 px-2 text-[10px] text-right">-Máx</TableHead>
+                  <TableHead className="w-[70px] py-2 px-2 text-[10px] text-right">Mín</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -144,7 +145,7 @@ export function VendedorListaPreciosTab() {
                   <>
                     {/* Separador de categoría */}
                     <TableRow key={`cat-${categoria}`} className="bg-muted/60 hover:bg-muted/60">
-                      <TableCell colSpan={4} className="py-1 px-2 font-semibold text-[10px] uppercase tracking-wide text-muted-foreground">
+                      <TableCell colSpan={5} className="py-1 px-2 font-semibold text-[10px] uppercase tracking-wide text-muted-foreground">
                         {categoria} ({prods.length})
                       </TableCell>
                     </TableRow>
@@ -173,6 +174,15 @@ export function VendedorListaPreciosTab() {
                           {producto.descuento_maximo && producto.descuento_maximo > 0 ? (
                             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
                               -${producto.descuento_maximo.toFixed(0)}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-1 px-2 text-right">
+                          {producto.descuento_maximo && producto.descuento_maximo > 0 ? (
+                            <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
+                              {formatCurrency((producto.precio_venta || 0) - producto.descuento_maximo)}
                             </span>
                           ) : (
                             <span className="text-[10px] text-muted-foreground">—</span>
@@ -218,9 +228,14 @@ export function VendedorListaPreciosTab() {
                         {formatCurrency(producto.precio_venta || 0)}
                       </p>
                       {producto.descuento_maximo && producto.descuento_maximo > 0 && (
-                        <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium leading-tight">
-                          -${producto.descuento_maximo.toFixed(0)}
-                        </p>
+                        <>
+                          <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium leading-tight">
+                            -${producto.descuento_maximo.toFixed(0)}
+                          </p>
+                          <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold leading-tight">
+                            → {formatCurrency((producto.precio_venta || 0) - producto.descuento_maximo)}
+                          </p>
+                        </>
                       )}
                     </div>
                   </div>
