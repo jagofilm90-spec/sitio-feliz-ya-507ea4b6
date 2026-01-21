@@ -93,19 +93,22 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [newCcEmail, setNewCcEmail] = useState("");
 
+  // Derive ordenId safely to use in hooks
+  const ordenId = orden?.id;
+
   // Fetch pending deliveries count
   const { data: entregasPendientes = 0 } = useQuery({
-    queryKey: ["entregas-pendientes", orden?.id],
+    queryKey: ["entregas-pendientes", ordenId],
     queryFn: async () => {
-      if (!orden?.id || !orden?.entregas_multiples) return 0;
+      if (!ordenId || !orden?.entregas_multiples) return 0;
       const { count } = await supabase
         .from("ordenes_compra_entregas")
         .select("*", { count: "exact", head: true })
-        .eq("orden_compra_id", orden.id)
+        .eq("orden_compra_id", ordenId)
         .or("fecha_programada.is.null,status.eq.pendiente_fecha");
       return count || 0;
     },
-    enabled: !!orden?.id && orden?.entregas_multiples,
+    enabled: !!ordenId && !!orden?.entregas_multiples,
   });
 
   // Fetch email confirmation status
@@ -479,6 +482,23 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       }
     }
   }, [accion, orden?.proveedores?.email, orden?.proveedor_email_manual]);
+
+  // Safety check: if orden is invalid, show error dialog (placed after all hooks)
+  if (!ordenId) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Error</DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground">
+            No se pudo cargar la información de la orden. Por favor, cierra e intenta de nuevo.
+          </p>
+          <Button onClick={() => onOpenChange(false)}>Cerrar</Button>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const handleAddCcEmail = () => {
     const email = newCcEmail.trim();

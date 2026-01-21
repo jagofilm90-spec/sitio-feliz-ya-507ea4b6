@@ -474,10 +474,12 @@ const CalendarioEntregasTab = () => {
                           <TableCell>{entrega.proveedor}</TableCell>
                           <TableCell>
                             <div className="text-sm">
-                              {entrega.productos
-                                ?.slice(0, 2)
-                                .map((d: any) => d.productos?.nombre)
-                                .join(", ")}
+                              {entrega.productos?.slice(0, 2).map((d: any, idx: number) => (
+                                <span key={idx}>
+                                  {idx > 0 && ", "}
+                                  <span className="font-medium">{d.cantidad_ordenada}</span> {d.productos?.nombre}
+                                </span>
+                              ))}
                               {entrega.productos &&
                                 entrega.productos.length > 2 && (
                                   <span className="text-muted-foreground">
@@ -594,10 +596,12 @@ const CalendarioEntregasTab = () => {
                 </div>
                 <p className="text-sm text-muted-foreground mb-1">{entrega.proveedor}</p>
                 <p className="text-sm">
-                  {entrega.productos
-                    ?.slice(0, 3)
-                    .map((d: any) => d.productos?.nombre)
-                    .join(", ")}
+                  {entrega.productos?.slice(0, 3).map((d: any, idx: number) => (
+                    <span key={idx}>
+                      {idx > 0 && ", "}
+                      <span className="font-medium">{d.cantidad_ordenada}</span> {d.productos?.nombre}
+                    </span>
+                  ))}
                   {entrega.productos && entrega.productos.length > 3 && (
                     <span className="text-muted-foreground"> +{entrega.productos.length - 3} más</span>
                   )}
