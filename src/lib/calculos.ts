@@ -612,3 +612,143 @@ export function validarTotalesLegacy(subtotal: number, iva: number, ieps: number
   const diferencia = Math.abs(calculado - total);
   return diferencia < 0.02;
 }
+
+// ==================== ANÁLISIS DE MARGEN Y COSTOS ====================
+
+export interface AnalisisMargenParams {
+  costo_promedio: number;
+  costo_ultimo: number;
+  precio_venta: number;
+  descuento_maximo: number;
+}
+
+export interface ResultadoAnalisisMargen {
+  costo_referencia: number;          // Costo que usamos para cálculos (promedio si hay, sino último)
+  precio_venta: number;
+  piso_minimo: number;               // precio_venta - descuento_maximo
+  margen_bruto: number;              // precio_venta - costo_referencia
+  margen_porcentaje: number;         // (margen_bruto / precio_venta) * 100
+  espacio_negociacion: number;       // piso_minimo - costo_referencia
+  estado_margen: 'perdida' | 'critico' | 'bajo' | 'saludable';
+  puede_dar_descuento_maximo: boolean;
+}
+
+/**
+ * Analiza el margen de un producto para decisiones de precio
+ * REGLAS:
+ * - Margen % = (precio_venta - costo) / precio_venta × 100
+ * - Piso mínimo = precio_venta - descuento_máximo
+ * - Espacio = piso_mínimo - costo (cuánto queda si da el máximo descuento)
+ * - Estado según margen: pérdida (<0), crítico (0-5%), bajo (5-10%), saludable (>10%)
+ */
+export function analizarMargen(params: AnalisisMargenParams): ResultadoAnalisisMargen {
+  const { costo_promedio, costo_ultimo, precio_venta, descuento_maximo } = params;
+  
+  // Usar costo promedio si está disponible, sino el último
+  const costo_referencia = costo_promedio > 0 ? costo_promedio : costo_ultimo;
+  
+  // Calcular piso mínimo (precio más bajo permitido)
+  const piso_minimo = redondear(precio_venta - (descuento_maximo || 0));
+  
+  // Margen bruto
+  const margen_bruto = redondear(precio_venta - costo_referencia);
+  
+  // Margen porcentaje (evitar división por cero)
+  const margen_porcentaje = precio_venta > 0 
+    ? redondear((margen_bruto / precio_venta) * 100) 
+    : 0;
+  
+  // Espacio de negociación (cuánto margen queda si da el máximo descuento)
+  const espacio_negociacion = redondear(piso_minimo - costo_referencia);
+  
+  // Determinar estado del margen
+  let estado_margen: 'perdida' | 'critico' | 'bajo' | 'saludable';
+  if (margen_porcentaje < 0) {
+    estado_margen = 'perdida';
+  } else if (margen_porcentaje < 5) {
+    estado_margen = 'critico';
+  } else if (margen_porcentaje < 10) {
+    estado_margen = 'bajo';
+  } else {
+    estado_margen = 'saludable';
+  }
+  
+  // ¿Puede dar el descuento máximo sin perder dinero?
+  const puede_dar_descuento_maximo = espacio_negociacion >= 0;
+  
+  auditoriaCalculos.registrar('analisis_margen', {
+    entrada: { costo_promedio, costo_ultimo, precio_venta, descuento_maximo },
+    salida: { costo_referencia, piso_minimo, margen_bruto, margen_porcentaje, espacio_negociacion, estado_margen },
+    valido: true
+  });
+  
+  return {
+    costo_referencia,
+    precio_venta,
+    piso_minimo,
+    margen_bruto,
+    margen_porcentaje,
+    espacio_negociacion,
+    estado_margen,
+    puede_dar_descuento_maximo
+  };
+}
+
+/**
+ * Calcula precio sugerido basado en costo y utilidad deseada
+ * FÓRMULA: precio_sugerido = costo × (1 + utilidad%) + descuento_maximo
+ * Esto garantiza que al dar el descuento máximo, aún se obtiene la utilidad deseada
+ */
+export function calcularPrecioSugerido(
+  costo: number,
+  utilidad_porcentaje: number = 10,
+  descuento_maximo: number = 0
+): number {
+  const base_con_utilidad = costo * (1 + utilidad_porcentaje / 100);
+  const precio_sugerido = redondear(base_con_utilidad + descuento_maximo);
+  
+  auditoriaCalculos.registrar('precio_sugerido', {
+    entrada: { costo, utilidad_porcentaje, descuento_maximo },
+    salida: { precio_sugerido },
+    valido: true,
+    contexto: { formula: `${costo} × 1.${utilidad_porcentaje} + ${descuento_maximo} = ${precio_sugerido}` }
+  });
+  
+  return precio_sugerido;
+}
+
+/**
+ * Simula el margen resultante de un precio propuesto
+ */
+export function simularPrecioPropuesto(
+  costo: number,
+  precio_propuesto: number,
+  descuento_maximo: number = 0,
+  precio_lista: number = 0
+): {
+  margen_pesos: number;
+  margen_porcentaje: number;
+  diferencia_vs_lista: number;
+  requiere_autorizacion: boolean;
+  es_perdida: boolean;
+} {
+  const margen_pesos = redondear(precio_propuesto - costo);
+  const margen_porcentaje = precio_propuesto > 0 
+    ? redondear((margen_pesos / precio_propuesto) * 100) 
+    : 0;
+  
+  const diferencia_vs_lista = precio_lista > 0 
+    ? redondear(precio_lista - precio_propuesto) 
+    : 0;
+  
+  // Requiere autorización si el descuento rebasa el máximo permitido
+  const requiere_autorizacion = diferencia_vs_lista > descuento_maximo;
+  
+  return {
+    margen_pesos,
+    margen_porcentaje,
+    diferencia_vs_lista,
+    requiere_autorizacion,
+    es_perdida: margen_pesos < 0
+  };
+}
