@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -28,11 +27,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Pencil, Search, History, ChevronLeft, ChevronRight, DollarSign, TrendingUp, TrendingDown, Minus, Save, Check } from "lucide-react";
+import { Loader2, Pencil, Search, History, ChevronLeft, ChevronRight, DollarSign, TrendingUp, TrendingDown, Minus, Save, Check, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -106,7 +104,8 @@ export const SecretariaListaPreciosTab = () => {
         .select("id, codigo, nombre, especificaciones, marca, categoria, peso_kg, contenido_empaque, unidad, precio_venta, precio_por_kilo, descuento_maximo, activo")
         .eq("activo", true)
         .or("solo_uso_interno.is.null,solo_uso_interno.eq.false")
-        .order("codigo");
+        .order("categoria")
+        .order("nombre");
 
       if (error) throw error;
       return data as Producto[];
@@ -198,36 +197,43 @@ export const SecretariaListaPreciosTab = () => {
   const categorias = [...new Set(productos?.map((p) => p.categoria).filter(Boolean))] as string[];
 
   // Filter products
-  const filteredProductos = productos?.filter((p) => {
-    const term = searchTerm.toLowerCase();
-    const matchesSearch =
-      p.codigo.toLowerCase().includes(term) ||
-      p.nombre.toLowerCase().includes(term) ||
-      (p.especificaciones?.toLowerCase() || "").includes(term) ||
-      (p.marca?.toLowerCase() || "").includes(term);
+  const filteredProductos = useMemo(() => {
+    if (!productos) return [];
+    
+    return productos.filter((p) => {
+      const term = searchTerm.toLowerCase();
+      const matchesSearch =
+        p.codigo.toLowerCase().includes(term) ||
+        p.nombre.toLowerCase().includes(term) ||
+        (p.especificaciones?.toLowerCase() || "").includes(term) ||
+        (p.marca?.toLowerCase() || "").includes(term);
 
-    const matchesCategoria = categoriaFilter === "all" || p.categoria === categoriaFilter;
+      const matchesCategoria = categoriaFilter === "all" || p.categoria === categoriaFilter;
 
-    return matchesSearch && matchesCategoria;
-  });
+      return matchesSearch && matchesCategoria;
+    });
+  }, [productos, searchTerm, categoriaFilter]);
 
-  // Calculate price per kilo if applicable
-  const getPrecioKilo = (producto: Producto) => {
-    if (producto.precio_por_kilo) return producto.precio_venta;
-    if (producto.peso_kg && producto.peso_kg > 0) {
-      return producto.precio_venta / producto.peso_kg;
+  // Group products by category
+  const productosPorCategoria = useMemo(() => {
+    const grupos: Record<string, Producto[]> = {};
+    for (const producto of filteredProductos) {
+      const cat = producto.categoria || "Sin categoría";
+      if (!grupos[cat]) grupos[cat] = [];
+      grupos[cat].push(producto);
     }
-    return null;
+    return Object.entries(grupos).sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredProductos]);
+
+  // Get flat index for a product (for navigation)
+  const getFlatIndex = (producto: Producto) => {
+    return filteredProductos.findIndex(p => p.id === producto.id);
   };
 
   // Handle edit
   const handleEdit = (producto: Producto, index?: number) => {
-    if (index !== undefined) {
-      setCurrentIndex(index);
-    } else {
-      const idx = filteredProductos?.findIndex(p => p.id === producto.id) ?? -1;
-      setCurrentIndex(idx);
-    }
+    const idx = index !== undefined ? index : getFlatIndex(producto);
+    setCurrentIndex(idx);
     setEditingProduct(producto);
     const precio = producto.precio_venta.toString();
     const descuento = producto.descuento_maximo?.toString() || "";
@@ -239,7 +245,7 @@ export const SecretariaListaPreciosTab = () => {
     setEditDialogOpen(true);
   };
 
-  // Detectar cambios para resetear estado de guardado
+  // Detect changes to reset saved state
   useEffect(() => {
     if (!editingProduct) return;
     const hasChanges = precioVenta !== originalPrecio || descuentoMaximo !== originalDescuento;
@@ -278,7 +284,6 @@ export const SecretariaListaPreciosTab = () => {
         }, 400);
         setOriginalPrecio(precioVenta);
         setOriginalDescuento(descuentoMaximo);
-        // Actualizar el editingProduct con los nuevos valores
         setEditingProduct(prev => prev ? {
           ...prev,
           precio_venta: precio,
@@ -298,7 +303,6 @@ export const SecretariaListaPreciosTab = () => {
     
     if (newIndex === currentIndex) return;
     
-    // Save current product first then navigate
     if (editingProduct) {
       const precio = parseFloat(precioVenta);
       if (!isNaN(precio) && precio > 0) {
@@ -356,146 +360,238 @@ export const SecretariaListaPreciosTab = () => {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div>
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <DollarSign className="h-5 w-5 text-primary" />
-          Lista de Precios
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          {productos?.length || 0} productos activos • Click en editar para modificar precios
-        </p>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por código, nombre o marca..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+    <div className="flex flex-col h-full">
+      {/* Header compacto */}
+      <div className="p-3 border-b bg-background sticky top-0 z-20 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Lista de Precios</h2>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {filteredProductos.length} productos
+          </p>
         </div>
-        <Select value={categoriaFilter} onValueChange={setCategoriaFilter}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <SelectValue placeholder="Categoría" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas las categorías</SelectItem>
-            {categorias.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por código, nombre o marca..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8 h-9"
+            />
+          </div>
+          <Select value={categoriaFilter} onValueChange={setCategoriaFilter}>
+            <SelectTrigger className="w-full sm:w-[180px] h-9">
+              <SelectValue placeholder="Categoría" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {categorias.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      {/* Price List Table */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
+      {filteredProductos.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <Package className="h-10 w-10 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">No se encontraron productos</p>
+        </div>
+      ) : (
+        <>
+          {/* Tabla compacta - Desktop */}
+          <div className="hidden md:block flex-1 overflow-auto">
             <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead>Código</TableHead>
-                  <TableHead>Producto</TableHead>
-                  <TableHead className="hidden md:table-cell">Presentación</TableHead>
-                  <TableHead className="hidden lg:table-cell">Categoría</TableHead>
-                  <TableHead className="text-right">Precio Unitario</TableHead>
-                  <TableHead className="text-right hidden sm:table-cell">$/Kilo</TableHead>
-                  <TableHead className="text-right hidden sm:table-cell">Desc. Máx</TableHead>
-                  <TableHead className="text-center">Acciones</TableHead>
+              <TableHeader className="sticky top-0 bg-background z-10">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-[70px] py-2 px-2 text-[10px]">Código</TableHead>
+                  <TableHead className="py-2 px-2 text-[10px]">Producto</TableHead>
+                  <TableHead className="w-[90px] py-2 px-2 text-[10px] text-right">Precio</TableHead>
+                  <TableHead className="w-[120px] py-2 px-2 text-[10px] text-right">Descuento</TableHead>
+                  <TableHead className="w-[60px] py-2 px-1 text-[10px] text-center">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProductos && filteredProductos.length > 0 ? (
-                  filteredProductos.map((producto, index) => {
-                    const precioKilo = getPrecioKilo(producto);
-                    return (
-                      <TableRow key={producto.id} className="hover:bg-muted/50">
-                        <TableCell className="font-mono font-medium text-primary">
+                {productosPorCategoria.map(([categoria, prods]) => (
+                  <>
+                    {/* Separador de categoría */}
+                    <TableRow key={`cat-${categoria}`} className="bg-muted/60 hover:bg-muted/60">
+                      <TableCell colSpan={5} className="py-1 px-2 font-semibold text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {categoria} ({prods.length})
+                      </TableCell>
+                    </TableRow>
+                    {/* Productos */}
+                    {prods.map((producto) => (
+                      <TableRow key={producto.id} className="h-8 hover:bg-muted/30">
+                        <TableCell className="py-1 px-2 text-[10px] font-mono text-muted-foreground">
                           {producto.codigo}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-1 px-2">
                           <div>
-                            <p className="font-medium">
-                              {getDisplayName(producto)}
-                            </p>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs">
+                                {producto.nombre}
+                                {producto.especificaciones && (
+                                  <span className="text-purple-600 dark:text-purple-400 font-medium ml-1">
+                                    {producto.especificaciones}
+                                  </span>
+                                )}
+                              </span>
+                              {producto.precio_por_kilo && (
+                                <span className="text-[8px] text-muted-foreground bg-muted px-1 rounded shrink-0">
+                                  /kg
+                                </span>
+                              )}
+                            </div>
+                            {(producto.marca || producto.contenido_empaque) && (
+                              <div className="text-[10px] text-muted-foreground flex items-center gap-1 flex-wrap">
+                                {producto.marca && (
+                                  <span className="font-medium text-blue-600 dark:text-blue-400">{producto.marca}</span>
+                                )}
+                                {producto.marca && producto.contenido_empaque && <span>•</span>}
+                                {producto.contenido_empaque && (
+                                  <span>{producto.contenido_empaque}</span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <div className="flex items-center gap-2">
-                            {producto.contenido_empaque || (producto.peso_kg && `${producto.peso_kg} kg`) || "—"}
-                            <Badge variant="outline" className="text-xs">
-                              {producto.unidad}
-                            </Badge>
-                          </div>
+                        <TableCell className="py-1 px-2 text-right font-semibold text-xs">
+                          {formatCurrency(producto.precio_venta)}
                         </TableCell>
-                        <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                          {producto.categoria || "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <span className="font-mono font-semibold text-lg">
-                            {formatCurrency(producto.precio_venta)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right hidden sm:table-cell font-mono">
-                          {precioKilo ? (
-                            <span className="text-muted-foreground">
-                              {formatCurrency(precioKilo)}
+                        <TableCell className="py-1 px-2 text-right">
+                          {producto.descuento_maximo && producto.descuento_maximo > 0 ? (
+                            <span className="text-[10px] font-medium">
+                              <span className="text-emerald-600 dark:text-emerald-400">-${producto.descuento_maximo.toFixed(0)}</span>
+                              <span className="text-muted-foreground mx-0.5">→</span>
+                              <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                                {formatCurrency(producto.precio_venta - producto.descuento_maximo)}
+                              </span>
                             </span>
                           ) : (
-                            "—"
+                            <span className="text-[10px] text-muted-foreground">—</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-right hidden sm:table-cell">
-                          {producto.descuento_maximo && producto.descuento_maximo > 0 ? (
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800">
-                              -${producto.descuento_maximo.toFixed(2)}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1">
+                        <TableCell className="py-1 px-1 text-center">
+                          <div className="flex items-center justify-center gap-0.5">
                             <Button
                               variant="ghost"
-                              size="icon"
+                              size="sm"
+                              className="h-6 w-6 p-0"
                               onClick={() => handleViewHistory(producto)}
-                              title="Ver historial de precios"
+                              title="Ver historial"
                             >
-                              <History className="h-4 w-4" />
+                              <History className="h-3 w-3" />
                             </Button>
                             <Button
                               variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(producto, index)}
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => handleEdit(producto)}
                               title="Editar precio"
                             >
-                              <Pencil className="h-4 w-4" />
+                              <Pencil className="h-3 w-3" />
                             </Button>
                           </div>
                         </TableCell>
                       </TableRow>
-                    );
-                  })
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      No se encontraron productos
-                    </TableCell>
-                  </TableRow>
-                )}
+                    ))}
+                  </>
+                ))}
               </TableBody>
             </Table>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Vista móvil ultra compacta */}
+          <div className="md:hidden flex-1 overflow-auto">
+            {productosPorCategoria.map(([categoria, prods]) => (
+              <div key={categoria}>
+                {/* Separador de categoría sticky */}
+                <div className="sticky top-0 bg-muted/90 backdrop-blur-sm py-1 px-3 border-b z-10">
+                  <span className="font-semibold text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {categoria} ({prods.length})
+                  </span>
+                </div>
+                {/* Productos */}
+                {prods.map((producto) => (
+                  <div
+                    key={producto.id}
+                    className="flex justify-between items-center py-1.5 px-3 border-b hover:bg-muted/30"
+                  >
+                    <div className="min-w-0 flex-1 pr-2">
+                      <p className="text-sm font-medium truncate leading-tight">
+                        {producto.nombre}
+                        {producto.especificaciones && (
+                          <span className="text-purple-600 dark:text-purple-400 font-medium ml-1">
+                            {producto.especificaciones}
+                          </span>
+                        )}
+                      </p>
+                      {(producto.marca || producto.contenido_empaque) && (
+                        <p className="text-[10px] text-muted-foreground truncate leading-tight">
+                          {producto.marca && (
+                            <span className="text-blue-600 dark:text-blue-400 font-medium">{producto.marca}</span>
+                          )}
+                          {producto.marca && producto.contenido_empaque && " • "}
+                          {producto.contenido_empaque}
+                        </p>
+                      )}
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                        <span className="font-mono">{producto.codigo}</span>
+                        {producto.precio_por_kilo && (
+                          <span className="bg-muted px-0.5 rounded text-[8px]">/kg</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right shrink-0">
+                        <p className="font-bold text-sm leading-tight">
+                          {formatCurrency(producto.precio_venta)}
+                        </p>
+                        {producto.descuento_maximo && producto.descuento_maximo > 0 && (
+                          <>
+                            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium leading-tight">
+                              -${producto.descuento_maximo.toFixed(0)}
+                            </p>
+                            <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold leading-tight">
+                              → {formatCurrency(producto.precio_venta - producto.descuento_maximo)}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => handleViewHistory(producto)}
+                        >
+                          <History className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => handleEdit(producto)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Edit Price Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={(open) => {
