@@ -17,6 +17,7 @@ import { ResumenRuta } from "@/components/chofer/ResumenRuta";
 import { GpsTrackingIndicator } from "@/components/rutas/GpsTrackingIndicator";
 import PushNotificationSetup from "@/components/PushNotificationSetup";
 import { LiveIndicator } from "@/components/ui/live-indicator";
+import { AvatarEmpleadoPopover } from "@/components/almacen/AvatarEmpleadoPopover";
 
 export default function ChoferPanel() {
   const navigate = useNavigate();
@@ -25,6 +26,9 @@ export default function ChoferPanel() {
   const [ruta, setRuta] = useState<any>(null);
   const [entregas, setEntregas] = useState<any[]>([]);
   const [choferNombre, setChoferNombre] = useState("");
+  const [choferId, setChoferId] = useState<string | null>(null);
+  const [choferFotoUrl, setChoferFotoUrl] = useState<string | null>(null);
+  const [choferEmail, setChoferEmail] = useState<string | null>(null);
   const [showResumen, setShowResumen] = useState(false);
 
   // GPS Tracking - only enabled when route is in progress
@@ -55,11 +59,16 @@ export default function ChoferPanel() {
 
       const { data: empleado } = await supabase
         .from("empleados")
-        .select("id, nombre_completo")
+        .select("id, nombre_completo, foto_url, email")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (empleado) setChoferNombre(empleado.nombre_completo);
+      if (empleado) {
+        setChoferId(empleado.id);
+        setChoferNombre(empleado.nombre_completo);
+        setChoferFotoUrl(empleado.foto_url);
+        setChoferEmail(empleado.email);
+      }
 
       const hoy = format(new Date(), "yyyy-MM-dd");
 
@@ -137,7 +146,19 @@ export default function ChoferPanel() {
             <LogOut className="h-5 w-5" />
           </Button>
         </div>
-        {choferNombre && <div className="flex items-center gap-2 mt-2 text-sm"><User className="h-4 w-4" /><span>{choferNombre}</span></div>}
+        {choferNombre && (
+          <div className="flex items-center gap-3 mt-2">
+            <AvatarEmpleadoPopover
+              empleadoId={choferId}
+              empleadoNombre={choferNombre}
+              empleadoPuesto="Chofer"
+              empleadoEmail={choferEmail || undefined}
+              fotoUrl={choferFotoUrl}
+              onFotoUpdated={(newUrl) => setChoferFotoUrl(newUrl)}
+            />
+            <span className="text-sm">{choferNombre}</span>
+          </div>
+        )}
         <div className="mt-2 flex items-center gap-4">
           {isRutaActiva && (
             <GpsTrackingIndicator isTracking={isTracking} accuracy={accuracy} error={gpsError} />
