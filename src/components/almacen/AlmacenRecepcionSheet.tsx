@@ -808,15 +808,35 @@ export const AlmacenRecepcionSheet = ({
 
             const { data: productoActual } = await supabase
               .from("productos")
-              .select("stock_actual")
+              .select("stock_actual, ultimo_costo_compra")
               .eq("id", producto.producto_id)
               .single();
 
             const nuevoStock = (productoActual?.stock_actual || 0) + cantidad;
+            const costoAnterior = productoActual?.ultimo_costo_compra || 0;
+
+            // Actualizar stock y último costo de compra
             await supabase
               .from("productos")
-              .update({ stock_actual: nuevoStock })
+              .update({ 
+                stock_actual: nuevoStock,
+                ultimo_costo_compra: precioCompra
+              })
               .eq("id", producto.producto_id);
+
+            // Registrar en historial de costos si el costo cambió
+            if (costoAnterior !== precioCompra && precioCompra > 0) {
+              await supabase.from("productos_historial_costos").insert({
+                producto_id: producto.producto_id,
+                proveedor_id: entrega.orden_compra?.proveedor?.id || null,
+                costo_anterior: costoAnterior,
+                costo_nuevo: precioCompra,
+                fuente: "recepcion_oc",
+                referencia_id: entrega.orden_compra.id,
+                usuario_id: user.id,
+                notas: `Recepción OC ${entrega.orden_compra.folio} - Entrega #${entrega.numero_entrega}`
+              });
+            }
           }
         }
       }
