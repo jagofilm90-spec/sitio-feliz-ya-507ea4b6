@@ -87,7 +87,6 @@ const CalendarioEntregasTab = () => {
               cantidad_ordenada,
               precio_unitario_compra,
               subtotal,
-              producto_nombre_manual,
               productos (id, codigo, nombre)
             )
           )
@@ -117,7 +116,6 @@ const CalendarioEntregasTab = () => {
             cantidad_ordenada,
             precio_unitario_compra,
             subtotal,
-            producto_nombre_manual,
             productos (id, codigo, nombre)
           ),
           ordenes_compra_entregas (
