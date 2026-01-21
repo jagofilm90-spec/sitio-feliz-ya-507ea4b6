@@ -69,19 +69,34 @@ const AlmacenTablet = () => {
     const loadEmpleadoData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        // Buscar en empleados primero
         const { data: empleado } = await supabase
           .from("empleados")
           .select("id, nombre, primer_apellido")
           .eq("user_id", user.id)
           .maybeSingle();
         
+        let displayName = "";
+        
         if (empleado) {
           setEmpleadoId(empleado.id);
-          const nombreCompleto = [empleado.nombre, empleado.primer_apellido]
+          displayName = [empleado.nombre, empleado.primer_apellido]
             .filter(Boolean)
             .join(" ");
-          setEmpleadoNombre(nombreCompleto || "Usuario");
         }
+        
+        // Si no hay nombre de empleado, buscar en profiles como fallback
+        if (!displayName) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", user.id)
+            .maybeSingle();
+          
+          displayName = profile?.full_name || "Usuario";
+        }
+        
+        setEmpleadoNombre(displayName);
       }
     };
     loadEmpleadoData();
