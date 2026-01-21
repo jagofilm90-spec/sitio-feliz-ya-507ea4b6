@@ -136,8 +136,7 @@ export function VendedorListaPreciosTab() {
                   <TableHead className="w-[70px] py-2 px-2 text-[10px]">Código</TableHead>
                   <TableHead className="py-2 px-2 text-[10px]">Producto</TableHead>
                   <TableHead className="w-[80px] py-2 px-2 text-[10px] text-right">Precio</TableHead>
-                  <TableHead className="w-[50px] py-2 px-2 text-[10px] text-right">-Máx</TableHead>
-                  <TableHead className="w-[70px] py-2 px-2 text-[10px] text-right">Mín</TableHead>
+                  <TableHead className="w-[100px] py-2 px-2 text-[10px] text-right">Descuento</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -145,7 +144,7 @@ export function VendedorListaPreciosTab() {
                   <>
                     {/* Separador de categoría */}
                     <TableRow key={`cat-${categoria}`} className="bg-muted/60 hover:bg-muted/60">
-                      <TableCell colSpan={5} className="py-1 px-2 font-semibold text-[10px] uppercase tracking-wide text-muted-foreground">
+                      <TableCell colSpan={4} className="py-1 px-2 font-semibold text-[10px] uppercase tracking-wide text-muted-foreground">
                         {categoria} ({prods.length})
                       </TableCell>
                     </TableRow>
@@ -172,17 +171,12 @@ export function VendedorListaPreciosTab() {
                         </TableCell>
                         <TableCell className="py-1 px-2 text-right">
                           {producto.descuento_maximo && producto.descuento_maximo > 0 ? (
-                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                              -${producto.descuento_maximo.toFixed(0)}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-1 px-2 text-right">
-                          {producto.descuento_maximo && producto.descuento_maximo > 0 ? (
-                            <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
-                              {formatCurrency((producto.precio_venta || 0) - producto.descuento_maximo)}
+                            <span className="text-[10px] font-medium">
+                              <span className="text-emerald-600 dark:text-emerald-400">-${producto.descuento_maximo.toFixed(0)}</span>
+                              <span className="text-muted-foreground mx-0.5">→</span>
+                              <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                                {formatCurrency((producto.precio_venta || 0) - producto.descuento_maximo)}
+                              </span>
                             </span>
                           ) : (
                             <span className="text-[10px] text-muted-foreground">—</span>
