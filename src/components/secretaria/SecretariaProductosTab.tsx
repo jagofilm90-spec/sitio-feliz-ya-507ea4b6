@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Search, Package, ChevronLeft, ChevronRight, Sparkles, Eye, Edit } from "lucide-react";
+import { Loader2, Plus, Search, Package, ChevronLeft, ChevronRight, Sparkles, Edit, Save, Check } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -67,6 +67,8 @@ export const SecretariaProductosTab = () => {
   const [migracionLoteOpen, setMigracionLoteOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
   const [currentIndex, setCurrentIndex] = useState<number>(-1);
+  const [isSaved, setIsSaved] = useState(false);
+  const [originalFormData, setOriginalFormData] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -146,7 +148,7 @@ export const SecretariaProductosTab = () => {
       setCurrentIndex(idx);
     }
     setEditingProduct(producto);
-    setFormData({
+    const newFormData = {
       codigo: producto.codigo,
       nombre: producto.nombre,
       marca: producto.marca || "",
@@ -162,9 +164,21 @@ export const SecretariaProductosTab = () => {
       aplica_ieps: producto.aplica_ieps,
       precio_por_kilo: producto.precio_por_kilo,
       activo: producto.activo,
-    });
+    };
+    setFormData(newFormData);
+    setOriginalFormData(JSON.stringify(newFormData));
+    setIsSaved(false);
     setDialogOpen(true);
   };
+
+  // Detectar cambios para resetear estado de guardado
+  useEffect(() => {
+    if (!editingProduct || !originalFormData) return;
+    const hasChanges = JSON.stringify(formData) !== originalFormData;
+    if (hasChanges && isSaved) {
+      setIsSaved(false);
+    }
+  }, [formData, originalFormData, isSaved, editingProduct]);
 
   // Save mutation
   const saveMutation = useMutation({
@@ -229,8 +243,15 @@ export const SecretariaProductosTab = () => {
     e.preventDefault();
     saveMutation.mutate(formData, {
       onSuccess: () => {
-        setDialogOpen(false);
-        resetForm();
+        if (editingProduct) {
+          // Para edición: no cerrar, mostrar "Guardado"
+          setIsSaved(true);
+          setOriginalFormData(JSON.stringify(formData));
+        } else {
+          // Para nuevo producto: cerrar diálogo
+          setDialogOpen(false);
+          resetForm();
+        }
       }
     });
   };
@@ -619,7 +640,7 @@ export const SecretariaProductosTab = () => {
               {/* Preview del Display Name */}
               <div className="p-3 bg-muted/50 rounded-lg border">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                  <Eye className="h-3 w-3" />
+                  <Package className="h-3 w-3" />
                   Vista previa del nombre (Display Name)
                 </div>
                 <p className="font-medium text-sm">
@@ -696,13 +717,27 @@ export const SecretariaProductosTab = () => {
 
             <div className="flex justify-end gap-2 pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancelar
+                {editingProduct ? "Cerrar" : "Cancelar"}
               </Button>
-              <Button type="submit" disabled={saveMutation.isPending}>
+              <Button 
+                type="submit" 
+                disabled={saveMutation.isPending}
+                variant={isSaved && editingProduct ? "outline" : "default"}
+                className={isSaved && editingProduct ? "border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/20" : ""}
+              >
                 {saveMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : null}
-                {editingProduct ? "Guardar Cambios" : "Crear Producto"}
+                ) : isSaved && editingProduct ? (
+                  <Check className="h-4 w-4 mr-2 text-green-500" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                {saveMutation.isPending 
+                  ? "Guardando..." 
+                  : editingProduct 
+                    ? (isSaved ? "Guardado" : "Guardar Cambios")
+                    : "Crear Producto"
+                }
               </Button>
             </div>
           </form>

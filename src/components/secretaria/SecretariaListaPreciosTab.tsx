@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Pencil, Search, History, ChevronLeft, ChevronRight, DollarSign, TrendingUp, TrendingDown, Minus, Save } from "lucide-react";
+import { Loader2, Pencil, Search, History, ChevronLeft, ChevronRight, DollarSign, TrendingUp, TrendingDown, Minus, Save, Check } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -88,6 +88,9 @@ export const SecretariaListaPreciosTab = () => {
   const [descuentoMaximo, setDescuentoMaximo] = useState("");
   const [historialDialogOpen, setHistorialDialogOpen] = useState(false);
   const [selectedProductForHistory, setSelectedProductForHistory] = useState<Producto | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
+  const [originalPrecio, setOriginalPrecio] = useState("");
+  const [originalDescuento, setOriginalDescuento] = useState("");
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -224,10 +227,24 @@ export const SecretariaListaPreciosTab = () => {
       setCurrentIndex(idx);
     }
     setEditingProduct(producto);
-    setPrecioVenta(producto.precio_venta.toString());
-    setDescuentoMaximo(producto.descuento_maximo?.toString() || "");
+    const precio = producto.precio_venta.toString();
+    const descuento = producto.descuento_maximo?.toString() || "";
+    setPrecioVenta(precio);
+    setDescuentoMaximo(descuento);
+    setOriginalPrecio(precio);
+    setOriginalDescuento(descuento);
+    setIsSaved(false);
     setEditDialogOpen(true);
   };
+
+  // Detectar cambios para resetear estado de guardado
+  useEffect(() => {
+    if (!editingProduct) return;
+    const hasChanges = precioVenta !== originalPrecio || descuentoMaximo !== originalDescuento;
+    if (hasChanges && isSaved) {
+      setIsSaved(false);
+    }
+  }, [precioVenta, descuentoMaximo, originalPrecio, originalDescuento, isSaved, editingProduct]);
 
   // Handle save
   const handleSave = () => {
@@ -250,6 +267,18 @@ export const SecretariaListaPreciosTab = () => {
       precio_venta: precio,
       descuento_maximo: descuento,
       precio_anterior: editingProduct.precio_venta,
+    }, {
+      onSuccess: () => {
+        setIsSaved(true);
+        setOriginalPrecio(precioVenta);
+        setOriginalDescuento(descuentoMaximo);
+        // Actualizar el editingProduct con los nuevos valores
+        setEditingProduct(prev => prev ? {
+          ...prev,
+          precio_venta: precio,
+          descuento_maximo: descuento
+        } : null);
+      }
     });
   };
 
@@ -564,15 +593,22 @@ export const SecretariaListaPreciosTab = () => {
 
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Cancelar
+              Cerrar
             </Button>
-            <Button onClick={handleSave} disabled={updatePriceMutation.isPending}>
+            <Button 
+              onClick={handleSave} 
+              disabled={updatePriceMutation.isPending}
+              variant={isSaved ? "outline" : "default"}
+              className={isSaved ? "border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/20" : ""}
+            >
               {updatePriceMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : isSaved ? (
+                <Check className="h-4 w-4 mr-2 text-green-500" />
               ) : (
                 <Save className="h-4 w-4 mr-2" />
               )}
-              Guardar
+              {updatePriceMutation.isPending ? "Guardando..." : isSaved ? "Guardado" : "Guardar Cambios"}
             </Button>
           </div>
         </DialogContent>
