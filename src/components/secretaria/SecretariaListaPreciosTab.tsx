@@ -26,8 +26,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Pencil, Search, History, ChevronLeft, ChevronRight, DollarSign, TrendingUp, TrendingDown, Minus, Save, Check, Package } from "lucide-react";
+import { Loader2, Pencil, Search, History, ChevronLeft, ChevronRight, DollarSign, TrendingUp, TrendingDown, Minus, Save, Check, Package, Calculator, Percent } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +53,9 @@ interface Producto {
   descripcion_promocion: string | null;
   producto_base_id: string | null;
   bloqueado_venta: boolean;
+  // Campos de costos para calculadora
+  ultimo_costo_compra: number | null;
+  costo_promedio_ponderado: number | null;
 }
 
 interface HistorialPrecio {
@@ -96,16 +100,21 @@ export const SecretariaListaPreciosTab = () => {
   const [originalPrecio, setOriginalPrecio] = useState("");
   const [originalDescuento, setOriginalDescuento] = useState("");
   
+  // Estados para calculadora de margen
+  const [modoCalculadora, setModoCalculadora] = useState(false);
+  const [usarCostoPromedio, setUsarCostoPromedio] = useState(true);
+  const [margenPorcentaje, setMargenPorcentaje] = useState("");
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch products
+  // Fetch products - incluye costos para calculadora
   const { data: productos, isLoading } = useQuery({
     queryKey: ["secretaria-lista-precios"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, especificaciones, marca, categoria, peso_kg, contenido_empaque, unidad, precio_venta, precio_por_kilo, descuento_maximo, activo, es_promocion, descripcion_promocion, producto_base_id, bloqueado_venta")
+        .select("id, codigo, nombre, especificaciones, marca, categoria, peso_kg, contenido_empaque, unidad, precio_venta, precio_por_kilo, descuento_maximo, activo, es_promocion, descripcion_promocion, producto_base_id, bloqueado_venta, ultimo_costo_compra, costo_promedio_ponderado")
         .eq("activo", true)
         .or("solo_uso_interno.is.null,solo_uso_interno.eq.false")
         .order("categoria")
@@ -246,6 +255,10 @@ export const SecretariaListaPreciosTab = () => {
     setOriginalPrecio(precio);
     setOriginalDescuento(descuento);
     setIsSaved(false);
+    // Resetear calculadora
+    setModoCalculadora(false);
+    setMargenPorcentaje("");
+    setUsarCostoPromedio(true);
     setEditDialogOpen(true);
   };
 
@@ -659,8 +672,176 @@ export const SecretariaListaPreciosTab = () => {
           </DialogHeader>
           
           <div className="space-y-4 py-4">
+            {/* Toggle calculadora */}
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
+              <div className="flex items-center gap-2">
+                <Calculator className="h-4 w-4 text-muted-foreground" />
+                <Label htmlFor="modo-calculadora" className="text-sm font-medium">
+                  Calculadora de Margen
+                </Label>
+              </div>
+              <Switch
+                id="modo-calculadora"
+                checked={modoCalculadora}
+                onCheckedChange={setModoCalculadora}
+              />
+            </div>
+
+            {/* Sección de costos (solo si hay datos y está en modo calculadora) */}
+            {modoCalculadora && editingProduct && (
+              <div className="p-3 bg-muted/30 rounded-lg border space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <DollarSign className="h-4 w-4" />
+                  Costos de Referencia
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Costo Promedio</p>
+                    <p className="font-mono font-semibold">
+                      {editingProduct.costo_promedio_ponderado 
+                        ? formatCurrency(editingProduct.costo_promedio_ponderado) 
+                        : <span className="text-muted-foreground">Sin datos</span>}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Último Costo</p>
+                    <p className="font-mono font-semibold">
+                      {editingProduct.ultimo_costo_compra 
+                        ? formatCurrency(editingProduct.ultimo_costo_compra) 
+                        : <span className="text-muted-foreground">Sin datos</span>}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Selector de costo base */}
+                {(editingProduct.costo_promedio_ponderado || editingProduct.ultimo_costo_compra) && (
+                  <div className="flex items-center gap-3 pt-2 border-t">
+                    <span className="text-xs text-muted-foreground">Usar como base:</span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant={usarCostoPromedio ? "default" : "outline"}
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => setUsarCostoPromedio(true)}
+                        disabled={!editingProduct.costo_promedio_ponderado}
+                      >
+                        Promedio
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={!usarCostoPromedio ? "default" : "outline"}
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => setUsarCostoPromedio(false)}
+                        disabled={!editingProduct.ultimo_costo_compra}
+                      >
+                        Último
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Campo de margen */}
+                {(editingProduct.costo_promedio_ponderado || editingProduct.ultimo_costo_compra) && (
+                  <div className="space-y-2 pt-2 border-t">
+                    <Label htmlFor="margen" className="text-xs">Margen de Utilidad (%)</Label>
+                    <div className="relative">
+                      <Input
+                        id="margen"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        className="pr-8"
+                        value={margenPorcentaje}
+                        onChange={(e) => {
+                          const margen = e.target.value;
+                          setMargenPorcentaje(margen);
+                          
+                          // Calcular precio automáticamente
+                          const costoBase = usarCostoPromedio 
+                            ? editingProduct.costo_promedio_ponderado 
+                            : editingProduct.ultimo_costo_compra;
+                          
+                          if (costoBase && margen) {
+                            const margenDecimal = parseFloat(margen) / 100;
+                            const precioConMargen = costoBase * (1 + margenDecimal);
+                            const descuento = parseFloat(descuentoMaximo) || 0;
+                            const precioFinal = precioConMargen + descuento;
+                            setPrecioVenta(precioFinal.toFixed(2));
+                          }
+                        }}
+                        placeholder="10"
+                      />
+                      <Percent className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    </div>
+
+                    {/* Preview del cálculo */}
+                    {margenPorcentaje && (
+                      <div className="text-xs space-y-1 p-2 bg-background rounded border">
+                        {(() => {
+                          const costoBase = usarCostoPromedio 
+                            ? editingProduct.costo_promedio_ponderado 
+                            : editingProduct.ultimo_costo_compra;
+                          
+                          if (!costoBase) return null;
+                          
+                          const margenDecimal = parseFloat(margenPorcentaje) / 100;
+                          const precioConMargen = costoBase * (1 + margenDecimal);
+                          const descuento = parseFloat(descuentoMaximo) || 0;
+                          const precioFinal = precioConMargen + descuento;
+                          
+                          return (
+                            <>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Costo base:</span>
+                                <span className="font-mono">{formatCurrency(costoBase)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">+ Margen {margenPorcentaje}%:</span>
+                                <span className="font-mono">{formatCurrency(costoBase * margenDecimal)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">= Precio con margen:</span>
+                                <span className="font-mono font-medium">{formatCurrency(precioConMargen)}</span>
+                              </div>
+                              {descuento > 0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">+ Colchón descuento:</span>
+                                  <span className="font-mono">{formatCurrency(descuento)}</span>
+                                </div>
+                              )}
+                              <div className="flex justify-between border-t pt-1 mt-1">
+                                <span className="font-medium">= Precio de Lista:</span>
+                                <span className="font-mono font-bold text-primary">{formatCurrency(precioFinal)}</span>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Mensaje si no hay costos */}
+                {!editingProduct.costo_promedio_ponderado && !editingProduct.ultimo_costo_compra && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    ⚠️ Este producto no tiene costos registrados. Usa el modo manual.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Precio de venta (siempre visible) */}
             <div className="space-y-2">
-              <Label htmlFor="precio_venta">Precio de Venta *</Label>
+              <Label htmlFor="precio_venta">
+                Precio de Venta *
+                {modoCalculadora && margenPorcentaje && (
+                  <span className="text-xs text-muted-foreground ml-2">(calculado)</span>
+                )}
+              </Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                 <Input
@@ -668,9 +849,18 @@ export const SecretariaListaPreciosTab = () => {
                   type="number"
                   step="0.01"
                   min="0"
-                  className="pl-7 text-lg font-mono"
+                  className={cn(
+                    "pl-7 text-lg font-mono",
+                    modoCalculadora && margenPorcentaje && "bg-muted/50"
+                  )}
                   value={precioVenta}
-                  onChange={(e) => setPrecioVenta(e.target.value)}
+                  onChange={(e) => {
+                    setPrecioVenta(e.target.value);
+                    // Si cambia manual, limpiar el margen
+                    if (modoCalculadora) {
+                      setMargenPorcentaje("");
+                    }
+                  }}
                   placeholder="0.00"
                 />
               </div>
@@ -681,6 +871,7 @@ export const SecretariaListaPreciosTab = () => {
               )}
             </div>
 
+            {/* Descuento máximo */}
             <div className="space-y-2">
               <Label htmlFor="descuento_maximo">Descuento Máximo Autorizado ($)</Label>
               <div className="relative">
@@ -692,7 +883,25 @@ export const SecretariaListaPreciosTab = () => {
                   min="0"
                   className="pl-7"
                   value={descuentoMaximo}
-                  onChange={(e) => setDescuentoMaximo(e.target.value)}
+                  onChange={(e) => {
+                    const nuevoDescuento = e.target.value;
+                    setDescuentoMaximo(nuevoDescuento);
+                    
+                    // Recalcular precio si está en modo calculadora
+                    if (modoCalculadora && margenPorcentaje && editingProduct) {
+                      const costoBase = usarCostoPromedio 
+                        ? editingProduct.costo_promedio_ponderado 
+                        : editingProduct.ultimo_costo_compra;
+                      
+                      if (costoBase) {
+                        const margenDecimal = parseFloat(margenPorcentaje) / 100;
+                        const precioConMargen = costoBase * (1 + margenDecimal);
+                        const descuento = parseFloat(nuevoDescuento) || 0;
+                        const precioFinal = precioConMargen + descuento;
+                        setPrecioVenta(precioFinal.toFixed(2));
+                      }
+                    }
+                  }}
                   placeholder="0.00"
                 />
               </div>
@@ -701,10 +910,11 @@ export const SecretariaListaPreciosTab = () => {
               </p>
             </div>
 
+            {/* Resumen de precio mínimo */}
             {precioVenta && descuentoMaximo && parseFloat(descuentoMaximo) > 0 && (
-              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                <p className="text-sm text-emerald-700 dark:text-emerald-400">
-                  Precio mínimo sin autorización: <strong>${(parseFloat(precioVenta) - parseFloat(descuentoMaximo)).toFixed(2)}</strong>
+              <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                <p className="text-sm text-primary">
+                  Precio mínimo sin autorización: <strong>{formatCurrency(parseFloat(precioVenta) - parseFloat(descuentoMaximo))}</strong>
                 </p>
               </div>
             )}
