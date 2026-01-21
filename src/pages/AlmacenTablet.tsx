@@ -20,7 +20,8 @@ import {
   Bug,
   AlertTriangle,
   Boxes,
-  ShoppingCart
+  ShoppingCart,
+  FileText
 } from "lucide-react";
 import { AlmacenCargaRutasTab } from "@/components/almacen/AlmacenCargaRutasTab";
 import { AlmacenRecepcionTab } from "@/components/almacen/AlmacenRecepcionTab";
@@ -28,6 +29,7 @@ import { AlmacenFumigacionesTab } from "@/components/almacen/AlmacenFumigaciones
 import { AlmacenInventarioTab } from "@/components/almacen/AlmacenInventarioTab";
 import { AlmacenProductosTab } from "@/components/almacen/AlmacenProductosTab";
 import { AlmacenVentasMostradorTab } from "@/components/almacen/AlmacenVentasMostradorTab";
+import { ReporteRecepcionesDiaTab } from "@/components/almacen/ReporteRecepcionesDiaTab";
 import { LiveIndicator } from "@/components/ui/live-indicator";
 
 const AlmacenTablet = () => {
@@ -297,7 +299,7 @@ const AlmacenTablet = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full grid grid-cols-6 h-14 mb-4">
+        <TabsList className="w-full grid grid-cols-7 h-14 mb-4">
           <TabsTrigger value="rutas" className="text-base h-12 gap-2">
             <Truck className="w-5 h-5" />
             <span className="hidden sm:inline">Mis</span> Rutas
@@ -319,6 +321,10 @@ const AlmacenTablet = () => {
                 {recepcionStats.pendientes}
               </span>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="reporte" className="text-base h-12 gap-2">
+            <FileText className="w-5 h-5" />
+            Reporte
           </TabsTrigger>
           <TabsTrigger value="inventario" className="text-base h-12 gap-2">
             <Boxes className="w-5 h-5" />
@@ -355,6 +361,10 @@ const AlmacenTablet = () => {
             key={`recepcion-${refreshKey}`}
             onStatsUpdate={setRecepcionStats}
           />
+        </TabsContent>
+
+        <TabsContent value="reporte" className="mt-0">
+          <ReporteRecepcionesDiaTab key={`reporte-${refreshKey}`} />
         </TabsContent>
 
         <TabsContent value="inventario" className="mt-0">
