@@ -32,6 +32,7 @@ import { AlmacenSidebar } from "@/components/almacen/AlmacenSidebar";
 import { AlmacenMobileNav } from "@/components/almacen/AlmacenMobileNav";
 import { LiveIndicator } from "@/components/ui/live-indicator";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useSystemPresence } from "@/hooks/useSystemPresence";
 
 const AlmacenTablet = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -44,6 +45,9 @@ const AlmacenTablet = () => {
   const [empleadoFotoUrl, setEmpleadoFotoUrl] = useState<string | null>(null);
   const navigate = useNavigate();
   const { isGerenteAlmacen, isAdmin } = useUserRoles();
+  
+  // Track presence in almacen
+  useSystemPresence('almacen');
 
   // El gerente de almacén ve tabs adicionales de flotilla
   const showFlotillaTabs = isGerenteAlmacen || isAdmin;

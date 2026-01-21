@@ -4,7 +4,9 @@ import Layout from "@/components/Layout";
 import { Loader2 } from "lucide-react";
 import { NotificacionesSistema } from "@/components/NotificacionesSistema";
 import { SolicitudesDescuentoPanel } from "@/components/admin/SolicitudesDescuentoPanel";
+import { UsuariosConectadosPanel } from "@/components/admin/UsuariosConectadosPanel";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useSystemPresence } from "@/hooks/useSystemPresence";
 import { KPICards } from "@/components/dashboard/KPICards";
 import { VentasMensualesChart } from "@/components/dashboard/VentasMensualesChart";
 import { CobranzaCriticaPanel } from "@/components/dashboard/CobranzaCriticaPanel";
@@ -15,7 +17,10 @@ import { InventarioResumen } from "@/components/dashboard/InventarioResumen";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { roles, isLoading: rolesLoading } = useUserRoles();
+  const { roles, isLoading: rolesLoading, isAdmin } = useUserRoles();
+  
+  // Track presence in dashboard
+  useSystemPresence('dashboard');
 
   // Redirección inmediata para almacenistas y choferes
   useEffect(() => {
@@ -67,6 +72,9 @@ const Dashboard = () => {
 
         {/* KPIs Principales */}
         <KPICards />
+
+        {/* Panel de Usuarios Conectados (solo admin) */}
+        {isAdmin && <UsuariosConectadosPanel />}
 
         {/* Gráfico de Ventas y Cobranza Crítica */}
         <div className="grid gap-4 lg:grid-cols-2">

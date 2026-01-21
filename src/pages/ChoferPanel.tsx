@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useChoferGeolocation } from "@/hooks/useChoferGeolocation";
+import { useSystemPresence } from "@/hooks/useSystemPresence";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,10 @@ import { AvatarEmpleadoPopover } from "@/components/almacen/AvatarEmpleadoPopove
 export default function ChoferPanel() {
   const navigate = useNavigate();
   const { isChofer, isAdmin, isLoading: rolesLoading } = useUserRoles();
+  
+  // Track presence in chofer panel
+  useSystemPresence('chofer');
+  
   const [loading, setLoading] = useState(true);
   const [ruta, setRuta] = useState<any>(null);
   const [entregas, setEntregas] = useState<any[]>([]);
