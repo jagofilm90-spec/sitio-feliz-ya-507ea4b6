@@ -29,8 +29,9 @@ import {
   AlertTriangle,
   Mail,
   Loader2,
+  Eye,
 } from "lucide-react";
-import { generarRecepcionPDF, generarRecepcionPDFBase64 } from "@/utils/recepcionPdfGenerator";
+import { generarRecepcionPDF, generarRecepcionPDFBase64, generarRecepcionPDFDataUrl } from "@/utils/recepcionPdfGenerator";
 import { getDisplayName } from "@/lib/productUtils";
 import { getEmailsInternos, enviarCopiaInterna } from "@/lib/emailNotificationsUtils";
 
@@ -127,6 +128,9 @@ export const RecepcionDetalleDialog = ({
   const [imagenExpandida, setImagenExpandida] = useState<string | null>(null);
   const [generandoPdf, setGenerandoPdf] = useState(false);
   const [reenviandoCorreo, setReenviandoCorreo] = useState(false);
+  const [previsualizandoPdf, setPrevisualizandoPdf] = useState(false);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
 
   useEffect(() => {
     if (open && entregaId) {
@@ -256,34 +260,58 @@ export const RecepcionDetalleDialog = ({
     }
   };
 
+  const buildPdfData = () => {
+    if (!recepcion) return null;
+    
+    const evidenciasConTipos = evidencias.map(ev => ({
+      url: evidenciasUrls[ev.id] || "",
+      tipo: ev.tipo_evidencia,
+    })).filter(e => e.url);
+    
+    return {
+      recepcion,
+      productos,
+      evidenciasConTipos,
+      firmaChofer: recepcion.firma_chofer_conformidad,
+      firmaAlmacenista: recepcion.firma_almacenista,
+      llegadaRegistradaEn: recepcion.llegada_registrada_en,
+      recepcionFinalizadaEn: recepcion.recepcion_finalizada_en,
+      placasVehiculo: recepcion.placas_vehiculo,
+      nombreChoferProveedor: recepcion.nombre_chofer_proveedor,
+      numeroRemisionProveedor: recepcion.numero_remision_proveedor,
+    };
+  };
+
   const handleGenerarPDF = async () => {
-    if (!recepcion) return;
+    const pdfData = buildPdfData();
+    if (!pdfData) return;
+    
     setGenerandoPdf(true);
     try {
-      // Build evidencias with types for PDF
-      const evidenciasConTipos = evidencias.map(ev => ({
-        url: evidenciasUrls[ev.id] || "",
-        tipo: ev.tipo_evidencia,
-      })).filter(e => e.url);
-      
-      await generarRecepcionPDF({
-        recepcion,
-        productos,
-        evidenciasConTipos,
-        firmaChofer: recepcion.firma_chofer_conformidad,
-        firmaAlmacenista: recepcion.firma_almacenista,
-        llegadaRegistradaEn: recepcion.llegada_registrada_en,
-        recepcionFinalizadaEn: recepcion.recepcion_finalizada_en,
-        placasVehiculo: recepcion.placas_vehiculo,
-        nombreChoferProveedor: recepcion.nombre_chofer_proveedor,
-        numeroRemisionProveedor: recepcion.numero_remision_proveedor,
-      });
+      await generarRecepcionPDF(pdfData);
       toast.success("PDF generado exitosamente");
     } catch (error) {
       console.error("Error generando PDF:", error);
       toast.error("Error al generar PDF. Revisa la consola para más detalles.");
     } finally {
       setGenerandoPdf(false);
+    }
+  };
+
+  const handlePreviewPDF = async () => {
+    const pdfData = buildPdfData();
+    if (!pdfData) return;
+    
+    setPrevisualizandoPdf(true);
+    try {
+      const dataUrl = await generarRecepcionPDFDataUrl(pdfData);
+      setPdfPreviewUrl(dataUrl);
+      setPreviewDialogOpen(true);
+    } catch (error) {
+      console.error("Error generando preview:", error);
+      toast.error("Error al generar vista previa del PDF");
+    } finally {
+      setPrevisualizandoPdf(false);
     }
   };
 
@@ -701,11 +729,27 @@ export const RecepcionDetalleDialog = ({
                 <div className="flex justify-end gap-2 pt-4 border-t">
                   <Button
                     variant="outline"
-                    onClick={handleGenerarPDF}
-                    disabled={generandoPdf}
+                    onClick={handlePreviewPDF}
+                    disabled={previsualizandoPdf || generandoPdf}
                   >
-                    <Download className="w-4 h-4 mr-2" />
-                    {generandoPdf ? "Generando..." : "Exportar PDF"}
+                    {previsualizandoPdf ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Eye className="w-4 h-4 mr-2" />
+                    )}
+                    Vista Previa
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleGenerarPDF}
+                    disabled={generandoPdf || previsualizandoPdf}
+                  >
+                    {generandoPdf ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4 mr-2" />
+                    )}
+                    Descargar PDF
                   </Button>
                   <Button
                     onClick={handleReenviarCorreo}
@@ -752,6 +796,43 @@ export const RecepcionDetalleDialog = ({
               className="w-full h-auto max-h-[85vh] object-contain"
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* PDF Preview dialog */}
+      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+        <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Vista Previa - {recepcion?.orden_compra.folio}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 min-h-0">
+            {pdfPreviewUrl && (
+              <iframe
+                src={pdfPreviewUrl}
+                className="w-full h-full border rounded-lg"
+                title="Vista previa del PDF"
+              />
+            )}
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setPreviewDialogOpen(false)}>
+              Cerrar
+            </Button>
+            <Button 
+              onClick={handleGenerarPDF} 
+              disabled={generandoPdf}
+            >
+              {generandoPdf ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 mr-2" />
+              )}
+              Descargar PDF
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>

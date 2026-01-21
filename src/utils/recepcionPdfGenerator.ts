@@ -743,3 +743,15 @@ export const generarRecepcionPDFBase64 = async (data: RecepcionData): Promise<{
   
   return { base64, fileName };
 };
+
+// Nueva función que retorna el PDF como Data URL para vista previa
+export const generarRecepcionPDFDataUrl = async (data: RecepcionData): Promise<string> => {
+  console.log("Generando PDF como Data URL para preview...");
+  
+  const { doc } = await generarDocumentoPDF(data);
+  
+  const dataUrl = doc.output('datauristring');
+  console.log("PDF Data URL generado para preview");
+  
+  return dataUrl;
+};
