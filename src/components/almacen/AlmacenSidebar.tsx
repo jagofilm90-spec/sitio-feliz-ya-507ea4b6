@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { 
   Truck, 
@@ -15,11 +17,12 @@ import {
   LogOut,
   Wifi,
   WifiOff,
-  Settings
+  Settings,
+  Calendar,
+  Clock
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { LiveIndicator } from "@/components/ui/live-indicator";
 import { ConfiguracionFlotillaDialog } from "./ConfiguracionFlotillaDialog";
 import logoBlanco from "@/assets/logos/logo-blanco.png";
 
@@ -42,6 +45,7 @@ interface AlmacenSidebarProps {
   };
   isOnline: boolean;
   onLogout: () => void;
+  empleadoNombre: string;
 }
 
 export const AlmacenSidebar = ({
@@ -50,9 +54,17 @@ export const AlmacenSidebar = ({
   showFlotillaTabs,
   counters,
   isOnline,
-  onLogout
+  onLogout,
+  empleadoNombre
 }: AlmacenSidebarProps) => {
   const [configOpen, setConfigOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Reloj en tiempo real
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
   
   const almacenItems: NavItem[] = [
     { id: "rutas", label: "Carga de Rutas", icon: Truck, badge: counters.rutas },
@@ -101,17 +113,44 @@ export const AlmacenSidebar = ({
   return (
     <>
       <aside className="hidden lg:flex flex-col w-56 bg-slate-900 fixed left-0 top-0 h-screen z-40">
-        {/* Header con Logo */}
-        <div className="p-3 border-b border-slate-700">
-          <div className="flex items-center gap-2">
-            <img src={logoBlanco} alt="Almasa" className="h-8 w-auto" />
+        {/* Header con Logo y Bienvenida */}
+        <div className="border-b border-slate-700">
+          {/* Logo */}
+          <div className="p-3 flex justify-center border-b border-slate-700/50">
+            <img src={logoBlanco} alt="Almasa" className="h-7 w-auto" />
+          </div>
+          
+          {/* Bienvenida personalizada */}
+          <div className="p-3 space-y-2">
             <div>
-              <h2 className="text-white font-semibold text-sm">
-                {showFlotillaTabs ? "Gerente" : "Almacén"}
+              <p className="text-slate-400 text-[10px]">Bienvenido,</p>
+              <h2 className="text-white font-semibold text-sm truncate">
+                {empleadoNombre || "Usuario"}
               </h2>
-              <div className="flex items-center gap-1.5">
-                <LiveIndicator size="sm" />
-                <span className="text-[10px] text-slate-400">Sincronizado</span>
+              <p className="text-slate-500 text-[10px]">
+                {showFlotillaTabs ? "Gerente de Almacén" : "Almacenista"}
+              </p>
+            </div>
+            
+            {/* Fecha y hora en vivo */}
+            <div className="pt-2 border-t border-slate-700/50 space-y-1">
+              <div className="flex items-center gap-1.5 text-slate-400">
+                <Calendar className="w-3 h-3" />
+                <span className="text-[10px]">
+                  {format(currentTime, "EEE, dd MMM yyyy", { locale: es })}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <Clock className="w-3 h-3" />
+                  <span className="text-xs font-mono">
+                    {format(currentTime, "HH:mm:ss")}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-[9px] text-green-400">En vivo</span>
+                </div>
               </div>
             </div>
           </div>
