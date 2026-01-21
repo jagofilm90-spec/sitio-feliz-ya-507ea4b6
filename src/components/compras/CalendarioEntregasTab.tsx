@@ -109,6 +109,8 @@ const CalendarioEntregasTab = () => {
         )
         .eq("entregas_multiples", false)
         .not("fecha_entrega_programada", "is", null)
+        .not("status", "eq", "completada")
+        .not("status", "eq", "cancelada")
         .order("fecha_entrega_programada");
 
       if (error) throw error;
