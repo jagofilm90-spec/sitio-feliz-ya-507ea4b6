@@ -1,11 +1,9 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -15,24 +13,25 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { formatCurrency } from "@/lib/utils";
-import { Search, Loader2, DollarSign, Edit, Save, History, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { getDisplayName } from "@/lib/productUtils";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2, Pencil, Search, History, ChevronLeft, ChevronRight, DollarSign, TrendingUp, TrendingDown, Minus, Save } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -61,11 +60,30 @@ interface HistorialPrecio {
   usuario_nombre?: string | null;
 }
 
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+  }).format(amount);
+};
+
+const getDisplayName = (producto: Producto) => {
+  let name = producto.nombre;
+  if (producto.especificaciones) {
+    name += ` ${producto.especificaciones}`;
+  }
+  if (producto.marca) {
+    name += ` - ${producto.marca}`;
+  }
+  return name;
+};
+
 export const SecretariaListaPreciosTab = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoriaFilter, setCategoriaFilter] = useState<string>("all");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
+  const [currentIndex, setCurrentIndex] = useState<number>(-1);
   const [precioVenta, setPrecioVenta] = useState("");
   const [descuentoMaximo, setDescuentoMaximo] = useState("");
   const [historialDialogOpen, setHistorialDialogOpen] = useState(false);
@@ -96,7 +114,6 @@ export const SecretariaListaPreciosTab = () => {
     queryFn: async () => {
       if (!selectedProductForHistory?.id) return [];
       
-      // Get history records
       const { data: historial, error } = await supabase
         .from("productos_historial_precios")
         .select("id, precio_anterior, precio_nuevo, created_at, usuario_id")
@@ -106,10 +123,8 @@ export const SecretariaListaPreciosTab = () => {
       if (error) throw error;
       if (!historial || historial.length === 0) return [];
 
-      // Get unique user IDs
       const userIds = [...new Set(historial.map(h => h.usuario_id).filter(Boolean))] as string[];
       
-      // Fetch user names if there are any
       let userMap: Record<string, string> = {};
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
@@ -125,7 +140,6 @@ export const SecretariaListaPreciosTab = () => {
         }
       }
 
-      // Merge user names into history
       return historial.map(h => ({
         ...h,
         usuario_nombre: h.usuario_id ? userMap[h.usuario_id] || "Usuario" : null
@@ -137,10 +151,8 @@ export const SecretariaListaPreciosTab = () => {
   // Update price mutation
   const updatePriceMutation = useMutation({
     mutationFn: async ({ id, precio_venta, descuento_maximo, precio_anterior }: { id: string; precio_venta: number; descuento_maximo: number | null; precio_anterior: number }) => {
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Update the product price
       const { error } = await supabase
         .from("productos")
         .update({ precio_venta, descuento_maximo })
@@ -148,7 +160,6 @@ export const SecretariaListaPreciosTab = () => {
       
       if (error) throw error;
 
-      // Save to history if price changed
       if (precio_anterior !== precio_venta) {
         const { error: historialError } = await supabase
           .from("productos_historial_precios")
@@ -168,8 +179,6 @@ export const SecretariaListaPreciosTab = () => {
       toast({ title: "Precio actualizado correctamente" });
       queryClient.invalidateQueries({ queryKey: ["secretaria-lista-precios"] });
       queryClient.invalidateQueries({ queryKey: ["historial-precios"] });
-      setEditDialogOpen(false);
-      setEditingProduct(null);
     },
     onError: (error: any) => {
       toast({
@@ -207,7 +216,13 @@ export const SecretariaListaPreciosTab = () => {
   };
 
   // Handle edit
-  const handleEdit = (producto: Producto) => {
+  const handleEdit = (producto: Producto, index?: number) => {
+    if (index !== undefined) {
+      setCurrentIndex(index);
+    } else {
+      const idx = filteredProductos?.findIndex(p => p.id === producto.id) ?? -1;
+      setCurrentIndex(idx);
+    }
     setEditingProduct(producto);
     setPrecioVenta(producto.precio_venta.toString());
     setDescuentoMaximo(producto.descuento_maximo?.toString() || "");
@@ -237,6 +252,59 @@ export const SecretariaListaPreciosTab = () => {
       precio_anterior: editingProduct.precio_venta,
     });
   };
+
+  // Navigate between products
+  const handleNavigate = (direction: 'prev' | 'next') => {
+    if (!filteredProductos || currentIndex === -1) return;
+    
+    const newIndex = direction === 'prev' 
+      ? Math.max(0, currentIndex - 1)
+      : Math.min(filteredProductos.length - 1, currentIndex + 1);
+    
+    if (newIndex === currentIndex) return;
+    
+    // Save current product first then navigate
+    if (editingProduct) {
+      const precio = parseFloat(precioVenta);
+      if (!isNaN(precio) && precio > 0) {
+        const descuento = descuentoMaximo ? parseFloat(descuentoMaximo) : null;
+        updatePriceMutation.mutate({
+          id: editingProduct.id,
+          precio_venta: precio,
+          descuento_maximo: descuento,
+          precio_anterior: editingProduct.precio_venta,
+        }, {
+          onSuccess: () => {
+            const nextProduct = filteredProductos[newIndex];
+            handleEdit(nextProduct, newIndex);
+          }
+        });
+      } else {
+        const nextProduct = filteredProductos[newIndex];
+        handleEdit(nextProduct, newIndex);
+      }
+    }
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (!editDialogOpen || !editingProduct) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      
+      if (e.key === 'ArrowLeft' && currentIndex > 0) {
+        e.preventDefault();
+        handleNavigate('prev');
+      } else if (e.key === 'ArrowRight' && currentIndex < (filteredProductos?.length || 1) - 1) {
+        e.preventDefault();
+        handleNavigate('next');
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editDialogOpen, editingProduct, currentIndex, filteredProductos?.length, precioVenta, descuentoMaximo]);
 
   // Handle view history
   const handleViewHistory = (producto: Producto) => {
@@ -305,12 +373,12 @@ export const SecretariaListaPreciosTab = () => {
                   <TableHead className="text-right">Precio Unitario</TableHead>
                   <TableHead className="text-right hidden sm:table-cell">$/Kilo</TableHead>
                   <TableHead className="text-right hidden sm:table-cell">Desc. Máx</TableHead>
-                  <TableHead className="text-center">Editar</TableHead>
+                  <TableHead className="text-center">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredProductos && filteredProductos.length > 0 ? (
-                  filteredProductos.map((producto) => {
+                  filteredProductos.map((producto, index) => {
                     const precioKilo = getPrecioKilo(producto);
                     return (
                       <TableRow key={producto.id} className="hover:bg-muted/50">
@@ -351,7 +419,7 @@ export const SecretariaListaPreciosTab = () => {
                         </TableCell>
                         <TableCell className="text-right hidden sm:table-cell">
                           {producto.descuento_maximo && producto.descuento_maximo > 0 ? (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950/50 dark:text-green-400 dark:border-green-800">
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800">
                               -${producto.descuento_maximo.toFixed(2)}
                             </Badge>
                           ) : (
@@ -371,10 +439,10 @@ export const SecretariaListaPreciosTab = () => {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleEdit(producto)}
+                              onClick={() => handleEdit(producto, index)}
                               title="Editar precio"
                             >
-                              <Edit className="h-4 w-4" />
+                              <Pencil className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -395,8 +463,42 @@ export const SecretariaListaPreciosTab = () => {
       </Card>
 
       {/* Edit Price Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+      <Dialog open={editDialogOpen} onOpenChange={(open) => {
+        if (!open) setCurrentIndex(-1);
+        setEditDialogOpen(open);
+      }}>
         <DialogContent className="max-w-md">
+          {/* Navigation between products */}
+          {editingProduct && filteredProductos && filteredProductos.length > 1 && (
+            <div className="flex items-center justify-between border-b pb-3 -mt-2 mb-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => handleNavigate('prev')}
+                disabled={currentIndex <= 0 || updatePriceMutation.isPending}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Anterior
+              </Button>
+              
+              <span className="text-xs text-muted-foreground font-mono">
+                {currentIndex + 1} de {filteredProductos.length}
+              </span>
+              
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => handleNavigate('next')}
+                disabled={currentIndex >= filteredProductos.length - 1 || updatePriceMutation.isPending}
+              >
+                Siguiente
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          )}
+
           <DialogHeader>
             <DialogTitle>Editar Precio</DialogTitle>
             <DialogDescription>
@@ -452,8 +554,8 @@ export const SecretariaListaPreciosTab = () => {
             </div>
 
             {precioVenta && descuentoMaximo && parseFloat(descuentoMaximo) > 0 && (
-              <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
-                <p className="text-sm text-green-700 dark:text-green-400">
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                <p className="text-sm text-emerald-700 dark:text-emerald-400">
                   Precio mínimo sin autorización: <strong>${(parseFloat(precioVenta) - parseFloat(descuentoMaximo)).toFixed(2)}</strong>
                 </p>
               </div>
@@ -538,12 +640,12 @@ export const SecretariaListaPreciosTab = () => {
                                 Sin cambio
                               </Badge>
                             ) : esAumento ? (
-                              <Badge className="bg-destructive/10 text-destructive border-destructive/20 text-xs">
+                              <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 text-xs">
                                 <TrendingUp className="h-3 w-3 mr-1" />
                                 +{formatCurrency(diferencia)}
                               </Badge>
                             ) : (
-                              <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400 text-xs">
+                              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400 text-xs">
                                 <TrendingDown className="h-3 w-3 mr-1" />
                                 {formatCurrency(diferencia)}
                               </Badge>
