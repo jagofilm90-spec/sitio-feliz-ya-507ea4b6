@@ -32,7 +32,7 @@ import {
   Loader2,
   Eye,
 } from "lucide-react";
-import { generarRecepcionPDF, generarRecepcionPDFBase64, generarRecepcionPDFDataUrl } from "@/utils/recepcionPdfGenerator";
+import { generarRecepcionPDF, generarRecepcionPDFBase64, generarRecepcionPDFBlobUrl } from "@/utils/recepcionPdfGenerator";
 import { getDisplayName } from "@/lib/productUtils";
 import { getEmailsInternos, enviarCopiaInterna } from "@/lib/emailNotificationsUtils";
 
@@ -307,8 +307,8 @@ export const RecepcionDetalleDialog = ({
     setPrevisualizandoPdf(true);
     setIframeLoading(true);
     try {
-      const dataUrl = await generarRecepcionPDFDataUrl(pdfData);
-      setPdfPreviewUrl(dataUrl);
+      const blobUrl = await generarRecepcionPDFBlobUrl(pdfData);
+      setPdfPreviewUrl(blobUrl);
       setPreviewDialogOpen(true);
     } catch (error) {
       console.error("Error generando preview:", error);
@@ -804,6 +804,10 @@ export const RecepcionDetalleDialog = ({
 
       {/* PDF Preview dialog */}
       <Dialog open={previewDialogOpen} onOpenChange={(open) => {
+        if (!open && pdfPreviewUrl) {
+          URL.revokeObjectURL(pdfPreviewUrl);
+          setPdfPreviewUrl(null);
+        }
         setPreviewDialogOpen(open);
         if (!open) setIframeLoading(true);
       }}>
