@@ -46,18 +46,28 @@ export interface ProductoBase {
   unidad?: string | null;
   contenido_empaque?: string | null;
   peso_kg?: number | null;
+  es_promocion?: boolean;
+  descripcion_promocion?: string | null;
 }
 
 /**
  * Genera el Display Name completo del producto siguiendo el formato:
- * {Nombre base} {Marca} {Variantes} — {Unidad} {Contenido}
+ * {Nombre base} {Marca} {Variantes} — {Unidad} {Contenido} (PROMO: descripción)
  * 
  * Ejemplos:
  * - Azúcar refinada Potrero — Bulto 25 kg
  * - Ciruela pasa Huertos Monserrat 30/40 — Caja 10 kg
  * - Piña rodaja en almíbar Agrover (14 rodajas) — Caja 24×800 g
+ * - CatChow 20kg + 3kg gratis (PROMO)
+ * 
+ * @param producto - Objeto con datos del producto
+ * @param options - Opciones adicionales
+ * @param options.includePromo - Si es true, incluye indicador de promoción en el nombre
  */
-export function getDisplayName(producto: ProductoBase): string {
+export function getDisplayName(
+  producto: ProductoBase, 
+  options?: { includePromo?: boolean }
+): string {
   const parts: string[] = [producto.nombre];
   
   // Agregar marca si existe
@@ -81,7 +91,21 @@ export function getDisplayName(producto: ProductoBase): string {
     parts.push(`— ${empaque}`);
   }
   
+  // Agregar indicador de promoción si está habilitado
+  if (options?.includePromo && producto.es_promocion && producto.descripcion_promocion) {
+    parts.push(`(${producto.descripcion_promocion})`);
+  } else if (options?.includePromo && producto.es_promocion) {
+    parts.push('(PROMO)');
+  }
+  
   return parts.join(' ');
+}
+
+/**
+ * Genera el nombre para remisiones/documentos, incluyendo texto de promoción si aplica
+ */
+export function getDisplayNameForRemision(producto: ProductoBase): string {
+  return getDisplayName(producto, { includePromo: true });
 }
 
 /**

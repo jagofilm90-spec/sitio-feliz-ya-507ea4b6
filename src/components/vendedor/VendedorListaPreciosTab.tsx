@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { Search, Package } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { getShortDisplayName } from "@/lib/productUtils";
@@ -27,6 +28,9 @@ interface Producto {
   contenido_empaque: string | null;
   precio_por_kilo: boolean | null;
   descuento_maximo: number | null;
+  es_promocion: boolean | null;
+  descripcion_promocion: string | null;
+  bloqueado_venta: boolean | null;
 }
 
 export function VendedorListaPreciosTab() {
@@ -55,7 +59,10 @@ export function VendedorListaPreciosTab() {
           peso_kg,
           contenido_empaque,
           precio_por_kilo,
-          descuento_maximo
+          descuento_maximo,
+          es_promocion,
+          descripcion_promocion,
+          bloqueado_venta
         `)
         .eq("activo", true)
         .or("solo_uso_interno.is.null,solo_uso_interno.eq.false")
@@ -156,7 +163,7 @@ export function VendedorListaPreciosTab() {
                         </TableCell>
                         <TableCell className="py-1 px-2">
                           <div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 flex-wrap">
                               <span className="text-xs">
                                 {producto.nombre}
                                 {producto.especificaciones && (
@@ -165,12 +172,25 @@ export function VendedorListaPreciosTab() {
                                   </span>
                                 )}
                               </span>
+                              {producto.es_promocion && (
+                                <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
+                                  🎁 PROMO
+                                </Badge>
+                              )}
+                              {producto.bloqueado_venta && (
+                                <span className="text-[8px] text-red-600 dark:text-red-400 shrink-0" title="Requiere autorización para vender">🔒</span>
+                              )}
                               {producto.precio_por_kilo && (
                                 <span className="text-[8px] text-muted-foreground bg-muted px-1 rounded shrink-0">
                                   /kg
                                 </span>
                               )}
                             </div>
+                            {producto.es_promocion && producto.descripcion_promocion && (
+                              <div className="text-[9px] text-amber-700 dark:text-amber-400 font-medium">
+                                {producto.descripcion_promocion}
+                              </div>
+                            )}
                             {(producto.marca || producto.contenido_empaque) && (
                               <div className="text-[10px] text-muted-foreground flex items-center gap-1 flex-wrap">
                                 {producto.marca && (
@@ -225,14 +245,29 @@ export function VendedorListaPreciosTab() {
                     className="flex justify-between items-center py-1.5 px-3 border-b hover:bg-muted/30"
                   >
                     <div className="min-w-0 flex-1 pr-2">
-                      <p className="text-sm font-medium truncate leading-tight">
-                        {producto.nombre}
-                        {producto.especificaciones && (
-                          <span className="text-purple-600 dark:text-purple-400 font-medium ml-1">
-                            {producto.especificaciones}
-                          </span>
+                      <p className="text-sm font-medium truncate leading-tight flex items-center gap-1 flex-wrap">
+                        <span>
+                          {producto.nombre}
+                          {producto.especificaciones && (
+                            <span className="text-purple-600 dark:text-purple-400 font-medium ml-1">
+                              {producto.especificaciones}
+                            </span>
+                          )}
+                        </span>
+                        {producto.es_promocion && (
+                          <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
+                            🎁 PROMO
+                          </Badge>
+                        )}
+                        {producto.bloqueado_venta && (
+                          <span className="text-[8px] text-red-600 dark:text-red-400 shrink-0" title="Requiere autorización">🔒</span>
                         )}
                       </p>
+                      {producto.es_promocion && producto.descripcion_promocion && (
+                        <p className="text-[9px] text-amber-700 dark:text-amber-400 font-medium truncate">
+                          {producto.descripcion_promocion}
+                        </p>
+                      )}
                       {(producto.marca || producto.contenido_empaque) && (
                         <p className="text-[10px] text-muted-foreground truncate leading-tight">
                           {producto.marca && (

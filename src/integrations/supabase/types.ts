@@ -3747,6 +3747,7 @@ export type Database = {
           activo: boolean | null
           aplica_ieps: boolean
           aplica_iva: boolean
+          bloqueado_venta: boolean | null
           categoria: string | null
           codigo: string
           codigo_sat: string | null
@@ -3754,7 +3755,9 @@ export type Database = {
           costo_promedio_ponderado: number | null
           created_at: string
           descripcion: string | null
+          descripcion_promocion: string | null
           descuento_maximo: number | null
+          es_promocion: boolean | null
           especificaciones: string | null
           fecha_ultima_compra: string | null
           fecha_ultima_fumigacion: string | null
@@ -3767,7 +3770,9 @@ export type Database = {
           precio_compra: number
           precio_por_kilo: boolean
           precio_venta: number
+          producto_base_id: string | null
           proveedor_preferido_id: string | null
+          puede_tener_promocion: boolean | null
           requiere_fumigacion: boolean
           solo_uso_interno: boolean | null
           stock_actual: number
@@ -3781,6 +3786,7 @@ export type Database = {
           activo?: boolean | null
           aplica_ieps?: boolean
           aplica_iva?: boolean
+          bloqueado_venta?: boolean | null
           categoria?: string | null
           codigo: string
           codigo_sat?: string | null
@@ -3788,7 +3794,9 @@ export type Database = {
           costo_promedio_ponderado?: number | null
           created_at?: string
           descripcion?: string | null
+          descripcion_promocion?: string | null
           descuento_maximo?: number | null
+          es_promocion?: boolean | null
           especificaciones?: string | null
           fecha_ultima_compra?: string | null
           fecha_ultima_fumigacion?: string | null
@@ -3801,7 +3809,9 @@ export type Database = {
           precio_compra?: number
           precio_por_kilo?: boolean
           precio_venta?: number
+          producto_base_id?: string | null
           proveedor_preferido_id?: string | null
+          puede_tener_promocion?: boolean | null
           requiere_fumigacion?: boolean
           solo_uso_interno?: boolean | null
           stock_actual?: number
@@ -3815,6 +3825,7 @@ export type Database = {
           activo?: boolean | null
           aplica_ieps?: boolean
           aplica_iva?: boolean
+          bloqueado_venta?: boolean | null
           categoria?: string | null
           codigo?: string
           codigo_sat?: string | null
@@ -3822,7 +3833,9 @@ export type Database = {
           costo_promedio_ponderado?: number | null
           created_at?: string
           descripcion?: string | null
+          descripcion_promocion?: string | null
           descuento_maximo?: number | null
+          es_promocion?: boolean | null
           especificaciones?: string | null
           fecha_ultima_compra?: string | null
           fecha_ultima_fumigacion?: string | null
@@ -3835,7 +3848,9 @@ export type Database = {
           precio_compra?: number
           precio_por_kilo?: boolean
           precio_venta?: number
+          producto_base_id?: string | null
           proveedor_preferido_id?: string | null
+          puede_tener_promocion?: boolean | null
           requiere_fumigacion?: boolean
           solo_uso_interno?: boolean | null
           stock_actual?: number
@@ -3846,6 +3861,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "productos_producto_base_id_fkey"
+            columns: ["producto_base_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_producto_base_id_fkey"
+            columns: ["producto_base_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "productos_proveedor_preferido_id_fkey"
             columns: ["proveedor_preferido_id"]
