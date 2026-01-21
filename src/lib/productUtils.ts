@@ -2,6 +2,43 @@
  * Utility functions for product display and calculations
  */
 
+/**
+ * Catálogo de unidades de producto para formularios
+ * Sincronizado con el enum unit_type de la base de datos
+ */
+export const UNIDADES_PRODUCTO = [
+  { value: 'balón', label: 'Balón' },
+  { value: 'bulto', label: 'Bulto' },
+  { value: 'caja', label: 'Caja' },
+  { value: 'churla', label: 'Churla' },
+  { value: 'costal', label: 'Costal' },
+  { value: 'cubeta', label: 'Cubeta' },
+  { value: 'kg', label: 'Kilogramo' },
+  { value: 'litro', label: 'Litro' },
+  { value: 'pieza', label: 'Pieza' },
+] as const;
+
+export type UnidadProductoValue = typeof UNIDADES_PRODUCTO[number]['value'];
+
+/**
+ * Obtiene el label de una unidad por su valor
+ */
+export function getUnidadLabel(value: string | null | undefined): string {
+  if (!value) return '';
+  const unidad = UNIDADES_PRODUCTO.find(u => u.value === value);
+  return unidad?.label || value;
+}
+
+/**
+ * Pluraliza una unidad en español
+ */
+export function pluralizarUnidad(unidad: string, cantidad: number): string {
+  if (cantidad === 1) return unidad;
+  if (unidad === 'balón') return 'balones';
+  if (unidad.endsWith('z')) return unidad.slice(0, -1) + 'ces';
+  return unidad + 's';
+}
+
 export interface ProductoBase {
   nombre: string;
   marca?: string | null;

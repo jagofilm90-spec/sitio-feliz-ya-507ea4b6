@@ -11,6 +11,7 @@ import { Search, Package, Truck, Settings2, ChevronDown, ChevronUp, Plus, Dollar
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { UNIDADES_PRODUCTO } from "@/lib/productUtils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Dialog,
@@ -575,15 +576,11 @@ const CrearProductoDialog = ({ open, onOpenChange, proveedorId, proveedorNombre,
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="balón">Balón</SelectItem>
-                  <SelectItem value="bulto">Bulto</SelectItem>
-                  <SelectItem value="caja">Caja</SelectItem>
-                  <SelectItem value="churla">Churla</SelectItem>
-                  <SelectItem value="costal">Costal</SelectItem>
-                  <SelectItem value="cubeta">Cubeta</SelectItem>
-                  <SelectItem value="kg">Kilogramos</SelectItem>
-                  <SelectItem value="litro">Litro</SelectItem>
-                  <SelectItem value="pieza">Pieza</SelectItem>
+                  {UNIDADES_PRODUCTO.map(unidad => (
+                    <SelectItem key={unidad.value} value={unidad.value}>
+                      {unidad.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
