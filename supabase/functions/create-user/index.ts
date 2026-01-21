@@ -43,8 +43,11 @@ Deno.serve(async (req) => {
       throw new Error('User is not an admin')
     }
 
-    // Obtener datos del nuevo usuario
-    const { email, password, full_name, phone, role } = await req.json()
+  // Obtener datos del nuevo usuario
+  const { 
+    email, password, full_name, phone, role,
+    nombre, primer_apellido, segundo_apellido, empleado_id 
+  } = await req.json()
 
     if (!email || !password || !full_name || !role) {
       throw new Error('Missing required fields')
@@ -90,6 +93,50 @@ Deno.serve(async (req) => {
 
     if (roleError) {
       throw roleError
+    }
+
+    // Mapeo de rol a puesto para empleados
+    const rolToPuesto: Record<string, string> = {
+      'almacen': 'Almacenista',
+      'gerente_almacen': 'Gerente Almacén',
+      'chofer': 'Chofer',
+      'vendedor': 'Vendedor',
+      'secretaria': 'Secretaria',
+      'contadora': 'Contador',
+      'admin': 'Administrador'
+    }
+
+    // Si se proporciona empleado_id, vincular el usuario al empleado existente
+    if (empleado_id) {
+      const { error: linkError } = await supabaseAdmin
+        .from('empleados')
+        .update({ user_id: newUser.user.id })
+        .eq('id', empleado_id)
+
+      if (linkError) {
+        console.error('Error linking empleado:', linkError)
+      }
+    } else {
+      // Crear nuevo registro de empleado automáticamente
+      const { error: empleadoError } = await supabaseAdmin
+        .from('empleados')
+        .insert({
+          user_id: newUser.user.id,
+          nombre_completo: full_name,
+          nombre: nombre || null,
+          primer_apellido: primer_apellido || null,
+          segundo_apellido: segundo_apellido || null,
+          email: email,
+          telefono: phone || null,
+          puesto: rolToPuesto[role] || 'Empleado',
+          activo: true,
+          fecha_ingreso: new Date().toISOString().split('T')[0]
+        })
+
+      if (empleadoError) {
+        console.error('Error creating empleado:', empleadoError)
+        // No lanzar error, el usuario ya está creado
+      }
     }
 
     return new Response(

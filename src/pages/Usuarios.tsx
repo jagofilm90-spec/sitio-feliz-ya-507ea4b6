@@ -282,28 +282,16 @@ export default function Usuarios() {
           full_name: fullName,
           phone: newUser.phone || null,
           role: newUser.role,
+          // Campos adicionales para crear/vincular empleado automáticamente
+          nombre: newUserFields.nombre || null,
+          primer_apellido: newUserFields.primer_apellido || null,
+          segundo_apellido: newUserFields.segundo_apellido || null,
+          empleado_id: selectedEmpleadoId || null,
         },
       });
 
       if (error) throw error;
       if (data.error) throw new Error(data.error);
-
-      // Si se seleccionó un empleado, actualizar su user_id con el nuevo usuario creado
-      if (selectedEmpleadoId && data.user) {
-        const { error: empleadoError } = await supabase
-          .from('empleados')
-          .update({ user_id: data.user.id })
-          .eq('id', selectedEmpleadoId);
-
-        if (empleadoError) {
-          console.error('Error vinculando empleado con usuario:', empleadoError);
-          toast({
-            variant: "destructive",
-            title: "Advertencia",
-            description: "El usuario se creó pero no se pudo vincular con el empleado",
-          });
-        }
-      }
 
       toast({
         title: "Usuario creado",
