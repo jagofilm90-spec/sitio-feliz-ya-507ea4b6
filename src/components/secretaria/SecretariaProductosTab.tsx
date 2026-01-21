@@ -58,6 +58,10 @@ interface Producto {
   aplica_ieps: boolean;
   precio_por_kilo: boolean;
   descuento_maximo: number | null;
+  puede_tener_promocion: boolean;
+  es_promocion: boolean;
+  descripcion_promocion: string | null;
+  producto_base_id: string | null;
 }
 
 export const SecretariaProductosTab = () => {
@@ -92,6 +96,7 @@ export const SecretariaProductosTab = () => {
     activo: true,
     requiere_fumigacion: false,
     fecha_ultima_fumigacion: "",
+    puede_tener_promocion: false,
   });
 
   // Fetch products
@@ -142,6 +147,7 @@ export const SecretariaProductosTab = () => {
       activo: true,
       requiere_fumigacion: false,
       fecha_ultima_fumigacion: "",
+      puede_tener_promocion: false,
     });
   };
 
@@ -172,6 +178,7 @@ export const SecretariaProductosTab = () => {
       activo: producto.activo,
       requiere_fumigacion: (producto as any).requiere_fumigacion || false,
       fecha_ultima_fumigacion: (producto as any).fecha_ultima_fumigacion || "",
+      puede_tener_promocion: producto.puede_tener_promocion || false,
     };
     setFormData(newFormData);
     setOriginalFormData(JSON.stringify(newFormData));
@@ -209,6 +216,7 @@ export const SecretariaProductosTab = () => {
         activo: data.activo,
         requiere_fumigacion: data.requiere_fumigacion,
         fecha_ultima_fumigacion: data.fecha_ultima_fumigacion || null,
+        puede_tener_promocion: data.puede_tener_promocion,
       };
 
       if (editingProduct) {
@@ -718,14 +726,32 @@ export const SecretariaProductosTab = () => {
                   <Label htmlFor="maneja_caducidad">Maneja Caducidad</Label>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="activo"
-                  checked={formData.activo}
-                  onCheckedChange={(v) => setFormData({ ...formData, activo: v })}
-                />
-                <Label htmlFor="activo">Producto Activo</Label>
+              <div className="flex flex-wrap gap-6">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="activo"
+                    checked={formData.activo}
+                    onCheckedChange={(v) => setFormData({ ...formData, activo: v })}
+                  />
+                  <Label htmlFor="activo">Producto Activo</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="puede_tener_promocion"
+                    checked={formData.puede_tener_promocion}
+                    onCheckedChange={(v) => setFormData({ ...formData, puede_tener_promocion: v })}
+                  />
+                  <Label htmlFor="puede_tener_promocion" className="flex items-center gap-1">
+                    Puede venir con promoción
+                    <span className="text-amber-500">🎁</span>
+                  </Label>
+                </div>
               </div>
+              {formData.puede_tener_promocion && (
+                <p className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-800">
+                  💡 Al crear una OC, el sistema preguntará si este producto viene con promoción del proveedor
+                </p>
+              )}
               
               {/* Fumigación */}
               <div className="space-y-3 p-3 bg-muted/50 rounded-lg border mt-4">

@@ -48,6 +48,10 @@ interface Producto {
   precio_por_kilo: boolean;
   descuento_maximo: number | null;
   activo: boolean;
+  es_promocion: boolean;
+  descripcion_promocion: string | null;
+  producto_base_id: string | null;
+  bloqueado_venta: boolean;
 }
 
 interface HistorialPrecio {
@@ -101,7 +105,7 @@ export const SecretariaListaPreciosTab = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, especificaciones, marca, categoria, peso_kg, contenido_empaque, unidad, precio_venta, precio_por_kilo, descuento_maximo, activo")
+        .select("id, codigo, nombre, especificaciones, marca, categoria, peso_kg, contenido_empaque, unidad, precio_venta, precio_por_kilo, descuento_maximo, activo, es_promocion, descripcion_promocion, producto_base_id, bloqueado_venta")
         .eq("activo", true)
         .or("solo_uso_interno.is.null,solo_uso_interno.eq.false")
         .order("categoria")
@@ -435,7 +439,7 @@ export const SecretariaListaPreciosTab = () => {
                         </TableCell>
                         <TableCell className="py-1 px-2">
                           <div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 flex-wrap">
                               <span className="text-xs">
                                 {producto.nombre}
                                 {producto.especificaciones && (
@@ -444,12 +448,25 @@ export const SecretariaListaPreciosTab = () => {
                                   </span>
                                 )}
                               </span>
+                              {producto.es_promocion && (
+                                <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
+                                  🎁 PROMO
+                                </Badge>
+                              )}
+                              {producto.bloqueado_venta && (
+                                <span className="text-[8px] text-red-600 dark:text-red-400 shrink-0" title="Requiere autorización">🔒</span>
+                              )}
                               {producto.precio_por_kilo && (
                                 <span className="text-[8px] text-muted-foreground bg-muted px-1 rounded shrink-0">
                                   /kg
                                 </span>
                               )}
                             </div>
+                            {producto.es_promocion && producto.descripcion_promocion && (
+                              <div className="text-[9px] text-amber-700 dark:text-amber-400 font-medium">
+                                {producto.descripcion_promocion}
+                              </div>
+                            )}
                             {(producto.marca || producto.contenido_empaque) && (
                               <div className="text-[10px] text-muted-foreground flex items-center gap-1 flex-wrap">
                                 {producto.marca && (
