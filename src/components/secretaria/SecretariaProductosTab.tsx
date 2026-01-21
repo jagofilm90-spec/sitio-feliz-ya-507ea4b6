@@ -87,13 +87,11 @@ export const SecretariaProductosTab = () => {
     unidad_sat: "",
     peso_kg: "",
     unidad: "bulto" as const,
-    precio_venta: "",
     stock_minimo: "",
     maneja_caducidad: false,
     aplica_iva: false,
     aplica_ieps: false,
     precio_por_kilo: false,
-    descuento_maximo: "",
     activo: true,
   });
 
@@ -136,13 +134,11 @@ export const SecretariaProductosTab = () => {
       unidad_sat: "",
       peso_kg: "",
       unidad: "bulto",
-      precio_venta: "",
       stock_minimo: "",
       maneja_caducidad: false,
       aplica_iva: false,
       aplica_ieps: false,
       precio_por_kilo: false,
-      descuento_maximo: "",
       activo: true,
     });
   };
@@ -160,13 +156,11 @@ export const SecretariaProductosTab = () => {
       unidad_sat: producto.unidad_sat || "",
       peso_kg: producto.peso_kg?.toString() || "",
       unidad: producto.unidad as any,
-      precio_venta: producto.precio_venta.toString(),
       stock_minimo: producto.stock_minimo.toString(),
       maneja_caducidad: producto.maneja_caducidad,
       aplica_iva: producto.aplica_iva,
       aplica_ieps: producto.aplica_ieps,
       precio_por_kilo: producto.precio_por_kilo,
-      descuento_maximo: producto.descuento_maximo?.toString() || "",
       activo: producto.activo,
     });
     setDialogOpen(true);
@@ -185,13 +179,11 @@ export const SecretariaProductosTab = () => {
         unidad_sat: data.unidad_sat || null,
         peso_kg: data.peso_kg ? parseFloat(data.peso_kg) : null,
         unidad: data.unidad,
-        precio_venta: parseFloat(data.precio_venta) || 0,
         stock_minimo: parseInt(data.stock_minimo) || 0,
         maneja_caducidad: data.maneja_caducidad,
         aplica_iva: data.aplica_iva,
         aplica_ieps: data.aplica_ieps,
         precio_por_kilo: data.precio_por_kilo,
-        descuento_maximo: data.descuento_maximo ? parseFloat(data.descuento_maximo) : null,
         activo: data.activo,
       };
 
@@ -456,41 +448,7 @@ export const SecretariaProductosTab = () => {
                 </div>
               </div>
 
-              {/* Sección 3: Precios (confidencial - se captura pero no se muestra en lista) */}
-              <div className="space-y-4">
-                <h3 className="font-medium text-sm text-muted-foreground border-b pb-2">
-                  Precios <span className="text-xs text-pink-600">(confidencial)</span>
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="precio_venta">Precio de Venta *</Label>
-                    <Input
-                      id="precio_venta"
-                      type="number"
-                      step="0.01"
-                      value={formData.precio_venta}
-                      onChange={(e) => setFormData({ ...formData, precio_venta: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="descuento_maximo">Descuento Máximo ($)</Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                      <Input
-                        id="descuento_maximo"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        className="pl-7"
-                        value={formData.descuento_maximo}
-                        onChange={(e) => setFormData({ ...formData, descuento_maximo: e.target.value })}
-                        placeholder="Ej: 5.00"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {/* Nota: Los precios se gestionan en Lista de Precios */}
 
               {/* Sección 4: Impuestos */}
               <div className="space-y-4">
@@ -603,7 +561,7 @@ export const SecretariaProductosTab = () => {
         />
       </div>
 
-      {/* Products Table - SIN PRECIO (confidencial, solo en Lista de Precios) */}
+      {/* Products Table - Catálogo (sin precio ni stock, esos van en sus módulos) */}
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -615,8 +573,8 @@ export const SecretariaProductosTab = () => {
                   <TableHead className="hidden md:table-cell">Marca</TableHead>
                   <TableHead className="hidden lg:table-cell">Presentación</TableHead>
                   <TableHead>Unidad</TableHead>
-                  <TableHead className="text-center">Stock</TableHead>
-                  <TableHead className="text-center hidden sm:table-cell">Stock Min</TableHead>
+                  <TableHead className="text-center hidden sm:table-cell">IVA/IEPS</TableHead>
+                  <TableHead className="text-center">Stock Min</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -637,12 +595,22 @@ export const SecretariaProductosTab = () => {
                       <TableCell className="capitalize">
                         {producto.unidad}
                       </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={producto.stock_actual <= producto.stock_minimo ? "destructive" : "secondary"}>
-                          {producto.stock_actual}
-                        </Badge>
+                      <TableCell className="text-center hidden sm:table-cell">
+                        <div className="flex items-center justify-center gap-1">
+                          {producto.aplica_iva && (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-blue-50 text-blue-700 border-blue-200">
+                              IVA
+                            </Badge>
+                          )}
+                          {producto.aplica_ieps && (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-amber-50 text-amber-700 border-amber-200">
+                              IEPS
+                            </Badge>
+                          )}
+                          {!producto.aplica_iva && !producto.aplica_ieps && "—"}
+                        </div>
                       </TableCell>
-                      <TableCell className="text-center hidden sm:table-cell text-muted-foreground">
+                      <TableCell className="text-center text-muted-foreground">
                         {producto.stock_minimo}
                       </TableCell>
                       <TableCell className="text-right">
