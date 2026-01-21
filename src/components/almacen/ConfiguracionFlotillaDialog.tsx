@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,21 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Settings, Mail, Bell } from "lucide-react";
 
-interface ConfiguracionFlotillaDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-interface ConfigItem {
-  clave: string;
-  valor: string;
-  descripcion: string | null;
-}
-
-export const ConfiguracionFlotillaDialog = ({
-  open,
-  onOpenChange,
-}: ConfiguracionFlotillaDialogProps) => {
+export const ConfiguracionFlotillaDialog = () => {
+  const [open, setOpen] = useState(false);
   const [config, setConfig] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -57,7 +44,6 @@ export const ConfiguracionFlotillaDialog = ({
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Actualizar cada configuración
       for (const [clave, valor] of Object.entries(config)) {
         const { error } = await supabase
           .from("configuracion_flotilla")
@@ -68,7 +54,7 @@ export const ConfiguracionFlotillaDialog = ({
       }
 
       toast.success("Configuración guardada correctamente");
-      onOpenChange(false);
+      setOpen(false);
     } catch (error) {
       console.error("Error guardando configuración:", error);
       toast.error("Error al guardar configuración");
@@ -82,7 +68,13 @@ export const ConfiguracionFlotillaDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="lg" className="h-14 px-6 text-lg">
+          <Settings className="w-5 h-5 mr-2" />
+          Configuración
+        </Button>
+      </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -172,7 +164,7 @@ export const ConfiguracionFlotillaDialog = ({
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => setOpen(false)}>
             Cancelar
           </Button>
           <Button onClick={handleSave} disabled={saving || loading}>
