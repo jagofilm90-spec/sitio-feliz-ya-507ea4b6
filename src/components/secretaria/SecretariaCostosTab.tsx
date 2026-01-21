@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRoles } from "@/hooks/useUserRoles";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -49,7 +50,7 @@ import {
   ShieldCheck,
   ShieldMinus,
 } from "lucide-react";
-import { analizarMargen, calcularPrecioSugerido, simularPrecioPropuesto } from "@/lib/calculos";
+import { analizarMargen, simularPrecioPropuesto } from "@/lib/calculos";
 
 // Formateo de moneda
 const formatCurrency = (amount: number) => {
@@ -88,6 +89,7 @@ interface HistorialCosto {
 }
 
 export const SecretariaCostosTab = () => {
+  const { isAdmin } = useUserRoles();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("analisis");
   const [categoriaFilter, setCategoriaFilter] = useState<string>("todas");
@@ -379,10 +381,12 @@ export const SecretariaCostosTab = () => {
         <div>
           <h2 className="text-xl font-semibold flex items-center gap-2">
             <Coins className="h-5 w-5 text-pink-600" />
-            Análisis Costo-Precio-Margen
+            {isAdmin ? "Análisis Costo-Precio-Margen" : "Costos de Productos"}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {productos?.length || 0} productos • Responde: "¿hasta dónde puedo bajar?"
+            {productos?.length || 0} productos • {isAdmin 
+              ? "Responde: \"¿hasta dónde puedo bajar?\"" 
+              : "Consulta de costos actualizados"}
           </p>
         </div>
       </div>
@@ -416,7 +420,7 @@ export const SecretariaCostosTab = () => {
         <TabsList>
           <TabsTrigger value="analisis" className="gap-2">
             <Target className="h-4 w-4" />
-            Análisis de Margen
+            {isAdmin ? "Análisis de Margen" : "Costos"}
           </TabsTrigger>
           <TabsTrigger value="historial" className="gap-2">
             <History className="h-4 w-4" />
@@ -435,12 +439,21 @@ export const SecretariaCostosTab = () => {
                       <TableHead className="w-20">Código</TableHead>
                       <TableHead>Producto</TableHead>
                       <TableHead className="text-right w-24">Últ. Costo</TableHead>
-                      <TableHead className="text-right w-24 hidden md:table-cell">Costo Prom.</TableHead>
+                      {isAdmin && (
+                        <TableHead className="text-right w-24 hidden md:table-cell">Costo Prom.</TableHead>
+                      )}
                       <TableHead className="text-right w-24">Precio Lista</TableHead>
-                      <TableHead className="text-center w-20">Margen</TableHead>
-                      <TableHead className="text-right w-24 hidden lg:table-cell">Piso Mín.</TableHead>
-                      <TableHead className="text-right w-24 hidden lg:table-cell">Espacio</TableHead>
-                      <TableHead className="w-20"></TableHead>
+                      {isAdmin && (
+                        <>
+                          <TableHead className="text-center w-20">Margen</TableHead>
+                          <TableHead className="text-right w-24 hidden lg:table-cell">Piso Mín.</TableHead>
+                          <TableHead className="text-right w-24 hidden lg:table-cell">Espacio</TableHead>
+                          <TableHead className="w-20"></TableHead>
+                        </>
+                      )}
+                      {!isAdmin && (
+                        <TableHead className="text-right w-20">Stock</TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -457,17 +470,21 @@ export const SecretariaCostosTab = () => {
                           </TableRow>
                           {/* Productos */}
                           {prods.map((producto) => {
-                            const analisis = analizarMargen({
+                            // Solo calcular análisis si es admin
+                            const analisis = isAdmin ? analizarMargen({
                               costo_promedio: producto.costo_promedio_ponderado || 0,
                               costo_ultimo: producto.ultimo_costo_compra || 0,
                               precio_venta: producto.precio_venta || 0,
                               descuento_maximo: producto.descuento_maximo || 0,
-                            });
+                            }) : null;
                             
-                            const rowClass = analisis.estado_margen === 'perdida' 
-                              ? 'bg-red-50 dark:bg-red-950/20' 
-                              : analisis.estado_margen === 'critico'
-                              ? 'bg-orange-50 dark:bg-orange-950/20'
+                            // Color de fila solo para admin
+                            const rowClass = isAdmin && analisis 
+                              ? analisis.estado_margen === 'perdida' 
+                                ? 'bg-red-50 dark:bg-red-950/20' 
+                                : analisis.estado_margen === 'critico'
+                                ? 'bg-orange-50 dark:bg-orange-950/20'
+                                : ''
                               : '';
 
                             return (
@@ -488,71 +505,93 @@ export const SecretariaCostosTab = () => {
                                     {formatCurrency(producto.ultimo_costo_compra || 0)}
                                   </span>
                                 </TableCell>
-                                <TableCell className="py-1.5 px-2 text-right hidden md:table-cell">
-                                  {producto.costo_promedio_ponderado > 0 ? (
-                                    <span className="text-xs text-muted-foreground">
-                                      {formatCurrency(producto.costo_promedio_ponderado)}
-                                    </span>
-                                  ) : (
-                                    <span className="text-xs text-muted-foreground">—</span>
-                                  )}
-                                </TableCell>
-                                <TableCell className="py-1.5 px-2 text-right">
-                                  <span className="text-xs font-bold">
-                                    {formatCurrency(producto.precio_venta)}
-                                  </span>
-                                </TableCell>
-                                <TableCell className="py-1.5 px-2 text-center">
-                                  <div className="flex flex-col items-center gap-0.5">
-                                    <span className={`text-xs font-bold ${
-                                      analisis.margen_porcentaje < 0 ? 'text-red-600' :
-                                      analisis.margen_porcentaje < 5 ? 'text-orange-600' :
-                                      analisis.margen_porcentaje < 10 ? 'text-yellow-600' :
-                                      'text-green-600'
-                                    }`}>
-                                      {analisis.margen_porcentaje.toFixed(1)}%
-                                    </span>
-                                    <span className="text-[9px] text-muted-foreground">
-                                      {formatCurrency(analisis.margen_bruto)}
-                                    </span>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="py-1.5 px-2 text-right hidden lg:table-cell">
-                                  <span className="text-xs">
-                                    {formatCurrency(analisis.piso_minimo)}
-                                  </span>
-                                </TableCell>
-                                <TableCell className="py-1.5 px-2 text-right hidden lg:table-cell">
-                                  <span className={`text-xs font-medium ${
-                                    analisis.espacio_negociacion < 0 ? 'text-red-600' :
-                                    analisis.espacio_negociacion < 20 ? 'text-yellow-600' :
-                                    'text-green-600'
-                                  }`}>
-                                    {analisis.espacio_negociacion >= 0 ? '+' : ''}{formatCurrency(analisis.espacio_negociacion)}
-                                  </span>
-                                </TableCell>
-                                <TableCell className="py-1.5 px-1 text-center">
-                                  <div className="flex items-center justify-center gap-0.5">
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm" 
-                                      className="h-6 w-6 p-0" 
-                                      onClick={() => handleSimuladorClick(producto)}
-                                      title="Simular precio"
-                                    >
-                                      <Calculator className="h-3 w-3" />
-                                    </Button>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm" 
-                                      className="h-6 w-6 p-0" 
-                                      onClick={() => handleEditClick(producto)}
-                                      title="Editar costo"
-                                    >
-                                      <Edit className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                </TableCell>
+                                
+                                {/* Columnas solo para Admin */}
+                                {isAdmin && analisis && (
+                                  <>
+                                    <TableCell className="py-1.5 px-2 text-right hidden md:table-cell">
+                                      {producto.costo_promedio_ponderado > 0 ? (
+                                        <span className="text-xs text-muted-foreground">
+                                          {formatCurrency(producto.costo_promedio_ponderado)}
+                                        </span>
+                                      ) : (
+                                        <span className="text-xs text-muted-foreground">—</span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="py-1.5 px-2 text-right">
+                                      <span className="text-xs font-bold">
+                                        {formatCurrency(producto.precio_venta)}
+                                      </span>
+                                    </TableCell>
+                                    <TableCell className="py-1.5 px-2 text-center">
+                                      <div className="flex flex-col items-center gap-0.5">
+                                        <span className={`text-xs font-bold ${
+                                          analisis.margen_porcentaje < 0 ? 'text-red-600' :
+                                          analisis.margen_porcentaje < 5 ? 'text-orange-600' :
+                                          analisis.margen_porcentaje < 10 ? 'text-yellow-600' :
+                                          'text-green-600'
+                                        }`}>
+                                          {analisis.margen_porcentaje.toFixed(1)}%
+                                        </span>
+                                        <span className="text-[9px] text-muted-foreground">
+                                          {formatCurrency(analisis.margen_bruto)}
+                                        </span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-1.5 px-2 text-right hidden lg:table-cell">
+                                      <span className="text-xs">
+                                        {formatCurrency(analisis.piso_minimo)}
+                                      </span>
+                                    </TableCell>
+                                    <TableCell className="py-1.5 px-2 text-right hidden lg:table-cell">
+                                      <span className={`text-xs font-medium ${
+                                        analisis.espacio_negociacion < 0 ? 'text-red-600' :
+                                        analisis.espacio_negociacion < 20 ? 'text-yellow-600' :
+                                        'text-green-600'
+                                      }`}>
+                                        {analisis.espacio_negociacion >= 0 ? '+' : ''}{formatCurrency(analisis.espacio_negociacion)}
+                                      </span>
+                                    </TableCell>
+                                    <TableCell className="py-1.5 px-1 text-center">
+                                      <div className="flex items-center justify-center gap-0.5">
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm" 
+                                          className="h-6 w-6 p-0" 
+                                          onClick={() => handleSimuladorClick(producto)}
+                                          title="Simular precio"
+                                        >
+                                          <Calculator className="h-3 w-3" />
+                                        </Button>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm" 
+                                          className="h-6 w-6 p-0" 
+                                          onClick={() => handleEditClick(producto)}
+                                          title="Editar costo"
+                                        >
+                                          <Edit className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    </TableCell>
+                                  </>
+                                )}
+
+                                {/* Columnas para Secretaria (vista simplificada) */}
+                                {!isAdmin && (
+                                  <>
+                                    <TableCell className="py-1.5 px-2 text-right">
+                                      <span className="text-xs font-bold">
+                                        {formatCurrency(producto.precio_venta)}
+                                      </span>
+                                    </TableCell>
+                                    <TableCell className="py-1.5 px-2 text-right">
+                                      <span className="text-xs">
+                                        {producto.stock_actual}
+                                      </span>
+                                    </TableCell>
+                                  </>
+                                )}
                               </TableRow>
                             );
                           })}
@@ -560,7 +599,7 @@ export const SecretariaCostosTab = () => {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={isAdmin ? 9 : 5} className="text-center py-8 text-muted-foreground">
                           No se encontraron productos
                         </TableCell>
                       </TableRow>
@@ -571,25 +610,27 @@ export const SecretariaCostosTab = () => {
             </CardContent>
           </Card>
 
-          {/* Leyenda */}
-          <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mt-2">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-red-200 dark:bg-red-900" />
-              <span>Margen &lt; 0% (Pérdida)</span>
+          {/* Leyenda - Solo visible para Admin */}
+          {isAdmin && (
+            <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mt-2">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded bg-red-200 dark:bg-red-900" />
+                <span>Margen &lt; 0% (Pérdida)</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded bg-orange-200 dark:bg-orange-900" />
+                <span>Margen 0-5% (Crítico)</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-yellow-600 font-bold">●</span>
+                <span>Margen 5-10% (Bajo)</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-green-600 font-bold">●</span>
+                <span>Margen &gt;10% (Saludable)</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-orange-200 dark:bg-orange-900" />
-              <span>Margen 0-5% (Crítico)</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-yellow-600 font-bold">●</span>
-              <span>Margen 5-10% (Bajo)</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-green-600 font-bold">●</span>
-              <span>Margen &gt;10% (Saludable)</span>
-            </div>
-          </div>
+          )}
         </TabsContent>
 
         {/* Tab: Historial */}
@@ -688,207 +729,211 @@ export const SecretariaCostosTab = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Dialog: Editar Costo */}
-      <Dialog open={editDialog} onOpenChange={setEditDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Costo</DialogTitle>
-            <DialogDescription>
-              {editingProducto?.codigo} - {editingProducto?.nombre}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Último Costo</Label>
-                <p className="text-lg font-bold text-muted-foreground">
-                  {formatCurrency(editingProducto?.ultimo_costo_compra || 0)}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Costo Promedio</Label>
-                <p className="text-lg font-bold text-muted-foreground">
-                  {editingProducto?.costo_promedio_ponderado 
-                    ? formatCurrency(editingProducto.costo_promedio_ponderado) 
-                    : "—"}
-                </p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="nuevoCosto">Nuevo Costo *</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  $
-                </span>
-                <Input
-                  id="nuevoCosto"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className="pl-7"
-                  value={nuevoCosto}
-                  onChange={(e) => setNuevoCosto(e.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="notas">Notas (opcional)</Label>
-              <Textarea
-                id="notas"
-                value={notas}
-                onChange={(e) => setNotas(e.target.value)}
-                placeholder="Ej: Cotización telefónica con proveedor"
-                rows={2}
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setEditDialog(false)}>
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleSaveCosto}
-                disabled={editCostoMutation.isPending}
-              >
-                {editCostoMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : null}
-                Guardar
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog: Simulador de Precio */}
-      <Dialog open={simuladorDialog} onOpenChange={setSimuladorDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5 text-blue-600" />
-              Simulador de Precio
-            </DialogTitle>
-            <DialogDescription>
-              {simuladorProducto?.codigo} - {simuladorProducto?.nombre}
-            </DialogDescription>
-          </DialogHeader>
-          
-          {simuladorProducto && (
+      {/* Dialog: Editar Costo - Solo Admin */}
+      {isAdmin && (
+        <Dialog open={editDialog} onOpenChange={setEditDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Costo</DialogTitle>
+              <DialogDescription>
+                {editingProducto?.codigo} - {editingProducto?.nombre}
+              </DialogDescription>
+            </DialogHeader>
             <div className="space-y-4 py-4">
-              {/* Info actual */}
-              <div className="grid grid-cols-2 gap-4 p-3 bg-muted/50 rounded-lg">
-                <div>
-                  <p className="text-xs text-muted-foreground">Costo Referencia</p>
-                  <p className="font-bold">
-                    {formatCurrency(simuladorProducto.costo_promedio_ponderado > 0 
-                      ? simuladorProducto.costo_promedio_ponderado 
-                      : simuladorProducto.ultimo_costo_compra)}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Último Costo</Label>
+                  <p className="text-lg font-bold text-muted-foreground">
+                    {formatCurrency(editingProducto?.ultimo_costo_compra || 0)}
                   </p>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Precio Lista</p>
-                  <p className="font-bold">{formatCurrency(simuladorProducto.precio_venta)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Desc. Máximo</p>
-                  <p className="font-medium text-emerald-600">
-                    -{formatCurrency(simuladorProducto.descuento_maximo || 0)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Piso Mínimo</p>
-                  <p className="font-bold text-amber-600">
-                    {formatCurrency(simuladorProducto.precio_venta - (simuladorProducto.descuento_maximo || 0))}
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Costo Promedio</Label>
+                  <p className="text-lg font-bold text-muted-foreground">
+                    {editingProducto?.costo_promedio_ponderado 
+                      ? formatCurrency(editingProducto.costo_promedio_ponderado) 
+                      : "—"}
                   </p>
                 </div>
               </div>
-
-              {/* Input precio propuesto */}
               <div className="space-y-2">
-                <Label>Precio propuesto al cliente</Label>
+                <Label htmlFor="nuevoCosto">Nuevo Costo *</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    $
+                  </span>
                   <Input
+                    id="nuevoCosto"
                     type="number"
                     step="0.01"
                     min="0"
-                    className="pl-7 text-lg font-bold"
-                    value={precioSimulado}
-                    onChange={(e) => setPrecioSimulado(e.target.value)}
+                    className="pl-7"
+                    value={nuevoCosto}
+                    onChange={(e) => setNuevoCosto(e.target.value)}
                     placeholder="0.00"
                   />
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="notas">Notas (opcional)</Label>
+                <Textarea
+                  id="notas"
+                  value={notas}
+                  onChange={(e) => setNotas(e.target.value)}
+                  placeholder="Ej: Cotización telefónica con proveedor"
+                  rows={2}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setEditDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleSaveCosto}
+                  disabled={editCostoMutation.isPending}
+                >
+                  {editCostoMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
+                  Guardar
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
-              {/* Resultado de simulación */}
-              {simulacion && (
-                <div className={`p-4 rounded-lg border-2 ${
-                  simulacion.es_perdida 
-                    ? 'border-red-500 bg-red-50 dark:bg-red-950/30' 
-                    : simulacion.requiere_autorizacion
-                    ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/30'
-                    : 'border-green-500 bg-green-50 dark:bg-green-950/30'
-                }`}>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Margen resultante</p>
-                      <p className={`text-xl font-bold ${
-                        simulacion.es_perdida ? 'text-red-600' : 'text-green-600'
-                      }`}>
-                        {simulacion.margen_porcentaje.toFixed(1)}%
-                      </p>
-                      <p className={`text-sm ${
-                        simulacion.es_perdida ? 'text-red-600' : 'text-green-600'
-                      }`}>
-                        {formatCurrency(simulacion.margen_pesos)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Descuento otorgado</p>
-                      <p className="text-xl font-bold">
-                        {formatCurrency(simulacion.diferencia_vs_lista)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        vs máx. {formatCurrency(simuladorProducto.descuento_maximo || 0)}
-                      </p>
-                    </div>
+      {/* Dialog: Simulador de Precio - Solo Admin */}
+      {isAdmin && (
+        <Dialog open={simuladorDialog} onOpenChange={setSimuladorDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Calculator className="h-5 w-5 text-blue-600" />
+                Simulador de Precio
+              </DialogTitle>
+              <DialogDescription>
+                {simuladorProducto?.codigo} - {simuladorProducto?.nombre}
+              </DialogDescription>
+            </DialogHeader>
+            
+            {simuladorProducto && (
+              <div className="space-y-4 py-4">
+                {/* Info actual */}
+                <div className="grid grid-cols-2 gap-4 p-3 bg-muted/50 rounded-lg">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Costo Referencia</p>
+                    <p className="font-bold">
+                      {formatCurrency(simuladorProducto.costo_promedio_ponderado > 0 
+                        ? simuladorProducto.costo_promedio_ponderado 
+                        : simuladorProducto.ultimo_costo_compra)}
+                    </p>
                   </div>
-
-                  {/* Alertas */}
-                  <div className="mt-3 pt-3 border-t">
-                    {simulacion.es_perdida ? (
-                      <div className="flex items-center gap-2 text-red-600">
-                        <ShieldAlert className="h-5 w-5" />
-                        <span className="font-medium">¡PÉRDIDA! No se recomienda este precio</span>
-                      </div>
-                    ) : simulacion.requiere_autorizacion ? (
-                      <div className="flex items-center gap-2 text-orange-600">
-                        <AlertTriangle className="h-5 w-5" />
-                        <span className="font-medium">
-                          Requiere autorización (rebasa desc. máximo por {formatCurrency(simulacion.diferencia_vs_lista - (simuladorProducto.descuento_maximo || 0))})
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-green-600">
-                        <ShieldCheck className="h-5 w-5" />
-                        <span className="font-medium">Precio dentro del rango autorizado</span>
-                      </div>
-                    )}
+                  <div>
+                    <p className="text-xs text-muted-foreground">Precio Lista</p>
+                    <p className="font-bold">{formatCurrency(simuladorProducto.precio_venta)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Desc. Máximo</p>
+                    <p className="font-medium text-emerald-600">
+                      -{formatCurrency(simuladorProducto.descuento_maximo || 0)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Piso Mínimo</p>
+                    <p className="font-bold text-amber-600">
+                      {formatCurrency(simuladorProducto.precio_venta - (simuladorProducto.descuento_maximo || 0))}
+                    </p>
                   </div>
                 </div>
-              )}
 
-              <Button 
-                variant="outline" 
-                className="w-full" 
-                onClick={() => setSimuladorDialog(false)}
-              >
-                Cerrar
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+                {/* Input precio propuesto */}
+                <div className="space-y-2">
+                  <Label>Precio propuesto al cliente</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="pl-7 text-lg font-bold"
+                      value={precioSimulado}
+                      onChange={(e) => setPrecioSimulado(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+
+                {/* Resultado de simulación */}
+                {simulacion && (
+                  <div className={`p-4 rounded-lg border-2 ${
+                    simulacion.es_perdida 
+                      ? 'border-red-500 bg-red-50 dark:bg-red-950/30' 
+                      : simulacion.requiere_autorizacion
+                      ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/30'
+                      : 'border-green-500 bg-green-50 dark:bg-green-950/30'
+                  }`}>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Margen resultante</p>
+                        <p className={`text-xl font-bold ${
+                          simulacion.es_perdida ? 'text-red-600' : 'text-green-600'
+                        }`}>
+                          {simulacion.margen_porcentaje.toFixed(1)}%
+                        </p>
+                        <p className={`text-sm ${
+                          simulacion.es_perdida ? 'text-red-600' : 'text-green-600'
+                        }`}>
+                          {formatCurrency(simulacion.margen_pesos)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Descuento otorgado</p>
+                        <p className="text-xl font-bold">
+                          {formatCurrency(simulacion.diferencia_vs_lista)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          vs máx. {formatCurrency(simuladorProducto.descuento_maximo || 0)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Alertas */}
+                    <div className="mt-3 pt-3 border-t">
+                      {simulacion.es_perdida ? (
+                        <div className="flex items-center gap-2 text-red-600">
+                          <ShieldAlert className="h-5 w-5" />
+                          <span className="font-medium">¡PÉRDIDA! No se recomienda este precio</span>
+                        </div>
+                      ) : simulacion.requiere_autorizacion ? (
+                        <div className="flex items-center gap-2 text-orange-600">
+                          <AlertTriangle className="h-5 w-5" />
+                          <span className="font-medium">
+                            Requiere autorización (rebasa desc. máximo por {formatCurrency(simulacion.diferencia_vs_lista - (simuladorProducto.descuento_maximo || 0))})
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-green-600">
+                          <ShieldCheck className="h-5 w-5" />
+                          <span className="font-medium">Precio dentro del rango autorizado</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={() => setSimuladorDialog(false)}
+                >
+                  Cerrar
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
