@@ -516,8 +516,13 @@ const generarDocumentoPDF = async (data: RecepcionData): Promise<{ doc: jsPDF; f
     let col = 0;
     let startY = photoY;
     
+    // Pre-load all images in parallel for faster PDF generation
+    const imagePromises = evidenciasConTipos.map(({ url }) => loadImageAsBase64(url));
+    const imagesBase64 = await Promise.all(imagePromises);
+    
     for (let i = 0; i < evidenciasConTipos.length; i++) {
-      const { url, tipo } = evidenciasConTipos[i];
+      const { tipo } = evidenciasConTipos[i];
+      const base64Image = imagesBase64[i];
       
       // Check if we need a new page
       if (startY + imgHeight + 20 > 285) {
@@ -531,8 +536,6 @@ const generarDocumentoPDF = async (data: RecepcionData): Promise<{ doc: jsPDF; f
       const xPos = margin + (col * colWidth);
       
       try {
-        const base64Image = await loadImageAsBase64(url);
-        
         if (base64Image) {
           // Shadow effect
           doc.setFillColor(230, 230, 230);

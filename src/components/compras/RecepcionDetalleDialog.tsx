@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -131,6 +132,7 @@ export const RecepcionDetalleDialog = ({
   const [previsualizandoPdf, setPrevisualizandoPdf] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [iframeLoading, setIframeLoading] = useState(true);
 
   useEffect(() => {
     if (open && entregaId) {
@@ -303,6 +305,7 @@ export const RecepcionDetalleDialog = ({
     if (!pdfData) return;
     
     setPrevisualizandoPdf(true);
+    setIframeLoading(true);
     try {
       const dataUrl = await generarRecepcionPDFDataUrl(pdfData);
       setPdfPreviewUrl(dataUrl);
@@ -800,20 +803,35 @@ export const RecepcionDetalleDialog = ({
       </Dialog>
 
       {/* PDF Preview dialog */}
-      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
-        <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
+      <Dialog open={previewDialogOpen} onOpenChange={(open) => {
+        setPreviewDialogOpen(open);
+        if (!open) setIframeLoading(true);
+      }}>
+        <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-4">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5" />
               Vista Previa - {recepcion?.orden_compra.folio}
             </DialogTitle>
+            <DialogDescription>
+              Revisa el documento antes de descargarlo
+            </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 h-[calc(90vh-140px)] relative">
+            {iframeLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-background z-10 rounded-lg border">
+                <div className="text-center">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-primary" />
+                  <p className="text-sm text-muted-foreground">Renderizando PDF...</p>
+                </div>
+              </div>
+            )}
             {pdfPreviewUrl && (
               <iframe
                 src={pdfPreviewUrl}
                 className="w-full h-full border rounded-lg"
                 title="Vista previa del PDF"
+                onLoad={() => setIframeLoading(false)}
               />
             )}
           </div>
