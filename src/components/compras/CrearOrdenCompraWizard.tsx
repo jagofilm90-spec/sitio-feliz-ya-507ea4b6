@@ -28,6 +28,8 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -43,8 +45,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { 
   Plus, Trash2, Loader2, Truck, ArrowRight, ArrowLeft, Check, 
-  Calendar as CalendarIcon, CreditCard, ChevronDown, ChevronUp, Package, Mail
+  Calendar as CalendarIcon, CreditCard, ChevronDown, ChevronUp, Package, Mail, Gift
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -101,13 +104,19 @@ interface Proveedor {
 interface Producto {
   id: string;
   nombre: string;
+  codigo?: string;
   marca?: string;
   ultimo_costo_compra?: number;
   aplica_iva?: boolean;
   aplica_ieps?: boolean;
   kg_por_unidad?: number;
+  peso_kg?: number;
   precio_por_kilo?: boolean;
   unidad?: string;
+  puede_tener_promocion?: boolean;
+  categoria?: string;
+  contenido_empaque?: string;
+  requiere_fumigacion?: boolean;
 }
 
 interface ProveedorConfig {
@@ -195,6 +204,14 @@ const CrearOrdenCompraWizard = ({
   // Folio (auto-generated)
   const [folio, setFolio] = useState("");
   const [generatingFolio, setGeneratingFolio] = useState(false);
+  
+  // Promotional variant flow state
+  const [showPromoDialog, setShowPromoDialog] = useState(false);
+  const [pendingProductForPromo, setPendingProductForPromo] = useState<Producto | null>(null);
+  const [promoDescripcion, setPromoDescripcion] = useState("");
+  const [promoPrecio, setPromoPrecio] = useState("");
+  const [promoBloqueado, setPromoBloqueado] = useState(false);
+  const [creatingPromoVariant, setCreatingPromoVariant] = useState(false);
   
   // Proveedor productos config
   const [productosProveedorConfig, setProductosProveedorConfig] = useState<ProveedorConfig[]>([]);
@@ -545,6 +562,135 @@ const CrearOrdenCompraWizard = ({
     setPrecioPorKg("");
     setKgPorUnidad("");
     setNumeroVehiculos("");
+  };
+
+  const resetPromoForm = () => {
+    setShowPromoDialog(false);
+    setPendingProductForPromo(null);
+    setPromoDescripcion("");
+    setPromoPrecio("");
+    setPromoBloqueado(false);
+  };
+
+  // Handle product selection - check if promotion dialog is needed
+  const handleProductSelect = (productId: string) => {
+    setProductoSeleccionado(productId);
+    setShowOverridePrecioUnidad(false);
+    setShowPreguntaPrecioKg(false);
+    
+    const prod = productosDisponibles.find(p => p.id === productId);
+    const provConfig = productosProveedorConfig.find(pc => pc.producto_id === productId);
+    
+    // Use costo_proveedor if available, otherwise fallback to ultimo_costo_compra
+    if (provConfig?.costo_proveedor) {
+      setPrecioUnitario(provConfig.costo_proveedor.toString());
+    } else if (prod?.ultimo_costo_compra) {
+      setPrecioUnitario(prod.ultimo_costo_compra.toString());
+    } else {
+      setPrecioUnitario("");
+    }
+    
+    if (prod?.kg_por_unidad) {
+      setKgPorUnidad(prod.kg_por_unidad.toString());
+    }
+    
+    // Check proveedor-producto config for precio por kilo
+    if (tipoProveedor === 'catalogo' && provConfig) {
+      if (provConfig.precio_por_kilo_compra !== null && provConfig.precio_por_kilo_compra !== undefined) {
+        setUsaPrecioPorKg(provConfig.precio_por_kilo_compra);
+      } else {
+        setShowPreguntaPrecioKg(true);
+        setUsaPrecioPorKg(false);
+      }
+    } else if (tipoProveedor === 'manual') {
+      setUsaPrecioPorKg(false);
+    }
+    
+    // Check if product can have promotions and show dialog
+    if (prod?.puede_tener_promocion) {
+      setPendingProductForPromo(prod);
+      setPromoPrecio(provConfig?.costo_proveedor?.toString() || prod?.ultimo_costo_compra?.toString() || "");
+      setShowPromoDialog(true);
+    }
+  };
+
+  // Handle user choosing "No promotion"
+  const handleNoPromotion = () => {
+    resetPromoForm();
+    // Product is already selected, user continues normally
+  };
+
+  // Handle user choosing "Yes, has promotion" - create variant
+  const handleCreatePromoVariant = async () => {
+    if (!pendingProductForPromo || !promoDescripcion.trim() || !promoPrecio) {
+      toast({
+        title: "Datos incompletos",
+        description: "Ingresa la descripción de la promoción y el precio",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCreatingPromoVariant(true);
+    
+    try {
+      // Generate promo code
+      const baseCode = pendingProductForPromo.codigo || pendingProductForPromo.id.slice(0, 6).toUpperCase();
+      const promoCode = `${baseCode}-PROMO-${Date.now().toString(36).toUpperCase().slice(-4)}`;
+      
+      // Create the promotional variant product
+      const { data: newVariant, error } = await supabase
+        .from("productos")
+        .insert({
+          codigo: promoCode,
+          nombre: promoDescripcion.trim(),
+          marca: pendingProductForPromo.marca,
+          categoria: pendingProductForPromo.categoria,
+          contenido_empaque: pendingProductForPromo.contenido_empaque,
+          unidad: pendingProductForPromo.unidad as any,
+          peso_kg: pendingProductForPromo.peso_kg || pendingProductForPromo.kg_por_unidad,
+          aplica_iva: pendingProductForPromo.aplica_iva ?? false,
+          aplica_ieps: pendingProductForPromo.aplica_ieps ?? false,
+          requiere_fumigacion: pendingProductForPromo.requiere_fumigacion ?? false,
+          precio_por_kilo: pendingProductForPromo.precio_por_kilo ?? false,
+          ultimo_costo_compra: parseFloat(promoPrecio),
+          precio_compra: parseFloat(promoPrecio),
+          precio_venta: 0, // Will be set by admin
+          producto_base_id: pendingProductForPromo.id,
+          es_promocion: true,
+          descripcion_promocion: promoDescripcion.trim(),
+          bloqueado_venta: promoBloqueado,
+          activo: true,
+          stock_actual: 0, // Will be updated when received
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update the selected product to use the new variant
+      setProductoSeleccionado(newVariant.id);
+      setPrecioUnitario(promoPrecio);
+      
+      // Refresh products in query cache
+      queryClient.invalidateQueries({ queryKey: ["productos"] });
+
+      toast({
+        title: "✅ Variante promocional creada",
+        description: `"${promoDescripcion}" vinculada a ${pendingProductForPromo.nombre}`,
+      });
+
+      resetPromoForm();
+    } catch (error: any) {
+      console.error("Error creating promo variant:", error);
+      toast({
+        title: "Error al crear variante",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setCreatingPromoVariant(false);
+    }
   };
 
   const eliminarProducto = (index: number) => {
@@ -1449,39 +1595,7 @@ const CrearOrdenCompraWizard = ({
               <div className="grid grid-cols-12 gap-3 items-end">
                 <div className="col-span-4">
                   <Label>Producto</Label>
-                  <Select value={productoSeleccionado} onValueChange={(v) => {
-                    setProductoSeleccionado(v);
-                    setShowOverridePrecioUnidad(false);
-                    setShowPreguntaPrecioKg(false);
-                    
-                    const prod = productosDisponibles.find(p => p.id === v);
-                    const provConfig = productosProveedorConfig.find(pc => pc.producto_id === v);
-                    
-                    // Use costo_proveedor if available, otherwise fallback to ultimo_costo_compra
-                    if (provConfig?.costo_proveedor) {
-                      setPrecioUnitario(provConfig.costo_proveedor.toString());
-                    } else if (prod?.ultimo_costo_compra) {
-                      setPrecioUnitario(prod.ultimo_costo_compra.toString());
-                    } else {
-                      setPrecioUnitario("");
-                    }
-                    
-                    if (prod?.kg_por_unidad) {
-                      setKgPorUnidad(prod.kg_por_unidad.toString());
-                    }
-                    
-                    // Check proveedor-producto config for precio por kilo
-                    if (tipoProveedor === 'catalogo' && provConfig) {
-                      if (provConfig.precio_por_kilo_compra !== null && provConfig.precio_por_kilo_compra !== undefined) {
-                        setUsaPrecioPorKg(provConfig.precio_por_kilo_compra);
-                      } else {
-                        setShowPreguntaPrecioKg(true);
-                        setUsaPrecioPorKg(false);
-                      }
-                    } else if (tipoProveedor === 'manual') {
-                      setUsaPrecioPorKg(false);
-                    }
-                  }}>
+                  <Select value={productoSeleccionado} onValueChange={handleProductSelect}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecciona..." />
                     </SelectTrigger>
@@ -1493,8 +1607,11 @@ const CrearOrdenCompraWizard = ({
                             <div className="flex items-center gap-2">
                               <span>{p.nombre}</span>
                               {p.marca && <span className="text-muted-foreground">({p.marca})</span>}
+                              {p.puede_tener_promocion && (
+                                <span className="text-amber-500" title="Puede venir con promoción">🎁</span>
+                              )}
                               {provConfig?.costo_proveedor && (
-                                <span className="text-xs text-green-600 dark:text-green-400">
+                                <span className="text-xs text-muted-foreground">
                                   ${provConfig.costo_proveedor.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                                 </span>
                               )}
@@ -2185,6 +2302,111 @@ const CrearOrdenCompraWizard = ({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+    
+    {/* Dialog for promotional variant creation */}
+    <Dialog open={showPromoDialog} onOpenChange={(open) => {
+      if (!open) {
+        resetPromoForm();
+      }
+    }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Gift className="h-5 w-5 text-amber-500" />
+            ¿Viene con promoción?
+          </DialogTitle>
+          <DialogDescription>
+            {pendingProductForPromo?.nombre} puede venir con promoción del proveedor.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              className="flex-1"
+              onClick={handleNoPromotion}
+            >
+              No, viene normal
+            </Button>
+            <Button 
+              variant="default" 
+              className="flex-1 bg-amber-500 hover:bg-amber-600 text-white"
+              onClick={() => {
+                // Just close and show form below
+              }}
+              disabled={promoDescripcion.length > 0}
+            >
+              🎁 Sí, tiene promoción
+            </Button>
+          </div>
+
+          {/* Promo details form */}
+          <div className="space-y-4 pt-4 border-t">
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+              <p className="text-sm text-amber-800 dark:text-amber-300 font-medium mb-3">
+                💡 Escribe cómo viene el producto tal cual lo pondrás en la OC:
+              </p>
+              <Input
+                placeholder="Ej: CatChow 20kg + 3kg gratis"
+                value={promoDescripcion}
+                onChange={(e) => setPromoDescripcion(e.target.value)}
+                className="bg-background"
+              />
+            </div>
+
+            <div>
+              <Label>Precio de compra (con promoción)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="$0.00"
+                value={promoPrecio}
+                onChange={(e) => setPromoPrecio(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+
+            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+              <Switch
+                id="bloquear-venta"
+                checked={promoBloqueado}
+                onCheckedChange={setPromoBloqueado}
+              />
+              <Label htmlFor="bloquear-venta" className="flex flex-col gap-0.5">
+                <span className="font-medium">Bloquear venta</span>
+                <span className="text-xs text-muted-foreground">
+                  Requiere autorización para vender este producto
+                </span>
+              </Label>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={handleNoPromotion}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleCreatePromoVariant}
+            disabled={creatingPromoVariant || !promoDescripcion.trim() || !promoPrecio}
+            className="bg-amber-500 hover:bg-amber-600 text-white"
+          >
+            {creatingPromoVariant ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Creando...
+              </>
+            ) : (
+              <>
+                <Gift className="h-4 w-4 mr-2" />
+                Crear variante promocional
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 };
