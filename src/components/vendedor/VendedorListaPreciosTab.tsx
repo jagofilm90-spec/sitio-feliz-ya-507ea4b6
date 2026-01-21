@@ -159,6 +159,11 @@ export function VendedorListaPreciosTab() {
                             <div className="flex items-center gap-1">
                               <span className="text-xs">
                                 {producto.nombre}
+                                {producto.especificaciones && (
+                                  <span className="text-purple-600 dark:text-purple-400 font-medium ml-1">
+                                    {producto.especificaciones}
+                                  </span>
+                                )}
                               </span>
                               {producto.precio_por_kilo && (
                                 <span className="text-[8px] text-muted-foreground bg-muted px-1 rounded shrink-0">
@@ -222,6 +227,11 @@ export function VendedorListaPreciosTab() {
                     <div className="min-w-0 flex-1 pr-2">
                       <p className="text-sm font-medium truncate leading-tight">
                         {producto.nombre}
+                        {producto.especificaciones && (
+                          <span className="text-purple-600 dark:text-purple-400 font-medium ml-1">
+                            {producto.especificaciones}
+                          </span>
+                        )}
                       </p>
                       {(producto.marca || producto.contenido_empaque) && (
                         <p className="text-[10px] text-muted-foreground truncate leading-tight">
