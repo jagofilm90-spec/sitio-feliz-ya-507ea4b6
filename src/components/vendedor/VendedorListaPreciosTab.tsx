@@ -155,14 +155,27 @@ export function VendedorListaPreciosTab() {
                           {producto.codigo}
                         </TableCell>
                         <TableCell className="py-1 px-2">
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs truncate max-w-[240px]">
-                              {getShortDisplayName(producto)}
-                            </span>
-                            {producto.precio_por_kilo && (
-                              <span className="text-[8px] text-muted-foreground bg-muted px-1 rounded shrink-0">
-                                /kg
+                          <div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs">
+                                {producto.nombre}
                               </span>
+                              {producto.precio_por_kilo && (
+                                <span className="text-[8px] text-muted-foreground bg-muted px-1 rounded shrink-0">
+                                  /kg
+                                </span>
+                              )}
+                            </div>
+                            {(producto.marca || producto.contenido_empaque) && (
+                              <div className="text-[10px] text-muted-foreground flex items-center gap-1 flex-wrap">
+                                {producto.marca && (
+                                  <span className="font-medium text-blue-600 dark:text-blue-400">{producto.marca}</span>
+                                )}
+                                {producto.marca && producto.contenido_empaque && <span>•</span>}
+                                {producto.contenido_empaque && (
+                                  <span>{producto.contenido_empaque}</span>
+                                )}
+                              </div>
                             )}
                           </div>
                         </TableCell>
@@ -208,8 +221,17 @@ export function VendedorListaPreciosTab() {
                   >
                     <div className="min-w-0 flex-1 pr-2">
                       <p className="text-sm font-medium truncate leading-tight">
-                        {getShortDisplayName(producto)}
+                        {producto.nombre}
                       </p>
+                      {(producto.marca || producto.contenido_empaque) && (
+                        <p className="text-[10px] text-muted-foreground truncate leading-tight">
+                          {producto.marca && (
+                            <span className="text-blue-600 dark:text-blue-400 font-medium">{producto.marca}</span>
+                          )}
+                          {producto.marca && producto.contenido_empaque && " • "}
+                          {producto.contenido_empaque}
+                        </p>
+                      )}
                       <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                         <span className="font-mono">{producto.codigo}</span>
                         {producto.precio_por_kilo && (
