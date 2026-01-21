@@ -36,6 +36,7 @@ import VendedorAnalisisVentas from "./pages/VendedorAnalisisVentas";
 import SecretariaPanel from "./pages/SecretariaPanel";
 import AppMobileGuide from "./pages/AppMobileGuide";
 import TestFirma from "./pages/TestFirma";
+import Precios from "./pages/Precios";
 
 import PushNotificationSetup from "./components/PushNotificationSetup";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -125,6 +126,7 @@ const App = () => (
               } />
               <Route path="/app-mobile" element={<AppMobileGuide />} />
               <Route path="/test-firma" element={<TestFirma />} />
+              <Route path="/precios" element={<Precios />} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

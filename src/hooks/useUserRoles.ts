@@ -109,6 +109,7 @@ export const MODULE_PERMISSIONS: Record<string, AppRole[]> = {
   '/chofer': ['chofer'], // Interfaz dedicada para choferes
   '/secretaria': ['admin', 'secretaria'], // Interfaz dedicada para secretarias
   '/vendedor': ['admin', 'vendedor'], // Interfaz dedicada para vendedores
+  '/precios': ['admin', 'secretaria', 'vendedor'], // Lista de precios (edición solo admin/secretaria)
 };
 
 // Hook para verificar acceso a un módulo específico (usa permisos de BD con fallback)
