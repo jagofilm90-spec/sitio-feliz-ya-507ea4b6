@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import TarjetaDigital from "./pages/TarjetaDigital";
+import Privacidad from "./pages/Privacidad";
+import Soporte from "./pages/Soporte";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -112,6 +114,8 @@ const App = () => (
               <Route path="/correos" element={<CorreosCorporativos />} />
               <Route path="/generate-assets" element={<GenerateAssets />} />
               <Route path="/tarjeta" element={<TarjetaDigital />} />
+              <Route path="/privacidad" element={<Privacidad />} />
+              <Route path="/soporte" element={<Soporte />} />
               <Route path="/disenos-camioneta" element={<DisenosCamioneta />} />
               <Route path="/permisos" element={<Permisos />} />
               <Route path="/respaldos" element={<Respaldos />} />
