@@ -75,6 +75,22 @@ const DANO_CONFIG: Record<string, { label: string; color: string; icon: string }
   grieta: { label: "Grieta", color: "#2563eb", icon: "🔵" },
 };
 
+// Helper to determine area label from coordinates
+function getAreaLabel(x: number, y: number): string {
+  let vertical = "";
+  let horizontal = "";
+  
+  if (y < 30) vertical = "Frente";
+  else if (y > 70) vertical = "Trasera";
+  else vertical = "Centro";
+  
+  if (x < 35) horizontal = "Izquierda";
+  else if (x > 65) horizontal = "Derecha";
+  else horizontal = "";
+  
+  return `${vertical}${horizontal ? ` ${horizontal}` : ""}`;
+}
+
 // Generate damage section HTML
 function generateDanosSection(observacionesGolpes: string | null): string {
   if (!observacionesGolpes) return '';
@@ -106,7 +122,7 @@ function generateDanosSection(observacionesGolpes: string | null): string {
         <tbody>
       `;
       
-      danos.forEach((dano: any, index: number) => {
+      danos.forEach((dano: { tipo: string; posicionX: number; posicionY: number }, index: number) => {
         const config = DANO_CONFIG[dano.tipo] || DANO_CONFIG.golpe;
         const ubicacion = getAreaLabel(dano.posicionX, dano.posicionY);
         html += `
@@ -144,20 +160,29 @@ function generateDanosSection(observacionesGolpes: string | null): string {
   }
 }
 
-// Helper to determine area label from coordinates
-function getAreaLabel(x: number, y: number): string {
-  let vertical = "";
-  let horizontal = "";
+// Generate signatures section HTML
+function generateFirmasSection(firmaConductor: string | null, firmaSupervisor: string | null): string {
+  if (!firmaConductor && !firmaSupervisor) return '';
   
-  if (y < 30) vertical = "Frente";
-  else if (y > 70) vertical = "Trasera";
-  else vertical = "Centro";
-  
-  if (x < 35) horizontal = "Izquierda";
-  else if (x > 65) horizontal = "Derecha";
-  else horizontal = "";
-  
-  return `${vertical}${horizontal ? ` ${horizontal}` : ""}`;
+  return `
+    <div class="section">
+      <div class="section-title">✍️ Firmas de Conformidad</div>
+      <div style="display: flex; gap: 40px; flex-wrap: wrap;">
+        ${firmaConductor ? `
+        <div style="text-align: center;">
+          <img src="${firmaConductor}" style="max-width: 200px; height: 80px; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 4px; background: #fafafa;" />
+          <p style="margin: 5px 0 0 0; font-size: 12px; color: #6b7280;">Firma del Conductor</p>
+        </div>
+        ` : ''}
+        ${firmaSupervisor ? `
+        <div style="text-align: center;">
+          <img src="${firmaSupervisor}" style="max-width: 200px; height: 80px; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 4px; background: #fafafa;" />
+          <p style="margin: 5px 0 0 0; font-size: 12px; color: #6b7280;">Firma del Supervisor</p>
+        </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
 }
 
 serve(async (req) => {
@@ -194,9 +219,9 @@ serve(async (req) => {
       throw new Error(`Checkup no encontrado: ${checkupError?.message}`);
     }
 
-    const vehiculo = checkup.vehiculos as any;
-    const chofer = checkup.chofer as any;
-    const realizado = checkup.realizado as any;
+    const vehiculo = checkup.vehiculos as { nombre?: string; placa?: string; marca?: string; modelo?: string; anio?: number } | null;
+    const chofer = checkup.chofer as { nombre_completo?: string; telefono?: string } | null;
+    const realizado = checkup.realizado as { nombre_completo?: string } | null;
 
     // Determine priority styling
     const prioridadColorMap: Record<string, string> = {
@@ -302,6 +327,36 @@ serve(async (req) => {
       `;
     }
 
+    // Check if PDF exists and get download URL
+    let pdfAttachment: { filename: string; content: string; mimeType: string } | null = null;
+    if (checkup.pdf_path) {
+      try {
+        const { data: pdfData, error: pdfError } = await supabase.storage
+          .from('checkups-reportes-pdf')
+          .download(checkup.pdf_path);
+        
+        if (pdfData && !pdfError) {
+          const arrayBuffer = await pdfData.arrayBuffer();
+          const uint8Array = new Uint8Array(arrayBuffer);
+          let binary = '';
+          for (let i = 0; i < uint8Array.length; i++) {
+            binary += String.fromCharCode(uint8Array[i]);
+          }
+          const base64 = btoa(binary);
+          
+          const fecha = new Date(checkup.fecha_checkup).toISOString().split('T')[0];
+          pdfAttachment = {
+            filename: `Checkup_${vehiculo?.nombre?.replace(/\s+/g, '_') || 'Vehiculo'}_${fecha}.pdf`,
+            content: base64,
+            mimeType: 'application/pdf'
+          };
+          console.log("PDF adjunto preparado");
+        }
+      } catch (pdfError) {
+        console.error("Error descargando PDF:", pdfError);
+      }
+    }
+
     // Generate HTML email
     const htmlBody = `
 <!DOCTYPE html>
@@ -310,21 +365,29 @@ serve(async (req) => {
   <meta charset="utf-8">
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 700px; margin: 0 auto; }
-    .header { background: #1e3a5f; color: white; padding: 20px; text-align: center; }
+    .header { background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8a 100%); color: white; padding: 20px; text-align: center; }
+    .header img { max-height: 50px; margin-bottom: 10px; }
     .content { padding: 20px; }
     .section { margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px; }
-    .section-title { font-weight: bold; margin-bottom: 10px; color: #1e3a5f; }
+    .section-title { font-weight: bold; margin-bottom: 10px; color: #1e3a5f; font-size: 15px; }
     .priority { display: inline-block; padding: 4px 12px; border-radius: 4px; color: white; font-weight: bold; }
     .alert-box { background: #fef2f2; border: 2px solid #dc2626; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
     .alert-title { color: #dc2626; font-weight: bold; font-size: 16px; margin-bottom: 8px; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .info-item { padding: 8px; background: white; border-radius: 4px; }
+    .info-label { font-size: 11px; color: #6b7280; text-transform: uppercase; }
+    .info-value { font-size: 14px; font-weight: 600; color: #1e3a5f; }
     table { width: 100%; border-collapse: collapse; }
     td { padding: 8px; border-bottom: 1px solid #e5e7eb; }
-    .footer { padding: 20px; text-align: center; color: #6b7280; font-size: 12px; }
+    .footer { padding: 20px; text-align: center; color: #6b7280; font-size: 12px; background: #f3f4f6; }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>🔧 Reporte de Checkup - ${checkup.tiene_items_nn_fallados ? '🚨 PUNTOS NO NEGOCIABLES FALLADOS' : 'Requiere Atención'}</h1>
+    <h1 style="margin: 0 0 5px 0; font-size: 20px;">🔧 Reporte de Checkup Vehicular</h1>
+    <p style="margin: 0; opacity: 0.9; font-size: 14px;">
+      ${checkup.tiene_items_nn_fallados ? '🚨 PUNTOS NO NEGOCIABLES FALLADOS' : 'Revisión de Salida de Unidad'}
+    </p>
   </div>
   
   <div class="content">
@@ -340,60 +403,60 @@ serve(async (req) => {
 
     <div class="section">
       <div class="section-title">📋 Información del Vehículo</div>
-      <table>
-        <tr>
-          <td><strong>Unidad:</strong></td>
-          <td>${vehiculo?.nombre || 'N/A'}</td>
-        </tr>
-        <tr>
-          <td><strong>Placa:</strong></td>
-          <td>${vehiculo?.placa || 'Sin placa'}</td>
-        </tr>
-        <tr>
-          <td><strong>Marca/Modelo:</strong></td>
-          <td>${vehiculo?.marca || ''} ${vehiculo?.modelo || ''} ${vehiculo?.anio || ''}</td>
-        </tr>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">Unidad</div>
+          <div class="info-value">${vehiculo?.nombre || 'N/A'}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Placa</div>
+          <div class="info-value">${vehiculo?.placa || 'Sin placa'}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Marca/Modelo</div>
+          <div class="info-value">${vehiculo?.marca || ''} ${vehiculo?.modelo || ''} ${vehiculo?.anio || ''}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Fecha</div>
+          <div class="info-value">${new Date(checkup.fecha_checkup).toLocaleDateString('es-MX')}</div>
+        </div>
         ${chofer ? `
-        <tr>
-          <td><strong>Chofer:</strong></td>
-          <td>${chofer.nombre_completo}${chofer.telefono ? ` - Tel: ${chofer.telefono}` : ''}</td>
-        </tr>
+        <div class="info-item">
+          <div class="info-label">Chofer</div>
+          <div class="info-value">${chofer.nombre_completo}${chofer.telefono ? ` - ${chofer.telefono}` : ''}</div>
+        </div>
         ` : ''}
-        <tr>
-          <td><strong>Revisado por:</strong></td>
-          <td>${realizado?.nombre_completo || 'N/A'}</td>
-        </tr>
-        <tr>
-          <td><strong>Fecha:</strong></td>
-          <td>${new Date(checkup.fecha_checkup).toLocaleString('es-MX')}</td>
-        </tr>
+        <div class="info-item">
+          <div class="info-label">Revisado por</div>
+          <div class="info-value">${realizado?.nombre_completo || 'N/A'}</div>
+        </div>
         ${checkup.kilometraje_inicial ? `
-        <tr>
-          <td><strong>Kilometraje:</strong></td>
-          <td>${checkup.kilometraje_inicial.toLocaleString()} km</td>
-        </tr>
+        <div class="info-item">
+          <div class="info-label">Kilometraje</div>
+          <div class="info-value">${checkup.kilometraje_inicial.toLocaleString()} km</div>
+        </div>
         ` : ''}
         ${checkup.hora_inspeccion ? `
-        <tr>
-          <td><strong>Hora de Inspección:</strong></td>
-          <td>${checkup.hora_inspeccion}</td>
-        </tr>
+        <div class="info-item">
+          <div class="info-label">Hora de Inspección</div>
+          <div class="info-value">${checkup.hora_inspeccion}</div>
+        </div>
         ` : ''}
-      </table>
+      </div>
     </div>
 
     <div class="section">
-      <div class="section-title">⚠️ Prioridad</div>
+      <div class="section-title">⚠️ Prioridad de Atención</div>
       <span class="priority" style="background-color: ${prioridadColor};">
         ${prioridadTexto}
       </span>
     </div>
 
     ${failedItems.length > 0 ? `
-    <div class="section">
-      <div class="section-title">❌ Items con Falla (${failedItems.length})</div>
+    <div class="section" style="background: #fef2f2;">
+      <div class="section-title" style="color: #dc2626;">❌ Items con Falla (${failedItems.length})</div>
       <ul style="margin:0;padding-left:20px;">
-        ${failedItems.map(item => `<li style="color:#dc2626;"><strong>${item}</strong></li>`).join('')}
+        ${failedItems.map(item => `<li style="color:#b91c1c;"><strong>${item}</strong></li>`).join('')}
       </ul>
     </div>
     ` : ''}
@@ -404,32 +467,50 @@ serve(async (req) => {
     </div>
 
     ${checkup.fallas_detectadas ? `
-    <div class="section">
-      <div class="section-title">📝 Observaciones</div>
+    <div class="section" style="background: #fff7ed;">
+      <div class="section-title" style="color: #c2410c;">📝 Observaciones / Fallas Detectadas</div>
       <p style="margin:0;">${checkup.fallas_detectadas}</p>
     </div>
     ` : ''}
 
     ${generateDanosSection(checkup.observaciones_golpes)}
+
+    ${generateFirmasSection(checkup.firma_conductor, checkup.firma_supervisor)}
   </div>
 
   <div class="footer">
-    <p>Este correo fue generado automáticamente por el Sistema de Gestión de Flotilla</p>
-    <p>Abarrotes La Manita - Almasa</p>
+    <p style="margin: 0 0 5px 0;"><strong>ABARROTES LA MANITA SA DE CV</strong></p>
+    <p style="margin: 0;">Sistema de Gestión de Flotilla | Este correo fue generado automáticamente</p>
+    ${pdfAttachment ? '<p style="margin: 5px 0 0 0; color: #16a34a;">📎 PDF adjunto incluido</p>' : ''}
   </div>
 </body>
 </html>
     `;
 
+    // Prepare email payload
+    const emailPayload: {
+      action: string;
+      email: string;
+      to: string;
+      subject: string;
+      body: string;
+      attachments?: { filename: string; content: string; mimeType: string }[];
+    } = {
+      action: "send",
+      email: "compras@almasa.com.mx",
+      to: emailMecanico,
+      subject: `🔧 [${(checkup.prioridad || 'MEDIA').toUpperCase()}]${checkup.tiene_items_nn_fallados ? ' 🚨 NN FALLADOS' : ''} Checkup - ${vehiculo?.nombre || 'Vehículo'} (${vehiculo?.placa || 'S/P'})`,
+      body: htmlBody,
+    };
+
+    // Add PDF attachment if available
+    if (pdfAttachment) {
+      emailPayload.attachments = [pdfAttachment];
+    }
+
     // Send email using gmail-api
     const { error: emailError } = await supabase.functions.invoke("gmail-api", {
-      body: {
-        action: "send",
-        email: "compras@almasa.com.mx",
-        to: emailMecanico,
-        subject: `🔧 [${checkup.prioridad?.toUpperCase() || 'MEDIA'}]${checkup.tiene_items_nn_fallados ? ' 🚨 NN FALLADOS' : ''} Reporte de Checkup - ${vehiculo?.nombre || 'Vehículo'}`,
-        body: htmlBody,
-      }
+      body: emailPayload
     });
 
     if (emailError) {
@@ -449,7 +530,7 @@ serve(async (req) => {
     console.log("Reporte enviado exitosamente");
 
     return new Response(
-      JSON.stringify({ success: true, message: "Reporte enviado" }),
+      JSON.stringify({ success: true, message: "Reporte enviado", pdfAdjunto: !!pdfAttachment }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

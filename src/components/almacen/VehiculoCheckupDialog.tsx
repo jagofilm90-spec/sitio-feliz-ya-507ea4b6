@@ -32,6 +32,7 @@ import {
   CheckCircle2,
   Send,
   Clock,
+  FileText,
 } from "lucide-react";
 import { ChecklistItemRow, ChecklistStatus } from "./ChecklistItemRow";
 import {
@@ -43,6 +44,7 @@ import {
 } from "./checklistConfig";
 import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
 import { DiagramaDanosVehiculo, DanoMarcado } from "./DiagramaDanosVehiculo";
+import { generarCheckupPDF } from "@/utils/checkupPdfGenerator";
 
 interface Vehiculo {
   id: string;
@@ -220,6 +222,71 @@ export const VehiculoCheckupDialog = ({
         .single();
 
       if (error) throw error;
+
+      // Get empleado name for PDF
+      const { data: empleadoData } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", empleadoId)
+        .single();
+
+      const choferData = choferes.find(c => c.id === selectedChofer);
+      const vehiculoCompleto = vehiculos.find(v => v.id === selectedVehiculo);
+
+      // Generate and upload PDF
+      try {
+        toast.info("Generando PDF del checkup...");
+        
+        const pdfBlob = await generarCheckupPDF({
+          checkup: {
+            id: checkup.id,
+            fecha_checkup: checkup.fecha_checkup,
+            hora_inspeccion: horaInspeccion,
+            kilometraje_inicial: kilometrajeInicial ? parseInt(kilometrajeInicial) : null,
+            prioridad: checkup.prioridad,
+            tiene_items_nn_fallados: checkup.tiene_items_nn_fallados,
+            checklist_detalle: checklist,
+            fallas_detectadas: observaciones,
+            observaciones_golpes: danosData,
+            firma_conductor: firmaConductor,
+            firma_supervisor: firmaSupervisor,
+          },
+          vehiculo: {
+            id: selectedVehiculo,
+            nombre: vehiculoCompleto?.nombre || "Vehículo",
+            placa: vehiculoCompleto?.placa,
+          },
+          chofer: choferData ? { 
+            id: choferData.id, 
+            nombre_completo: choferData.nombre_completo 
+          } : null,
+          realizadoPor: empleadoData?.full_name || null,
+        });
+
+        // Upload PDF to storage
+        const pdfPath = `${selectedVehiculo}/${checkup.id}.pdf`;
+        const { error: uploadError } = await supabase.storage
+          .from("checkups-reportes-pdf")
+          .upload(pdfPath, pdfBlob, { 
+            contentType: "application/pdf",
+            upsert: true 
+          });
+
+        if (uploadError) {
+          console.error("Error uploading PDF:", uploadError);
+        } else {
+          // Update checkup with PDF path
+          await supabase
+            .from("vehiculos_checkups")
+            .update({ pdf_path: pdfPath })
+            .eq("id", checkup.id);
+          
+          console.log("PDF guardado en:", pdfPath);
+        }
+      } catch (pdfError) {
+        console.error("Error generando PDF:", pdfError);
+        // Don't fail the whole operation if PDF fails
+      }
 
       // Auto-notify mechanic if NN items failed
       if (!nnValidation.isValid && checkup) {
