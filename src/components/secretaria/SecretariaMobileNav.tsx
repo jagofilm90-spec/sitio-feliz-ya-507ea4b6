@@ -11,6 +11,7 @@ import {
   Mail,
   Users,
   Store,
+  LogOut,
 } from "lucide-react";
 
 interface SecretariaMobileNavProps {
@@ -24,12 +25,14 @@ interface SecretariaMobileNavProps {
     correos: number;
     compras: number;
   };
+  onLogout: () => void;
 }
 
 export const SecretariaMobileNav = ({
   activeTab,
   onTabChange,
   counters,
+  onLogout,
 }: SecretariaMobileNavProps) => {
   const navItems = [
     { id: "pedidos", label: "Pedidos", icon: ClipboardList, badge: counters.pedidos },
@@ -49,7 +52,7 @@ export const SecretariaMobileNav = ({
   ];
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50 safe-area-bottom">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50 pb-[env(safe-area-inset-bottom)]">
       {/* Primary Navigation */}
       <div className="grid grid-cols-5 gap-1 p-1">
         {navItems.map((item) => {
@@ -62,16 +65,16 @@ export const SecretariaMobileNav = ({
               key={item.id}
               onClick={() => onTabChange(item.id)}
               className={cn(
-                "flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all",
+                "flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all min-h-[52px]",
                 isActive
-                  ? "bg-pink-100 dark:bg-pink-950/30 text-pink-600"
+                  ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-muted"
               )}
             >
               <div className="relative">
                 <Icon className="h-5 w-5" />
                 {hasBadge && (
-                  <span className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center bg-rose-500 text-white text-[9px] font-bold rounded-full">
+                  <span className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full">
                     {item.badge! > 9 ? "9+" : item.badge}
                   </span>
                 )}
@@ -94,9 +97,9 @@ export const SecretariaMobileNav = ({
               key={item.id}
               onClick={() => onTabChange(item.id)}
               className={cn(
-                "flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium whitespace-nowrap transition-all",
+                "flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium whitespace-nowrap transition-all min-h-[36px]",
                 isActive
-                  ? "bg-pink-600 text-white"
+                  ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               )}
             >
@@ -110,6 +113,14 @@ export const SecretariaMobileNav = ({
             </button>
           );
         })}
+        {/* Logout Button */}
+        <button
+          onClick={onLogout}
+          className="flex items-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-medium whitespace-nowrap transition-all min-h-[36px] text-destructive hover:bg-destructive/10"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          Salir
+        </button>
       </div>
     </div>
   );

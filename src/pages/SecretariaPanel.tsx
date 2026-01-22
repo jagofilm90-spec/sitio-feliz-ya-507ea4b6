@@ -184,9 +184,9 @@ const SecretariaPanel = () => {
       />
 
       {/* Main Content */}
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 md:ml-60 lg:ml-64 flex flex-col min-h-screen">
         {/* Mobile Header */}
-        <header className="lg:hidden sticky top-0 z-40 bg-gradient-to-r from-pink-600 to-rose-600 text-white px-4 py-3 shadow-lg">
+        <header className="md:hidden sticky top-0 z-40 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground px-4 py-3 shadow-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img src={logoAlmasa} alt="ALMASA" className="h-8 brightness-0 invert" />
@@ -220,8 +220,8 @@ const SecretariaPanel = () => {
           </div>
         </header>
 
-        {/* Desktop Header */}
-        <header className="hidden lg:flex sticky top-0 z-40 bg-background/95 backdrop-blur border-b px-6 py-4 items-center justify-between">
+        {/* Desktop/Tablet Header */}
+        <header className="hidden md:flex sticky top-0 z-40 bg-background/95 backdrop-blur border-b px-6 py-4 items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-foreground">Panel Secretaria</h1>
             <p className="text-sm text-muted-foreground">
@@ -236,7 +236,7 @@ const SecretariaPanel = () => {
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 p-4 lg:p-6 pb-32 lg:pb-6">
+        <main className="flex-1 p-4 md:p-6 pb-40 md:pb-6">
           {renderTabContent()}
         </main>
       </div>
@@ -246,6 +246,7 @@ const SecretariaPanel = () => {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         counters={counters}
+        onLogout={handleLogout}
       />
 
       {/* Welcome Dialog */}

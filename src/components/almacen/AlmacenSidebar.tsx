@@ -123,7 +123,7 @@ export const AlmacenSidebar = ({
 
   return (
     <>
-      <aside className="hidden lg:flex flex-col w-64 bg-slate-900 fixed left-0 top-0 h-screen z-40">
+      <aside className="hidden md:flex flex-col w-60 lg:w-64 bg-slate-900 fixed left-0 top-0 h-screen z-40">
         {/* Header con Logo y Bienvenida */}
         <div className="border-b border-slate-700">
           {/* Logo */}
