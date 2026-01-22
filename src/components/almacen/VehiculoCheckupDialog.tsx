@@ -92,6 +92,9 @@ export const VehiculoCheckupDialog = ({
   const [firmaDialogOpen, setFirmaDialogOpen] = useState<
     "conductor" | "supervisor" | null
   >(null);
+  
+  // Generate a unique ID for this checkup session to organize photos in storage
+  const [checkupTempId] = useState(() => crypto.randomUUID());
 
   useEffect(() => {
     if (open) {
@@ -507,6 +510,7 @@ export const VehiculoCheckupDialog = ({
               <DiagramaDanosVehiculo
                 danos={danosVehiculo}
                 onDanosChange={setDanosVehiculo}
+                checkupId={checkupTempId}
               />
 
               <div className="space-y-2">
