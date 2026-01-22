@@ -13,9 +13,10 @@ import { es } from "date-fns/locale";
 import { 
   Search, CheckCircle2, XCircle, Wrench, RefreshCw, 
   ClipboardCheck, ChevronDown, ChevronUp, Truck, AlertTriangle,
-  Clock
+  Clock, History
 } from "lucide-react";
 import { VehiculoCheckupDialog } from "./VehiculoCheckupDialog";
+import { HistorialDanosVehiculo } from "./HistorialDanosVehiculo";
 
 interface Checkup {
   id: string;
@@ -59,6 +60,8 @@ export const VehiculoCheckupsTab = ({ empleadoId, refreshKey }: VehiculoCheckups
   const [dialogOpen, setDialogOpen] = useState(false);
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<{id: string; nombre: string; placa: string | null} | null>(null);
   const [historialOpen, setHistorialOpen] = useState(false);
+  const [historialDanosOpen, setHistorialDanosOpen] = useState(false);
+  const [vehiculoHistorial, setVehiculoHistorial] = useState<{id: string; nombre: string; placa: string | null} | null>(null);
 
   useEffect(() => {
     loadCheckups();
@@ -224,6 +227,15 @@ export const VehiculoCheckupsTab = ({ empleadoId, refreshKey }: VehiculoCheckups
       placa: vehiculo.placa
     });
     setDialogOpen(true);
+  };
+
+  const abrirHistorialDanos = (vehiculo: VehiculoConCheckup) => {
+    setVehiculoHistorial({
+      id: vehiculo.id,
+      nombre: vehiculo.nombre,
+      placa: vehiculo.placa
+    });
+    setHistorialDanosOpen(true);
   };
 
   const getCheckupStatusBadge = (vehiculo: VehiculoConCheckup) => {
@@ -406,15 +418,26 @@ export const VehiculoCheckupsTab = ({ empleadoId, refreshKey }: VehiculoCheckups
                       </div>
                     </div>
 
-                    {/* Botón iniciar checkup - Optimizado para tablet */}
-                    <Button 
-                      size="lg"
-                      className="w-full h-12"
-                      onClick={() => iniciarCheckup(v)}
-                    >
-                      <ClipboardCheck className="h-5 w-5 mr-2" />
-                      Iniciar Checkup
-                    </Button>
+                    {/* Botones de acción - Optimizado para tablet */}
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 h-10"
+                        onClick={() => abrirHistorialDanos(v)}
+                      >
+                        <History className="h-4 w-4 mr-1" />
+                        Daños
+                      </Button>
+                      <Button 
+                        size="sm"
+                        className="flex-1 h-10"
+                        onClick={() => iniciarCheckup(v)}
+                      >
+                        <ClipboardCheck className="h-4 w-4 mr-1" />
+                        Checkup
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -577,6 +600,19 @@ export const VehiculoCheckupsTab = ({ empleadoId, refreshKey }: VehiculoCheckups
           loadVehiculosConCheckups();
         }}
       />
+
+      {vehiculoHistorial && (
+        <HistorialDanosVehiculo
+          vehiculoId={vehiculoHistorial.id}
+          vehiculoNombre={vehiculoHistorial.nombre}
+          vehiculoPlaca={vehiculoHistorial.placa}
+          open={historialDanosOpen}
+          onOpenChange={(open) => {
+            setHistorialDanosOpen(open);
+            if (!open) setVehiculoHistorial(null);
+          }}
+        />
+      )}
     </div>
   );
 };
