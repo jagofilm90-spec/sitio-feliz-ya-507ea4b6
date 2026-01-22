@@ -1,9 +1,14 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { X, Trash2, MapPin } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { X, Trash2, MapPin, Camera, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { compressImageForUpload } from "@/lib/imageUtils";
+import { toast } from "sonner";
 
 export type TipoDano = "golpe" | "raspadura" | "grieta";
 export type VistaCamion = "superior" | "lateral_izq" | "lateral_der" | "frontal" | "trasera";
@@ -15,12 +20,14 @@ export interface DanoMarcado {
   posicionX: number; // 0-100%
   posicionY: number; // 0-100%
   descripcion?: string;
+  fotos?: string[]; // Storage paths for damage photos
 }
 
 interface DiagramaDanosVehiculoProps {
   danos: DanoMarcado[];
   onDanosChange: (danos: DanoMarcado[]) => void;
   disabled?: boolean;
+  checkupId?: string; // For organizing photos in storage
 }
 
 const TIPO_CONFIG: Record<TipoDano, { label: string; color: string; bgColor: string; icon: string }> = {
@@ -37,14 +44,84 @@ const VISTA_CONFIG: Record<VistaCamion, { label: string; icon: string }> = {
   trasera: { label: "Trasera", icon: "🔳" },
 };
 
+const MAX_PHOTOS_PER_DAMAGE = 3;
+
+// Sub-component for loading photos with signed URLs
+const DanoFotoThumbnail = ({ 
+  path, 
+  onRemove, 
+  onPreview,
+  disabled 
+}: { 
+  path: string; 
+  onRemove: () => void; 
+  onPreview: (url: string) => void;
+  disabled?: boolean;
+}) => {
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadUrl = async () => {
+      try {
+        const { data } = await supabase.storage
+          .from("checkups-danos-fotos")
+          .createSignedUrl(path, 3600); // 1 hour
+        if (data?.signedUrl) setSignedUrl(data.signedUrl);
+      } catch (error) {
+        console.error("Error loading photo URL:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadUrl();
+  }, [path]);
+
+  if (loading) {
+    return <Skeleton className="w-12 h-12 rounded" />;
+  }
+
+  if (!signedUrl) {
+    return <div className="w-12 h-12 rounded bg-muted flex items-center justify-center text-muted-foreground text-xs">Error</div>;
+  }
+
+  return (
+    <div className="relative group">
+      <img
+        src={signedUrl}
+        alt="Evidencia de daño"
+        className="w-12 h-12 object-cover rounded cursor-pointer border border-border hover:border-primary transition-colors"
+        onClick={() => onPreview(signedUrl)}
+      />
+      {!disabled && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <X className="h-2.5 w-2.5" />
+        </button>
+      )}
+    </div>
+  );
+};
+
 export const DiagramaDanosVehiculo = ({
   danos,
   onDanosChange,
   disabled = false,
+  checkupId,
 }: DiagramaDanosVehiculoProps) => {
   const [tipoSeleccionado, setTipoSeleccionado] = useState<TipoDano>("golpe");
   const [vistaActual, setVistaActual] = useState<VistaCamion>("lateral_izq");
+  const [uploadingDanoId, setUploadingDanoId] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const selectedDanoIdRef = useRef<string | null>(null);
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -72,12 +149,92 @@ export const DiagramaDanosVehiculo = ({
     [disabled, danos, onDanosChange, tipoSeleccionado, vistaActual]
   );
 
-  const eliminarDano = (id: string) => {
+  const eliminarDano = async (id: string) => {
+    const dano = danos.find(d => d.id === id);
+    // Remove photos from storage if they exist
+    if (dano?.fotos && dano.fotos.length > 0) {
+      await supabase.storage.from("checkups-danos-fotos").remove(dano.fotos);
+    }
     onDanosChange(danos.filter((d) => d.id !== id));
   };
 
-  const limpiarTodos = () => {
+  const limpiarTodos = async () => {
+    // Remove all photos from storage
+    const allPhotos = danos.flatMap(d => d.fotos || []);
+    if (allPhotos.length > 0) {
+      await supabase.storage.from("checkups-danos-fotos").remove(allPhotos);
+    }
     onDanosChange([]);
+  };
+
+  // Photo capture handlers
+  const handleAddPhoto = (danoId: string) => {
+    selectedDanoIdRef.current = danoId;
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const danoId = selectedDanoIdRef.current;
+    if (!file || !danoId) return;
+
+    const dano = danos.find(d => d.id === danoId);
+    if (dano && (dano.fotos?.length || 0) >= MAX_PHOTOS_PER_DAMAGE) {
+      toast.error(`Máximo ${MAX_PHOTOS_PER_DAMAGE} fotos por daño`);
+      e.target.value = "";
+      return;
+    }
+
+    setUploadingDanoId(danoId);
+    try {
+      // Compress image
+      const compressed = await compressImageForUpload(file, "evidence");
+
+      // Generate unique path
+      const timestamp = Date.now();
+      const folderPath = checkupId || "temp";
+      const storagePath = `${folderPath}/${danoId}/${timestamp}.jpg`;
+
+      // Upload to storage
+      const { error } = await supabase.storage
+        .from("checkups-danos-fotos")
+        .upload(storagePath, compressed);
+
+      if (error) throw error;
+
+      // Update damage with new photo path
+      const newDanos = danos.map(d =>
+        d.id === danoId
+          ? { ...d, fotos: [...(d.fotos || []), storagePath] }
+          : d
+      );
+      onDanosChange(newDanos);
+      toast.success("Foto agregada");
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      toast.error("Error al subir la foto");
+    } finally {
+      setUploadingDanoId(null);
+      e.target.value = "";
+    }
+  };
+
+  const handleRemovePhoto = async (danoId: string, photoPath: string) => {
+    try {
+      // Remove from storage
+      await supabase.storage.from("checkups-danos-fotos").remove([photoPath]);
+
+      // Update local state
+      const newDanos = danos.map(d =>
+        d.id === danoId
+          ? { ...d, fotos: d.fotos?.filter(f => f !== photoPath) }
+          : d
+      );
+      onDanosChange(newDanos);
+    } catch (error) {
+      console.error("Error removing photo:", error);
+      toast.error("Error al eliminar la foto");
+    }
   };
 
   const getAreaLabel = (vista: VistaCamion, x: number, y: number): string => {
@@ -577,33 +734,83 @@ export const DiagramaDanosVehiculo = ({
               Limpiar todo
             </Button>
           </div>
-          <div className="max-h-40 overflow-y-auto space-y-1.5 border rounded-lg p-2">
+          <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-2">
             {danos.map((dano, index) => (
               <div
                 key={dano.id}
-                className="flex items-center justify-between p-2 rounded bg-muted/50"
+                className="p-2 rounded bg-muted/50 space-y-2"
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{TIPO_CONFIG[dano.tipo].icon}</span>
-                  <div className="text-sm">
-                    <span className="font-medium">
-                      {index + 1}. {TIPO_CONFIG[dano.tipo].label}
-                    </span>
-                    <span className="text-muted-foreground ml-2">
-                      {VISTA_CONFIG[dano.vista].label} - {getAreaLabel(dano.vista, dano.posicionX, dano.posicionY)}
-                    </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{TIPO_CONFIG[dano.tipo].icon}</span>
+                    <div className="text-sm">
+                      <span className="font-medium">
+                        {index + 1}. {TIPO_CONFIG[dano.tipo].label}
+                      </span>
+                      <span className="text-muted-foreground ml-2">
+                        {VISTA_CONFIG[dano.vista].label} - {getAreaLabel(dano.vista, dano.posicionX, dano.posicionY)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {/* Camera button for adding photo */}
+                    {!disabled && (dano.fotos?.length || 0) < MAX_PHOTOS_PER_DAMAGE && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleAddPhoto(dano.id)}
+                        disabled={uploadingDanoId === dano.id}
+                        className="h-8 w-8 p-0 text-primary"
+                      >
+                        {uploadingDanoId === dano.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Camera className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => eliminarDano(dano.id)}
+                      disabled={disabled}
+                      className="h-8 w-8 p-0 text-destructive"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => eliminarDano(dano.id)}
-                  disabled={disabled}
-                  className="h-8 w-8 p-0 text-destructive"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                
+                {/* Photo gallery for this damage */}
+                {dano.fotos && dano.fotos.length > 0 && (
+                  <div className="flex gap-2 flex-wrap pl-8">
+                    {dano.fotos.map((photoPath) => (
+                      <DanoFotoThumbnail
+                        key={photoPath}
+                        path={photoPath}
+                        disabled={disabled}
+                        onRemove={() => handleRemovePhoto(dano.id, photoPath)}
+                        onPreview={(url) => setPreviewUrl(url)}
+                      />
+                    ))}
+                    {(dano.fotos.length < MAX_PHOTOS_PER_DAMAGE) && !disabled && (
+                      <button
+                        type="button"
+                        onClick={() => handleAddPhoto(dano.id)}
+                        disabled={uploadingDanoId === dano.id}
+                        className="w-12 h-12 rounded border-2 border-dashed border-muted-foreground/30 flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                      >
+                        {uploadingDanoId === dano.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Camera className="h-4 w-4" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -640,6 +847,29 @@ export const DiagramaDanosVehiculo = ({
           })}
         </div>
       )}
+
+      {/* Hidden file input for camera capture */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileSelected}
+        className="hidden"
+      />
+
+      {/* Photo preview dialog */}
+      <Dialog open={!!previewUrl} onOpenChange={() => setPreviewUrl(null)}>
+        <DialogContent className="max-w-2xl p-1">
+          {previewUrl && (
+            <img 
+              src={previewUrl} 
+              alt="Evidencia de daño" 
+              className="w-full h-auto rounded"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
