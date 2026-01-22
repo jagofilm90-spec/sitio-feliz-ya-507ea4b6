@@ -109,40 +109,67 @@ export const DiagramaDanosVehiculo = ({
     return acc;
   }, {} as Record<VistaCamion, number>);
 
-  // SVG Components for each view
+  // SVG Components for each view - Professional ALMASA truck diagrams
   const renderSVG = () => {
-    const commonStyles = {
-      body: "fill-muted stroke-muted-foreground",
-      window: "fill-accent stroke-muted-foreground",
-      wheel: "fill-foreground opacity-70",
-      detail: "fill-secondary stroke-muted-foreground",
-      text: "fill-muted-foreground text-[8px]",
+    const styles = {
+      body: "fill-slate-200 stroke-slate-500",
+      cabin: "fill-slate-300 stroke-slate-600",
+      window: "fill-sky-200 stroke-slate-500",
+      wheel: "fill-slate-700",
+      wheelRim: "fill-slate-400",
+      detail: "fill-slate-100 stroke-slate-400",
+      curtain: "fill-slate-50 stroke-slate-300",
+      curtainLine: "stroke-slate-300",
+      bumper: "fill-slate-400 stroke-slate-600",
+      light: "fill-amber-300 stroke-slate-500",
+      tailLight: "fill-red-400 stroke-slate-500",
+      fuelTank: "fill-slate-500 stroke-slate-600",
+      text: "fill-slate-500 text-[7px] font-medium",
+      brandText: "fill-red-600 text-[14px] font-bold",
+      labelText: "fill-slate-400 text-[6px]",
     };
 
     switch (vistaActual) {
       case "superior":
         return (
           <svg viewBox="0 0 400 200" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-            {/* Cabina - Top view */}
-            <rect x="20" y="60" width="70" height="80" rx="10" className={commonStyles.body} strokeWidth="2" />
-            <rect x="30" y="70" width="50" height="60" rx="5" className={commonStyles.window} strokeWidth="1" />
-            <text x="55" y="105" textAnchor="middle" className={commonStyles.text}>CABINA</text>
+            {/* Shadow for depth */}
+            <ellipse cx="200" cy="175" rx="180" ry="15" className="fill-slate-900/10" />
             
-            {/* Espejos */}
-            <ellipse cx="20" cy="85" rx="8" ry="12" className={commonStyles.detail} strokeWidth="1" />
-            <ellipse cx="90" cy="85" rx="8" ry="12" className={commonStyles.detail} strokeWidth="1" />
-            <ellipse cx="20" cy="115" rx="8" ry="12" className={commonStyles.detail} strokeWidth="1" />
-            <ellipse cx="90" cy="115" rx="8" ry="12" className={commonStyles.detail} strokeWidth="1" />
-
+            {/* Cabina - Top view with realistic shape */}
+            <rect x="15" y="55" width="80" height="90" rx="12" className={styles.cabin} strokeWidth="2" />
+            
+            {/* Techo cabina con AC */}
+            <rect x="25" y="65" width="60" height="70" rx="8" className={styles.window} strokeWidth="1" />
+            <rect x="40" y="58" width="30" height="8" rx="2" className={styles.detail} strokeWidth="1" />
+            <text x="55" y="64" textAnchor="middle" className={styles.labelText}>A/C</text>
+            
+            {/* Espejos laterales grandes */}
+            <rect x="5" y="75" width="12" height="25" rx="3" className={styles.detail} strokeWidth="1.5" />
+            <rect x="93" y="75" width="12" height="25" rx="3" className={styles.detail} strokeWidth="1.5" />
+            
             {/* Caja de carga - Top view */}
-            <rect x="100" y="40" width="280" height="120" rx="5" className={commonStyles.body} strokeWidth="2" />
-            <line x1="100" y1="100" x2="380" y2="100" className="stroke-muted-foreground" strokeWidth="1" strokeDasharray="5,5" />
-            <text x="240" y="75" textAnchor="middle" className={commonStyles.text}>CAJA - LADO IZQUIERDO</text>
-            <text x="240" y="130" textAnchor="middle" className={commonStyles.text}>CAJA - LADO DERECHO</text>
-
-            {/* Indicador frontal */}
-            <polygon points="55,40 45,55 65,55" className="fill-muted-foreground" />
-            <text x="55" y="35" textAnchor="middle" className={commonStyles.text}>FRENTE</text>
+            <rect x="105" y="35" width="280" height="130" rx="4" className={styles.body} strokeWidth="2" />
+            
+            {/* Bordes superiores de la caja */}
+            <rect x="105" y="35" width="280" height="8" rx="2" className={styles.bumper} strokeWidth="1" />
+            <rect x="105" y="157" width="280" height="8" rx="2" className={styles.bumper} strokeWidth="1" />
+            
+            {/* Logo ALMASA centrado en la caja */}
+            <rect x="200" y="85" width="100" height="30" rx="3" className="fill-white stroke-red-500" strokeWidth="1" />
+            <text x="250" y="106" textAnchor="middle" className={styles.brandText}>ALMASA</text>
+            
+            {/* Línea central divisoria */}
+            <line x1="105" y1="100" x2="385" y2="100" className="stroke-slate-400" strokeWidth="1" strokeDasharray="8,4" />
+            
+            {/* Etiquetas de zonas */}
+            <text x="55" y="105" textAnchor="middle" className={styles.text}>CABINA</text>
+            <text x="180" y="60" textAnchor="middle" className={styles.labelText}>LADO IZQUIERDO</text>
+            <text x="180" y="148" textAnchor="middle" className={styles.labelText}>LADO DERECHO</text>
+            
+            {/* Indicador frontal con flecha */}
+            <polygon points="55,30 45,48 65,48" className="fill-red-500" />
+            <text x="55" y="23" textAnchor="middle" className="fill-red-600 text-[8px] font-bold">▲ FRENTE</text>
           </svg>
         );
 
@@ -150,142 +177,281 @@ export const DiagramaDanosVehiculo = ({
       case "lateral_der":
         const isLeft = vistaActual === "lateral_izq";
         return (
-          <svg viewBox="0 0 400 180" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-            {/* Cabina */}
+          <svg viewBox="0 0 420 190" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+            {/* Ground shadow */}
+            <ellipse cx="220" cy="178" rx="200" ry="8" className="fill-slate-900/10" />
+            
+            {/* === CABINA === */}
+            {/* Cuerpo cabina con forma de camión */}
             <path 
-              d="M20 140 L20 60 L50 40 L80 40 L80 140 Z" 
-              className={commonStyles.body} 
+              d="M15 150 L15 55 Q15 45 25 45 L55 30 Q60 28 65 30 L85 40 Q90 42 90 48 L90 150 Z" 
+              className={styles.cabin} 
               strokeWidth="2" 
             />
+            
+            {/* Visera/Toldo superior */}
+            <path d="M18 48 L52 28 L88 42 L88 50 L52 38 L18 55 Z" className={styles.bumper} strokeWidth="1" />
+            
             {/* Parabrisas inclinado */}
             <path 
-              d="M25 65 L48 45 L75 45 L75 65 Z" 
-              className={commonStyles.window} 
-              strokeWidth="1" 
+              d="M22 62 L52 35 L82 45 L82 62 Q82 65 78 65 L26 65 Q22 65 22 62 Z" 
+              className={styles.window} 
+              strokeWidth="1.5" 
             />
+            
             {/* Ventana lateral */}
-            <rect x="25" y="70" width="50" height="30" rx="3" className={commonStyles.window} strokeWidth="1" />
-            {/* Puerta */}
-            <rect x="25" y="70" width="50" height="65" rx="2" className="fill-none stroke-muted-foreground" strokeWidth="1" />
-            <circle cx="70" cy="110" r="3" className="fill-muted-foreground" />
-            <text x="50" y="125" textAnchor="middle" className={commonStyles.text}>CABINA</text>
-
-            {/* Tanque de combustible */}
-            <rect x="25" y="140" width="30" height="15" rx="3" className={commonStyles.detail} strokeWidth="1" />
-
-            {/* Caja de carga */}
-            <rect x="90" y="30" width="290" height="125" rx="3" className={commonStyles.body} strokeWidth="2" />
-            {/* Líneas de paneles/cortinas */}
-            <line x1="150" y1="30" x2="150" y2="155" className="stroke-muted-foreground" strokeWidth="1" />
-            <line x1="220" y1="30" x2="220" y2="155" className="stroke-muted-foreground" strokeWidth="1" />
-            <line x1="290" y1="30" x2="290" y2="155" className="stroke-muted-foreground" strokeWidth="1" />
-            <text x="120" y="95" textAnchor="middle" className={commonStyles.text}>FRENTE</text>
-            <text x="185" y="95" textAnchor="middle" className={commonStyles.text}>CENTRO</text>
-            <text x="255" y="95" textAnchor="middle" className={commonStyles.text}>CENTRO</text>
-            <text x="340" y="95" textAnchor="middle" className={commonStyles.text}>TRASERA</text>
-
-            {/* Llanta delantera */}
-            <ellipse cx="50" cy="165" rx="25" ry="12" className={commonStyles.wheel} />
-            <ellipse cx="50" cy="165" rx="10" ry="5" className="fill-muted" />
-
+            <rect x="22" y="70" width="62" height="28" rx="4" className={styles.window} strokeWidth="1" />
+            
+            {/* Puerta con detalles */}
+            <rect x="22" y="68" width="62" height="75" rx="3" className="fill-none stroke-slate-500" strokeWidth="1.5" />
+            <circle cx="78" cy="108" r="4" className="fill-slate-400 stroke-slate-500" strokeWidth="1" />
+            
+            {/* Escalón */}
+            <rect x="15" y="145" width="25" height="8" rx="1" className={styles.bumper} strokeWidth="1" />
+            
+            {/* Luces delanteras */}
+            <rect x="12" y="130" width="8" height="12" rx="2" className={styles.light} strokeWidth="1" />
+            
+            {/* Tanque de combustible cilíndrico */}
+            <ellipse cx="52" cy="152" rx="18" ry="8" className={styles.fuelTank} strokeWidth="1.5" />
+            <ellipse cx="52" cy="152" rx="12" ry="5" className="fill-slate-600" />
+            <text x="52" y="155" textAnchor="middle" className="fill-slate-300 text-[5px]">DIESEL</text>
+            
+            {/* Llanta delantera con detalle de rin */}
+            <ellipse cx="52" cy="172" rx="28" ry="13" className={styles.wheel} />
+            <ellipse cx="52" cy="172" rx="18" ry="8" className={styles.wheelRim} />
+            <ellipse cx="52" cy="172" rx="8" ry="4" className="fill-slate-600" />
+            
+            {/* === CAJA DE CARGA CON CORTINAS === */}
+            <rect x="100" y="25" width="305" height="130" rx="3" className={styles.body} strokeWidth="2" />
+            
+            {/* Marco superior de la caja */}
+            <rect x="100" y="22" width="305" height="8" rx="2" className={styles.bumper} strokeWidth="1" />
+            
+            {/* Cortinas laterales con pliegues */}
+            <rect x="105" y="30" width="295" height="118" className={styles.curtain} strokeWidth="1" />
+            
+            {/* Líneas de pliegue de cortina */}
+            {Array.from({ length: 12 }).map((_, i) => (
+              <g key={i}>
+                <line 
+                  x1={130 + i * 23} y1="30" 
+                  x2={130 + i * 23} y2="148" 
+                  className={styles.curtainLine} 
+                  strokeWidth="0.5" 
+                />
+                {/* Sombras de pliegue */}
+                <rect 
+                  x={131 + i * 23} y="30" 
+                  width="6" height="118" 
+                  className="fill-slate-200/50" 
+                />
+              </g>
+            ))}
+            
+            {/* Logo ALMASA en la caja */}
+            <rect x="200" y="65" width="100" height="35" rx="4" className="fill-white/90 stroke-red-500" strokeWidth="1.5" />
+            <text x="250" y="88" textAnchor="middle" className="fill-red-600 text-[16px] font-bold" style={{ fontFamily: 'Arial Black, sans-serif' }}>ALMASA</text>
+            <text x="250" y="96" textAnchor="middle" className="fill-slate-500 text-[4px]">DISTRIBUIDORA DE ALIMENTOS</text>
+            
+            {/* Divisiones de secciones */}
+            <line x1="170" y1="22" x2="170" y2="155" className="stroke-slate-400" strokeWidth="1.5" strokeDasharray="4,2" />
+            <line x1="250" y1="22" x2="250" y2="155" className="stroke-slate-400" strokeWidth="1.5" strokeDasharray="4,2" />
+            <line x1="330" y1="22" x2="330" y2="155" className="stroke-slate-400" strokeWidth="1.5" strokeDasharray="4,2" />
+            
+            {/* Etiquetas de secciones */}
+            <text x="135" y="145" textAnchor="middle" className={styles.labelText}>FRENTE</text>
+            <text x="210" y="145" textAnchor="middle" className={styles.labelText}>CENTRO-1</text>
+            <text x="290" y="145" textAnchor="middle" className={styles.labelText}>CENTRO-2</text>
+            <text x="365" y="145" textAnchor="middle" className={styles.labelText}>TRASERA</text>
+            
+            {/* Loderas traseras */}
+            <path d="M310 155 L310 165 Q310 175 320 175 L390 175 Q400 175 400 165 L400 155 Z" className={styles.bumper} strokeWidth="1" />
+            
             {/* Llantas traseras (dobles) */}
-            <ellipse cx="320" cy="165" rx="25" ry="12" className={commonStyles.wheel} />
-            <ellipse cx="320" cy="165" rx="10" ry="5" className="fill-muted" />
-            <ellipse cx="355" cy="165" rx="25" ry="12" className={commonStyles.wheel} />
-            <ellipse cx="355" cy="165" rx="10" ry="5" className="fill-muted" />
-
+            <ellipse cx="335" cy="172" rx="26" ry="12" className={styles.wheel} />
+            <ellipse cx="335" cy="172" rx="16" ry="7" className={styles.wheelRim} />
+            <ellipse cx="335" cy="172" rx="6" ry="3" className="fill-slate-600" />
+            
+            <ellipse cx="375" cy="172" rx="26" ry="12" className={styles.wheel} />
+            <ellipse cx="375" cy="172" rx="16" ry="7" className={styles.wheelRim} />
+            <ellipse cx="375" cy="172" rx="6" ry="3" className="fill-slate-600" />
+            
+            {/* Calavera trasera */}
+            <rect x="400" y="100" width="8" height="25" rx="2" className={styles.tailLight} strokeWidth="1" />
+            
             {/* Indicador de dirección */}
-            <polygon points={isLeft ? "10,90 2,100 10,110" : "390,90 398,100 390,110"} className="fill-muted-foreground" />
-            <text x={isLeft ? "8" : "392"} y="125" textAnchor="middle" className={commonStyles.text} transform={isLeft ? "" : "rotate(90 392 125)"}>
-              {isLeft ? "←" : "→"}
-            </text>
+            <g className="fill-red-500">
+              <polygon points={isLeft ? "5,90 0,100 5,110" : "415,90 420,100 415,110"} />
+              <text x={isLeft ? "3" : "417"} y="120" textAnchor="middle" className="text-[6px] fill-red-600 font-bold">
+                {isLeft ? "IZQ" : "DER"}
+              </text>
+            </g>
+            
+            <text x="52" y="38" textAnchor="middle" className={styles.text}>CABINA</text>
           </svg>
         );
 
       case "frontal":
         return (
-          <svg viewBox="0 0 200 220" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-            {/* Cabina frontal */}
-            <rect x="30" y="30" width="140" height="140" rx="10" className={commonStyles.body} strokeWidth="2" />
+          <svg viewBox="0 0 220 240" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+            {/* Ground shadow */}
+            <ellipse cx="110" cy="225" rx="90" ry="10" className="fill-slate-900/10" />
             
-            {/* Parabrisas */}
-            <rect x="45" y="40" width="110" height="50" rx="5" className={commonStyles.window} strokeWidth="1" />
-            <text x="100" y="70" textAnchor="middle" className={commonStyles.text}>PARABRISAS</text>
-
-            {/* Cofre/Parrilla */}
-            <rect x="45" y="100" width="110" height="40" rx="3" className={commonStyles.detail} strokeWidth="1" />
-            <line x1="60" y1="100" x2="60" y2="140" className="stroke-muted-foreground" strokeWidth="1" />
-            <line x1="80" y1="100" x2="80" y2="140" className="stroke-muted-foreground" strokeWidth="1" />
-            <line x1="100" y1="100" x2="100" y2="140" className="stroke-muted-foreground" strokeWidth="1" />
-            <line x1="120" y1="100" x2="120" y2="140" className="stroke-muted-foreground" strokeWidth="1" />
-            <line x1="140" y1="100" x2="140" y2="140" className="stroke-muted-foreground" strokeWidth="1" />
-            <text x="100" y="125" textAnchor="middle" className={commonStyles.text}>PARRILLA</text>
-
-            {/* Faros */}
-            <ellipse cx="55" cy="155" rx="15" ry="10" className={commonStyles.window} strokeWidth="1" />
-            <ellipse cx="145" cy="155" rx="15" ry="10" className={commonStyles.window} strokeWidth="1" />
-            <text x="55" y="158" textAnchor="middle" className="fill-muted-foreground text-[6px]">FARO</text>
-            <text x="145" y="158" textAnchor="middle" className="fill-muted-foreground text-[6px]">FARO</text>
-
-            {/* Defensa */}
-            <rect x="25" y="170" width="150" height="15" rx="3" className={commonStyles.detail} strokeWidth="1" />
-            <text x="100" y="181" textAnchor="middle" className={commonStyles.text}>DEFENSA</text>
-
-            {/* Espejos */}
-            <rect x="10" y="50" width="15" height="25" rx="3" className={commonStyles.detail} strokeWidth="1" />
-            <rect x="175" y="50" width="15" height="25" rx="3" className={commonStyles.detail} strokeWidth="1" />
-
-            {/* Llantas */}
-            <ellipse cx="50" cy="200" rx="20" ry="8" className={commonStyles.wheel} />
-            <ellipse cx="150" cy="200" rx="20" ry="8" className={commonStyles.wheel} />
-
-            {/* Indicador */}
-            <text x="100" y="20" textAnchor="middle" className={commonStyles.text}>VISTA FRONTAL</text>
+            {/* Cabina principal */}
+            <rect x="25" y="35" width="170" height="155" rx="12" className={styles.cabin} strokeWidth="2" />
+            
+            {/* Visera parasol */}
+            <path d="M30 38 L190 38 L185 28 Q180 22 170 22 L50 22 Q40 22 35 28 Z" className={styles.bumper} strokeWidth="1.5" />
+            <text x="110" y="32" textAnchor="middle" className="fill-slate-300 text-[5px]">VISERA</text>
+            
+            {/* Parabrisas grande */}
+            <rect x="40" y="45" width="140" height="55" rx="6" className={styles.window} strokeWidth="1.5" />
+            <line x1="110" y1="45" x2="110" y2="100" className="stroke-slate-400" strokeWidth="1" />
+            <text x="110" y="78" textAnchor="middle" className={styles.text}>PARABRISAS</text>
+            
+            {/* Marco de parabrisas */}
+            <rect x="40" y="45" width="140" height="55" rx="6" className="fill-none stroke-slate-600" strokeWidth="2" />
+            
+            {/* Parrilla con rejilla detallada */}
+            <rect x="45" y="108" width="130" height="45" rx="5" className={styles.detail} strokeWidth="1.5" />
+            {/* Rejilla horizontal */}
+            {[0, 1, 2, 3, 4].map((i) => (
+              <line key={i} x1="50" y1={115 + i * 8} x2="170" y2={115 + i * 8} className="stroke-slate-400" strokeWidth="1.5" />
+            ))}
+            {/* Logo pequeño en parrilla */}
+            <rect x="85" y="120" width="50" height="18" rx="2" className="fill-white stroke-red-500" strokeWidth="1" />
+            <text x="110" y="133" textAnchor="middle" className="fill-red-600 text-[9px] font-bold">ALMASA</text>
+            
+            {/* Faros con detalle de reflector */}
+            <g>
+              <ellipse cx="55" cy="165" rx="20" ry="14" className="fill-slate-100 stroke-slate-500" strokeWidth="1.5" />
+              <ellipse cx="55" cy="165" rx="12" ry="8" className={styles.light} strokeWidth="1" />
+              <ellipse cx="55" cy="165" rx="5" ry="3" className="fill-white" />
+            </g>
+            <g>
+              <ellipse cx="165" cy="165" rx="20" ry="14" className="fill-slate-100 stroke-slate-500" strokeWidth="1.5" />
+              <ellipse cx="165" cy="165" rx="12" ry="8" className={styles.light} strokeWidth="1" />
+              <ellipse cx="165" cy="165" rx="5" ry="3" className="fill-white" />
+            </g>
+            <text x="55" y="168" textAnchor="middle" className={styles.labelText}>FARO IZQ</text>
+            <text x="165" y="168" textAnchor="middle" className={styles.labelText}>FARO DER</text>
+            
+            {/* Luces direccionales */}
+            <rect x="30" y="155" width="12" height="8" rx="2" className="fill-amber-400 stroke-slate-500" strokeWidth="1" />
+            <rect x="178" y="155" width="12" height="8" rx="2" className="fill-amber-400 stroke-slate-500" strokeWidth="1" />
+            
+            {/* Defensa con escalón */}
+            <rect x="20" y="185" width="180" height="18" rx="4" className={styles.bumper} strokeWidth="1.5" />
+            <rect x="80" y="188" width="60" height="8" rx="2" className="fill-slate-300 stroke-slate-500" strokeWidth="1" />
+            <text x="110" y="195" textAnchor="middle" className={styles.labelText}>DEFENSA</text>
+            
+            {/* Espejos laterales grandes */}
+            <rect x="5" y="55" width="18" height="35" rx="4" className={styles.detail} strokeWidth="1.5" />
+            <rect x="197" y="55" width="18" height="35" rx="4" className={styles.detail} strokeWidth="1.5" />
+            <text x="14" y="75" textAnchor="middle" className="fill-slate-400 text-[4px]">ESP</text>
+            <text x="206" y="75" textAnchor="middle" className="fill-slate-400 text-[4px]">ESP</text>
+            
+            {/* Llantas con detalle */}
+            <ellipse cx="50" cy="218" rx="25" ry="10" className={styles.wheel} />
+            <ellipse cx="50" cy="218" rx="15" ry="6" className={styles.wheelRim} />
+            <ellipse cx="170" cy="218" rx="25" ry="10" className={styles.wheel} />
+            <ellipse cx="170" cy="218" rx="15" ry="6" className={styles.wheelRim} />
+            
+            {/* Título */}
+            <text x="110" y="15" textAnchor="middle" className="fill-slate-600 text-[9px] font-bold">VISTA FRONTAL</text>
           </svg>
         );
 
       case "trasera":
         return (
-          <svg viewBox="0 0 200 220" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-            {/* Caja trasera */}
-            <rect x="20" y="20" width="160" height="150" rx="5" className={commonStyles.body} strokeWidth="2" />
+          <svg viewBox="0 0 220 240" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+            {/* Ground shadow */}
+            <ellipse cx="110" cy="228" rx="100" ry="10" className="fill-slate-900/10" />
             
-            {/* Puertas de carga */}
-            <rect x="25" y="25" width="72" height="140" rx="3" className={commonStyles.detail} strokeWidth="1" />
-            <rect x="103" y="25" width="72" height="140" rx="3" className={commonStyles.detail} strokeWidth="1" />
+            {/* Caja trasera completa */}
+            <rect x="15" y="15" width="190" height="165" rx="6" className={styles.body} strokeWidth="2" />
             
-            {/* Manijas */}
-            <rect x="90" y="80" width="8" height="30" rx="2" className="fill-muted-foreground" />
-            <rect x="102" y="80" width="8" height="30" rx="2" className="fill-muted-foreground" />
+            {/* Marco superior de la caja */}
+            <rect x="15" y="12" width="190" height="10" rx="3" className={styles.bumper} strokeWidth="1" />
+            
+            {/* Logo ALMASA en la parte superior */}
+            <rect x="60" y="22" width="100" height="28" rx="3" className="fill-white stroke-red-500" strokeWidth="1.5" />
+            <text x="110" y="42" textAnchor="middle" className="fill-red-600 text-[14px] font-bold" style={{ fontFamily: 'Arial Black, sans-serif' }}>ALMASA</text>
+            
+            {/* Puertas de carga con bisagras */}
+            <rect x="22" y="55" width="85" height="118" rx="3" className={styles.curtain} strokeWidth="1.5" />
+            <rect x="113" y="55" width="85" height="118" rx="3" className={styles.curtain} strokeWidth="1.5" />
+            
+            {/* Bisagras de puertas */}
+            <rect x="22" y="70" width="5" height="15" rx="1" className="fill-slate-400" />
+            <rect x="22" y="100" width="5" height="15" rx="1" className="fill-slate-400" />
+            <rect x="22" y="130" width="5" height="15" rx="1" className="fill-slate-400" />
+            <rect x="193" y="70" width="5" height="15" rx="1" className="fill-slate-400" />
+            <rect x="193" y="100" width="5" height="15" rx="1" className="fill-slate-400" />
+            <rect x="193" y="130" width="5" height="15" rx="1" className="fill-slate-400" />
+            
+            {/* Barras de seguridad verticales */}
+            <line x1="45" y1="60" x2="45" y2="168" className="stroke-slate-400" strokeWidth="2" />
+            <line x1="85" y1="60" x2="85" y2="168" className="stroke-slate-400" strokeWidth="2" />
+            <line x1="135" y1="60" x2="135" y2="168" className="stroke-slate-400" strokeWidth="2" />
+            <line x1="175" y1="60" x2="175" y2="168" className="stroke-slate-400" strokeWidth="2" />
+            
+            {/* Manijas centrales */}
+            <rect x="100" y="95" width="8" height="35" rx="2" className="fill-slate-500 stroke-slate-600" strokeWidth="1" />
+            <rect x="112" y="95" width="8" height="35" rx="2" className="fill-slate-500 stroke-slate-600" strokeWidth="1" />
+            <circle cx="104" cy="130" r="3" className="fill-slate-300" />
+            <circle cx="116" cy="130" r="3" className="fill-slate-300" />
             
             {/* Etiquetas puertas */}
-            <text x="61" y="100" textAnchor="middle" className={commonStyles.text}>PUERTA</text>
-            <text x="61" y="112" textAnchor="middle" className={commonStyles.text}>IZQUIERDA</text>
-            <text x="139" y="100" textAnchor="middle" className={commonStyles.text}>PUERTA</text>
-            <text x="139" y="112" textAnchor="middle" className={commonStyles.text}>DERECHA</text>
-
-            {/* Calaveras */}
-            <rect x="25" y="175" width="25" height="12" rx="2" className="fill-red-500/50 stroke-muted-foreground" strokeWidth="1" />
-            <rect x="150" y="175" width="25" height="12" rx="2" className="fill-red-500/50 stroke-muted-foreground" strokeWidth="1" />
-            <text x="37" y="184" textAnchor="middle" className="fill-muted-foreground text-[5px]">CALAV</text>
-            <text x="162" y="184" textAnchor="middle" className="fill-muted-foreground text-[5px]">CALAV</text>
-
-            {/* Placa */}
-            <rect x="75" y="175" width="50" height="12" rx="2" className="fill-background stroke-muted-foreground" strokeWidth="1" />
-            <text x="100" y="184" textAnchor="middle" className="fill-muted-foreground text-[6px]">PLACA</text>
-
-            {/* Defensa */}
-            <rect x="15" y="190" width="170" height="10" rx="2" className={commonStyles.detail} strokeWidth="1" />
-            <text x="100" y="198" textAnchor="middle" className="fill-muted-foreground text-[6px]">DEFENSA</text>
-
+            <text x="64" y="115" textAnchor="middle" className={styles.text}>PUERTA</text>
+            <text x="64" y="125" textAnchor="middle" className={styles.text}>IZQUIERDA</text>
+            <text x="156" y="115" textAnchor="middle" className={styles.text}>PUERTA</text>
+            <text x="156" y="125" textAnchor="middle" className={styles.text}>DERECHA</text>
+            
+            {/* Calaveras con reflector */}
+            <g>
+              <rect x="20" y="182" width="30" height="15" rx="3" className={styles.tailLight} strokeWidth="1.5" />
+              <rect x="25" y="185" width="8" height="9" rx="1" className="fill-red-300" />
+              <rect x="37" y="185" width="8" height="9" rx="1" className="fill-amber-400" />
+            </g>
+            <g>
+              <rect x="170" y="182" width="30" height="15" rx="3" className={styles.tailLight} strokeWidth="1.5" />
+              <rect x="175" y="185" width="8" height="9" rx="1" className="fill-amber-400" />
+              <rect x="187" y="185" width="8" height="9" rx="1" className="fill-red-300" />
+            </g>
+            <text x="35" y="193" textAnchor="middle" className="fill-white text-[4px]">CALAV</text>
+            <text x="185" y="193" textAnchor="middle" className="fill-white text-[4px]">CALAV</text>
+            
+            {/* Placa con marco */}
+            <rect x="75" y="182" width="70" height="15" rx="2" className="fill-white stroke-slate-600" strokeWidth="1.5" />
+            <text x="110" y="193" textAnchor="middle" className="fill-slate-600 text-[7px] font-bold">ABC-1234</text>
+            
+            {/* Defensa trasera con antiderrapante */}
+            <rect x="10" y="200" width="200" height="12" rx="3" className={styles.bumper} strokeWidth="1.5" />
+            {/* Patrón antiderrapante */}
+            {Array.from({ length: 20 }).map((_, i) => (
+              <line key={i} x1={20 + i * 10} y1="203" x2={25 + i * 10} y2="209" className="stroke-slate-500" strokeWidth="1" />
+            ))}
+            <text x="110" y="209" textAnchor="middle" className={styles.labelText}>DEFENSA</text>
+            
+            {/* Loderas */}
+            <path d="M25 212 L25 220 Q25 225 35 225 L80 225 Q90 225 90 220 L90 212 Z" className={styles.bumper} strokeWidth="1" />
+            <path d="M130 212 L130 220 Q130 225 140 225 L185 225 Q195 225 195 220 L195 212 Z" className={styles.bumper} strokeWidth="1" />
+            
             {/* Llantas traseras dobles */}
-            <ellipse cx="40" cy="210" rx="18" ry="7" className={commonStyles.wheel} />
-            <ellipse cx="60" cy="210" rx="18" ry="7" className={commonStyles.wheel} />
-            <ellipse cx="140" cy="210" rx="18" ry="7" className={commonStyles.wheel} />
-            <ellipse cx="160" cy="210" rx="18" ry="7" className={commonStyles.wheel} />
-
-            {/* Indicador */}
-            <text x="100" y="12" textAnchor="middle" className={commonStyles.text}>VISTA TRASERA</text>
+            <ellipse cx="45" cy="225" rx="20" ry="8" className={styles.wheel} />
+            <ellipse cx="45" cy="225" rx="12" ry="5" className={styles.wheelRim} />
+            <ellipse cx="72" cy="225" rx="20" ry="8" className={styles.wheel} />
+            <ellipse cx="72" cy="225" rx="12" ry="5" className={styles.wheelRim} />
+            
+            <ellipse cx="148" cy="225" rx="20" ry="8" className={styles.wheel} />
+            <ellipse cx="148" cy="225" rx="12" ry="5" className={styles.wheelRim} />
+            <ellipse cx="175" cy="225" rx="20" ry="8" className={styles.wheel} />
+            <ellipse cx="175" cy="225" rx="12" ry="5" className={styles.wheelRim} />
+            
+            {/* Título */}
+            <text x="110" y="8" textAnchor="middle" className="fill-slate-600 text-[9px] font-bold">VISTA TRASERA</text>
           </svg>
         );
     }
