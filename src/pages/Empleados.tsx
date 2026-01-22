@@ -157,7 +157,7 @@ const Empleados = () => {
   const [editingLicenseDoc, setEditingLicenseDoc] = useState<EmpleadoDocumento | null>(null);
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("todos");
-  const [filtroPuesto, setFiltroPuesto] = useState<"todos" | "secretaria" | "vendedor" | "chofer" | "almacenista">("todos");
+  const [filtroPuesto, setFiltroPuesto] = useState<"todos" | "secretaria" | "vendedor" | "chofer" | "almacenista" | "gerente de almacén">("todos");
   const [filtroActivo, setFiltroActivo] = useState<"todos" | "activos" | "inactivos">("todos");
   const { toast } = useToast();
 
@@ -240,6 +240,7 @@ const Empleados = () => {
         "vendedor": "vendedor",
         "secretaria": "secretaria",
         "almacenista": "almacenista",
+        "gerente_almacen": "gerente de almacén",
         "todos": "todos"
       };
       if (tabMap[tabParam]) {
@@ -1405,6 +1406,7 @@ const Empleados = () => {
                       <SelectContent>
                         <SelectItem value="Secretaria">Secretaria</SelectItem>
                         <SelectItem value="Almacenista">Almacenista</SelectItem>
+                        <SelectItem value="Gerente de Almacén">Gerente de Almacén</SelectItem>
                         <SelectItem value="Chofer">Chofer</SelectItem>
                         <SelectItem value="Ayudante de Chofer">Ayudante de Chofer</SelectItem>
                         <SelectItem value="Vendedor">Vendedor</SelectItem>
@@ -1763,7 +1765,7 @@ const Empleados = () => {
             setActiveTab(v);
             setFiltroPuesto(v as any);
           }}>
-            <TabsList>
+            <TabsList className="flex-wrap h-auto">
               <TabsTrigger value="todos">
                 Todos ({empleados.length})
               </TabsTrigger>
@@ -1779,13 +1781,16 @@ const Empleados = () => {
               <TabsTrigger value="almacenista">
                 Almacenista ({getEmpleadosPorPuesto('Almacenista').length})
               </TabsTrigger>
+              <TabsTrigger value="gerente de almacén">
+                Gte. Almacén ({getEmpleadosPorPuesto('Gerente de Almacén').length})
+              </TabsTrigger>
               <TabsTrigger value="ayudante de chofer">
                 Ayudantes ({getEmpleadosPorPuesto('Ayudante de Chofer').length})
               </TabsTrigger>
             </TabsList>
 
-            {/* Tabs para Todos, Secretaria, Almacenista, Ayudante de Chofer (sin columna de licencia) */}
-            {['todos', 'secretaria', 'almacenista', 'ayudante de chofer'].map((tab) => (
+            {/* Tabs para Todos, Secretaria, Almacenista, Gerente de Almacén, Ayudante de Chofer (sin columna de licencia) */}
+            {['todos', 'secretaria', 'almacenista', 'gerente de almacén', 'ayudante de chofer'].map((tab) => (
               <TabsContent key={tab} value={tab} className="space-y-4">
                 <div className="flex gap-2">
                   <Select value={filtroActivo} onValueChange={(value: any) => setFiltroActivo(value)}>
