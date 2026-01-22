@@ -727,12 +727,17 @@ export const VehiculoCheckupDialog = ({
             : "Firma del Supervisor"
         }
         onConfirm={(firma) => {
-          if (firmaDialogOpen === "conductor") {
-            setFirmaConductor(firma);
-          } else {
-            setFirmaSupervisor(firma);
-          }
+          const tipo = firmaDialogOpen; // Capturar antes de cerrar
           setFirmaDialogOpen(null);
+          
+          // Aplicar firma después del cierre para evitar conflictos
+          setTimeout(() => {
+            if (tipo === "conductor") {
+              setFirmaConductor(firma);
+            } else {
+              setFirmaSupervisor(firma);
+            }
+          }, 50);
         }}
       />
     </>
