@@ -61,7 +61,11 @@ export const FirmaDigitalDialog = ({
       portalRoot.style.isolation = "isolate";
     }
 
-    const inertElements = Array.from(document.querySelectorAll<HTMLElement>("[inert]"));
+    // Solo manipular elementos que NO son ancestros del portal de firma
+    // para evitar afectar el dialog padre (VehiculoCheckupDialog)
+    const inertElements = Array.from(
+      document.querySelectorAll<HTMLElement>("[inert]")
+    ).filter(el => !portalRoot?.contains(el) && el !== portalRoot);
     const inertSnapshot = inertElements.map((el) => ({
       el,
       value: el.getAttribute("inert"),
@@ -70,7 +74,7 @@ export const FirmaDigitalDialog = ({
 
     const ariaHiddenElements = Array.from(
       document.querySelectorAll<HTMLElement>("[aria-hidden=\"true\"]")
-    );
+    ).filter(el => !portalRoot?.contains(el) && el !== portalRoot);
     const ariaHiddenSnapshot = ariaHiddenElements.map((el) => ({
       el,
       value: el.getAttribute("aria-hidden"),
@@ -204,10 +208,18 @@ export const FirmaDigitalDialog = ({
     setHasSignature(false);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!canvasRef.current || !hasSignature) return;
     const firmaBase64 = canvasRef.current.toDataURL("image/png");
-    onConfirm(firmaBase64);
+    
+    // Usar requestAnimationFrame para asegurar que el estado se procese correctamente
+    requestAnimationFrame(() => {
+      onConfirm(firmaBase64);
+    });
   };
 
   const handleClose = () => {
@@ -316,7 +328,7 @@ export const FirmaDigitalDialog = ({
             Cancelar
           </Button>
           <Button
-            onClick={handleConfirm}
+            onClick={(e) => handleConfirm(e)}
             disabled={!hasSignature || loading}
             className="min-w-32"
           >
