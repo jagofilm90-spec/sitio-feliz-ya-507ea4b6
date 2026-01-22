@@ -217,7 +217,20 @@ const AlmacenTablet = () => {
       case "alertas":
         return showFlotillaTabs ? <AlertasFlotillaPanel key={`alertas-${refreshKey}`} /> : null;
       case "checkups":
-        return showFlotillaTabs && empleadoId ? <VehiculoCheckupsTab empleadoId={empleadoId} refreshKey={refreshKey} /> : null;
+        return showFlotillaTabs ? (
+          empleadoId ? (
+            <VehiculoCheckupsTab empleadoId={empleadoId} refreshKey={refreshKey} />
+          ) : (
+            <Card className="p-8 text-center">
+              <AlertTriangle className="h-12 w-12 mx-auto text-yellow-500 mb-4" />
+              <h3 className="text-lg font-semibold">Configuración Incompleta</h3>
+              <p className="text-muted-foreground mt-2">
+                Tu usuario no está vinculado a un registro de empleado. 
+                Contacta al administrador para completar la configuración.
+              </p>
+            </Card>
+          )
+        ) : null;
       case "vehiculos":
         return showFlotillaTabs ? <VehiculosTab key={`vehiculos-${refreshKey}`} /> : null;
       case "personal":
