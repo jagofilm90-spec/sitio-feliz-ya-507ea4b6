@@ -139,48 +139,54 @@ export default function ChoferPanel() {
     <div className="min-h-screen bg-background">
       <PushNotificationSetup />
       <header className="sticky top-0 z-50 bg-primary text-primary-foreground p-4 shadow-lg">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Truck className="h-8 w-8" />
-            <div>
-              <h1 className="text-lg font-bold">Panel del Chofer</h1>
-              <p className="text-sm opacity-90">{format(new Date(), "EEEE d 'de' MMMM", { locale: es })}</p>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Truck className="h-7 w-7 md:h-8 md:w-8" />
+              <div>
+                <h1 className="text-base md:text-lg font-bold">Panel del Chofer</h1>
+                <p className="text-xs md:text-sm opacity-90">{format(new Date(), "EEEE d 'de' MMMM", { locale: es })}</p>
+              </div>
             </div>
+            <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate("/auth"); }} className="md:hidden text-primary-foreground hover:bg-primary-foreground/20">
+              <LogOut className="h-5 w-5" />
+            </Button>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate("/auth"); }} className="text-primary-foreground hover:bg-primary-foreground/20">
-            <LogOut className="h-5 w-5" />
-          </Button>
-        </div>
-        {choferNombre && (
-          <div className="flex items-center gap-3 mt-2">
-            <AvatarEmpleadoPopover
-              empleadoId={choferId}
-              empleadoNombre={choferNombre}
-              empleadoPuesto="Chofer"
-              empleadoEmail={choferEmail || undefined}
-              fotoUrl={choferFotoUrl}
-              onFotoUpdated={(newUrl) => setChoferFotoUrl(newUrl)}
-            />
-            <span className="text-sm">{choferNombre}</span>
+          
+          <div className="flex items-center gap-3 md:gap-4">
+            {choferNombre && (
+              <div className="flex items-center gap-2">
+                <AvatarEmpleadoPopover
+                  empleadoId={choferId}
+                  empleadoNombre={choferNombre}
+                  empleadoPuesto="Chofer"
+                  empleadoEmail={choferEmail || undefined}
+                  fotoUrl={choferFotoUrl}
+                  onFotoUpdated={(newUrl) => setChoferFotoUrl(newUrl)}
+                />
+                <span className="text-sm hidden md:inline">{choferNombre}</span>
+              </div>
+            )}
+            {isRutaActiva && (
+              <GpsTrackingIndicator isTracking={isTracking} accuracy={accuracy} error={gpsError} />
+            )}
+            <LiveIndicator label="En vivo" className="text-primary-foreground/90" />
+            <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate("/auth"); }} className="hidden md:flex text-primary-foreground hover:bg-primary-foreground/20">
+              <LogOut className="h-5 w-5" />
+            </Button>
           </div>
-        )}
-        <div className="mt-2 flex items-center gap-4">
-          {isRutaActiva && (
-            <GpsTrackingIndicator isTracking={isTracking} accuracy={accuracy} error={gpsError} />
-          )}
-          <LiveIndicator label="Ruta en vivo" className="text-primary-foreground/90" />
         </div>
       </header>
 
-      <main className="p-4 pb-24">
+      <main className="p-4 pb-8 md:pb-8 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         {!ruta ? (
-          <Card className="border-dashed"><CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <Card className="border-dashed max-w-lg mx-auto md:mt-8"><CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Truck className="h-16 w-16 text-muted-foreground mb-4" />
             <h2 className="text-xl font-semibold mb-2">Sin ruta asignada</h2>
             <p className="text-muted-foreground">No tienes rutas programadas para hoy</p>
           </CardContent></Card>
         ) : (
-          <>
+          <div className="max-w-4xl mx-auto">
             <Card className="mb-4">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
@@ -189,9 +195,11 @@ export default function ChoferPanel() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
-                <div className="flex items-center gap-2 text-sm"><Truck className="h-4 w-4 text-muted-foreground" /><span>{ruta.vehiculo?.nombre || "Sin vehículo"} {ruta.vehiculo?.placas && `(${ruta.vehiculo.placas})`}</span></div>
-                {(ruta.ayudante || ruta.ayudante_externo) && <div className="flex items-center gap-2 text-sm"><User className="h-4 w-4 text-muted-foreground" /><span>Ayudante: {ruta.ayudante?.nombre_completo || ruta.ayudante_externo?.nombre_completo}</span></div>}
-                {ruta.distancia_total_km && <div className="flex items-center gap-2 text-sm"><MapPin className="h-4 w-4 text-muted-foreground" /><span>{ruta.distancia_total_km} km</span></div>}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                  <div className="flex items-center gap-2"><Truck className="h-4 w-4 text-muted-foreground" /><span>{ruta.vehiculo?.nombre || "Sin vehículo"} {ruta.vehiculo?.placas && `(${ruta.vehiculo.placas})`}</span></div>
+                  {(ruta.ayudante || ruta.ayudante_externo) && <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /><span>Ayudante: {ruta.ayudante?.nombre_completo || ruta.ayudante_externo?.nombre_completo}</span></div>}
+                  {ruta.distancia_total_km && <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" /><span>{ruta.distancia_total_km} km</span></div>}
+                </div>
                 <div className="mt-4">
                   <div className="flex items-center justify-between text-sm mb-1"><span className="text-muted-foreground">Progreso</span><span className="font-medium">{completadas}/{entregas.length} entregas</span></div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-primary transition-all" style={{ width: `${progreso}%` }} /></div>
@@ -201,13 +209,13 @@ export default function ChoferPanel() {
 
             <div className="space-y-3">
               <h2 className="font-semibold flex items-center gap-2"><Package className="h-5 w-5" />Entregas del día ({entregas.length})</h2>
-              <ScrollArea className="h-[calc(100vh-380px)]">
+              <ScrollArea className="h-[calc(100vh-340px)] md:h-[calc(100vh-300px)]">
                 <div className="space-y-3 pr-2">
                   {entregas.map((entrega) => <EntregaCard key={entrega.id} entrega={entrega} onEntregaActualizada={fetchRutaDelDia} />)}
                 </div>
               </ScrollArea>
             </div>
-          </>
+          </div>
         )}
       </main>
 

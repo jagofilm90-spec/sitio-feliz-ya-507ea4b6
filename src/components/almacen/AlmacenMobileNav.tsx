@@ -88,7 +88,7 @@ export const AlmacenMobileNav = ({
   );
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-40 safe-area-bottom">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-40 pb-[env(safe-area-inset-bottom)]">
       {/* Fila secundaria scrollable */}
       <ScrollArea className="border-b">
         <div className="flex gap-1 p-2">

@@ -229,7 +229,7 @@ export default function VendedorPanel() {
       />
       
       {/* Sidebar para desktop/tablet */}
-      <aside className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0 bg-card border-r shadow-sm">
+      <aside className="hidden md:flex md:w-60 lg:w-72 md:flex-col md:fixed md:inset-y-0 bg-card border-r shadow-sm">
         {/* Logo Header */}
         <div className="flex items-center justify-center px-6 py-5 border-b bg-gradient-to-r from-primary/5 via-primary/3 to-transparent">
           <img src={logoAlmasa} alt="ALMASA" className="h-12 object-contain" />
@@ -303,7 +303,7 @@ export default function VendedorPanel() {
       </aside>
 
       {/* Header móvil */}
-      <header className="lg:hidden sticky top-0 z-50 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground px-4 py-3 shadow-lg">
+      <header className="md:hidden sticky top-0 z-50 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground px-4 py-3 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src={logoBlanco} alt="ALMASA" className="h-9 object-contain" />
@@ -335,10 +335,10 @@ export default function VendedorPanel() {
       </header>
 
       {/* Contenido principal */}
-      <main className="flex-1 lg:ml-72">
-        <div className="p-4 lg:p-8 pb-24 lg:pb-8">
+      <main className="flex-1 md:ml-60 lg:ml-72">
+        <div className="p-4 lg:p-8 pb-32 md:pb-8">
           {/* Stats Dashboard - 5 KPIs */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4 mb-6">
             <Card className="hover:shadow-md transition-shadow">
               <CardContent className="p-3 lg:p-4">
                 <div className="flex items-center gap-2 lg:gap-3">
@@ -411,8 +411,8 @@ export default function VendedorPanel() {
           </div>
 
 
-          {/* Content Area - Desktop uses activeTab state */}
-          <div className="hidden lg:block">
+          {/* Content Area - Desktop/Tablet uses activeTab state */}
+          <div className="hidden md:block">
             <Card>
               <CardContent className="p-6">
                 {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
@@ -426,51 +426,56 @@ export default function VendedorPanel() {
             </Card>
           </div>
 
-      {/* Mobile Tabs - Bottom Navigation */}
-      <div className="lg:hidden">
-        {/* Content Area */}
-        <div className="pb-24">
-          {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
-          {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} onNavigateToVentas={() => setActiveTab("ventas")} />}
-          {activeTab === "ventas" && <VendedorMisVentasTab />}
-          {activeTab === "novedades" && <VendedorNovedadesTab />}
-          {activeTab === "precios" && <VendedorListaPreciosTab />}
-          {activeTab === "saldos" && <VendedorSaldosTab />}
-          {activeTab === "comisiones" && <VendedorComisionesTab />}
-        </div>
-
-        {/* Fixed Bottom Navigation */}
-        <nav className="fixed bottom-0 left-0 right-0 bg-background border-t safe-area-bottom z-50">
-          <div className="grid grid-cols-6">
-            {navItems.filter(item => !item.isLink).map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={cn(
-                  "flex flex-col items-center justify-center py-2 px-1 transition-colors min-h-[60px] relative",
-                  activeTab === item.id
-                    ? "text-primary bg-primary/10"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                )}
-              >
-                <div className="relative">
-                  <item.icon className={cn("h-5 w-5 mb-0.5", activeTab === item.id && "text-primary")} />
-                  {item.badge && item.badge > 0 && (
-                    <span className="absolute -top-1 -right-1.5 h-3.5 w-3.5 flex items-center justify-center bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full">
-                      {item.badge > 9 ? "+" : item.badge}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] font-medium truncate max-w-full">
-                  {item.id === "novedades" ? "Nuevo" : item.label.split(" ")[0]}
-                </span>
-              </button>
-            ))}
+          {/* Mobile Content */}
+          <div className="md:hidden">
+            {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
+            {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} onNavigateToVentas={() => setActiveTab("ventas")} />}
+            {activeTab === "ventas" && <VendedorMisVentasTab />}
+            {activeTab === "novedades" && <VendedorNovedadesTab />}
+            {activeTab === "precios" && <VendedorListaPreciosTab />}
+            {activeTab === "saldos" && <VendedorSaldosTab />}
+            {activeTab === "comisiones" && <VendedorComisionesTab />}
           </div>
-        </nav>
-      </div>
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation - Scrollable */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50 pb-[env(safe-area-inset-bottom)]">
+        <div className="flex overflow-x-auto scrollbar-hide">
+          {navItems.filter(item => !item.isLink).map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={cn(
+                "flex flex-col items-center justify-center py-2 px-3 transition-colors min-h-[56px] min-w-[60px] relative flex-shrink-0",
+                activeTab === item.id
+                  ? "text-primary bg-primary/10"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              <div className="relative">
+                <item.icon className={cn("h-5 w-5 mb-0.5", activeTab === item.id && "text-primary")} />
+                {item.badge && item.badge > 0 && (
+                  <span className="absolute -top-1 -right-1.5 h-3.5 w-3.5 flex items-center justify-center bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full">
+                    {item.badge > 9 ? "+" : item.badge}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] font-medium whitespace-nowrap">
+                {item.id === "novedades" ? "Nuevo" : item.label.split(" ")[0]}
+              </span>
+            </button>
+          ))}
+          {/* Logout Button */}
+          <button
+            onClick={() => { sessionStorage.removeItem("vendedor_bienvenida_mostrado"); supabase.auth.signOut(); navigate("/auth"); }}
+            className="flex flex-col items-center justify-center py-2 px-3 transition-colors min-h-[56px] min-w-[60px] text-destructive hover:bg-destructive/10 flex-shrink-0"
+          >
+            <LogOut className="h-5 w-5 mb-0.5" />
+            <span className="text-[10px] font-medium">Salir</span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 }

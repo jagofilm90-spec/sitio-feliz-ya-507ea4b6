@@ -269,7 +269,7 @@ const AlmacenTablet = () => {
       />
       
       {/* Contenido Principal */}
-      <main className="flex-1 lg:ml-64 p-4 md:p-6 pb-40 lg:pb-6">
+      <main className="flex-1 md:ml-60 lg:ml-64 p-4 md:p-6 pb-44 md:pb-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -277,7 +277,7 @@ const AlmacenTablet = () => {
               <h1 className="text-2xl md:text-3xl font-bold text-foreground">
                 {getTabTitle()}
               </h1>
-              <LiveIndicator size="md" className="lg:hidden" />
+              <LiveIndicator size="md" className="md:hidden" />
             </div>
             <p className="text-muted-foreground mt-1 text-lg flex items-center gap-2">
               <Calendar className="w-5 h-5" />
@@ -288,7 +288,7 @@ const AlmacenTablet = () => {
             {/* Badge de conexión solo en móvil */}
             <Badge 
               variant={isOnline ? "default" : "destructive"} 
-              className="lg:hidden h-8 px-3 text-sm"
+              className="md:hidden h-8 px-3 text-sm"
             >
               {isOnline ? "Online" : "Offline"}
             </Badge>
