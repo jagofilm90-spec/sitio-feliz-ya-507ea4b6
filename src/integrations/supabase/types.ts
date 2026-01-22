@@ -5233,6 +5233,7 @@ export type Database = {
           notificado_en: string | null
           notificado_mecanico: boolean | null
           observaciones_golpes: string | null
+          pdf_path: string | null
           prioridad: string | null
           realizado_por: string
           requiere_reparacion: boolean | null
@@ -5270,6 +5271,7 @@ export type Database = {
           notificado_en?: string | null
           notificado_mecanico?: boolean | null
           observaciones_golpes?: string | null
+          pdf_path?: string | null
           prioridad?: string | null
           realizado_por: string
           requiere_reparacion?: boolean | null
@@ -5307,6 +5309,7 @@ export type Database = {
           notificado_en?: string | null
           notificado_mecanico?: boolean | null
           observaciones_golpes?: string | null
+          pdf_path?: string | null
           prioridad?: string | null
           realizado_por?: string
           requiere_reparacion?: boolean | null
