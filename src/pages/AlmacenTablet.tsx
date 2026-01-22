@@ -44,13 +44,14 @@ const AlmacenTablet = () => {
   const [empleadoEmail, setEmpleadoEmail] = useState<string>("");
   const [empleadoFotoUrl, setEmpleadoFotoUrl] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { isGerenteAlmacen, isAdmin } = useUserRoles();
+  const { isGerenteAlmacen, isAdmin, isLoading: rolesLoading } = useUserRoles();
   
   // Track presence in almacen
   useSystemPresence('almacen');
 
   // El gerente de almacén ve tabs adicionales de flotilla
-  const showFlotillaTabs = isGerenteAlmacen || isAdmin;
+  // IMPORTANTE: Solo evaluar después de que los roles hayan cargado
+  const showFlotillaTabs = !rolesLoading && (isGerenteAlmacen || isAdmin);
 
   // Stats
   const [rutasStats, setRutasStats] = useState({ total: 0, pendientes: 0, completadas: 0, entregas: 0 });
