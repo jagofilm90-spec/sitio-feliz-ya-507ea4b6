@@ -10,7 +10,8 @@ import {
   CheckCircle2,
   Car,
   Users,
-  CalendarCheck
+  CalendarCheck,
+  LogOut
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -25,13 +26,15 @@ interface AlmacenMobileNavProps {
     recepcion: number;
     alertas: number;
   };
+  onLogout: () => void;
 }
 
 export const AlmacenMobileNav = ({
   activeTab,
   onTabChange,
   showFlotillaTabs,
-  counters
+  counters,
+  onLogout
 }: AlmacenMobileNavProps) => {
   
   // Items principales (siempre visibles en fila superior)
@@ -90,6 +93,14 @@ export const AlmacenMobileNav = ({
       <ScrollArea className="border-b">
         <div className="flex gap-1 p-2">
           {secondaryItems.map(item => renderNavButton(item, false))}
+          {/* Botón de Cerrar Sesión */}
+          <button
+            onClick={onLogout}
+            className="flex flex-col items-center justify-center gap-1 min-w-[60px] px-2 py-2 rounded-lg text-destructive hover:bg-destructive/10 transition-all"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Salir</span>
+          </button>
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>

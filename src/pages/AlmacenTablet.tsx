@@ -311,6 +311,7 @@ const AlmacenTablet = () => {
         onTabChange={setActiveTab}
         showFlotillaTabs={showFlotillaTabs}
         counters={counters}
+        onLogout={handleLogout}
       />
     </div>
   );
