@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import ExpedienteAnalysisDialog from "@/components/empleados/ExpedienteAnalysisDialog";
 import {
   UserPlus,
   Search,
@@ -54,6 +55,7 @@ import {
   Users,
   Bell,
   AlertTriangle,
+  FileStack,
 } from "lucide-react";
 
 interface Empleado {
@@ -224,6 +226,11 @@ const Empleados = () => {
     fecha_vencimiento: "",
     es_permanente: false,
   });
+
+  // Estado para el análisis de expediente completo
+  const [isExpedienteDialogOpen, setIsExpedienteDialogOpen] = useState(false);
+  const [expedientePdfBase64, setExpedientePdfBase64] = useState<string>("");
+  const [expedienteFileName, setExpedienteFileName] = useState<string>("");
 
   useEffect(() => {
     loadEmpleados();
@@ -2355,7 +2362,7 @@ const Empleados = () => {
               )}
 
               {/* Agregar documento pendiente */}
-              <div className="border-b pb-4">
+              <div className="border-b pb-4 flex gap-2 flex-wrap">
                 <Button
                   variant="outline"
                   size="sm"
@@ -2364,6 +2371,39 @@ const Empleados = () => {
                   <FileText className="h-4 w-4 mr-2" />
                   Marcar Documento Faltante
                 </Button>
+                
+                {/* Botón para subir expediente completo con IA */}
+                <div className="relative">
+                  <input
+                    type="file"
+                    id="expediente-file-input"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      
+                      // Convertir a base64
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        const base64 = (reader.result as string).split(",")[1];
+                        setExpedientePdfBase64(base64);
+                        setExpedienteFileName(file.name);
+                        setIsExpedienteDialogOpen(true);
+                      };
+                      reader.readAsDataURL(file);
+                      e.target.value = ""; // Reset input
+                    }}
+                  />
+                  <Button
+                    variant="default"
+                    size="sm"
+                    type="button"
+                  >
+                    <FileStack className="h-4 w-4 mr-2" />
+                    Subir Expediente Completo (IA)
+                  </Button>
+                </div>
               </div>
 
               {/* Upload form */}
@@ -2668,6 +2708,27 @@ const Empleados = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Dialog para análisis de expediente completo con IA */}
+        {selectedEmpleado && (
+          <ExpedienteAnalysisDialog
+            open={isExpedienteDialogOpen}
+            onOpenChange={(open) => {
+              setIsExpedienteDialogOpen(open);
+              if (!open) {
+                setExpedientePdfBase64("");
+                setExpedienteFileName("");
+              }
+            }}
+            empleadoId={selectedEmpleado}
+            empleadoNombre={empleados.find(e => e.id === selectedEmpleado)?.nombre_completo || ""}
+            pdfBase64={expedientePdfBase64}
+            fileName={expedienteFileName}
+            onSuccess={() => {
+              loadEmpleados();
+            }}
+          />
+        )}
       </div>
     </Layout>
   );
