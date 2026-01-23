@@ -88,22 +88,31 @@ npx cap open ios
    - Ve a `App` en el navegador del proyecto
    - En "Signing & Capabilities", selecciona tu Apple Developer Team
 
-2. **Configurar Bundle Identifier**:
+3. **Configurar Bundle Identifier**:
    - Debe coincidir con `com.almasa.erp`
 
-3. **Configurar Permisos** (Info.plist):
+4. **Configurar Permisos de Ubicación** (Info.plist):
    ```xml
    <key>NSLocationWhenInUseUsageDescription</key>
    <string>ALMASA necesita tu ubicación para mostrar tu posición en la ruta de entregas.</string>
    
    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-   <string>ALMASA necesita tu ubicación en segundo plano para tracking continuo de rutas.</string>
+   <string>ALMASA necesita acceso continuo a tu ubicación para que el administrador pueda monitorear el progreso de tu ruta de entregas en tiempo real, incluso cuando cambies de app o bloquees la pantalla.</string>
    ```
 
-4. **Habilitar Push Notifications**:
+5. **Configurar Background Modes** (Info.plist):
+   ```xml
+   <key>UIBackgroundModes</key>
+   <array>
+     <string>location</string>
+     <string>remote-notification</string>
+   </array>
+   ```
+
+6. **Habilitar Push Notifications**:
    - En "Signing & Capabilities", click en "+ Capability"
    - Agregar "Push Notifications"
-   - Agregar "Background Modes" → marcar "Remote notifications"
+   - Agregar "Background Modes" → marcar "Remote notifications" y "Location updates"
 
 ### Ejecutar en Dispositivo
 
@@ -130,11 +139,18 @@ npx cap open android
 
 1. **Esperar sincronización de Gradle** (puede tardar varios minutos la primera vez)
 
-2. **Configurar Permisos** (ya incluidos en AndroidManifest.xml):
+2. **Verificar Permisos** (AndroidManifest.xml - ya incluidos):
    ```xml
+   <!-- Permisos de ubicación -->
    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+   
+   <!-- Permisos para servicio en primer plano (requerido para GPS en segundo plano) -->
+   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+   
+   <!-- Internet -->
    <uses-permission android:name="android.permission.INTERNET" />
    ```
 
@@ -289,6 +305,57 @@ cd android
 
 ---
 
+## GPS Tracking en Segundo Plano (v1.1+)
+
+A partir de la versión 1.1, la app utiliza `@capacitor-community/background-geolocation` para tracking GPS continuo de los choferes, incluso cuando la app está en segundo plano.
+
+### Características
+
+| Característica | Descripción |
+|----------------|-------------|
+| **Tracking continuo** | Funciona con la app minimizada o pantalla bloqueada |
+| **Notificación persistente** | Android muestra notificación mientras tracking está activo |
+| **Bajo consumo** | Solo actualiza cuando hay movimiento significativo (50m) |
+| **Permisos claros** | Solicita permisos con explicación del propósito |
+
+### Configuración Requerida
+
+#### iOS
+
+En `Info.plist`, asegurarse de tener:
+- `NSLocationAlwaysAndWhenInUseUsageDescription` - Justificación para Apple
+- `UIBackgroundModes` con `location` habilitado
+
+#### Android
+
+En `AndroidManifest.xml`, asegurarse de tener:
+- `ACCESS_BACKGROUND_LOCATION` - Para Android 10+
+- `FOREGROUND_SERVICE_LOCATION` - Para Android 14+
+
+### Flujo de Usuario
+
+1. Chofer abre la app y tiene ruta asignada
+2. App muestra diálogo explicando por qué necesita ubicación
+3. Chofer acepta → tracking inicia automáticamente
+4. Notificación aparece (Android) indicando tracking activo
+5. Al finalizar ruta → tracking se detiene automáticamente
+
+### Solución de Problemas GPS
+
+#### "Ubicación no disponible"
+- Verificar que GPS del dispositivo esté encendido
+- Salir a un área abierta (mejor señal GPS)
+
+#### "Permiso denegado"
+- Ir a Configuración > Apps > ALMASA ERP > Permisos > Ubicación
+- Seleccionar "Permitir siempre"
+
+#### Tracking no funciona en segundo plano
+- iOS: Verificar que "Background App Refresh" esté habilitado
+- Android: Desactivar optimización de batería para ALMASA ERP
+
+---
+
 ## Rutas de la Aplicación
 
 | Ruta | Descripción | Rol Requerido |
@@ -308,3 +375,4 @@ cd android
 Para problemas con la compilación, consultar:
 - [Documentación de Capacitor](https://capacitorjs.com/docs)
 - [Foro de Ionic/Capacitor](https://forum.ionicframework.com/)
+- [Plugin Background Geolocation](https://github.com/capacitor-community/background-geolocation)
