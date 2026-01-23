@@ -3,6 +3,7 @@ import { format, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useBodegaAutoDetect } from "@/hooks/useBodegaAutoDetect";
 import { cn } from "@/lib/utils";
 import {
   Sheet,
@@ -57,6 +58,9 @@ import {
   User,
   Receipt,
   PackageOpen,
+  MapPin,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { EvidenciaCapture, EvidenciasPreviewGrid } from "@/components/compras/EvidenciaCapture";
 import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
@@ -175,6 +179,16 @@ export const AlmacenRecepcionSheet = ({
   const [notas, setNotas] = useState("");
   const [bodegas, setBodegas] = useState<Bodega[]>([]);
   const [bodegaSeleccionada, setBodegaSeleccionada] = useState<string>("");
+  const [mostrarSelectorBodega, setMostrarSelectorBodega] = useState(false);
+  
+  // Auto-detección de bodega por GPS
+  const { 
+    bodega: bodegaDetectada, 
+    distanciaMetros, 
+    detectando: detectandoBodega, 
+    error: errorDeteccion,
+    reintentarDeteccion 
+  } = useBodegaAutoDetect();
   
   // Estado para múltiples lotes por producto
   const [lotesInputs, setLotesInputs] = useState<Record<string, LoteInput[]>>({});
@@ -250,10 +264,16 @@ export const AlmacenRecepcionSheet = ({
     
     if (data) {
       setBodegas(data);
-      const bodega1 = data.find(b => b.nombre === "Bodega 1");
-      if (bodega1) setBodegaSeleccionada(bodega1.id);
+      // Ya no seleccionamos Bodega 1 por defecto - lo hará el hook de auto-detección
     }
   };
+  
+  // Efecto para usar la bodega auto-detectada
+  useEffect(() => {
+    if (bodegaDetectada && !bodegaSeleccionada) {
+      setBodegaSeleccionada(bodegaDetectada.id);
+    }
+  }, [bodegaDetectada, bodegaSeleccionada]);
 
   const loadFotosLlegada = async () => {
     if (!entrega?.id) return;
@@ -1862,24 +1882,90 @@ export const AlmacenRecepcionSheet = ({
                   </div>
                 </div>
 
-                {/* Bodega destino */}
+                {/* Bodega destino - con auto-detección GPS */}
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Warehouse className="w-4 h-4" />
                     Bodega destino *
                   </Label>
-                  <Select value={bodegaSeleccionada} onValueChange={setBodegaSeleccionada}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona bodega" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {bodegas.map(bodega => (
-                        <SelectItem key={bodega.id} value={bodega.id}>
-                          {bodega.nombre} {bodega.es_externa && "(Externa)"}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  
+                  {/* Estado de detección */}
+                  {detectandoBodega ? (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      <span className="text-sm text-muted-foreground">Detectando ubicación...</span>
+                    </div>
+                  ) : bodegaDetectada && !mostrarSelectorBodega ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
+                        <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+                        <div className="flex-1">
+                          <span className="font-medium text-green-700 dark:text-green-300">
+                            {bodegaDetectada.nombre}
+                          </span>
+                          <span className="text-xs text-green-600 dark:text-green-400 ml-2">
+                            <MapPin className="w-3 h-3 inline mr-1" />
+                            Detectado por GPS ({distanciaMetros}m)
+                          </span>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => setMostrarSelectorBodega(true)}
+                          className="text-xs"
+                        >
+                          Cambiar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {errorDeteccion && !mostrarSelectorBodega && (
+                        <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                          <span className="text-sm text-amber-700 dark:text-amber-300 flex-1">
+                            {errorDeteccion}
+                          </span>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={reintentarDeteccion}
+                            className="text-xs"
+                          >
+                            <RefreshCw className="w-3 h-3 mr-1" />
+                            Reintentar
+                          </Button>
+                        </div>
+                      )}
+                      <Select value={bodegaSeleccionada} onValueChange={setBodegaSeleccionada}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona bodega manualmente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {bodegas.map(bodega => (
+                            <SelectItem key={bodega.id} value={bodega.id}>
+                              {bodega.nombre} {bodega.es_externa && "(Externa)"}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {mostrarSelectorBodega && (
+                        <Button 
+                          variant="link" 
+                          size="sm" 
+                          onClick={() => {
+                            setMostrarSelectorBodega(false);
+                            if (bodegaDetectada) {
+                              setBodegaSeleccionada(bodegaDetectada.id);
+                            }
+                          }}
+                          className="text-xs p-0 h-auto"
+                        >
+                          ← Usar bodega detectada
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Documento del Proveedor */}
