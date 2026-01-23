@@ -873,23 +873,95 @@ export const AlmacenRecepcionSheet = ({
         .update(updateEntrega)
         .eq("id", entrega.id);
 
-      // Verificar si TODAS las entregas de esta orden ya están recibidas
-      const { data: entregasPendientes } = await supabase
-        .from("ordenes_compra_entregas")
-        .select("id")
-        .eq("orden_compra_id", entrega.orden_compra.id)
-        .neq("status", "recibida");
+      // Detectar productos con "no_llego" y cantidad pendiente
+      const productosFaltantes = productos.filter(p => {
+        const cantRecibida = getCantidadNumerica(p.id);
+        const razon = razonesDiferencia[p.id];
+        return razon === 'no_llego' && cantRecibida < p.cantidad_ordenada;
+      });
 
-      // Si no hay entregas pendientes, marcar la orden como completada
-      // y sincronizar la fecha_entrega_programada con la fecha real de recepción
-      if (!entregasPendientes || entregasPendientes.length === 0) {
+      // Si hay faltantes, crear entrega automática para el siguiente día hábil
+      if (productosFaltantes.length > 0) {
+        // Calcular siguiente día hábil (saltar domingos)
+        const hoy = new Date();
+        let siguienteDia = new Date(hoy);
+        siguienteDia.setDate(siguienteDia.getDate() + 1);
+        if (siguienteDia.getDay() === 0) siguienteDia.setDate(siguienteDia.getDate() + 1); // Skip Sunday
+
+        const fechaSiguiente = siguienteDia.toISOString().split("T")[0];
+
+        // Obtener el siguiente número de entrega
+        const { data: ultimaEntrega } = await supabase
+          .from("ordenes_compra_entregas")
+          .select("numero_entrega")
+          .eq("orden_compra_id", entrega.orden_compra.id)
+          .order("numero_entrega", { ascending: false })
+          .limit(1)
+          .single();
+
+        const siguienteNumero = (ultimaEntrega?.numero_entrega || entrega.numero_entrega) + 1;
+
+        const productosFaltantesData = productosFaltantes.map(p => ({
+          producto_id: p.producto_id,
+          nombre: p.producto?.nombre || "Producto",
+          cantidad_faltante: p.cantidad_ordenada - getCantidadNumerica(p.id)
+        }));
+
+        // Crear nueva entrega para faltantes
+        await supabase.from("ordenes_compra_entregas").insert({
+          orden_compra_id: entrega.orden_compra.id,
+          numero_entrega: siguienteNumero,
+          fecha_programada: fechaSiguiente,
+          status: "programada",
+          cantidad_bultos: productosFaltantesData.reduce((sum, p) => sum + p.cantidad_faltante, 0),
+          notas: `[FALTANTE] De entrega #${entrega.numero_entrega}: ${productosFaltantesData.map(p => `${p.cantidad_faltante}x ${p.nombre}`).join(", ")}`,
+          origen_faltante: true,
+          productos_faltantes: productosFaltantesData
+        });
+
+        // Marcar orden como parcial
         await supabase
           .from("ordenes_compra")
-          .update({ 
-            status: "completada",
-            fecha_entrega_programada: new Date().toISOString().split("T")[0]
-          })
+          .update({ status: "parcial" })
           .eq("id", entrega.orden_compra.id);
+
+        // Notificar al proveedor (obtener email del proveedor)
+        const { data: proveedorData } = await supabase
+          .from("proveedores")
+          .select("email, nombre")
+          .eq("id", entrega.orden_compra?.proveedor?.id)
+          .single();
+        if (proveedorEmail) {
+          await supabase.functions.invoke("notificar-faltante-oc", {
+            body: {
+              tipo: "faltante_creado",
+              entrega_id: entrega.id,
+              orden_folio: entrega.orden_compra.folio,
+              proveedor_email: proveedorEmail,
+              proveedor_nombre: entrega.orden_compra?.proveedor?.nombre || "Proveedor",
+              fecha_programada: fechaSiguiente,
+              productos_faltantes: productosFaltantesData
+            }
+          });
+        }
+      } else {
+        // Verificar si TODAS las entregas de esta orden ya están recibidas
+        const { data: entregasPendientes } = await supabase
+          .from("ordenes_compra_entregas")
+          .select("id")
+          .eq("orden_compra_id", entrega.orden_compra.id)
+          .neq("status", "recibida");
+
+        // Si no hay entregas pendientes, marcar la orden como completada
+        if (!entregasPendientes || entregasPendientes.length === 0) {
+          await supabase
+            .from("ordenes_compra")
+            .update({ 
+              status: "completada",
+              fecha_entrega_programada: new Date().toISOString().split("T")[0]
+            })
+            .eq("id", entrega.orden_compra.id);
+        }
       }
 
       await supabase.from("recepciones_participantes").insert({
