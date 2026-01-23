@@ -55,7 +55,10 @@ export type Database = {
           direccion: string | null
           es_externa: boolean
           id: string
+          latitud: number | null
+          longitud: number | null
           nombre: string
+          radio_deteccion_metros: number | null
           updated_at: string
         }
         Insert: {
@@ -65,7 +68,10 @@ export type Database = {
           direccion?: string | null
           es_externa?: boolean
           id?: string
+          latitud?: number | null
+          longitud?: number | null
           nombre: string
+          radio_deteccion_metros?: number | null
           updated_at?: string
         }
         Update: {
@@ -75,7 +81,10 @@ export type Database = {
           direccion?: string | null
           es_externa?: boolean
           id?: string
+          latitud?: number | null
+          longitud?: number | null
           nombre?: string
+          radio_deteccion_metros?: number | null
           updated_at?: string
         }
         Relationships: []
