@@ -19,6 +19,8 @@ import { GpsTrackingIndicator } from "@/components/rutas/GpsTrackingIndicator";
 import PushNotificationSetup from "@/components/PushNotificationSetup";
 import { LiveIndicator } from "@/components/ui/live-indicator";
 import { AvatarEmpleadoPopover } from "@/components/almacen/AvatarEmpleadoPopover";
+import { LocationPermissionRequest } from "@/components/chofer/LocationPermissionRequest";
+import { isNativePlatform } from "@/services/backgroundGeolocation";
 
 export default function ChoferPanel() {
   const navigate = useNavigate();
@@ -35,13 +37,27 @@ export default function ChoferPanel() {
   const [choferFotoUrl, setChoferFotoUrl] = useState<string | null>(null);
   const [choferEmail, setChoferEmail] = useState<string | null>(null);
   const [showResumen, setShowResumen] = useState(false);
+  const [showPermissionRequest, setShowPermissionRequest] = useState(false);
+  const [permissionGranted, setPermissionGranted] = useState(false);
 
-  // GPS Tracking - only enabled when route is in progress
+  // GPS Tracking - only enabled when route is in progress and permissions granted
   const isRutaActiva = ruta && ['en_ruta', 'cargada'].includes(ruta.status);
-  const { isTracking, accuracy, error: gpsError } = useChoferGeolocation({
+  const shouldTrack = isRutaActiva && (permissionGranted || !isNativePlatform());
+  
+  const { isTracking, accuracy, error: gpsError, isNative } = useChoferGeolocation({
     rutaId: ruta?.id || null,
-    enabled: isRutaActiva,
+    choferId: choferId,
+    enabled: shouldTrack,
   });
+
+  // Show permission dialog on native when route becomes active
+  useEffect(() => {
+    if (isRutaActiva && isNativePlatform() && !permissionGranted && !showPermissionRequest) {
+      // Small delay to let the UI settle
+      const timer = setTimeout(() => setShowPermissionRequest(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isRutaActiva, permissionGranted, showPermissionRequest]);
 
   useEffect(() => {
     if (!rolesLoading && !isChofer && !isAdmin) {
@@ -220,6 +236,17 @@ export default function ChoferPanel() {
       </main>
 
       {showResumen && ruta && <ResumenRuta ruta={ruta} entregas={entregas} onFinalizar={handleFinalizarRuta} onCerrar={() => setShowResumen(false)} />}
+      
+      {/* Location permission request dialog for native apps */}
+      <LocationPermissionRequest
+        open={showPermissionRequest}
+        onPermissionGranted={() => {
+          setPermissionGranted(true);
+          setShowPermissionRequest(false);
+          toast.success('Ubicación activada');
+        }}
+        onDismiss={() => setShowPermissionRequest(false)}
+      />
     </div>
   );
 }
