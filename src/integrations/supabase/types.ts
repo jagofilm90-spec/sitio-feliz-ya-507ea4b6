@@ -3091,6 +3091,7 @@ export type Database = {
           firma_chofer_diferencia: string | null
           firma_chofer_diferencia_fecha: string | null
           firma_chofer_rechazo: string | null
+          firma_chofer_sin_sellos: string | null
           id: string
           llegada_registrada_en: string | null
           llegada_registrada_por: string | null
@@ -3107,6 +3108,7 @@ export type Database = {
           rechazada_en: string | null
           rechazada_por: string | null
           recibido_por: string | null
+          sin_sellos: boolean | null
           status: string
           trabajando_desde: string | null
           trabajando_por: string | null
@@ -3131,6 +3133,7 @@ export type Database = {
           firma_chofer_diferencia?: string | null
           firma_chofer_diferencia_fecha?: string | null
           firma_chofer_rechazo?: string | null
+          firma_chofer_sin_sellos?: string | null
           id?: string
           llegada_registrada_en?: string | null
           llegada_registrada_por?: string | null
@@ -3147,6 +3150,7 @@ export type Database = {
           rechazada_en?: string | null
           rechazada_por?: string | null
           recibido_por?: string | null
+          sin_sellos?: boolean | null
           status?: string
           trabajando_desde?: string | null
           trabajando_por?: string | null
@@ -3171,6 +3175,7 @@ export type Database = {
           firma_chofer_diferencia?: string | null
           firma_chofer_diferencia_fecha?: string | null
           firma_chofer_rechazo?: string | null
+          firma_chofer_sin_sellos?: string | null
           id?: string
           llegada_registrada_en?: string | null
           llegada_registrada_por?: string | null
@@ -3187,6 +3192,7 @@ export type Database = {
           rechazada_en?: string | null
           rechazada_por?: string | null
           recibido_por?: string | null
+          sin_sellos?: boolean | null
           status?: string
           trabajando_desde?: string | null
           trabajando_por?: string | null

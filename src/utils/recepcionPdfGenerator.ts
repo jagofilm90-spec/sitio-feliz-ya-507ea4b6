@@ -20,6 +20,8 @@ interface RecepcionData {
     notas: string | null;
     firma_chofer_conformidad?: string | null;
     firma_almacenista?: string | null;
+    firma_chofer_diferencia?: string | null;
+    sin_sellos?: boolean;
     recibido_por_profile: {
       full_name: string;
     } | null;
@@ -50,6 +52,9 @@ interface RecepcionData {
   evidenciasConTipos?: EvidenciaConTipo[];
   firmaChofer?: string | null;
   firmaAlmacenista?: string | null;
+  firmaChoferDiferencia?: string | null;
+  firmaSinSellos?: string | null;
+  sinSellos?: boolean;
   llegadaRegistradaEn?: string | null;
   recepcionFinalizadaEn?: string | null;
   placasVehiculo?: string | null;
@@ -147,6 +152,9 @@ const generarDocumentoPDF = async (data: RecepcionData): Promise<{ doc: jsPDF; f
     evidenciasConTipos = [], 
     firmaChofer, 
     firmaAlmacenista,
+    firmaChoferDiferencia,
+    firmaSinSellos,
+    sinSellos,
     llegadaRegistradaEn,
     recepcionFinalizadaEn,
     placasVehiculo,
@@ -592,9 +600,54 @@ const generarDocumentoPDF = async (data: RecepcionData): Promise<{ doc: jsPDF; f
     yPos = startY + imgHeight + 30;
   }
   
+  // ================ DECLARACIÓN SIN SELLOS (si aplica) ================
+  const hayDiferencias = productos.some(p => p.cantidad_recibida !== p.cantidad_ordenada);
+  
+  if (sinSellos && firmaSinSellos) {
+    if (yPos > 200 || evidenciasConTipos.length > 0) {
+      doc.addPage();
+      doc.setFillColor(BRAND_RED.r, BRAND_RED.g, BRAND_RED.b);
+      doc.rect(0, 0, 210, 8, "F");
+      yPos = 30;
+    } else {
+      yPos += 15;
+    }
+    
+    // Warning box for sin sellos
+    doc.setFillColor(255, 245, 230);
+    doc.setDrawColor(255, 180, 100);
+    doc.roundedRect(15, yPos, 180, 50, 3, 3, "FD");
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(180, 100, 40);
+    doc.text("⚠️ DECLARACIÓN: VEHÍCULO SIN SELLOS DE SEGURIDAD", 105, yPos + 10, { align: "center" });
+    
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+    doc.text("El transportista declara que el vehículo llegó sin sellos de seguridad.", 105, yPos + 18, { align: "center" });
+    
+    // Firma sin sellos
+    const sinSellosSignWidth = 50;
+    const sinSellosSignHeight = 25;
+    try {
+      doc.addImage(firmaSinSellos, "PNG", 80, yPos + 22, sinSellosSignWidth, sinSellosSignHeight);
+    } catch (e) {
+      console.error("Error adding sin sellos signature:", e);
+    }
+    
+    doc.setDrawColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+    doc.line(80, yPos + 45, 80 + sinSellosSignWidth, yPos + 45);
+    doc.setFontSize(7);
+    doc.text("Firma Transportista", 80 + sinSellosSignWidth / 2, yPos + 49, { align: "center" });
+    
+    yPos += 58;
+  }
+
   // ================ SIGNATURES SECTION ================
   // Start on new page or continue if space
-  if (yPos > 200 || evidenciasConTipos.length > 0) {
+  if (yPos > 200 || (evidenciasConTipos.length > 0 && !sinSellos)) {
     doc.addPage();
     doc.setFillColor(BRAND_RED.r, BRAND_RED.g, BRAND_RED.b);
     doc.rect(0, 0, 210, 8, "F");
@@ -610,63 +663,100 @@ const generarDocumentoPDF = async (data: RecepcionData): Promise<{ doc: jsPDF; f
   
   yPos += 15;
   
-  const signatureWidth = 65;
+  // Determinar número de firmas a mostrar
+  const mostrarFirmaDiferencia = hayDiferencias && firmaChoferDiferencia;
+  const signatureWidth = mostrarFirmaDiferencia ? 55 : 65;
   const signatureHeight = 35;
+  
+  // Calcular posiciones X según número de firmas
+  const xAlmacenista = mostrarFirmaDiferencia ? 15 : 25;
+  const xChofer = mostrarFirmaDiferencia ? 75 : 115;
+  const xDiferencia = 135;
   
   // Firma Almacenista box
   doc.setFillColor(250, 250, 250);
   doc.setDrawColor(220, 220, 220);
-  doc.roundedRect(25, yPos, signatureWidth + 10, signatureHeight + 25, 3, 3, "FD");
+  doc.roundedRect(xAlmacenista, yPos, signatureWidth + 10, signatureHeight + 25, 3, 3, "FD");
   
   if (firmaAlmacenista) {
     try {
-      doc.addImage(firmaAlmacenista, "PNG", 30, yPos + 5, signatureWidth, signatureHeight);
+      doc.addImage(firmaAlmacenista, "PNG", xAlmacenista + 5, yPos + 5, signatureWidth, signatureHeight);
     } catch (e) {
       console.error("Error adding almacenista signature:", e);
     }
   }
   
   doc.setDrawColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
-  doc.line(30, yPos + signatureHeight + 8, 30 + signatureWidth, yPos + signatureHeight + 8);
+  doc.line(xAlmacenista + 5, yPos + signatureHeight + 8, xAlmacenista + 5 + signatureWidth, yPos + signatureHeight + 8);
   
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
-  doc.text("ALMACENISTA", 30 + signatureWidth / 2, yPos + signatureHeight + 15, { align: "center" });
+  doc.text("ALMACENISTA", xAlmacenista + 5 + signatureWidth / 2, yPos + signatureHeight + 15, { align: "center" });
   
   // Nombre del almacenista debajo
   if (recepcion.recibido_por_profile?.full_name) {
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
-    doc.text(recepcion.recibido_por_profile.full_name, 30 + signatureWidth / 2, yPos + signatureHeight + 20, { align: "center" });
+    const nombreTruncado = recepcion.recibido_por_profile.full_name.length > 20 
+      ? recepcion.recibido_por_profile.full_name.substring(0, 17) + "..." 
+      : recepcion.recibido_por_profile.full_name;
+    doc.text(nombreTruncado, xAlmacenista + 5 + signatureWidth / 2, yPos + signatureHeight + 20, { align: "center" });
   }
   
   // Firma Proveedor/Transportista box
   doc.setFillColor(250, 250, 250);
-  doc.roundedRect(115, yPos, signatureWidth + 10, signatureHeight + 25, 3, 3, "FD");
+  doc.roundedRect(xChofer, yPos, signatureWidth + 10, signatureHeight + 25, 3, 3, "FD");
   
   if (firmaChofer) {
     try {
-      doc.addImage(firmaChofer, "PNG", 120, yPos + 5, signatureWidth, signatureHeight);
+      doc.addImage(firmaChofer, "PNG", xChofer + 5, yPos + 5, signatureWidth, signatureHeight);
     } catch (e) {
       console.error("Error adding driver signature:", e);
     }
   }
   
-  doc.line(120, yPos + signatureHeight + 8, 120 + signatureWidth, yPos + signatureHeight + 8);
+  doc.line(xChofer + 5, yPos + signatureHeight + 8, xChofer + 5 + signatureWidth, yPos + signatureHeight + 8);
   
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
-  doc.text("PROVEEDOR / TRANSPORTISTA", 120 + signatureWidth / 2, yPos + signatureHeight + 15, { align: "center" });
+  doc.text("TRANSPORTISTA", xChofer + 5 + signatureWidth / 2, yPos + signatureHeight + 15, { align: "center" });
   
   // Nombre del chofer debajo
   if (nombreChoferProveedor) {
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
-    doc.text(nombreChoferProveedor, 120 + signatureWidth / 2, yPos + signatureHeight + 20, { align: "center" });
+    const nombreTruncado = nombreChoferProveedor.length > 20 
+      ? nombreChoferProveedor.substring(0, 17) + "..." 
+      : nombreChoferProveedor;
+    doc.text(nombreTruncado, xChofer + 5 + signatureWidth / 2, yPos + signatureHeight + 20, { align: "center" });
+  }
+  
+  // Firma de Aceptación de Diferencia (solo si hay diferencias)
+  if (mostrarFirmaDiferencia) {
+    doc.setFillColor(255, 240, 240);
+    doc.setDrawColor(220, 180, 180);
+    doc.roundedRect(xDiferencia, yPos, signatureWidth + 10, signatureHeight + 25, 3, 3, "FD");
+    
+    try {
+      doc.addImage(firmaChoferDiferencia!, "PNG", xDiferencia + 5, yPos + 5, signatureWidth, signatureHeight);
+    } catch (e) {
+      console.error("Error adding diferencia signature:", e);
+    }
+    
+    doc.setDrawColor(180, 100, 100);
+    doc.line(xDiferencia + 5, yPos + signatureHeight + 8, xDiferencia + 5 + signatureWidth, yPos + signatureHeight + 8);
+    
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(180, 80, 80);
+    doc.text("ACEPTO DIFERENCIA", xDiferencia + 5 + signatureWidth / 2, yPos + signatureHeight + 15, { align: "center" });
+    doc.setFontSize(6);
+    doc.setFont("helvetica", "normal");
+    doc.text("(Transportista)", xDiferencia + 5 + signatureWidth / 2, yPos + signatureHeight + 20, { align: "center" });
   }
   
   // ================ FOOTER ================
