@@ -60,6 +60,7 @@ export type Database = {
           nombre: string
           radio_deteccion_metros: number | null
           updated_at: string
+          wifi_ssids: string[] | null
         }
         Insert: {
           activo?: boolean
@@ -73,6 +74,7 @@ export type Database = {
           nombre: string
           radio_deteccion_metros?: number | null
           updated_at?: string
+          wifi_ssids?: string[] | null
         }
         Update: {
           activo?: boolean
@@ -86,6 +88,7 @@ export type Database = {
           nombre?: string
           radio_deteccion_metros?: number | null
           updated_at?: string
+          wifi_ssids?: string[] | null
         }
         Relationships: []
       }
