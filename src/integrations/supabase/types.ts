@@ -3012,6 +3012,7 @@ export type Database = {
       }
       ordenes_compra_detalles: {
         Row: {
+          cantidad_cancelada: number | null
           cantidad_ordenada: number
           cantidad_recibida: number
           created_at: string
@@ -3024,6 +3025,7 @@ export type Database = {
           subtotal: number
         }
         Insert: {
+          cantidad_cancelada?: number | null
           cantidad_ordenada: number
           cantidad_recibida?: number
           created_at?: string
@@ -3036,6 +3038,7 @@ export type Database = {
           subtotal: number
         }
         Update: {
+          cantidad_cancelada?: number | null
           cantidad_ordenada?: number
           cantidad_recibida?: number
           created_at?: string
@@ -3103,7 +3106,9 @@ export type Database = {
           numero_remision_proveedor: string | null
           numero_sello_llegada: string | null
           orden_compra_id: string
+          origen_faltante: boolean | null
           placas_vehiculo: string | null
+          productos_faltantes: Json | null
           recepcion_finalizada_en: string | null
           rechazada_en: string | null
           rechazada_por: string | null
@@ -3145,7 +3150,9 @@ export type Database = {
           numero_remision_proveedor?: string | null
           numero_sello_llegada?: string | null
           orden_compra_id: string
+          origen_faltante?: boolean | null
           placas_vehiculo?: string | null
+          productos_faltantes?: Json | null
           recepcion_finalizada_en?: string | null
           rechazada_en?: string | null
           rechazada_por?: string | null
@@ -3187,7 +3194,9 @@ export type Database = {
           numero_remision_proveedor?: string | null
           numero_sello_llegada?: string | null
           orden_compra_id?: string
+          origen_faltante?: boolean | null
           placas_vehiculo?: string | null
+          productos_faltantes?: Json | null
           recepcion_finalizada_en?: string | null
           rechazada_en?: string | null
           rechazada_por?: string | null

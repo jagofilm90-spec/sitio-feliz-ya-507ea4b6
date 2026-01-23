@@ -4,13 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import Layout from "@/components/Layout";
-import { Package, Truck, Calendar, BarChart3, History, AlertTriangle } from "lucide-react";
+import { Package, Truck, Calendar, BarChart3, History, AlertTriangle, PackageX } from "lucide-react";
 import ProveedoresTab from "@/components/compras/ProveedoresTab";
 import OrdenesCompraTab from "@/components/compras/OrdenesCompraTab";
 import CalendarioEntregasTab from "@/components/compras/CalendarioEntregasTab";
 import ComprasAnalyticsTab from "@/components/compras/ComprasAnalyticsTab";
 import HistorialComprasProductoTab from "@/components/compras/HistorialComprasProductoTab";
 import DevolucionesPendientesTab from "@/components/compras/DevolucionesPendientesTab";
+import FaltantesPendientesTab from "@/components/compras/FaltantesPendientesTab";
 import { supabase } from "@/integrations/supabase/client";
 
 const Compras = () => {
@@ -69,6 +70,26 @@ const Compras = () => {
     refetchInterval: 60000,
   });
 
+  // Fetch count of pending faltantes
+  const { data: faltantesPendientesCount = 0 } = useQuery({
+    queryKey: ["faltantes-pendientes-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("ordenes_compra_entregas")
+        .select("*", { count: "exact", head: true })
+        .eq("origen_faltante", true)
+        .in("status", ["programada", "pendiente"]);
+
+      if (error) {
+        console.error("Error fetching faltantes count:", error);
+        return 0;
+      }
+
+      return count || 0;
+    },
+    refetchInterval: 60000,
+  });
+
   // Auto-switch to ordenes tab when ?aprobar= param is present
   useEffect(() => {
     if (searchParams.get("aprobar")) {
@@ -87,7 +108,7 @@ const Compras = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="proveedores" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
               Proveedores
@@ -124,6 +145,18 @@ const Compras = () => {
               <History className="h-4 w-4" />
               Historial
             </TabsTrigger>
+            <TabsTrigger value="faltantes" className="flex items-center gap-2">
+              <PackageX className="h-4 w-4" />
+              Faltantes
+              {faltantesPendientesCount > 0 && (
+                <Badge 
+                  variant="secondary" 
+                  className="ml-1 h-5 min-w-5 px-1.5 text-xs font-bold bg-orange-500 text-white"
+                >
+                  {faltantesPendientesCount}
+                </Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Analytics
@@ -148,6 +181,10 @@ const Compras = () => {
 
           <TabsContent value="historial">
             <HistorialComprasProductoTab />
+          </TabsContent>
+
+          <TabsContent value="faltantes">
+            <FaltantesPendientesTab />
           </TabsContent>
 
           <TabsContent value="analytics">
