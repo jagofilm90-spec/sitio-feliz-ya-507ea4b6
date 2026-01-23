@@ -931,13 +931,13 @@ export const AlmacenRecepcionSheet = ({
           .select("email, nombre")
           .eq("id", entrega.orden_compra?.proveedor?.id)
           .single();
-        if (proveedorEmail) {
+        if (proveedorData?.email) {
           await supabase.functions.invoke("notificar-faltante-oc", {
             body: {
               tipo: "faltante_creado",
               entrega_id: entrega.id,
               orden_folio: entrega.orden_compra.folio,
-              proveedor_email: proveedorEmail,
+              proveedor_email: proveedorData.email,
               proveedor_nombre: entrega.orden_compra?.proveedor?.nombre || "Proveedor",
               fecha_programada: fechaSiguiente,
               productos_faltantes: productosFaltantesData
