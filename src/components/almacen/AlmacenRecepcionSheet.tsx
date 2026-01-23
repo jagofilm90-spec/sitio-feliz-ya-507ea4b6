@@ -61,6 +61,7 @@ import {
   MapPin,
   Loader2,
   RefreshCw,
+  Wifi,
 } from "lucide-react";
 import { EvidenciaCapture, EvidenciasPreviewGrid } from "@/components/compras/EvidenciaCapture";
 import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
@@ -181,10 +182,11 @@ export const AlmacenRecepcionSheet = ({
   const [bodegaSeleccionada, setBodegaSeleccionada] = useState<string>("");
   const [mostrarSelectorBodega, setMostrarSelectorBodega] = useState(false);
   
-  // Auto-detección de bodega por GPS
+  // Auto-detección de bodega por WiFi/GPS
   const { 
     bodega: bodegaDetectada, 
     distanciaMetros, 
+    metodoDeteccion,
     detectando: detectandoBodega, 
     error: errorDeteccion,
     reintentarDeteccion 
@@ -1904,8 +1906,17 @@ export const AlmacenRecepcionSheet = ({
                             {bodegaDetectada.nombre}
                           </span>
                           <span className="text-xs text-green-600 dark:text-green-400 ml-2">
-                            <MapPin className="w-3 h-3 inline mr-1" />
-                            Detectado por GPS ({distanciaMetros}m)
+                            {metodoDeteccion === 'wifi' ? (
+                              <>
+                                <Wifi className="w-3 h-3 inline mr-1" />
+                                Detectado por WiFi
+                              </>
+                            ) : (
+                              <>
+                                <MapPin className="w-3 h-3 inline mr-1" />
+                                Detectado por GPS ({distanciaMetros}m)
+                              </>
+                            )}
                           </span>
                         </div>
                         <Button 
