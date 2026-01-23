@@ -10,7 +10,8 @@ import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CentroNotificaciones } from "@/components/CentroNotificaciones";
-import { Loader2, LogOut, Menu, Home } from "lucide-react";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { Loader2, LogOut, Home } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import logoAlmasa from "@/assets/logo-almasa.png";
@@ -171,92 +172,97 @@ const SecretariaPanel = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Desktop Sidebar */}
-      <SecretariaSidebar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        onLogout={handleLogout}
-        onNavigateDashboard={() => navigate("/dashboard")}
-        userName={userName}
-        counters={counters}
-        hasMultipleRoles={hasMultipleRoles}
-      />
+    <SidebarProvider defaultOpen={true}>
+      <div className="min-h-screen bg-background flex w-full">
+        {/* Desktop Sidebar */}
+        <SecretariaSidebar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onLogout={handleLogout}
+          onNavigateDashboard={() => navigate("/dashboard")}
+          userName={userName}
+          counters={counters}
+          hasMultipleRoles={hasMultipleRoles}
+        />
 
-      {/* Main Content */}
-      <div className="flex-1 md:ml-60 lg:ml-64 flex flex-col min-h-screen">
-        {/* Mobile Header */}
-        <header className="md:hidden sticky top-0 z-40 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground px-4 py-3 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src={logoAlmasa} alt="ALMASA" className="h-8 brightness-0 invert" />
-              <div className="border-l border-white/30 pl-3">
-                <p className="text-sm font-medium truncate max-w-[120px]">{userName}</p>
-                <p className="text-[10px] opacity-70">Secretaria</p>
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col min-h-screen">
+          {/* Mobile Header */}
+          <header className="md:hidden sticky top-0 z-40 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground px-4 py-3 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img src={logoAlmasa} alt="ALMASA" className="h-8 brightness-0 invert" />
+                <div className="border-l border-white/30 pl-3">
+                  <p className="text-sm font-medium truncate max-w-[120px]">{userName}</p>
+                  <p className="text-[10px] opacity-70">Secretaria</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <ThemeToggle />
-              <CentroNotificaciones />
-              {hasMultipleRoles && (
+              <div className="flex items-center gap-1">
+                <ThemeToggle />
+                <CentroNotificaciones />
+                {hasMultipleRoles && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate("/dashboard")}
+                    className="text-white hover:bg-white/20"
+                  >
+                    <Home className="h-5 w-5" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => navigate("/dashboard")}
+                  onClick={handleLogout}
                   className="text-white hover:bg-white/20"
                 >
-                  <Home className="h-5 w-5" />
+                  <LogOut className="h-5 w-5" />
                 </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleLogout}
-                className="text-white hover:bg-white/20"
-              >
-                <LogOut className="h-5 w-5" />
-              </Button>
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        {/* Desktop/Tablet Header */}
-        <header className="hidden md:flex sticky top-0 z-40 bg-background/95 backdrop-blur border-b px-6 py-4 items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-foreground">Panel Secretaria</h1>
-            <p className="text-sm text-muted-foreground">
-              {format(new Date(), "EEEE d 'de' MMMM, yyyy", { locale: es })}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <CentroNotificaciones />
-            <span className="text-sm text-muted-foreground">{user?.email}</span>
-          </div>
-        </header>
+          {/* Desktop/Tablet Header */}
+          <header className="hidden md:flex sticky top-0 z-40 bg-background/95 backdrop-blur border-b px-6 py-4 items-center justify-between">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger className="h-9 w-9" />
+              <div>
+                <h1 className="text-xl font-semibold text-foreground">Panel Secretaria</h1>
+                <p className="text-sm text-muted-foreground">
+                  {format(new Date(), "EEEE d 'de' MMMM, yyyy", { locale: es })}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+              <CentroNotificaciones />
+              <span className="text-sm text-muted-foreground">{user?.email}</span>
+            </div>
+          </header>
 
-        {/* Content Area */}
-        <main className="flex-1 p-4 md:p-6 pb-40 md:pb-6">
-          {renderTabContent()}
-        </main>
+          {/* Content Area */}
+          <main className="flex-1 p-4 md:p-6 pb-40 md:pb-6">
+            {renderTabContent()}
+          </main>
+        </div>
+
+        {/* Mobile Bottom Navigation */}
+        <SecretariaMobileNav
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          counters={counters}
+          onLogout={handleLogout}
+        />
+
+        {/* Welcome Dialog */}
+        <SecretariaBienvenidaDialog
+          open={showBienvenida}
+          onOpenChange={setShowBienvenida}
+          secretariaNombre={userName}
+          onNavigate={setActiveTab}
+        />
       </div>
-
-      {/* Mobile Bottom Navigation */}
-      <SecretariaMobileNav
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        counters={counters}
-        onLogout={handleLogout}
-      />
-
-      {/* Welcome Dialog */}
-      <SecretariaBienvenidaDialog
-        open={showBienvenida}
-        onOpenChange={setShowBienvenida}
-        secretariaNombre={userName}
-        onNavigate={setActiveTab}
-      />
-    </div>
+    </SidebarProvider>
   );
 };
 

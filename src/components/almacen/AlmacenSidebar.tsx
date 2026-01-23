@@ -2,6 +2,25 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { 
   Truck, 
   ShoppingCart, 
@@ -26,6 +45,7 @@ import { Button } from "@/components/ui/button";
 import { ConfiguracionFlotillaDialog } from "./ConfiguracionFlotillaDialog";
 import { AvatarEmpleadoPopover } from "./AvatarEmpleadoPopover";
 import logoBlanco from "@/assets/logos/logo-blanco.png";
+import iconoA from "@/assets/logos/icono-a-pequeno.png";
 
 interface NavItem {
   id: string;
@@ -68,6 +88,8 @@ export const AlmacenSidebar = ({
   empleadoFotoUrl,
   onFotoUpdated
 }: AlmacenSidebarProps) => {
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
   const [configOpen, setConfigOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -96,45 +118,65 @@ export const AlmacenSidebar = ({
     { id: "externos", label: "Ayudantes Externos", icon: Users },
   ];
 
-  const renderNavItem = (item: NavItem) => (
-    <button
-      key={item.id}
-      onClick={() => onTabChange(item.id)}
-      className={cn(
-        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all",
-        "hover:bg-white/10",
-        activeTab === item.id
-          ? "bg-primary/20 text-primary-foreground border-l-2 border-primary"
-          : "text-slate-300 hover:text-white"
-      )}
-    >
-      <item.icon className="w-4 h-4 flex-shrink-0" />
-      <span className="flex-1 text-sm font-medium">{item.label}</span>
-      {item.badge !== undefined && item.badge > 0 && (
-        <Badge 
-          variant={item.id === "alertas" ? "destructive" : "secondary"}
-          className="h-5 min-w-5 flex items-center justify-center text-xs px-1.5"
+  const renderNavItem = (item: NavItem) => {
+    const isActive = activeTab === item.id;
+    const hasBadge = item.badge !== undefined && item.badge > 0;
+
+    return (
+      <SidebarMenuItem key={item.id}>
+        <SidebarMenuButton
+          isActive={isActive}
+          tooltip={item.label}
+          onClick={() => onTabChange(item.id)}
+          size="lg"
+          className={cn(
+            "h-11 transition-all",
+            isActive && "bg-primary/20 text-primary-foreground border-l-2 border-primary"
+          )}
         >
-          {item.badge > 99 ? "99+" : item.badge}
-        </Badge>
-      )}
-    </button>
-  );
+          <div className="relative">
+            <item.icon className="h-5 w-5" />
+            {hasBadge && isCollapsed && (
+              <span className="absolute -top-1 -right-1 h-3.5 w-3.5 flex items-center justify-center bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full">
+                {item.badge! > 9 ? "+" : item.badge}
+              </span>
+            )}
+          </div>
+          <span className="font-medium">{item.label}</span>
+          {hasBadge && !isCollapsed && (
+            <Badge 
+              variant={item.id === "alertas" ? "destructive" : "secondary"}
+              className="ml-auto h-5 min-w-5 flex items-center justify-center text-xs px-1.5"
+            >
+              {item.badge! > 99 ? "99+" : item.badge}
+            </Badge>
+          )}
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  };
 
   return (
     <>
-      <aside className="hidden md:flex flex-col w-60 lg:w-64 bg-slate-900 fixed left-0 top-0 h-screen z-40">
-        {/* Header con Logo y Bienvenida */}
-        <div className="border-b border-slate-700">
-          {/* Logo */}
-          <div className="p-3 flex justify-center border-b border-slate-700/50">
-            <img src={logoBlanco} alt="Almasa" className="h-7 w-auto" />
+      <Sidebar collapsible="icon" className="bg-slate-900 border-r border-slate-700">
+        {/* Header con Logo */}
+        <SidebarHeader className="border-b border-slate-700">
+          <div className={cn(
+            "flex items-center justify-center py-2 transition-all",
+            isCollapsed ? "px-0" : "px-3"
+          )}>
+            {isCollapsed ? (
+              <img src={iconoA} alt="A" className="h-7 w-7 object-contain brightness-0 invert" />
+            ) : (
+              <img src={logoBlanco} alt="Almasa" className="h-7 w-auto" />
+            )}
           </div>
-          
-          {/* Bienvenida personalizada con Avatar */}
-          <div className="p-3 space-y-3">
+        </SidebarHeader>
+
+        {/* Bienvenida con Avatar - Solo cuando está expandido */}
+        {!isCollapsed && (
+          <div className="p-3 border-b border-slate-700 space-y-3">
             <div className="flex items-center gap-3">
-              {/* Avatar con popover */}
               <AvatarEmpleadoPopover
                 empleadoId={empleadoId}
                 empleadoNombre={empleadoNombre}
@@ -177,74 +219,123 @@ export const AlmacenSidebar = ({
               </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Avatar compacto cuando está colapsado */}
+        {isCollapsed && (
+          <div className="flex justify-center py-3 border-b border-slate-700">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center cursor-default">
+                  <span className="text-primary-foreground font-semibold text-xs">
+                    {empleadoNombre?.charAt(0)?.toUpperCase() || "U"}
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>{empleadoNombre || "Usuario"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        )}
 
         {/* Navegación */}
-        <nav className="flex-1 overflow-y-auto p-2 space-y-1">
+        <SidebarContent className="bg-slate-900">
           {/* Sección Operaciones */}
-          <div className="mb-3">
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-3 mb-1.5">
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-slate-500 uppercase text-[10px] tracking-wider">
               Operaciones
-            </p>
-            <div className="space-y-0.5">
-              {almacenItems.map(renderNavItem)}
-            </div>
-          </div>
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {almacenItems.map(renderNavItem)}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
 
           {/* Sección Flotilla - Solo para gerente/admin */}
           {showFlotillaTabs && (
-            <div className="pt-3 border-t border-slate-700">
-              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-3 mb-1.5">
+            <SidebarGroup className="border-t border-slate-700 pt-2">
+              <SidebarGroupLabel className="text-slate-500 uppercase text-[10px] tracking-wider">
                 Gestión Flotilla
-              </p>
-              <div className="space-y-0.5">
-                {flotillaItems.map(renderNavItem)}
-              </div>
-              
-              {/* Configuración como item compacto */}
-              <button
-                onClick={() => setConfigOpen(true)}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-slate-400 hover:text-white hover:bg-white/5 mt-2 border-t border-slate-700/50 pt-3"
-              >
-                <Settings className="w-4 h-4" />
-                <span className="text-xs">Configuración</span>
-              </button>
-            </div>
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {flotillaItems.map(renderNavItem)}
+                  
+                  {/* Configuración */}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      tooltip="Configuración"
+                      onClick={() => setConfigOpen(true)}
+                      size="lg"
+                      className="h-11 text-slate-400 hover:text-white hover:bg-white/5"
+                    >
+                      <Settings className="h-5 w-5" />
+                      <span>Configuración</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
           )}
-        </nav>
+        </SidebarContent>
 
         {/* Footer */}
-        <div className="p-2 border-t border-slate-700 space-y-1.5">
+        <SidebarFooter className="border-t border-slate-700 bg-slate-900">
+          {/* Toggle button */}
+          <SidebarTrigger className="w-full justify-center h-10 text-slate-400 hover:text-white hover:bg-slate-800" />
+
           {/* Estado de conexión */}
-          <div className={cn(
-            "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs",
-            isOnline ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400"
-          )}>
-            {isOnline ? (
-              <>
-                <Wifi className="w-3.5 h-3.5" />
-                <span>Conectado</span>
-              </>
-            ) : (
-              <>
-                <WifiOff className="w-3.5 h-3.5" />
-                <span>Sin conexión</span>
-              </>
-            )}
-          </div>
+          {!isCollapsed && (
+            <div className={cn(
+              "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs mx-2",
+              isOnline ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400"
+            )}>
+              {isOnline ? (
+                <>
+                  <Wifi className="w-3.5 h-3.5" />
+                  <span>Conectado</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-3.5 h-3.5" />
+                  <span>Sin conexión</span>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Indicador de conexión colapsado */}
+          {isCollapsed && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex justify-center py-2">
+                  {isOnline ? (
+                    <Wifi className="w-4 h-4 text-green-400" />
+                  ) : (
+                    <WifiOff className="w-4 h-4 text-red-400" />
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>{isOnline ? "Conectado" : "Sin conexión"}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
 
           {/* Botón Cerrar Sesión */}
-          <Button
-            variant="ghost"
-            size="sm"
+          <SidebarMenuButton
+            tooltip="Cerrar sesión"
             onClick={onLogout}
-            className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-900/20 h-8 text-xs"
+            size="lg"
+            className="h-10 text-red-400 hover:text-red-300 hover:bg-red-900/20"
           >
-            <LogOut className="w-3.5 h-3.5 mr-2" />
-            Cerrar Sesión
-          </Button>
-        </div>
-      </aside>
+            <LogOut className="h-4 w-4" />
+            <span>Cerrar Sesión</span>
+          </SidebarMenuButton>
+        </SidebarFooter>
+      </Sidebar>
 
       {/* Dialog de Configuración controlado */}
       <ConfiguracionFlotillaDialog 

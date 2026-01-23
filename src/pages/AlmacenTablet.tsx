@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { 
   Package, 
   Truck, 
@@ -265,69 +266,74 @@ const AlmacenTablet = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-background">
-      {/* Sidebar - visible en lg+ */}
-      <AlmacenSidebar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        showFlotillaTabs={showFlotillaTabs}
-        counters={counters}
-        isOnline={isOnline}
-        onLogout={handleLogout}
-        empleadoNombre={empleadoNombre}
-        empleadoId={empleadoId}
-        empleadoPuesto={empleadoPuesto}
-        empleadoEmail={empleadoEmail}
-        empleadoFotoUrl={empleadoFotoUrl}
-        onFotoUpdated={setEmpleadoFotoUrl}
-      />
-      
-      {/* Contenido Principal */}
-      <main className="flex-1 md:ml-60 lg:ml-64 p-4 md:p-6 pb-44 md:pb-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
+    <SidebarProvider defaultOpen={true}>
+      <div className="min-h-screen flex bg-background w-full">
+        {/* Sidebar - visible en lg+ */}
+        <AlmacenSidebar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          showFlotillaTabs={showFlotillaTabs}
+          counters={counters}
+          isOnline={isOnline}
+          onLogout={handleLogout}
+          empleadoNombre={empleadoNombre}
+          empleadoId={empleadoId}
+          empleadoPuesto={empleadoPuesto}
+          empleadoEmail={empleadoEmail}
+          empleadoFotoUrl={empleadoFotoUrl}
+          onFotoUpdated={setEmpleadoFotoUrl}
+        />
+        
+        {/* Contenido Principal */}
+        <main className="flex-1 p-4 md:p-6 pb-44 md:pb-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-                {getTabTitle()}
-              </h1>
-              <LiveIndicator size="md" className="md:hidden" />
+              <SidebarTrigger className="hidden md:flex h-10 w-10" />
+              <div>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+                    {getTabTitle()}
+                  </h1>
+                  <LiveIndicator size="md" className="md:hidden" />
+                </div>
+                <p className="text-muted-foreground mt-1 text-lg flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  {format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es })}
+                </p>
+              </div>
             </div>
-            <p className="text-muted-foreground mt-1 text-lg flex items-center gap-2">
-              <Calendar className="w-5 h-5" />
-              {format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es })}
-            </p>
+            <div className="flex items-center gap-3">
+              {/* Badge de conexión solo en móvil */}
+              <Badge 
+                variant={isOnline ? "default" : "destructive"} 
+                className="md:hidden h-8 px-3 text-sm"
+              >
+                {isOnline ? "Online" : "Offline"}
+              </Badge>
+              <Button variant="outline" size="lg" onClick={handleRefresh} className="h-12 px-4 text-base">
+                <RefreshCw className="w-5 h-5 mr-2" /> Actualizar
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            {/* Badge de conexión solo en móvil */}
-            <Badge 
-              variant={isOnline ? "default" : "destructive"} 
-              className="md:hidden h-8 px-3 text-sm"
-            >
-              {isOnline ? "Online" : "Offline"}
-            </Badge>
-            <Button variant="outline" size="lg" onClick={handleRefresh} className="h-12 px-4 text-base">
-              <RefreshCw className="w-5 h-5 mr-2" /> Actualizar
-            </Button>
-          </div>
-        </div>
 
-        {/* Stats cards según tab activo */}
-        {renderStats()}
+          {/* Stats cards según tab activo */}
+          {renderStats()}
 
-        {/* Contenido del tab */}
-        {renderTabContent()}
-      </main>
-      
-      {/* Navegación móvil - visible en < lg */}
-      <AlmacenMobileNav
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        showFlotillaTabs={showFlotillaTabs}
-        counters={counters}
-        onLogout={handleLogout}
-      />
-    </div>
+          {/* Contenido del tab */}
+          {renderTabContent()}
+        </main>
+        
+        {/* Navegación móvil - visible en < lg */}
+        <AlmacenMobileNav
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          showFlotillaTabs={showFlotillaTabs}
+          counters={counters}
+          onLogout={handleLogout}
+        />
+      </div>
+    </SidebarProvider>
   );
 };
 
