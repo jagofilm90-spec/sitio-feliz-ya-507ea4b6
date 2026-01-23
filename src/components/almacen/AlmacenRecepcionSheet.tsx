@@ -729,16 +729,21 @@ export const AlmacenRecepcionSheet = ({
         // Determinar cantidad total recibida (normal o suma de lotes)
         const tieneLotesMultiples = producto.lotesConfig?.dividir_en_lotes && lotesInputs[producto.id]?.length > 0;
         const lotes = lotesInputs[producto.id] || [];
-        const cantidad = tieneLotesMultiples 
+        const cantidadARecibir = tieneLotesMultiples 
           ? lotes.reduce((sum, l) => sum + (l.cantidad || 0), 0)
           : getCantidadNumerica(producto.id);
         
         if (producto) {
-          const nuevaCantidadRecibida = producto.cantidad_recibida + cantidad;
+          // IMPORTANTE: Para entregas parciales, sumamos a lo ya recibido en entregas anteriores
+          // pero para la entrega actual, usamos la cantidad ingresada directamente
+          // La cantidad_recibida del producto YA refleja entregas anteriores de la OC
+          // Aquí registramos lo recibido en ESTA entrega específica
+          const nuevaCantidadRecibida = (producto.cantidad_recibida || 0) + cantidadARecibir;
           const updateData: any = { cantidad_recibida: nuevaCantidadRecibida };
           
-          const faltante = producto.cantidad_ordenada - producto.cantidad_recibida;
-          if (cantidad < faltante && razonesDiferencia[producto.id]) {
+          // Registrar diferencia si no se recibió todo lo esperado en esta entrega
+          const faltante = producto.cantidad_ordenada - nuevaCantidadRecibida;
+          if (faltante > 0 && razonesDiferencia[producto.id]) {
             updateData.razon_diferencia = razonesDiferencia[producto.id];
             updateData.notas_diferencia = notasDiferencia[producto.id] || null;
           }
@@ -748,7 +753,7 @@ export const AlmacenRecepcionSheet = ({
             .update(updateData)
             .eq("id", producto.id);
 
-          if (cantidad > 0) {
+          if (cantidadARecibir > 0) {
             const { data: detalleConPrecio } = await supabase
               .from("ordenes_compra_detalles")
               .select("precio_unitario_compra")
@@ -789,7 +794,7 @@ export const AlmacenRecepcionSheet = ({
                 .from("inventario_lotes")
                 .insert({
                   producto_id: producto.producto_id,
-                  cantidad_disponible: cantidad,
+                  cantidad_disponible: cantidadARecibir,
                   precio_compra: precioCompra,
                   fecha_entrada: new Date().toISOString(),
                   fecha_caducidad: fechaCaducidad || null,
@@ -806,20 +811,20 @@ export const AlmacenRecepcionSheet = ({
               }
             }
 
+            // Nota: El stock ahora se actualiza automáticamente via trigger SQL (sync_stock_from_lotes)
+            // Solo actualizamos el último costo de compra manualmente
             const { data: productoActual } = await supabase
               .from("productos")
-              .select("stock_actual, ultimo_costo_compra")
+              .select("ultimo_costo_compra")
               .eq("id", producto.producto_id)
               .single();
 
-            const nuevoStock = (productoActual?.stock_actual || 0) + cantidad;
             const costoAnterior = productoActual?.ultimo_costo_compra || 0;
 
-            // Actualizar stock y último costo de compra
+            // Solo actualizar último costo de compra (el stock lo actualiza el trigger)
             await supabase
               .from("productos")
               .update({ 
-                stock_actual: nuevoStock,
                 ultimo_costo_compra: precioCompra
               })
               .eq("id", producto.producto_id);

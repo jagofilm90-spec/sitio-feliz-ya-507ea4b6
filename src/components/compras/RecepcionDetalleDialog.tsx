@@ -150,7 +150,7 @@ export const RecepcionDetalleDialog = ({
         .from("ordenes_compra_entregas")
         .select(`
           id, numero_entrega, cantidad_bultos, fecha_programada, fecha_entrega_real, status, notas,
-          firma_chofer_conformidad, firma_almacenista,
+          firma_chofer_conformidad, firma_almacenista, firma_chofer_diferencia, sin_sellos, firma_chofer_sin_sellos,
           llegada_registrada_en, recepcion_finalizada_en, placas_vehiculo, nombre_chofer_proveedor, numero_remision_proveedor,
           recibido_por,
           orden_compra:ordenes_compra(
@@ -265,10 +265,23 @@ export const RecepcionDetalleDialog = ({
   const buildPdfData = () => {
     if (!recepcion) return null;
     
-    const evidenciasConTipos = evidencias.map(ev => ({
-      url: evidenciasUrls[ev.id] || "",
-      tipo: ev.tipo_evidencia,
-    })).filter(e => e.url);
+    // Filtrar evidencias que no son firmas para la galería de fotos
+    const evidenciasConTipos = evidencias
+      .filter(ev => !ev.tipo_evidencia.startsWith('firma_'))
+      .map(ev => ({
+        url: evidenciasUrls[ev.id] || "",
+        tipo: ev.tipo_evidencia,
+      }))
+      .filter(e => e.url);
+    
+    // Buscar firma sin sellos en evidencias si no está en el campo directo
+    let firmaSinSellos = (recepcion as any).firma_chofer_sin_sellos || null;
+    if (!firmaSinSellos) {
+      const evidenciaFirmaSinSellos = evidencias.find(ev => ev.tipo_evidencia === 'firma_sin_sellos');
+      if (evidenciaFirmaSinSellos && evidenciasUrls[evidenciaFirmaSinSellos.id]) {
+        firmaSinSellos = evidenciasUrls[evidenciaFirmaSinSellos.id];
+      }
+    }
     
     return {
       recepcion,
@@ -276,6 +289,9 @@ export const RecepcionDetalleDialog = ({
       evidenciasConTipos,
       firmaChofer: recepcion.firma_chofer_conformidad,
       firmaAlmacenista: recepcion.firma_almacenista,
+      firmaChoferDiferencia: (recepcion as any).firma_chofer_diferencia || null,
+      firmaSinSellos,
+      sinSellos: (recepcion as any).sin_sellos || false,
       llegadaRegistradaEn: recepcion.llegada_registrada_en,
       recepcionFinalizadaEn: recepcion.recepcion_finalizada_en,
       placasVehiculo: recepcion.placas_vehiculo,

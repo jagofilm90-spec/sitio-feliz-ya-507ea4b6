@@ -467,6 +467,7 @@ export const RegistrarLlegadaSheet = ({
             : getEvidenciaPorTipo("sello_2") 
               ? "2 SELLOS REGISTRADOS"
               : "1 SELLO REGISTRADO",
+          sin_sellos: sinSellos,
           trabajando_por: user.id,
           trabajando_desde: new Date().toISOString(),
         })
