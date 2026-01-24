@@ -27,6 +27,8 @@ type SidebarContext = {
   setOpenMobile: (open: boolean) => void;
   isMobile: boolean;
   toggleSidebar: () => void;
+  isHovering: boolean;
+  setIsHovering: (hovering: boolean) => void;
 };
 
 const SidebarContext = React.createContext<SidebarContext | null>(null);
@@ -50,6 +52,7 @@ const SidebarProvider = React.forwardRef<
 >(({ defaultOpen = true, open: openProp, onOpenChange: setOpenProp, className, style, children, ...props }, ref) => {
   const isMobile = useIsMobile();
   const [openMobile, setOpenMobile] = React.useState(false);
+  const [isHovering, setIsHovering] = React.useState(false);
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -101,8 +104,10 @@ const SidebarProvider = React.forwardRef<
       openMobile,
       setOpenMobile,
       toggleSidebar,
+      isHovering,
+      setIsHovering,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
+    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, isHovering],
   );
 
   return (
@@ -134,9 +139,38 @@ const Sidebar = React.forwardRef<
     side?: "left" | "right";
     variant?: "sidebar" | "floating" | "inset";
     collapsible?: "offcanvas" | "icon" | "none";
+    expandOnHover?: boolean;
   }
->(({ side = "left", variant = "sidebar", collapsible = "offcanvas", className, children, ...props }, ref) => {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+>(({ side = "left", variant = "sidebar", collapsible = "offcanvas", expandOnHover = false, className, children, ...props }, ref) => {
+  const { isMobile, state, openMobile, setOpenMobile, isHovering, setIsHovering } = useSidebar();
+  const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  
+  // Visual state considers hover when expandOnHover is enabled
+  const visualState = expandOnHover && isHovering && state === "collapsed" ? "expanded" : state;
+  
+  const handleMouseEnter = React.useCallback(() => {
+    if (!expandOnHover || state !== "collapsed") return;
+    // Small delay to prevent accidental expansion
+    hoverTimeoutRef.current = setTimeout(() => {
+      setIsHovering(true);
+    }, 100);
+  }, [expandOnHover, state, setIsHovering]);
+  
+  const handleMouseLeave = React.useCallback(() => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    setIsHovering(false);
+  }, [setIsHovering]);
+  
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (collapsible === "none") {
     return (
@@ -174,10 +208,13 @@ const Sidebar = React.forwardRef<
     <div
       ref={ref}
       className="group peer hidden text-sidebar-foreground md:block"
-      data-state={state}
+      data-state={visualState}
       data-collapsible={state === "collapsed" ? collapsible : ""}
       data-variant={variant}
       data-side={side}
+      data-hovering={isHovering ? "true" : "false"}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       {/* This is what handles the sidebar gap on desktop */}
       <div
@@ -188,6 +225,8 @@ const Sidebar = React.forwardRef<
           variant === "floating" || variant === "inset"
             ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
             : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]",
+          // Keep the gap small when hovering (sidebar expands over content, not pushing it)
+          expandOnHover && isHovering && "!w-[--sidebar-width-icon]",
         )}
       />
       <div
@@ -200,6 +239,8 @@ const Sidebar = React.forwardRef<
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
             : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
+          // Expand width on hover
+          expandOnHover && isHovering && "!w-[--sidebar-width] shadow-xl",
           className,
         )}
         {...props}

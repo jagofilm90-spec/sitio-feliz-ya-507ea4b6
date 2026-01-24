@@ -64,8 +64,8 @@ export const VendedorSidebar = ({
   vendedorNombre,
   novedadesCount,
 }: VendedorSidebarProps) => {
-  const { state } = useSidebar();
-  const isCollapsed = state === "collapsed";
+  const { state, isHovering } = useSidebar();
+  const isCollapsed = state === "collapsed" && !isHovering;
 
   const navItems: NavItem[] = [
     { id: "clientes", label: "Clientes", icon: Users },
@@ -79,7 +79,7 @@ export const VendedorSidebar = ({
   ];
 
   return (
-    <Sidebar collapsible="icon" className="border-r">
+    <Sidebar collapsible="icon" expandOnHover className="border-r">
       {/* Header con Logo */}
       <SidebarHeader className="border-b bg-gradient-to-r from-primary/5 via-primary/3 to-transparent">
         <div className={cn(

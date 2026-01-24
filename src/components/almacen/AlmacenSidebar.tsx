@@ -88,8 +88,9 @@ export const AlmacenSidebar = ({
   empleadoFotoUrl,
   onFotoUpdated
 }: AlmacenSidebarProps) => {
-  const { state } = useSidebar();
-  const isCollapsed = state === "collapsed";
+  const { state, isHovering } = useSidebar();
+  // Show expanded content when actually expanded OR hovering
+  const isCollapsed = state === "collapsed" && !isHovering;
   const [configOpen, setConfigOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -158,7 +159,7 @@ export const AlmacenSidebar = ({
 
   return (
     <>
-      <Sidebar collapsible="icon" className="bg-slate-900 border-r border-slate-700">
+      <Sidebar collapsible="icon" expandOnHover className="bg-slate-900 border-r border-slate-700">
         {/* Header con Logo */}
         <SidebarHeader className="border-b border-slate-700">
           <div className={cn(

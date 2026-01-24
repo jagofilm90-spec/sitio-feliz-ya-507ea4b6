@@ -74,8 +74,8 @@ export const SecretariaSidebar = ({
   counters,
   hasMultipleRoles = false,
 }: SecretariaSidebarProps) => {
-  const { state } = useSidebar();
-  const isCollapsed = state === "collapsed";
+  const { state, isHovering } = useSidebar();
+  const isCollapsed = state === "collapsed" && !isHovering;
 
   const navItems: NavItem[] = [
     { id: "productos", label: "Productos", icon: Package },
@@ -92,7 +92,7 @@ export const SecretariaSidebar = ({
   ];
 
   return (
-    <Sidebar collapsible="icon" className="border-r">
+    <Sidebar collapsible="icon" expandOnHover className="border-r">
       {/* Header con Logo */}
       <SidebarHeader className="border-b border-sidebar-border bg-gradient-to-r from-primary/20 to-primary/10">
         <div className={cn(
