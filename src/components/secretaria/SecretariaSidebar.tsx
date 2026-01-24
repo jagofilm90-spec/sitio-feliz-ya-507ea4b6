@@ -202,9 +202,6 @@ export const SecretariaSidebar = ({
           </div>
         )}
 
-        {/* Toggle button */}
-        <SidebarTrigger className="w-full justify-center h-9 hover:bg-sidebar-accent" />
-
         {/* Dashboard button for multiple roles */}
         {hasMultipleRoles && (
           <SidebarMenuButton
