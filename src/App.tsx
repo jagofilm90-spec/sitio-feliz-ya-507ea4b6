@@ -39,6 +39,7 @@ import SecretariaPanel from "./pages/SecretariaPanel";
 import AppMobileGuide from "./pages/AppMobileGuide";
 import TestFirma from "./pages/TestFirma";
 import Precios from "./pages/Precios";
+import Configuracion from "./pages/Configuracion";
 
 import PushNotificationSetup from "./components/PushNotificationSetup";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -131,6 +132,11 @@ const App = () => (
               <Route path="/app-mobile" element={<AppMobileGuide />} />
               <Route path="/test-firma" element={<TestFirma />} />
               <Route path="/precios" element={<Precios />} />
+              <Route path="/configuracion" element={
+                <ProtectedRoute allowedRoles={['admin', 'contadora', 'gerente_almacen']} redirectTo="/auth">
+                  <Configuracion />
+                </ProtectedRoute>
+              } />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

@@ -41,6 +41,7 @@ import {
   Lock,
   Database,
   DollarSign,
+  Settings,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -130,6 +131,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: Smartphone, label: "App Móvil", path: "/generate-assets" },
     { icon: Lock, label: "Permisos", path: "/permisos" },
     { icon: Database, label: "Respaldos", path: "/respaldos" },
+    { icon: Settings, label: "Configuración", path: "/configuracion" },
     { icon: Warehouse, label: "Almacén Tablet", path: "/almacen-tablet" },
   ];
 
