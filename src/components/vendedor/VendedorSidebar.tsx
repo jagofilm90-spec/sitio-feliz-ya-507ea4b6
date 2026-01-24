@@ -185,8 +185,6 @@ export const VendedorSidebar = ({
 
       {/* Footer */}
       <SidebarFooter className="border-t">
-        {/* Toggle button */}
-        <SidebarTrigger className="w-full justify-center h-9 hover:bg-muted" />
 
         {/* Tarjeta Digital - solo en colapsado */}
         {isCollapsed && (

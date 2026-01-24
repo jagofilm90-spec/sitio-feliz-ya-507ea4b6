@@ -17,3 +17,20 @@ export function useIsMobile() {
 
   return !!isMobile;
 }
+
+export function useHasPointer() {
+  const [hasPointer, setHasPointer] = React.useState<boolean>(true);
+
+  React.useEffect(() => {
+    // Detect if device has a fine pointer (mouse)
+    const mql = window.matchMedia('(pointer: fine)');
+    const onChange = () => {
+      setHasPointer(mql.matches);
+    };
+    mql.addEventListener("change", onChange);
+    setHasPointer(mql.matches);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
+  return hasPointer;
+}

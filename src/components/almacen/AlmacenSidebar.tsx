@@ -13,7 +13,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
@@ -288,9 +287,6 @@ export const AlmacenSidebar = ({
 
         {/* Footer */}
         <SidebarFooter className="border-t border-slate-700 bg-slate-900">
-          {/* Toggle button */}
-          <SidebarTrigger className="w-full justify-center h-10 text-slate-400 hover:text-white hover:bg-slate-800" />
-
           {/* Estado de conexión */}
           {!isCollapsed && (
             <div className={cn(

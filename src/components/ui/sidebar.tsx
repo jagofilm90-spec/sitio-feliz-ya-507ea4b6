@@ -3,7 +3,7 @@ import { Slot } from "@radix-ui/react-slot";
 import { VariantProps, cva } from "class-variance-authority";
 import { PanelLeft } from "lucide-react";
 
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile, useHasPointer } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -142,19 +142,23 @@ const Sidebar = React.forwardRef<
     expandOnHover?: boolean;
   }
 >(({ side = "left", variant = "sidebar", collapsible = "offcanvas", expandOnHover = false, className, children, ...props }, ref) => {
-  const { isMobile, state, openMobile, setOpenMobile, isHovering, setIsHovering } = useSidebar();
+  const { isMobile, openMobile, setOpenMobile, isHovering, setIsHovering } = useSidebar();
+  const hasPointer = useHasPointer();
   const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   
-  // Visual state considers hover when expandOnHover is enabled
-  const visualState = expandOnHover && isHovering && state === "collapsed" ? "expanded" : state;
+  // Desktop with mouse: always collapsed, expand only on hover
+  const isDesktopWithMouse = !isMobile && hasPointer && expandOnHover;
+  
+  // Visual state: expanded when hovering (for desktop with mouse + expandOnHover)
+  const visualState = isDesktopWithMouse && isHovering ? "expanded" : "collapsed";
   
   const handleMouseEnter = React.useCallback(() => {
-    if (!expandOnHover || state !== "collapsed") return;
+    if (!isDesktopWithMouse) return;
     // Small delay to prevent accidental expansion
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovering(true);
     }, 100);
-  }, [expandOnHover, state, setIsHovering]);
+  }, [isDesktopWithMouse, setIsHovering]);
   
   const handleMouseLeave = React.useCallback(() => {
     if (hoverTimeoutRef.current) {
@@ -204,43 +208,38 @@ const Sidebar = React.forwardRef<
     );
   }
 
+  // Desktop: always collapsed by default, expands on hover when expandOnHover is true
   return (
     <div
       ref={ref}
       className="group peer hidden text-sidebar-foreground md:block"
       data-state={visualState}
-      data-collapsible={state === "collapsed" ? collapsible : ""}
+      data-collapsible="icon"
       data-variant={variant}
       data-side={side}
       data-hovering={isHovering ? "true" : "false"}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* This is what handles the sidebar gap on desktop */}
+      {/* Gap placeholder - always collapsed width */}
       <div
         className={cn(
-          "relative h-svh w-[--sidebar-width] bg-transparent transition-[width] duration-200 ease-linear",
-          "group-data-[collapsible=offcanvas]:w-0",
-          "group-data-[side=right]:rotate-180",
+          "relative h-svh bg-transparent transition-[width] duration-200 ease-linear",
           variant === "floating" || variant === "inset"
-            ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
-            : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]",
-          // Keep the gap small when hovering (sidebar expands over content, not pushing it)
-          expandOnHover && isHovering && "!w-[--sidebar-width-icon]",
+            ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
+            : "w-[--sidebar-width-icon]",
         )}
       />
+      {/* Actual sidebar - positioned absolute to overlay content when expanded */}
       <div
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] duration-200 ease-linear md:flex",
-          side === "left"
-            ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
-            : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
-          // Adjust the padding for floating and inset variants.
+          "fixed inset-y-0 z-10 hidden h-svh flex-col transition-[width] duration-200 ease-linear md:flex",
+          side === "left" ? "left-0" : "right-0",
           variant === "floating" || variant === "inset"
-            ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
-            : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
-          // Expand width on hover
-          expandOnHover && isHovering && "!w-[--sidebar-width] shadow-xl",
+            ? "p-2"
+            : "group-data-[side=left]:border-r group-data-[side=right]:border-l",
+          // Width based on hover state
+          isHovering ? "w-[--sidebar-width] shadow-xl" : "w-[--sidebar-width-icon]",
           className,
         )}
         {...props}
