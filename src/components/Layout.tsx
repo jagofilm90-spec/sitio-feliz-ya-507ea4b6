@@ -126,7 +126,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: Truck, label: "Rutas y Entregas", path: "/rutas" },
     { icon: FileText, label: "Facturación", path: "/facturas" },
     { icon: UserCog, label: "Empleados", path: "/empleados" },
-    { icon: Shield, label: "Usuarios", path: "/usuarios" },
+    
     { icon: MessageCircle, label: "Chat", path: "/chat" },
     { icon: Smartphone, label: "App Móvil", path: "/generate-assets" },
     { icon: Settings, label: "Configuración", path: "/configuracion" },
