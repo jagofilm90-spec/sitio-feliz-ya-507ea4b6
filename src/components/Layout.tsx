@@ -129,8 +129,6 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: Shield, label: "Usuarios", path: "/usuarios" },
     { icon: MessageCircle, label: "Chat", path: "/chat" },
     { icon: Smartphone, label: "App Móvil", path: "/generate-assets" },
-    { icon: Lock, label: "Permisos", path: "/permisos" },
-    { icon: Database, label: "Respaldos", path: "/respaldos" },
     { icon: Settings, label: "Configuración", path: "/configuracion" },
     { icon: Warehouse, label: "Almacén Tablet", path: "/almacen-tablet" },
   ];
