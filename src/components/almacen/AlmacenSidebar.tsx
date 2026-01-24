@@ -134,7 +134,7 @@ export const AlmacenSidebar = ({
             isActive && "bg-primary/20 text-primary-foreground border-l-2 border-primary"
           )}
         >
-          <div className="relative">
+          <div className="relative shrink-0">
             <item.icon className="h-5 w-5" />
             {hasBadge && isCollapsed && (
               <span className="absolute -top-1 -right-1 h-3.5 w-3.5 flex items-center justify-center bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full">
@@ -142,7 +142,7 @@ export const AlmacenSidebar = ({
               </span>
             )}
           </div>
-          <span className="font-medium">{item.label}</span>
+          {!isCollapsed && <span className="font-medium">{item.label}</span>}
           {hasBadge && !isCollapsed && (
             <Badge 
               variant={item.id === "alertas" ? "destructive" : "secondary"}
@@ -243,9 +243,11 @@ export const AlmacenSidebar = ({
         <SidebarContent className="bg-slate-900">
           {/* Sección Operaciones */}
           <SidebarGroup>
-            <SidebarGroupLabel className="text-slate-500 uppercase text-[10px] tracking-wider">
-              Operaciones
-            </SidebarGroupLabel>
+            {!isCollapsed && (
+              <SidebarGroupLabel className="text-slate-500 uppercase text-[10px] tracking-wider">
+                Operaciones
+              </SidebarGroupLabel>
+            )}
             <SidebarGroupContent>
               <SidebarMenu>
                 {almacenItems.map(renderNavItem)}
@@ -255,10 +257,12 @@ export const AlmacenSidebar = ({
 
           {/* Sección Flotilla - Solo para gerente/admin */}
           {showFlotillaTabs && (
-            <SidebarGroup className="border-t border-slate-700 pt-2">
-              <SidebarGroupLabel className="text-slate-500 uppercase text-[10px] tracking-wider">
-                Gestión Flotilla
-              </SidebarGroupLabel>
+            <SidebarGroup className={cn(!isCollapsed && "border-t border-slate-700 pt-2")}>
+              {!isCollapsed && (
+                <SidebarGroupLabel className="text-slate-500 uppercase text-[10px] tracking-wider">
+                  Gestión Flotilla
+                </SidebarGroupLabel>
+              )}
               <SidebarGroupContent>
                 <SidebarMenu>
                   {flotillaItems.map(renderNavItem)}
@@ -272,7 +276,7 @@ export const AlmacenSidebar = ({
                       className="h-11 text-slate-400 hover:text-white hover:bg-white/5"
                     >
                       <Settings className="h-5 w-5" />
-                      <span>Configuración</span>
+                      {!isCollapsed && <span>Configuración</span>}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>
@@ -332,7 +336,7 @@ export const AlmacenSidebar = ({
             className="h-10 text-red-400 hover:text-red-300 hover:bg-red-900/20"
           >
             <LogOut className="h-4 w-4" />
-            <span>Cerrar Sesión</span>
+            {!isCollapsed && <span>Cerrar Sesión</span>}
           </SidebarMenuButton>
         </SidebarFooter>
       </Sidebar>
