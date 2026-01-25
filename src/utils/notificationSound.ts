@@ -1,8 +1,27 @@
 // Tipos de sonido de notificación
 export type NotificationSoundType = 'default' | 'urgent' | 'success' | 'error';
 
+// Verificar si los sonidos están habilitados en preferencias
+const isSoundEnabled = (): boolean => {
+  try {
+    const stored = localStorage.getItem('user_preferences');
+    if (stored) {
+      const prefs = JSON.parse(stored);
+      return prefs.soundEnabled !== false;
+    }
+    return true;
+  } catch {
+    return true;
+  }
+};
+
 // Función para reproducir un sonido de notificación usando Web Audio API
 export const playNotificationSound = (type: NotificationSoundType = 'default') => {
+  // Verificar preferencia del usuario
+  if (!isSoundEnabled()) {
+    return;
+  }
+
   try {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     

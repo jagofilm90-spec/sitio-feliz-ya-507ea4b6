@@ -48,6 +48,58 @@ import { supabase } from "./integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
+// Componente para aplicar preferencias de accesibilidad globalmente
+const AccessibilityPreferencesApplicator = () => {
+  useEffect(() => {
+    const applyPreferences = () => {
+      try {
+        const stored = localStorage.getItem('user_preferences');
+        if (stored) {
+          const prefs = JSON.parse(stored);
+          
+          // Font size
+          if (prefs.fontSize === 'large') {
+            document.documentElement.classList.add('font-size-large');
+          } else {
+            document.documentElement.classList.remove('font-size-large');
+          }
+          
+          // High contrast
+          if (prefs.highContrast) {
+            document.documentElement.classList.add('high-contrast');
+          } else {
+            document.documentElement.classList.remove('high-contrast');
+          }
+        }
+      } catch (error) {
+        console.error('Error applying preferences:', error);
+      }
+    };
+    
+    applyPreferences();
+    
+    // Escuchar cambios en localStorage (desde otras pestañas)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'user_preferences') {
+        applyPreferences();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // También escuchar cambios internos via custom event
+    const handlePreferenceChange = () => applyPreferences();
+    window.addEventListener('user-preferences-changed', handlePreferenceChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('user-preferences-changed', handlePreferenceChange);
+    };
+  }, []);
+
+  return null;
+};
+
 // Componente interno para manejar la inicialización de push notifications
 const PushNotificationInitializer = () => {
   useEffect(() => {
@@ -86,6 +138,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <AccessibilityPreferencesApplicator />
           <PushNotificationInitializer />
           <BrowserRouter>
             <Routes>
