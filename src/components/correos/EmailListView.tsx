@@ -122,7 +122,7 @@ const EmailListView = ({
 
   return (
     <Card>
-      <ScrollArea className="h-[600px]">
+      <ScrollArea className="h-[calc(100vh-280px)] min-h-[300px] max-h-[700px]">
         <div className="divide-y">
           {emails.map((email, index) => (
             <div

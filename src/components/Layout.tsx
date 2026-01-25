@@ -421,9 +421,9 @@ const Layout = ({ children }: LayoutProps) => {
       </header>
 
       <div className="flex">
-        {/* Sidebar - Desktop */}
-        <aside className="hidden md:flex w-64 min-h-[calc(100vh-4rem)] border-r bg-card">
-          <nav className="flex flex-col w-full p-4 overflow-y-auto">
+        {/* Sidebar - Desktop (más angosto en tablets) */}
+        <aside className="hidden md:flex md:w-52 lg:w-64 min-h-[calc(100vh-4rem)] border-r bg-card flex-shrink-0">
+          <nav className="flex flex-col w-full p-3 lg:p-4 overflow-y-auto">
             {renderMenuItems(false)}
             {/* Correos después de las categorías */}
             {canViewEmails && (
