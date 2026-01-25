@@ -8,6 +8,7 @@ import { UsuariosConectadosPanel } from "@/components/admin/UsuariosConectadosPa
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useSystemPresence } from "@/hooks/useSystemPresence";
 import { KPICards } from "@/components/dashboard/KPICards";
+import { EstadoOperacionesPanel } from "@/components/dashboard/EstadoOperacionesPanel";
 import { VentasMensualesChart } from "@/components/dashboard/VentasMensualesChart";
 import { CobranzaCriticaPanel } from "@/components/dashboard/CobranzaCriticaPanel";
 import { CreditoExcedidoAlert } from "@/components/dashboard/CreditoExcedidoAlert";
@@ -72,6 +73,9 @@ const Dashboard = () => {
 
         {/* KPIs Principales */}
         <KPICards />
+
+        {/* Estado de Operaciones en Tiempo Real */}
+        <EstadoOperacionesPanel />
 
         {/* Panel de Usuarios Conectados (solo admin) */}
         {isAdmin && <UsuariosConectadosPanel />}
