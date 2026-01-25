@@ -35,7 +35,7 @@ import { LiveIndicator } from "@/components/ui/live-indicator";
 import { UserPreferencesPopover } from "@/components/UserPreferencesPopover";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useSystemPresence } from "@/hooks/useSystemPresence";
-import { useShowMobileNav } from "@/hooks/use-mobile";
+import { useShowMobileNav, useIsMobile, useIsTablet, useHasPointer, useIsTabletWithMouse } from "@/hooks/use-mobile";
 
 const AlmacenTablet = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -267,8 +267,23 @@ const AlmacenTablet = () => {
     return titles[activeTab] || "Almacén";
   };
 
-  // Detectar si debe mostrar navegación móvil (phones + tablets sin mouse)
+  // Detectar tipo de dispositivo para navegación
   const showMobileNav = useShowMobileNav();
+  const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
+  const hasPointer = useHasPointer();
+  const isTabletWithMouse = useIsTabletWithMouse();
+
+  // Determinar tipo de dispositivo para indicador de depuración
+  const getDeviceType = () => {
+    if (isMobile) return { label: "Mobile", color: "bg-orange-500" };
+    if (isTabletWithMouse) return { label: "Tablet + Mouse", color: "bg-blue-500" };
+    if (isTablet && !hasPointer) return { label: "Tablet Táctil", color: "bg-purple-500" };
+    if (isTablet && hasPointer) return { label: "Tablet + Pointer", color: "bg-cyan-500" };
+    if (hasPointer) return { label: "Desktop", color: "bg-green-500" };
+    return { label: "Desconocido", color: "bg-gray-500" };
+  };
+  const deviceInfo = getDeviceType();
 
   return (
     <SidebarProvider defaultOpen={false}>
@@ -323,6 +338,13 @@ const AlmacenTablet = () => {
                   {isOnline ? "Online" : "Offline"}
                 </Badge>
               )}
+              {/* Indicador de depuración de dispositivo */}
+              <Badge 
+                className={`${deviceInfo.color} text-white text-xs px-2 py-1`}
+                title={`Mobile: ${isMobile}, Tablet: ${isTablet}, HasPointer: ${hasPointer}, TabletWithMouse: ${isTabletWithMouse}, ShowMobileNav: ${showMobileNav}`}
+              >
+                {deviceInfo.label}
+              </Badge>
               <UserPreferencesPopover />
               <Button variant="outline" size="lg" onClick={handleRefresh} className="h-12 px-4 text-base">
                 <RefreshCw className="w-5 h-5 mr-2" /> Actualizar
