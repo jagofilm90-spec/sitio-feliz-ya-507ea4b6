@@ -9,6 +9,7 @@ import { useUserRoles } from "@/hooks/useUserRoles";
 import { useSystemPresence } from "@/hooks/useSystemPresence";
 import { KPICards } from "@/components/dashboard/KPICards";
 import { EstadoOperacionesPanel } from "@/components/dashboard/EstadoOperacionesPanel";
+import { MapaRutasWidget } from "@/components/dashboard/MapaRutasWidget";
 import { VentasMensualesChart } from "@/components/dashboard/VentasMensualesChart";
 import { CobranzaCriticaPanel } from "@/components/dashboard/CobranzaCriticaPanel";
 import { CreditoExcedidoAlert } from "@/components/dashboard/CreditoExcedidoAlert";
@@ -76,6 +77,9 @@ const Dashboard = () => {
 
         {/* Estado de Operaciones en Tiempo Real */}
         <EstadoOperacionesPanel />
+
+        {/* Mapa de Rutas Activas en Vivo */}
+        <MapaRutasWidget />
 
         {/* Panel de Usuarios Conectados (solo admin) */}
         {isAdmin && <UsuariosConectadosPanel />}
