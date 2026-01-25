@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { triggerHaptic } from "@/utils/hapticFeedback";
 
 interface AlmacenMobileNavProps {
   activeTab: string;
@@ -36,6 +37,19 @@ export const AlmacenMobileNav = ({
   counters,
   onLogout
 }: AlmacenMobileNavProps) => {
+  
+  // Handler with haptic feedback for tab changes
+  const handleTabChange = (tabId: string, hasBadge?: boolean) => {
+    // Double pulse for tabs with notifications, light for normal
+    triggerHaptic(hasBadge ? 'double' : 'light');
+    onTabChange(tabId);
+  };
+
+  // Handler with haptic feedback for logout
+  const handleLogout = () => {
+    triggerHaptic('medium');
+    onLogout();
+  };
   
   // Items principales (siempre visibles en fila superior)
   const mainItems = [
@@ -60,32 +74,37 @@ export const AlmacenMobileNav = ({
     ] : []),
   ];
 
-  const renderNavButton = (item: typeof mainItems[0], isMain = true) => (
-    <button
-      key={item.id}
-      onClick={() => onTabChange(item.id)}
-      className={cn(
-        "flex flex-col items-center justify-center gap-1 relative min-w-[60px] px-2 py-2 rounded-lg transition-all",
-        isMain ? "flex-1" : "",
-        activeTab === item.id
-          ? "bg-primary text-primary-foreground"
-          : "text-muted-foreground hover:bg-muted"
-      )}
-    >
-      <div className="relative">
-        <item.icon className="w-5 h-5" />
-        {item.badge !== undefined && item.badge > 0 && (
-          <Badge 
-            variant={item.id === "alertas" ? "destructive" : "default"}
-            className="absolute -top-2 -right-2 h-4 min-w-4 p-0 flex items-center justify-center text-[10px]"
-          >
-            {item.badge > 9 ? "9+" : item.badge}
-          </Badge>
+  const renderNavButton = (item: typeof mainItems[0], isMain = true) => {
+    const hasBadge = item.badge !== undefined && item.badge > 0;
+    
+    return (
+      <button
+        key={item.id}
+        onClick={() => handleTabChange(item.id, hasBadge)}
+        className={cn(
+          "flex flex-col items-center justify-center gap-1 relative min-w-[60px] px-2 py-2 rounded-lg transition-all",
+          "active:scale-95 active:opacity-80", // Touch feedback
+          isMain ? "flex-1" : "",
+          activeTab === item.id
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:bg-muted"
         )}
-      </div>
-      <span className="text-[10px] font-medium truncate max-w-full">{item.label}</span>
-    </button>
-  );
+      >
+        <div className="relative">
+          <item.icon className="w-5 h-5" />
+          {hasBadge && (
+            <Badge 
+              variant={item.id === "alertas" ? "destructive" : "default"}
+              className="absolute -top-2 -right-2 h-4 min-w-4 p-0 flex items-center justify-center text-[10px]"
+            >
+              {item.badge > 9 ? "9+" : item.badge}
+            </Badge>
+          )}
+        </div>
+        <span className="text-[10px] font-medium truncate max-w-full">{item.label}</span>
+      </button>
+    );
+  };
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-40 pb-[env(safe-area-inset-bottom)]">
@@ -95,8 +114,12 @@ export const AlmacenMobileNav = ({
           {secondaryItems.map(item => renderNavButton(item, false))}
           {/* Botón de Cerrar Sesión */}
           <button
-            onClick={onLogout}
-            className="flex flex-col items-center justify-center gap-1 min-w-[60px] px-2 py-2 rounded-lg text-destructive hover:bg-destructive/10 transition-all"
+            onClick={handleLogout}
+            className={cn(
+              "flex flex-col items-center justify-center gap-1 min-w-[60px] px-2 py-2 rounded-lg",
+              "text-destructive hover:bg-destructive/10 transition-all",
+              "active:scale-95 active:bg-destructive/20"
+            )}
           >
             <LogOut className="w-5 h-5" />
             <span className="text-[10px] font-medium">Salir</span>
