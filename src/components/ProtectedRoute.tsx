@@ -40,17 +40,21 @@ const ProtectedRoute = ({
   const hasPermission = roles.some(role => allowedRoles.includes(role));
 
   if (!hasPermission) {
-    // Redirigir según el rol del usuario
+    // Redirigir según el rol del usuario a su panel dedicado
     const isOnlyAlmacen = roles.length === 1 && roles.includes("almacen");
     const isOnlyGerenteAlmacen = roles.length === 1 && roles.includes("gerente_almacen");
     const isOnlyChofer = roles.length === 1 && roles.includes("chofer");
     const isOnlySecretaria = roles.includes("secretaria") && !roles.includes("admin");
+    const isOnlyVendedor = roles.includes("vendedor") && !roles.includes("admin") && !roles.includes("secretaria");
     
     if (isOnlyAlmacen || isOnlyGerenteAlmacen) {
       return <Navigate to="/almacen-tablet" replace />;
     }
     if (isOnlyChofer) {
       return <Navigate to="/chofer" replace />;
+    }
+    if (isOnlyVendedor) {
+      return <Navigate to="/vendedor" replace />;
     }
     if (isOnlySecretaria) {
       return <Navigate to="/secretaria" replace />;

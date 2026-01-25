@@ -26,8 +26,6 @@ import {
   Menu,
   X,
   Home,
-  Shield,
-  UserCog,
   MessageCircle,
   ShoppingBag,
   PieChart,
@@ -38,14 +36,25 @@ import {
   CreditCard,
   Smartphone,
   ArrowLeft,
-  Lock,
-  Database,
   DollarSign,
   Settings,
+  UserCog,
+  LucideIcon,
 } from "lucide-react";
 
 interface LayoutProps {
   children: ReactNode;
+}
+
+interface MenuItem {
+  icon: LucideIcon;
+  label: string;
+  path: string;
+}
+
+interface MenuCategory {
+  label: string;
+  items: MenuItem[];
 }
 
 const Layout = ({ children }: LayoutProps) => {
@@ -87,22 +96,131 @@ const Layout = ({ children }: LayoutProps) => {
     return roles.length === 1 && roles.includes("almacen");
   }, [roles]);
 
+  // Detectar si usuario es solo gerente almacén
+  const isOnlyGerenteAlmacen = useMemo(() => {
+    return roles.length === 1 && roles.includes("gerente_almacen");
+  }, [roles]);
+
   // Detectar si usuario es solo secretaria (sin admin)
   const isOnlySecretaria = useMemo(() => {
     return roles.includes("secretaria") && !roles.includes("admin");
   }, [roles]);
 
+  // Detectar si usuario es solo vendedor (sin admin ni secretaria)
+  const isOnlyVendedor = useMemo(() => {
+    return roles.includes("vendedor") && !roles.includes("admin") && !roles.includes("secretaria");
+  }, [roles]);
+
+  // Detectar si usuario es solo chofer
+  const isOnlyChofer = useMemo(() => {
+    return roles.length === 1 && roles.includes("chofer");
+  }, [roles]);
+
   const allowedPagesForAlmacen = ["/almacen-tablet", "/chat"];
   const allowedPagesForSecretaria = ["/secretaria", "/chat"];
+  const allowedPagesForVendedor = ["/vendedor", "/chat", "/precios"];
+  const allowedPagesForChofer = ["/chofer", "/chat"];
 
-  // Segunda capa de defensa: si roles están listos y es solo almacen, redirigir inmediatamente
+  // Menú organizado por categorías
+  const menuCategories: MenuCategory[] = useMemo(() => [
+    {
+      label: "Principal",
+      items: [
+        { icon: Home, label: "Dashboard", path: "/dashboard" },
+      ]
+    },
+    {
+      label: "Catálogos",
+      items: [
+        { icon: Package, label: "Productos", path: "/productos" },
+        { icon: DollarSign, label: "Lista de Precios", path: "/precios" },
+        { icon: Bug, label: "Fumigaciones", path: "/fumigaciones" },
+      ]
+    },
+    {
+      label: "Operaciones",
+      items: [
+        { icon: Users, label: "Clientes", path: "/clientes" },
+        { icon: ShoppingCart, label: "Pedidos", path: "/pedidos" },
+        { icon: ShoppingBag, label: "Compras", path: "/compras" },
+        { icon: Warehouse, label: "Inventario", path: "/inventario" },
+      ]
+    },
+    {
+      label: "Logística",
+      items: [
+        { icon: Truck, label: "Rutas y Entregas", path: "/rutas" },
+      ]
+    },
+    {
+      label: "Finanzas",
+      items: [
+        { icon: FileText, label: "Facturación", path: "/facturas" },
+        { icon: PieChart, label: "Rentabilidad", path: "/rentabilidad" },
+      ]
+    },
+    {
+      label: "RRHH",
+      items: [
+        { icon: UserCog, label: "Empleados", path: "/empleados" },
+      ]
+    },
+    {
+      label: "Comunicación",
+      items: [
+        { icon: MessageCircle, label: "Chat", path: "/chat" },
+      ]
+    },
+    {
+      label: "Sistema",
+      items: [
+        { icon: Settings, label: "Configuración", path: "/configuracion" },
+        { icon: Smartphone, label: "App Móvil", path: "/generate-assets" },
+        { icon: Warehouse, label: "Almacén Tablet", path: "/almacen-tablet" },
+      ]
+    },
+  ], []);
+
+  // Filtrar categorías y items según permisos del usuario
+  const filteredCategories = useMemo(() => {
+    if (permissionsLoading || allowedPaths.length === 0) return menuCategories;
+    
+    return menuCategories.map(category => ({
+      ...category,
+      items: category.items.filter(item => {
+        // Ocultar /precios para secretarias (ya lo tienen en su panel dedicado)
+        if (item.path === '/precios' && isOnlySecretaria) {
+          return false;
+        }
+        return checkAccess(item.path);
+      })
+    })).filter(category => category.items.length > 0);
+  }, [allowedPaths, permissionsLoading, checkAccess, isOnlySecretaria, menuCategories]);
+
+  // Verificar si el usuario puede ver correos
+  const canViewEmails = useMemo(() => {
+    return checkAccess('/correos');
+  }, [checkAccess]);
+
+  // Redirección automática por rol (después de todos los hooks)
   if (!rolesLoading && isOnlyAlmacen && !allowedPagesForAlmacen.includes(location.pathname)) {
     return <Navigate to="/almacen-tablet" replace />;
   }
 
-  // Secretarias solo pueden estar en su panel exclusivo
+  if (!rolesLoading && isOnlyGerenteAlmacen && !allowedPagesForAlmacen.includes(location.pathname) && location.pathname !== "/configuracion") {
+    return <Navigate to="/almacen-tablet" replace />;
+  }
+
   if (!rolesLoading && isOnlySecretaria && !allowedPagesForSecretaria.includes(location.pathname)) {
     return <Navigate to="/secretaria" replace />;
+  }
+
+  if (!rolesLoading && isOnlyVendedor && !allowedPagesForVendedor.includes(location.pathname)) {
+    return <Navigate to="/vendedor" replace />;
+  }
+
+  if (!rolesLoading && isOnlyChofer && !allowedPagesForChofer.includes(location.pathname)) {
+    return <Navigate to="/chofer" replace />;
   }
 
   const handleLogout = async () => {
@@ -112,44 +230,6 @@ const Layout = ({ children }: LayoutProps) => {
       description: "Has cerrado sesión correctamente",
     });
   };
-
-  const allMenuItems = [
-    { icon: Home, label: "Dashboard", path: "/dashboard" },
-    { icon: Package, label: "Productos", path: "/productos" },
-    { icon: DollarSign, label: "Lista de Precios", path: "/precios" },
-    { icon: Bug, label: "Fumigaciones", path: "/fumigaciones" },
-    { icon: Users, label: "Clientes", path: "/clientes" },
-    { icon: ShoppingCart, label: "Pedidos", path: "/pedidos" },
-    { icon: ShoppingBag, label: "Compras", path: "/compras" },
-    { icon: Warehouse, label: "Inventario", path: "/inventario" },
-    { icon: PieChart, label: "Rentabilidad", path: "/rentabilidad" },
-    { icon: Truck, label: "Rutas y Entregas", path: "/rutas" },
-    { icon: FileText, label: "Facturación", path: "/facturas" },
-    { icon: UserCog, label: "Empleados", path: "/empleados" },
-    
-    { icon: MessageCircle, label: "Chat", path: "/chat" },
-    { icon: Smartphone, label: "App Móvil", path: "/generate-assets" },
-    { icon: Settings, label: "Configuración", path: "/configuracion" },
-    { icon: Warehouse, label: "Almacén Tablet", path: "/almacen-tablet" },
-  ];
-
-  // Filtrar menú según permisos dinámicos del usuario
-  const menuItems = useMemo(() => {
-    if (permissionsLoading || allowedPaths.length === 0) return allMenuItems;
-    
-    return allMenuItems.filter(item => {
-      // Ocultar /precios para secretarias (ya lo tienen en su panel dedicado)
-      if (item.path === '/precios' && isOnlySecretaria) {
-        return false;
-      }
-      return checkAccess(item.path);
-    });
-  }, [allowedPaths, permissionsLoading, checkAccess, isOnlySecretaria]);
-
-  // Verificar si el usuario puede ver correos
-  const canViewEmails = useMemo(() => {
-    return checkAccess('/correos');
-  }, [checkAccess]);
 
   const handleEmailAccountClick = (email: string, isMobile: boolean) => {
     navigate(`/correos?cuenta=${encodeURIComponent(email)}`);
@@ -224,6 +304,53 @@ const Layout = ({ children }: LayoutProps) => {
     );
   };
 
+  // Renderizar items del menú con categorías
+  const renderMenuItems = (isMobile: boolean = false) => {
+    return filteredCategories.map((category, categoryIndex) => (
+      <div key={category.label} className="mb-1">
+        {/* Separador visual entre categorías (excepto la primera) */}
+        {categoryIndex > 0 && (
+          <div className="h-px bg-border my-3" />
+        )}
+        {/* Label de categoría */}
+        <div className="px-3 py-1.5 mb-1">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+            {category.label}
+          </span>
+        </div>
+        {/* Items de la categoría */}
+        {category.items.map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.path;
+          const showBadge = item.path === "/chat" && unreadCount > 0;
+          return (
+            <Link 
+              key={item.path} 
+              to={item.path}
+              onClick={isMobile ? () => setMobileMenuOpen(false) : undefined}
+            >
+              <Button
+                variant={isActive ? "secondary" : "ghost"}
+                className="w-full justify-start relative group hover:bg-accent/80 hover:translate-x-1 transition-all duration-200 mb-0.5"
+              >
+                <Icon className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
+                {item.label}
+                {showBadge && (
+                  <Badge 
+                    variant="destructive" 
+                    className="ml-auto h-5 min-w-5 flex items-center justify-center px-1.5"
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </Badge>
+                )}
+              </Button>
+            </Link>
+          );
+        })}
+      </div>
+    ));
+  };
+
   // Mostrar loader mientras carga sesión O roles
   if (loading || rolesLoading) {
     return (
@@ -294,32 +421,15 @@ const Layout = ({ children }: LayoutProps) => {
       <div className="flex">
         {/* Sidebar - Desktop */}
         <aside className="hidden md:flex w-64 min-h-[calc(100vh-4rem)] border-r bg-card">
-          <nav className="flex flex-col w-full p-4 space-y-2">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.path;
-              const showBadge = item.path === "/chat" && unreadCount > 0;
-              return (
-                <Link key={item.path} to={item.path}>
-                  <Button
-                    variant={isActive ? "secondary" : "ghost"}
-                    className="w-full justify-start relative group hover:bg-accent/80 hover:translate-x-1 transition-all duration-200"
-                  >
-                    <Icon className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
-                    {item.label}
-                    {showBadge && (
-                      <Badge 
-                        variant="destructive" 
-                        className="ml-auto h-5 min-w-5 flex items-center justify-center px-1.5"
-                      >
-                        {unreadCount > 99 ? "99+" : unreadCount}
-                      </Badge>
-                    )}
-                  </Button>
-                </Link>
-              );
-            })}
-            {canViewEmails && renderEmailMenuItem(false)}
+          <nav className="flex flex-col w-full p-4 overflow-y-auto">
+            {renderMenuItems(false)}
+            {/* Correos después de las categorías */}
+            {canViewEmails && (
+              <div className="mt-1">
+                <div className="h-px bg-border my-3" />
+                {renderEmailMenuItem(false)}
+              </div>
+            )}
           </nav>
         </aside>
 
@@ -327,36 +437,14 @@ const Layout = ({ children }: LayoutProps) => {
         {mobileMenuOpen && (
           <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden">
             <aside className="fixed left-0 top-16 bottom-0 w-64 border-r bg-card overflow-y-auto">
-              <nav className="flex flex-col p-4 pb-24 space-y-2">
-                {menuItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.path;
-                  const showBadge = item.path === "/chat" && unreadCount > 0;
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <Button
-                        variant={isActive ? "secondary" : "ghost"}
-                        className="w-full justify-start relative group hover:bg-accent/80 hover:translate-x-1 transition-all duration-200"
-                      >
-                        <Icon className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
-                        {item.label}
-                        {showBadge && (
-                          <Badge 
-                            variant="destructive" 
-                            className="ml-auto h-5 min-w-5 flex items-center justify-center px-1.5"
-                          >
-                            {unreadCount > 99 ? "99+" : unreadCount}
-                          </Badge>
-                        )}
-                      </Button>
-                    </Link>
-                  );
-                })}
-                {canViewEmails && renderEmailMenuItem(true)}
+              <nav className="flex flex-col p-4 pb-24">
+                {renderMenuItems(true)}
+                {canViewEmails && (
+                  <div className="mt-1">
+                    <div className="h-px bg-border my-3" />
+                    {renderEmailMenuItem(true)}
+                  </div>
+                )}
               </nav>
             </aside>
           </div>
