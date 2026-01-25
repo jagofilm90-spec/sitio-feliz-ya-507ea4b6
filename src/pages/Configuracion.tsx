@@ -3,6 +3,8 @@ import Layout from "@/components/Layout";
 import { ErrorBoundaryModule } from "@/components/ErrorBoundaryModule";
 import { cn } from "@/lib/utils";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useCompactLayout } from "@/hooks/use-mobile";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Building2,
   Mail,
@@ -86,6 +88,7 @@ const sections: Section[] = [
 function ConfiguracionContent() {
   const [activeSection, setActiveSection] = useState("empresa");
   const { roles, isAdmin, hasRole } = useUserRoles();
+  const isCompact = useCompactLayout();
 
   // Filter sections based on user roles
   const allowedSections = sections.filter((section) =>
@@ -134,11 +137,10 @@ function ConfiguracionContent() {
         </div>
       </div>
 
-      {/* Main content with sidebar */}
-      <div className="flex flex-col md:flex-row gap-6 min-h-[600px]">
-        {/* Sidebar navigation */}
-        <nav className="md:w-64 flex-shrink-0">
-          <div className="sticky top-24 space-y-1">
+      {/* Navegación horizontal en tablets */}
+      {isCompact && (
+        <ScrollArea className="w-full pb-2">
+          <div className="flex gap-2 min-w-max">
             {allowedSections.map((section) => {
               const Icon = section.icon;
               const isActive = activeSection === section.id;
@@ -148,35 +150,66 @@ function ConfiguracionContent() {
                   key={section.id}
                   onClick={() => setActiveSection(section.id)}
                   className={cn(
-                    "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all",
+                    "flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all",
                     isActive
                       ? "bg-primary text-primary-foreground shadow-md"
-                      : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                      : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <Icon className="h-5 w-5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium">{section.label}</div>
-                    <div
-                      className={cn(
-                        "text-xs truncate",
-                        isActive
-                          ? "text-primary-foreground/80"
-                          : "text-muted-foreground"
-                      )}
-                    >
-                      {section.description}
-                    </div>
-                  </div>
+                  <Icon className="h-4 w-4 flex-shrink-0" />
+                  {section.label}
                 </button>
               );
             })}
           </div>
-        </nav>
+        </ScrollArea>
+      )}
+
+      {/* Main content with sidebar */}
+      <div className="flex flex-col lg:flex-row gap-6 min-h-[600px]">
+        {/* Sidebar navigation - solo en desktop grande */}
+        {!isCompact && (
+          <nav className="lg:w-56 xl:w-64 flex-shrink-0">
+            <div className="sticky top-24 space-y-1">
+              {allowedSections.map((section) => {
+                const Icon = section.icon;
+                const isActive = activeSection === section.id;
+
+                return (
+                  <button
+                    key={section.id}
+                    onClick={() => setActiveSection(section.id)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all",
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium">{section.label}</div>
+                      <div
+                        className={cn(
+                          "text-xs truncate",
+                          isActive
+                            ? "text-primary-foreground/80"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {section.description}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
+        )}
 
         {/* Content area */}
         <div className="flex-1 min-w-0">
-          <div className="bg-card rounded-lg border p-6">
+          <div className="bg-card rounded-lg border p-4 md:p-6">
             {renderTabContent()}
           </div>
         </div>

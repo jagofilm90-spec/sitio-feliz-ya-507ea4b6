@@ -105,7 +105,7 @@ export const AlertasFlotillaPanel = () => {
                 Todas las licencias están vigentes
               </div>
             ) : (
-              <ScrollArea className="h-48">
+              <ScrollArea className="h-40 md:h-44 lg:h-48">
                 <div className="space-y-3">
                   {alertasLicencias.map((alerta) => (
                     <div 
@@ -155,7 +155,7 @@ export const AlertasFlotillaPanel = () => {
                 Sin verificaciones pendientes
               </div>
             ) : (
-              <ScrollArea className="h-48">
+              <ScrollArea className="h-40 md:h-44 lg:h-48">
                 <div className="space-y-3">
                   {alertasVerificaciones.map((alerta) => (
                     <div 
@@ -200,7 +200,7 @@ export const AlertasFlotillaPanel = () => {
                 Todos los documentos están vigentes
               </div>
             ) : (
-              <ScrollArea className="h-48">
+              <ScrollArea className="h-40 md:h-44 lg:h-48">
                 <div className="space-y-3">
                   {alertasDocumentos.map((alerta) => (
                     <div 
@@ -248,7 +248,7 @@ export const AlertasFlotillaPanel = () => {
                 Sin reparaciones pendientes
               </div>
             ) : (
-              <ScrollArea className="h-48">
+              <ScrollArea className="h-40 md:h-44 lg:h-48">
                 <div className="space-y-3">
                   {checkupsPendientes.map((checkup) => (
                     <div 
