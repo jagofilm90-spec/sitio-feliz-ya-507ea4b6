@@ -95,56 +95,57 @@ export const SecretariaSidebar = ({
     <div className="dark">
       <Sidebar collapsible="icon" expandOnHover className="border-r border-sidebar-border">
         {/* Header con Logo */}
-        <SidebarHeader className="border-b border-sidebar-border">
+        <SidebarHeader className="border-b border-sidebar-border shrink-0">
           <div className={cn(
-            "flex items-center justify-center py-2 transition-all duration-200",
-            isCollapsed ? "px-0" : "px-4"
+            "flex items-center justify-center py-3 transition-all duration-300 ease-in-out",
+            isCollapsed ? "px-2" : "px-4"
           )}>
-            {isCollapsed ? (
-              <img src={iconoA} alt="A" className="h-8 w-8 object-contain" />
-            ) : (
-              <img src={logoAlmasa} alt="ALMASA" className="h-10 object-contain" />
-            )}
+            <div className="h-10 flex items-center justify-center overflow-hidden">
+              {isCollapsed ? (
+                <img src={iconoA} alt="A" className="h-8 w-8 object-contain transition-all duration-300" />
+              ) : (
+                <img src={logoAlmasa} alt="ALMASA" className="h-10 max-w-[180px] object-contain transition-all duration-300" />
+              )}
+            </div>
           </div>
         </SidebarHeader>
 
-      {/* User Info - Solo visible cuando está expandido */}
-      {!isCollapsed && (
-        <div className="px-4 py-3 border-b border-sidebar-border bg-sidebar-accent/50">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shrink-0">
-              <span className="text-primary-foreground font-semibold text-sm">
-                {userName?.charAt(0)?.toUpperCase() || "S"}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sidebar-foreground truncate text-sm">{userName || "Secretaria"}</p>
-              <p className="text-xs text-sidebar-foreground/60">Panel Secretaria</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Avatar compacto cuando está colapsado */}
-      {isCollapsed && (
-        <div className="flex justify-center py-3 border-b border-sidebar-border">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center cursor-default">
-                <span className="text-primary-foreground font-semibold text-xs">
-                  {userName?.charAt(0)?.toUpperCase() || "S"}
-                </span>
+        {/* User Info Section - con shrink-0 para evitar compresión */}
+        <div className="shrink-0 border-b border-sidebar-border">
+          {!isCollapsed ? (
+            <div className="px-4 py-3 bg-sidebar-accent/50">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shrink-0">
+                  <span className="text-primary-foreground font-semibold text-sm">
+                    {userName?.charAt(0)?.toUpperCase() || "S"}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sidebar-foreground truncate text-sm">{userName || "Secretaria"}</p>
+                  <p className="text-xs text-sidebar-foreground/60">Panel Secretaria</p>
+                </div>
               </div>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <p>{userName || "Secretaria"}</p>
-            </TooltipContent>
-          </Tooltip>
+            </div>
+          ) : (
+            <div className="flex justify-center py-3">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center cursor-default">
+                    <span className="text-primary-foreground font-semibold text-xs">
+                      {userName?.charAt(0)?.toUpperCase() || "S"}
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>{userName || "Secretaria"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          )}
         </div>
-      )}
 
-      {/* Navigation */}
-      <SidebarContent>
+        {/* Navigation */}
+        <SidebarContent className="flex-1 overflow-y-auto overflow-x-hidden">
         <SidebarGroup>
           <SidebarGroupLabel>Módulos</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -195,7 +196,7 @@ export const SecretariaSidebar = ({
       </SidebarContent>
 
         {/* Footer */}
-        <SidebarFooter className="border-t border-sidebar-border">
+        <SidebarFooter className="border-t border-sidebar-border shrink-0">
           {/* Live indicator */}
           {!isCollapsed && (
             <div className="px-2 py-1">
