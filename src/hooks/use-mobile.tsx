@@ -33,33 +33,30 @@ export function useHasPointer() {
 
   React.useEffect(() => {
     const checkPointer = () => {
-      const hasFinePointer = window.matchMedia('(pointer: fine)').matches;
-      const hasCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
-      const hasHoverCapability = window.matchMedia('(hover: hover)').matches;
+      // Usar "any-pointer" para detectar si ALGÚN dispositivo de entrada
+      // tiene puntero fino (mouse, trackpad), aunque el primario sea touch.
+      // Esto es crítico para iPads con Magic Keyboard/Trackpad conectado.
+      const anyFinePointer = window.matchMedia('(any-pointer: fine)').matches;
+      const anyHoverCapability = window.matchMedia('(any-hover: hover)').matches;
       
-      // Es "desktop con mouse real" si:
-      // - Tiene puntero fino (mouse/trackpad/stylus)
-      // - Puede hacer hover real (no touch-only)
-      // - NO tiene puntero grueso como primario (esto descarta tablets con stylus)
-      const isRealMouse = hasFinePointer && hasHoverCapability && !hasCoarsePointer;
-      
-      setHasPointer(isRealMouse);
+      // Es "dispositivo con mouse/trackpad disponible" si:
+      // - Tiene ALGÚN puntero fino (any-pointer: fine)
+      // - Y puede hacer hover con alguno (any-hover: hover)
+      // Esto cubre: iPads con Magic Keyboard, laptops, desktops
+      setHasPointer(anyFinePointer && anyHoverCapability);
     };
     
     checkPointer();
     
     // Listener para cambios (ej: conectar/desconectar mouse bluetooth a tablet)
-    const fineQuery = window.matchMedia('(pointer: fine)');
-    const coarseQuery = window.matchMedia('(pointer: coarse)');
-    const hoverQuery = window.matchMedia('(hover: hover)');
+    const fineQuery = window.matchMedia('(any-pointer: fine)');
+    const hoverQuery = window.matchMedia('(any-hover: hover)');
     
     fineQuery.addEventListener("change", checkPointer);
-    coarseQuery.addEventListener("change", checkPointer);
     hoverQuery.addEventListener("change", checkPointer);
     
     return () => {
       fineQuery.removeEventListener("change", checkPointer);
-      coarseQuery.removeEventListener("change", checkPointer);
       hoverQuery.removeEventListener("change", checkPointer);
     };
   }, []);
