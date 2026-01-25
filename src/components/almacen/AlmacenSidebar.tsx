@@ -87,11 +87,14 @@ export const AlmacenSidebar = ({
   empleadoFotoUrl,
   onFotoUpdated
 }: AlmacenSidebarProps) => {
-  const { state, isHovering } = useSidebar();
-  // Show expanded content when actually expanded OR hovering
-  const isCollapsed = state === "collapsed" && !isHovering;
+  const { isHovering, isMobile } = useSidebar();
   const [configOpen, setConfigOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // El sidebar está visualmente colapsado cuando NO está en hover
+  // En desktop con mouse: colapsado por defecto, expandido solo al hover
+  // La lógica de `hasPointer` ya se maneja en el componente Sidebar base
+  const isCollapsed = !isHovering;
 
   // Reloj en tiempo real
   useEffect(() => {
