@@ -10,7 +10,7 @@ import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CentroNotificaciones } from "@/components/CentroNotificaciones";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { Loader2, LogOut, Home } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -225,7 +225,6 @@ const SecretariaPanel = () => {
           {/* Desktop/Tablet Header */}
           <header className="hidden md:flex sticky top-0 z-40 bg-background/95 backdrop-blur border-b px-6 py-4 items-center justify-between">
             <div className="flex items-center gap-4">
-              <SidebarTrigger className="h-9 w-9" />
               <div>
                 <h1 className="text-xl font-semibold text-foreground">Panel Secretaria</h1>
                 <p className="text-sm text-muted-foreground">
