@@ -121,13 +121,13 @@ const EmailListView = ({
   }
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <ScrollArea className="h-[calc(100vh-280px)] min-h-[300px] max-h-[700px]">
-        <div className="divide-y">
+        <div className="divide-y overflow-hidden">
           {emails.map((email, index) => (
             <div
               key={email.id}
-              className="flex items-center gap-2 hover:bg-muted/50 transition-colors"
+              className="flex items-center gap-2 hover:bg-muted/50 transition-colors overflow-hidden"
             >
               {selectionMode && (
                 <div className="pl-4">
@@ -139,7 +139,7 @@ const EmailListView = ({
                 </div>
               )}
               <button
-                className="w-full text-left p-4 flex items-start gap-3"
+                className="w-full text-left p-4 flex items-start gap-3 min-w-0 overflow-hidden"
                 onClick={() => onSelectEmail(email.id, index)}
               >
                 {/* Blue dot for unread */}

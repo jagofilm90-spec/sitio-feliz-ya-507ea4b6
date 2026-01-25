@@ -169,9 +169,7 @@ export const SecretariaSidebar = ({
                       <div className="relative">
                         <Icon className="h-4 w-4" />
                         {hasBadge && isCollapsed && (
-                          <span className="absolute -top-1 -right-1 h-3 w-3 flex items-center justify-center bg-destructive text-destructive-foreground text-[8px] font-bold rounded-full">
-                            {item.badge! > 9 ? "+" : item.badge}
-                          </span>
+                          <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-destructive rounded-full ring-2 ring-sidebar" />
                         )}
                       </div>
                       <span>{item.label}</span>
