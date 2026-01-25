@@ -207,3 +207,73 @@
 .almacen-tablet .interactive-spacing > * + * {
   margin-top: 0.75rem;
 }
+
+/* ============================================
+   ACCESSIBILITY - Font Size Large
+   ============================================ */
+.font-size-large {
+  font-size: 112.5%; /* 18px base instead of 16px */
+}
+
+.font-size-large .text-xs {
+  font-size: 0.8125rem; /* 13px */
+}
+
+.font-size-large .text-sm {
+  font-size: 0.9375rem; /* 15px */
+}
+
+.font-size-large .text-base {
+  font-size: 1.125rem; /* 18px */
+}
+
+.font-size-large .text-lg {
+  font-size: 1.3125rem; /* 21px */
+}
+
+/* ============================================
+   ACCESSIBILITY - High Contrast Mode
+   ============================================ */
+.high-contrast {
+  /* Backgrounds - Pure white */
+  --background: 0 0% 100%;
+  --foreground: 0 0% 0%;
+  
+  /* Cards */
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 0%;
+  
+  /* Borders - Much stronger */
+  --border: 0 0% 20%;
+  --input: 0 0% 20%;
+  
+  /* Muted - Higher contrast */
+  --muted: 0 0% 92%;
+  --muted-foreground: 0 0% 15%;
+  
+  /* Primary - More saturated */
+  --primary: 352 100% 35%;
+  --primary-foreground: 0 0% 100%;
+}
+
+.dark.high-contrast {
+  /* Backgrounds - Pure black */
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  
+  /* Cards */
+  --card: 0 0% 5%;
+  --card-foreground: 0 0% 100%;
+  
+  /* Borders - White for visibility */
+  --border: 0 0% 80%;
+  --input: 0 0% 80%;
+  
+  /* Muted */
+  --muted: 0 0% 10%;
+  --muted-foreground: 0 0% 85%;
+  
+  /* Primary - Brighter */
+  --primary: 352 100% 60%;
+  --primary-foreground: 0 0% 0%;
+}
