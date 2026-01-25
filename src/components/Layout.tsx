@@ -9,6 +9,7 @@ import { useUnreadEmails } from "@/hooks/useUnreadEmails";
 import { useUserRoles, useUserModulePermissions } from "@/hooks/useUserRoles";
 import { CentroNotificaciones } from "@/components/CentroNotificaciones";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { UserPreferencesPopover } from "@/components/UserPreferencesPopover";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import {
   Collapsible,
@@ -397,6 +398,7 @@ const Layout = ({ children }: LayoutProps) => {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
+            <UserPreferencesPopover />
             <CentroNotificaciones />
             <Link to="/tarjeta">
               <Button variant="ghost" size="sm" className="hidden sm:flex">

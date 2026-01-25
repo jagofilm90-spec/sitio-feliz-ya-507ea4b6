@@ -134,14 +134,35 @@ const playHapticPattern = (pattern: number[]): boolean => {
 };
 
 /**
- * Triggers haptic feedback if the device supports it
+ * Checks if haptic feedback is enabled in user preferences
+ */
+const isHapticEnabled = (): boolean => {
+  try {
+    const stored = localStorage.getItem('user_preferences');
+    if (stored) {
+      const prefs = JSON.parse(stored);
+      return prefs.hapticEnabled !== false;
+    }
+    return true; // Enabled by default
+  } catch {
+    return true;
+  }
+};
+
+/**
+ * Triggers haptic feedback if the device supports it and user has it enabled
  * Falls back to AudioContext on iOS for simulated haptic
  * @param pattern - Predefined pattern name, duration in ms, or custom array pattern
- * @returns true if feedback was triggered, false if not supported
+ * @returns true if feedback was triggered, false if not supported or disabled
  */
 export const triggerHaptic = (
   pattern: HapticPattern | number | number[] = 'light'
 ): boolean => {
+  // Check user preference first
+  if (!isHapticEnabled()) {
+    return false;
+  }
+
   if (typeof navigator === 'undefined' && typeof window === 'undefined') {
     return false;
   }
