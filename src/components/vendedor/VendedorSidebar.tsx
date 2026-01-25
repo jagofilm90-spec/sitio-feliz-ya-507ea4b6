@@ -79,61 +79,62 @@ export const VendedorSidebar = ({
   ];
 
   return (
-    <Sidebar collapsible="icon" expandOnHover className="border-r">
-      {/* Header con Logo */}
-      <SidebarHeader className="border-b bg-gradient-to-r from-primary/5 via-primary/3 to-transparent">
-        <div className={cn(
-          "flex items-center justify-center py-2 transition-all",
-          isCollapsed ? "px-0" : "px-4"
-        )}>
-          {isCollapsed ? (
-            <img src={iconoA} alt="A" className="h-8 w-8 object-contain" />
-          ) : (
-            <img src={logoAlmasa} alt="ALMASA" className="h-10 object-contain" />
-          )}
-        </div>
-      </SidebarHeader>
-
-      {/* Info del vendedor - Solo visible cuando está expandido */}
-      {!isCollapsed && (
-        <div className="px-4 py-3 border-b bg-muted/20">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md ring-2 ring-primary/20 shrink-0">
-              <User className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-foreground truncate text-sm">{vendedorNombre}</p>
-              <p className="text-xs text-muted-foreground font-medium">Ejecutivo de Ventas</p>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={onNavigateTarjeta}
-              className="shrink-0 hover:bg-primary/10 h-8 w-8"
-              title="Mi Tarjeta Digital"
-            >
-              <IdCard className="h-4 w-4 text-muted-foreground" />
-            </Button>
+    <div className="dark">
+      <Sidebar collapsible="icon" expandOnHover className="border-r border-sidebar-border">
+        {/* Header con Logo */}
+        <SidebarHeader className="border-b border-sidebar-border">
+          <div className={cn(
+            "flex items-center justify-center py-2 transition-all",
+            isCollapsed ? "px-0" : "px-4"
+          )}>
+            {isCollapsed ? (
+              <img src={iconoA} alt="A" className="h-8 w-8 object-contain" />
+            ) : (
+              <img src={logoAlmasa} alt="ALMASA" className="h-10 object-contain" />
+            )}
           </div>
-        </div>
-      )}
+        </SidebarHeader>
 
-      {/* Avatar compacto cuando está colapsado */}
-      {isCollapsed && (
-        <div className="flex justify-center py-3 border-b">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center cursor-default">
-                <User className="h-4 w-4 text-primary-foreground" />
+        {/* Info del vendedor - Solo visible cuando está expandido */}
+        {!isCollapsed && (
+          <div className="px-4 py-3 border-b border-sidebar-border">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md ring-2 ring-primary/20 shrink-0">
+                <User className="h-5 w-5 text-primary-foreground" />
               </div>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <p>{vendedorNombre}</p>
-              <p className="text-xs text-muted-foreground">Ejecutivo de Ventas</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-      )}
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sidebar-foreground truncate text-sm">{vendedorNombre}</p>
+                <p className="text-xs text-muted-foreground font-medium">Ejecutivo de Ventas</p>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={onNavigateTarjeta}
+                className="shrink-0 hover:bg-primary/10 h-8 w-8"
+                title="Mi Tarjeta Digital"
+              >
+                <IdCard className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Avatar compacto cuando está colapsado */}
+        {isCollapsed && (
+          <div className="flex justify-center py-3 border-b border-sidebar-border">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center cursor-default">
+                  <User className="h-4 w-4 text-primary-foreground" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>{vendedorNombre}</p>
+                <p className="text-xs text-muted-foreground">Ejecutivo de Ventas</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        )}
 
       {/* Navegación */}
       <SidebarContent>
@@ -183,31 +184,32 @@ export const VendedorSidebar = ({
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Footer */}
-      <SidebarFooter className="border-t">
+        {/* Footer */}
+        <SidebarFooter className="border-t border-sidebar-border">
 
-        {/* Tarjeta Digital - solo en colapsado */}
-        {isCollapsed && (
+          {/* Tarjeta Digital - solo en colapsado */}
+          {isCollapsed && (
+            <SidebarMenuButton
+              tooltip="Mi Tarjeta Digital"
+              onClick={onNavigateTarjeta}
+              className="hover:bg-primary/10"
+            >
+              <IdCard className="h-4 w-4" />
+              <span>Mi Tarjeta</span>
+            </SidebarMenuButton>
+          )}
+
+          {/* Logout button */}
           <SidebarMenuButton
-            tooltip="Mi Tarjeta Digital"
-            onClick={onNavigateTarjeta}
-            className="hover:bg-primary/10"
+            tooltip="Cerrar sesión"
+            onClick={onLogout}
+            className="hover:bg-destructive/10 hover:text-destructive"
           >
-            <IdCard className="h-4 w-4" />
-            <span>Mi Tarjeta</span>
+            <LogOut className="h-4 w-4" />
+            <span>Cerrar sesión</span>
           </SidebarMenuButton>
-        )}
-
-        {/* Logout button */}
-        <SidebarMenuButton
-          tooltip="Cerrar sesión"
-          onClick={onLogout}
-          className="hover:bg-destructive/10 hover:text-destructive"
-        >
-          <LogOut className="h-4 w-4" />
-          <span>Cerrar sesión</span>
-        </SidebarMenuButton>
-      </SidebarFooter>
-    </Sidebar>
+        </SidebarFooter>
+      </Sidebar>
+    </div>
   );
 };
