@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { playNotificationSound } from "@/utils/notificationSound";
 
 interface EstadoOperaciones {
   autorizaciones: {
@@ -44,6 +46,38 @@ const initialState: EstadoOperaciones = {
 
 export const useEstadoOperaciones = () => {
   const [estado, setEstado] = useState<EstadoOperaciones>(initialState);
+  const { toast } = useToast();
+  
+  // Refs para tracking de valores anteriores (para detectar nuevas solicitudes)
+  const prevAutorizacionesRef = useRef<{ descuentos: number; cotizaciones: number; ordenesCompra: number } | null>(null);
+  const isInitialLoadRef = useRef(true);
+
+  // Función para mostrar notificación con sonido
+  const notificarNuevaSolicitud = useCallback((tipo: 'descuento' | 'cotizacion' | 'orden_compra', cantidad: number) => {
+    // Reproducir sonido urgente
+    playNotificationSound('urgent');
+    
+    const mensajes = {
+      descuento: {
+        title: "🔔 Nueva Solicitud de Descuento",
+        description: `${cantidad} solicitud${cantidad > 1 ? 'es' : ''} de descuento pendiente${cantidad > 1 ? 's' : ''} de autorizar`,
+      },
+      cotizacion: {
+        title: "🔔 Nueva Cotización por Autorizar",
+        description: `${cantidad} cotización${cantidad > 1 ? 'es' : ''} pendiente${cantidad > 1 ? 's' : ''} de autorización`,
+      },
+      orden_compra: {
+        title: "🔔 Nueva Orden de Compra",
+        description: `${cantidad} OC pendiente${cantidad > 1 ? 's' : ''} de autorizar`,
+      },
+    };
+
+    toast({
+      title: mensajes[tipo].title,
+      description: mensajes[tipo].description,
+      duration: 8000,
+    });
+  }, [toast]);
 
   const cargarAutorizaciones = useCallback(async () => {
     try {
@@ -76,6 +110,43 @@ export const useEstadoOperaciones = () => {
       return initialState.autorizaciones;
     }
   }, []);
+
+  // Función para cargar y notificar cambios en autorizaciones
+  const cargarYNotificarAutorizaciones = useCallback(async () => {
+    const nuevas = await cargarAutorizaciones();
+    
+    // Solo notificar si no es la carga inicial y hay incrementos
+    if (!isInitialLoadRef.current && prevAutorizacionesRef.current) {
+      const prev = prevAutorizacionesRef.current;
+      
+      // Detectar nuevas solicitudes de descuento
+      if (nuevas.descuentos > prev.descuentos) {
+        const cantidad = nuevas.descuentos - prev.descuentos;
+        notificarNuevaSolicitud('descuento', cantidad);
+      }
+      
+      // Detectar nuevas cotizaciones
+      if (nuevas.cotizaciones > prev.cotizaciones) {
+        const cantidad = nuevas.cotizaciones - prev.cotizaciones;
+        notificarNuevaSolicitud('cotizacion', cantidad);
+      }
+      
+      // Detectar nuevas OC
+      if (nuevas.ordenesCompra > prev.ordenesCompra) {
+        const cantidad = nuevas.ordenesCompra - prev.ordenesCompra;
+        notificarNuevaSolicitud('orden_compra', cantidad);
+      }
+    }
+    
+    // Actualizar referencia
+    prevAutorizacionesRef.current = {
+      descuentos: nuevas.descuentos,
+      cotizaciones: nuevas.cotizaciones,
+      ordenesCompra: nuevas.ordenesCompra,
+    };
+    
+    return nuevas;
+  }, [cargarAutorizaciones, notificarNuevaSolicitud]);
 
   const cargarRecepciones = useCallback(async () => {
     try {
@@ -225,6 +296,13 @@ export const useEstadoOperaciones = () => {
       cargarAlertas(),
     ]);
 
+    // Guardar referencia inicial
+    prevAutorizacionesRef.current = {
+      descuentos: autorizaciones.descuentos,
+      cotizaciones: autorizaciones.cotizaciones,
+      ordenesCompra: autorizaciones.ordenesCompra,
+    };
+
     setEstado({
       autorizaciones,
       recepciones,
@@ -233,6 +311,9 @@ export const useEstadoOperaciones = () => {
       lastUpdate: new Date(),
       loading: false,
     });
+
+    // Marcar que la carga inicial terminó
+    isInitialLoadRef.current = false;
   }, [cargarAutorizaciones, cargarRecepciones, cargarRutas, cargarAlertas]);
 
   // Carga inicial y suscripciones realtime
@@ -245,7 +326,7 @@ export const useEstadoOperaciones = () => {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "solicitudes_descuento" },
-        () => cargarAutorizaciones().then((a) => 
+        () => cargarYNotificarAutorizaciones().then((a) => 
           setEstado((prev) => ({ ...prev, autorizaciones: a, lastUpdate: new Date() }))
         )
       )
@@ -257,7 +338,19 @@ export const useEstadoOperaciones = () => {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "cotizaciones" },
-        () => cargarAutorizaciones().then((a) => 
+        () => cargarYNotificarAutorizaciones().then((a) => 
+          setEstado((prev) => ({ ...prev, autorizaciones: a, lastUpdate: new Date() }))
+        )
+      )
+      .subscribe();
+
+    // Suscripción a cambios en OC
+    const ocChannel = supabase
+      .channel("estado-ops-ordenes-compra")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "ordenes_compra" },
+        () => cargarYNotificarAutorizaciones().then((a) => 
           setEstado((prev) => ({ ...prev, autorizaciones: a, lastUpdate: new Date() }))
         )
       )
@@ -309,12 +402,13 @@ export const useEstadoOperaciones = () => {
     return () => {
       supabase.removeChannel(descuentosChannel);
       supabase.removeChannel(cotizacionesChannel);
+      supabase.removeChannel(ocChannel);
       supabase.removeChannel(recepcionesChannel);
       supabase.removeChannel(rutasChannel);
       supabase.removeChannel(entregasChannel);
       clearInterval(alertasInterval);
     };
-  }, [cargarTodo, cargarAutorizaciones, cargarRecepciones, cargarRutas, cargarAlertas]);
+  }, [cargarTodo, cargarYNotificarAutorizaciones, cargarRecepciones, cargarRutas, cargarAlertas]);
 
   return { ...estado, refetch: cargarTodo };
 };
