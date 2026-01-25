@@ -75,40 +75,47 @@ const Auth = () => {
       const roles = userRoles.map(r => r.role);
       console.log("User roles for redirect:", roles);
       
-      // Si tiene SOLO rol almacen o gerente_almacen, ir a tablet
+      // ==========================================
+      // REDIRECCIÓN AUTOMÁTICA POR ROL
+      // Cada rol operativo va a su panel dedicado
+      // ==========================================
+
+      // 1. Solo Almacén o Gerente Almacén -> Almacén Tablet
       const isOnlyAlmacen = roles.length === 1 && roles[0] === "almacen";
       const isOnlyGerenteAlmacen = roles.length === 1 && roles[0] === "gerente_almacen";
       if (isOnlyAlmacen || isOnlyGerenteAlmacen) {
-        console.log("Redirecting to /almacen-tablet");
+        console.log("Redirecting almacen/gerente to /almacen-tablet");
         navigate("/almacen-tablet", { replace: true });
         return;
       }
 
-      // Solo chofer -> panel chofer
+      // 2. Solo Chofer -> Panel Chofer
       const isOnlyChofer = roles.length === 1 && roles[0] === "chofer";
       if (isOnlyChofer) {
-        console.log("Redirecting to /chofer");
+        console.log("Redirecting chofer to /chofer");
         navigate("/chofer", { replace: true });
         return;
       }
 
-      // Solo vendedor -> panel vendedor
+      // 3. Solo Vendedor (sin admin ni secretaria) -> Panel Vendedor
       const isOnlyVendedor = roles.includes("vendedor") && 
         !roles.includes("admin") && !roles.includes("secretaria");
       if (isOnlyVendedor) {
-        console.log("Redirecting to /vendedor");
+        console.log("Redirecting vendedor to /vendedor");
         navigate("/vendedor", { replace: true });
         return;
       }
 
-      // Solo secretaria (sin admin) -> panel secretaria
+      // 4. Solo Secretaria (sin admin) -> Panel Secretaria
       const isOnlySecretaria = roles.includes("secretaria") && !roles.includes("admin");
       if (isOnlySecretaria) {
-        console.log("Redirecting to /secretaria");
+        console.log("Redirecting secretaria to /secretaria");
         navigate("/secretaria", { replace: true });
         return;
       }
 
+      // 5. Admin, Contadora, o roles mixtos -> Dashboard ejecutivo
+      console.log("Redirecting to executive dashboard");
       navigate("/dashboard", { replace: true });
     } catch (error) {
       console.error("Error checking user role:", error);
