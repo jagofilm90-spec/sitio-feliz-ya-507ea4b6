@@ -233,7 +233,7 @@ const Sidebar = React.forwardRef<
       {/* Actual sidebar - positioned absolute to overlay content when expanded */}
       <div
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh flex-col transition-[width] duration-200 ease-linear md:flex",
+          "fixed inset-y-0 z-50 hidden h-svh flex-col transition-[width] duration-200 ease-linear md:flex",
           side === "left" ? "left-0" : "right-0",
           variant === "floating" || variant === "inset"
             ? "p-2"
