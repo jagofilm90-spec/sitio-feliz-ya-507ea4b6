@@ -32,6 +32,7 @@ import { VehiculoCheckupsTab } from "@/components/almacen/VehiculoCheckupsTab";
 import { AlmacenSidebar } from "@/components/almacen/AlmacenSidebar";
 import { AlmacenMobileNav } from "@/components/almacen/AlmacenMobileNav";
 import { LiveIndicator } from "@/components/ui/live-indicator";
+import { UserPreferencesPopover } from "@/components/UserPreferencesPopover";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useSystemPresence } from "@/hooks/useSystemPresence";
 import { useShowMobileNav } from "@/hooks/use-mobile";
@@ -322,6 +323,7 @@ const AlmacenTablet = () => {
                   {isOnline ? "Online" : "Offline"}
                 </Badge>
               )}
+              <UserPreferencesPopover />
               <Button variant="outline" size="lg" onClick={handleRefresh} className="h-12 px-4 text-base">
                 <RefreshCw className="w-5 h-5 mr-2" /> Actualizar
               </Button>
