@@ -92,20 +92,21 @@ export const SecretariaSidebar = ({
   ];
 
   return (
-    <Sidebar collapsible="icon" expandOnHover className="border-r">
-      {/* Header con Logo */}
-      <SidebarHeader className="border-b border-sidebar-border bg-gradient-to-r from-primary/20 to-primary/10">
-        <div className={cn(
-          "flex items-center justify-center py-2 transition-all duration-200",
-          isCollapsed ? "px-0" : "px-4"
-        )}>
-          {isCollapsed ? (
-            <img src={iconoA} alt="A" className="h-8 w-8 object-contain" />
-          ) : (
-            <img src={logoAlmasa} alt="ALMASA" className="h-10 object-contain brightness-0 invert dark:brightness-100 dark:invert-0" />
-          )}
-        </div>
-      </SidebarHeader>
+    <div className="dark">
+      <Sidebar collapsible="icon" expandOnHover className="border-r border-sidebar-border">
+        {/* Header con Logo */}
+        <SidebarHeader className="border-b border-sidebar-border">
+          <div className={cn(
+            "flex items-center justify-center py-2 transition-all duration-200",
+            isCollapsed ? "px-0" : "px-4"
+          )}>
+            {isCollapsed ? (
+              <img src={iconoA} alt="A" className="h-8 w-8 object-contain" />
+            ) : (
+              <img src={logoAlmasa} alt="ALMASA" className="h-10 object-contain" />
+            )}
+          </div>
+        </SidebarHeader>
 
       {/* User Info - Solo visible cuando está expandido */}
       {!isCollapsed && (
@@ -193,37 +194,38 @@ export const SecretariaSidebar = ({
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Footer */}
-      <SidebarFooter className="border-t border-sidebar-border">
-        {/* Live indicator */}
-        {!isCollapsed && (
-          <div className="px-2 py-1">
-            <LiveIndicator label="Sincronizado" className="text-sidebar-foreground/60 text-xs" />
-          </div>
-        )}
+        {/* Footer */}
+        <SidebarFooter className="border-t border-sidebar-border">
+          {/* Live indicator */}
+          {!isCollapsed && (
+            <div className="px-2 py-1">
+              <LiveIndicator label="Sincronizado" className="text-sidebar-foreground/60 text-xs" />
+            </div>
+          )}
 
-        {/* Dashboard button for multiple roles */}
-        {hasMultipleRoles && (
+          {/* Dashboard button for multiple roles */}
+          {hasMultipleRoles && (
+            <SidebarMenuButton
+              tooltip="Dashboard"
+              onClick={onNavigateDashboard}
+              className="hover:bg-sidebar-accent"
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              <span>Dashboard</span>
+            </SidebarMenuButton>
+          )}
+
+          {/* Logout button */}
           <SidebarMenuButton
-            tooltip="Dashboard"
-            onClick={onNavigateDashboard}
-            className="hover:bg-sidebar-accent"
+            tooltip="Cerrar sesión"
+            onClick={onLogout}
+            className="hover:bg-destructive/10 hover:text-destructive"
           >
-            <LayoutDashboard className="h-4 w-4" />
-            <span>Dashboard</span>
+            <LogOut className="h-4 w-4" />
+            <span>Cerrar sesión</span>
           </SidebarMenuButton>
-        )}
-
-        {/* Logout button */}
-        <SidebarMenuButton
-          tooltip="Cerrar sesión"
-          onClick={onLogout}
-          className="hover:bg-destructive/10 hover:text-destructive"
-        >
-          <LogOut className="h-4 w-4" />
-          <span>Cerrar sesión</span>
-        </SidebarMenuButton>
-      </SidebarFooter>
-    </Sidebar>
+        </SidebarFooter>
+      </Sidebar>
+    </div>
   );
 };
