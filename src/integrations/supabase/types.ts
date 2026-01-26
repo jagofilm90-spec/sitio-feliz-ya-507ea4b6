@@ -4238,6 +4238,64 @@ export type Database = {
           },
         ]
       }
+      proveedor_factura_detalles: {
+        Row: {
+          cantidad_facturada: number
+          created_at: string | null
+          diferencia: number
+          factura_id: string
+          id: string
+          precio_original_oc: number
+          precio_unitario_facturado: number
+          producto_id: string
+          subtotal_facturado: number
+        }
+        Insert: {
+          cantidad_facturada: number
+          created_at?: string | null
+          diferencia?: number
+          factura_id: string
+          id?: string
+          precio_original_oc: number
+          precio_unitario_facturado: number
+          producto_id: string
+          subtotal_facturado: number
+        }
+        Update: {
+          cantidad_facturada?: number
+          created_at?: string | null
+          diferencia?: number
+          factura_id?: string
+          id?: string
+          precio_original_oc?: number
+          precio_unitario_facturado?: number
+          producto_id?: string
+          subtotal_facturado?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proveedor_factura_detalles_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "proveedor_facturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedor_factura_detalles_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedor_factura_detalles_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proveedor_factura_entregas: {
         Row: {
           created_at: string
@@ -4290,8 +4348,10 @@ export type Database = {
         Row: {
           archivo_url: string | null
           comprobante_pago_url: string | null
+          conciliacion_completada: boolean | null
           creado_por: string | null
           created_at: string
+          diferencia_total: number | null
           fecha_factura: string
           fecha_pago: string | null
           id: string
@@ -4300,6 +4360,7 @@ export type Database = {
           numero_factura: string
           orden_compra_id: string
           referencia_pago: string | null
+          requiere_conciliacion: boolean | null
           status_pago: string
           tipo_pago: string
           updated_at: string
@@ -4307,8 +4368,10 @@ export type Database = {
         Insert: {
           archivo_url?: string | null
           comprobante_pago_url?: string | null
+          conciliacion_completada?: boolean | null
           creado_por?: string | null
           created_at?: string
+          diferencia_total?: number | null
           fecha_factura?: string
           fecha_pago?: string | null
           id?: string
@@ -4317,6 +4380,7 @@ export type Database = {
           numero_factura: string
           orden_compra_id: string
           referencia_pago?: string | null
+          requiere_conciliacion?: boolean | null
           status_pago?: string
           tipo_pago?: string
           updated_at?: string
@@ -4324,8 +4388,10 @@ export type Database = {
         Update: {
           archivo_url?: string | null
           comprobante_pago_url?: string | null
+          conciliacion_completada?: boolean | null
           creado_por?: string | null
           created_at?: string
+          diferencia_total?: number | null
           fecha_factura?: string
           fecha_pago?: string | null
           id?: string
@@ -4334,6 +4400,7 @@ export type Database = {
           numero_factura?: string
           orden_compra_id?: string
           referencia_pago?: string | null
+          requiere_conciliacion?: boolean | null
           status_pago?: string
           tipo_pago?: string
           updated_at?: string
@@ -5743,6 +5810,10 @@ export type Database = {
       check_client_order_access: {
         Args: { p_pedido_cliente_id: string; p_user_id: string }
         Returns: boolean
+      }
+      conciliar_factura_proveedor: {
+        Args: { p_factura_id: string; p_productos: Json }
+        Returns: undefined
       }
       decrementar_lote: {
         Args: { p_cantidad: number; p_lote_id: string }
