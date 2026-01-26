@@ -81,31 +81,60 @@ export const VendedorSidebar = ({
   return (
     <div className="dark">
       <Sidebar collapsible="icon" expandOnHover className="border-r border-sidebar-border">
-        {/* Header con Logo */}
+        {/* Header con Logo - Siempre visible */}
         <SidebarHeader className="border-b border-sidebar-border">
-          <div className={cn(
-            "flex items-center justify-center py-2 transition-all",
-            isCollapsed ? "px-0" : "px-4"
-          )}>
-            {isCollapsed ? (
-              <img src={iconoA} alt="A" className="h-8 w-8 object-contain" />
-            ) : (
-              <img src={logoAlmasa} alt="ALMASA" className="h-10 object-contain" />
+          <div className="flex flex-col items-center py-2 gap-1">
+            <img src={iconoA} alt="A" className="h-7 w-7 object-contain" />
+            {!isCollapsed && (
+              <img src={logoAlmasa} alt="ALMASA" className="h-6 object-contain" />
             )}
           </div>
         </SidebarHeader>
 
-        {/* Info del vendedor - Solo visible cuando está expandido */}
-        {!isCollapsed && (
-          <div className="px-4 py-3 border-b border-sidebar-border">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md ring-2 ring-primary/20 shrink-0">
-                <User className="h-5 w-5 text-primary-foreground" />
+        {/* User Info - Nombre siempre visible, avatar solo expandido */}
+        <div className="border-b border-sidebar-border">
+          <div className={cn(
+            "flex items-center gap-2 p-2",
+            isCollapsed ? "flex-col justify-center" : "flex-row"
+          )}>
+            {/* Avatar - Solo cuando expandido */}
+            {!isCollapsed && (
+              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md ring-2 ring-primary/20 shrink-0">
+                <User className="h-4 w-4 text-primary-foreground" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sidebar-foreground truncate text-sm">{vendedorNombre}</p>
-                <p className="text-xs text-muted-foreground font-medium">Ejecutivo de Ventas</p>
-              </div>
+            )}
+            
+            {/* Nombre - Siempre visible */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className={cn(
+                  "min-w-0",
+                  isCollapsed ? "w-full text-center" : "flex-1 text-left"
+                )}>
+                  <p className={cn(
+                    "text-sidebar-foreground font-semibold truncate",
+                    isCollapsed ? "text-[10px]" : "text-sm"
+                  )}>
+                    {isCollapsed 
+                      ? (vendedorNombre?.split(' ')[0] || "Vendedor")
+                      : vendedorNombre
+                    }
+                  </p>
+                  {!isCollapsed && (
+                    <p className="text-xs text-muted-foreground font-medium">Ejecutivo de Ventas</p>
+                  )}
+                </div>
+              </TooltipTrigger>
+              {isCollapsed && (
+                <TooltipContent side="right">
+                  <p>{vendedorNombre}</p>
+                  <p className="text-xs text-muted-foreground">Ejecutivo de Ventas</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+            
+            {/* Tarjeta Digital button - Solo expandido */}
+            {!isCollapsed && (
               <Button 
                 variant="ghost" 
                 size="icon"
@@ -115,26 +144,9 @@ export const VendedorSidebar = ({
               >
                 <IdCard className="h-4 w-4 text-muted-foreground" />
               </Button>
-            </div>
+            )}
           </div>
-        )}
-
-        {/* Avatar compacto cuando está colapsado */}
-        {isCollapsed && (
-          <div className="flex justify-center py-3 border-b border-sidebar-border">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center cursor-default">
-                  <User className="h-4 w-4 text-primary-foreground" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>{vendedorNombre}</p>
-                <p className="text-xs text-muted-foreground">Ejecutivo de Ventas</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        )}
+        </div>
 
       {/* Navegación */}
       <SidebarContent>
