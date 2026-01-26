@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarIcon, Upload, Loader2, Mail, Send, X, Plus, Save } from "lucide-react";
+import { CalendarIcon, Upload, Loader2, Mail, Send, X, Plus, Save, Package, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,11 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { registrarCorreoEnviado } from "./HistorialCorreosOC";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface MarcarPagadoDialogProps {
   open: boolean;
@@ -57,6 +62,7 @@ export function MarcarPagadoDialog({
   const [referenciaPago, setReferenciaPago] = useState("");
   const [comprobante, setComprobante] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [devolucionesOpen, setDevolucionesOpen] = useState(true);
   
   // Estado para envío de correo
   const [enviarCorreo, setEnviarCorreo] = useState(false);
@@ -64,6 +70,20 @@ export function MarcarPagadoDialog({
   const [emailManual, setEmailManual] = useState("");
   const [guardarEmail, setGuardarEmail] = useState(false);
   const [enviandoCorreo, setEnviandoCorreo] = useState(false);
+
+  // Formato de motivos legible
+  const formatMotivo = (motivo: string) => {
+    const motivos: Record<string, string> = {
+      'roto': 'Empaque roto',
+      'rechazado_calidad': 'Calidad rechazada',
+      'no_llego': 'No llegó',
+      'faltante': 'Faltante',
+      'dañado': 'Producto dañado',
+      'vencido': 'Producto vencido',
+      'error_cantidad': 'Error en cantidad',
+    };
+    return motivos[motivo] || motivo;
+  };
 
   // Fetch contacts that receive payment notifications
   const { data: contactosPagos = [], refetch: refetchContactos } = useQuery({
@@ -83,6 +103,51 @@ export function MarcarPagadoDialog({
       return data || [];
     },
     enabled: !!orden?.proveedor_id && open,
+  });
+
+  // Query para obtener detalles de devoluciones
+  const { data: devolucionesDetalle = [] } = useQuery({
+    queryKey: ["devoluciones-detalle-pago", orden?.id],
+    queryFn: async () => {
+      if (!orden?.id) return [];
+      
+      // Obtener las devoluciones con productos
+      const { data: devoluciones, error } = await supabase
+        .from("devoluciones_proveedor")
+        .select(`
+          id,
+          cantidad_devuelta,
+          motivo,
+          producto_id,
+          productos (nombre, codigo)
+        `)
+        .eq("orden_compra_id", orden.id);
+      
+      if (error) throw error;
+      if (!devoluciones || devoluciones.length === 0) return [];
+      
+      // Para cada devolución, obtener el precio unitario
+      const devolucionesConPrecio = await Promise.all(
+        devoluciones.map(async (dev) => {
+          const { data: detalle } = await supabase
+            .from("ordenes_compra_detalles")
+            .select("precio_unitario_compra")
+            .eq("orden_compra_id", orden.id)
+            .eq("producto_id", dev.producto_id)
+            .maybeSingle();
+          
+          const precioUnitario = detalle?.precio_unitario_compra || 0;
+          return {
+            ...dev,
+            precio_unitario: precioUnitario,
+            monto: dev.cantidad_devuelta * precioUnitario
+          };
+        })
+      );
+      
+      return devolucionesConPrecio;
+    },
+    enabled: !!orden?.id && open && !!(orden?.monto_devoluciones && orden.monto_devoluciones > 0),
   });
 
   // Initialize email when dialog opens - prioritize contacts with recibe_pagos
@@ -216,6 +281,39 @@ export function MarcarPagadoDialog({
       if (enviarCorreo && emailDestino) {
         setEnviandoCorreo(true);
         try {
+          // Construir tabla de devoluciones para el correo si hay
+          let devolucionesHtml = '';
+          if (orden?.monto_devoluciones && orden.monto_devoluciones > 0 && devolucionesDetalle.length > 0) {
+            const devolucionesRows = devolucionesDetalle.map((dev: any) => `
+              <tr>
+                <td style="padding: 6px; border: 1px solid #ddd;">${dev.productos?.nombre || 'Producto'}</td>
+                <td style="padding: 6px; border: 1px solid #ddd; text-align: center;">${dev.cantidad_devuelta}</td>
+                <td style="padding: 6px; border: 1px solid #ddd;">${formatMotivo(dev.motivo)}</td>
+                <td style="padding: 6px; border: 1px solid #ddd; text-align: right; color: #dc2626;">-$${dev.monto.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td>
+              </tr>
+            `).join('');
+            
+            devolucionesHtml = `
+              <h3 style="color: #333; margin-top: 30px;">Detalle de Devoluciones Aplicadas:</h3>
+              <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+                <tr style="background: #fef2f2;">
+                  <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Producto</th>
+                  <th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Cantidad</th>
+                  <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Motivo</th>
+                  <th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Descuento</th>
+                </tr>
+                ${devolucionesRows}
+                <tr style="background: #fef2f2; font-weight: bold;">
+                  <td colspan="3" style="padding: 8px; border: 1px solid #ddd; text-align: right;">Total Devoluciones:</td>
+                  <td style="padding: 8px; border: 1px solid #ddd; text-align: right; color: #dc2626;">-$${orden.monto_devoluciones.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td>
+                </tr>
+              </table>
+            `;
+          }
+
+          const montoAPagar = orden?.total_ajustado ?? orden?.total ?? 0;
+          const tieneDescuentos = orden?.monto_devoluciones && orden.monto_devoluciones > 0;
+
           const emailBody = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #333;">Confirmación de Pago</h2>
@@ -227,10 +325,25 @@ export function MarcarPagadoDialog({
                   <td style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5; font-weight: bold;">Folio OC:</td>
                   <td style="padding: 8px; border: 1px solid #ddd;">${orden?.folio}</td>
                 </tr>
+                ${tieneDescuentos ? `
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5; font-weight: bold;">Total Original:</td>
+                  <td style="padding: 8px; border: 1px solid #ddd;">$${orden?.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #ddd; background: #fef2f2; font-weight: bold; color: #dc2626;">(-) Devoluciones:</td>
+                  <td style="padding: 8px; border: 1px solid #ddd; color: #dc2626;">-$${orden?.monto_devoluciones?.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #ddd; background: #f0fdf4; font-weight: bold; color: #16a34a;">Monto Pagado:</td>
+                  <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #16a34a;">$${montoAPagar.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td>
+                </tr>
+                ` : `
                 <tr>
                   <td style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5; font-weight: bold;">Monto:</td>
                   <td style="padding: 8px; border: 1px solid #ddd;">$${orden?.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td>
                 </tr>
+                `}
                 <tr>
                   <td style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5; font-weight: bold;">Fecha de pago:</td>
                   <td style="padding: 8px; border: 1px solid #ddd;">${format(fechaPago, "PPP", { locale: es })}</td>
@@ -240,6 +353,8 @@ export function MarcarPagadoDialog({
                   <td style="padding: 8px; border: 1px solid #ddd;">${referenciaPago}</td>
                 </tr>
               </table>
+              
+              ${devolucionesHtml}
               
               ${comprobante ? '<p>Adjuntamos el comprobante de pago para su referencia.</p>' : ''}
               
@@ -359,45 +474,83 @@ export function MarcarPagadoDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Info de la orden */}
-          <div className="rounded-lg bg-muted p-3 space-y-1 text-sm">
-            <div className="flex justify-between">
+          {/* Resumen Visual de Pago */}
+          <div className="rounded-lg border bg-card p-4 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Package className="h-4 w-4 text-primary" />
+              RESUMEN DE PAGO
+            </div>
+            
+            <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Folio:</span>
               <span className="font-medium">{orden.folio}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Proveedor:</span>
               <span className="font-medium">{orden.proveedor_nombre}</span>
             </div>
             
-            {/* Si hay devoluciones, mostrar desglose */}
-            {orden.monto_devoluciones && orden.monto_devoluciones > 0 ? (
-              <>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Original:</span>
-                  <span>${orden.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between text-destructive">
-                  <span>(-) Devoluciones:</span>
-                  <span>-${orden.monto_devoluciones.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="border-t pt-1 mt-1">
-                  <div className="flex justify-between">
-                    <span className="font-medium">Total a Pagar:</span>
-                    <span className="font-bold text-primary">
-                      ${(orden.total_ajustado ?? orden.total).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total:</span>
-                <span className="font-bold text-primary">
-                  ${orden.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-                </span>
+            <div className="border-t pt-3 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Total Original:</span>
+                <span className="font-medium">${orden.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
               </div>
-            )}
+              
+              {/* Si hay devoluciones, mostrar desglose detallado */}
+              {orden.monto_devoluciones && orden.monto_devoluciones > 0 && (
+                <Collapsible open={devolucionesOpen} onOpenChange={setDevolucionesOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex items-center justify-between w-full text-sm text-destructive hover:bg-destructive/5 rounded px-2 py-1 -mx-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        <span>(-) Devoluciones:</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">-${orden.monto_devoluciones.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+                        {devolucionesOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      </div>
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="mt-2 ml-2 pl-4 border-l-2 border-destructive/30 space-y-2">
+                      {devolucionesDetalle.length > 0 ? (
+                        devolucionesDetalle.map((dev: any) => (
+                          <div key={dev.id} className="text-xs space-y-0.5">
+                            <div className="font-medium text-foreground">
+                              {dev.cantidad_devuelta} × {dev.productos?.nombre || 'Producto'}
+                            </div>
+                            <div className="text-muted-foreground flex justify-between">
+                              <span>Motivo: {formatMotivo(dev.motivo)} | ${dev.precio_unitario.toLocaleString("es-MX", { minimumFractionDigits: 2 })} c/u</span>
+                              <span className="text-destructive font-medium">-${dev.monto.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-xs text-muted-foreground italic">
+                          Cargando detalles de devoluciones...
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+              
+              {/* Total a pagar */}
+              <div className="border-t pt-2 mt-2">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                    <CheckCircle2 className="h-4 w-4" />
+                    TOTAL A PAGAR:
+                  </div>
+                  <span className="text-lg font-bold text-primary">
+                    ${(orden.total_ajustado ?? orden.total).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Fecha de pago */}
