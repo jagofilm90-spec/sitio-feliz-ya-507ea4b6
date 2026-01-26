@@ -89,6 +89,13 @@ export const useUnreadEmails = (): UnreadEmailsData => {
       return;
     }
 
+    // Verify user is authenticated before calling edge function
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const results = await Promise.allSettled(
         cuentas.map(cuenta =>
