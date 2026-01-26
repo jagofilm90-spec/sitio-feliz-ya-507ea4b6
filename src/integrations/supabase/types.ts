@@ -5808,6 +5808,10 @@ export type Database = {
         Args: { p_monto: number; p_oc_id: string }
         Returns: undefined
       }
+      ajustar_costos_oc: {
+        Args: { p_oc_id: string; p_productos: Json }
+        Returns: undefined
+      }
       calcular_costo_promedio_ponderado: {
         Args: { p_producto_id: string }
         Returns: number
