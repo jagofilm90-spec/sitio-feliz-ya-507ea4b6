@@ -2865,6 +2865,7 @@ export type Database = {
           id: string
           impuestos: number
           monto_devoluciones: number | null
+          monto_pagado: number | null
           motivo_devolucion: string | null
           motivo_rechazo: string | null
           notas: string | null
@@ -2901,6 +2902,7 @@ export type Database = {
           id?: string
           impuestos?: number
           monto_devoluciones?: number | null
+          monto_pagado?: number | null
           motivo_devolucion?: string | null
           motivo_rechazo?: string | null
           notas?: string | null
@@ -2937,6 +2939,7 @@ export type Database = {
           id?: string
           impuestos?: number
           monto_devoluciones?: number | null
+          monto_pagado?: number | null
           motivo_devolucion?: string | null
           motivo_rechazo?: string | null
           notas?: string | null

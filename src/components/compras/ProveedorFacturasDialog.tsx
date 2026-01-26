@@ -275,6 +275,48 @@ const ProveedorFacturasDialog = ({
     },
   });
 
+  // Helper function to sync OC payment status based on paid invoices
+  const actualizarEstadoPagoOC = async (ocId: string) => {
+    try {
+      // Get all invoices for this OC
+      const { data: todasFacturas, error: fetchError } = await supabase
+        .from("proveedor_facturas")
+        .select("monto_total, status_pago")
+        .eq("orden_compra_id", ocId);
+      
+      if (fetchError) throw fetchError;
+      if (!todasFacturas || todasFacturas.length === 0) return;
+      
+      const totalFacturado = todasFacturas.reduce((sum, f) => sum + (f.monto_total || 0), 0);
+      const totalPagadoFacturas = todasFacturas
+        .filter(f => f.status_pago === "pagado")
+        .reduce((sum, f) => sum + (f.monto_total || 0), 0);
+      
+      let nuevoStatusPago: string = "pendiente";
+      if (totalPagadoFacturas >= totalFacturado && totalFacturado > 0) {
+        nuevoStatusPago = "pagado";
+      } else if (totalPagadoFacturas > 0) {
+        nuevoStatusPago = "parcial";
+      }
+      
+      // Update OC payment status and amount
+      const { error: updateError } = await supabase
+        .from("ordenes_compra")
+        .update({ 
+          status_pago: nuevoStatusPago,
+          monto_pagado: totalPagadoFacturas,
+        })
+        .eq("id", ocId);
+      
+      if (updateError) throw updateError;
+      
+      // Invalidate OC queries to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["ordenes_compra"] });
+    } catch (error) {
+      console.error("Error syncing OC payment status:", error);
+    }
+  };
+
   // Mutation to register payment
   const registerPayment = useMutation({
     mutationFn: async (facturaId: string) => {
@@ -303,8 +345,11 @@ const ProveedorFacturasDialog = ({
         .eq("id", facturaId);
 
       if (error) throw error;
+      
+      // Return the OC id to sync payment status
+      return ordenCompra?.id;
     },
-    onSuccess: () => {
+    onSuccess: async (ocId) => {
       toast({ title: "Pago registrado correctamente" });
       queryClient.invalidateQueries({
         queryKey: ["proveedor-facturas", ordenCompra?.id],
@@ -312,6 +357,11 @@ const ProveedorFacturasDialog = ({
       setShowPaymentForm(null);
       setReferenciaPago("");
       setComprobantePago(null);
+      
+      // Sync OC payment status
+      if (ocId) {
+        await actualizarEstadoPagoOC(ocId);
+      }
     },
     onError: (error: Error) => {
       toast({
