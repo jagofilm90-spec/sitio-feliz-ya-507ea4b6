@@ -1,215 +1,229 @@
 
-# Plan: Ajuste Automático del Total de OC por Devoluciones
+# Plan: Conciliación de Factura de Proveedor con Ajuste de Costo
 
-## Resumen del Problema
+## Problema
 
-Cuando se devuelven productos por mal estado (roto, rechazado_calidad), el sistema registra la devolución pero **NO ajusta el total de la OC para el pago**. Ejemplo:
+Cuando el proveedor factura a un precio diferente al de la OC (ej: más barato), el sistema actualmente:
+1. Registra el costo de la OC en el inventario (incorrecto)
+2. No ajusta el costo promedio ponderado
+3. No tiene forma de vincular la factura real con los precios por producto
 
-- OC de 1200 bultos de Azúcar a $50 c/u = **$60,000**
-- Se devuelven 2 bultos por mal estado = **$100**
-- El pago debería ser **$59,900** (no $60,000)
-
-Actualmente el `MarcarPagadoDialog` muestra el total original sin considerar las devoluciones.
+**Ejemplo real:**
+- OC de Papel Blanco Revolución: 40 bultos a $95 c/u = $3,800
+- Factura del proveedor: 40 bultos a $88 c/u = $3,520
+- Diferencia: $280 menos
+- El inventario debe reflejar costo $88, no $95
 
 ---
 
 ## Solución Propuesta
 
-### Cambios en Base de Datos
+### 1. Ampliar el registro de facturas para incluir detalle por producto
 
-**Nuevos campos en `ordenes_compra`:**
+**Nuevo concepto:** "Conciliación de Factura"
+
+Cuando la secretaria registra la factura del proveedor y el monto es diferente al de la OC, el sistema:
+1. Detecta la diferencia automáticamente
+2. Permite capturar el precio unitario real (facturado) por producto
+3. Ajusta el costo en los lotes de inventario
+4. Recalcula el costo promedio ponderado
+
+---
+
+## Cambios en Base de Datos
+
+### Nueva tabla: `proveedor_factura_detalles`
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
-| `monto_devoluciones` | numeric | Suma del valor de productos devueltos |
-| `total_ajustado` | numeric | Total original - monto_devoluciones |
+| id | uuid | Identificador |
+| factura_id | uuid | FK a proveedor_facturas |
+| producto_id | uuid | FK a productos |
+| cantidad_facturada | integer | Cantidad en factura |
+| precio_unitario_facturado | numeric | Precio real del proveedor |
+| subtotal_facturado | numeric | cantidad × precio |
+| precio_original_oc | numeric | Precio que estaba en la OC |
+| diferencia | numeric | Original - Facturado |
 
-### Cambios en Código
+### Nuevos campos en `proveedor_facturas`
 
-#### 1. Al registrar una devolución, calcular el monto a descontar
-
-**Archivo:** `src/components/almacen/DevolucionProveedorDialog.tsx`
-
-- Después de insertar en `devoluciones_proveedor`, buscar el `precio_unitario_compra` del producto en `ordenes_compra_detalles`
-- Calcular: `monto_devolucion = cantidad_devuelta × precio_unitario_compra`
-- Actualizar `ordenes_compra.monto_devoluciones` (sumando el nuevo monto)
-- Recalcular `ordenes_compra.total_ajustado`
-
-```typescript
-// Después de insertar la devolución:
-const { data: detalle } = await supabase
-  .from("ordenes_compra_detalles")
-  .select("precio_unitario_compra")
-  .eq("orden_compra_id", ordenCompraId)
-  .eq("producto_id", producto.productoId)
-  .single();
-
-const montoDevolucion = producto.cantidadDevuelta * detalle.precio_unitario_compra;
-
-// Actualizar la OC
-await supabase.rpc('agregar_devolucion_a_oc', {
-  p_oc_id: ordenCompraId,
-  p_monto: montoDevolucion
-});
-```
-
-#### 2. Mostrar el total ajustado en el diálogo de pago
-
-**Archivo:** `src/components/compras/MarcarPagadoDialog.tsx`
-
-**Antes (línea 370-376):**
-```jsx
-<div className="flex justify-between">
-  <span className="text-muted-foreground">Total:</span>
-  <span className="font-bold text-primary">
-    ${orden.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-  </span>
-</div>
-```
-
-**Después:**
-```jsx
-{/* Total original */}
-<div className="flex justify-between">
-  <span className="text-muted-foreground">Total Original:</span>
-  <span>${orden.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
-</div>
-
-{/* Si hay devoluciones, mostrar desglose */}
-{devoluciones.length > 0 && (
-  <>
-    <div className="flex justify-between text-destructive">
-      <span>(-) Devoluciones:</span>
-      <span>-${montoDevoluciones.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
-    </div>
-    <Separator className="my-1" />
-    <div className="flex justify-between">
-      <span className="font-medium">Total a Pagar:</span>
-      <span className="font-bold text-primary">
-        ${totalAjustado.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-      </span>
-    </div>
-  </>
-)}
-```
-
-#### 3. Cargar las devoluciones de la OC al abrir el diálogo de pago
-
-```typescript
-const { data: devolucionesOC = [] } = useQuery({
-  queryKey: ["devoluciones-oc", orden?.id],
-  queryFn: async () => {
-    const { data } = await supabase
-      .from("devoluciones_proveedor")
-      .select(`
-        cantidad_devuelta,
-        producto_id,
-        productos (nombre, codigo)
-      `)
-      .eq("orden_compra_id", orden?.id);
-    return data || [];
-  },
-  enabled: !!orden?.id && open,
-});
-
-// Calcular monto total de devoluciones
-const calcularMontoDevoluciones = async () => {
-  let total = 0;
-  for (const dev of devolucionesOC) {
-    const { data: detalle } = await supabase
-      .from("ordenes_compra_detalles")
-      .select("precio_unitario_compra")
-      .eq("orden_compra_id", orden.id)
-      .eq("producto_id", dev.producto_id)
-      .single();
-    
-    if (detalle) {
-      total += dev.cantidad_devuelta * detalle.precio_unitario_compra;
-    }
-  }
-  return total;
-};
-```
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| requiere_conciliacion | boolean | true si monto ≠ total OC |
+| conciliacion_completada | boolean | true cuando se ajustaron costos |
+| diferencia_total | numeric | Monto OC - Monto Factura |
 
 ---
 
-## Archivos a Modificar
+## Cambios en Código
 
-| Archivo | Cambio |
-|---------|--------|
-| `ordenes_compra` (migración) | Agregar campos `monto_devoluciones` y `total_ajustado` |
-| `src/components/almacen/DevolucionProveedorDialog.tsx` | Calcular y guardar monto al registrar devolución |
-| `src/components/compras/MarcarPagadoDialog.tsx` | Mostrar desglose (original - devoluciones = a pagar) |
-| `src/components/compras/DevolucionesPendientesTab.tsx` | Agregar columna de "Monto" a la tabla |
+### 1. Modificar `ProveedorFacturasDialog.tsx`
 
----
+Al registrar una factura:
+- Comparar `monto_total` de la factura vs `total` de la OC
+- Si hay diferencia > $1, marcar `requiere_conciliacion = true`
+- Mostrar alerta: "El monto facturado es diferente al de la OC. Se requiere conciliación de precios."
 
-## Función SQL para actualizar OC
+### 2. Nuevo componente: `ConciliarFacturaDialog.tsx`
+
+Permite:
+1. Ver productos de la OC con sus precios originales
+2. Capturar el precio real facturado por cada producto
+3. Calcular la diferencia por producto y total
+4. Botón "Aplicar Conciliación" que:
+   - Actualiza `precio_compra` en `inventario_lotes`
+   - Actualiza `precio_unitario_compra` en `ordenes_compra_detalles`
+   - Dispara recálculo de `costo_promedio_ponderado`
+   - Ajusta `total_ajustado` de la OC
+   - Marca `conciliacion_completada = true`
+
+### 3. Función SQL: `conciliar_factura_proveedor`
 
 ```sql
-CREATE OR REPLACE FUNCTION agregar_devolucion_a_oc(
-  p_oc_id UUID,
-  p_monto NUMERIC
+CREATE OR REPLACE FUNCTION conciliar_factura_proveedor(
+  p_factura_id UUID,
+  p_productos JSONB -- [{producto_id, precio_facturado}]
 )
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
+DECLARE
+  v_producto RECORD;
+  v_oc_id UUID;
+  v_diferencia_total NUMERIC := 0;
 BEGIN
+  -- Obtener la OC de la factura
+  SELECT orden_compra_id INTO v_oc_id
+  FROM proveedor_facturas
+  WHERE id = p_factura_id;
+
+  -- Por cada producto, ajustar costos
+  FOR v_producto IN SELECT * FROM jsonb_to_recordset(p_productos) 
+    AS x(producto_id UUID, precio_facturado NUMERIC)
+  LOOP
+    -- Actualizar lotes de inventario de esta OC
+    UPDATE inventario_lotes
+    SET precio_compra = v_producto.precio_facturado
+    WHERE orden_compra_id = v_oc_id
+      AND producto_id = v_producto.producto_id;
+
+    -- Actualizar detalle de la OC
+    UPDATE ordenes_compra_detalles
+    SET precio_unitario_compra = v_producto.precio_facturado,
+        subtotal = cantidad_recibida * v_producto.precio_facturado
+    WHERE orden_compra_id = v_oc_id
+      AND producto_id = v_producto.producto_id;
+
+    -- Recalcular costo promedio del producto
+    UPDATE productos 
+    SET costo_promedio_ponderado = calcular_costo_promedio_ponderado(v_producto.producto_id),
+        ultimo_costo_compra = v_producto.precio_facturado
+    WHERE id = v_producto.producto_id;
+  END LOOP;
+
+  -- Recalcular total de la OC
   UPDATE ordenes_compra
-  SET 
-    monto_devoluciones = COALESCE(monto_devoluciones, 0) + p_monto,
-    total_ajustado = total - (COALESCE(monto_devoluciones, 0) + p_monto)
-  WHERE id = p_oc_id;
+  SET total = (
+    SELECT COALESCE(SUM(subtotal), 0)
+    FROM ordenes_compra_detalles
+    WHERE orden_compra_id = v_oc_id
+  ),
+  total_ajustado = (
+    SELECT COALESCE(SUM(subtotal), 0)
+    FROM ordenes_compra_detalles
+    WHERE orden_compra_id = v_oc_id
+  ) - COALESCE(monto_devoluciones, 0)
+  WHERE id = v_oc_id;
+
+  -- Marcar factura como conciliada
+  UPDATE proveedor_facturas
+  SET conciliacion_completada = true
+  WHERE id = p_factura_id;
 END;
 $$;
 ```
 
 ---
 
-## Flujo Visual
+## Flujo de Usuario
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│  REGISTRAR PAGO - OC-202601-0003                                        │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  Proveedor: BODEGA AURRERA                                              │
-│                                                                          │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │ Total Original:                              $60,000.00         │   │
-│  │ (-) Devoluciones:                               -$100.00        │   │
-│  │   • 2 × Azúcar Estándar ($50.00 c/u) - Roto                    │   │
-│  │ ──────────────────────────────────────────────────────────      │   │
-│  │ TOTAL A PAGAR:                               $59,900.00         │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                          │
-│  Fecha de pago: [26/01/2026]                                            │
-│  Referencia: [_______________]                                          │
-│  Comprobante: [Subir archivo...]                                        │
-│                                                                          │
-│  [ ] Enviar comprobante al proveedor                                    │
-│                                                                          │
-│                                    [Cancelar]  [Registrar Pago]         │
-└─────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│  FACTURAS DEL PROVEEDOR - OC-202601-0003                                        │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  Total OC: $3,800.00    |    Total Facturado: $3,520.00    |    Pagado: $0.00   │
+│                                                                                  │
+│  ┌───────────────────────────────────────────────────────────────────────────┐  │
+│  │ ⚠️ FACTURA FAC-2024-1234                                                  │  │
+│  │                                                                            │  │
+│  │ Monto: $3,520.00    Diferencia: -$280.00                                  │  │
+│  │                                                                            │  │
+│  │ ⚠️ El monto facturado es menor al de la OC.                               │  │
+│  │    Se requiere conciliación para ajustar los costos de inventario.       │  │
+│  │                                                                            │  │
+│  │                      [Conciliar Precios]  [Registrar Pago]                │  │
+│  └───────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+Al hacer clic en "Conciliar Precios":
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│  CONCILIAR FACTURA - FAC-2024-1234                                              │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  Producto               │ Cant. │ Precio OC │ Precio Factura │ Diferencia       │
+│  ───────────────────────┼───────┼───────────┼────────────────┼──────────────    │
+│  Papel Blanco Revolución│  40   │   $95.00  │   [$88.00]     │   -$280.00       │
+│                                                                                  │
+│  ────────────────────────────────────────────────────────────────────────────   │
+│  Total Diferencia:                                             -$280.00         │
+│                                                                                  │
+│  ⚡ Al aplicar:                                                                  │
+│     • Se actualizará el costo de 40 bultos en inventario                        │
+│     • Se recalculará el costo promedio ponderado                                │
+│     • Se ajustará el total de la OC                                             │
+│                                                                                  │
+│                                    [Cancelar]  [Aplicar Conciliación]           │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Beneficios
+## Archivos a Crear/Modificar
 
-1. **Pago exacto**: Solo se paga lo que realmente se aceptó
-2. **Transparencia**: El proveedor recibe desglose claro en la notificación
-3. **Trazabilidad**: Queda registro de qué productos se descontaron y por qué
-4. **Sin reprogramación**: Las devoluciones por mal estado NO crean entregas adicionales (diferente a faltantes)
+| Archivo | Acción |
+|---------|--------|
+| Migración SQL | Crear tabla `proveedor_factura_detalles`, agregar campos a `proveedor_facturas` |
+| `src/components/compras/ConciliarFacturaDialog.tsx` | CREAR - Diálogo de conciliación |
+| `src/components/compras/ProveedorFacturasDialog.tsx` | Modificar - Detectar diferencia y mostrar botón conciliar |
 
 ---
 
-## Nota Importante: Diferencia entre Faltante y Devolución
+## Resultado Esperado
 
-| Escenario | Acción del Sistema |
-|-----------|---------------------|
-| **Faltante (no_llego)** | Se reprograma entrega para el día siguiente. OC queda en "parcial" hasta que llegue. Se paga el total cuando se complete. |
-| **Devolución (roto/rechazado)** | NO se reprograma. OC se cierra normalmente. Se descuenta el monto de lo devuelto del pago. |
+1. Secretaria registra factura con monto diferente → Sistema detecta automáticamente
+2. Secretaria hace clic en "Conciliar Precios" → Captura precio real por producto
+3. Sistema ajusta:
+   - Costo en lotes de inventario
+   - Costo promedio ponderado
+   - Total de la OC
+   - `ultimo_costo_compra` del producto
+4. Los análisis de margen reflejan el costo real (el de la factura)
+5. El pago al proveedor es por el monto facturado
 
-Este plan implementa la lógica de devoluciones sin afectar el flujo de faltantes que ya funciona correctamente.
+---
+
+## Beneficio Directo
+
+**Responde tu pregunta:** Si el proveedor factura más barato, el sistema:
+1. Detecta la diferencia automáticamente
+2. Te permite corregir el costo producto por producto
+3. Ajusta el inventario y los cálculos de margen
+4. El pago refleja lo realmente facturado
+
+Todo queda trazable: quién concilió, cuándo, y qué diferencia había.
