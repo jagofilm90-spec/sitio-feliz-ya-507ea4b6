@@ -178,8 +178,8 @@ const EmailListView = ({
 
   // Layout desktop original
   return (
-    <Card className="overflow-hidden h-full">
-      <ScrollArea className="h-full">
+    <Card className="overflow-hidden h-full flex flex-col">
+      <ScrollArea className="flex-1">
         <div className="divide-y overflow-hidden">
           {emails.map((email, index) => (
             <div
