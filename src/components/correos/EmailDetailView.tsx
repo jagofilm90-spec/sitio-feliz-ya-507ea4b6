@@ -80,6 +80,7 @@ interface EmailDetailViewProps {
   hasNext?: boolean;
   hasPrev?: boolean;
   isFromTrash?: boolean;
+  embedded?: boolean; // Modo panel lateral sin header "Volver"
 }
 
 const EmailDetailView = ({
@@ -93,6 +94,7 @@ const EmailDetailView = ({
   hasNext = false,
   hasPrev = false,
   isFromTrash = false,
+  embedded = false,
 }: EmailDetailViewProps) => {
   const { toast } = useToast();
   const [deleting, setDeleting] = useState(false);
@@ -304,17 +306,19 @@ const EmailDetailView = ({
 
   return (
     <>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
+      <div className={`space-y-4 ${embedded ? "h-full flex flex-col" : ""}`}>
+        <div className={`flex items-center justify-between ${embedded ? "flex-wrap gap-2" : ""}`}>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={onBack}>
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Volver
-            </Button>
+            {!embedded && (
+              <Button variant="ghost" size="sm" onClick={onBack}>
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Volver
+              </Button>
+            )}
             
             {/* Navigation arrows */}
             {(hasPrev || hasNext) && (
-              <div className="flex items-center gap-1 ml-2">
+              <div className={`flex items-center gap-1 ${embedded ? "" : "ml-2"}`}>
                 <Button 
                   variant="outline" 
                   size="icon" 

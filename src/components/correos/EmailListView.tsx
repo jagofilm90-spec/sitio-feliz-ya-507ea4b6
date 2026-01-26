@@ -34,6 +34,7 @@ interface EmailListViewProps {
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
   accountTag?: string;
+  selectedEmailId?: string | null; // Para resaltar el correo seleccionado en desktop
 }
 
 const EmailListView = ({
@@ -49,6 +50,7 @@ const EmailListView = ({
   isLoadingMore = false,
   onLoadMore,
   accountTag,
+  selectedEmailId,
 }: EmailListViewProps) => {
   const isMobile = useIsMobile();
 
@@ -176,13 +178,15 @@ const EmailListView = ({
 
   // Layout desktop original
   return (
-    <Card className="overflow-hidden">
-      <ScrollArea className="h-[calc(100vh-280px)] min-h-[300px] max-h-[700px]">
+    <Card className="overflow-hidden h-full">
+      <ScrollArea className="h-full">
         <div className="divide-y overflow-hidden">
           {emails.map((email, index) => (
             <div
               key={email.id}
-              className="flex items-center gap-2 hover:bg-muted/50 transition-colors overflow-hidden"
+              className={`flex items-center gap-2 hover:bg-muted/50 transition-colors overflow-hidden ${
+                email.id === selectedEmailId ? "bg-primary/10 border-l-2 border-primary" : ""
+              }`}
             >
               {selectionMode && (
                 <div className="pl-4">
