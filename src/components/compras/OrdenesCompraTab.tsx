@@ -161,6 +161,8 @@ const OrdenesCompraTab = () => {
     proveedor_nombre: string;
     proveedor_email: string | null;
     total: number;
+    monto_devoluciones?: number | null;
+    total_ajustado?: number | null;
   } | null>(null);
 
   // Estado para modo "Por Vehículos"
@@ -1685,6 +1687,8 @@ const OrdenesCompraTab = () => {
                                   proveedor_nombre: orden.proveedor_id ? orden.proveedores?.nombre : orden.proveedor_nombre_manual,
                                   proveedor_email: orden.proveedor_id ? orden.proveedores?.email : null,
                                   total: orden.total,
+                                  monto_devoluciones: orden.monto_devoluciones || null,
+                                  total_ajustado: orden.total_ajustado || null,
                                 });
                                 setMarcarPagadoDialogOpen(true);
                               }}

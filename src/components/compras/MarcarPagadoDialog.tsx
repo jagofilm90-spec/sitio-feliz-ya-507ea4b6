@@ -42,6 +42,8 @@ interface MarcarPagadoDialogProps {
     proveedor_nombre: string;
     proveedor_email: string | null;
     total: number;
+    monto_devoluciones?: number | null;
+    total_ajustado?: number | null;
   } | null;
 }
 
@@ -367,12 +369,35 @@ export function MarcarPagadoDialog({
               <span className="text-muted-foreground">Proveedor:</span>
               <span className="font-medium">{orden.proveedor_nombre}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Total:</span>
-              <span className="font-bold text-primary">
-                ${orden.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-              </span>
-            </div>
+            
+            {/* Si hay devoluciones, mostrar desglose */}
+            {orden.monto_devoluciones && orden.monto_devoluciones > 0 ? (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Original:</span>
+                  <span>${orden.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between text-destructive">
+                  <span>(-) Devoluciones:</span>
+                  <span>-${orden.monto_devoluciones.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="border-t pt-1 mt-1">
+                  <div className="flex justify-between">
+                    <span className="font-medium">Total a Pagar:</span>
+                    <span className="font-bold text-primary">
+                      ${(orden.total_ajustado ?? orden.total).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total:</span>
+                <span className="font-bold text-primary">
+                  ${orden.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Fecha de pago */}
