@@ -1,173 +1,144 @@
 
 
-# Plan: Corregir Estado Incorrecto de OC con Faltantes
+# Plan: Sincronizar Vista de Recepción para Entregas de Faltantes
 
-## Problema Identificado
+## Problema Principal
 
-La OC `OC-202601-0002` (Envolvían) tiene status `COMPLETADA` pero tiene:
-- 1 entrega recibida
-- 1 entrega pendiente (de faltante programada para el siguiente día)
-- Flag `origen_faltante = true` en la entrega pendiente
+Cuando el almacenista recibe una entrega de faltante (`origen_faltante = true`), la interfaz muestra **todos los productos de la OC** en lugar de solo los productos que faltaron. Esto es confuso y puede causar errores en la recepción.
 
-**Causa raíz**: El Edge Function `auto-reschedule-deliveries` (líneas 129-136) verifica si existe "alguna entrega recibida" y si es así, marca la OC como `completada` sin verificar si hay entregas pendientes de faltantes.
-
-```text
-┌──────────────────────────────────────────────────────────────────────┐
-│  FLUJO ACTUAL (INCORRECTO)                                           │
-├──────────────────────────────────────────────────────────────────────┤
-│  1. Recepción con faltante                                           │
-│     └─> OC marcada como "parcial" ✓                                  │
-│  2. Se crea entrega de faltante para día siguiente ✓                 │
-│  3. Edge Function auto-reschedule ejecuta (al día siguiente)         │
-│     └─> Detecta que hay 1 entrega recibida                          │
-│     └─> Ignora entregas pendientes de faltante                      │
-│     └─> Marca OC como "completada" ✗                                 │
-└──────────────────────────────────────────────────────────────────────┘
-```
+**Ejemplo actual (incorrecto):**
+- OC-202601-0002 tuvo faltante de 40 unidades de "Papel Blanco Revolución"
+- Cuando el almacenista abre la entrega #2 (faltante), ve:
+  - Papel Bala Rojo: 250 (ya recibido)
+  - Papel Blanco Revolución: 40 (el faltante)
+- Debería ver SOLO:
+  - Papel Blanco Revolución: 40
 
 ---
 
-## Solucion
+## Cambios a Realizar
 
-### 1. Corregir Edge Function `auto-reschedule-deliveries`
+### 1. Guardar `producto_id` al crear entregas de faltantes
 
-Modificar la logica para verificar si hay entregas pendientes ANTES de marcar como completada.
+**Archivo:** `src/components/almacen/AlmacenRecepcionSheet.tsx`
 
-**Archivo**: `supabase/functions/auto-reschedule-deliveries/index.ts`
-
-**Cambio en lineas 119-137**:
-
-**Antes**:
+Actualmente (línea 932-942):
 ```typescript
-// Verificar si la orden tiene una entrega ya recibida
-const { data: entregaRecibida } = await supabase
-  .from('ordenes_compra_entregas')
-  .select('id')
-  .eq('orden_compra_id', order.id)
-  .eq('status', 'recibida')
-  .limit(1)
-  .maybeSingle()
-
-// Si ya hay entrega recibida, actualizar status de la orden y NO reprogramar
-if (entregaRecibida) {
-  console.log(`Order ${order.folio} already has received delivery, marking as completed`)
-  await supabase
-    .from('ordenes_compra')
-    .update({ status: 'completada' })
-    .eq('id', order.id)
-  continue
-}
+productos_faltantes: productosFaltantesData
 ```
 
-**Despues**:
+El array `productosFaltantesData` NO incluye el `producto_id`. Hay que modificar la generación de este array para incluirlo:
+
 ```typescript
-// Verificar si la orden tiene entregas pendientes (programadas)
-const { data: entregasPendientes, count: countPendientes } = await supabase
-  .from('ordenes_compra_entregas')
-  .select('id', { count: 'exact', head: true })
-  .eq('orden_compra_id', order.id)
-  .in('status', ['programada', 'en_transito'])
+// Antes
+const productosFaltantesData = [{ nombre, cantidad_faltante }];
 
-// Si hay entregas pendientes, NO marcar como completada
-// Solo reprogramar las que tienen fecha vencida
-if (countPendientes && countPendientes > 0) {
-  // Esta orden tiene entregas pendientes, verificar si necesita reprogramacion
-  const { data: entregaVencida } = await supabase
-    .from('ordenes_compra_entregas')
-    .select('id')
-    .eq('orden_compra_id', order.id)
-    .eq('status', 'programada')
-    .lt('fecha_programada', todayStr)
-    .limit(1)
-    .maybeSingle()
+// Después  
+const productosFaltantesData = [{ 
+  producto_id: producto.producto_id,  // <-- AGREGAR
+  nombre, 
+  cantidad_faltante,
+  codigo: producto.producto?.codigo   // <-- AGREGAR para referencia
+}];
+```
 
-  if (entregaVencida) {
-    // Reprogramar (mantener logica existente pero sin marcar como completada)
-    // ... logica de reprogramacion
+### 2. Mostrar solo productos faltantes en la lista de entregas
+
+**Archivo:** `src/components/almacen/AlmacenRecepcionTab.tsx`
+
+En el componente `ProductosEntregaList`, verificar si la entrega tiene `origen_faltante` y usar `productos_faltantes` en lugar de los productos de la OC:
+
+```typescript
+// Si es entrega de faltante, usar productos_faltantes
+if (entrega.origen_faltante && entrega.productos_faltantes) {
+  return entrega.productos_faltantes.map(pf => ({
+    nombre: pf.nombre,
+    cantidad: pf.cantidad_faltante
+  }));
+}
+// Si no, usar productos de la OC
+return entrega.productos;
+```
+
+### 3. Filtrar productos en `AlmacenRecepcionSheet` para entregas de faltantes
+
+**Archivo:** `src/components/almacen/AlmacenRecepcionSheet.tsx`
+
+En la función `loadProductos()`, agregar lógica para filtrar:
+
+```typescript
+const loadProductos = async () => {
+  // ... código existente ...
+  
+  // Si es entrega de faltante, filtrar solo los productos que faltaron
+  if (entrega.origen_faltante && entrega.productos_faltantes) {
+    const productosFaltantesIds = entrega.productos_faltantes
+      .map(pf => pf.producto_id)
+      .filter(Boolean);
+    
+    // Filtrar solo los productos que están en la lista de faltantes
+    productosData = productosData.filter(p => 
+      productosFaltantesIds.includes(p.producto_id) ||
+      // Fallback: buscar por nombre si no hay producto_id
+      entrega.productos_faltantes.some(pf => 
+        pf.nombre === p.producto?.nombre
+      )
+    );
+    
+    // Ajustar cantidades esperadas según los faltantes
+    productosData = productosData.map(p => {
+      const faltante = entrega.productos_faltantes.find(
+        pf => pf.producto_id === p.producto_id || pf.nombre === p.producto?.nombre
+      );
+      return {
+        ...p,
+        // Sobreescribir cantidad ordenada con cantidad faltante
+        cantidad_ordenada: faltante?.cantidad_faltante || p.cantidad_ordenada,
+        cantidad_recibida: 0 // Resetear para esta entrega
+      };
+    });
   }
   
-  // Asegurar que el status sea 'parcial' si hay entregas recibidas Y pendientes
-  const { data: entregaRecibida } = await supabase
-    .from('ordenes_compra_entregas')
-    .select('id')
-    .eq('orden_compra_id', order.id)
-    .eq('status', 'recibida')
-    .limit(1)
-    .maybeSingle()
-
-  if (entregaRecibida) {
-    await supabase
-      .from('ordenes_compra')
-      .update({ status: 'parcial' })
-      .eq('id', order.id)
-  }
-  continue
-}
-
-// Solo si NO hay entregas pendientes y SI hay recibidas, marcar como completada
-const { data: entregaRecibida } = await supabase
-  .from('ordenes_compra_entregas')
-  .select('id')
-  .eq('orden_compra_id', order.id)
-  .eq('status', 'recibida')
-  .limit(1)
-  .maybeSingle()
-
-if (entregaRecibida) {
-  console.log(`Order ${order.folio} has all deliveries received, marking as completed`)
-  await supabase
-    .from('ordenes_compra')
-    .update({ status: 'completada' })
-    .eq('id', order.id)
-  continue
-}
+  setProductos(productosData);
+};
 ```
 
-### 2. Corregir datos actuales en la base de datos
+### 4. Incluir campos de faltantes en las queries
 
-Ejecutar una correccion para las OC que fueron marcadas incorrectamente como `completada`:
+**Archivo:** `src/components/almacen/AlmacenRecepcionTab.tsx`
 
-```sql
--- Corregir OCs que tienen entregas pendientes pero estan marcadas como completadas
-UPDATE ordenes_compra
-SET status = 'parcial'
-WHERE status = 'completada'
-AND id IN (
-  SELECT DISTINCT orden_compra_id 
-  FROM ordenes_compra_entregas 
-  WHERE status = 'programada'
-);
-```
-
-### 3. Mejorar la logica de determinacion de estado
-
-Agregar una funcion auxiliar que centralice la logica de estado de OC:
+Agregar `origen_faltante` y `productos_faltantes` a la query de entregas (línea 119-145):
 
 ```typescript
-async function determinarEstadoOC(supabase: any, ordenId: string): Promise<string> {
-  // Contar entregas por status
-  const { data: entregas } = await supabase
-    .from('ordenes_compra_entregas')
-    .select('status')
-    .eq('orden_compra_id', ordenId)
+.select(`
+  id,
+  numero_entrega,
+  cantidad_bultos,
+  fecha_programada,
+  fecha_entrega_real,
+  status,
+  notas,
+  origen_faltante,        // <-- AGREGAR
+  productos_faltantes,     // <-- AGREGAR
+  llegada_registrada_en,
+  ...
+`)
+```
 
-  if (!entregas || entregas.length === 0) {
-    return 'enviada' // Sin entregas registradas
-  }
+### 5. Actualizar interface `EntregaCompra`
 
-  const recibidas = entregas.filter(e => e.status === 'recibida').length
-  const pendientes = entregas.filter(e => ['programada', 'en_transito'].includes(e.status)).length
-  const total = entregas.length
+En ambos archivos, actualizar la interface para incluir los nuevos campos:
 
-  if (recibidas === total) {
-    return 'completada' // Todas recibidas
-  } else if (recibidas > 0 && pendientes > 0) {
-    return 'parcial' // Algunas recibidas, algunas pendientes
-  } else if (pendientes === total) {
-    return 'confirmada' // Todas pendientes
-  }
-  
-  return 'enviada' // Estado por defecto
+```typescript
+interface EntregaCompra {
+  // ... campos existentes ...
+  origen_faltante?: boolean;
+  productos_faltantes?: Array<{
+    producto_id?: string;
+    nombre: string;
+    cantidad_faltante: number;
+    codigo?: string;
+  }>;
 }
 ```
 
@@ -177,35 +148,56 @@ async function determinarEstadoOC(supabase: any, ordenId: string): Promise<strin
 
 | Archivo | Cambio |
 |---------|--------|
-| `supabase/functions/auto-reschedule-deliveries/index.ts` | Corregir logica para verificar entregas pendientes antes de marcar como completada |
+| `src/components/almacen/AlmacenRecepcionTab.tsx` | Agregar campos a query, mostrar productos faltantes específicos |
+| `src/components/almacen/AlmacenRecepcionSheet.tsx` | Guardar `producto_id` en faltantes, filtrar productos en recepción |
 
 ---
 
-## Flujo Correcto Despues del Fix
+## Corrección de Datos Existentes
 
-```text
-┌──────────────────────────────────────────────────────────────────────┐
-│  FLUJO CORREGIDO                                                     │
-├──────────────────────────────────────────────────────────────────────┤
-│  1. Recepcion con faltante                                           │
-│     └─> OC marcada como "parcial" ✓                                  │
-│  2. Se crea entrega de faltante para dia siguiente ✓                 │
-│  3. Edge Function auto-reschedule ejecuta (al dia siguiente)         │
-│     └─> Detecta que hay entregas pendientes                          │
-│     └─> Mantiene status "parcial" ✓                                  │
-│     └─> Reprograma entregas vencidas si aplica                       │
-│  4. Cuando se recibe la entrega de faltante                          │
-│     └─> Verifica si hay mas entregas pendientes                      │
-│     └─> Si no hay mas, marca como "completada" ✓                     │
-└──────────────────────────────────────────────────────────────────────┘
+Ejecutar migración SQL para agregar `producto_id` a los faltantes existentes (basándose en el nombre del producto):
+
+```sql
+-- Actualizar productos_faltantes existentes para incluir producto_id
+UPDATE ordenes_compra_entregas e
+SET productos_faltantes = (
+  SELECT jsonb_agg(
+    jsonb_build_object(
+      'producto_id', p.id,
+      'nombre', pf->>'nombre',
+      'cantidad_faltante', (pf->>'cantidad_faltante')::int,
+      'codigo', p.codigo
+    )
+  )
+  FROM jsonb_array_elements(e.productos_faltantes) pf
+  LEFT JOIN productos p ON p.nombre = pf->>'nombre'
+)
+WHERE e.origen_faltante = true
+AND e.productos_faltantes IS NOT NULL;
 ```
 
 ---
 
 ## Resultado Esperado
 
-1. Las OC con faltantes mantendran el status `parcial` hasta que todas las entregas sean recibidas
-2. Solo cuando no haya entregas pendientes, la OC pasara a `completada`
-3. La OC `OC-202601-0002` (Envolviann) sera corregida a status `parcial`
-4. El calendario de entregas mostrara correctamente las entregas pendientes de faltantes
+Después de estos cambios:
+
+1. Al crear una entrega de faltante, se guardará el `producto_id` correctamente
+2. En la lista de entregas pendientes, el almacenista verá solo los productos que faltan
+3. Al completar la recepción de un faltante, solo aparecerán los productos faltantes para registrar
+4. Las cantidades esperadas serán las correctas (solo lo que faltó)
+
+```text
+┌──────────────────────────────────────────────────────────────────────┐
+│  VISTA CORREGIDA - Entrega de Faltante                              │
+├──────────────────────────────────────────────────────────────────────┤
+│  OC-202601-0002 - ENVOLPAN                                          │
+│  Entrega #2 (Faltante)                                              │
+│  ────────────────────────────────                                   │
+│  📦 Productos (1):                                                  │
+│    • Papel Blanco Revolución ................ 40 unidades          │
+│                                                                      │
+│  [Registrar Llegada]                                                │
+└──────────────────────────────────────────────────────────────────────┘
+```
 
