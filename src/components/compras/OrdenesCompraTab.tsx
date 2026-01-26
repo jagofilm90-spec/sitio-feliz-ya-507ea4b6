@@ -55,6 +55,7 @@ import OCAutorizadaAlert from "./OCAutorizadaAlert";
 import EntregasPopover from "./EntregasPopover";
 import ProveedorFacturasDialog from "./ProveedorFacturasDialog";
 import { MarcarPagadoDialog } from "./MarcarPagadoDialog";
+import { ProcesarPagoOCDialog } from "./ProcesarPagoOCDialog";
 import CrearOrdenCompraWizard from "./CrearOrdenCompraWizard";
 import NotificarCambiosOCDialog, { CambioDetectado } from "./NotificarCambiosOCDialog";
 import { formatCurrency } from "@/lib/utils";
@@ -152,7 +153,7 @@ const OrdenesCompraTab = () => {
   const [facturasDialogOpen, setFacturasDialogOpen] = useState(false);
   const [ordenParaFacturas, setOrdenParaFacturas] = useState<any>(null);
 
-  // Estado para dialog de marcar como pagado
+  // Estado para dialog de marcar como pagado (anticipado)
   const [marcarPagadoDialogOpen, setMarcarPagadoDialogOpen] = useState(false);
   const [ordenParaPago, setOrdenParaPago] = useState<{
     id: string;
@@ -163,6 +164,19 @@ const OrdenesCompraTab = () => {
     total: number;
     monto_devoluciones?: number | null;
     total_ajustado?: number | null;
+  } | null>(null);
+
+  // Estado para dialog de procesar pago (OC completada)
+  const [procesarPagoDialogOpen, setProcesarPagoDialogOpen] = useState(false);
+  const [ordenParaProcesarPago, setOrdenParaProcesarPago] = useState<{
+    id: string;
+    folio: string;
+    proveedor_id: string | null;
+    proveedor_nombre: string;
+    total: number;
+    monto_devoluciones?: number | null;
+    total_ajustado?: number | null;
+    fecha_creacion?: string;
   } | null>(null);
 
   // Estado para modo "Por Vehículos"
@@ -1699,9 +1713,41 @@ const OrdenesCompraTab = () => {
                           </div>
                         )
                       ) : (
-                        <Badge variant="outline" className="text-muted-foreground">
-                          🚚 Contra Entrega
-                        </Badge>
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline" className="text-muted-foreground">
+                            🚚 Contra Entrega
+                          </Badge>
+                          {/* Botón procesar pago para OC completadas/parciales */}
+                          {(orden.status === 'completada' || orden.status === 'parcial') && 
+                           orden.status_pago !== 'pagado' && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-xs text-primary hover:text-primary"
+                              onClick={() => {
+                                setOrdenParaProcesarPago({
+                                  id: orden.id,
+                                  folio: orden.folio,
+                                  proveedor_id: orden.proveedor_id || null,
+                                  proveedor_nombre: orden.proveedor_id ? orden.proveedores?.nombre : orden.proveedor_nombre_manual,
+                                  total: orden.total,
+                                  monto_devoluciones: orden.monto_devoluciones || null,
+                                  total_ajustado: orden.total_ajustado || null,
+                                  fecha_creacion: orden.fecha_orden,
+                                });
+                                setProcesarPagoDialogOpen(true);
+                              }}
+                            >
+                              <CreditCard className="h-3 w-3 mr-1" />
+                              Pagar
+                            </Button>
+                          )}
+                          {orden.status_pago === 'pagado' && (
+                            <Badge className="bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800 text-xs">
+                              ✓ Pagado
+                            </Badge>
+                          )}
+                        </div>
                       )}
                     </TableCell>
                     <TableCell>
@@ -2698,6 +2744,12 @@ const OrdenesCompraTab = () => {
         open={marcarPagadoDialogOpen}
         onOpenChange={setMarcarPagadoDialogOpen}
         orden={ordenParaPago}
+      />
+
+      <ProcesarPagoOCDialog
+        open={procesarPagoDialogOpen}
+        onOpenChange={setProcesarPagoDialogOpen}
+        orden={ordenParaProcesarPago}
       />
 
       <CrearOrdenCompraWizard
