@@ -121,7 +121,7 @@ export function ProcesarPagoOCDialog({
         .from("ordenes_compra_detalles")
         .select(`
           id,
-          cantidad,
+          cantidad_ordenada,
           cantidad_recibida,
           precio_unitario_compra,
           subtotal,
@@ -139,9 +139,9 @@ export function ProcesarPagoOCDialog({
         producto_id: d.producto_id,
         codigo: d.productos?.codigo || "",
         nombre: d.productos?.nombre || "Producto",
-        cantidad: d.cantidad_recibida ?? d.cantidad,
+        cantidad: d.cantidad_recibida ?? d.cantidad_ordenada,
         precio_unitario: d.precio_unitario_compra || 0,
-        subtotal: (d.cantidad_recibida ?? d.cantidad) * (d.precio_unitario_compra || 0),
+        subtotal: (d.cantidad_recibida ?? d.cantidad_ordenada) * (d.precio_unitario_compra || 0),
         aplica_iva: d.productos?.aplica_iva ?? true,
         aplica_ieps: d.productos?.aplica_ieps ?? false,
         pagado: d.pagado || false,
