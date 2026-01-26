@@ -34,7 +34,6 @@ import {
   IdCard 
 } from "lucide-react";
 import logoAlmasa from "@/assets/logo-almasa.png";
-import iconoA from "@/assets/logos/icono-a-pequeno.png";
 
 interface NavItem {
   id: string;
@@ -83,11 +82,15 @@ export const VendedorSidebar = ({
       <Sidebar collapsible="icon" expandOnHover className="border-r border-sidebar-border">
         {/* Header con Logo - Siempre visible */}
         <SidebarHeader className="border-b border-sidebar-border">
-          <div className="flex flex-col items-center py-2 gap-1">
-            <img src={iconoA} alt="A" className="h-7 w-7 object-contain" />
-            {!isCollapsed && (
-              <img src={logoAlmasa} alt="ALMASA" className="h-6 object-contain" />
-            )}
+          <div className="flex flex-col items-center py-3">
+            <img 
+              src={logoAlmasa} 
+              alt="ALMASA" 
+              className={cn(
+                "object-contain transition-all duration-200",
+                isCollapsed ? "h-6 w-auto" : "h-8 w-auto"
+              )} 
+            />
           </div>
         </SidebarHeader>
 
