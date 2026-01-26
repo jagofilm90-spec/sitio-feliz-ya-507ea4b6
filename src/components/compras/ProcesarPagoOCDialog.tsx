@@ -528,7 +528,7 @@ export function ProcesarPagoOCDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 px-1">
+        <ScrollArea className="flex-1 min-h-0 overflow-hidden px-1">
           <div className="space-y-6 pb-4">
             {/* Alert when there are registered invoices */}
             {tieneFacturasRegistradas && (
