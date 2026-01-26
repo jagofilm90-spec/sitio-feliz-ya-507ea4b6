@@ -2864,6 +2864,7 @@ export type Database = {
           folio: string
           id: string
           impuestos: number
+          monto_devoluciones: number | null
           motivo_devolucion: string | null
           motivo_rechazo: string | null
           notas: string | null
@@ -2879,6 +2880,7 @@ export type Database = {
           subtotal: number
           tipo_pago: string | null
           total: number
+          total_ajustado: number | null
           updated_at: string
         }
         Insert: {
@@ -2898,6 +2900,7 @@ export type Database = {
           folio: string
           id?: string
           impuestos?: number
+          monto_devoluciones?: number | null
           motivo_devolucion?: string | null
           motivo_rechazo?: string | null
           notas?: string | null
@@ -2913,6 +2916,7 @@ export type Database = {
           subtotal?: number
           tipo_pago?: string | null
           total?: number
+          total_ajustado?: number | null
           updated_at?: string
         }
         Update: {
@@ -2932,6 +2936,7 @@ export type Database = {
           folio?: string
           id?: string
           impuestos?: number
+          monto_devoluciones?: number | null
           motivo_devolucion?: string | null
           motivo_rechazo?: string | null
           notas?: string | null
@@ -2947,6 +2952,7 @@ export type Database = {
           subtotal?: number
           tipo_pago?: string | null
           total?: number
+          total_ajustado?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -5722,6 +5728,10 @@ export type Database = {
       }
     }
     Functions: {
+      agregar_devolucion_a_oc: {
+        Args: { p_monto: number; p_oc_id: string }
+        Returns: undefined
+      }
       calcular_costo_promedio_ponderado: {
         Args: { p_producto_id: string }
         Returns: number

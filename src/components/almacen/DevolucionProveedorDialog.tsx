@@ -109,6 +109,8 @@ export const DevolucionProveedorDialog = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No autenticado");
 
+      let montoTotalDevoluciones = 0;
+
       // Crear registros de devolución para cada producto
       for (const producto of productosDevolucion) {
         const { data: devolucion, error: devError } = await supabase
@@ -128,6 +130,19 @@ export const DevolucionProveedorDialog = ({
           .single();
 
         if (devError) throw devError;
+
+        // Obtener precio unitario de compra para calcular monto de devolución
+        const { data: detalleOC } = await supabase
+          .from("ordenes_compra_detalles")
+          .select("precio_unitario_compra")
+          .eq("orden_compra_id", ordenCompraId)
+          .eq("producto_id", producto.productoId)
+          .maybeSingle();
+
+        if (detalleOC?.precio_unitario_compra) {
+          const montoDevolucion = producto.cantidadDevuelta * detalleOC.precio_unitario_compra;
+          montoTotalDevoluciones += montoDevolucion;
+        }
 
         // Subir fotos de este producto
         const fotosProducto = fotosDevolucion.filter(f => f.productoId === producto.productoId);
@@ -150,6 +165,14 @@ export const DevolucionProveedorDialog = ({
               });
           }
         }
+      }
+
+      // Actualizar el monto de devoluciones en la OC
+      if (montoTotalDevoluciones > 0) {
+        await supabase.rpc('agregar_devolucion_a_oc', {
+          p_oc_id: ordenCompraId,
+          p_monto: montoTotalDevoluciones
+        });
       }
 
       toast({

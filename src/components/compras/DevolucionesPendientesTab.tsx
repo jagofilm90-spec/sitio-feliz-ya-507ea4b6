@@ -59,6 +59,7 @@ interface Devolucion {
   orden_compra_id: string;
   orden_compra_entrega_id: string | null;
   producto_id: string;
+  monto_devolucion?: number | null;
   productos: { nombre: string; codigo: string } | null;
   ordenes_compra: {
     id: string;
@@ -66,6 +67,7 @@ interface Devolucion {
     proveedores: { id: string; nombre: string; email: string | null } | null;
     proveedor_nombre_manual: string | null;
   } | null;
+  ordenes_compra_detalles?: { precio_unitario_compra: number } | null;
 }
 
 const DevolucionesPendientesTab = () => {
@@ -105,7 +107,25 @@ const DevolucionesPendientesTab = () => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as Devolucion[];
+
+      // Para cada devolución, obtener el precio unitario y calcular el monto
+      const devolucionesConMonto = await Promise.all(
+        (data || []).map(async (dev: any) => {
+          const { data: detalle } = await supabase
+            .from("ordenes_compra_detalles")
+            .select("precio_unitario_compra")
+            .eq("orden_compra_id", dev.orden_compra_id)
+            .eq("producto_id", dev.producto_id)
+            .maybeSingle();
+          
+          return {
+            ...dev,
+            monto_devolucion: detalle ? dev.cantidad_devuelta * detalle.precio_unitario_compra : null
+          };
+        })
+      );
+
+      return devolucionesConMonto as Devolucion[];
     },
   });
 
@@ -265,6 +285,7 @@ const DevolucionesPendientesTab = () => {
                   <TableHead>OC / Proveedor</TableHead>
                   <TableHead>Producto</TableHead>
                   <TableHead className="text-center">Cantidad</TableHead>
+                  <TableHead className="text-right">Monto</TableHead>
                   <TableHead>Motivo</TableHead>
                   <TableHead className="text-center">Evidencias</TableHead>
                   <TableHead className="text-center">Estado</TableHead>
@@ -309,6 +330,15 @@ const DevolucionesPendientesTab = () => {
                         <Badge variant="secondary" className="bg-red-100 text-red-700">
                           {devolucion.cantidad_devuelta} unidades
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {devolucion.monto_devolucion ? (
+                          <span className="font-medium text-destructive">
+                            -${devolucion.monto_devolucion.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">N/A</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <p className="text-sm max-w-[200px] truncate" title={devolucion.motivo}>
