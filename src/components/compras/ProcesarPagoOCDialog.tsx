@@ -12,7 +12,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   Package,
-  Undo2
+  Undo2,
+  Receipt,
+  ExternalLink
 } from "lucide-react";
 import { generarOrdenPagoPDF, type OrdenPagoData } from "@/utils/ordenPagoPdfGenerator";
 import {
@@ -45,6 +47,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface ProcesarPagoOCDialogProps {
   open: boolean;
@@ -59,6 +62,7 @@ interface ProcesarPagoOCDialogProps {
     total_ajustado?: number | null;
     fecha_creacion?: string;
   } | null;
+  onOpenFacturas?: () => void;
 }
 
 // Motivo labels
@@ -76,6 +80,7 @@ export function ProcesarPagoOCDialog({
   open,
   onOpenChange,
   orden,
+  onOpenFacturas,
 }: ProcesarPagoOCDialogProps) {
   const queryClient = useQueryClient();
   const [fechaPago, setFechaPago] = useState<Date>(new Date());
@@ -118,6 +123,28 @@ export function ProcesarPagoOCDialog({
     },
     enabled: !!orden?.id && open,
   });
+
+  // Query para verificar si hay facturas del proveedor registradas
+  const { data: facturasProveedor = [] } = useQuery({
+    queryKey: ["facturas-proveedor-pago", orden?.id],
+    queryFn: async () => {
+      if (!orden?.id) return [];
+      
+      const { data, error } = await supabase
+        .from("proveedor_facturas")
+        .select("id, numero_factura, monto_total, status_pago")
+        .eq("orden_compra_id", orden.id)
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!orden?.id && open,
+  });
+
+  const tieneFacturasRegistradas = facturasProveedor.length > 0;
+  const facturasPendientes = facturasProveedor.filter(f => f.status_pago !== "pagado");
+  const facturasPagadas = facturasProveedor.filter(f => f.status_pago === "pagado");
 
   // Query para obtener devoluciones
   const { data: devolucionesDetalle = [] } = useQuery({
@@ -328,25 +355,72 @@ export function ProcesarPagoOCDialog({
 
         <ScrollArea className="flex-1 px-1">
           <div className="space-y-6 pb-4">
+            {/* Alert when there are registered invoices */}
+            {tieneFacturasRegistradas && (
+              <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+                <Receipt className="h-4 w-4 text-amber-600" />
+                <AlertTitle className="text-amber-800 dark:text-amber-300">
+                  Esta OC tiene facturas del proveedor registradas
+                </AlertTitle>
+                <AlertDescription className="text-amber-700 dark:text-amber-400">
+                  <p className="mb-3">
+                    Para manejar pagos parciales, registra el pago directamente en cada factura.
+                  </p>
+                  <div className="space-y-2 mb-4">
+                    {facturasProveedor.map((f: any) => (
+                      <div key={f.id} className="flex items-center justify-between text-sm bg-background/50 rounded px-3 py-2">
+                        <span className="font-medium">{f.numero_factura}</span>
+                        <div className="flex items-center gap-2">
+                          <span>${f.monto_total?.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+                          <Badge 
+                            variant={f.status_pago === "pagado" ? "default" : "outline"}
+                            className={f.status_pago === "pagado" ? "bg-green-100 text-green-800" : ""}
+                          >
+                            {f.status_pago === "pagado" ? "✓ Pagada" : "Pendiente"}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {onOpenFacturas && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        onOpenChange(false);
+                        onOpenFacturas();
+                      }}
+                      className="w-full"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Ir a Gestionar Facturas
+                    </Button>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Proveedor */}
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <div>
                 <p className="text-sm text-muted-foreground">Proveedor</p>
                 <p className="font-semibold">{orden?.proveedor_nombre}</p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDescargarPDF}
-                disabled={generandoPDF}
-              >
-                {generandoPDF ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <FileDown className="h-4 w-4 mr-2" />
-                )}
-                Descargar Orden de Pago (PDF)
-              </Button>
+              {!tieneFacturasRegistradas && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDescargarPDF}
+                  disabled={generandoPDF}
+                >
+                  {generandoPDF ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <FileDown className="h-4 w-4 mr-2" />
+                  )}
+                  Descargar Orden de Pago (PDF)
+                </Button>
+              )}
             </div>
 
             {/* Resumen Financiero */}

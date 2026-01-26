@@ -1747,6 +1747,27 @@ const OrdenesCompraTab = () => {
                               ✓ Pagado
                             </Badge>
                           )}
+                          {orden.status_pago === 'parcial' && (
+                            <Badge 
+                              className="bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800 text-xs cursor-pointer"
+                              onClick={() => {
+                                setOrdenParaFacturas({
+                                  id: orden.id,
+                                  folio: orden.folio,
+                                  proveedor_nombre: orden.proveedor_id ? orden.proveedores?.nombre : orden.proveedor_nombre_manual,
+                                  total: orden.total,
+                                });
+                                setFacturasDialogOpen(true);
+                              }}
+                            >
+                              🟡 Pago Parcial
+                              {(orden as any).monto_pagado > 0 && (
+                                <span className="ml-1">
+                                  (${((orden as any).monto_pagado || 0).toLocaleString("es-MX", { minimumFractionDigits: 0 })})
+                                </span>
+                              )}
+                            </Badge>
+                          )}
                         </div>
                       )}
                     </TableCell>
@@ -2750,6 +2771,17 @@ const OrdenesCompraTab = () => {
         open={procesarPagoDialogOpen}
         onOpenChange={setProcesarPagoDialogOpen}
         orden={ordenParaProcesarPago}
+        onOpenFacturas={() => {
+          if (ordenParaProcesarPago) {
+            setOrdenParaFacturas({
+              id: ordenParaProcesarPago.id,
+              folio: ordenParaProcesarPago.folio,
+              proveedor_nombre: ordenParaProcesarPago.proveedor_nombre,
+              total: ordenParaProcesarPago.total,
+            });
+            setFacturasDialogOpen(true);
+          }
+        }}
       />
 
       <CrearOrdenCompraWizard
