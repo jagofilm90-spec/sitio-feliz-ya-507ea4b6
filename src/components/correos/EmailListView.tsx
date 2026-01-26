@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Mail, RefreshCw, Paperclip, Loader2, CheckCheck } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { useIsMobile } from "@/hooks/use-mobile";
+import EmailRowMobile from "./EmailRowMobile";
 
 interface Email {
   id: string;
@@ -31,6 +33,7 @@ interface EmailListViewProps {
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
+  accountTag?: string;
 }
 
 const EmailListView = ({
@@ -45,7 +48,10 @@ const EmailListView = ({
   hasMore = false,
   isLoadingMore = false,
   onLoadMore,
+  accountTag,
 }: EmailListViewProps) => {
+  const isMobile = useIsMobile();
+
   const formatEmailDate = (dateStr: string) => {
     try {
       const date = new Date(dateStr);
@@ -71,7 +77,7 @@ const EmailListView = ({
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className={isMobile ? "border-0 shadow-none" : ""}>
         <div className="p-4 border-b bg-primary/5">
           <div className="flex items-center justify-center gap-3">
             <div className="relative">
@@ -86,8 +92,12 @@ const EmailListView = ({
         <div className="divide-y">
           {/* Skeleton loader for emails */}
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="p-4 flex items-start gap-3 animate-pulse">
-              <div className="w-2 h-2 mt-2 rounded-full bg-muted" />
+            <div key={i} className={`p-4 flex items-start gap-3 animate-pulse ${isMobile ? 'p-3' : ''}`}>
+              {isMobile ? (
+                <div className="w-11 h-11 rounded-full bg-muted shrink-0" />
+              ) : (
+                <div className="w-2 h-2 mt-2 rounded-full bg-muted" />
+              )}
               <div className="flex-1 space-y-2">
                 <div className="flex justify-between">
                   <div className="h-4 bg-muted rounded w-1/3" />
@@ -105,7 +115,7 @@ const EmailListView = ({
 
   if (!emails || emails.length === 0) {
     return (
-      <Card>
+      <Card className={isMobile ? "border-0 shadow-none" : ""}>
         <CardContent className="flex flex-col items-center justify-center py-12">
           <Mail className="h-12 w-12 text-muted-foreground mb-4" />
           <p className="text-muted-foreground">
@@ -120,6 +130,51 @@ const EmailListView = ({
     );
   }
 
+  // Layout móvil estilo Gmail
+  if (isMobile) {
+    return (
+      <div className="bg-background">
+        <ScrollArea className="h-[calc(100vh-200px)] min-h-[300px]">
+          <div className="divide-y divide-border/50">
+            {emails.map((email, index) => (
+              <EmailRowMobile
+                key={email.id}
+                email={email}
+                onClick={() => onSelectEmail(email.id, index)}
+                selectionMode={selectionMode}
+                isSelected={selectedIds.has(email.id)}
+                onToggleSelect={() => onToggleSelect(email.id)}
+                accountTag={accountTag}
+              />
+            ))}
+            
+            {/* Load More Button */}
+            {hasMore && (
+              <div className="p-4 flex justify-center">
+                <Button
+                  variant="outline"
+                  onClick={onLoadMore}
+                  disabled={isLoadingMore}
+                  className="w-full"
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Cargando...
+                    </>
+                  ) : (
+                    "Cargar más correos"
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
+    );
+  }
+
+  // Layout desktop original
   return (
     <Card className="overflow-hidden">
       <ScrollArea className="h-[calc(100vh-280px)] min-h-[300px] max-h-[700px]">

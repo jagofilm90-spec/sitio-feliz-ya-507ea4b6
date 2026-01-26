@@ -18,8 +18,10 @@ import EmailListView from "./EmailListView";
 import EmailDetailView from "./EmailDetailView";
 import ComposeEmailDialog from "./ComposeEmailDialog";
 import TrashListView from "./TrashListView";
+import GmailSearchBar from "./GmailSearchBar";
 import { playNotificationSound } from "@/utils/notificationSound";
 import { showGlobalRetrying, showGlobalSuccess, hideGlobalRetrying } from "@/hooks/useNetworkRetry";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Email {
   id: string;
@@ -59,6 +61,7 @@ interface BandejaEntradaProps {
 }
 
 const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
+  const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   
@@ -814,6 +817,185 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
     );
   }
 
+  // Layout móvil estilo Gmail
+  if (isMobile) {
+    return (
+      <>
+        <div className="space-y-3">
+          {/* Barra de búsqueda estilo Gmail */}
+          <GmailSearchBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onSearchSubmit={() => setActiveSearch(searchQuery)}
+            onClearSearch={clearSearch}
+            cuentas={cuentas}
+            selectedAccount={selectedAccount}
+            onAccountChange={handleAccountChange}
+            unreadCounts={unreadCounts}
+          />
+
+          {activeSearch && (
+            <div className="text-sm text-muted-foreground px-1">
+              Resultados para: <span className="font-medium">"{activeSearch}"</span>
+            </div>
+          )}
+
+          {/* Tabs simplificados para móvil */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <div className="flex items-center justify-between gap-2 overflow-x-auto">
+              <TabsList className="h-9">
+                <TabsTrigger value="inbox" className="gap-1.5 text-xs px-3">
+                  <Inbox className="h-4 w-4" />
+                  Entrada
+                  {unreadCounts?.[selectedAccount] ? (
+                    <Badge variant="destructive" className="text-[10px] px-1.5 h-4 ml-1">
+                      {unreadCounts[selectedAccount]}
+                    </Badge>
+                  ) : null}
+                </TabsTrigger>
+                <TabsTrigger value="trash" className="gap-1.5 text-xs px-3">
+                  <Trash2 className="h-4 w-4" />
+                  Papelera
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Filtros compactos móvil */}
+              {activeTab === "inbox" && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant={showOnlyUnread ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setShowOnlyUnread(!showOnlyUnread)}
+                    className="h-8 px-2"
+                  >
+                    <Filter className="h-4 w-4" />
+                  </Button>
+                  
+                  {!selectionMode ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectionMode(true)}
+                      className="h-8 px-2"
+                    >
+                      <Square className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearSelection}
+                      className="h-8 px-2"
+                    >
+                      ✕
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Barra de selección móvil */}
+            {selectionMode && selectedEmailIds.size > 0 && (
+              <div className="flex items-center gap-2 py-2 px-1">
+                <Badge variant="secondary" className="text-xs">
+                  {selectedEmailIds.size} seleccionado(s)
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectAll}
+                  className="h-7 text-xs"
+                >
+                  Todos
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleMarkSelectedAsRead}
+                  disabled={markingAllAsRead}
+                  className="h-7 text-xs"
+                >
+                  <CheckCheck className="h-3 w-3 mr-1" />
+                  Leído
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeleteSelected}
+                  disabled={deletingSelected}
+                  className="h-7 text-xs"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+
+            <TabsContent value="inbox" className="mt-2">
+              <EmailListView
+                emails={(showOnlyUnread ? emails.filter(e => e.isUnread) : emails)
+                  .map(email => ({
+                    ...email,
+                    isProcesado: correosProcesados?.has(email.id) || false,
+                  }))
+                  .filter(email => {
+                    if (filterProcessed === 'processed') return email.isProcesado;
+                    if (filterProcessed === 'unprocessed') return !email.isProcesado;
+                    return true;
+                  })
+                }
+                isLoading={isLoading}
+                onSelectEmail={(id, index) => handleSelectEmail(id, false, index)}
+                onRefresh={() => refetch()}
+                isRefreshing={isRefetching}
+                selectedIds={selectedEmailIds}
+                onToggleSelect={handleToggleSelect}
+                selectionMode={selectionMode}
+                hasMore={!!nextPageToken}
+                isLoadingMore={isLoadingMore}
+                onLoadMore={handleLoadMore}
+                accountTag={selectedCuenta?.nombre}
+              />
+            </TabsContent>
+
+            <TabsContent value="trash" className="mt-2">
+              <TrashListView
+                email={selectedAccount}
+                onSelectEmail={(id) => handleSelectEmail(id, true)}
+                onEmailRecovered={handleEmailDeleted}
+              />
+            </TabsContent>
+          </Tabs>
+
+          {/* Loading overlay for email detail */}
+          {isLoadingDetail && (
+            <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          )}
+        </div>
+
+        {/* FAB para redactar - estilo Gmail */}
+        <Button
+          onClick={() => setComposeOpen(true)}
+          className="fixed bottom-20 right-4 h-14 px-5 rounded-full shadow-lg z-40 gap-2"
+        >
+          <PenSquare className="h-5 w-5" />
+          <span className="font-medium">Redactar</span>
+        </Button>
+
+        {/* Compose email dialog */}
+        <ComposeEmailDialog
+          open={composeOpen}
+          onOpenChange={setComposeOpen}
+          fromEmail={selectedAccount}
+          cuentas={cuentas}
+          onSuccess={() => refetch()}
+        />
+      </>
+    );
+  }
+
+  // Layout desktop original
   return (
     <>
       <div className="space-y-4">
