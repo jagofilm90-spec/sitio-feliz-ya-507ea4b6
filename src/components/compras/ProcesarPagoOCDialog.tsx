@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -49,6 +49,23 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
+// Constantes de impuestos
+const IVA_RATE = 0.16;
+const IEPS_RATE = 0.08;
+
+interface ProductoRecibido {
+  detalle_id: string;
+  producto_id: string;
+  codigo: string;
+  nombre: string;
+  cantidad: number;
+  precio_unitario: number;
+  subtotal: number;
+  aplica_iva: boolean;
+  aplica_ieps: boolean;
+  pagado: boolean;
+}
+
 interface ProcesarPagoOCDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -60,6 +77,7 @@ interface ProcesarPagoOCDialogProps {
     total: number;
     monto_devoluciones?: number | null;
     total_ajustado?: number | null;
+    monto_pagado?: number | null;
     fecha_creacion?: string;
   } | null;
   onOpenFacturas?: () => void;
@@ -85,13 +103,15 @@ export function ProcesarPagoOCDialog({
   const queryClient = useQueryClient();
   const [fechaPago, setFechaPago] = useState<Date>(new Date());
   const [referenciaPago, setReferenciaPago] = useState("");
-  const [montoPagado, setMontoPagado] = useState("");
   const [comprobante, setComprobante] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [generandoPDF, setGenerandoPDF] = useState(false);
   const [notificarDevoluciones, setNotificarDevoluciones] = useState(true);
+  
+  // Estado para productos seleccionados
+  const [productosSeleccionados, setProductosSeleccionados] = useState<Set<string>>(new Set());
 
-  // Query para obtener productos recibidos
+  // Query para obtener productos recibidos con flags de impuestos
   const { data: productosRecibidos = [] } = useQuery({
     queryKey: ["productos-recibidos-pago", orden?.id],
     queryFn: async () => {
@@ -106,23 +126,39 @@ export function ProcesarPagoOCDialog({
           precio_unitario_compra,
           subtotal,
           producto_id,
-          productos (codigo, nombre)
+          pagado,
+          productos (codigo, nombre, aplica_iva, aplica_ieps)
         `)
         .eq("orden_compra_id", orden.id);
       
       if (error) throw error;
       if (!detalles) return [];
       
-      return detalles.map((d: any) => ({
+      return detalles.map((d: any): ProductoRecibido => ({
+        detalle_id: d.id,
+        producto_id: d.producto_id,
         codigo: d.productos?.codigo || "",
         nombre: d.productos?.nombre || "Producto",
         cantidad: d.cantidad_recibida ?? d.cantidad,
         precio_unitario: d.precio_unitario_compra || 0,
-        subtotal: (d.cantidad_recibida ?? d.cantidad) * (d.precio_unitario_compra || 0)
+        subtotal: (d.cantidad_recibida ?? d.cantidad) * (d.precio_unitario_compra || 0),
+        aplica_iva: d.productos?.aplica_iva ?? true,
+        aplica_ieps: d.productos?.aplica_ieps ?? false,
+        pagado: d.pagado || false,
       }));
     },
     enabled: !!orden?.id && open,
   });
+
+  // Inicializar selección cuando cargan productos (solo los no pagados)
+  useEffect(() => {
+    if (productosRecibidos.length > 0) {
+      const noPagados = productosRecibidos
+        .filter(p => !p.pagado)
+        .map(p => p.detalle_id);
+      setProductosSeleccionados(new Set(noPagados));
+    }
+  }, [productosRecibidos]);
 
   // Query para verificar si hay facturas del proveedor registradas
   const { data: facturasProveedor = [] } = useQuery({
@@ -143,8 +179,6 @@ export function ProcesarPagoOCDialog({
   });
 
   const tieneFacturasRegistradas = facturasProveedor.length > 0;
-  const facturasPendientes = facturasProveedor.filter(f => f.status_pago !== "pagado");
-  const facturasPagadas = facturasProveedor.filter(f => f.status_pago === "pagado");
 
   // Query para obtener devoluciones
   const { data: devolucionesDetalle = [] } = useQuery({
@@ -166,7 +200,6 @@ export function ProcesarPagoOCDialog({
       if (error) throw error;
       if (!devoluciones || devoluciones.length === 0) return [];
       
-      // Para cada devolución, obtener el precio unitario
       const devolucionesConPrecio = await Promise.all(
         devoluciones.map(async (dev) => {
           const { data: detalle } = await supabase
@@ -190,13 +223,12 @@ export function ProcesarPagoOCDialog({
     enabled: !!orden?.id && open && !!(orden?.monto_devoluciones && orden.monto_devoluciones > 0),
   });
 
-  // Query para datos bancarios del proveedor (si los tiene)
+  // Query para datos bancarios del proveedor
   const { data: datosBancarios } = useQuery({
     queryKey: ["proveedor-banco", orden?.proveedor_id],
     queryFn: async () => {
       if (!orden?.proveedor_id) return null;
       
-      // Solo seleccionar nombre ya que los campos bancarios podrían no existir
       const { data, error } = await supabase
         .from("proveedores")
         .select("nombre")
@@ -204,52 +236,101 @@ export function ProcesarPagoOCDialog({
         .single();
       
       if (error) throw error;
-      // Retornar solo beneficiario por ahora - datos bancarios se podrían agregar después
-      return data ? {
-        beneficiario: data.nombre
-      } : null;
+      return data ? { beneficiario: data.nombre } : null;
     },
     enabled: !!orden?.proveedor_id && open,
   });
 
-  const montoCalculado = orden?.total_ajustado ?? orden?.total ?? 0;
+  // Calcular totales con impuestos de productos seleccionados
+  const calcularTotalesSeleccionados = useMemo(() => {
+    const productosParaPagar = productosRecibidos.filter(
+      p => productosSeleccionados.has(p.detalle_id) && !p.pagado
+    );
+    
+    let subtotalBase = 0;
+    let ivaTotal = 0;
+    let iepsTotal = 0;
+    
+    for (const p of productosParaPagar) {
+      // Los precios de compra típicamente incluyen impuestos, desagregar
+      let divisor = 1;
+      if (p.aplica_iva) divisor += IVA_RATE;
+      if (p.aplica_ieps) divisor += IEPS_RATE;
+      
+      const base = p.subtotal / divisor;
+      subtotalBase += base;
+      
+      if (p.aplica_iva) {
+        ivaTotal += base * IVA_RATE;
+      }
+      if (p.aplica_ieps) {
+        iepsTotal += base * IEPS_RATE;
+      }
+    }
+    
+    return {
+      subtotal: Math.round(subtotalBase * 100) / 100,
+      iva: Math.round(ivaTotal * 100) / 100,
+      ieps: Math.round(iepsTotal * 100) / 100,
+      impuestos: Math.round((ivaTotal + iepsTotal) * 100) / 100,
+      total: Math.round((subtotalBase + ivaTotal + iepsTotal) * 100) / 100,
+      cantidadProductos: productosParaPagar.length,
+    };
+  }, [productosRecibidos, productosSeleccionados]);
+
   const tieneDevoluciones = (orden?.monto_devoluciones ?? 0) > 0;
+  const productosNoPagados = productosRecibidos.filter(p => !p.pagado);
+  const todosSeleccionados = productosNoPagados.length > 0 && 
+    productosNoPagados.every(p => productosSeleccionados.has(p.detalle_id));
+  const algunosPagados = productosRecibidos.some(p => p.pagado);
 
-  // Validar conciliación
-  const montoPagadoNum = parseFloat(montoPagado) || 0;
-  const diferencia = Math.abs(montoPagadoNum - montoCalculado);
-  const hayDiferencia = montoPagado && diferencia > 0.02;
+  // Handlers para checkboxes
+  const handleToggleAll = (checked: boolean) => {
+    if (checked) {
+      setProductosSeleccionados(new Set(productosNoPagados.map(p => p.detalle_id)));
+    } else {
+      setProductosSeleccionados(new Set());
+    }
+  };
 
-  // Descargar PDF de Orden de Pago
+  const handleToggleProducto = (detalleId: string, checked: boolean) => {
+    const newSet = new Set(productosSeleccionados);
+    if (checked) {
+      newSet.add(detalleId);
+    } else {
+      newSet.delete(detalleId);
+    }
+    setProductosSeleccionados(newSet);
+  };
+
+  // Descargar PDF de Orden de Pago con productos seleccionados
   const handleDescargarPDF = async () => {
     if (!orden) return;
     
     setGenerandoPDF(true);
     try {
+      const productosParaPDF = productosRecibidos.filter(
+        p => productosSeleccionados.has(p.detalle_id) && !p.pagado
+      );
+      
       const pdfData: OrdenPagoData = {
         ordenCompra: {
           id: orden.id,
           folio: orden.folio,
           proveedor_nombre: orden.proveedor_nombre,
           fecha_creacion: orden.fecha_creacion || new Date().toISOString().split('T')[0],
-          total: orden.total,
-          monto_devoluciones: orden.monto_devoluciones || 0,
-          total_ajustado: orden.total_ajustado ?? orden.total,
+          total: calcularTotalesSeleccionados.total,
+          monto_devoluciones: 0, // No aplica devoluciones en pago parcial por producto
+          total_ajustado: calcularTotalesSeleccionados.total,
         },
-        productosRecibidos: productosRecibidos.map(p => ({
+        productosRecibidos: productosParaPDF.map(p => ({
           codigo: p.codigo,
           nombre: p.nombre,
           cantidad: p.cantidad,
           precio_unitario: p.precio_unitario,
           subtotal: p.subtotal,
         })),
-        devoluciones: devolucionesDetalle.map((d: any) => ({
-          codigo: d.productos?.codigo || "",
-          nombre: d.productos?.nombre || "Producto",
-          cantidad: d.cantidad_devuelta,
-          motivo: d.motivo,
-          monto: d.monto,
-        })),
+        devoluciones: [],
         datosBancarios,
       };
       
@@ -290,22 +371,49 @@ export function ProcesarPagoOCDialog({
         setUploading(false);
       }
 
-      // Update orden en base de datos
+      // 1. Marcar productos seleccionados como pagados
+      const idsSeleccionados = Array.from(productosSeleccionados);
+      
+      if (idsSeleccionados.length > 0) {
+        const { error: updateDetallesError } = await supabase
+          .from("ordenes_compra_detalles")
+          .update({ 
+            pagado: true, 
+            fecha_pago: new Date().toISOString() 
+          })
+          .in("id", idsSeleccionados);
+        
+        if (updateDetallesError) throw updateDetallesError;
+      }
+
+      // 2. Verificar si todos los productos están pagados
+      const { data: todosDetalles } = await supabase
+        .from("ordenes_compra_detalles")
+        .select("id, pagado")
+        .eq("orden_compra_id", orden?.id);
+      
+      const todosPagados = todosDetalles?.every(d => d.pagado);
+      const nuevoStatus = todosPagados ? "pagado" : "parcial";
+
+      // 3. Calcular nuevo monto pagado total
+      const nuevoMontoPagado = (orden?.monto_pagado || 0) + calcularTotalesSeleccionados.total;
+
+      // 4. Update orden en base de datos
       const { error } = await supabase
         .from("ordenes_compra")
         .update({
-          status_pago: "pagado",
+          status_pago: nuevoStatus,
           fecha_pago: fechaPago.toISOString(),
           referencia_pago: referenciaPago,
           comprobante_pago_url: comprobanteUrl,
-          monto_pagado: montoPagadoNum,
+          monto_pagado: nuevoMontoPagado,
         })
         .eq("id", orden?.id);
 
       if (error) throw error;
 
-      // Notificar devoluciones al proveedor si hay y está activado
-      if (tieneDevoluciones && notificarDevoluciones && orden?.proveedor_id) {
+      // Notificar devoluciones al proveedor si hay y está activado (solo en pago completo)
+      if (todosPagados && tieneDevoluciones && notificarDevoluciones && orden?.proveedor_id) {
         try {
           await supabase.functions.invoke("notificar-cierre-oc", {
             body: {
@@ -321,35 +429,45 @@ export function ProcesarPagoOCDialog({
           });
         } catch (notifError) {
           console.error("Error notificando devoluciones:", notifError);
-          // No lanzar error, el pago ya se registró
         }
       }
+
+      return { todosPagados };
     },
-    onSuccess: () => {
+    onSuccess: ({ todosPagados }) => {
       queryClient.invalidateQueries({ queryKey: ["ordenes_compra"] });
-      toast.success("Pago registrado exitosamente");
+      queryClient.invalidateQueries({ queryKey: ["productos-recibidos-pago"] });
+      
+      if (todosPagados) {
+        toast.success("Pago completo registrado exitosamente");
+      } else {
+        toast.success(`Pago parcial registrado: ${calcularTotalesSeleccionados.cantidadProductos} producto(s)`);
+      }
+      
       onOpenChange(false);
       // Reset form
       setReferenciaPago("");
-      setMontoPagado("");
       setComprobante(null);
       setFechaPago(new Date());
+      setProductosSeleccionados(new Set());
     },
     onError: (error: Error) => {
       toast.error("Error al registrar pago: " + error.message);
     },
   });
 
+  const isPagoCompleto = productosNoPagados.length === calcularTotalesSeleccionados.cantidadProductos;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
             Procesar Pago - {orden?.folio}
           </DialogTitle>
           <DialogDescription>
-            Revisa el resumen financiero y registra el pago de esta orden de compra.
+            Selecciona los productos a pagar. Los impuestos se recalculan automáticamente.
           </DialogDescription>
         </DialogHeader>
 
@@ -364,24 +482,8 @@ export function ProcesarPagoOCDialog({
                 </AlertTitle>
                 <AlertDescription className="text-amber-700 dark:text-amber-400">
                   <p className="mb-3">
-                    Para manejar pagos parciales, registra el pago directamente en cada factura.
+                    También puedes gestionar los pagos por factura individual.
                   </p>
-                  <div className="space-y-2 mb-4">
-                    {facturasProveedor.map((f: any) => (
-                      <div key={f.id} className="flex items-center justify-between text-sm bg-background/50 rounded px-3 py-2">
-                        <span className="font-medium">{f.numero_factura}</span>
-                        <div className="flex items-center gap-2">
-                          <span>${f.monto_total?.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
-                          <Badge 
-                            variant={f.status_pago === "pagado" ? "default" : "outline"}
-                            className={f.status_pago === "pagado" ? "bg-green-100 text-green-800" : ""}
-                          >
-                            {f.status_pago === "pagado" ? "✓ Pagada" : "Pendiente"}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                   {onOpenFacturas && (
                     <Button
                       variant="outline"
@@ -390,84 +492,194 @@ export function ProcesarPagoOCDialog({
                         onOpenChange(false);
                         onOpenFacturas();
                       }}
-                      className="w-full"
                     >
                       <ExternalLink className="h-4 w-4 mr-2" />
-                      Ir a Gestionar Facturas
+                      Ver Facturas del Proveedor
                     </Button>
                   )}
                 </AlertDescription>
               </Alert>
             )}
 
-            {/* Proveedor */}
+            {/* Proveedor header */}
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <div>
                 <p className="text-sm text-muted-foreground">Proveedor</p>
                 <p className="font-semibold">{orden?.proveedor_nombre}</p>
               </div>
-              {!tieneFacturasRegistradas && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDescargarPDF}
-                  disabled={generandoPDF}
-                >
-                  {generandoPDF ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <FileDown className="h-4 w-4 mr-2" />
-                  )}
-                  Descargar Orden de Pago (PDF)
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDescargarPDF}
+                disabled={generandoPDF || calcularTotalesSeleccionados.cantidadProductos === 0}
+              >
+                {generandoPDF ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <FileDown className="h-4 w-4 mr-2" />
+                )}
+                Descargar Orden de Pago (PDF)
+              </Button>
             </div>
 
-            {/* Resumen Financiero */}
+            {/* Productos ya pagados alert */}
+            {algunosPagados && (
+              <Alert>
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <AlertDescription>
+                  Algunos productos de esta OC ya han sido pagados previamente.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Tabla de productos con checkboxes */}
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-muted/30 p-3 border-b flex items-center justify-between">
+                <h4 className="font-medium">Seleccionar Productos a Pagar</h4>
+                {productosNoPagados.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="selectAll"
+                      checked={todosSeleccionados}
+                      onCheckedChange={(checked) => handleToggleAll(checked === true)}
+                    />
+                    <Label htmlFor="selectAll" className="text-sm cursor-pointer">
+                      Seleccionar todos
+                    </Label>
+                  </div>
+                )}
+              </div>
+              
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12"></TableHead>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Producto</TableHead>
+                    <TableHead className="text-center">Cant.</TableHead>
+                    <TableHead className="text-right">Subtotal</TableHead>
+                    <TableHead>Impuestos</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {productosRecibidos.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        No hay productos recibidos
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    productosRecibidos.map((p) => (
+                      <TableRow 
+                        key={p.detalle_id}
+                        className={cn(
+                          p.pagado && "bg-green-50/50 dark:bg-green-950/20",
+                          !p.pagado && !productosSeleccionados.has(p.detalle_id) && "opacity-50"
+                        )}
+                      >
+                        <TableCell>
+                          {p.pagado ? (
+                            <Badge variant="outline" className="bg-green-100 text-green-800 text-xs">
+                              ✓ Pagado
+                            </Badge>
+                          ) : (
+                            <Checkbox
+                              checked={productosSeleccionados.has(p.detalle_id)}
+                              onCheckedChange={(checked) => 
+                                handleToggleProducto(p.detalle_id, checked === true)
+                              }
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">{p.codigo}</TableCell>
+                        <TableCell>{p.nombre}</TableCell>
+                        <TableCell className="text-center">{p.cantidad}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          ${p.subtotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            {p.aplica_iva && (
+                              <Badge variant="outline" className="text-xs">IVA</Badge>
+                            )}
+                            {p.aplica_ieps && (
+                              <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-950/50">IEPS</Badge>
+                            )}
+                            {!p.aplica_iva && !p.aplica_ieps && (
+                              <span className="text-muted-foreground text-xs">-</span>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Resumen Financiero Dinámico */}
             <div className="border rounded-lg overflow-hidden">
               <div className="bg-green-50 dark:bg-green-950/30 p-4">
                 <h3 className="font-semibold text-green-800 dark:text-green-300 mb-3">
-                  Resumen Financiero
+                  Resumen del Pago {!isPagoCompleto && "(Parcial)"}
                 </h3>
                 
                 <div className="space-y-2">
-                  {tieneDevoluciones && (
-                    <>
-                      <div className="flex justify-between text-sm">
-                        <span>Total Original:</span>
-                        <span className="font-medium">
-                          ${orden?.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm text-red-600 dark:text-red-400">
-                        <span className="flex items-center gap-1">
-                          <Undo2 className="h-3 w-3" />
-                          Devoluciones:
-                        </span>
-                        <span className="font-medium">
-                          -${(orden?.monto_devoluciones || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                      <Separator className="my-2" />
-                    </>
+                  <div className="flex justify-between text-sm">
+                    <span>Productos seleccionados:</span>
+                    <span className="font-medium">
+                      {calcularTotalesSeleccionados.cantidadProductos} de {productosNoPagados.length}
+                    </span>
+                  </div>
+                  
+                  <Separator className="my-2" />
+                  
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal (base):</span>
+                    <span className="font-medium">
+                      ${calcularTotalesSeleccionados.subtotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  
+                  {calcularTotalesSeleccionados.iva > 0 && (
+                    <div className="flex justify-between text-sm text-blue-600 dark:text-blue-400">
+                      <span>IVA (16%):</span>
+                      <span className="font-medium">
+                        +${calcularTotalesSeleccionados.iva.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
                   )}
+                  
+                  {calcularTotalesSeleccionados.ieps > 0 && (
+                    <div className="flex justify-between text-sm text-amber-600 dark:text-amber-400">
+                      <span>IEPS (8%):</span>
+                      <span className="font-medium">
+                        +${calcularTotalesSeleccionados.ieps.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
+                  
+                  <Separator className="my-2" />
                   
                   <div className="flex justify-between text-lg font-bold text-green-700 dark:text-green-400">
                     <span>MONTO A PAGAR:</span>
-                    <span>${montoCalculado.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+                    <span>${calcularTotalesSeleccionados.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Devoluciones detalle */}
+            {/* Devoluciones detalle (solo mostrar si hay) */}
             {tieneDevoluciones && devolucionesDetalle.length > 0 && (
               <div className="border rounded-lg overflow-hidden">
                 <div className="bg-red-50 dark:bg-red-950/30 p-3 border-b">
                   <h4 className="font-medium text-red-800 dark:text-red-300 flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4" />
-                    Devoluciones Aplicadas ({devolucionesDetalle.length})
+                    Devoluciones Registradas ({devolucionesDetalle.length})
                   </h4>
+                  <p className="text-xs text-red-600/80 mt-1">
+                    Nota: Las devoluciones se descontaron del total de la OC.
+                  </p>
                 </div>
                 <Table>
                   <TableHeader>
@@ -504,33 +716,9 @@ export function ProcesarPagoOCDialog({
 
             {/* Formulario de Pago */}
             <div className="space-y-4">
-              <h3 className="font-semibold">Registrar Pago</h3>
+              <h3 className="font-semibold">Datos del Pago</h3>
               
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Monto Pagado *</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={montoPagado}
-                      onChange={(e) => setMontoPagado(e.target.value)}
-                      placeholder={montoCalculado.toFixed(2)}
-                      className="pl-7"
-                      required
-                    />
-                  </div>
-                  {hayDiferencia && (
-                    <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-sm">
-                      <AlertTriangle className="h-4 w-4" />
-                      <span>
-                        Diferencia de ${diferencia.toFixed(2)} con el monto calculado
-                      </span>
-                    </div>
-                  )}
-                </div>
-
                 <div className="space-y-2">
                   <Label>Fecha de Pago *</Label>
                   <Popover>
@@ -556,15 +744,15 @@ export function ProcesarPagoOCDialog({
                     </PopoverContent>
                   </Popover>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label>Referencia / No. Transferencia</Label>
-                <Input
-                  value={referenciaPago}
-                  onChange={(e) => setReferenciaPago(e.target.value)}
-                  placeholder="Ej: Transferencia SPEI #123456"
-                />
+                <div className="space-y-2">
+                  <Label>Referencia / No. Transferencia</Label>
+                  <Input
+                    value={referenciaPago}
+                    onChange={(e) => setReferenciaPago(e.target.value)}
+                    placeholder="Ej: Transferencia SPEI #123456"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -585,7 +773,7 @@ export function ProcesarPagoOCDialog({
                 </div>
               </div>
 
-              {tieneDevoluciones && (
+              {isPagoCompleto && tieneDevoluciones && (
                 <div className="flex items-center space-x-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
                   <Checkbox
                     id="notificarDevoluciones"
@@ -614,7 +802,7 @@ export function ProcesarPagoOCDialog({
           </Button>
           <Button
             onClick={() => confirmarPagoMutation.mutate()}
-            disabled={!montoPagado || confirmarPagoMutation.isPending || uploading}
+            disabled={calcularTotalesSeleccionados.cantidadProductos === 0 || confirmarPagoMutation.isPending || uploading}
           >
             {confirmarPagoMutation.isPending || uploading ? (
               <>
@@ -624,7 +812,7 @@ export function ProcesarPagoOCDialog({
             ) : (
               <>
                 <CheckCircle2 className="h-4 w-4 mr-2" />
-                Confirmar Pago
+                {isPagoCompleto ? "Confirmar Pago Completo" : "Confirmar Pago Parcial"}
               </>
             )}
           </Button>
