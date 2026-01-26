@@ -1,127 +1,161 @@
 
-## Plan: Corregir Crash al Tomar Foto en Registro de Vehículo
+# Plan: Adaptar Interfaz de Correos Estilo Gmail para Movil
 
-### Problema Identificado
+## Objetivo
+Transformar la interfaz de correos del ERP para que en dispositivos moviles se vea y funcione como la app de Gmail, manteniendo la funcionalidad actual en desktop.
 
-La app crashea en iPad cuando el usuario selecciona "Take Photo" al registrar un vehículo nuevo. El crash ocurre porque:
+---
 
-1. Las fotos del iPad pueden ser muy grandes (12+ megapixels, 5-10MB)
-2. El código actual en `VehiculosTab.tsx` procesa las imágenes directamente sin comprimirlas primero
-3. Falta manejo de errores robusto en el evento `onChange` del input de archivos
-4. El `FileReader` puede fallar en el WebView de Capacitor sin un catch apropiado
+## Elementos a Implementar (basado en el screenshot de Gmail)
 
-### Solución
+### 1. Barra de Busqueda Estilo Gmail
+- Barra redondeada con fondo gris claro
+- Icono de menu hamburguesa a la izquierda
+- Placeholder "Buscar en el correo"
+- Avatar del usuario a la derecha
+- Solo visible en movil (en desktop se mantiene el diseno actual)
 
-Agregar compresión de imágenes y manejo defensivo de errores en el formulario de registro de vehículos.
+### 2. Avatares Circulares con Iniciales
+- Extraer iniciales del nombre del remitente
+- Generar color de fondo consistente basado en el email
+- Mostrar foto de perfil si esta disponible (para remitentes conocidos)
+
+### 3. Rediseno de Filas de Correo
+**Layout por fila:**
+```text
++-------+----------------------------------+-------+
+| Avatar| Nombre remitente       Contador  |  Hora |
+|       | Asunto del correo               |  Star |
+|       | Preview del contenido...        |       |
+|       | [Tag cuenta] [Adjuntos]         |       |
++-------+----------------------------------+-------+
+```
+
+**Elementos visuales:**
+- Avatar 44x44px a la izquierda
+- Nombre en negrita si no leido
+- Contador de hilos (si aplica)
+- Hora alineada a la derecha
+- Asunto en linea secundaria
+- Snippet en gris debajo
+- Tags de cuenta en chips coloridos
+- Chips para adjuntos mostrando nombre de imagen
+- Estrella para favoritos (opcional, fase 2)
+
+### 4. Boton Flotante (FAB) para Redactar
+- Boton azul redondeado fijo en esquina inferior derecha
+- Icono de lapiz + texto "Redactar"
+- Visible solo en movil
+- Reemplaza al boton "Nuevo correo" del header
+
+### 5. Vista de Detalle de Correo Adaptada
+- Header simplificado con boton volver
+- Avatar grande del remitente
+- Botones de accion en menu desplegable
+
+---
+
+## Arquitectura de Cambios
 
 ### Archivos a Modificar
 
-| Archivo | Cambios |
-|---------|---------|
-| `src/components/rutas/VehiculosTab.tsx` | Agregar compresión de imágenes antes de subir/procesar, try-catch robusto |
+1. **`src/components/correos/EmailListView.tsx`**
+   - Crear componente `EmailRowMobile` para el nuevo diseno
+   - Agregar funcion `generateAvatarColor(email)` para colores consistentes
+   - Agregar funcion `getInitials(name)` para extraer iniciales
+   - Detectar movil con `useIsMobile()` para alternar layouts
 
-### Cambios Detallados
+2. **`src/components/correos/BandejaEntrada.tsx`**
+   - Agregar barra de busqueda estilo Gmail (solo movil)
+   - Agregar boton flotante FAB (solo movil)
+   - Simplificar header en movil (ocultar botones, usar FAB)
+   - Mover selector de cuenta a menu hamburguesa
 
-#### 1. Importar utilidad de compresión de imágenes
+3. **`src/components/correos/EmailDetailView.tsx`** (fase 2)
+   - Simplificar layout para movil
+   - Colapsar botones secundarios en menu dropdown
 
-```tsx
-// Agregar al inicio del archivo
-import { compressImageForUpload, isValidImage } from "@/lib/imageUtils";
-```
+4. **Nuevo: `src/components/correos/EmailAvatarMobile.tsx`**
+   - Componente reutilizable para avatares
+   - Manejo de iniciales y colores
 
-#### 2. Modificar el manejador de archivos para agregar compresión y manejo de errores
+5. **Nuevo: `src/components/correos/GmailSearchBar.tsx`**
+   - Barra de busqueda estilo Gmail
+   - Menu hamburguesa para cuentas
+   - Avatar del usuario actual
 
-El input actual (línea ~777-786):
-```tsx
-<Input
-  type="file"
-  accept=".pdf,.jpg,.jpeg,.png,.webp"
-  onChange={(e) => {
-    const file = e.target.files?.[0];
-    if (file) handleFileUpload(file, 'tarjeta', editingVehiculo?.id);
-  }}
-  disabled={uploadingTarjeta || extractingData}
-/>
-```
+---
 
-Cambiar a:
-```tsx
-<Input
-  type="file"
-  accept=".pdf,.jpg,.jpeg,.png,.webp,image/*"
-  capture="environment"
-  onChange={async (e) => {
-    try {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      
-      // Para imágenes, comprimir antes de procesar (evita crash por memoria en iPad)
-      let processedFile = file;
-      if (file.type.startsWith('image/')) {
-        processedFile = await compressImageForUpload(file, 'ocr');
-      }
-      
-      handleFileUpload(processedFile, 'tarjeta', editingVehiculo?.id);
-    } catch (error) {
-      console.error('Error processing file:', error);
-      toast({
-        title: "Error al procesar archivo",
-        description: "Intenta de nuevo o selecciona un archivo diferente",
-        variant: "destructive",
-      });
-    }
-  }}
-  disabled={uploadingTarjeta || extractingData}
-/>
-```
+## Detalles Tecnicos
 
-#### 3. Aplicar el mismo patrón a los otros inputs de archivo
-
-- **Póliza de seguro** (~línea 1077): Agregar try-catch
-- **Factura del vehículo** (~línea 1095): Agregar compresión y try-catch
-
-#### 4. Agregar manejo defensivo en funciones de extracción
-
-En `extractTarjetaCirculacionData` y `extractFacturaData`, agregar validación del archivo:
-
-```tsx
-const extractTarjetaCirculacionData = async (file: File) => {
-  setExtractingData(true);
-  try {
-    // Validar que el archivo existe y tiene contenido
-    if (!file || file.size === 0) {
-      throw new Error('Archivo vacío o inválido');
-    }
-    
-    const { data: { session } } = await supabase.auth.getSession();
-    // ... resto del código
-  } catch (error: any) {
-    // ... manejo de errores existente
-  }
+### Generacion de Colores para Avatares
+```typescript
+const generateAvatarColor = (email: string): string => {
+  const colors = [
+    '#1a73e8', '#ea4335', '#34a853', '#fbbc04',
+    '#673ab7', '#e91e63', '#00bcd4', '#ff5722'
+  ];
+  const hash = email.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+  return colors[Math.abs(hash) % colors.length];
 };
 ```
 
-### Resultado Esperado
+### Extraccion de Iniciales
+```typescript
+const getInitials = (name: string): string => {
+  const words = name.trim().split(' ');
+  if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+};
+```
 
-- La app ya no crasheará al tomar fotos desde la cámara del iPad
-- Las imágenes grandes se comprimirán automáticamente antes de procesarlas
-- Si ocurre algún error, se mostrará un mensaje al usuario en lugar de crashear
-- La funcionalidad de extracción de datos con IA seguirá funcionando normalmente
+### Deteccion de Movil
+```typescript
+const isMobile = useIsMobile();
+// Renderizar layout diferente segun dispositivo
+```
 
-### Notas Importantes
+---
 
-1. **NO reenviar a Apple** hasta recibir el email de confirmación sobre la solicitud "Unlisted"
-2. Una vez corregido el crash, deberás:
-   - Hacer `git pull` del proyecto
-   - Ejecutar `npm run build`
-   - Ejecutar `npx cap sync ios`
-   - Crear nuevo Archive en Xcode y subir nueva build
+## Flujo de Implementacion
 
-### Pruebas Recomendadas
+### Fase 1: Lista de Correos (Prioridad Alta)
+1. Crear componente `EmailAvatarMobile`
+2. Redisenar `EmailListView` para movil con avatares
+3. Agregar FAB para redactar
+4. Simplificar header en movil
 
-Antes de reenviar a Apple, probar en dispositivo real o simulador:
-1. Abrir Rutas → Vehículos → Nuevo Vehículo
-2. Tocar el input de Tarjeta de Circulación
-3. Seleccionar "Take Photo" y tomar una foto
-4. Verificar que la app no crashea y procesa la imagen correctamente
-5. Repetir con Póliza y Factura
+### Fase 2: Busqueda y Navegacion
+1. Crear `GmailSearchBar` con menu hamburguesa
+2. Mover selector de cuentas al menu
+3. Agregar filtros en menu lateral
+
+### Fase 3: Vista de Detalle (Opcional)
+1. Adaptar `EmailDetailView` para movil
+2. Colapsar acciones secundarias
+
+---
+
+## Consideraciones Importantes
+
+1. **Retrocompatibilidad**: El layout de desktop no debe cambiar
+2. **Performance**: Los avatares se generan con CSS, sin imagenes adicionales
+3. **Accesibilidad**: Mantener tamanos tactiles minimos de 44x44px
+4. **Consistencia**: Usar los mismos colores del tema del ERP
+5. **Memoria del proyecto**: Seguir el patron de `useIsMobile()` ya establecido
+
+---
+
+## Resultado Esperado
+
+En movil, la bandeja de entrada se vera exactamente como la app de Gmail:
+- Avatares coloridos con iniciales
+- Busqueda prominente arriba
+- Informacion jerarquica clara
+- FAB para redactar
+- Navegacion fluida entre correos
