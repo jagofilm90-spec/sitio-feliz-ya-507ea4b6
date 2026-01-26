@@ -1,161 +1,315 @@
 
-# Plan: Resumen Visual Detallado en Panel de Pago
 
-## Situación Actual
+# Plan: Notificación al Proveedor al Cierre de OC con Devoluciones
 
-El `MarcarPagadoDialog` ya muestra un resumen básico cuando hay devoluciones:
-- Total Original: $60,000.00
-- (-) Devoluciones: -$100.00
-- Total a Pagar: $59,900.00
+## Resumen
 
-**Lo que falta:** El detalle de qué productos fueron devueltos, cuántas unidades y el monto de cada uno.
+Crear un flujo automático que notifique al proveedor cuando se cierra una OC que tuvo devoluciones (productos rotos, rechazados por calidad), enviando un correo profesional con un PDF adjunto que detalla:
+- Productos recibidos correctamente
+- Productos devueltos y sus motivos
+- Total original vs monto final a pagar
 
 ---
 
-## Mejora Propuesta
+## Contexto Actual
 
-Transformar la sección de devoluciones en un resumen visual completo con desglose por producto:
+### Lo que ya existe:
+1. **Flujo de pago** (`MarcarPagadoDialog.tsx`): Ya envía correo de confirmación al proveedor con desglose de devoluciones
+2. **Generador de PDF de recepción** (`recepcionPdfGenerator.ts`): Genera PDFs profesionales con logo, tabla de productos, firmas
+3. **Edge Function de notificaciones** (`notificar-faltante-oc`): Patrón para enviar emails a proveedores via Gmail API
+4. **Campos de devoluciones en OC**: `monto_devoluciones` y `total_ajustado` ya calculados
+
+### Lo que falta:
+- Un PDF consolidado de "Cierre de OC" que incluya tanto lo recibido como lo devuelto
+- Disparo automático de la notificación al cerrar una OC con devoluciones (no solo al pagar)
+
+---
+
+## Solución Propuesta
+
+### 1. Nuevo Generador de PDF: `cierreOCPdfGenerator.ts`
+
+Crear un nuevo generador que produzca un documento de "Estado de Cuenta de Orden de Compra" con:
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│  REGISTRAR PAGO - OC-202601-0003                                │
-├─────────────────────────────────────────────────────────────────┤
-│  Proveedor: BODEGA AURRERA                                      │
-│                                                                  │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ 📦 RESUMEN DE PAGO                                        │  │
-│  ├───────────────────────────────────────────────────────────┤  │
-│  │                                                            │  │
-│  │ Total Original:                           $60,000.00      │  │
-│  │                                                            │  │
-│  │ ⚠️ Devoluciones:                             -$100.00      │  │
-│  │   ┌──────────────────────────────────────────────────┐   │  │
-│  │   │ • 2 × Azúcar Estándar 50kg                       │   │  │
-│  │   │   Motivo: Roto | $50.00 c/u → -$100.00           │   │  │
-│  │   │ • 1 × Arroz Morelos 25kg                         │   │  │
-│  │   │   Motivo: Calidad | $42.00 c/u → -$42.00         │   │  │
-│  │   └──────────────────────────────────────────────────┘   │  │
-│  │                                                            │  │
-│  │ ─────────────────────────────────────────────────────     │  │
-│  │ ✅ TOTAL A PAGAR:                         $59,858.00      │  │
-│  └───────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│  [LOGO]                                ESTADO DE CUENTA               │
+│                                        ORDEN DE COMPRA                 │
+├─────────────────────────────────────────────────────────────────────────┤
+│  Folio: OC-202601-0003          Fecha: 26/01/2026                      │
+│  Proveedor: BODEGA AURRERA                                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  PRODUCTOS RECIBIDOS                                                    │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │ Código     │ Producto              │ Cantidad │ P.U.    │ Subtotal│  │
+│  ├────────────┼───────────────────────┼──────────┼─────────┼─────────┤  │
+│  │ AZC001     │ Azúcar Estándar 50kg  │    1,198 │  $50.00 │$59,900  │  │
+│  │ ARR002     │ Arroz Morelos 25kg    │      200 │  $42.00 │ $8,400  │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+│  PRODUCTOS DEVUELTOS                                                    │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │ Código     │ Producto              │ Cant │ Motivo   │ Descuento │  │
+│  ├────────────┼───────────────────────┼──────┼──────────┼───────────┤  │
+│  │ AZC001     │ Azúcar Estándar 50kg  │    2 │ Roto     │   -$100.00│  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+│  ════════════════════════════════════════════════════════════════════   │
+│                                                                          │
+│  Total Original:                                          $68,300.00    │
+│  (-) Devoluciones:                                          -$100.00    │
+│  ──────────────────────────────────────────────────────────────────     │
+│  TOTAL A PAGAR:                                           $68,200.00    │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
----
-
-## Cambios Técnicos
-
-### Archivo: `src/components/compras/MarcarPagadoDialog.tsx`
-
-**1. Agregar query para obtener devoluciones de la OC:**
+**Estructura del archivo:**
 
 ```typescript
-// Nuevo query para obtener detalles de devoluciones
-const { data: devolucionesDetalle = [] } = useQuery({
-  queryKey: ["devoluciones-detalle-pago", orden?.id],
-  queryFn: async () => {
-    // Primero obtener las devoluciones
-    const { data: devoluciones, error } = await supabase
-      .from("devoluciones_proveedor")
-      .select(`
-        id,
-        cantidad_devuelta,
-        motivo,
-        producto_id,
-        productos (nombre, codigo)
-      `)
-      .eq("orden_compra_id", orden?.id);
-    
-    if (error) throw error;
-    
-    // Para cada devolución, obtener el precio unitario
-    const devolucionesConPrecio = await Promise.all(
-      (devoluciones || []).map(async (dev) => {
-        const { data: detalle } = await supabase
-          .from("ordenes_compra_detalles")
-          .select("precio_unitario_compra")
-          .eq("orden_compra_id", orden?.id)
-          .eq("producto_id", dev.producto_id)
-          .maybeSingle();
-        
-        return {
-          ...dev,
-          precio_unitario: detalle?.precio_unitario_compra || 0,
-          monto: dev.cantidad_devuelta * (detalle?.precio_unitario_compra || 0)
-        };
-      })
-    );
-    
-    return devolucionesConPrecio;
-  },
-  enabled: !!orden?.id && open,
-});
-```
+// src/utils/cierreOCPdfGenerator.ts
 
-**2. Crear componente visual de resumen:**
-
-Nueva sección que reemplaza el resumen básico actual con:
-- Card con fondo destacado
-- Icono de paquete para el título
-- Lista colapsable de productos devueltos
-- Cada producto muestra: cantidad, nombre, motivo, precio unitario, subtotal
-- Total claramente destacado con color de éxito
-
-**3. Formato de motivos legible:**
-
-```typescript
-const formatMotivo = (motivo: string) => {
-  const motivos: Record<string, string> = {
-    'roto': 'Empaque roto',
-    'rechazado_calidad': 'Calidad rechazada',
-    'no_llego': 'No llegó',
+interface CierreOCData {
+  ordenCompra: {
+    id: string;
+    folio: string;
+    proveedor_nombre: string;
+    fecha_creacion: string;
+    total: number;
+    monto_devoluciones: number;
+    total_ajustado: number;
   };
-  return motivos[motivo] || motivo;
-};
+  productosRecibidos: Array<{
+    codigo: string;
+    nombre: string;
+    cantidad: number;
+    precio_unitario: number;
+    subtotal: number;
+  }>;
+  devoluciones: Array<{
+    codigo: string;
+    nombre: string;
+    cantidad: number;
+    motivo: string;
+    precio_unitario: number;
+    monto: number;
+  }>;
+}
+
+// Función principal
+export const generarCierreOCPDF = async (data: CierreOCData): Promise<void>
+
+// Versión base64 para adjuntar a emails
+export const generarCierreOCPDFBase64 = async (data: CierreOCData): Promise<{
+  base64: string;
+  fileName: string;
+}>
 ```
 
 ---
 
-## Beneficios para el Proveedor
+### 2. Nueva Edge Function: `notificar-cierre-oc`
 
-Cuando se envía el correo de confirmación de pago, el cuerpo del mensaje también incluirá:
+Crear una edge function que:
+1. Reciba el `orden_compra_id`
+2. Consulte los datos de la OC, productos recibidos y devoluciones
+3. Genere el HTML del correo con resumen financiero
+4. Adjunte el PDF generado (pasado como base64 desde el frontend)
+5. Envíe via `gmail-api` a los contactos del proveedor con `recibe_logistica` o `recibe_devoluciones`
+
+**Estructura:**
+
+```typescript
+// supabase/functions/notificar-cierre-oc/index.ts
+
+interface RequestBody {
+  orden_compra_id: string;
+  pdf_base64: string;
+  pdf_filename: string;
+}
+
+// El email incluirá:
+// - Resumen de la OC (folio, fecha, proveedor)
+// - Tabla de productos recibidos
+// - Tabla de devoluciones (si las hay)
+// - Desglose financiero (original - devoluciones = total)
+// - PDF adjunto con el detalle completo
+```
+
+---
+
+### 3. Disparar Notificación al Cerrar OC
+
+**Opción A - Al marcar la última entrega como recibida:**
+
+Modificar `AlmacenRecepcionSheet.tsx` (líneas 1030-1039) donde ya se marca la OC como "completada":
+
+```typescript
+// Después de marcar como completada...
+if (!entregasPendientes || entregasPendientes.length === 0) {
+  await supabase
+    .from("ordenes_compra")
+    .update({ status: "completada", ... })
+    .eq("id", entrega.orden_compra.id);
+  
+  // Si hubo devoluciones, enviar notificación
+  if (monto_devoluciones > 0) {
+    await enviarNotificacionCierreOC(ordenCompraId);
+  }
+}
+```
+
+**Opción B - Al registrar el pago (recomendada):**
+
+Integrar en `MarcarPagadoDialog.tsx` ya que:
+- Ya tiene el flujo de envío de correo
+- Ya tiene los datos de devoluciones cargados
+- El PDF serviría como documento oficial de cierre
+
+La diferencia sería agregar la generación del PDF de cierre como adjunto adicional.
+
+---
+
+### 4. Modificaciones a `MarcarPagadoDialog.tsx`
+
+Agregar opción de adjuntar "Estado de Cuenta de OC" como PDF adicional:
+
+```typescript
+// Nuevo checkbox en la UI
+<div className="flex items-center space-x-2">
+  <Checkbox
+    id="adjuntarEstadoCuenta"
+    checked={adjuntarEstadoCuenta}
+    onCheckedChange={(checked) => setAdjuntarEstadoCuenta(checked === true)}
+  />
+  <Label htmlFor="adjuntarEstadoCuenta">
+    Adjuntar Estado de Cuenta (PDF con detalle de productos)
+  </Label>
+</div>
+
+// Al enviar el correo, generar y adjuntar el PDF
+if (adjuntarEstadoCuenta) {
+  const estadoCuentaPDF = await generarCierreOCPDFBase64(cierreData);
+  emailPayload.attachments.push({
+    filename: estadoCuentaPDF.fileName,
+    content: estadoCuentaPDF.base64,
+    mimeType: 'application/pdf',
+  });
+}
+```
+
+---
+
+## Archivos a Crear/Modificar
+
+| Archivo | Acción | Descripción |
+|---------|--------|-------------|
+| `src/utils/cierreOCPdfGenerator.ts` | CREAR | Generador de PDF de Estado de Cuenta |
+| `supabase/functions/notificar-cierre-oc/index.ts` | CREAR | Edge function para notificación automática |
+| `src/components/compras/MarcarPagadoDialog.tsx` | MODIFICAR | Agregar opción de adjuntar PDF de cierre |
+| `supabase/config.toml` | MODIFICAR | Registrar nueva edge function |
+
+---
+
+## Flujo Visual del Usuario
+
+```text
+                    ┌─────────────────────────────────┐
+                    │   Almacén: Recepción con        │
+                    │   devoluciones (2 bultos rotos) │
+                    └──────────────┬──────────────────┘
+                                   │
+                                   ▼
+                    ┌─────────────────────────────────┐
+                    │   Sistema calcula:              │
+                    │   monto_devoluciones = $100     │
+                    │   total_ajustado = $59,900      │
+                    └──────────────┬──────────────────┘
+                                   │
+                                   ▼
+                    ┌─────────────────────────────────┐
+                    │   OC marcada como "completada"  │
+                    └──────────────┬──────────────────┘
+                                   │
+                                   ▼
+                    ┌─────────────────────────────────┐
+                    │   Secretaria: Registrar Pago    │
+                    │   ☑ Enviar correo al proveedor  │
+                    │   ☑ Adjuntar Estado de Cuenta   │
+                    │   📎 Adjuntar comprobante pago  │
+                    └──────────────┬──────────────────┘
+                                   │
+                                   ▼
+            ┌──────────────────────────────────────────────┐
+            │             📧 CORREO AL PROVEEDOR           │
+            ├──────────────────────────────────────────────┤
+            │  Asunto: Confirmación de Pago - OC-202601-003│
+            │                                               │
+            │  Adjuntos:                                    │
+            │  📄 Comprobante_pago.pdf                      │
+            │  📄 Estado_Cuenta_OC-202601-0003.pdf          │
+            │                                               │
+            │  Contenido:                                   │
+            │  - Resumen de pago                           │
+            │  - Desglose de devoluciones                  │
+            │  - Total pagado                              │
+            └──────────────────────────────────────────────┘
+```
+
+---
+
+## Contenido del Correo (HTML)
 
 ```html
-<h3>Detalle de Devoluciones Aplicadas:</h3>
+<h2>Confirmación de Pago - OC-202601-0003</h2>
+
+<p>Estimado proveedor,</p>
+
+<p>Le informamos que hemos procesado el cierre de la siguiente orden de compra:</p>
+
 <table>
-  <tr>
-    <th>Producto</th>
-    <th>Cantidad</th>
-    <th>Motivo</th>
-    <th>Descuento</th>
-  </tr>
-  <tr>
-    <td>Azúcar Estándar 50kg</td>
-    <td>2</td>
-    <td>Empaque roto</td>
-    <td>-$100.00</td>
-  </tr>
+  <tr><td>Folio OC:</td><td>OC-202601-0003</td></tr>
+  <tr><td>Total Original:</td><td>$60,000.00</td></tr>
+  <tr><td>(-) Devoluciones:</td><td>-$100.00</td></tr>
+  <tr><td><strong>Total Pagado:</strong></td><td><strong>$59,900.00</strong></td></tr>
 </table>
+
+<h3>Detalle de Devoluciones:</h3>
+<table>
+  <tr><th>Producto</th><th>Cantidad</th><th>Motivo</th><th>Monto</th></tr>
+  <tr><td>Azúcar Estándar 50kg</td><td>2</td><td>Empaque roto</td><td>-$100.00</td></tr>
+</table>
+
+<p>Adjuntamos:</p>
+<ul>
+  <li>Estado de Cuenta detallado (PDF)</li>
+  <li>Comprobante de pago</li>
+</ul>
+
+<p>Saludos cordiales,<br>
+<strong>Departamento de Compras - ALMASA</strong></p>
 ```
 
 ---
 
-## Archivos a Modificar
+## Beneficios
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/components/compras/MarcarPagadoDialog.tsx` | Agregar query de devoluciones y componente visual de resumen |
+1. **Transparencia total**: El proveedor recibe documento oficial con todo el detalle
+2. **Trazabilidad**: Queda registro del PDF enviado y los correos
+3. **Profesionalismo**: PDF con formato corporativo (logo, colores institucionales)
+4. **Reducción de disputas**: El proveedor sabe exactamente qué se recibió y qué se devolvió
+5. **Eficiencia**: Un solo clic genera y envía todo automáticamente
 
 ---
 
-## Resultado Esperado
+## Datos Necesarios para el PDF
 
-1. Al abrir el diálogo de pago de una OC con devoluciones, se verá inmediatamente:
-   - El total original de la OC
-   - Lista detallada de cada producto devuelto (nombre, cantidad, motivo, monto)
-   - El total final a pagar claramente destacado
+La información se obtiene de:
+- `ordenes_compra`: folio, total, monto_devoluciones, total_ajustado
+- `ordenes_compra_detalles`: productos con cantidades y precios
+- `devoluciones_proveedor`: productos devueltos con motivos
+- `proveedores`: nombre del proveedor
 
-2. El proveedor recibirá en el correo de confirmación el mismo desglose para transparencia total
+Todo esto ya está disponible en el contexto del `MarcarPagadoDialog`.
 
-3. La información visual permite al operador confirmar que el pago es correcto antes de ejecutarlo
