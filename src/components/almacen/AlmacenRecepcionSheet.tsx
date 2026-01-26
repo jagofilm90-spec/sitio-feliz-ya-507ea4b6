@@ -83,6 +83,13 @@ const RAZONES_REQUIEREN_DEVOLUCION = ["roto", "rechazado_calidad"];
 // Razones que requieren foto obligatoria del producto
 const RAZONES_REQUIEREN_FOTO = ["roto", "rechazado_calidad"];
 
+interface ProductoFaltante {
+  producto_id?: string;
+  nombre: string;
+  cantidad_faltante: number;
+  codigo?: string;
+}
+
 interface EntregaCompra {
   id: string;
   numero_entrega: number;
@@ -97,6 +104,9 @@ interface EntregaCompra {
   numero_sello_llegada: string | null;
   llegada_registrada_por: string | null;
   llegada_registrada_por_profile?: { id: string; full_name: string } | null;
+  // Campos para entregas de faltantes
+  origen_faltante?: boolean;
+  productos_faltantes?: ProductoFaltante[];
   orden_compra: {
     id: string;
     folio: string;
@@ -315,6 +325,18 @@ export const AlmacenRecepcionSheet = ({
   const loadProductos = async () => {
     setLoading(true);
     try {
+      // Primero obtener datos de la entrega para saber si es faltante
+      const { data: entregaData } = await supabase
+        .from("ordenes_compra_entregas")
+        .select("origen_faltante, productos_faltantes")
+        .eq("id", entrega.id)
+        .maybeSingle();
+
+      const esEntregaFaltante = entregaData?.origen_faltante === true;
+      const productosFaltantes = (Array.isArray(entregaData?.productos_faltantes) 
+        ? entregaData.productos_faltantes as unknown as ProductoFaltante[] 
+        : []);
+
       const { data, error } = await supabase
         .from("ordenes_compra_detalles")
         .select(`
@@ -328,7 +350,37 @@ export const AlmacenRecepcionSheet = ({
 
       if (error) throw error;
 
-      const productosData = (data as any[]) || [];
+      let productosData = (data as any[]) || [];
+      
+      // Si es entrega de faltante, filtrar solo los productos que faltaron
+      if (esEntregaFaltante && productosFaltantes.length > 0) {
+        const productosFaltantesIds = productosFaltantes
+          .map(pf => pf.producto_id)
+          .filter(Boolean);
+        
+        // Filtrar solo los productos que están en la lista de faltantes
+        productosData = productosData.filter(p => 
+          productosFaltantesIds.includes(p.producto_id) ||
+          // Fallback: buscar por nombre si no hay producto_id
+          productosFaltantes.some(pf => 
+            pf.nombre === p.producto?.nombre
+          )
+        );
+        
+        // Ajustar cantidades esperadas según los faltantes
+        productosData = productosData.map(p => {
+          const faltante = productosFaltantes.find(
+            pf => pf.producto_id === p.producto_id || pf.nombre === p.producto?.nombre
+          );
+          return {
+            ...p,
+            // Sobreescribir cantidad ordenada con cantidad faltante
+            cantidad_ordenada: faltante?.cantidad_faltante || p.cantidad_ordenada,
+            // Resetear cantidad_recibida a 0 para esta entrega específica
+            cantidad_recibida: 0
+          };
+        });
+      }
       
       // Obtener el proveedor_id de la orden de compra
       const proveedorId = entrega.orden_compra?.proveedor?.id;
@@ -926,7 +978,8 @@ export const AlmacenRecepcionSheet = ({
         const productosFaltantesData = productosFaltantes.map(p => ({
           producto_id: p.producto_id,
           nombre: p.producto?.nombre || "Producto",
-          cantidad_faltante: p.cantidad_ordenada - getCantidadNumerica(p.id)
+          cantidad_faltante: p.cantidad_ordenada - getCantidadNumerica(p.id),
+          codigo: p.producto?.codigo
         }));
 
         // Crear nueva entrega para faltantes
