@@ -164,85 +164,95 @@ export const AlmacenSidebar = ({
       {/* Forzar tema oscuro solo en este sidebar */}
       <div className="dark">
         <Sidebar collapsible="icon" expandOnHover className="border-r border-sidebar-border">
-          {/* Header con Logo */}
-          <SidebarHeader className="border-b border-sidebar-border">
-            <div className={cn(
-              "flex items-center justify-center py-2 transition-all",
-              isCollapsed ? "px-0" : "px-3"
-            )}>
-              {isCollapsed ? (
-                <img src={iconoA} alt="A" className="h-7 w-7 object-contain" />
-              ) : (
-                <img src={logoBlanco} alt="Almasa" className="h-7 w-auto" />
-              )}
-            </div>
-          </SidebarHeader>
+        {/* Header con Logo - Siempre visible */}
+        <SidebarHeader className="border-b border-sidebar-border">
+          <div className="flex flex-col items-center py-2 gap-1">
+            <img src={iconoA} alt="A" className="h-7 w-7 object-contain" />
+            {!isCollapsed && (
+              <img src={logoBlanco} alt="Almasa" className="h-5 w-auto" />
+            )}
+          </div>
+        </SidebarHeader>
 
-          {/* Bienvenida con Avatar - Solo cuando está expandido */}
-          {!isCollapsed && (
-            <div className="p-3 border-b border-sidebar-border space-y-3">
-              <div className="flex items-center gap-3">
-                <AvatarEmpleadoPopover
-                  empleadoId={empleadoId}
-                  empleadoNombre={empleadoNombre}
-                  empleadoPuesto={empleadoPuesto}
-                  empleadoEmail={empleadoEmail}
-                  fotoUrl={empleadoFotoUrl}
-                  onFotoUpdated={onFotoUpdated}
-                />
-                
-                <div className="flex-1 min-w-0">
-                  <p className="text-muted-foreground text-[10px]">Bienvenido,</p>
-                  <h2 className="text-sidebar-foreground font-semibold text-sm truncate">
-                    {empleadoNombre || "Usuario"}
-                  </h2>
-                  <p className="text-muted-foreground text-[10px]">
-                    {empleadoPuesto || (showFlotillaTabs ? "Gerente de Almacén" : "Almacenista")}
+        {/* User Info - Nombre siempre visible, avatar solo expandido */}
+        <div className="border-b border-sidebar-border">
+          <div className={cn(
+            "flex items-center gap-2 p-2",
+            isCollapsed ? "flex-col justify-center" : "flex-row"
+          )}>
+            {/* Avatar - Solo cuando expandido */}
+            {!isCollapsed && (
+              <AvatarEmpleadoPopover
+                empleadoId={empleadoId}
+                empleadoNombre={empleadoNombre}
+                empleadoPuesto={empleadoPuesto}
+                empleadoEmail={empleadoEmail}
+                fotoUrl={empleadoFotoUrl}
+                onFotoUpdated={onFotoUpdated}
+              />
+            )}
+            
+            {/* Nombre - Siempre visible */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className={cn(
+                  "min-w-0",
+                  isCollapsed ? "w-full text-center" : "flex-1 text-left"
+                )}>
+                  {!isCollapsed && (
+                    <p className="text-muted-foreground text-[10px]">Bienvenido,</p>
+                  )}
+                  <p className={cn(
+                    "text-sidebar-foreground font-semibold truncate",
+                    isCollapsed ? "text-[10px]" : "text-sm"
+                  )}>
+                    {isCollapsed 
+                      ? (empleadoNombre?.split(' ')[0] || "Usuario")
+                      : (empleadoNombre || "Usuario")
+                    }
                   </p>
+                  {!isCollapsed && (
+                    <p className="text-muted-foreground text-[10px]">
+                      {empleadoPuesto || (showFlotillaTabs ? "Gerente de Almacén" : "Almacenista")}
+                    </p>
+                  )}
                 </div>
-              </div>
-              
-              {/* Fecha y hora en vivo */}
-              <div className="pt-2 border-t border-sidebar-border/50 space-y-1">
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <Calendar className="w-3 h-3" />
-                  <span className="text-[10px]">
-                    {format(currentTime, "EEE, dd MMM yyyy", { locale: es })}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-sidebar-foreground">
-                    <Clock className="w-3 h-3" />
-                    <span className="text-xs font-mono">
-                      {format(currentTime, "HH:mm:ss")}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-[9px] text-green-400">En vivo</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Avatar compacto cuando está colapsado */}
-          {isCollapsed && (
-            <div className="flex justify-center py-3 border-b border-sidebar-border">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center cursor-default">
-                    <span className="text-primary-foreground font-semibold text-xs">
-                      {empleadoNombre?.charAt(0)?.toUpperCase() || "U"}
-                    </span>
-                  </div>
-                </TooltipTrigger>
+              </TooltipTrigger>
+              {isCollapsed && (
                 <TooltipContent side="right">
                   <p>{empleadoNombre || "Usuario"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {empleadoPuesto || (showFlotillaTabs ? "Gerente de Almacén" : "Almacenista")}
+                  </p>
                 </TooltipContent>
-              </Tooltip>
+              )}
+            </Tooltip>
+          </div>
+          
+          {/* Fecha y hora en vivo - Solo expandido */}
+          {!isCollapsed && (
+            <div className="px-3 pb-2 space-y-1">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Calendar className="w-3 h-3" />
+                <span className="text-[10px]">
+                  {format(currentTime, "EEE, dd MMM yyyy", { locale: es })}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-sidebar-foreground">
+                  <Clock className="w-3 h-3" />
+                  <span className="text-xs font-mono">
+                    {format(currentTime, "HH:mm:ss")}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-[9px] text-green-400">En vivo</span>
+                </div>
+              </div>
             </div>
           )}
+        </div>
 
           {/* Navegación */}
           <SidebarContent>
