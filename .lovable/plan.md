@@ -1,67 +1,56 @@
 
-## Diagnóstico (por qué “no te deja” aunque ya agregamos `min-h-0`)
-En tu `ProcesarPagoOCDialog`, el `DialogContent` base (el componente de UI) trae por defecto la clase Tailwind `grid` (viene de `src/components/ui/dialog.tsx`).
 
-Aunque en tu código le pasamos `className="... flex flex-col"`, en Tailwind **el orden de clases en el HTML no siempre “gana”**; para utilidades conflictivas como `grid` vs `flex`, puede terminar aplicándose `grid`.  
-Resultado: tu `ScrollArea` está dentro de un contenedor que **no es flex**, así que:
+# Plan: Corrección Definitiva del Scroll en ProcesarPagoOCDialog
 
-- `flex-1` **no funciona**
-- el `ScrollArea` no recibe una altura “limitada”
-- el contenido se “sale” del modal y queda **cortado** sin posibilidad de scroll
-- por eso no alcanzas a llegar a “Datos del Pago / subir comprobante”
+## Diagnóstico Actualizado
 
-Esto cuadra perfecto con lo que describes: “no me deja ver más abajo”.
+Revisando el código, veo que:
 
----
+1. **`DialogContent` base** (en `dialog.tsx` línea 39) tiene `grid` como clase por defecto
+2. Aunque usamos `!flex !flex-col`, hay un problema con cómo Tailwind procesa los modificadores `!important` cuando se mezclan con clases existentes en `cn()`
+3. El `ScrollArea` de Radix tiene un `Viewport` interno con `h-full` que depende de que su padre tenga altura definida
 
-## Solución propuesta (robusta): forzar el layout del modal a flex (solo aquí)
-En lugar de depender de que `flex` “override” a `grid`, vamos a **forzarlo** usando el modificador `!` de Tailwind (important).
+## Solución Definitiva
 
-### Cambio 1 — `ProcesarPagoOCDialog.tsx`
-**Objetivo:** asegurar que el `DialogContent` sea realmente `flex flex-col` y además recorte el contenido para que el scroll interno funcione.
+Vamos a tomar un enfoque más directo: **usar estilos inline para forzar el display flex**, ya que los estilos inline siempre tienen mayor especificidad que las clases CSS.
 
-- Ubicación actual:
+### Cambio en `ProcesarPagoOCDialog.tsx`
+
+**Ubicación**: Línea 520
+
+**Cambio**:
 ```tsx
-<DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-```
-
-- Cambiar a:
-```tsx
+// ANTES:
 <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden !flex !flex-col">
+
+// DESPUÉS:
+<DialogContent 
+  className="max-w-4xl max-h-[90vh] overflow-hidden" 
+  style={{ display: 'flex', flexDirection: 'column' }}
+>
 ```
 
-Notas:
-- `!flex !flex-col`: garantiza que el contenedor sea flex aunque el componente base tenga `grid`.
-- `overflow-hidden`: evita que el contenido se salga del modal; obliga a que el scroll ocurra dentro del `ScrollArea`.
-
-### Cambio 2 — mantener tu `ScrollArea` como está (ya está bien)
-Esto ya lo tienes:
-```tsx
-<ScrollArea className="flex-1 min-h-0 overflow-hidden px-1">
-```
-Lo dejamos igual; con el `DialogContent` realmente en flex, ahora sí va a funcionar.
+Al usar `style={{ display: 'flex', flexDirection: 'column' }}`, garantizamos que:
+- El estilo inline tiene mayor especificidad que cualquier clase Tailwind
+- No hay conflicto con la clase `grid` del componente base
+- El `ScrollArea` con `flex-1 min-h-0` funcionará correctamente
 
 ---
 
-## Alternativa (si por alguna razón prefieres seguir con `grid`)
-Si quieres mantener grid en lugar de flex, la solución equivalente es convertir el modal en un grid con filas definidas:
+## Validación Post-Cambio
 
-- `DialogContent`: `grid grid-rows-[auto,1fr,auto] max-h-[90vh] overflow-hidden`
-- `ScrollArea`: `min-h-0`
-
-Pero la opción de `!flex` es más simple y más consistente con tu intención actual (ya lo estabas usando como flex).
-
----
-
-## Qué vamos a validar después del cambio
-1. Abrir una OC con muchos productos.
-2. Abrir **Procesar Pago**.
-3. Hacer scroll hasta **Datos del Pago**.
-4. Confirmar que se puede seleccionar archivo (comprobante) y que el footer (botones) se mantiene accesible.
+1. Abrir una OC con muchos productos
+2. Hacer clic en "Procesar Pago"
+3. Verificar que aparece la barra de scroll a la derecha
+4. Hacer scroll hasta ver "Datos del Pago"
+5. Verificar que se puede subir el comprobante
+6. Confirmar que los botones del footer son visibles y accesibles
 
 ---
 
-## Archivos a tocar
-- `src/components/compras/ProcesarPagoOCDialog.tsx`
-  - Ajustar `DialogContent className` para forzar `flex` con `!flex !flex-col` y agregar `overflow-hidden`.
+## Archivo a Modificar
+
+| Archivo | Cambio |
+|---------|--------|
+| `src/components/compras/ProcesarPagoOCDialog.tsx` | Línea 520: usar `style` inline para forzar flex |
 
