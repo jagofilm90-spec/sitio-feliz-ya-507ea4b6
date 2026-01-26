@@ -1,161 +1,170 @@
 
-# Plan: Adaptar Interfaz de Correos Estilo Gmail para Movil
+# Plan: Adaptar Modulo de Correos para Desktop Estilo Gmail
 
-## Objetivo
-Transformar la interfaz de correos del ERP para que en dispositivos moviles se vea y funcione como la app de Gmail, manteniendo la funcionalidad actual en desktop.
+## Problema Identificado
+1. **Espacio blanco inferior**: La lista de correos tiene un `max-h-[700px]` que limita su altura, dejando un area grande sin utilizar en pantallas grandes.
+2. **Layout de una sola vista**: Actualmente, al seleccionar un correo, se reemplaza toda la pantalla con el detalle. Gmail desktop muestra lista + detalle lado a lado.
 
 ---
 
-## Elementos a Implementar (basado en el screenshot de Gmail)
+## Solucion Propuesta: Layout de Dos Paneles (Gmail Desktop)
 
-### 1. Barra de Busqueda Estilo Gmail
-- Barra redondeada con fondo gris claro
-- Icono de menu hamburguesa a la izquierda
-- Placeholder "Buscar en el correo"
-- Avatar del usuario a la derecha
-- Solo visible en movil (en desktop se mantiene el diseno actual)
-
-### 2. Avatares Circulares con Iniciales
-- Extraer iniciales del nombre del remitente
-- Generar color de fondo consistente basado en el email
-- Mostrar foto de perfil si esta disponible (para remitentes conocidos)
-
-### 3. Rediseno de Filas de Correo
-**Layout por fila:**
+### Arquitectura Visual
 ```text
-+-------+----------------------------------+-------+
-| Avatar| Nombre remitente       Contador  |  Hora |
-|       | Asunto del correo               |  Star |
-|       | Preview del contenido...        |       |
-|       | [Tag cuenta] [Adjuntos]         |       |
-+-------+----------------------------------+-------+
++------------------+--------------------------------+
+|                  |                                |
+|   LISTA DE       |    DETALLE DEL CORREO         |
+|   CORREOS        |    (Vista previa)              |
+|                  |                                |
+|   - Correo 1     |    De: remitente@email.com    |
+|   - Correo 2 *   |    Asunto: Re: Pedido...      |
+|   - Correo 3     |                                |
+|   - Correo 4     |    [Cuerpo del mensaje]       |
+|   ...            |                                |
+|                  |    [Adjuntos]                  |
+|   [Cargar mas]   |    [Responder] [Eliminar]      |
+|                  |                                |
++------------------+--------------------------------+
+     ~35-40%                   ~60-65%
 ```
 
-**Elementos visuales:**
-- Avatar 44x44px a la izquierda
-- Nombre en negrita si no leido
-- Contador de hilos (si aplica)
-- Hora alineada a la derecha
-- Asunto en linea secundaria
-- Snippet en gris debajo
-- Tags de cuenta en chips coloridos
-- Chips para adjuntos mostrando nombre de imagen
-- Estrella para favoritos (opcional, fase 2)
+### Cambios Principales
 
-### 4. Boton Flotante (FAB) para Redactar
-- Boton azul redondeado fijo en esquina inferior derecha
-- Icono de lapiz + texto "Redactar"
-- Visible solo en movil
-- Reemplaza al boton "Nuevo correo" del header
+1. **Eliminar limite de altura** en `EmailListView.tsx`
+   - Remover `max-h-[700px]` para que la lista ocupe todo el espacio vertical disponible
+   - Usar altura dinamica con `h-full` o `flex-1`
 
-### 5. Vista de Detalle de Correo Adaptada
-- Header simplificado con boton volver
-- Avatar grande del remitente
-- Botones de accion en menu desplegable
+2. **Implementar layout de dos columnas** en `BandejaEntrada.tsx`
+   - En desktop, mostrar lista y detalle simultaneamente
+   - La lista ocupara ~35% del ancho, el detalle ~65%
+   - Solo en movil se mantendra el comportamiento actual (una vista a la vez)
 
----
-
-## Arquitectura de Cambios
-
-### Archivos a Modificar
-
-1. **`src/components/correos/EmailListView.tsx`**
-   - Crear componente `EmailRowMobile` para el nuevo diseno
-   - Agregar funcion `generateAvatarColor(email)` para colores consistentes
-   - Agregar funcion `getInitials(name)` para extraer iniciales
-   - Detectar movil con `useIsMobile()` para alternar layouts
-
-2. **`src/components/correos/BandejaEntrada.tsx`**
-   - Agregar barra de busqueda estilo Gmail (solo movil)
-   - Agregar boton flotante FAB (solo movil)
-   - Simplificar header en movil (ocultar botones, usar FAB)
-   - Mover selector de cuenta a menu hamburguesa
-
-3. **`src/components/correos/EmailDetailView.tsx`** (fase 2)
-   - Simplificar layout para movil
-   - Colapsar botones secundarios en menu dropdown
-
-4. **Nuevo: `src/components/correos/EmailAvatarMobile.tsx`**
-   - Componente reutilizable para avatares
-   - Manejo de iniciales y colores
-
-5. **Nuevo: `src/components/correos/GmailSearchBar.tsx`**
-   - Barra de busqueda estilo Gmail
-   - Menu hamburguesa para cuentas
-   - Avatar del usuario actual
+3. **Ajustar `EmailDetailView.tsx`** para modo incrustado
+   - Crear variante sin header redundante cuando esta embebido en el panel derecho
+   - Mantener botones de accion pero compactar el layout
 
 ---
 
 ## Detalles Tecnicos
 
-### Generacion de Colores para Avatares
-```typescript
-const generateAvatarColor = (email: string): string => {
-  const colors = [
-    '#1a73e8', '#ea4335', '#34a853', '#fbbc04',
-    '#673ab7', '#e91e63', '#00bcd4', '#ff5722'
-  ];
-  const hash = email.split('').reduce((a, b) => {
-    a = ((a << 5) - a) + b.charCodeAt(0);
-    return a & a;
-  }, 0);
-  return colors[Math.abs(hash) % colors.length];
-};
+### 1. `EmailListView.tsx` - Corregir altura
+
+**Antes:**
+```tsx
+<ScrollArea className="h-[calc(100vh-280px)] min-h-[300px] max-h-[700px]">
 ```
 
-### Extraccion de Iniciales
-```typescript
-const getInitials = (name: string): string => {
-  const words = name.trim().split(' ');
-  if (words.length >= 2) {
-    return (words[0][0] + words[1][0]).toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
-};
+**Despues:**
+```tsx
+<ScrollArea className="h-[calc(100vh-280px)] min-h-[300px]">
 ```
 
-### Deteccion de Movil
-```typescript
-const isMobile = useIsMobile();
-// Renderizar layout diferente segun dispositivo
+### 2. `BandejaEntrada.tsx` - Layout de dos paneles
+
+**Nuevo layout desktop:**
+```tsx
+// En desktop, mostrar lista + detalle lado a lado
+return (
+  <div className="flex h-[calc(100vh-200px)] gap-4 overflow-hidden">
+    {/* Panel izquierdo: Lista de correos */}
+    <div className={cn(
+      "overflow-hidden flex flex-col",
+      selectedEmailId ? "w-[400px] flex-shrink-0" : "flex-1"
+    )}>
+      <EmailListView 
+        emails={filteredEmails} 
+        selectedEmailId={selectedEmailId}  // Para resaltar el seleccionado
+        ... 
+      />
+    </div>
+    
+    {/* Panel derecho: Detalle del correo */}
+    {selectedEmailId && emailDetail && (
+      <div className="flex-1 overflow-hidden">
+        <EmailDetailView 
+          email={emailDetail}
+          embedded={true}  // Modo compacto sin header duplicado
+          ...
+        />
+      </div>
+    )}
+    
+    {/* Estado vacio cuando no hay seleccion */}
+    {!selectedEmailId && (
+      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+        <div className="text-center">
+          <Mail className="h-16 w-16 mx-auto mb-4 opacity-50" />
+          <p>Selecciona un correo para ver su contenido</p>
+        </div>
+      </div>
+    )}
+  </div>
+);
+```
+
+### 3. `EmailDetailView.tsx` - Modo embebido
+
+**Nueva prop:**
+```tsx
+interface EmailDetailViewProps {
+  // ... props existentes
+  embedded?: boolean; // Para modo panel lateral sin header completo
+}
+```
+
+**Adaptaciones:**
+- Ocultar boton "Volver" cuando `embedded={true}` (innecesario, el usuario hace clic en otro correo)
+- Reducir padding del header
+- Mantener acciones de responder/eliminar visibles
+
+### 4. Resaltar correo seleccionado en la lista
+
+Agregar prop `selectedEmailId` a `EmailListView` para aplicar estilo de seleccion:
+
+```tsx
+<div className={cn(
+  "hover:bg-muted/50 transition-colors",
+  email.id === selectedEmailId && "bg-primary/10 border-l-2 border-primary"
+)}>
 ```
 
 ---
 
-## Flujo de Implementacion
+## Archivos a Modificar
 
-### Fase 1: Lista de Correos (Prioridad Alta)
-1. Crear componente `EmailAvatarMobile`
-2. Redisenar `EmailListView` para movil con avatares
-3. Agregar FAB para redactar
-4. Simplificar header en movil
-
-### Fase 2: Busqueda y Navegacion
-1. Crear `GmailSearchBar` con menu hamburguesa
-2. Mover selector de cuentas al menu
-3. Agregar filtros en menu lateral
-
-### Fase 3: Vista de Detalle (Opcional)
-1. Adaptar `EmailDetailView` para movil
-2. Colapsar acciones secundarias
+| Archivo | Cambio |
+|---------|--------|
+| `src/components/correos/EmailListView.tsx` | Quitar `max-h-[700px]`, agregar prop `selectedEmailId`, estilo de seleccion |
+| `src/components/correos/BandejaEntrada.tsx` | Layout de dos columnas en desktop, pasar `selectedEmailId` a lista |
+| `src/components/correos/EmailDetailView.tsx` | Nueva prop `embedded` para modo panel sin header "Volver" |
 
 ---
 
-## Consideraciones Importantes
+## Comportamiento por Dispositivo
 
-1. **Retrocompatibilidad**: El layout de desktop no debe cambiar
-2. **Performance**: Los avatares se generan con CSS, sin imagenes adicionales
-3. **Accesibilidad**: Mantener tamanos tactiles minimos de 44x44px
-4. **Consistencia**: Usar los mismos colores del tema del ERP
-5. **Memoria del proyecto**: Seguir el patron de `useIsMobile()` ya establecido
+| Dispositivo | Comportamiento |
+|-------------|----------------|
+| **Desktop (>1024px)** | Dos paneles lado a lado. Lista + Detalle simultaneos |
+| **Tablet (768-1024px)** | Similar a desktop pero con lista mas estrecha (~300px) |
+| **Movil (<768px)** | Comportamiento actual: una vista a la vez con transicion |
+
+---
+
+## Beneficios
+
+1. **Elimina espacio blanco**: La lista ocupa todo el alto disponible
+2. **Navegacion rapida**: Sin necesidad de "Volver" - clic directo en otro correo
+3. **Contexto visual**: Siempre ves la lista de correos mientras lees uno
+4. **Experiencia Gmail**: Familiar para usuarios de correo web
+5. **Retrocompatibilidad**: Movil mantiene el flujo actual
 
 ---
 
 ## Resultado Esperado
 
-En movil, la bandeja de entrada se vera exactamente como la app de Gmail:
-- Avatares coloridos con iniciales
-- Busqueda prominente arriba
-- Informacion jerarquica clara
-- FAB para redactar
-- Navegacion fluida entre correos
+En desktop, el modulo de correos se vera exactamente como Gmail web:
+- Lista de correos a la izquierda con scroll independiente
+- Detalle del correo a la derecha ocupando el espacio restante
+- Correo seleccionado resaltado en la lista
+- Sin espacios blancos desperdiciados
+- Navegacion fluida sin necesidad de retroceder
