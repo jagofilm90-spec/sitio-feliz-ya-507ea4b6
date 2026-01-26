@@ -1,183 +1,302 @@
 
+# Plan: Selección de Productos con Checkboxes y Recálculo de Impuestos
 
-# Plan: Soporte para Pagos Parciales por Factura del Proveedor
+## Resumen
 
-## El Escenario
-
-```text
-OC-XXXX de ENVOLPAN
-├── Producto 1: Papel Bala Rojo     → Entrega #1 (recibida)
-│                                    → Factura A (monto: $X) ← PAGAR HOY
-│
-├── Producto 2: Blanco Revolucionario → Entrega #2 (recibida) 
-│                                      → Factura B (monto: $Y) ← PAGAR MAÑANA
-│
-└── Status OC: "completada" (todo recibido)
-    Status Pago: ??? (parcialmente pagado)
-```
-
-## Lo que ya existe
-
-El sistema ya tiene la infraestructura necesaria:
-- Tabla `proveedor_facturas` para múltiples facturas por OC
-- Tabla `proveedor_factura_entregas` para enlazar facturas con entregas específicas
-- Flujo para marcar cada factura como pagada individualmente en `ProveedorFacturasDialog`
-
-## Lo que falta
-
-1. **Estado de pago parcial en la OC**: Actualmente solo hay "pendiente" o "pagado", falta "parcial"
-2. **Sincronización automática**: Cuando se paga una factura, actualizar el estado de la OC
-3. **Visibilidad clara**: Mostrar cuánto se ha pagado vs cuánto falta
-4. **Enlace desde el flujo de pago**: Conectar `ProcesarPagoOCDialog` con las facturas del proveedor
+Implementar sistema de checkboxes para selección de productos a pagar, con recálculo automático de IVA e IEPS cuando se quitan productos que llevan estos impuestos.
 
 ---
 
-## Cambios Propuestos
+## Lógica de Impuestos Actual
 
-### 1. Nuevo estado de pago: "parcial"
+El sistema ya tiene definido:
+- **IVA**: 16% (`IVA_RATE = 0.16`)
+- **IEPS**: 8% (`IEPS_RATE = 0.08`)
+- Los flags `aplica_iva` y `aplica_ieps` están en la tabla `productos`
+- La función `redondear()` garantiza precisión a 2 decimales
 
-Actualizar el campo `status_pago` en `ordenes_compra` para soportar:
-- `pendiente`: No se ha pagado nada
-- `parcial`: Se han pagado algunas facturas pero no todas
-- `pagado`: Todas las facturas están pagadas
+---
 
-### 2. Sincronización automática del estado de pago
+## Cambios Técnicos
 
-Cuando se registra un pago en una factura (`proveedor_facturas.status_pago = 'pagado'`), el sistema debe:
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ Al pagar una factura del proveedor:                        │
-├─────────────────────────────────────────────────────────────┤
-│ 1. Sumar total de facturas pagadas de la OC                │
-│ 2. Sumar total de todas las facturas de la OC              │
-│ 3. Actualizar OC:                                          │
-│    - Si pagado == total → status_pago = "pagado"           │
-│    - Si pagado > 0 pero < total → status_pago = "parcial"  │
-│    - Si pagado == 0 → status_pago = "pendiente"            │
-│ 4. Actualizar monto_pagado en la OC                        │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 3. Modificar flujo en `ProveedorFacturasDialog`
-
-Al marcar una factura como pagada (líneas 278-323), agregar:
+### 1. Modificar Query de Productos para Incluir Flags de Impuestos
 
 ```typescript
-// Después de registrar el pago de la factura...
-const { error } = await supabase
-  .from("proveedor_facturas")
-  .update({ status_pago: "pagado", ... })
-  .eq("id", facturaId);
+const { data: productosRecibidos = [] } = useQuery({
+  queryKey: ["productos-recibidos-pago", orden?.id],
+  queryFn: async () => {
+    const { data: detalles, error } = await supabase
+      .from("ordenes_compra_detalles")
+      .select(`
+        id,
+        cantidad_ordenada,
+        cantidad_recibida,
+        precio_unitario_compra,
+        subtotal,
+        producto_id,
+        pagado,
+        productos (
+          codigo, 
+          nombre, 
+          aplica_iva, 
+          aplica_ieps
+        )
+      `)
+      .eq("orden_compra_id", orden.id);
+    
+    return detalles.map((d) => ({
+      detalle_id: d.id,
+      producto_id: d.producto_id,
+      codigo: d.productos?.codigo || "",
+      nombre: d.productos?.nombre || "Producto",
+      cantidad: d.cantidad_recibida ?? d.cantidad_ordenada,
+      precio_unitario: d.precio_unitario_compra || 0,
+      subtotal: (d.cantidad_recibida ?? d.cantidad_ordenada) * (d.precio_unitario_compra || 0),
+      aplica_iva: d.productos?.aplica_iva || false,
+      aplica_ieps: d.productos?.aplica_ieps || false,
+      pagado: d.pagado || false,
+    }));
+  },
+});
+```
 
-// NUEVO: Actualizar estado de pago de la OC
-await actualizarEstadoPagoOC(ordenCompra.id);
+### 2. Función de Recálculo de Impuestos
 
-async function actualizarEstadoPagoOC(ocId: string) {
-  // Obtener todas las facturas de la OC
-  const { data: facturas } = await supabase
-    .from("proveedor_facturas")
-    .select("monto_total, status_pago")
-    .eq("orden_compra_id", ocId);
+```typescript
+const IVA_RATE = 0.16;
+const IEPS_RATE = 0.08;
+
+const calcularTotalesSeleccionados = useMemo(() => {
+  const productosParaPagar = productosRecibidos.filter(
+    p => productosSeleccionados.has(p.detalle_id) && !p.pagado
+  );
   
-  const totalFacturado = facturas.reduce((s, f) => s + f.monto_total, 0);
-  const totalPagado = facturas
-    .filter(f => f.status_pago === "pagado")
-    .reduce((s, f) => s + f.monto_total, 0);
+  let subtotalBase = 0;
+  let ivaTotal = 0;
+  let iepsTotal = 0;
   
-  let nuevoStatus = "pendiente";
-  if (totalPagado >= totalFacturado && totalFacturado > 0) {
-    nuevoStatus = "pagado";
-  } else if (totalPagado > 0) {
-    nuevoStatus = "parcial";
+  for (const p of productosParaPagar) {
+    // Asumir precios incluyen impuestos (flujo común de proveedores)
+    let base = p.subtotal;
+    let divisor = 1;
+    
+    if (p.aplica_iva) divisor += IVA_RATE;  // +0.16
+    if (p.aplica_ieps) divisor += IEPS_RATE; // +0.08
+    
+    // Desagregar base del precio total
+    base = p.subtotal / divisor;
+    subtotalBase += base;
+    
+    // Calcular impuestos
+    if (p.aplica_iva) {
+      ivaTotal += base * IVA_RATE;
+    }
+    if (p.aplica_ieps) {
+      iepsTotal += base * IEPS_RATE;
+    }
   }
   
-  await supabase
-    .from("ordenes_compra")
-    .update({ 
-      status_pago: nuevoStatus,
-      monto_pagado: totalPagado 
-    })
-    .eq("id", ocId);
-}
+  // Redondear a 2 decimales
+  return {
+    subtotal: Math.round(subtotalBase * 100) / 100,
+    iva: Math.round(ivaTotal * 100) / 100,
+    ieps: Math.round(iepsTotal * 100) / 100,
+    impuestos: Math.round((ivaTotal + iepsTotal) * 100) / 100,
+    total: Math.round((subtotalBase + ivaTotal + iepsTotal) * 100) / 100,
+  };
+}, [productosRecibidos, productosSeleccionados]);
 ```
 
-### 4. Modificar `ProcesarPagoOCDialog` para redirigir a facturas
-
-Cuando hay facturas pendientes, mostrar mensaje:
+### 3. Interfaz con Checkboxes
 
 ```text
-┌────────────────────────────────────────────────────────────┐
-│  PROCESAR PAGO - OC-202601-0003                            │
-├────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ⚠️ Esta OC tiene facturas del proveedor registradas       │
-│                                                             │
-│  Para manejar pagos parciales, registra el pago            │
-│  directamente en cada factura.                             │
-│                                                             │
-│  Facturas:                                                  │
-│  ├── FAC-001: $15,000 (Papel Bala Rojo) - Pendiente        │
-│  └── FAC-002: $12,000 (Blanco Revolucionario) - Pendiente  │
-│                                                             │
-│           [Ir a Gestionar Facturas]                        │
-│                                                             │
-└────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│  PROCESAR PAGO - OC-202601-0003                                         │
+├─────────────────────────────────────────────────────────────────────────┤
+│  Proveedor: ENVOLPAN                                                    │
+│                                                                          │
+│  SELECCIONAR PRODUCTOS A PAGAR:                [☑ Seleccionar todos]    │
+│  ┌────────────────────────────────────────────────────────────────────┐ │
+│  │ ☑ │ Código   │ Producto            │ Cant │ Subtotal │ IVA  │ IEPS│ │
+│  ├───┼──────────┼─────────────────────┼──────┼──────────┼──────┼─────┤ │
+│  │ ☑ │ BALA-001 │ Papel Bala Rojo     │ 50   │ $12,931  │ 16%  │  -  │ │
+│  │ ☐ │ BLAN-002 │ Blanco Revolucion.. │ 40   │ $10,345  │ 16%  │  -  │ │
+│  │ ✓ │ ALCO-003 │ Alcohol 96 (pagado) │ 10   │  $5,000  │ 16%  │ 8%  │ │
+│  └────────────────────────────────────────────────────────────────────┘ │
+│                                                                          │
+│  ════════════════════════════════════════════════════════════════════   │
+│  │ Subtotal (base):                                       $12,931.03 │  │
+│  │ IVA (16%):                                              $2,068.97 │  │
+│  │ IEPS (8%):                                                  $0.00 │  │
+│  │──────────────────────────────────────────────────────────────────│  │
+│  │ MONTO A PAGAR:                                         $15,000.00 │  │
+│  ════════════════════════════════════════════════════════════════════   │
+│                                                                          │
+│  [📄 Descargar Orden de Pago (PDF)]                                     │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 5. Visual en lista de OCs
+### 4. Badges Visuales de Impuestos
 
-Actualizar el badge de estado de pago para mostrar:
+Cada fila mostrará badges indicando qué impuestos aplica:
 
-```text
-┌──────────────────────────────────────────────────────────────────┐
-│ OC-202601-0003 | ENVOLPAN | $27,000                              │
-│                                                                   │
-│ [Completada]  [🟡 Pago Parcial: $15,000 / $27,000]              │
-│               └── Click para ver detalle de facturas            │
-└──────────────────────────────────────────────────────────────────┘
+```typescript
+<TableCell>
+  <div className="flex gap-1">
+    {p.aplica_iva && <Badge variant="outline" className="text-xs">IVA</Badge>}
+    {p.aplica_ieps && <Badge variant="outline" className="text-xs bg-amber-50">IEPS</Badge>}
+    {!p.aplica_iva && !p.aplica_ieps && <span className="text-muted-foreground text-xs">Sin impuestos</span>}
+  </div>
+</TableCell>
+```
+
+### 5. Resumen Financiero Dinámico
+
+El resumen se actualiza en tiempo real cuando se seleccionan/deseleccionan productos:
+
+```typescript
+<div className="bg-green-50 dark:bg-green-950/30 p-4 rounded-lg">
+  <div className="space-y-2 text-sm">
+    <div className="flex justify-between">
+      <span>Subtotal (base):</span>
+      <span>${calcularTotalesSeleccionados.subtotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+    </div>
+    
+    {calcularTotalesSeleccionados.iva > 0 && (
+      <div className="flex justify-between text-blue-600">
+        <span>IVA (16%):</span>
+        <span>+${calcularTotalesSeleccionados.iva.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+      </div>
+    )}
+    
+    {calcularTotalesSeleccionados.ieps > 0 && (
+      <div className="flex justify-between text-amber-600">
+        <span>IEPS (8%):</span>
+        <span>+${calcularTotalesSeleccionados.ieps.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+      </div>
+    )}
+    
+    <Separator />
+    
+    <div className="flex justify-between text-lg font-bold text-green-700">
+      <span>MONTO A PAGAR:</span>
+      <span>${calcularTotalesSeleccionados.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+    </div>
+  </div>
+</div>
+```
+
+### 6. Migración de Base de Datos
+
+Agregar campos de tracking a `ordenes_compra_detalles`:
+
+```sql
+-- Agregar campos para tracking de pago por producto
+ALTER TABLE ordenes_compra_detalles 
+ADD COLUMN IF NOT EXISTS pagado boolean DEFAULT false;
+
+ALTER TABLE ordenes_compra_detalles 
+ADD COLUMN IF NOT EXISTS fecha_pago timestamp with time zone;
+
+-- Comentarios
+COMMENT ON COLUMN ordenes_compra_detalles.pagado IS 'Indica si este detalle ya fue pagado';
+COMMENT ON COLUMN ordenes_compra_detalles.fecha_pago IS 'Fecha en que se registró el pago';
+```
+
+### 7. Lógica de Confirmación de Pago
+
+```typescript
+const confirmarPagoMutation = useMutation({
+  mutationFn: async () => {
+    // 1. Marcar productos seleccionados como pagados
+    const idsSeleccionados = Array.from(productosSeleccionados);
+    await supabase
+      .from("ordenes_compra_detalles")
+      .update({ 
+        pagado: true, 
+        fecha_pago: new Date().toISOString() 
+      })
+      .in("id", idsSeleccionados);
+    
+    // 2. Calcular nuevo monto pagado total
+    const nuevoMontoPagado = (orden.monto_pagado || 0) + calcularTotalesSeleccionados.total;
+    
+    // 3. Verificar si todos los productos están pagados
+    const { data: detalles } = await supabase
+      .from("ordenes_compra_detalles")
+      .select("id, pagado")
+      .eq("orden_compra_id", orden.id);
+    
+    const todosPagados = detalles?.every(d => d.pagado);
+    const nuevoStatus = todosPagados ? "pagado" : "parcial";
+    
+    // 4. Actualizar OC
+    await supabase
+      .from("ordenes_compra")
+      .update({
+        status_pago: nuevoStatus,
+        monto_pagado: nuevoMontoPagado,
+        fecha_pago: fechaPago.toISOString(),
+        referencia_pago: referenciaPago,
+        comprobante_pago_url: comprobanteUrl,
+      })
+      .eq("id", orden.id);
+  },
+});
+```
+
+### 8. PDF con Productos Seleccionados
+
+El PDF solo incluirá los productos seleccionados con su desglose de impuestos:
+
+```typescript
+const handleDescargarPDF = async () => {
+  const productosParaPDF = productosRecibidos.filter(
+    p => productosSeleccionados.has(p.detalle_id)
+  );
+  
+  const pdfData: OrdenPagoData = {
+    ordenCompra: {
+      ...orden,
+      // Usar totales calculados de selección
+      subtotal: calcularTotalesSeleccionados.subtotal,
+      iva: calcularTotalesSeleccionados.iva,
+      ieps: calcularTotalesSeleccionados.ieps,
+      total: calcularTotalesSeleccionados.total,
+    },
+    productosRecibidos: productosParaPDF.map(p => ({
+      ...p,
+      aplica_iva: p.aplica_iva,
+      aplica_ieps: p.aplica_ieps,
+    })),
+    devoluciones: [],
+    datosBancarios,
+  };
+  
+  await generarOrdenPagoPDF(pdfData);
+};
 ```
 
 ---
 
-## Flujo del Usuario (Tu Escenario)
+## Ejemplo de Recálculo
 
-```text
-DÍA 1: Recepción Papel Bala Rojo
-────────────────────────────────
-1. Almacén recibe entrega #1 (Papel Bala Rojo)
-2. Proveedor envía factura FAC-001 por $15,000
-3. Secretaria registra factura en OC → Vincula a entrega #1
+**Escenario**: OC con 2 productos
 
-DÍA 2: Recepción Blanco Revolucionario  
-────────────────────────────────────────
-1. Almacén recibe entrega #2 (Blanco Revolucionario)
-2. OC se marca como "completada"
-3. (Proveedor aún no envía factura #2)
+| Producto | Subtotal | IVA | IEPS | Total |
+|----------|----------|-----|------|-------|
+| Papel Bala Rojo | $12,931.03 | $2,068.97 | $0 | $15,000 |
+| Blanco Revolucionario | $10,344.83 | $1,655.17 | $0 | $12,000 |
+| **TOTAL OC** | $23,275.86 | $3,724.14 | $0 | **$27,000** |
 
-HOY: Pagar Factura #1
-────────────────────
-1. Compras abre OC-XXXX
-2. Click en "Facturas" → Ve FAC-001 pendiente
-3. Click "Registrar Pago" en FAC-001
-4. Sube comprobante, ingresa referencia
-5. Confirma pago
+**Usuario deselecciona "Blanco Revolucionario":**
 
-→ Sistema actualiza:
-   - FAC-001: status_pago = "pagado"
-   - OC: status_pago = "parcial", monto_pagado = $15,000
+| Producto | Subtotal | IVA | IEPS | Total |
+|----------|----------|-----|------|-------|
+| Papel Bala Rojo | $12,931.03 | $2,068.97 | $0 | $15,000 |
+| **TOTAL A PAGAR** | $12,931.03 | $2,068.97 | $0 | **$15,000** |
 
-MAÑANA: Pagar Factura #2
-────────────────────────
-1. Proveedor envía FAC-002 por $12,000
-2. Secretaria registra factura → Vincula a entrega #2
-3. Click "Registrar Pago" en FAC-002
-4. Confirma pago
-
-→ Sistema actualiza:
-   - FAC-002: status_pago = "pagado"
-   - OC: status_pago = "pagado", monto_pagado = $27,000
-```
+El IVA se recalcula correctamente porque el producto deseleccionado tenía `aplica_iva = true`.
 
 ---
 
@@ -185,33 +304,16 @@ MAÑANA: Pagar Factura #2
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/components/compras/ProveedorFacturasDialog.tsx` | Agregar sincronización automática del estado de pago de la OC |
-| `src/components/compras/ProcesarPagoOCDialog.tsx` | Detectar si hay facturas y redirigir al flujo de facturas |
-| `src/components/compras/OrdenesCompraTab.tsx` | Actualizar badge para mostrar "Pago Parcial" con progreso |
-
----
-
-## Migración de Base de Datos
-
-Agregar "parcial" como valor válido para `status_pago` en `ordenes_compra`:
-
-```sql
--- Actualizar constraint para permitir 'parcial'
-ALTER TABLE ordenes_compra 
-DROP CONSTRAINT IF EXISTS ordenes_compra_status_pago_check;
-
-ALTER TABLE ordenes_compra 
-ADD CONSTRAINT ordenes_compra_status_pago_check 
-CHECK (status_pago IN ('pendiente', 'parcial', 'pagado'));
-```
+| `src/components/compras/ProcesarPagoOCDialog.tsx` | Agregar checkboxes, lógica de selección, recálculo con impuestos |
+| `src/utils/ordenPagoPdfGenerator.ts` | Actualizar para mostrar desglose de IVA/IEPS |
+| Migración SQL | Agregar `pagado` y `fecha_pago` a `ordenes_compra_detalles` |
 
 ---
 
 ## Beneficios
 
-1. **Flexibilidad**: Cada factura se paga independientemente
-2. **Trazabilidad**: Registro claro de qué se pagó y cuándo
-3. **Visibilidad**: Badge muestra progreso de pago ($15,000 / $27,000)
-4. **Conciliación**: El total pagado cuadra con la suma de facturas pagadas
-5. **Sin cambios drásticos**: Aprovecha la infraestructura existente de `proveedor_facturas`
-
+1. **Precisión fiscal**: IVA e IEPS se recalculan correctamente
+2. **Cumplimiento de la regla de 0 tolerancia**: Usa `redondear()` a 2 decimales
+3. **Flexibilidad total**: Paga exactamente los productos que quieras
+4. **Trazabilidad**: Cada producto tiene su fecha de pago
+5. **PDF dinámico**: Solo muestra lo seleccionado con desglose fiscal
