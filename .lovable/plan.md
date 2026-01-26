@@ -1,138 +1,215 @@
 
-# Plan: Vista Unificada de Análisis Costo-Precio-Margen para Admin
+# Plan: Ajuste Automático del Total de OC por Devoluciones
 
-## Problema Identificado
+## Resumen del Problema
 
-Como administrador/dueño, necesitas ver en un solo lugar:
-1. **Costo** (ultimo costo y costo promedio ponderado)
-2. **Precio de venta** y descuento maximo
-3. **Analisis de margen** (porcentaje, piso minimo, espacio de negociacion)
-4. **Estado del margen** (perdida, critico, bajo, saludable)
-5. **Simulador** para responder "hasta donde puedo bajar?"
+Cuando se devuelven productos por mal estado (roto, rechazado_calidad), el sistema registra la devolución pero **NO ajusta el total de la OC para el pago**. Ejemplo:
 
-Actualmente la pagina `/precios` muestra la misma vista para Admin y Secretaria, pero el Admin deberia ver la informacion completa de analisis.
+- OC de 1200 bultos de Azúcar a $50 c/u = **$60,000**
+- Se devuelven 2 bultos por mal estado = **$100**
+- El pago debería ser **$59,900** (no $60,000)
 
----
-
-## Solucion Propuesta
-
-### Opcion A: Mejorar la pagina `/precios` para Admin (RECOMENDADA)
-
-Modificar la pagina para que cuando el usuario sea **Admin**, muestre una version enriquecida con:
-- Columnas adicionales: Costo Prom., Margen %, Piso Min., Espacio, Estado
-- Simulador de precio integrado
-- Indicadores visuales de salud del margen
-
-```text
-┌────────────────────────────────────────────────────────────────────────────────────┐
-│  LISTA DE PRECIOS - VISTA ADMIN                                                    │
-├────────────────────────────────────────────────────────────────────────────────────┤
-│  Codigo │ Producto          │ Costo  │ Precio │ Dto Max │ Margen  │ Piso  │ Estado │
-│  ───────┼───────────────────┼────────┼────────┼─────────┼─────────┼───────┼────────│
-│  AZ001  │ Azucar Estandar   │ $48.50 │ $58.00 │ $5.00   │ 16.4%   │$53.00 │ ✅ OK  │
-│  AR002  │ Arroz Morelos     │ $42.00 │ $52.00 │ $8.00   │ 19.2%   │$44.00 │ ✅ OK  │
-│  AL003  │ Alpiste 25kg      │ $310   │ $325   │ $15.00  │ 4.6%    │$310   │ ⚠ Crit │
-│  FE004  │ Fecula Maiz       │ $95.00 │ $90.00 │ $0.00   │ -5.3%   │$90.00 │ ❌ Perd│
-└────────────────────────────────────────────────────────────────────────────────────┘
-```
+Actualmente el `MarcarPagadoDialog` muestra el total original sin considerar las devoluciones.
 
 ---
 
-## Cambios a Realizar
+## Solución Propuesta
 
-### Archivo: `src/pages/Precios.tsx`
+### Cambios en Base de Datos
 
-**Cambio principal:** Mostrar una vista diferente para Admin que incluya el analisis de margen.
+**Nuevos campos en `ordenes_compra`:**
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `monto_devoluciones` | numeric | Suma del valor de productos devueltos |
+| `total_ajustado` | numeric | Total original - monto_devoluciones |
+
+### Cambios en Código
+
+#### 1. Al registrar una devolución, calcular el monto a descontar
+
+**Archivo:** `src/components/almacen/DevolucionProveedorDialog.tsx`
+
+- Después de insertar en `devoluciones_proveedor`, buscar el `precio_unitario_compra` del producto en `ordenes_compra_detalles`
+- Calcular: `monto_devolucion = cantidad_devuelta × precio_unitario_compra`
+- Actualizar `ordenes_compra.monto_devoluciones` (sumando el nuevo monto)
+- Recalcular `ordenes_compra.total_ajustado`
 
 ```typescript
-// Antes
-const puedeEditar = isAdmin || isSecretaria;
-// Mostrar SecretariaListaPreciosTab o VendedorListaPreciosTab
+// Después de insertar la devolución:
+const { data: detalle } = await supabase
+  .from("ordenes_compra_detalles")
+  .select("precio_unitario_compra")
+  .eq("orden_compra_id", ordenCompraId)
+  .eq("producto_id", producto.productoId)
+  .single();
 
-// Despues
-if (isAdmin) {
-  // Vista completa con analisis de margen (AdminListaPreciosTab)
-} else if (isSecretaria) {
-  // Vista editable sin analisis profundo (SecretariaListaPreciosTab)
-} else {
-  // Vista solo lectura (VendedorListaPreciosTab)
-}
+const montoDevolucion = producto.cantidadDevuelta * detalle.precio_unitario_compra;
+
+// Actualizar la OC
+await supabase.rpc('agregar_devolucion_a_oc', {
+  p_oc_id: ordenCompraId,
+  p_monto: montoDevolucion
+});
 ```
 
-### Nuevo Componente: `src/components/admin/AdminListaPreciosTab.tsx`
+#### 2. Mostrar el total ajustado en el diálogo de pago
 
-Crear un nuevo componente que combine:
-1. La tabla de `SecretariaListaPreciosTab` (edicion de precios)
-2. Las columnas de analisis de `SecretariaCostosTab` (margen, piso, estado)
-3. El simulador de precios integrado
+**Archivo:** `src/components/compras/MarcarPagadoDialog.tsx`
 
-**Columnas del componente:**
-| Columna | Descripcion |
-|---------|-------------|
-| Codigo | Codigo interno del producto |
-| Producto | Nombre + especificaciones + marca |
-| Costo Prom. | `costo_promedio_ponderado` (WAC) |
-| Ult. Costo | `ultimo_costo_compra` |
-| Precio Venta | `precio_venta` (editable) |
-| Dto Maximo | `descuento_maximo` (editable) |
-| Margen % | Calculado con `analizarMargen()` |
-| Piso Minimo | `precio_venta - descuento_maximo` |
-| Espacio | Piso Minimo - Costo |
-| Estado | Badge visual (perdida/critico/bajo/OK) |
-| Acciones | Editar, Simular, Historial |
+**Antes (línea 370-376):**
+```jsx
+<div className="flex justify-between">
+  <span className="text-muted-foreground">Total:</span>
+  <span className="font-bold text-primary">
+    ${orden.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+  </span>
+</div>
+```
 
-**Funcionalidades:**
-- Clic en Simular: Abre dialog con `simularPrecioPropuesto()`
-- Indicadores de color en filas segun estado del margen
-- Filtro por categoria
-- Ordenamiento por margen (detectar problematicos)
+**Después:**
+```jsx
+{/* Total original */}
+<div className="flex justify-between">
+  <span className="text-muted-foreground">Total Original:</span>
+  <span>${orden.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+</div>
+
+{/* Si hay devoluciones, mostrar desglose */}
+{devoluciones.length > 0 && (
+  <>
+    <div className="flex justify-between text-destructive">
+      <span>(-) Devoluciones:</span>
+      <span>-${montoDevoluciones.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+    </div>
+    <Separator className="my-1" />
+    <div className="flex justify-between">
+      <span className="font-medium">Total a Pagar:</span>
+      <span className="font-bold text-primary">
+        ${totalAjustado.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+      </span>
+    </div>
+  </>
+)}
+```
+
+#### 3. Cargar las devoluciones de la OC al abrir el diálogo de pago
+
+```typescript
+const { data: devolucionesOC = [] } = useQuery({
+  queryKey: ["devoluciones-oc", orden?.id],
+  queryFn: async () => {
+    const { data } = await supabase
+      .from("devoluciones_proveedor")
+      .select(`
+        cantidad_devuelta,
+        producto_id,
+        productos (nombre, codigo)
+      `)
+      .eq("orden_compra_id", orden?.id);
+    return data || [];
+  },
+  enabled: !!orden?.id && open,
+});
+
+// Calcular monto total de devoluciones
+const calcularMontoDevoluciones = async () => {
+  let total = 0;
+  for (const dev of devolucionesOC) {
+    const { data: detalle } = await supabase
+      .from("ordenes_compra_detalles")
+      .select("precio_unitario_compra")
+      .eq("orden_compra_id", orden.id)
+      .eq("producto_id", dev.producto_id)
+      .single();
+    
+    if (detalle) {
+      total += dev.cantidad_devuelta * detalle.precio_unitario_compra;
+    }
+  }
+  return total;
+};
+```
 
 ---
 
-## Flujo de Decision de Precios
+## Archivos a Modificar
 
-El sistema ya tiene toda la logica matematica en `src/lib/calculos.ts`:
-
-1. **`analizarMargen()`**: Calcula margen_bruto, margen_porcentaje, piso_minimo, espacio_negociacion, estado
-2. **`calcularPrecioSugerido()`**: Dado un costo y utilidad deseada, sugiere precio
-3. **`simularPrecioPropuesto()`**: Simula que pasa si se propone un precio diferente
-
-Solo falta exponerlo visualmente al Admin en la interfaz.
-
----
-
-## Archivos a Modificar/Crear
-
-| Archivo | Accion |
+| Archivo | Cambio |
 |---------|--------|
-| `src/pages/Precios.tsx` | Modificar para mostrar vista diferente segun rol |
-| `src/components/admin/AdminListaPreciosTab.tsx` | CREAR - Vista completa con analisis de margen |
+| `ordenes_compra` (migración) | Agregar campos `monto_devoluciones` y `total_ajustado` |
+| `src/components/almacen/DevolucionProveedorDialog.tsx` | Calcular y guardar monto al registrar devolución |
+| `src/components/compras/MarcarPagadoDialog.tsx` | Mostrar desglose (original - devoluciones = a pagar) |
+| `src/components/compras/DevolucionesPendientesTab.tsx` | Agregar columna de "Monto" a la tabla |
 
 ---
 
-## Resultado Esperado
+## Función SQL para actualizar OC
 
-Como Admin, al entrar a `/precios`:
-
-1. Veras TODAS las columnas de analisis de margen
-2. Podras identificar rapidamente productos en "perdida" o "critico"
-3. Tendras simulador para responder "si le bajo $X, cuanto me queda?"
-4. Podras editar precios y descuentos directamente
-5. El historial de cambios quedara registrado
+```sql
+CREATE OR REPLACE FUNCTION agregar_devolucion_a_oc(
+  p_oc_id UUID,
+  p_monto NUMERIC
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  UPDATE ordenes_compra
+  SET 
+    monto_devoluciones = COALESCE(monto_devoluciones, 0) + p_monto,
+    total_ajustado = total - (COALESCE(monto_devoluciones, 0) + p_monto)
+  WHERE id = p_oc_id;
+END;
+$$;
+```
 
 ---
 
-## Beneficio Directo
+## Flujo Visual
 
-**Responde tu pregunta central**: "Cuanto costo, a cuanto lo vendo, y hasta donde puedo bajar?"
-
-Todo visible en una sola pantalla, con indicadores de alerta para productos problematicos.
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│  REGISTRAR PAGO - OC-202601-0003                                        │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  Proveedor: BODEGA AURRERA                                              │
+│                                                                          │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │ Total Original:                              $60,000.00         │   │
+│  │ (-) Devoluciones:                               -$100.00        │   │
+│  │   • 2 × Azúcar Estándar ($50.00 c/u) - Roto                    │   │
+│  │ ──────────────────────────────────────────────────────────      │   │
+│  │ TOTAL A PAGAR:                               $59,900.00         │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+│  Fecha de pago: [26/01/2026]                                            │
+│  Referencia: [_______________]                                          │
+│  Comprobante: [Subir archivo...]                                        │
+│                                                                          │
+│  [ ] Enviar comprobante al proveedor                                    │
+│                                                                          │
+│                                    [Cancelar]  [Registrar Pago]         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Notas Tecnicas
+## Beneficios
 
-- El calculo de `costo_promedio_ponderado` se actualiza automaticamente cuando entra mercancia
-- El trigger `sync_stock_from_lotes` ya maneja esto
-- La funcion `analizarMargen()` prioriza el costo promedio sobre el ultimo costo
-- Si el producto es nuevo (sin lotes), usara `ultimo_costo_compra`
+1. **Pago exacto**: Solo se paga lo que realmente se aceptó
+2. **Transparencia**: El proveedor recibe desglose claro en la notificación
+3. **Trazabilidad**: Queda registro de qué productos se descontaron y por qué
+4. **Sin reprogramación**: Las devoluciones por mal estado NO crean entregas adicionales (diferente a faltantes)
+
+---
+
+## Nota Importante: Diferencia entre Faltante y Devolución
+
+| Escenario | Acción del Sistema |
+|-----------|---------------------|
+| **Faltante (no_llego)** | Se reprograma entrega para el día siguiente. OC queda en "parcial" hasta que llegue. Se paga el total cuando se complete. |
+| **Devolución (roto/rechazado)** | NO se reprograma. OC se cierra normalmente. Se descuenta el monto de lo devuelto del pago. |
+
+Este plan implementa la lógica de devoluciones sin afectar el flujo de faltantes que ya funciona correctamente.
