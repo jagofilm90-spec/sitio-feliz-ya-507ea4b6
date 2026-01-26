@@ -42,8 +42,12 @@ import {
   Receipt,
   CreditCard,
   X,
+  AlertTriangle,
+  Calculator,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import ConciliarFacturaDialog from "./ConciliarFacturaDialog";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -73,6 +77,10 @@ interface Factura {
   notas: string | null;
   created_at: string;
   entregas_asignadas?: EntregaAsignada[];
+  requiere_conciliacion?: boolean;
+  conciliacion_completada?: boolean;
+  diferencia_total?: number;
+  orden_compra_id?: string;
 }
 
 interface EntregaAsignada {
@@ -115,7 +123,10 @@ const ProveedorFacturasDialog = ({
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  // Payment registration state
+  // Conciliation state
+  const [showConciliacion, setShowConciliacion] = useState(false);
+  const [facturaAConciliar, setFacturaAConciliar] = useState<Factura | null>(null);
+
   const [showPaymentForm, setShowPaymentForm] = useState<string | null>(null);
   const [fechaPago, setFechaPago] = useState(format(new Date(), "yyyy-MM-dd"));
   const [referenciaPago, setReferenciaPago] = useState("");
@@ -199,6 +210,12 @@ const ProveedorFacturasDialog = ({
         archivoUrl = fileName;
       }
 
+      // Calculate if conciliation is needed (difference > $1)
+      const montoFactura = parseFloat(montoTotal) || 0;
+      const totalOC = ordenCompra?.total || 0;
+      const diferencia = Math.abs(totalOC - montoFactura);
+      const requiereConciliacion = diferencia > 1;
+
       // Create factura
       const { data: factura, error } = await supabase
         .from("proveedor_facturas")
@@ -206,11 +223,13 @@ const ProveedorFacturasDialog = ({
           orden_compra_id: ordenCompra?.id,
           numero_factura: numeroFactura,
           fecha_factura: fechaFactura,
-          monto_total: parseFloat(montoTotal) || 0,
+          monto_total: montoFactura,
           archivo_url: archivoUrl,
           tipo_pago: tipoPago,
           notas: notas || null,
           creado_por: userData.user.id,
+          requiere_conciliacion: requiereConciliacion,
+          diferencia_total: totalOC - montoFactura,
         })
         .select()
         .single();
@@ -231,10 +250,17 @@ const ProveedorFacturasDialog = ({
         if (enlaceError) throw enlaceError;
       }
 
-      return factura;
+      return { factura, requiereConciliacion };
     },
-    onSuccess: () => {
-      toast({ title: "Factura registrada correctamente" });
+    onSuccess: (result) => {
+      if (result.requiereConciliacion) {
+        toast({ 
+          title: "Factura registrada", 
+          description: "El monto difiere de la OC. Concilia los precios para ajustar costos." 
+        });
+      } else {
+        toast({ title: "Factura registrada correctamente" });
+      }
       queryClient.invalidateQueries({
         queryKey: ["proveedor-facturas", ordenCompra?.id],
       });
@@ -469,6 +495,21 @@ const ProveedorFacturasDialog = ({
                               <Download className="h-4 w-4" />
                             </Button>
                           )}
+                          {/* Conciliar button - show when needs conciliation */}
+                          {factura.requiere_conciliacion && !factura.conciliacion_completada && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-amber-500 text-amber-600 hover:bg-amber-50"
+                              onClick={() => {
+                                setFacturaAConciliar(factura);
+                                setShowConciliacion(true);
+                              }}
+                            >
+                              <Calculator className="h-4 w-4 mr-1" />
+                              Conciliar Precios
+                            </Button>
+                          )}
                           {factura.status_pago === "pendiente" && (
                             <Button
                               size="sm"
@@ -519,6 +560,29 @@ const ProveedorFacturasDialog = ({
                           </div>
                         )}
                       </div>
+
+                      {/* Conciliation Alert */}
+                      {factura.requiere_conciliacion && !factura.conciliacion_completada && (
+                        <Alert className="mt-3 border-amber-300 bg-amber-50">
+                          <AlertTriangle className="h-4 w-4 text-amber-600" />
+                          <AlertDescription className="text-amber-800">
+                            <strong>Diferencia detectada:</strong> La factura es{" "}
+                            <span className="font-bold">
+                              ${Math.abs(factura.diferencia_total || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                            </span>{" "}
+                            {(factura.diferencia_total || 0) > 0 ? "menor" : "mayor"} que la OC.
+                            Concilia los precios para ajustar los costos de inventario.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      {/* Conciliation Completed Badge */}
+                      {factura.conciliacion_completada && (
+                        <div className="mt-3 flex items-center gap-2 text-sm text-green-700">
+                          <CheckCircle className="h-4 w-4" />
+                          <span>Precios conciliados - Costos ajustados en inventario</span>
+                        </div>
+                      )}
 
                       {/* Entregas asignadas */}
                       {factura.entregas_asignadas &&
@@ -803,6 +867,20 @@ const ProveedorFacturasDialog = ({
           </div>
         </ScrollArea>
       </DialogContent>
+
+      {/* Conciliación Dialog */}
+      <ConciliarFacturaDialog
+        open={showConciliacion}
+        onOpenChange={setShowConciliacion}
+        factura={facturaAConciliar}
+        ordenCompra={ordenCompra}
+        onConciliacionCompletada={() => {
+          queryClient.invalidateQueries({
+            queryKey: ["proveedor-facturas", ordenCompra?.id],
+          });
+          setFacturaAConciliar(null);
+        }}
+      />
     </Dialog>
   );
 };
