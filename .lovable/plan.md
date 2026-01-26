@@ -1,264 +1,217 @@
 
-# Plan: Separar Flujos de Notificación y Pago de OC
 
-## Resumen del Cambio
+# Plan: Soporte para Pagos Parciales por Factura del Proveedor
 
-Separar completamente el proceso de **notificación al proveedor** (solo devoluciones) del proceso de **pago interno** (monto calculado + comprobante).
+## El Escenario
 
-**Flujo actual**: El proveedor recibe todo (productos recibidos, devoluciones, monto a pagar, estado de cuenta)
+```text
+OC-XXXX de ENVOLPAN
+├── Producto 1: Papel Bala Rojo     → Entrega #1 (recibida)
+│                                    → Factura A (monto: $X) ← PAGAR HOY
+│
+├── Producto 2: Blanco Revolucionario → Entrega #2 (recibida) 
+│                                      → Factura B (monto: $Y) ← PAGAR MAÑANA
+│
+└── Status OC: "completada" (todo recibido)
+    Status Pago: ??? (parcialmente pagado)
+```
 
-**Flujo nuevo**:
-- **Al proveedor**: Solo notificación de devoluciones (qué productos se rechazaron y por qué)
-- **Interno**: PDF con monto a pagar, botón para registrar pago, conciliación de montos
+## Lo que ya existe
+
+El sistema ya tiene la infraestructura necesaria:
+- Tabla `proveedor_facturas` para múltiples facturas por OC
+- Tabla `proveedor_factura_entregas` para enlazar facturas con entregas específicas
+- Flujo para marcar cada factura como pagada individualmente en `ProveedorFacturasDialog`
+
+## Lo que falta
+
+1. **Estado de pago parcial en la OC**: Actualmente solo hay "pendiente" o "pagado", falta "parcial"
+2. **Sincronización automática**: Cuando se paga una factura, actualizar el estado de la OC
+3. **Visibilidad clara**: Mostrar cuánto se ha pagado vs cuánto falta
+4. **Enlace desde el flujo de pago**: Conectar `ProcesarPagoOCDialog` con las facturas del proveedor
 
 ---
 
 ## Cambios Propuestos
 
-### 1. Modificar `notificar-cierre-oc` para Solo Enviar Devoluciones
+### 1. Nuevo estado de pago: "parcial"
 
-**Archivo**: `supabase/functions/notificar-cierre-oc/index.ts`
+Actualizar el campo `status_pago` en `ordenes_compra` para soportar:
+- `pendiente`: No se ha pagado nada
+- `parcial`: Se han pagado algunas facturas pero no todas
+- `pagado`: Todas las facturas están pagadas
 
-Cambiar el contenido del correo para que **solo incluya las devoluciones**, sin mostrar:
-- Total original de la OC
-- Total a pagar
-- Productos recibidos correctamente
+### 2. Sincronización automática del estado de pago
 
-El correo al proveedor dirá algo como:
-```
-"Le notificamos que durante la recepción de la OC-XXXX 
-los siguientes productos fueron devueltos:
-
-- 2 x Azúcar (Empaque roto)
-- 1 x Arroz (Calidad rechazada)
-
-Esta notificación es para su registro. El ajuste 
-correspondiente se aplicará al pago."
-```
-
----
-
-### 2. Nuevo Diálogo: "Procesar Pago de OC"
-
-**Archivo**: `src/components/compras/ProcesarPagoOCDialog.tsx` (CREAR)
-
-Diálogo interno para el departamento de Compras que muestra:
-- Resumen de la OC (folio, proveedor, fecha)
-- Tabla de productos recibidos con subtotales
-- Tabla de devoluciones con descuentos
-- **Monto Calculado a Pagar** (Total - Devoluciones)
-- Botón para **Descargar PDF de Orden de Pago** (uso interno)
-- Sección para subir comprobante de pago
-- Campo para monto pagado (para conciliación)
-- Botón "Marcar como Pagado"
+Cuando se registra un pago en una factura (`proveedor_facturas.status_pago = 'pagado'`), el sistema debe:
 
 ```text
-┌────────────────────────────────────────────────────────────────┐
-│  PROCESAR PAGO - OC-202601-0003                                │
-├────────────────────────────────────────────────────────────────┤
-│  Proveedor: BODEGA AURRERA                                     │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ RESUMEN FINANCIERO                                      │   │
-│  ├─────────────────────────────────────────────────────────┤   │
-│  │ Total Original:                          $60,000.00     │   │
-│  │ (-) Devoluciones:                          -$100.00     │   │
-│  │ ─────────────────────────────────────────────────────   │   │
-│  │ MONTO A PAGAR:                           $59,900.00     │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  [📄 Descargar PDF Orden de Pago]                              │
-│                                                                 │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━   │
-│                                                                 │
-│  REGISTRAR PAGO:                                               │
-│  ┌───────────────────────────────────────────────────────┐     │
-│  │ Monto Pagado:  [$59,900.00]                           │     │
-│  │ Fecha de Pago: [26/01/2026]                           │     │
-│  │ Referencia:    [Transferencia #12345]                 │     │
-│  │ Comprobante:   [📎 Subir archivo]                     │     │
-│  └───────────────────────────────────────────────────────┘     │
-│                                                                 │
-│  ⚠️ El monto pagado debe coincidir con el monto calculado     │
-│     para que la OC se marque como pagada correctamente.        │
-│                                                                 │
-│                          [Cancelar]  [✓ Confirmar Pago]        │
-└────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ Al pagar una factura del proveedor:                        │
+├─────────────────────────────────────────────────────────────┤
+│ 1. Sumar total de facturas pagadas de la OC                │
+│ 2. Sumar total de todas las facturas de la OC              │
+│ 3. Actualizar OC:                                          │
+│    - Si pagado == total → status_pago = "pagado"           │
+│    - Si pagado > 0 pero < total → status_pago = "parcial"  │
+│    - Si pagado == 0 → status_pago = "pendiente"            │
+│ 4. Actualizar monto_pagado en la OC                        │
+└─────────────────────────────────────────────────────────────┘
 ```
 
----
+### 3. Modificar flujo en `ProveedorFacturasDialog`
 
-### 3. Nuevo Generador de PDF: "Orden de Pago Interno"
-
-**Archivo**: `src/utils/ordenPagoPdfGenerator.ts` (CREAR)
-
-PDF para uso interno (no se envía al proveedor) que incluye:
-- Encabezado con logo ALMASA
-- Datos de la OC y proveedor
-- Tabla de productos recibidos
-- Tabla de devoluciones
-- **Monto a Pagar claramente destacado**
-- Datos bancarios del proveedor (si los tiene)
-- Espacio para referencia de pago
-
-Este PDF se usa internamente para procesar el pago con el departamento de tesorería.
-
----
-
-### 4. Agregar Icono "Procesar Pago" en Lista de OCs
-
-**Archivo**: `src/components/compras/OrdenesCompraTab.tsx`
-
-Agregar un nuevo botón/icono en cada OC cuando esté en status `completada` o `parcial`:
+Al marcar una factura como pagada (líneas 278-323), agregar:
 
 ```typescript
-// Nuevo icono al lado de los existentes
-{(orden.status === 'completada' || orden.status === 'parcial') && 
- orden.status_pago !== 'pagado' && (
-  <Button
-    variant="ghost"
-    size="sm"
-    onClick={() => abrirProcesarPago(orden)}
-    className="text-green-600 hover:text-green-700"
-    title="Procesar Pago"
-  >
-    <CreditCard className="h-4 w-4" />
-  </Button>
-)}
+// Después de registrar el pago de la factura...
+const { error } = await supabase
+  .from("proveedor_facturas")
+  .update({ status_pago: "pagado", ... })
+  .eq("id", facturaId);
+
+// NUEVO: Actualizar estado de pago de la OC
+await actualizarEstadoPagoOC(ordenCompra.id);
+
+async function actualizarEstadoPagoOC(ocId: string) {
+  // Obtener todas las facturas de la OC
+  const { data: facturas } = await supabase
+    .from("proveedor_facturas")
+    .select("monto_total, status_pago")
+    .eq("orden_compra_id", ocId);
+  
+  const totalFacturado = facturas.reduce((s, f) => s + f.monto_total, 0);
+  const totalPagado = facturas
+    .filter(f => f.status_pago === "pagado")
+    .reduce((s, f) => s + f.monto_total, 0);
+  
+  let nuevoStatus = "pendiente";
+  if (totalPagado >= totalFacturado && totalFacturado > 0) {
+    nuevoStatus = "pagado";
+  } else if (totalPagado > 0) {
+    nuevoStatus = "parcial";
+  }
+  
+  await supabase
+    .from("ordenes_compra")
+    .update({ 
+      status_pago: nuevoStatus,
+      monto_pagado: totalPagado 
+    })
+    .eq("id", ocId);
+}
 ```
 
-También agregar un Badge visual que muestre el estado de pago:
-- Verde: "Pagado"
-- Amarillo: "Pago Pendiente"
-- Rojo: "Con Devoluciones" (cuando hay monto_devoluciones > 0)
+### 4. Modificar `ProcesarPagoOCDialog` para redirigir a facturas
 
----
+Cuando hay facturas pendientes, mostrar mensaje:
 
-### 5. Actualizar `MarcarPagadoDialog` o Reemplazarlo
-
-**Opción**: Modificar el existente `MarcarPagadoDialog.tsx` para que:
-1. **NO envíe el Estado de Cuenta al proveedor** (quitar esa opción)
-2. Solo registre el pago internamente
-3. Valide que el monto pagado coincida con el monto calculado (con tolerancia de centavos)
-4. Si hay devoluciones, pregunte si se desea notificar solo las devoluciones al proveedor
-
----
-
-### 6. Flujo de Notificación de Devoluciones Separado
-
-**Archivo**: `supabase/functions/notificar-devoluciones-proveedor/index.ts` (CREAR)
-
-Nueva edge function dedicada **solo para notificar devoluciones**:
-
-```typescript
-// Solo envía al proveedor:
-// - Lista de productos devueltos
-// - Motivo de cada devolución
-// - NO incluye montos ni totales
-
-const emailBody = `
-  Le notificamos que durante la recepción de la 
-  Orden de Compra ${folio}, los siguientes productos 
-  fueron devueltos:
-  
-  - 2 x Azúcar Estándar 50kg (Empaque roto)
-  - 1 x Arroz Morelos (Calidad rechazada)
-  
-  Esta notificación es únicamente para su registro. 
-  El ajuste correspondiente se aplicará al momento 
-  del pago.
-  
-  Saludos,
-  Departamento de Compras - ALMASA
-`;
+```text
+┌────────────────────────────────────────────────────────────┐
+│  PROCESAR PAGO - OC-202601-0003                            │
+├────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ⚠️ Esta OC tiene facturas del proveedor registradas       │
+│                                                             │
+│  Para manejar pagos parciales, registra el pago            │
+│  directamente en cada factura.                             │
+│                                                             │
+│  Facturas:                                                  │
+│  ├── FAC-001: $15,000 (Papel Bala Rojo) - Pendiente        │
+│  └── FAC-002: $12,000 (Blanco Revolucionario) - Pendiente  │
+│                                                             │
+│           [Ir a Gestionar Facturas]                        │
+│                                                             │
+└────────────────────────────────────────────────────────────┘
 ```
 
-Esta notificación se dispara:
-- Automáticamente al registrar devoluciones en almacén
-- O manualmente desde el diálogo de pago
+### 5. Visual en lista de OCs
+
+Actualizar el badge de estado de pago para mostrar:
+
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│ OC-202601-0003 | ENVOLPAN | $27,000                              │
+│                                                                   │
+│ [Completada]  [🟡 Pago Parcial: $15,000 / $27,000]              │
+│               └── Click para ver detalle de facturas            │
+└──────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Archivos a Crear
+## Flujo del Usuario (Tu Escenario)
 
-| Archivo | Descripción |
-|---------|-------------|
-| `src/components/compras/ProcesarPagoOCDialog.tsx` | Nuevo diálogo para proceso interno de pago |
-| `src/utils/ordenPagoPdfGenerator.ts` | Generador de PDF para orden de pago interna |
-| `supabase/functions/notificar-devoluciones-proveedor/index.ts` | Edge function solo para notificar devoluciones |
+```text
+DÍA 1: Recepción Papel Bala Rojo
+────────────────────────────────
+1. Almacén recibe entrega #1 (Papel Bala Rojo)
+2. Proveedor envía factura FAC-001 por $15,000
+3. Secretaria registra factura en OC → Vincula a entrega #1
+
+DÍA 2: Recepción Blanco Revolucionario  
+────────────────────────────────────────
+1. Almacén recibe entrega #2 (Blanco Revolucionario)
+2. OC se marca como "completada"
+3. (Proveedor aún no envía factura #2)
+
+HOY: Pagar Factura #1
+────────────────────
+1. Compras abre OC-XXXX
+2. Click en "Facturas" → Ve FAC-001 pendiente
+3. Click "Registrar Pago" en FAC-001
+4. Sube comprobante, ingresa referencia
+5. Confirma pago
+
+→ Sistema actualiza:
+   - FAC-001: status_pago = "pagado"
+   - OC: status_pago = "parcial", monto_pagado = $15,000
+
+MAÑANA: Pagar Factura #2
+────────────────────────
+1. Proveedor envía FAC-002 por $12,000
+2. Secretaria registra factura → Vincula a entrega #2
+3. Click "Registrar Pago" en FAC-002
+4. Confirma pago
+
+→ Sistema actualiza:
+   - FAC-002: status_pago = "pagado"
+   - OC: status_pago = "pagado", monto_pagado = $27,000
+```
+
+---
 
 ## Archivos a Modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `supabase/functions/notificar-cierre-oc/index.ts` | Modificar para solo enviar devoluciones, sin montos |
-| `src/components/compras/OrdenesCompraTab.tsx` | Agregar icono "Procesar Pago" en cada OC |
-| `src/components/compras/MarcarPagadoDialog.tsx` | Quitar envío de estado de cuenta, solo registro interno |
-| `supabase/config.toml` | Registrar nueva edge function |
+| `src/components/compras/ProveedorFacturasDialog.tsx` | Agregar sincronización automática del estado de pago de la OC |
+| `src/components/compras/ProcesarPagoOCDialog.tsx` | Detectar si hay facturas y redirigir al flujo de facturas |
+| `src/components/compras/OrdenesCompraTab.tsx` | Actualizar badge para mostrar "Pago Parcial" con progreso |
 
 ---
 
-## Flujo Visual Completo
+## Migración de Base de Datos
 
-```text
-┌────────────────────────────────────────────────────────────────────┐
-│                    ALMACÉN: Recepción de OC                        │
-│                    ↓                                                │
-│        Registra devoluciones (2 bultos rotos)                      │
-│                    ↓                                                │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │ AUTOMÁTICO: Notificar SOLO devoluciones al proveedor        │   │
-│  │ (Sin montos, sin totales, solo qué se devolvió y por qué)   │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-└────────────────────────────────────────────────────────────────────┘
-                              ↓
-┌────────────────────────────────────────────────────────────────────┐
-│                    COMPRAS: Menú de OCs                            │
-│                    ↓                                                │
-│        Ve OC con status "Completada" + badge "Pago Pendiente"      │
-│                    ↓                                                │
-│        Click en icono 💳 "Procesar Pago"                           │
-│                    ↓                                                │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │ DIÁLOGO: Procesar Pago OC                                   │   │
-│  │ - Muestra resumen: $60,000 - $100 = $59,900                 │   │
-│  │ - [📄 Descargar PDF Orden de Pago] ← Para tesorería         │   │
-│  │ - Ingresa monto pagado: $59,900                             │   │
-│  │ - Sube comprobante de transferencia                         │   │
-│  │ - [Confirmar Pago]                                          │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                    ↓                                                │
-│        OC se marca como "Pagada"                                   │
-│        Monto pagado queda registrado para conciliación             │
-└────────────────────────────────────────────────────────────────────┘
+Agregar "parcial" como valor válido para `status_pago` en `ordenes_compra`:
+
+```sql
+-- Actualizar constraint para permitir 'parcial'
+ALTER TABLE ordenes_compra 
+DROP CONSTRAINT IF EXISTS ordenes_compra_status_pago_check;
+
+ALTER TABLE ordenes_compra 
+ADD CONSTRAINT ordenes_compra_status_pago_check 
+CHECK (status_pago IN ('pendiente', 'parcial', 'pagado'));
 ```
-
----
-
-## Validación de Conciliación
-
-Al confirmar el pago, el sistema verificará:
-
-```typescript
-const montoCalculado = orden.total_ajustado ?? orden.total;
-const diferencia = Math.abs(montoPagado - montoCalculado);
-
-if (diferencia > 0.02) { // Tolerancia de 2 centavos
-  // Mostrar advertencia
-  "El monto pagado ($59,800) no coincide con el calculado ($59,900). 
-   Diferencia: $100.00
-   ¿Desea continuar de todos modos?"
-}
-```
-
-Esto garantiza que el pago cuadre con la OC y permite detectar errores antes de marcar como pagado.
 
 ---
 
 ## Beneficios
 
-1. **Separación de responsabilidades**: El proveedor solo sabe qué se devolvió, no cuánto le van a pagar
-2. **Control interno**: El cálculo del pago queda 100% interno
-3. **PDF para tesorería**: Documento listo para procesar el pago
-4. **Conciliación**: El monto pagado se registra y valida contra el calculado
-5. **Trazabilidad**: Queda registro de quién procesó el pago y cuándo
+1. **Flexibilidad**: Cada factura se paga independientemente
+2. **Trazabilidad**: Registro claro de qué se pagó y cuándo
+3. **Visibilidad**: Badge muestra progreso de pago ($15,000 / $27,000)
+4. **Conciliación**: El total pagado cuadra con la suma de facturas pagadas
+5. **Sin cambios drásticos**: Aprovecha la infraestructura existente de `proveedor_facturas`
+
