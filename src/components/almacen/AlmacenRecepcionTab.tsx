@@ -58,6 +58,13 @@ interface ProductoEntrega {
   };
 }
 
+interface ProductoFaltante {
+  producto_id?: string;
+  nombre: string;
+  cantidad_faltante: number;
+  codigo?: string;
+}
+
 interface EntregaCompra {
   id: string;
   numero_entrega: number;
@@ -76,6 +83,9 @@ interface EntregaCompra {
   trabajando_desde: string | null;
   trabajando_por_profile?: TrabajandoPor | null;
   productos?: ProductoEntrega[];
+  // Campos para entregas de faltantes
+  origen_faltante?: boolean;
+  productos_faltantes?: ProductoFaltante[];
   orden_compra: {
     id: string;
     folio: string;
@@ -133,6 +143,8 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
           llegada_registrada_por,
           trabajando_por,
           trabajando_desde,
+          origen_faltante,
+          productos_faltantes,
           orden_compra:ordenes_compra(
             id,
             folio,
@@ -553,9 +565,63 @@ const TimerDescarga = ({ inicioDescarga }: { inicioDescarga: string }) => {
 };
 
 // Componente para lista de productos expandible
-const ProductosEntregaList = ({ productos }: { productos?: ProductoEntrega[] }) => {
+// Ahora recibe también datos de faltantes para mostrar solo esos productos
+interface ProductosEntregaListProps {
+  productos?: ProductoEntrega[];
+  origen_faltante?: boolean;
+  productos_faltantes?: ProductoFaltante[];
+}
+
+const ProductosEntregaList = ({ productos, origen_faltante, productos_faltantes }: ProductosEntregaListProps) => {
   const [expandido, setExpandido] = useState(false);
 
+  // Si es entrega de faltante, mostrar solo los productos faltantes
+  if (origen_faltante && productos_faltantes && productos_faltantes.length > 0) {
+    const productosVisibles = expandido ? productos_faltantes : productos_faltantes.slice(0, 3);
+    const tienesMas = productos_faltantes.length > 3;
+
+    return (
+      <div className="mt-2 space-y-1">
+        <span className="text-xs font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1">
+          <Box className="w-3 h-3" />
+          Faltantes ({productos_faltantes.length}):
+        </span>
+        <div className="pl-4 space-y-0.5">
+          {productosVisibles.map((prod, index) => (
+            <div key={prod.producto_id || index} className="text-sm flex items-center gap-2">
+              <span className="text-amber-600 dark:text-amber-400">•</span>
+              <span className="truncate flex-1">
+                {prod.codigo ? `${prod.codigo} - ` : ""}{prod.nombre}
+              </span>
+              <Badge variant="outline" className="text-xs flex-shrink-0 border-amber-500 text-amber-600">
+                {prod.cantidad_faltante.toLocaleString()}
+              </Badge>
+            </div>
+          ))}
+          {tienesMas && (
+            <button
+              onClick={() => setExpandido(!expandido)}
+              className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
+            >
+              {expandido ? (
+                <>
+                  <ChevronUp className="w-3 h-3" />
+                  Ver menos
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-3 h-3" />
+                  +{productos_faltantes.length - 3} más...
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Flujo normal: mostrar productos de la OC
   if (!productos || productos.length === 0) return null;
 
   const productosVisibles = expandido ? productos : productos.slice(0, 3);
@@ -662,7 +728,11 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
           </div>
 
           {/* Productos de la entrega - expandible */}
-          <ProductosEntregaList productos={entrega.productos} />
+          <ProductosEntregaList 
+            productos={entrega.productos}
+            origen_faltante={entrega.origen_faltante}
+            productos_faltantes={entrega.productos_faltantes as ProductoFaltante[] | undefined}
+          />
 
           {/* Info de descarga en curso con timer en tiempo real */}
           {esEnDescarga && entrega.llegada_registrada_en && (
