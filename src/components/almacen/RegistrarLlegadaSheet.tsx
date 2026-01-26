@@ -93,11 +93,8 @@ export const RegistrarLlegadaSheet = ({
   // Evidencias
   const [evidencias, setEvidencias] = useState<EvidenciaLlegada[]>([]);
   
-  // AI placas detection
-  const [placasDetectadas, setPlacasDetectadas] = useState<string | null>(null);
-  const [placasManual, setPlacasManual] = useState("");
-  const [detectandoPlacas, setDetectandoPlacas] = useState(false);
-  const [deteccionFallida, setDeteccionFallida] = useState(false);
+  // Placas del vehículo (ingreso manual)
+  const [placas, setPlacas] = useState("");
   
   // Sin sellos + firma
   const [sinSellos, setSinSellos] = useState(false);
@@ -113,65 +110,12 @@ export const RegistrarLlegadaSheet = ({
   
   const { toast } = useToast();
 
-  const handleEvidenciaCapture = async (tipo: TipoEvidencia, file: File, preview: string) => {
+  const handleEvidenciaCapture = (tipo: TipoEvidencia, file: File, preview: string) => {
     // Reemplazar si ya existe una de este tipo
     setEvidencias(prev => {
       const filtered = prev.filter(e => e.tipo !== tipo);
       return [...filtered, { tipo, file, preview }];
     });
-    
-    // Si es foto de placas, intentar detectar con AI
-    if (tipo === "placas") {
-      await detectarPlacasConAI(file);
-    }
-  };
-
-  const detectarPlacasConAI = async (file: File) => {
-    setDetectandoPlacas(true);
-    setDeteccionFallida(false);
-    setPlacasDetectadas(null);
-    
-    try {
-      // Convert file to base64
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      
-      const { data, error } = await supabase.functions.invoke('extract-placas-vehiculo', {
-        body: { imageBase64: base64 }
-      });
-      
-      if (error) throw error;
-      
-      if (data?.placas) {
-        setPlacasDetectadas(data.placas);
-        setPlacasManual(data.placas);
-        toast({
-          title: "Placas detectadas",
-          description: `Se detectó: ${data.placas}`,
-        });
-      } else {
-        setDeteccionFallida(true);
-        toast({
-          title: "Detección manual requerida",
-          description: data?.message || "No se pudieron detectar las placas automáticamente",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error("Error detectando placas:", error);
-      setDeteccionFallida(true);
-      toast({
-        title: "Error en detección",
-        description: "Ingresa las placas manualmente",
-        variant: "destructive"
-      });
-    } finally {
-      setDetectandoPlacas(false);
-    }
   };
 
   const handleRemoveEvidencia = (tipo: TipoEvidencia) => {
@@ -180,13 +124,6 @@ export const RegistrarLlegadaSheet = ({
       if (ev) URL.revokeObjectURL(ev.preview);
       return prev.filter(e => e.tipo !== tipo);
     });
-    
-    // Reset placas detection if removing placas photo
-    if (tipo === "placas") {
-      setPlacasDetectadas(null);
-      setPlacasManual("");
-      setDeteccionFallida(false);
-    }
   };
 
   const getEvidenciaPorTipo = (tipo: TipoEvidencia) => {
@@ -255,8 +192,8 @@ export const RegistrarLlegadaSheet = ({
       return false;
     }
 
-    // Verificar que tenemos placas (detectadas o manuales)
-    if (!placasManual.trim()) {
+    // Verificar que tenemos placas
+    if (!placas.trim()) {
       toast({
         title: "Placas requeridas",
         description: "Ingresa el número de placas del vehículo",
@@ -345,7 +282,7 @@ export const RegistrarLlegadaSheet = ({
             llegada_registrada_en: new Date().toISOString(),
             llegada_registrada_por: user.id,
             nombre_chofer_proveedor: nombreChofer.trim(),
-            placas_vehiculo: placasManual.trim(),
+            placas_vehiculo: placas.trim(),
             motivo_rechazo: motivoRechazo,
             rechazada_en: new Date().toISOString(),
             rechazada_por: user.id,
@@ -439,9 +376,7 @@ export const RegistrarLlegadaSheet = ({
 
         // Limpiar estado
         setNombreChofer("");
-        setPlacasDetectadas(null);
-        setPlacasManual("");
-        setDeteccionFallida(false);
+        setPlacas("");
         setRechazoTotal(false);
         setMotivoRechazo("");
         setFotosRechazo([]);
@@ -461,7 +396,7 @@ export const RegistrarLlegadaSheet = ({
           llegada_registrada_en: new Date().toISOString(),
           llegada_registrada_por: user.id,
           nombre_chofer_proveedor: nombreChofer.trim(),
-          placas_vehiculo: placasManual.trim(),
+          placas_vehiculo: placas.trim(),
           numero_sello_llegada: sinSellos 
             ? "SIN SELLOS - FIRMADO" 
             : getEvidenciaPorTipo("sello_2") 
@@ -480,7 +415,7 @@ export const RegistrarLlegadaSheet = ({
         entrega_id: entrega.id,
         user_id: user.id,
         accion: "inicio_llegada",
-        notas: `Registró llegada. Chofer: ${nombreChofer.trim()}, Placas: ${placasManual.trim()}${sinSellos ? ", Sin sellos (firmado)" : ""}`
+        notas: `Registró llegada. Chofer: ${nombreChofer.trim()}, Placas: ${placas.trim()}${sinSellos ? ", Sin sellos (firmado)" : ""}`
       });
 
       // 3. Subir y registrar evidencias de llegada
@@ -580,7 +515,7 @@ export const RegistrarLlegadaSheet = ({
                   </tr>
                   <tr style="background: #f3f4f6;">
                     <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Placas:</strong></td>
-                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${placasManual.trim()}</td>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${placas.trim()}</td>
                   </tr>
                 </table>
                 <p>Le notificaremos cuando la descarga haya finalizado.</p>
@@ -632,9 +567,7 @@ export const RegistrarLlegadaSheet = ({
 
       // Limpiar estado
       setNombreChofer("");
-      setPlacasDetectadas(null);
-      setPlacasManual("");
-      setDeteccionFallida(false);
+      setPlacas("");
       setSinSellos(false);
       setFirmaChoferSinSellos(null);
       setEvidencias([]);
@@ -739,35 +672,15 @@ export const RegistrarLlegadaSheet = ({
                         </Button>
                       </div>
                       
-                      {/* Placas detection status */}
-                      {detectandoPlacas && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Detectando placas con AI...
-                        </div>
-                      )}
-                      
-                      {placasDetectadas && !detectandoPlacas && (
-                        <div className="flex items-center gap-2 text-sm text-green-600">
-                          <CheckCircle2 className="h-4 w-4" />
-                          AI detectó: {placasDetectadas}
-                        </div>
-                      )}
-                      
-                      {/* Input para placas (siempre visible, pre-llenado si AI detectó) */}
+                      {/* Input para placas (ingreso manual) */}
                       <div className="space-y-1">
                         <Label className="text-sm">Número de placas *</Label>
                         <Input
-                          value={placasManual}
-                          onChange={(e) => setPlacasManual(e.target.value.toUpperCase())}
+                          value={placas}
+                          onChange={(e) => setPlacas(e.target.value.toUpperCase())}
                           placeholder="ABC-123"
                           className="uppercase h-12 text-base touch-manipulation"
                         />
-                        {deteccionFallida && (
-                          <p className="text-sm text-amber-600">
-                            AI no pudo detectar, ingresa manualmente
-                          </p>
-                        )}
                       </div>
                     </div>
                   ) : (
@@ -1065,7 +978,7 @@ export const RegistrarLlegadaSheet = ({
           <SheetFooter className="mt-4 pt-4 border-t">
             <Button
               onClick={handleConfirmarLlegada}
-              disabled={saving || detectandoPlacas}
+              disabled={saving}
               className={cn("w-full h-14 text-base touch-manipulation", rechazoTotal && "bg-destructive hover:bg-destructive/90")}
               size="lg"
             >
