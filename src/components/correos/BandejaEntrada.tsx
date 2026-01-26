@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { Inbox, RefreshCw, PenSquare, Loader2, ChevronDown, Search, Trash2, Mail, Bell, CheckCheck, CheckSquare, Square, Filter, WifiOff } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import EmailListView from "./EmailListView";
 import EmailDetailView from "./EmailDetailView";
@@ -799,8 +801,8 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
     }
   };
 
-  // Show email detail view
-  if (selectedEmailId && emailDetail) {
+  // En móvil: mostrar detalle de correo a pantalla completa
+  if (isMobile && selectedEmailId && emailDetail) {
     return (
       <EmailDetailView
         email={emailDetail}
@@ -995,12 +997,12 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
     );
   }
 
-  // Layout desktop original
+  // Layout desktop con dos paneles estilo Gmail
   return (
     <>
-      <div className="space-y-4">
+      <div className="flex flex-col h-[calc(100vh-180px)] overflow-hidden">
         {/* Header with account dropdown and actions */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 shrink-0 pb-4">
           {/* Row 1: Account selector */}
           <div className="flex items-center gap-3 min-w-0">
             <Mail className="h-5 w-5 text-primary shrink-0" />
@@ -1102,7 +1104,7 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
         </div>
 
         {/* Search bar - responsive */}
-        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
+        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2 shrink-0 pb-4">
           <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -1125,171 +1127,210 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
         </form>
 
         {activeSearch && (
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-muted-foreground shrink-0 pb-2">
             Resultados para: <span className="font-medium">"{activeSearch}"</span>
           </div>
         )}
 
-        {/* Tabs for Inbox and Trash */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <TabsList>
-              <TabsTrigger value="inbox" className="gap-2">
-                <Inbox className="h-4 w-4" />
-                Bandeja de entrada
-                {unreadCounts?.[selectedAccount] ? (
-                  <Badge variant="destructive" className="text-xs ml-1">
-                    {unreadCounts[selectedAccount]}
-                  </Badge>
-                ) : null}
-              </TabsTrigger>
-              <TabsTrigger value="trash" className="gap-2">
-                <Trash2 className="h-4 w-4" />
-                Papelera
-              </TabsTrigger>
-            </TabsList>
+        {/* Main content area - Two panels */}
+        <div className="flex-1 flex gap-4 overflow-hidden min-h-0">
+          {/* Left Panel: Email List */}
+          <div className={cn(
+            "flex flex-col overflow-hidden",
+            selectedEmailId ? "w-[400px] shrink-0" : "flex-1"
+          )}>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+              <div className="flex flex-wrap items-center justify-between gap-2 shrink-0">
+                <TabsList>
+                  <TabsTrigger value="inbox" className="gap-2">
+                    <Inbox className="h-4 w-4" />
+                    Bandeja de entrada
+                    {unreadCounts?.[selectedAccount] ? (
+                      <Badge variant="destructive" className="text-xs ml-1">
+                        {unreadCounts[selectedAccount]}
+                      </Badge>
+                    ) : null}
+                  </TabsTrigger>
+                  <TabsTrigger value="trash" className="gap-2">
+                    <Trash2 className="h-4 w-4" />
+                    Papelera
+                  </TabsTrigger>
+                </TabsList>
 
-            {/* Filter and Selection controls - responsive */}
-            {activeTab === "inbox" && (
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant={showOnlyUnread ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setShowOnlyUnread(!showOnlyUnread)}
-                  title="Mostrar solo no leídos"
-                  className="whitespace-nowrap"
-                >
-                  <Filter className="h-4 w-4 lg:mr-2" />
-                  <span className="hidden lg:inline">No leídos</span>
-                </Button>
-                
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                {/* Filter and Selection controls - responsive */}
+                {activeTab === "inbox" && (
+                  <div className="flex flex-wrap items-center gap-2">
                     <Button
-                      variant={filterProcessed !== 'all' ? "default" : "outline"}
+                      variant={showOnlyUnread ? "default" : "outline"}
                       size="sm"
+                      onClick={() => setShowOnlyUnread(!showOnlyUnread)}
+                      title="Mostrar solo no leídos"
                       className="whitespace-nowrap"
                     >
-                      <CheckCheck className="h-4 w-4 lg:mr-2" />
-                      <span className="hidden lg:inline">
-                        {filterProcessed === 'all' ? 'Todos' : 
-                         filterProcessed === 'processed' ? 'Procesados' : 'No procesados'}
-                      </span>
-                      <ChevronDown className="h-4 w-4 ml-1" />
+                      <Filter className="h-4 w-4 lg:mr-2" />
+                      <span className="hidden lg:inline">No leídos</span>
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-popover">
-                    <DropdownMenuItem onClick={() => setFilterProcessed('all')}>
-                      Todos los correos
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setFilterProcessed('processed')}>
-                      Solo procesados
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setFilterProcessed('unprocessed')}>
-                      Solo no procesados
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {!selectionMode ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectionMode(true)}
-                    className="whitespace-nowrap"
-                  >
-                    <Square className="h-4 w-4 lg:mr-2" />
-                    <span className="hidden lg:inline">Seleccionar</span>
-                  </Button>
-                ) : (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleSelectAll}
-                    >
-                      <CheckSquare className="h-4 w-4 mr-2" />
-                      Seleccionar todos
-                    </Button>
-                    {selectedEmailIds.size > 0 && (
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant={filterProcessed !== 'all' ? "default" : "outline"}
+                          size="sm"
+                          className="whitespace-nowrap"
+                        >
+                          <CheckCheck className="h-4 w-4 lg:mr-2" />
+                          <span className="hidden lg:inline">
+                            {filterProcessed === 'all' ? 'Todos' : 
+                             filterProcessed === 'processed' ? 'Procesados' : 'No procesados'}
+                          </span>
+                          <ChevronDown className="h-4 w-4 ml-1" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-popover">
+                        <DropdownMenuItem onClick={() => setFilterProcessed('all')}>
+                          Todos los correos
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setFilterProcessed('processed')}>
+                          Solo procesados
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setFilterProcessed('unprocessed')}>
+                          Solo no procesados
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    {!selectionMode ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectionMode(true)}
+                        className="whitespace-nowrap"
+                      >
+                        <Square className="h-4 w-4 lg:mr-2" />
+                        <span className="hidden lg:inline">Seleccionar</span>
+                      </Button>
+                    ) : (
                       <>
-                        <Badge variant="secondary">
-                          {selectedEmailIds.size} seleccionado(s)
-                        </Badge>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={handleMarkSelectedAsRead}
-                          disabled={markingAllAsRead}
+                          onClick={handleSelectAll}
                         >
-                          {markingAllAsRead ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <CheckCheck className="h-4 w-4 mr-2" />
-                          )}
-                          Marcar leídos
+                          <CheckSquare className="h-4 w-4 mr-2" />
+                          Seleccionar todos
                         </Button>
+                        {selectedEmailIds.size > 0 && (
+                          <>
+                            <Badge variant="secondary">
+                              {selectedEmailIds.size} seleccionado(s)
+                            </Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleMarkSelectedAsRead}
+                              disabled={markingAllAsRead}
+                            >
+                              {markingAllAsRead ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <CheckCheck className="h-4 w-4 mr-2" />
+                              )}
+                              Marcar leídos
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={handleDeleteSelected}
+                              disabled={deletingSelected}
+                            >
+                              {deletingSelected ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4 mr-2" />
+                              )}
+                              Eliminar
+                            </Button>
+                          </>
+                        )}
                         <Button
-                          variant="destructive"
+                          variant="ghost"
                           size="sm"
-                          onClick={handleDeleteSelected}
-                          disabled={deletingSelected}
+                          onClick={handleClearSelection}
                         >
-                          {deletingSelected ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4 mr-2" />
-                          )}
-                          Eliminar
+                          Cancelar
                         </Button>
                       </>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleClearSelection}
-                    >
-                      Cancelar
-                    </Button>
-                  </>
+                  </div>
                 )}
               </div>
-            )}
+
+              <TabsContent value="inbox" className="mt-4 flex-1 overflow-hidden">
+                <EmailListView
+                  emails={(showOnlyUnread ? emails.filter(e => e.isUnread) : emails)
+                    .map(email => ({
+                      ...email,
+                      isProcesado: correosProcesados?.has(email.id) || false,
+                    }))
+                    .filter(email => {
+                      if (filterProcessed === 'processed') return email.isProcesado;
+                      if (filterProcessed === 'unprocessed') return !email.isProcesado;
+                      return true;
+                    })
+                  }
+                  isLoading={isLoading}
+                  onSelectEmail={(id, index) => handleSelectEmail(id, false, index)}
+                  onRefresh={() => refetch()}
+                  isRefreshing={isRefetching}
+                  selectedIds={selectedEmailIds}
+                  onToggleSelect={handleToggleSelect}
+                  selectionMode={selectionMode}
+                  hasMore={!!nextPageToken}
+                  isLoadingMore={isLoadingMore}
+                  onLoadMore={handleLoadMore}
+                  selectedEmailId={selectedEmailId}
+                />
+              </TabsContent>
+
+              <TabsContent value="trash" className="mt-4 flex-1 overflow-hidden">
+                <TrashListView
+                  email={selectedAccount}
+                  onSelectEmail={(id) => handleSelectEmail(id, true)}
+                  onEmailRecovered={handleEmailDeleted}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
 
-          <TabsContent value="inbox" className="mt-4">
-            <EmailListView
-              emails={(showOnlyUnread ? emails.filter(e => e.isUnread) : emails)
-                .map(email => ({
-                  ...email,
-                  isProcesado: correosProcesados?.has(email.id) || false,
-                }))
-                .filter(email => {
-                  if (filterProcessed === 'processed') return email.isProcesado;
-                  if (filterProcessed === 'unprocessed') return !email.isProcesado;
-                  return true;
-                })
-              }
-              isLoading={isLoading}
-              onSelectEmail={(id, index) => handleSelectEmail(id, false, index)}
-              onRefresh={() => refetch()}
-              isRefreshing={isRefetching}
-              selectedIds={selectedEmailIds}
-              onToggleSelect={handleToggleSelect}
-              selectionMode={selectionMode}
-              hasMore={!!nextPageToken}
-              isLoadingMore={isLoadingMore}
-              onLoadMore={handleLoadMore}
-            />
-          </TabsContent>
-
-          <TabsContent value="trash" className="mt-4">
-            <TrashListView
-              email={selectedAccount}
-              onSelectEmail={(id) => handleSelectEmail(id, true)}
-              onEmailRecovered={handleEmailDeleted}
-            />
-          </TabsContent>
-        </Tabs>
+          {/* Right Panel: Email Detail or Empty State */}
+          {selectedEmailId && emailDetail ? (
+            <div className="flex-1 overflow-hidden border rounded-lg">
+              <ScrollArea className="h-full">
+                <div className="p-4">
+                  <EmailDetailView
+                    email={emailDetail}
+                    cuentaEmail={selectedAccount}
+                    cuentas={cuentas}
+                    onBack={handleBack}
+                    onDeleted={handleEmailDeleted}
+                    onNavigateNext={handleNavigateNext}
+                    onNavigatePrev={handleNavigatePrev}
+                    hasNext={emails ? selectedEmailIndex < emails.length - 1 : false}
+                    hasPrev={selectedEmailIndex > 0}
+                    isFromTrash={isFromTrash}
+                    embedded={true}
+                  />
+                </div>
+              </ScrollArea>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground border rounded-lg">
+              <div className="text-center">
+                <Mail className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                <p>Selecciona un correo para ver su contenido</p>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Loading overlay for email detail */}
         {isLoadingDetail && (
