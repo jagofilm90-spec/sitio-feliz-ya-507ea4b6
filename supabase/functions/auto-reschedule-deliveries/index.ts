@@ -117,7 +117,14 @@ Deno.serve(async (req) => {
 
     // 4. Reschedule overdue single-delivery orders
     for (const order of (pendingOrders || [])) {
-      // Verificar si la orden tiene una entrega ya recibida
+      // PRIMERO: Verificar si la orden tiene entregas pendientes (programadas o en_transito)
+      const { count: countPendientes } = await supabase
+        .from('ordenes_compra_entregas')
+        .select('id', { count: 'exact', head: true })
+        .eq('orden_compra_id', order.id)
+        .in('status', ['programada', 'en_transito'])
+
+      // Verificar si tiene entregas recibidas
       const { data: entregaRecibida } = await supabase
         .from('ordenes_compra_entregas')
         .select('id')
@@ -126,16 +133,31 @@ Deno.serve(async (req) => {
         .limit(1)
         .maybeSingle()
 
-      // Si ya hay entrega recibida, actualizar status de la orden y NO reprogramar
-      if (entregaRecibida) {
-        console.log(`Order ${order.folio} already has received delivery, marking as completed`)
+      // Si hay entregas pendientes Y recibidas, mantener como 'parcial' y NO marcar como completada
+      if (countPendientes && countPendientes > 0) {
+        if (entregaRecibida) {
+          // Asegurar que el status sea 'parcial' si hay entregas recibidas Y pendientes
+          console.log(`Order ${order.folio} has pending deliveries, ensuring status is 'parcial'`)
+          await supabase
+            .from('ordenes_compra')
+            .update({ status: 'parcial' })
+            .eq('id', order.id)
+        }
+        // No reprogramar esta orden aquí - las entregas individuales se manejan arriba
+        continue
+      }
+
+      // Solo si NO hay entregas pendientes y SI hay recibidas, marcar como completada
+      if (entregaRecibida && (!countPendientes || countPendientes === 0)) {
+        console.log(`Order ${order.folio} has all deliveries received, marking as completed`)
         await supabase
           .from('ordenes_compra')
           .update({ status: 'completada' })
           .eq('id', order.id)
-        continue // Saltar a la siguiente orden
+        continue
       }
 
+      // Si llegamos aquí, es una orden sin entregas múltiples que necesita reprogramación
       const currentNotas = (order as any).notas || ''
       const proveedorData = (order as any).proveedores as any
       
