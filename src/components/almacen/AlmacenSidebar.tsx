@@ -43,9 +43,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfiguracionFlotillaDialog } from "./ConfiguracionFlotillaDialog";
 import { AvatarEmpleadoPopover } from "./AvatarEmpleadoPopover";
-import logoBlanco from "@/assets/logos/logo-blanco.png";
-import iconoA from "@/assets/logos/icono-a-pequeno.png";
-
+import logoAlmasa from "@/assets/logo-almasa.png";
 interface NavItem {
   id: string;
   label: string;
@@ -166,11 +164,15 @@ export const AlmacenSidebar = ({
         <Sidebar collapsible="icon" expandOnHover className="border-r border-sidebar-border">
         {/* Header con Logo - Siempre visible */}
         <SidebarHeader className="border-b border-sidebar-border">
-          <div className="flex flex-col items-center py-2 gap-1">
-            <img src={iconoA} alt="A" className="h-7 w-7 object-contain" />
-            {!isCollapsed && (
-              <img src={logoBlanco} alt="Almasa" className="h-5 w-auto" />
-            )}
+          <div className="flex flex-col items-center py-3">
+            <img 
+              src={logoAlmasa} 
+              alt="ALMASA" 
+              className={cn(
+                "object-contain transition-all duration-200",
+                isCollapsed ? "h-6 w-auto" : "h-8 w-auto"
+              )} 
+            />
           </div>
         </SidebarHeader>
 
