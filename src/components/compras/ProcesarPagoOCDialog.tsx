@@ -517,7 +517,10 @@ export function ProcesarPagoOCDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden !flex !flex-col">
+      <DialogContent 
+        className="max-w-4xl max-h-[90vh] overflow-hidden" 
+        style={{ display: 'flex', flexDirection: 'column' }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
