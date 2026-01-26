@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
-import { Inbox, RefreshCw, PenSquare, Loader2, ChevronDown, Search, Trash2, Mail, Bell, CheckCheck, CheckSquare, Square, Filter, WifiOff } from "lucide-react";
+import { Inbox, RefreshCw, PenSquare, Loader2, ChevronDown, Search, Trash2, Mail, Bell, CheckCheck, CheckSquare, Square, Filter, WifiOff, Columns, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
@@ -92,6 +92,13 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
   const [showOnlyUnread, setShowOnlyUnread] = useState(false);
   const [markingAllInboxAsRead, setMarkingAllInboxAsRead] = useState(false);
   const [filterProcessed, setFilterProcessed] = useState<'all' | 'processed' | 'unprocessed'>('all');
+  // View mode: split (two panels) or list-only (full width list)
+  const [viewMode, setViewMode] = useState<'split' | 'list-only'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('email-view-mode') as 'split' | 'list-only') || 'split';
+    }
+    return 'split';
+  });
   // Flag to open first unread email after account switch from notification
   const [pendingOpenUnread, setPendingOpenUnread] = useState<string | null>(null);
   
@@ -801,8 +808,8 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
     }
   };
 
-  // En móvil: mostrar detalle de correo a pantalla completa
-  if (isMobile && selectedEmailId && emailDetail) {
+  // En móvil o modo solo lista con correo seleccionado: mostrar detalle a pantalla completa
+  if ((isMobile || viewMode === 'list-only') && selectedEmailId && emailDetail) {
     return (
       <EmailDetailView
         email={emailDetail}
@@ -1100,6 +1107,26 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
               <PenSquare className="h-4 w-4 lg:mr-2" />
               <span className="hidden lg:inline">Nuevo correo</span>
             </Button>
+
+            {/* View mode toggle */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const newMode = viewMode === 'split' ? 'list-only' : 'split';
+                setViewMode(newMode);
+                localStorage.setItem('email-view-mode', newMode);
+              }}
+              title={viewMode === 'split' ? 'Cambiar a solo lista' : 'Cambiar a vista dividida'}
+              className="whitespace-nowrap"
+            >
+              {viewMode === 'split' ? (
+                <List className="h-4 w-4 lg:mr-2" />
+              ) : (
+                <Columns className="h-4 w-4 lg:mr-2" />
+              )}
+              <span className="hidden lg:inline">{viewMode === 'split' ? 'Solo lista' : 'Dividir'}</span>
+            </Button>
           </div>
         </div>
 
@@ -1132,12 +1159,14 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
           </div>
         )}
 
-        {/* Main content area - Two panels */}
+        {/* Main content area - Two panels or full width */}
         <div className="flex-1 flex gap-4 overflow-hidden min-h-0">
           {/* Left Panel: Email List */}
           <div className={cn(
-            "flex flex-col overflow-hidden",
-            selectedEmailId ? "w-[400px] shrink-0" : "flex-1"
+            "flex flex-col overflow-hidden h-full",
+            // En modo split con correo seleccionado: ancho fijo
+            // En modo solo lista: todo el ancho
+            viewMode === 'split' && selectedEmailId ? "w-[400px] shrink-0" : "flex-1"
           )}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
               <div className="flex flex-wrap items-center justify-between gap-2 shrink-0">
@@ -1301,34 +1330,38 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
             </Tabs>
           </div>
 
-          {/* Right Panel: Email Detail or Empty State */}
-          {selectedEmailId && emailDetail ? (
-            <div className="flex-1 overflow-hidden border rounded-lg">
-              <ScrollArea className="h-full">
-                <div className="p-4">
-                  <EmailDetailView
-                    email={emailDetail}
-                    cuentaEmail={selectedAccount}
-                    cuentas={cuentas}
-                    onBack={handleBack}
-                    onDeleted={handleEmailDeleted}
-                    onNavigateNext={handleNavigateNext}
-                    onNavigatePrev={handleNavigatePrev}
-                    hasNext={emails ? selectedEmailIndex < emails.length - 1 : false}
-                    hasPrev={selectedEmailIndex > 0}
-                    isFromTrash={isFromTrash}
-                    embedded={true}
-                  />
+          {/* Right Panel: Email Detail or Empty State - Only in split mode */}
+          {viewMode === 'split' && (
+            <>
+              {selectedEmailId && emailDetail ? (
+                <div className="flex-1 overflow-hidden border rounded-lg">
+                  <ScrollArea className="h-full">
+                    <div className="p-4">
+                      <EmailDetailView
+                        email={emailDetail}
+                        cuentaEmail={selectedAccount}
+                        cuentas={cuentas}
+                        onBack={handleBack}
+                        onDeleted={handleEmailDeleted}
+                        onNavigateNext={handleNavigateNext}
+                        onNavigatePrev={handleNavigatePrev}
+                        hasNext={emails ? selectedEmailIndex < emails.length - 1 : false}
+                        hasPrev={selectedEmailIndex > 0}
+                        isFromTrash={isFromTrash}
+                        embedded={true}
+                      />
+                    </div>
+                  </ScrollArea>
                 </div>
-              </ScrollArea>
-            </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground border rounded-lg">
-              <div className="text-center">
-                <Mail className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                <p>Selecciona un correo para ver su contenido</p>
-              </div>
-            </div>
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-muted-foreground border rounded-lg">
+                  <div className="text-center">
+                    <Mail className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                    <p>Selecciona un correo para ver su contenido</p>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
