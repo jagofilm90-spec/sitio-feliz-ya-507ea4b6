@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarIcon, Upload, Loader2, Mail, Send, X, Plus, Save, Package, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { CalendarIcon, Upload, Loader2, Mail, Send, X, Plus, Save, Package, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, FileText } from "lucide-react";
+import { generarCierreOCPDFBase64, type CierreOCData } from "@/utils/cierreOCPdfGenerator";
 import {
   Dialog,
   DialogContent,
@@ -70,6 +71,7 @@ export function MarcarPagadoDialog({
   const [emailManual, setEmailManual] = useState("");
   const [guardarEmail, setGuardarEmail] = useState(false);
   const [enviandoCorreo, setEnviandoCorreo] = useState(false);
+  const [adjuntarEstadoCuenta, setAdjuntarEstadoCuenta] = useState(true); // Por defecto activado
 
   // Formato de motivos legible
   const formatMotivo = (motivo: string) => {
@@ -148,6 +150,39 @@ export function MarcarPagadoDialog({
       return devolucionesConPrecio;
     },
     enabled: !!orden?.id && open && !!(orden?.monto_devoluciones && orden.monto_devoluciones > 0),
+  });
+
+  // Query para obtener productos recibidos (para el PDF de Estado de Cuenta)
+  const { data: productosRecibidos = [] } = useQuery({
+    queryKey: ["productos-recibidos-oc", orden?.id],
+    queryFn: async () => {
+      if (!orden?.id) return [];
+      
+      const { data: detalles, error } = await supabase
+        .from("ordenes_compra_detalles")
+        .select(`
+          id,
+          cantidad,
+          cantidad_recibida,
+          precio_unitario_compra,
+          subtotal,
+          producto_id,
+          productos (codigo, nombre)
+        `)
+        .eq("orden_compra_id", orden.id);
+      
+      if (error) throw error;
+      if (!detalles) return [];
+      
+      return detalles.map((d: any) => ({
+        codigo: d.productos?.codigo || "",
+        nombre: d.productos?.nombre || "Producto",
+        cantidad: d.cantidad_recibida ?? d.cantidad,
+        precio_unitario: d.precio_unitario_compra || 0,
+        subtotal: (d.cantidad_recibida ?? d.cantidad) * (d.precio_unitario_compra || 0)
+      }));
+    },
+    enabled: !!orden?.id && open,
   });
 
   // Initialize email when dialog opens - prioritize contacts with recibe_pagos
@@ -357,6 +392,7 @@ export function MarcarPagadoDialog({
               ${devolucionesHtml}
               
               ${comprobante ? '<p>Adjuntamos el comprobante de pago para su referencia.</p>' : ''}
+              ${adjuntarEstadoCuenta ? '<p>Adjuntamos también el Estado de Cuenta detallado en formato PDF.</p>' : ''}
               
               <p style="margin-top: 30px;">Saludos cordiales,</p>
               <p><strong>Abarrotes La Manita S.A. de C.V.</strong><br>
@@ -370,15 +406,58 @@ export function MarcarPagadoDialog({
             to: emailDestino,
             subject: `Confirmación de Pago - ${orden?.folio} - ALMASA`,
             body: emailBody,
+            attachments: [],
           };
 
           // Agregar comprobante como adjunto si existe
           if (comprobanteBase64 && comprobanteNombre && comprobanteMimeType) {
-            emailPayload.attachments = [{
+            emailPayload.attachments.push({
               filename: comprobanteNombre,
               content: comprobanteBase64,
               mimeType: comprobanteMimeType,
-            }];
+            });
+          }
+
+          // Generar y agregar PDF de Estado de Cuenta si está activado
+          if (adjuntarEstadoCuenta) {
+            try {
+              const cierreData: CierreOCData = {
+                ordenCompra: {
+                  id: orden?.id || "",
+                  folio: orden?.folio || "",
+                  proveedor_nombre: orden?.proveedor_nombre || "Proveedor",
+                  fecha_creacion: new Date().toISOString().split('T')[0],
+                  total: orden?.total || 0,
+                  monto_devoluciones: orden?.monto_devoluciones || 0,
+                  total_ajustado: orden?.total_ajustado ?? orden?.total ?? 0,
+                },
+                productosRecibidos: productosRecibidos.map((p: any) => ({
+                  codigo: p.codigo || "",
+                  nombre: p.nombre || "Producto",
+                  cantidad: p.cantidad || 0,
+                  precio_unitario: p.precio_unitario || 0,
+                  subtotal: p.subtotal || 0,
+                })),
+                devoluciones: devolucionesDetalle.map((d: any) => ({
+                  codigo: d.productos?.codigo || "",
+                  nombre: d.productos?.nombre || "Producto",
+                  cantidad: d.cantidad_devuelta || 0,
+                  motivo: d.motivo || "",
+                  precio_unitario: d.precio_unitario || 0,
+                  monto: d.monto || 0,
+                })),
+              };
+
+              const { base64: pdfBase64, fileName: pdfFileName } = await generarCierreOCPDFBase64(cierreData);
+              emailPayload.attachments.push({
+                filename: pdfFileName,
+                content: pdfBase64,
+                mimeType: 'application/pdf',
+              });
+            } catch (pdfError) {
+              console.error("Error generando PDF de Estado de Cuenta:", pdfError);
+              // Continuamos sin el PDF si hay error
+            }
           }
 
           const asunto = `Confirmación de Pago - ${orden?.folio} - ALMASA`;
@@ -439,6 +518,7 @@ export function MarcarPagadoDialog({
     setEmailSeleccionado("otro");
     setEmailManual("");
     setGuardarEmail(false);
+    setAdjuntarEstadoCuenta(true);
     onOpenChange(false);
   };
 
@@ -715,6 +795,22 @@ export function MarcarPagadoDialog({
                     )}
                   </div>
                 )}
+
+                {/* Checkbox para adjuntar Estado de Cuenta PDF */}
+                <div className="flex items-center space-x-2 pt-2 border-t border-dashed">
+                  <Checkbox
+                    id="adjuntarEstadoCuenta"
+                    checked={adjuntarEstadoCuenta}
+                    onCheckedChange={(checked) => setAdjuntarEstadoCuenta(checked === true)}
+                  />
+                  <Label 
+                    htmlFor="adjuntarEstadoCuenta" 
+                    className="text-sm font-normal cursor-pointer flex items-center gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Adjuntar Estado de Cuenta (PDF detallado)
+                  </Label>
+                </div>
               </div>
             )}
           </div>
