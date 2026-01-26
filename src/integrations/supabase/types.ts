@@ -3037,9 +3037,11 @@ export type Database = {
           cantidad_ordenada: number
           cantidad_recibida: number
           created_at: string
+          fecha_pago: string | null
           id: string
           notas_diferencia: string | null
           orden_compra_id: string
+          pagado: boolean | null
           precio_unitario_compra: number
           producto_id: string
           razon_diferencia: string | null
@@ -3050,9 +3052,11 @@ export type Database = {
           cantidad_ordenada: number
           cantidad_recibida?: number
           created_at?: string
+          fecha_pago?: string | null
           id?: string
           notas_diferencia?: string | null
           orden_compra_id: string
+          pagado?: boolean | null
           precio_unitario_compra: number
           producto_id: string
           razon_diferencia?: string | null
@@ -3063,9 +3067,11 @@ export type Database = {
           cantidad_ordenada?: number
           cantidad_recibida?: number
           created_at?: string
+          fecha_pago?: string | null
           id?: string
           notas_diferencia?: string | null
           orden_compra_id?: string
+          pagado?: boolean | null
           precio_unitario_compra?: number
           producto_id?: string
           razon_diferencia?: string | null
