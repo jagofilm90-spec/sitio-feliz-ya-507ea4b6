@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { compressImageForUpload } from "@/lib/imageUtils";
 import {
   Table,
   TableBody,
@@ -189,6 +190,11 @@ const VehiculosTab = () => {
   const extractTarjetaCirculacionData = async (file: File) => {
     setExtractingData(true);
     try {
+      // Validar que el archivo existe y tiene contenido (evita crash en iPad)
+      if (!file || file.size === 0) {
+        throw new Error('Archivo vacío o inválido');
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast({ title: "Sesión expirada", variant: "destructive" });
@@ -307,6 +313,11 @@ const VehiculosTab = () => {
   const extractFacturaData = async (file: File) => {
     setExtractingFactura(true);
     try {
+      // Validar que el archivo existe y tiene contenido (evita crash en iPad)
+      if (!file || file.size === 0) {
+        throw new Error('Archivo vacío o inválido');
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast({ title: "Sesión expirada", variant: "destructive" });
@@ -776,10 +787,28 @@ const VehiculosTab = () => {
                 <div className="flex gap-2 items-center">
                   <Input
                     type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.webp"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFileUpload(file, 'tarjeta', editingVehiculo?.id);
+                    accept=".pdf,.jpg,.jpeg,.png,.webp,image/*"
+                    capture="environment"
+                    onChange={async (e) => {
+                      try {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        
+                        // Para imágenes, comprimir antes de procesar (evita crash por memoria en iPad)
+                        let processedFile = file;
+                        if (file.type.startsWith('image/')) {
+                          processedFile = await compressImageForUpload(file, 'ocr');
+                        }
+                        
+                        handleFileUpload(processedFile, 'tarjeta', editingVehiculo?.id);
+                      } catch (error) {
+                        console.error('Error processing file:', error);
+                        toast({
+                          title: "Error al procesar archivo",
+                          description: "Intenta de nuevo o selecciona un archivo diferente",
+                          variant: "destructive",
+                        });
+                      }
                     }}
                     disabled={uploadingTarjeta || extractingData}
                     className="flex-1"
@@ -1216,10 +1245,28 @@ const VehiculosTab = () => {
                   <div className="flex gap-2 items-center">
                     <Input
                       type="file"
-                      accept=".pdf,.jpg,.jpeg,.png,.webp"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFileUpload(file, 'poliza', editingVehiculo?.id);
+                      accept=".pdf,.jpg,.jpeg,.png,.webp,image/*"
+                      capture="environment"
+                      onChange={async (e) => {
+                        try {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          
+                          // Para imágenes, comprimir antes de procesar (evita crash en iPad)
+                          let processedFile = file;
+                          if (file.type.startsWith('image/')) {
+                            processedFile = await compressImageForUpload(file, 'evidence');
+                          }
+                          
+                          handleFileUpload(processedFile, 'poliza', editingVehiculo?.id);
+                        } catch (error) {
+                          console.error('Error processing file:', error);
+                          toast({
+                            title: "Error al procesar archivo",
+                            description: "Intenta de nuevo o selecciona un archivo diferente",
+                            variant: "destructive",
+                          });
+                        }
                       }}
                       disabled={uploadingPoliza}
                       className="flex-1"
@@ -1263,10 +1310,28 @@ const VehiculosTab = () => {
                 <div className="flex gap-2 items-center">
                   <Input
                     type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.webp"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFacturaUpload(file, editingVehiculo?.id);
+                    accept=".pdf,.jpg,.jpeg,.png,.webp,image/*"
+                    capture="environment"
+                    onChange={async (e) => {
+                      try {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        
+                        // Para imágenes, comprimir antes de procesar (evita crash en iPad)
+                        let processedFile = file;
+                        if (file.type.startsWith('image/')) {
+                          processedFile = await compressImageForUpload(file, 'ocr');
+                        }
+                        
+                        handleFacturaUpload(processedFile, editingVehiculo?.id);
+                      } catch (error) {
+                        console.error('Error processing file:', error);
+                        toast({
+                          title: "Error al procesar archivo",
+                          description: "Intenta de nuevo o selecciona un archivo diferente",
+                          variant: "destructive",
+                        });
+                      }
                     }}
                     disabled={uploadingFactura || extractingFactura}
                     className="flex-1"
