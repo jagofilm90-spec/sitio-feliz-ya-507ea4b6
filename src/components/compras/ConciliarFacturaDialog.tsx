@@ -82,7 +82,7 @@ const ConciliarFacturaDialog = ({
         .from("ordenes_compra_detalles")
         .select(`
           producto_id,
-          cantidad,
+          cantidad_ordenada,
           cantidad_recibida,
           precio_unitario,
           precio_unitario_compra,
@@ -92,7 +92,10 @@ const ConciliarFacturaDialog = ({
         .eq("orden_compra_id", ordenCompra.id);
 
       if (error) throw error;
-      return (data || []) as unknown as ProductoOC[];
+      return (data || []).map((d: any) => ({
+        ...d,
+        cantidad: d.cantidad_ordenada, // Map to expected field name
+      })) as unknown as ProductoOC[];
     },
     enabled: !!ordenCompra?.id && open,
   });

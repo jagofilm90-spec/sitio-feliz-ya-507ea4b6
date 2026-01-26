@@ -64,6 +64,7 @@ interface ProductoRecibido {
   aplica_iva: boolean;
   aplica_ieps: boolean;
   pagado: boolean;
+  precioFacturado?: number;
 }
 
 interface ProcesarPagoOCDialogProps {
@@ -110,6 +111,9 @@ export function ProcesarPagoOCDialog({
   
   // Estado para productos seleccionados
   const [productosSeleccionados, setProductosSeleccionados] = useState<Set<string>>(new Set());
+  
+  // Estado para precios editados (costo facturado)
+  const [preciosEditados, setPreciosEditados] = useState<Record<string, number>>({});
 
   // Query para obtener productos recibidos con flags de impuestos
   const { data: productosRecibidos = [] } = useQuery({
@@ -157,6 +161,8 @@ export function ProcesarPagoOCDialog({
         .filter(p => !p.pagado)
         .map(p => p.detalle_id);
       setProductosSeleccionados(new Set(noPagados));
+      // Reset precios editados al abrir
+      setPreciosEditados({});
     }
   }, [productosRecibidos]);
 
@@ -241,24 +247,39 @@ export function ProcesarPagoOCDialog({
     enabled: !!orden?.proveedor_id && open,
   });
 
-  // Calcular totales con impuestos de productos seleccionados
+  // Handler para cambiar precio facturado
+  const handlePrecioChange = (detalleId: string, nuevoPrecio: number) => {
+    setPreciosEditados(prev => ({
+      ...prev,
+      [detalleId]: nuevoPrecio
+    }));
+  };
+
+  // Calcular totales con impuestos de productos seleccionados (usando precios editados)
   const calcularTotalesSeleccionados = useMemo(() => {
     const productosParaPagar = productosRecibidos.filter(
       p => productosSeleccionados.has(p.detalle_id) && !p.pagado
     );
     
     let subtotalBase = 0;
+    let subtotalBaseOriginal = 0;
     let ivaTotal = 0;
     let iepsTotal = 0;
     
     for (const p of productosParaPagar) {
+      const precioEfectivo = preciosEditados[p.detalle_id] ?? p.precio_unitario;
+      const subtotalProducto = p.cantidad * precioEfectivo;
+      const subtotalOriginal = p.subtotal;
+      
       // Los precios de compra típicamente incluyen impuestos, desagregar
       let divisor = 1;
       if (p.aplica_iva) divisor += IVA_RATE;
       if (p.aplica_ieps) divisor += IEPS_RATE;
       
-      const base = p.subtotal / divisor;
+      const base = subtotalProducto / divisor;
+      const baseOriginal = subtotalOriginal / divisor;
       subtotalBase += base;
+      subtotalBaseOriginal += baseOriginal;
       
       if (p.aplica_iva) {
         ivaTotal += base * IVA_RATE;
@@ -268,15 +289,24 @@ export function ProcesarPagoOCDialog({
       }
     }
     
+    const totalAjustado = subtotalBase + ivaTotal + iepsTotal;
+    const totalOriginal = subtotalBaseOriginal + (subtotalBaseOriginal * IVA_RATE) + (subtotalBaseOriginal * IEPS_RATE);
+    const diferencia = totalOriginal - totalAjustado;
+    const hayAjustes = Object.keys(preciosEditados).length > 0 && diferencia !== 0;
+    
     return {
       subtotal: Math.round(subtotalBase * 100) / 100,
+      subtotalOriginal: Math.round(subtotalBaseOriginal * 100) / 100,
       iva: Math.round(ivaTotal * 100) / 100,
       ieps: Math.round(iepsTotal * 100) / 100,
       impuestos: Math.round((ivaTotal + iepsTotal) * 100) / 100,
-      total: Math.round((subtotalBase + ivaTotal + iepsTotal) * 100) / 100,
+      total: Math.round(totalAjustado * 100) / 100,
+      totalOriginal: Math.round(totalOriginal * 100) / 100,
+      diferencia: Math.round(diferencia * 100) / 100,
+      hayAjustes,
       cantidadProductos: productosParaPagar.length,
     };
-  }, [productosRecibidos, productosSeleccionados]);
+  }, [productosRecibidos, productosSeleccionados, preciosEditados]);
 
   const tieneDevoluciones = (orden?.monto_devoluciones ?? 0) > 0;
   const productosNoPagados = productosRecibidos.filter(p => !p.pagado);
@@ -369,6 +399,33 @@ export function ProcesarPagoOCDialog({
 
         comprobanteUrl = urlData.publicUrl;
         setUploading(false);
+      }
+
+      // 0. Si hay ajustes de precio, actualizar costos primero usando RPC
+      const productosConAjustes = Object.entries(preciosEditados)
+        .filter(([id, precio]) => {
+          const producto = productosRecibidos.find(p => p.detalle_id === id);
+          return producto && precio !== producto.precio_unitario && productosSeleccionados.has(id);
+        })
+        .map(([id, precio]) => {
+          const producto = productosRecibidos.find(p => p.detalle_id === id)!;
+          return {
+            producto_id: producto.producto_id,
+            precio_facturado: precio,
+            cantidad: producto.cantidad,
+          };
+        });
+
+      if (productosConAjustes.length > 0 && orden?.id) {
+        const { error: rpcError } = await supabase.rpc("ajustar_costos_oc", {
+          p_oc_id: orden.id,
+          p_productos: productosConAjustes,
+        });
+        
+        if (rpcError) {
+          console.error("Error ajustando costos:", rpcError);
+          throw new Error("Error al ajustar costos: " + rpcError.message);
+        }
       }
 
       // 1. Marcar productos seleccionados como pagados
@@ -557,65 +614,137 @@ export function ProcesarPagoOCDialog({
                     <TableHead>Código</TableHead>
                     <TableHead>Producto</TableHead>
                     <TableHead className="text-center">Cant.</TableHead>
+                    <TableHead className="text-right">Costo OC</TableHead>
+                    <TableHead className="text-right">Costo Factura</TableHead>
                     <TableHead className="text-right">Subtotal</TableHead>
-                    <TableHead>Impuestos</TableHead>
+                    <TableHead>Imp.</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {productosRecibidos.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                         No hay productos recibidos
                       </TableCell>
                     </TableRow>
                   ) : (
-                    productosRecibidos.map((p) => (
-                      <TableRow 
-                        key={p.detalle_id}
-                        className={cn(
-                          p.pagado && "bg-green-50/50 dark:bg-green-950/20",
-                          !p.pagado && !productosSeleccionados.has(p.detalle_id) && "opacity-50"
-                        )}
-                      >
-                        <TableCell>
-                          {p.pagado ? (
-                            <Badge variant="outline" className="bg-green-100 text-green-800 text-xs">
-                              ✓ Pagado
-                            </Badge>
-                          ) : (
-                            <Checkbox
-                              checked={productosSeleccionados.has(p.detalle_id)}
-                              onCheckedChange={(checked) => 
-                                handleToggleProducto(p.detalle_id, checked === true)
-                              }
-                            />
+                    productosRecibidos.map((p) => {
+                      const precioEfectivo = preciosEditados[p.detalle_id] ?? p.precio_unitario;
+                      const subtotalCalculado = p.cantidad * precioEfectivo;
+                      const tieneAjuste = preciosEditados[p.detalle_id] !== undefined && 
+                                          preciosEditados[p.detalle_id] !== p.precio_unitario;
+                      
+                      return (
+                        <TableRow 
+                          key={p.detalle_id}
+                          className={cn(
+                            p.pagado && "bg-green-50/50 dark:bg-green-950/20",
+                            !p.pagado && !productosSeleccionados.has(p.detalle_id) && "opacity-50",
+                            tieneAjuste && "bg-amber-50/50 dark:bg-amber-950/20"
                           )}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">{p.codigo}</TableCell>
-                        <TableCell>{p.nombre}</TableCell>
-                        <TableCell className="text-center">{p.cantidad}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          ${p.subtotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            {p.aplica_iva && (
-                              <Badge variant="outline" className="text-xs">IVA</Badge>
+                        >
+                          <TableCell>
+                            {p.pagado ? (
+                              <Badge variant="outline" className="bg-green-100 text-green-800 text-xs">
+                                ✓ Pagado
+                              </Badge>
+                            ) : (
+                              <Checkbox
+                                checked={productosSeleccionados.has(p.detalle_id)}
+                                onCheckedChange={(checked) => 
+                                  handleToggleProducto(p.detalle_id, checked === true)
+                                }
+                              />
                             )}
-                            {p.aplica_ieps && (
-                              <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-950/50">IEPS</Badge>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">{p.codigo}</TableCell>
+                          <TableCell className="max-w-[150px] truncate">{p.nombre}</TableCell>
+                          <TableCell className="text-center">{p.cantidad}</TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            ${p.precio_unitario.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {p.pagado ? (
+                              <span className="text-muted-foreground">-</span>
+                            ) : (
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                className={cn(
+                                  "w-24 text-right h-8",
+                                  tieneAjuste && "border-amber-400 bg-amber-50 dark:bg-amber-950/50"
+                                )}
+                                value={precioEfectivo}
+                                onChange={(e) =>
+                                  handlePrecioChange(p.detalle_id, parseFloat(e.target.value) || 0)
+                                }
+                              />
                             )}
-                            {!p.aplica_iva && !p.aplica_ieps && (
-                              <span className="text-muted-foreground text-xs">-</span>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                          </TableCell>
+                          <TableCell className={cn(
+                            "text-right font-medium",
+                            tieneAjuste && "text-amber-600 dark:text-amber-400"
+                          )}>
+                            ${subtotalCalculado.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              {p.aplica_iva && (
+                                <Badge variant="outline" className="text-xs">IVA</Badge>
+                              )}
+                              {p.aplica_ieps && (
+                                <Badge variant="outline" className="text-xs">IEPS</Badge>
+                              )}
+                              {!p.aplica_iva && !p.aplica_ieps && (
+                                <span className="text-muted-foreground text-xs">-</span>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
             </div>
+
+            {/* Ajuste de Precios - Solo si hay cambios */}
+            {calcularTotalesSeleccionados.hayAjustes && (
+              <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertTitle className="text-amber-800 dark:text-amber-300">
+                  Ajuste de Costos Detectado
+                </AlertTitle>
+                <AlertDescription className="text-amber-700 dark:text-amber-400">
+                  <div className="mt-2 space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span>Total Original OC:</span>
+                      <span className="font-medium">
+                        ${calcularTotalesSeleccionados.totalOriginal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Total Ajustado:</span>
+                      <span className="font-medium">
+                        ${calcularTotalesSeleccionados.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between font-bold">
+                      <span>Diferencia:</span>
+                      <span className={calcularTotalesSeleccionados.diferencia >= 0 ? "text-green-600" : "text-destructive"}>
+                        {calcularTotalesSeleccionados.diferencia >= 0 ? "-" : "+"}$
+                        {Math.abs(calcularTotalesSeleccionados.diferencia).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                        {calcularTotalesSeleccionados.diferencia >= 0 ? " (ahorro)" : " (extra)"}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs">
+                    Al confirmar se actualizarán los costos del inventario y el costo promedio de los productos.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* Resumen Financiero Dinámico */}
             <div className="border rounded-lg overflow-hidden">
