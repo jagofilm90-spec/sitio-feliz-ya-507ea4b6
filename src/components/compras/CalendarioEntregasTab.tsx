@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, List, MoreVertical, Truck, ChevronLeft, ChevronRight, RotateCcw, Eye, Banknote, CheckCircle2 } from "lucide-react";
+import { Calendar as CalendarIcon, List, MoreVertical, Truck, ChevronLeft, ChevronRight, RotateCcw, Eye, Banknote, CheckCircle2, PackageX } from "lucide-react";
 import OrdenAccionesDialog from "./OrdenAccionesDialog";
 import { RecepcionDetalleDialog } from "./RecepcionDetalleDialog";
 import { useState, useMemo, useEffect } from "react";
@@ -55,7 +55,8 @@ const CalendarioEntregasTab = () => {
     };
   }, [queryClient]);
 
-  // Fetch scheduled deliveries from ordenes_compra_entregas
+  // Fetch ALL scheduled deliveries from ordenes_compra_entregas
+  // This now includes both multi-delivery OCs AND faltante follow-ups
   const { data: entregasProgramadas = [] } = useQuery({
     queryKey: ["entregas_programadas_calendario"],
     queryFn: async () => {
@@ -92,7 +93,7 @@ const CalendarioEntregasTab = () => {
           )
         `
         )
-        .eq("ordenes_compra.entregas_multiples", true)
+        // No filter on entregas_multiples - fetch ALL delivery records
         .order("fecha_programada");
 
       if (error) throw error;
@@ -101,10 +102,16 @@ const CalendarioEntregasTab = () => {
   });
 
 
-  // Also fetch single-delivery orders (legacy or non-multiple)
+  // Fetch OCs that have NO records in ordenes_compra_entregas (legacy orders without delivery tracking)
+  // These are older orders that only have fecha_entrega_programada on the OC itself
   const { data: ordenesSimples = [] } = useQuery({
-    queryKey: ["ordenes_calendario_simples"],
+    queryKey: ["ordenes_calendario_simples", entregasProgramadas],
     queryFn: async () => {
+      // Get all OC IDs that already have delivery records
+      const ocIdsWithDeliveries = new Set(
+        entregasProgramadas.map((e: any) => e.ordenes_compra?.id).filter(Boolean)
+      );
+
       const { data, error } = await supabase
         .from("ordenes_compra")
         .select(
@@ -117,21 +124,19 @@ const CalendarioEntregasTab = () => {
             precio_unitario_compra,
             subtotal,
             productos (id, codigo, nombre)
-          ),
-          ordenes_compra_entregas (
-            fecha_entrega_real,
-            status
           )
         `
         )
-        .eq("entregas_multiples", false)
         .not("fecha_entrega_programada", "is", null)
         .not("status", "eq", "cancelada")
         .order("fecha_entrega_programada");
 
       if (error) throw error;
-      return data;
+      
+      // Filter out OCs that already have entries in ordenes_compra_entregas
+      return (data || []).filter((oc: any) => !ocIdsWithDeliveries.has(oc.id));
     },
+    enabled: entregasProgramadas !== undefined,
   });
 
   const getStatusColor = (status: string) => {
@@ -161,54 +166,56 @@ const CalendarioEntregasTab = () => {
 
   // Combine both data sources into unified format
   const todasLasEntregas = useMemo(() => [
-    // Multiple delivery entries
-    ...entregasProgramadas.map((entrega: any) => ({
-      id: entrega.id,
-      fecha: entrega.fecha_programada,
-      folio: entrega.ordenes_compra?.folio,
-      proveedor: entrega.ordenes_compra?.proveedor_id 
-        ? entrega.ordenes_compra?.proveedores?.nombre 
-        : entrega.ordenes_compra?.proveedor_nombre_manual,
-      esProveedorManual: !entrega.ordenes_compra?.proveedor_id,
-      productos: entrega.ordenes_compra?.ordenes_compra_detalles,
-      total: entrega.ordenes_compra?.total,
-      status: entrega.status,
-      orden: entrega.ordenes_compra,
-      numeroEntrega: entrega.numero_entrega,
-      cantidadBultos: entrega.cantidad_bultos,
-      esMultiple: true,
-      reprogramada: esReprogramada(entrega.notas),
-      estadoPago: getEstadoPago(entrega.ordenes_compra),
-      esCompletada: entrega.status === 'recibida' || entrega.ordenes_compra?.status === 'completada',
-    })),
-    // Simple delivery entries
-    ...ordenesSimples.map((orden: any) => {
-      // Para órdenes completadas, usar la fecha real de la entrega si está disponible
-      const entregaAsociada = orden.ordenes_compra_entregas?.[0];
-      const esCompletadaOrden = orden.status === 'completada' || orden.status === 'recibida';
-      const fechaReal = entregaAsociada?.fecha_entrega_real;
-      const fechaMostrar = (esCompletadaOrden && fechaReal) ? fechaReal : orden.fecha_entrega_programada;
+    // All delivery entries from ordenes_compra_entregas (including faltantes)
+    ...entregasProgramadas.map((entrega: any) => {
+      // Use fecha_entrega_real if completed, otherwise fecha_programada
+      const esRecibida = entrega.status === 'recibida';
+      const fechaMostrar = (esRecibida && entrega.fecha_entrega_real) 
+        ? entrega.fecha_entrega_real 
+        : entrega.fecha_programada;
       
       return {
-        id: orden.id,
+        id: entrega.id,
         fecha: fechaMostrar,
-        folio: orden.folio,
-        proveedor: orden.proveedor_id 
-          ? orden.proveedores?.nombre 
-          : orden.proveedor_nombre_manual,
-        esProveedorManual: !orden.proveedor_id,
-        productos: orden.ordenes_compra_detalles,
-        total: orden.total,
-        status: orden.status,
-        orden: orden,
-        numeroEntrega: null,
-        cantidadBultos: null,
-        esMultiple: false,
-        reprogramada: esReprogramada(orden.notas),
-        estadoPago: getEstadoPago(orden),
-        esCompletada: orden.status === 'completada' || orden.status === 'recibida',
+        folio: entrega.ordenes_compra?.folio,
+        proveedor: entrega.ordenes_compra?.proveedor_id 
+          ? entrega.ordenes_compra?.proveedores?.nombre 
+          : entrega.ordenes_compra?.proveedor_nombre_manual,
+        esProveedorManual: !entrega.ordenes_compra?.proveedor_id,
+        productos: entrega.ordenes_compra?.ordenes_compra_detalles,
+        total: entrega.ordenes_compra?.total,
+        status: entrega.status,
+        orden: entrega.ordenes_compra,
+        numeroEntrega: entrega.numero_entrega,
+        cantidadBultos: entrega.cantidad_bultos,
+        esMultiple: entrega.ordenes_compra?.entregas_multiples || entrega.origen_faltante,
+        esFaltante: entrega.origen_faltante === true,
+        reprogramada: esReprogramada(entrega.notas),
+        estadoPago: getEstadoPago(entrega.ordenes_compra),
+        esCompletada: entrega.status === 'recibida',
       };
     }),
+    // Legacy OCs without delivery tracking entries
+    ...ordenesSimples.map((orden: any) => ({
+      id: orden.id,
+      fecha: orden.fecha_entrega_programada,
+      folio: orden.folio,
+      proveedor: orden.proveedor_id 
+        ? orden.proveedores?.nombre 
+        : orden.proveedor_nombre_manual,
+      esProveedorManual: !orden.proveedor_id,
+      productos: orden.ordenes_compra_detalles,
+      total: orden.total,
+      status: orden.status,
+      orden: orden,
+      numeroEntrega: null,
+      cantidadBultos: null,
+      esMultiple: false,
+      esFaltante: false,
+      reprogramada: esReprogramada(orden.notas),
+      estadoPago: getEstadoPago(orden),
+      esCompletada: orden.status === 'completada' || orden.status === 'recibida',
+    })),
   ], [entregasProgramadas, ordenesSimples]);
 
   // Helper to parse date string without timezone issues
@@ -402,6 +409,12 @@ const CalendarioEntregasTab = () => {
               <span>Recibida</span>
             </div>
             <div className="flex items-center gap-2">
+              <span className="w-4 h-4 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                <PackageX className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+              </span>
+              <span>Faltante</span>
+            </div>
+            <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-green-500" />
               <span>Anticipado pagado</span>
             </div>
@@ -458,7 +471,13 @@ const CalendarioEntregasTab = () => {
                                   Recibida
                                 </Badge>
                               )}
-                              {entrega.esMultiple && (
+                              {entrega.esFaltante && (
+                                <Badge className="text-xs bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800">
+                                  <PackageX className="h-3 w-3 mr-1" />
+                                  Faltante
+                                </Badge>
+                              )}
+                              {entrega.esMultiple && !entrega.esFaltante && (
                                 <Badge variant="outline" className="text-xs">
                                   <Truck className="h-3 w-3 mr-1" />
                                   #{entrega.numeroEntrega}
@@ -578,7 +597,13 @@ const CalendarioEntregasTab = () => {
                         Recibida
                       </Badge>
                     )}
-                    {entrega.esMultiple && (
+                    {entrega.esFaltante && (
+                      <Badge className="text-xs bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800">
+                        <PackageX className="h-3 w-3 mr-1" />
+                        Faltante
+                      </Badge>
+                    )}
+                    {entrega.esMultiple && !entrega.esFaltante && (
                       <Badge variant="outline" className="text-xs">
                         <Truck className="h-3 w-3 mr-1" />
                         Entrega #{entrega.numeroEntrega}
