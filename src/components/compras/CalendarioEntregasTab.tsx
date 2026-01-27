@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, List, MoreVertical, Truck, ChevronLeft, ChevronRight, RotateCcw, Eye, Banknote, CheckCircle2, PackageX } from "lucide-react";
+import { Calendar as CalendarIcon, List, MoreVertical, Truck, ChevronLeft, ChevronRight, RotateCcw, Eye, Banknote, CheckCircle2, PackageX, AlertTriangle } from "lucide-react";
 import OrdenAccionesDialog from "./OrdenAccionesDialog";
 import { RecepcionDetalleDialog } from "./RecepcionDetalleDialog";
 import { useState, useMemo, useEffect } from "react";
@@ -20,6 +20,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSam
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { LiveIndicator } from "@/components/ui/live-indicator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const CalendarioEntregasTab = () => {
   const queryClient = useQueryClient();
@@ -65,6 +66,7 @@ const CalendarioEntregasTab = () => {
         .select(
           `
           *,
+          productos_faltantes,
           ordenes_compra!inner (
             id,
             folio,
@@ -190,6 +192,12 @@ const CalendarioEntregasTab = () => {
         cantidadBultos: entrega.cantidad_bultos,
         esMultiple: entrega.ordenes_compra?.entregas_multiples || entrega.origen_faltante,
         esFaltante: entrega.origen_faltante === true,
+        productosFaltantes: entrega.productos_faltantes as Array<{
+          producto_id: string;
+          codigo: string;
+          nombre: string;
+          cantidad_faltante: number;
+        }> | null,
         reprogramada: esReprogramada(entrega.notas),
         estadoPago: getEstadoPago(entrega.ordenes_compra),
         esCompletada: entrega.status === 'recibida',
@@ -212,6 +220,7 @@ const CalendarioEntregasTab = () => {
       cantidadBultos: null,
       esMultiple: false,
       esFaltante: false,
+      productosFaltantes: null,
       reprogramada: esReprogramada(orden.notas),
       estadoPago: getEstadoPago(orden),
       esCompletada: orden.status === 'completada' || orden.status === 'recibida',
@@ -647,6 +656,24 @@ const CalendarioEntregasTab = () => {
                 {entrega.cantidadBultos && (
                   <p className="text-sm font-medium mt-1">{entrega.cantidadBultos.toLocaleString()} bultos</p>
                 )}
+                
+                {/* Alert for faltante deliveries showing specific products */}
+                {entrega.esFaltante && entrega.productosFaltantes && entrega.productosFaltantes.length > 0 && (
+                  <Alert className="mt-3 bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800">
+                    <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                    <AlertDescription className="text-orange-700 dark:text-orange-300">
+                      <span className="font-medium">Productos recibidos en esta entrega:</span>
+                      <ul className="mt-1 ml-4 list-disc">
+                        {entrega.productosFaltantes.map((p: any, idx: number) => (
+                          <li key={idx}>
+                            <span className="font-medium">{p.cantidad_faltante}</span> {p.nombre}
+                          </li>
+                        ))}
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
                 <div className="flex gap-2 mt-3">
                   {entrega.status === "recibida" && (
                     <Button
