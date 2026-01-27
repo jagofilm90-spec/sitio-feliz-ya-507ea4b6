@@ -14,13 +14,20 @@ import { Button } from "@/components/ui/button";
 import { Calendar as CalendarIcon, List, MoreVertical, Truck, ChevronLeft, ChevronRight, RotateCcw, Eye, Banknote, CheckCircle2, PackageX, AlertTriangle } from "lucide-react";
 import OrdenAccionesDialog from "./OrdenAccionesDialog";
 import { RecepcionDetalleDialog } from "./RecepcionDetalleDialog";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { LiveIndicator } from "@/components/ui/live-indicator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
+// Type for per-delivery products from inventario_lotes
+interface ProductoEntrega {
+  nombre: string;
+  codigo: string;
+  cantidad: number;
+}
 
 const CalendarioEntregasTab = () => {
   const queryClient = useQueryClient();
@@ -32,6 +39,10 @@ const CalendarioEntregasTab = () => {
   const [dialogDiaOpen, setDialogDiaOpen] = useState(false);
   const [recepcionDetalleId, setRecepcionDetalleId] = useState<string | null>(null);
   const [recepcionDialogOpen, setRecepcionDialogOpen] = useState(false);
+  
+  // State for per-delivery products cache
+  const [productosEntregaMap, setProductosEntregaMap] = useState<Record<string, ProductoEntrega[]>>({});
+  const [loadingProductos, setLoadingProductos] = useState<Set<string>>(new Set());
 
   // Realtime subscription para sincronizar calendario de entregas
   useEffect(() => {
@@ -88,6 +99,7 @@ const CalendarioEntregasTab = () => {
             ordenes_compra_detalles (
               id,
               cantidad_ordenada,
+              cantidad_recibida,
               precio_unitario_compra,
               subtotal,
               productos (id, codigo, nombre)
@@ -123,6 +135,7 @@ const CalendarioEntregasTab = () => {
           ordenes_compra_detalles (
             id,
             cantidad_ordenada,
+            cantidad_recibida,
             precio_unitario_compra,
             subtotal,
             productos (id, codigo, nombre)
@@ -165,6 +178,55 @@ const CalendarioEntregasTab = () => {
     }
     return 'contra_entrega';
   };
+
+  // Function to load specific products for a delivery from inventario_lotes
+  const cargarProductosEntrega = useCallback(async (
+    entregaId: string, 
+    ocId: string, 
+    folio: string, 
+    numeroEntrega: number
+  ) => {
+    // Already in cache?
+    if (productosEntregaMap[entregaId]) return;
+    
+    // Already loading?
+    if (loadingProductos.has(entregaId)) return;
+    
+    setLoadingProductos(prev => new Set(prev).add(entregaId));
+    
+    try {
+      const patronLote = `REC-${folio}-${numeroEntrega}`;
+      const { data: lotes } = await supabase
+        .from("inventario_lotes")
+        .select(`
+          cantidad_disponible,
+          cantidad_inicial,
+          producto:productos(nombre, codigo)
+        `)
+        .eq("orden_compra_id", ocId)
+        .like("lote_referencia", `${patronLote}%`);
+
+      if (lotes && lotes.length > 0) {
+        setProductosEntregaMap(prev => ({
+          ...prev,
+          [entregaId]: lotes.map((l: any) => ({
+            nombre: l.producto?.nombre || 'Producto',
+            codigo: l.producto?.codigo || '',
+            // Use cantidad_inicial as it represents what was received, not current available
+            cantidad: l.cantidad_inicial || l.cantidad_disponible || 0
+          }))
+        }));
+      }
+    } catch (error) {
+      console.error("Error loading delivery products:", error);
+    } finally {
+      setLoadingProductos(prev => {
+        const next = new Set(prev);
+        next.delete(entregaId);
+        return next;
+      });
+    }
+  }, [productosEntregaMap, loadingProductos]);
 
   // Combine both data sources into unified format
   const todasLasEntregas = useMemo(() => [
@@ -227,6 +289,31 @@ const CalendarioEntregasTab = () => {
     })),
   ], [entregasProgramadas, ordenesSimples]);
 
+  // Pre-load products for completed deliveries when switching to list view
+  useEffect(() => {
+    const cargarProductosEntregasRecibidas = async () => {
+      const entregasRecibidas = todasLasEntregas.filter(
+        e => e.esCompletada && e.numeroEntrega && e.orden
+      );
+      
+      // Load first 20 to avoid too many requests
+      for (const entrega of entregasRecibidas.slice(0, 20)) {
+        if (!productosEntregaMap[entrega.id] && entrega.orden) {
+          await cargarProductosEntrega(
+            entrega.id,
+            entrega.orden.id,
+            entrega.folio,
+            entrega.numeroEntrega
+          );
+        }
+      }
+    };
+    
+    if (!vistaCalendario && todasLasEntregas.length > 0) {
+      cargarProductosEntregasRecibidas();
+    }
+  }, [vistaCalendario, todasLasEntregas.length]);
+
   // Helper to parse date string without timezone issues
   const parseDateLocal = (dateStr: string): Date => {
     const [year, month, day] = dateStr.split('-').map(Number);
@@ -284,15 +371,162 @@ const CalendarioEntregasTab = () => {
     return entregasPorFecha[key] || [];
   };
 
-  const handleDiaClick = (dia: Date) => {
+  const handleDiaClick = async (dia: Date) => {
     const entregas = getEntregasDelDia(dia);
     if (entregas.length > 0) {
       setDiaSeleccionado(dia);
       setDialogDiaOpen(true);
+      
+      // Load specific products for completed deliveries
+      for (const entrega of entregas) {
+        if (entrega.esCompletada && entrega.orden && entrega.numeroEntrega) {
+          cargarProductosEntrega(
+            entrega.id, 
+            entrega.orden.id, 
+            entrega.folio, 
+            entrega.numeroEntrega
+          );
+        }
+      }
     }
   };
 
   const entregasDelDiaSeleccionado = diaSeleccionado ? getEntregasDelDia(diaSeleccionado) : [];
+
+  // Helper to render products for a delivery
+  const renderProductosEntrega = (entrega: any) => {
+    const productosRecibidos = productosEntregaMap[entrega.id];
+    const isLoading = loadingProductos.has(entrega.id);
+    
+    // Case 1: Completed delivery with specific products loaded from inventario_lotes
+    if (entrega.esCompletada && productosRecibidos && productosRecibidos.length > 0) {
+      const productosOC = entrega.productos || [];
+      const esEntregaParcial = productosRecibidos.length < productosOC.length;
+      
+      return (
+        <div className="space-y-2">
+          {esEntregaParcial && (
+            <Badge className="text-xs bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800">
+              Parcial ({productosRecibidos.length}/{productosOC.length} productos)
+            </Badge>
+          )}
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" />
+              Productos recibidos en esta entrega:
+            </p>
+            <ul className="text-sm ml-4 list-disc text-muted-foreground">
+              {productosRecibidos.map((p, idx) => (
+                <li key={idx}>
+                  <span className="font-medium">{p.cantidad}</span> {p.nombre}
+                  {p.codigo && <span className="text-xs text-muted-foreground ml-1">({p.codigo})</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      );
+    }
+    
+    // Case 2: Loading products
+    if (entrega.esCompletada && isLoading) {
+      return (
+        <p className="text-sm text-muted-foreground animate-pulse">
+          Cargando productos...
+        </p>
+      );
+    }
+    
+    // Case 3: Faltante delivery - show from productos_faltantes
+    if (entrega.esFaltante && entrega.productosFaltantes && entrega.productosFaltantes.length > 0) {
+      return (
+        <Alert className="mt-2 bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800">
+          <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+          <AlertDescription className="text-orange-700 dark:text-orange-300">
+            <span className="font-medium">Productos de esta entrega (faltantes):</span>
+            <ul className="mt-1 ml-4 list-disc">
+              {entrega.productosFaltantes.map((p: any, idx: number) => (
+                <li key={idx}>
+                  <span className="font-medium">{p.cantidad_faltante}</span> {p.nombre}
+                </li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    
+    // Case 4: Pending/scheduled delivery - show OC products
+    return (
+      <p className="text-sm text-muted-foreground">
+        {entrega.productos?.slice(0, 3).map((d: any, idx: number) => (
+          <span key={idx}>
+            {idx > 0 && ", "}
+            <span className="font-medium">{d.cantidad_ordenada}</span> {d.productos?.nombre}
+          </span>
+        ))}
+        {entrega.productos && entrega.productos.length > 3 && (
+          <span> +{entrega.productos.length - 3} más</span>
+        )}
+      </p>
+    );
+  };
+
+  // Helper to render products in list view (more compact)
+  const renderProductosLista = (entrega: any) => {
+    const productosRecibidos = productosEntregaMap[entrega.id];
+    
+    // Completed delivery with specific products
+    if (entrega.esCompletada && productosRecibidos && productosRecibidos.length > 0) {
+      return (
+        <div className="text-sm">
+          {productosRecibidos.slice(0, 2).map((p, idx) => (
+            <span key={idx}>
+              {idx > 0 && ", "}
+              <span className="font-medium text-green-700 dark:text-green-400">{p.cantidad}</span>{" "}
+              {p.nombre}
+            </span>
+          ))}
+          {productosRecibidos.length > 2 && (
+            <span className="text-muted-foreground"> +{productosRecibidos.length - 2} más</span>
+          )}
+        </div>
+      );
+    }
+    
+    // Faltante delivery
+    if (entrega.esFaltante && entrega.productosFaltantes && entrega.productosFaltantes.length > 0) {
+      return (
+        <div className="text-sm">
+          {entrega.productosFaltantes.slice(0, 2).map((p: any, idx: number) => (
+            <span key={idx}>
+              {idx > 0 && ", "}
+              <span className="font-medium text-orange-600 dark:text-orange-400">{p.cantidad_faltante}</span>{" "}
+              {p.nombre}
+            </span>
+          ))}
+          {entrega.productosFaltantes.length > 2 && (
+            <span className="text-muted-foreground"> +{entrega.productosFaltantes.length - 2} más</span>
+          )}
+        </div>
+      );
+    }
+    
+    // Default: show OC products
+    return (
+      <div className="text-sm">
+        {entrega.productos?.slice(0, 2).map((d: any, idx: number) => (
+          <span key={idx}>
+            {idx > 0 && ", "}
+            <span className="font-medium">{d.cantidad_ordenada}</span> {d.productos?.nombre}
+          </span>
+        ))}
+        {entrega.productos && entrega.productos.length > 2 && (
+          <span className="text-muted-foreground"> +{entrega.productos.length - 2} más</span>
+        )}
+      </div>
+    );
+  };
 
   return (
     <Card className="p-6">
@@ -386,6 +620,13 @@ const CalendarioEntregasTab = () => {
                             className="w-4 h-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center"
                           >
                             <CheckCircle2 className="w-3 h-3 text-green-600 dark:text-green-400" />
+                          </span>
+                        ) : entrega.esFaltante ? (
+                          <span
+                            key={idx}
+                            className="w-4 h-4 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center"
+                          >
+                            <PackageX className="w-3 h-3 text-orange-600 dark:text-orange-400" />
                           </span>
                         ) : (
                           <span
@@ -514,21 +755,7 @@ const CalendarioEntregasTab = () => {
                           </TableCell>
                           <TableCell>{entrega.proveedor}</TableCell>
                           <TableCell>
-                            <div className="text-sm">
-                              {entrega.productos?.slice(0, 2).map((d: any, idx: number) => (
-                                <span key={idx}>
-                                  {idx > 0 && ", "}
-                                  <span className="font-medium">{d.cantidad_ordenada}</span> {d.productos?.nombre}
-                                </span>
-                              ))}
-                              {entrega.productos &&
-                                entrega.productos.length > 2 && (
-                                  <span className="text-muted-foreground">
-                                    {" "}
-                                    +{entrega.productos.length - 2} más
-                                  </span>
-                                )}
-                            </div>
+                            {renderProductosLista(entrega)}
                           </TableCell>
                           <TableCell>
                             {entrega.cantidadBultos ? (
@@ -594,7 +821,7 @@ const CalendarioEntregasTab = () => {
                 key={entrega.id}
                 className={cn(
                   "p-4 border rounded-lg hover:bg-accent/50 transition-colors",
-                  entrega.esCompletada && "opacity-60 bg-muted/30"
+                  entrega.esCompletada && "opacity-70 bg-muted/30"
                 )}
               >
                 <div className="flex items-center justify-between mb-2">
@@ -641,37 +868,13 @@ const CalendarioEntregasTab = () => {
                     {entrega.status}
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground mb-1">{entrega.proveedor}</p>
-                <p className="text-sm">
-                  {entrega.productos?.slice(0, 3).map((d: any, idx: number) => (
-                    <span key={idx}>
-                      {idx > 0 && ", "}
-                      <span className="font-medium">{d.cantidad_ordenada}</span> {d.productos?.nombre}
-                    </span>
-                  ))}
-                  {entrega.productos && entrega.productos.length > 3 && (
-                    <span className="text-muted-foreground"> +{entrega.productos.length - 3} más</span>
-                  )}
-                </p>
-                {entrega.cantidadBultos && (
-                  <p className="text-sm font-medium mt-1">{entrega.cantidadBultos.toLocaleString()} bultos</p>
-                )}
+                <p className="text-sm text-muted-foreground mb-2">{entrega.proveedor}</p>
                 
-                {/* Alert for faltante deliveries showing specific products */}
-                {entrega.esFaltante && entrega.productosFaltantes && entrega.productosFaltantes.length > 0 && (
-                  <Alert className="mt-3 bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800">
-                    <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                    <AlertDescription className="text-orange-700 dark:text-orange-300">
-                      <span className="font-medium">Productos recibidos en esta entrega:</span>
-                      <ul className="mt-1 ml-4 list-disc">
-                        {entrega.productosFaltantes.map((p: any, idx: number) => (
-                          <li key={idx}>
-                            <span className="font-medium">{p.cantidad_faltante}</span> {p.nombre}
-                          </li>
-                        ))}
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
+                {/* Render specific products for this delivery */}
+                {renderProductosEntrega(entrega)}
+                
+                {entrega.cantidadBultos && (
+                  <p className="text-sm font-medium mt-2">{entrega.cantidadBultos.toLocaleString()} bultos</p>
                 )}
                 
                 <div className="flex gap-2 mt-3">
