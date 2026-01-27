@@ -1592,6 +1592,28 @@ const OrdenesCompraTab = () => {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
+  // Calcular porcentaje de recepción de una OC
+  const calcularPorcentajeRecepcion = (orden: any): number => {
+    const detalles = orden.ordenes_compra_detalles || [];
+    if (detalles.length === 0) return 0;
+    
+    const totalOrdenado = detalles.reduce((sum: number, d: any) => 
+      sum + (d.cantidad_ordenada || 0), 0);
+    const totalRecibido = detalles.reduce((sum: number, d: any) => 
+      sum + (d.cantidad_recibida || 0), 0);
+    
+    if (totalOrdenado === 0) return 0;
+    return Math.round((totalRecibido / totalOrdenado) * 100);
+  };
+
+  // Obtener color según porcentaje de recepción
+  const getProgressColor = (porcentaje: number): string => {
+    if (porcentaje === 0) return "bg-gray-400";
+    if (porcentaje < 50) return "bg-orange-500";
+    if (porcentaje < 100) return "bg-blue-500";
+    return "bg-green-500";
+  };
+
   return (
     <Card className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -1641,6 +1663,7 @@ const OrdenesCompraTab = () => {
               <TableHead>Proveedor</TableHead>
               <TableHead>Fecha</TableHead>
               <TableHead>Total</TableHead>
+              <TableHead className="w-32">Recepción</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead>Pago</TableHead>
               <TableHead>Confirmación</TableHead>
@@ -1651,7 +1674,7 @@ const OrdenesCompraTab = () => {
           <TableBody>
             {filteredOrdenes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground">
+                <TableCell colSpan={10} className="text-center text-muted-foreground">
                   No hay órdenes de compra registradas
                 </TableCell>
               </TableRow>
@@ -1677,6 +1700,34 @@ const OrdenesCompraTab = () => {
                       {format(new Date(orden.fecha_orden), "dd/MM/yyyy")}
                     </TableCell>
                     <TableCell>{formatCurrency(orden.total)}</TableCell>
+                    <TableCell>
+                      {(() => {
+                        const porcentaje = calcularPorcentajeRecepcion(orden);
+                        const colorClass = getProgressColor(porcentaje);
+                        
+                        return (
+                          <div className="flex items-center gap-2 min-w-[100px]">
+                            <div className="flex-1">
+                              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                <div 
+                                  className={`h-2 rounded-full transition-all ${colorClass}`}
+                                  style={{ width: `${porcentaje}%` }}
+                                />
+                              </div>
+                            </div>
+                            <span className={`text-xs font-medium min-w-[32px] text-right ${
+                              porcentaje === 100 
+                                ? 'text-green-600 dark:text-green-400' 
+                                : porcentaje > 0 
+                                  ? 'text-blue-600 dark:text-blue-400' 
+                                  : 'text-muted-foreground'
+                            }`}>
+                              {porcentaje}%
+                            </span>
+                          </div>
+                        );
+                      })()}
+                    </TableCell>
                     <TableCell>{getStatusBadge(orden.status)}</TableCell>
                     <TableCell>
                       {orden.tipo_pago === 'anticipado' ? (
