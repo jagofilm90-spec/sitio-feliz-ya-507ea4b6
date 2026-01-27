@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Package,
   Truck,
@@ -152,7 +153,7 @@ export const RecepcionDetalleDialog = ({
           id, numero_entrega, cantidad_bultos, fecha_programada, fecha_entrega_real, status, notas,
           firma_chofer_conformidad, firma_almacenista, firma_chofer_diferencia, sin_sellos, firma_chofer_sin_sellos,
           llegada_registrada_en, recepcion_finalizada_en, placas_vehiculo, nombre_chofer_proveedor, numero_remision_proveedor,
-          recibido_por,
+          recibido_por, origen_faltante, productos_faltantes,
           orden_compra:ordenes_compra(
             id, folio, proveedor_nombre_manual,
             proveedor:proveedores(id, nombre)
@@ -530,6 +531,26 @@ export const RecepcionDetalleDialog = ({
                     )}
                   </div>
                 </div>
+
+                {/* Alert for faltante deliveries */}
+                {(recepcion as any).origen_faltante === true && (
+                  <Alert className="bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800">
+                    <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                    <AlertDescription className="text-orange-700 dark:text-orange-300">
+                      <span className="font-medium text-orange-800 dark:text-orange-300">Entrega de Productos Faltantes</span>
+                      <p className="mt-1">Esta recepción corresponde a productos que no llegaron en entregas anteriores.</p>
+                      {(recepcion as any).productos_faltantes && Array.isArray((recepcion as any).productos_faltantes) && (recepcion as any).productos_faltantes.length > 0 && (
+                        <ul className="mt-2 list-disc ml-4">
+                          {((recepcion as any).productos_faltantes as Array<{producto_id: string; codigo: string; nombre: string; cantidad_faltante: number}>).map((p, idx) => (
+                            <li key={idx}>
+                              <span className="font-medium">{p.cantidad_faltante}</span> {p.nombre} ({p.codigo})
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 <Separator />
 
