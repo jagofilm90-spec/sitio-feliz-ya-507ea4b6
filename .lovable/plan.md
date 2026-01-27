@@ -1,114 +1,149 @@
 
 
-# Plan: Corregir Calendario de Entregas para Mostrar Entregas Parciales/Faltantes
+# Plan: Mejorar Información de Entregas Parciales en Calendario
 
-## El Problema Identificado
+## Problema Actual
 
-Tu OC-202601-0002 tiene estos datos en la base de datos:
+Cuando haces clic en un día del calendario y ves una entrega (como la del día 23 para OC-202601-0002):
 
-| # Entrega | Fecha Programada | Fecha Real | Status | Origen Faltante | Productos |
-|-----------|------------------|------------|--------|-----------------|-----------|
-| 1 | 2026-01-22 | 2026-01-23 | recibida | false | Entrega original |
-| 2 | 2026-01-26 | 2026-01-26 | recibida | **true** | 40x Papel Blanco Revolucion |
+1. **No hay alerta indicando qué se recibió específicamente ese día** - Solo muestra los productos generales de la OC
+2. **En "Ver Recepción"** - Muestra TODOS los productos de la OC con cantidades acumuladas, sin distinguir qué se recibió en cada entrega
 
-**Pero la OC tiene `entregas_multiples = false`**, lo cual causa que el calendario la ignore incorrectamente.
+### Datos actuales en BD
 
-### Causa Raiz del Bug
-
-El calendario tiene **dos queries separadas**:
-
-1. **Query 1** (`entregasProgramadas`): Solo obtiene entregas de OCs con `entregas_multiples = true`
-2. **Query 2** (`ordenesSimples`): Obtiene OCs con `entregas_multiples = false`, pero solo considera la **primera** entrega (`ordenes_compra_entregas?.[0]`)
-
-Cuando se crea automáticamente una entrega de faltante (Entrega #2), esta queda "invisible" porque:
-- La OC sigue marcada como `entregas_multiples = false`
-- El código solo lee la primera entrega de la lista
+| Entrega | Fecha | Tipo | productos_faltantes |
+|---------|-------|------|---------------------|
+| #1 | 2026-01-23 | Original | null |
+| #2 | 2026-01-26 | Faltante | `[{cantidad: 40, nombre: "Papel Blanco Revolución"}]` |
 
 ---
 
-## Solucion Propuesta
+## Solución Propuesta
 
-### Cambio 1: Modificar la Query de Entregas Multiples
+### Cambio 1: Alerta en Diálogo del Día (CalendarioEntregasTab.tsx)
 
-Actualmente filtra por `entregas_multiples = true`. Necesitamos **también incluir entregas con `origen_faltante = true`**, sin importar el flag de la OC.
+Cuando una entrega tiene `origen_faltante = true` o `productos_faltantes`, mostrar una alerta naranja/amarilla con los productos específicos de esa entrega.
+
+**Ubicación**: Diálogo de detalle del día (líneas 583-680)
+
+**Agregar**:
+```tsx
+{/* Alerta para entregas de faltante */}
+{entrega.esFaltante && entrega.productosFaltantes && entrega.productosFaltantes.length > 0 && (
+  <Alert className="bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800">
+    <AlertTriangle className="h-4 w-4 text-orange-600" />
+    <AlertDescription>
+      <span className="font-medium">Productos recibidos en esta entrega:</span>
+      <ul className="mt-1 ml-4 list-disc">
+        {entrega.productosFaltantes.map((p, idx) => (
+          <li key={idx}>
+            <span className="font-medium">{p.cantidad_faltante}</span> {p.nombre}
+          </li>
+        ))}
+      </ul>
+    </AlertDescription>
+  </Alert>
+)}
+```
+
+### Cambio 2: Actualizar Query de Entregas
+
+Incluir el campo `productos_faltantes` en la query de `entregasProgramadas`:
+
+**Ubicación**: Query principal (líneas 59-101)
+
+**Agregar al SELECT**:
+```tsx
+productos_faltantes
+```
+
+### Cambio 3: Actualizar Interface de Entrega
+
+Agregar la propiedad `productosFaltantes` al tipo de entrega:
 
 ```tsx
-// ANTES (linea 95):
-.eq("ordenes_compra.entregas_multiples", true)
-
-// DESPUES:
-// Sin filtro - traer TODAS las entregas de ordenes_compra_entregas
-// El filtro se aplica en el cliente para mostrar correctamente
+productosFaltantes?: Array<{
+  producto_id: string;
+  codigo: string;
+  nombre: string;
+  cantidad_faltante: number;
+}>;
 ```
 
-### Cambio 2: Excluir de ordenesSimples las OC que ya tienen entregas en la otra query
+### Cambio 4: Mapear productos_faltantes en todasLasEntregas
 
-Para evitar duplicados, las OCs que aparecen en `entregasProgramadas` no deben aparecer tambien en `ordenesSimples`.
+En el useMemo de `todasLasEntregas` (líneas 162-219):
 
-### Cambio 3: Ajustar la logica de "esCompletada" para entregas individuales
-
-Una entrega de faltante puede estar pendiente aunque la OC este "completada". La logica debe basarse en el status de la entrega individual, no de la OC.
-
----
-
-## Estructura Visual Esperada
-
-Despues del cambio, el calendario deberia mostrar:
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│                    ENERO 2026                                │
-├──────────────────────────────────────────────────────────────┤
-│  ...  │  22  │  23  │  24  │  25  │  26  │  27  │           │
-│       │      │ [*]  │      │      │ [*]  │      │           │
-│       │      │ OC-2 │      │      │ OC-2 │      │           │
-│       │      │ #1   │      │      │ #2   │      │           │
-│       │      │recib │      │      │(falt)│      │           │
-└──────────────────────────────────────────────────────────────┘
-
-[*] = punto verde (recibida)
+```tsx
+productosFaltantes: entrega.productos_faltantes || null,
 ```
 
-Dia 23: Entrega #1 de OC-202601-0002 (recibida)
-Dia 26: Entrega #2 de OC-202601-0002 - FALTANTE (recibida)
+---
+
+## Cambio 5: Mejorar RecepcionDetalleDialog
+
+Cuando la entrega tiene `origen_faltante = true`, mostrar una sección destacada al inicio indicando:
+
+**Ubicación**: Después del header info (línea 532)
+
+```tsx
+{/* Alerta de entrega de faltante */}
+{esEntregaFaltante && (
+  <Alert className="bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800">
+    <AlertTriangle className="h-4 w-4 text-orange-600" />
+    <AlertTitle className="text-orange-800 dark:text-orange-300">
+      Entrega de Productos Faltantes
+    </AlertTitle>
+    <AlertDescription className="text-orange-700 dark:text-orange-400">
+      Esta recepción corresponde a productos que no llegaron en entregas anteriores.
+      {productosFaltantes && productosFaltantes.length > 0 && (
+        <ul className="mt-2 list-disc ml-4">
+          {productosFaltantes.map((p, idx) => (
+            <li key={idx}>
+              <span className="font-medium">{p.cantidad_faltante}</span> {p.nombre} ({p.codigo})
+            </li>
+          ))}
+        </ul>
+      )}
+    </AlertDescription>
+  </Alert>
+)}
+```
+
+### Cambio 6: Actualizar Query en RecepcionDetalleDialog
+
+Incluir `origen_faltante` y `productos_faltantes` en la query de entrega:
+
+**Ubicación**: loadRecepcion (líneas 148-162)
+
+**Agregar al SELECT**:
+```tsx
+origen_faltante, productos_faltantes
+```
 
 ---
 
-## Cambios en Codigo
-
-### Archivo: `src/components/compras/CalendarioEntregasTab.tsx`
-
-**Cambio A - Query `entregasProgramadas` (lineas 59-101):**
-- Quitar el filtro `.eq("ordenes_compra.entregas_multiples", true)`
-- Esto traera TODAS las entregas individuales de la tabla `ordenes_compra_entregas`
-
-**Cambio B - Query `ordenesSimples` (lineas 105-135):**
-- Agregar filtro para excluir OCs que ya estan en `ordenes_compra_entregas`
-- O usar un enfoque mas simple: solo mostrar OCs que NO tienen registros en la tabla de entregas
-
-**Cambio C - Mapeo `todasLasEntregas` (lineas 162-212):**
-- Para entregas multiples: mantener logica actual pero usar fecha_entrega_real cuando existe
-- Para entregas simples: solo incluir OCs que realmente no tienen entregas en la otra tabla
-- Agregar indicador visual para entregas de faltantes (`origen_faltante = true`)
-
-**Cambio D - Agregar badge "Faltante" en la UI:**
-- Mostrar un badge naranja/amarillo cuando `origen_faltante = true`
-- Esto ayuda a identificar rapidamente las entregas de seguimiento
-
----
-
-## Beneficio para el Usuario
-
-1. **Visibilidad completa**: Cada entrega aparece en su fecha correcta (programada o real)
-2. **Sin duplicados**: Cada OC/entrega aparece una sola vez
-3. **Trazabilidad**: Puedes ver el historial completo de una OC con multiples entregas
-4. **Identificacion clara**: Badge "Faltante" indica que es una entrega de seguimiento
-
----
-
-## Archivos a Modificar
+## Resumen de Cambios
 
 | Archivo | Cambios |
 |---------|---------|
-| `src/components/compras/CalendarioEntregasTab.tsx` | Modificar queries y logica de mapeo |
+| `src/components/compras/CalendarioEntregasTab.tsx` | 1. Agregar `productos_faltantes` a query 2. Agregar `productosFaltantes` al mapeo 3. Mostrar alerta en diálogo del día |
+| `src/components/compras/RecepcionDetalleDialog.tsx` | 1. Agregar campos a query 2. Mostrar alerta destacada cuando es faltante |
+
+---
+
+## Resultado Esperado
+
+### Al hacer clic en el día 23 (Entrega original):
+- Se ve la OC con badge "Recibida"
+- Lista de productos ordenados (sin alerta especial)
+
+### Al hacer clic en el día 26 (Entrega de faltante):
+- Se ve la OC con badges "Recibida" + "Faltante"
+- **Alerta naranja**: "Productos recibidos en esta entrega: 40x Papel Blanco Revolución"
+
+### En "Ver Recepción" de la entrega del día 26:
+- **Alerta naranja al inicio**: "Esta recepción corresponde a productos que no llegaron en entregas anteriores."
+- Lista específica: "40 Papel Blanco Revolución (PAP-001)"
+- La tabla de productos muestra todo el contexto de la OC para referencia
 
