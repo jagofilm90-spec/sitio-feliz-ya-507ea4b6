@@ -32,6 +32,8 @@ import {
   Mail,
   Loader2,
   Eye,
+  BarChart3,
+  CheckCircle2,
 } from "lucide-react";
 import { generarRecepcionPDF, generarRecepcionPDFBase64, generarRecepcionPDFBlobUrl } from "@/utils/recepcionPdfGenerator";
 import { getDisplayName } from "@/lib/productUtils";
@@ -114,6 +116,20 @@ interface ProductoEntrega {
   };
 }
 
+interface ResumenOC {
+  completados: number;
+  pendientes: number;
+  totalProductos: number;
+  porcentajeAvance: number;
+  productosPendientesDetalle: Array<{
+    nombre: string;
+    codigo: string;
+    ordenado: number;
+    recibido: number;
+    faltante: number;
+  }>;
+}
+
 // Helper to format duration
 const formatDuration = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
@@ -151,6 +167,7 @@ export const RecepcionDetalleDialog = ({
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [iframeLoading, setIframeLoading] = useState(true);
   const [resumenOCExpandido, setResumenOCExpandido] = useState(false);
+  const [resumenOC, setResumenOC] = useState<ResumenOC | null>(null);
 
   useEffect(() => {
     if (open && entregaId) {
@@ -216,7 +233,29 @@ export const RecepcionDetalleDialog = ({
         `)
         .eq("orden_compra_id", (entrega as any).orden_compra.id);
 
-      setProductos((productosData as unknown as ProductoRecibido[]) || []);
+      const productosArray = (productosData as unknown as ProductoRecibido[]) || [];
+      setProductos(productosArray);
+
+      // Calcular resumen de la OC
+      const productosCompletados = productosArray.filter(p => p.cantidad_recibida >= p.cantidad_ordenada);
+      const productosPendientes = productosArray.filter(p => p.cantidad_recibida < p.cantidad_ordenada);
+      const totalOrdenado = productosArray.reduce((sum, p) => sum + p.cantidad_ordenada, 0);
+      const totalRecibido = productosArray.reduce((sum, p) => sum + p.cantidad_recibida, 0);
+      const porcentajeAvance = totalOrdenado > 0 ? Math.round((totalRecibido / totalOrdenado) * 100) : 0;
+
+      setResumenOC({
+        completados: productosCompletados.length,
+        pendientes: productosPendientes.length,
+        totalProductos: productosArray.length,
+        porcentajeAvance,
+        productosPendientesDetalle: productosPendientes.map(p => ({
+          nombre: p.producto?.nombre || '',
+          codigo: p.producto?.codigo || '',
+          ordenado: p.cantidad_ordenada,
+          recibido: p.cantidad_recibida,
+          faltante: p.cantidad_ordenada - p.cantidad_recibida
+        }))
+      });
 
       // Load products specifically received in THIS delivery using inventory lots
       const patronLote = `REC-${(entrega as any).orden_compra.folio}-${(entrega as any).numero_entrega}`;
@@ -593,6 +632,96 @@ export const RecepcionDetalleDialog = ({
                       )}
                     </AlertDescription>
                   </Alert>
+                )}
+
+                {/* Resumen Visual de la OC */}
+                {resumenOC && (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                    <h3 className="font-medium mb-3 flex items-center gap-2 text-blue-800 dark:text-blue-300">
+                      <BarChart3 className="w-4 h-4" />
+                      Resumen de la Orden de Compra
+                    </h3>
+                    
+                    <div className="grid grid-cols-3 gap-4 mb-4">
+                      {/* Productos Completados */}
+                      <div className="text-center p-3 bg-white/50 dark:bg-white/5 rounded-lg">
+                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                          {resumenOC.completados}/{resumenOC.totalProductos}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Productos Completos
+                        </div>
+                      </div>
+                      
+                      {/* Productos Pendientes */}
+                      <div className="text-center p-3 bg-white/50 dark:bg-white/5 rounded-lg">
+                        <div className={`text-2xl font-bold ${resumenOC.pendientes === 0 ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                          {resumenOC.pendientes}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Pendientes
+                        </div>
+                      </div>
+                      
+                      {/* Porcentaje de Avance */}
+                      <div className="text-center p-3 bg-white/50 dark:bg-white/5 rounded-lg">
+                        <div className={`text-2xl font-bold ${
+                          resumenOC.porcentajeAvance === 100 
+                            ? 'text-green-600 dark:text-green-400' 
+                            : 'text-blue-600 dark:text-blue-400'
+                        }`}>
+                          {resumenOC.porcentajeAvance}%
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Avance Total
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Barra de progreso */}
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-3">
+                      <div 
+                        className={`h-2 rounded-full transition-all ${
+                          resumenOC.porcentajeAvance === 100 
+                            ? 'bg-green-500' 
+                            : resumenOC.porcentajeAvance >= 50 
+                              ? 'bg-blue-500' 
+                              : 'bg-orange-500'
+                        }`}
+                        style={{ width: `${resumenOC.porcentajeAvance}%` }}
+                      />
+                    </div>
+                    
+                    {/* Lista de pendientes si hay */}
+                    {resumenOC.productosPendientesDetalle.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-700">
+                        <p className="text-sm font-medium text-orange-700 dark:text-orange-400 mb-2 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          Productos Pendientes:
+                        </p>
+                        <ul className="space-y-1">
+                          {resumenOC.productosPendientesDetalle.map((p, idx) => (
+                            <li key={idx} className="text-sm text-muted-foreground flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-orange-500 flex-shrink-0" />
+                              <span className="font-mono text-xs">{p.codigo}</span>
+                              <span className="truncate">{p.nombre}</span>
+                              <span className="ml-auto text-orange-600 dark:text-orange-400 font-medium flex-shrink-0">
+                                {p.recibido}/{p.ordenado}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {/* Mensaje de completado */}
+                    {resumenOC.pendientes === 0 && (
+                      <div className="mt-3 flex items-center gap-2 text-green-700 dark:text-green-400 text-sm">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span className="font-medium">Todos los productos han sido recibidos completamente</span>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 <Separator />
