@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useUserRoles } from "@/hooks/useUserRoles";
 import { format } from "date-fns";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,12 +82,18 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   const [solicitandoAutorizacion, setSolicitandoAutorizacion] = useState(false);
   const [autorizando, setAutorizando] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdminLocal, setIsAdminLocal] = useState(false);
   const [programarEntregasOpen, setProgramarEntregasOpen] = useState(false);
+  
+  // Hook para verificar rol admin (para borrar OCs de prueba)
+  const { isAdmin } = useUserRoles();
   
   // Removed: convertirEntregasOpen, dividirEntregaOpen - rarely used functionality
   const [evidenciasGalleryOpen, setEvidenciasGalleryOpen] = useState(false);
   const [confirmEditOpen, setConfirmEditOpen] = useState(false);
+  
+  // Estado para confirmación de folio (borrado especial de OC de prueba)
+  const [folioConfirmacion, setFolioConfirmacion] = useState('');
   
   // Email CC functionality
   const [emailTo, setEmailTo] = useState("");
@@ -95,6 +102,17 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
 
   // Derive ordenId safely to use in hooks
   const ordenId = orden?.id;
+
+  // Detectar si es OC de prueba (para permitir eliminación especial por admin)
+  const esOCPrueba = useMemo(() => {
+    const nombreProveedor = orden?.proveedores?.nombre || orden?.proveedor_nombre_manual || '';
+    const folio = orden?.folio || '';
+    
+    return nombreProveedor.toLowerCase().includes('prueba') || 
+           nombreProveedor.toLowerCase().includes('test') ||
+           folio.toUpperCase().includes('TEST') ||
+           folio.toUpperCase().includes('PRUEBA');
+  }, [orden]);
 
   // Fetch pending deliveries count
   const { data: entregasPendientes = 0 } = useQuery({
@@ -186,12 +204,12 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setCurrentUserId(user.id);
-        // Check if admin
+        // Check if admin (for local use, but we also have useUserRoles hook)
         const { data: roles } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", user.id);
-        setIsAdmin(roles?.some(r => r.role === 'admin') || false);
+        setIsAdminLocal(roles?.some(r => r.role === 'admin') || false);
       }
     };
     fetchCurrentUser();
@@ -258,12 +276,70 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
 
   const deleteOrden = useMutation({
     mutationFn: async () => {
-      // Block deletion of completed/received orders to protect inventory integrity
-      if (orden.status === 'completada' || orden.status === 'recibida') {
+      const nombreProveedor = orden?.proveedores?.nombre || orden?.proveedor_nombre_manual || '';
+      const folio = orden?.folio || '';
+      
+      // Detectar si es OC de prueba
+      const esOCPruebaLocal = nombreProveedor.toLowerCase().includes('prueba') || 
+                              nombreProveedor.toLowerCase().includes('test') ||
+                              folio.toUpperCase().includes('TEST') ||
+                              folio.toUpperCase().includes('PRUEBA');
+      
+      // Permitir eliminación de OC recibida SOLO si es de prueba Y el usuario es admin
+      if ((orden.status === 'completada' || orden.status === 'recibida') && !esOCPruebaLocal) {
         throw new Error(
           "No se puede eliminar una orden que ya fue recibida. El inventario ya fue afectado. " +
           "Contacte al administrador para realizar ajustes de inventario si es necesario."
         );
+      }
+      
+      // Si es OC recibida de prueba, eliminar también los lotes de inventario en cascada
+      if ((orden.status === 'completada' || orden.status === 'recibida') && esOCPruebaLocal) {
+        console.log("🧹 Eliminando OC de prueba con datos de inventario:", orden.folio);
+        
+        // 1. Eliminar lotes de inventario asociados (trigger actualizará stock)
+        const { error: lotesError } = await supabase
+          .from("inventario_lotes")
+          .delete()
+          .eq("orden_compra_id", orden.id);
+        
+        if (lotesError) {
+          console.error("Error eliminando lotes:", lotesError);
+          throw new Error("Error al eliminar lotes de inventario: " + lotesError.message);
+        }
+        
+        // 2. Eliminar entregas programadas
+        const { error: entregasError } = await supabase
+          .from("ordenes_compra_entregas")
+          .delete()
+          .eq("orden_compra_id", orden.id);
+        
+        if (entregasError) {
+          console.error("Error eliminando entregas:", entregasError);
+          // No lanzar error, continuar
+        }
+        
+        // 3. Eliminar recepciones participantes (si existen)
+        const { data: recepciones } = await (supabase as any)
+          .from("ordenes_compra_recepciones")
+          .select("id")
+          .eq("orden_compra_id", orden.id);
+        
+        if (recepciones && recepciones.length > 0) {
+          const recepcionIds = recepciones.map((r: any) => r.id);
+          
+          await (supabase as any)
+            .from("recepciones_participantes")
+            .delete()
+            .in("recepcion_id", recepcionIds);
+          
+          await (supabase as any)
+            .from("ordenes_compra_recepciones")
+            .delete()
+            .eq("orden_compra_id", orden.id);
+        }
+        
+        console.log("✅ Datos de inventario y recepciones eliminados para OC de prueba:", orden.folio);
       }
 
       // Get supplier email before deleting
@@ -2058,7 +2134,8 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
           </div>
         ) : accion === "eliminar" ? (
           <div className="space-y-4">
-            {(orden?.status === 'completada' || orden?.status === 'recibida') ? (
+            {/* Caso 1: OC recibida que NO es de prueba - mostrar bloqueo */}
+            {(orden?.status === 'completada' || orden?.status === 'recibida') && !esOCPrueba ? (
               <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg space-y-2">
                 <p className="font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5" />
@@ -2072,7 +2149,72 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                   Si necesita realizar ajustes, contacte al administrador del sistema.
                 </p>
               </div>
+            ) : (orden?.status === 'completada' || orden?.status === 'recibida') && esOCPrueba && isAdmin ? (
+              /* Caso 2: OC recibida de PRUEBA + usuario es admin - permitir con confirmación doble */
+              <div className="space-y-4">
+                <div className="bg-destructive/10 border-2 border-destructive p-4 rounded-lg space-y-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-6 w-6 text-destructive" />
+                    <p className="font-bold text-destructive">
+                      Eliminación de OC de Prueba
+                    </p>
+                  </div>
+                  <p className="text-sm text-destructive">
+                    ⚠️ Esta acción eliminará PERMANENTEMENTE:
+                  </p>
+                  <ul className="text-sm text-muted-foreground list-disc ml-5 space-y-1">
+                    <li>La orden de compra <strong>{orden?.folio}</strong></li>
+                    <li>Todos los lotes de inventario creados</li>
+                    <li>Las entregas y recepciones registradas</li>
+                    <li>El stock del producto será actualizado automáticamente</li>
+                  </ul>
+                  
+                  <div className="mt-4 p-3 bg-background rounded border">
+                    <p className="text-sm font-medium mb-2">
+                      Para confirmar, escribe el folio de la orden:
+                    </p>
+                    <Input
+                      value={folioConfirmacion}
+                      onChange={(e) => setFolioConfirmacion(e.target.value.toUpperCase())}
+                      placeholder={orden?.folio}
+                      className="font-mono"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => deleteOrden.mutate()} 
+                    disabled={deleteOrden.isPending || folioConfirmacion !== orden?.folio}
+                    variant="destructive"
+                    className="flex-1"
+                  >
+                    {deleteOrden.isPending ? "Eliminando datos de prueba..." : "🗑️ Eliminar OC de Prueba"}
+                  </Button>
+                  <Button variant="ghost" onClick={() => { setAccion(null); setFolioConfirmacion(''); }}>
+                    Cancelar
+                  </Button>
+                </div>
+                
+                {folioConfirmacion && folioConfirmacion !== orden?.folio && (
+                  <p className="text-xs text-destructive">
+                    El folio no coincide. Debe escribir exactamente: {orden?.folio}
+                  </p>
+                )}
+              </div>
+            ) : (orden?.status === 'completada' || orden?.status === 'recibida') && esOCPrueba && !isAdmin ? (
+              /* Caso 3: OC recibida de PRUEBA pero usuario NO es admin */
+              <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg space-y-2">
+                <p className="font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  Requiere permisos de administrador
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Esta es una OC de prueba que puede ser eliminada, pero requiere permisos de administrador.
+                </p>
+              </div>
             ) : (
+              /* Caso 4: OC no recibida - eliminación normal */
               <>
                 <div className="bg-destructive/10 p-4 rounded-lg space-y-2">
                   <p className="font-medium text-destructive">¿Estás seguro de eliminar esta orden?</p>
