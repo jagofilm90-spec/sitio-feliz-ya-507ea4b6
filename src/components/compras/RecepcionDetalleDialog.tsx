@@ -36,6 +36,8 @@ import {
 import { generarRecepcionPDF, generarRecepcionPDFBase64, generarRecepcionPDFBlobUrl } from "@/utils/recepcionPdfGenerator";
 import { getDisplayName } from "@/lib/productUtils";
 import { getEmailsInternos, enviarCopiaInterna } from "@/lib/emailNotificationsUtils";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronRight, ChevronDown } from "lucide-react";
 
 interface RecepcionDetalleDialogProps {
   entregaId: string | null;
@@ -99,6 +101,19 @@ interface ProductoRecibido {
   };
 }
 
+interface ProductoEntrega {
+  id: string;
+  cantidad_recibida: number;
+  lote_referencia: string | null;
+  producto: {
+    id: string;
+    codigo: string;
+    nombre: string;
+    marca: string | null;
+    especificaciones: string | null;
+  };
+}
+
 // Helper to format duration
 const formatDuration = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
@@ -125,6 +140,7 @@ export const RecepcionDetalleDialog = ({
   const [loading, setLoading] = useState(true);
   const [recepcion, setRecepcion] = useState<RecepcionDetalle | null>(null);
   const [productos, setProductos] = useState<ProductoRecibido[]>([]);
+  const [productosEntrega, setProductosEntrega] = useState<ProductoEntrega[]>([]);
   const [evidencias, setEvidencias] = useState<EvidenciaRecepcion[]>([]);
   const [evidenciasUrls, setEvidenciasUrls] = useState<Record<string, string>>({});
   const [imagenExpandida, setImagenExpandida] = useState<string | null>(null);
@@ -134,6 +150,7 @@ export const RecepcionDetalleDialog = ({
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [iframeLoading, setIframeLoading] = useState(true);
+  const [resumenOCExpandido, setResumenOCExpandido] = useState(false);
 
   useEffect(() => {
     if (open && entregaId) {
@@ -200,6 +217,32 @@ export const RecepcionDetalleDialog = ({
         .eq("orden_compra_id", (entrega as any).orden_compra.id);
 
       setProductos((productosData as unknown as ProductoRecibido[]) || []);
+
+      // Load products specifically received in THIS delivery using inventory lots
+      const patronLote = `REC-${(entrega as any).orden_compra.folio}-${(entrega as any).numero_entrega}`;
+      console.log("Buscando lotes con patrón:", patronLote);
+      
+      const { data: lotesEntrega, error: lotesError } = await supabase
+        .from("inventario_lotes")
+        .select(`
+          id, cantidad_disponible, lote_referencia, fecha_entrada,
+          producto:productos(id, codigo, nombre, marca, especificaciones)
+        `)
+        .eq("orden_compra_id", (entrega as any).orden_compra.id)
+        .like("lote_referencia", `${patronLote}%`);
+
+      if (lotesError) {
+        console.error("Error cargando lotes de entrega:", lotesError);
+      } else {
+        console.log("Lotes encontrados para esta entrega:", lotesEntrega?.length || 0, lotesEntrega);
+        const productosEstaEntrega: ProductoEntrega[] = (lotesEntrega || []).map((lote: any) => ({
+          id: lote.id,
+          cantidad_recibida: lote.cantidad_disponible,
+          lote_referencia: lote.lote_referencia,
+          producto: lote.producto
+        }));
+        setProductosEntrega(productosEstaEntrega);
+      }
 
       // Load evidences from correct table - ALL types, no filter
       const { data: evidenciasData, error: evidenciasError } = await supabase
@@ -633,58 +676,106 @@ export const RecepcionDetalleDialog = ({
 
                 <Separator />
 
-                {/* Products */}
-                <div>
-                  <h3 className="font-medium mb-3 flex items-center gap-2">
+                {/* Products received in THIS specific delivery */}
+                <div className="space-y-3">
+                  <h3 className="font-medium flex items-center gap-2">
                     <Package className="w-4 h-4" />
-                    Productos Recibidos
+                    Productos Recibidos en Esta Entrega
                   </h3>
-                  <div className="border rounded-lg overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-muted">
-                        <tr>
-                          <th className="text-left p-2">Código</th>
-                          <th className="text-left p-2">Producto</th>
-                          <th className="text-right p-2">Ordenado</th>
-                          <th className="text-right p-2">Recibido</th>
-                          <th className="text-left p-2">Diferencia</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {productos.map((p) => {
-                          const hasDiferencia = p.cantidad_recibida < p.cantidad_ordenada;
-                          return (
-                            <tr 
-                              key={p.id} 
-                              className={`border-t ${hasDiferencia ? "bg-destructive/10" : ""}`}
-                            >
-                              <td className="p-2 font-mono text-xs">{p.producto?.codigo}</td>
-                              <td className="p-2">{p.producto ? getDisplayName(p.producto) : '-'}</td>
-                              <td className="p-2 text-right">{p.cantidad_ordenada}</td>
-                              <td className={`p-2 text-right font-medium ${hasDiferencia ? "text-destructive" : ""}`}>
-                                {p.cantidad_recibida}
-                              </td>
-                              <td className="p-2">
-                                {hasDiferencia && (
-                                  <div className="flex flex-col gap-1">
-                                    <Badge variant="destructive" className="text-xs w-fit">
-                                      -{p.cantidad_ordenada - p.cantidad_recibida}
-                                    </Badge>
-                                    {p.razon_diferencia && (
-                                      <span className="text-xs text-muted-foreground">
-                                        {RAZON_LABELS[p.razon_diferencia] || p.razon_diferencia}
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
+                  
+                  {productosEntrega.length === 0 ? (
+                    <div className="border rounded-lg p-4 bg-muted/30">
+                      <p className="text-sm text-muted-foreground text-center">
+                        No se encontraron registros de lotes específicos para esta entrega.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-primary/10">
+                          <tr>
+                            <th className="text-left p-2">Código</th>
+                            <th className="text-left p-2">Producto</th>
+                            <th className="text-right p-2">Cantidad Recibida</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {productosEntrega.map((item) => (
+                            <tr key={item.id} className="border-t">
+                              <td className="p-2 font-mono text-xs">{item.producto?.codigo}</td>
+                              <td className="p-2">{item.producto ? getDisplayName(item.producto) : '-'}</td>
+                              <td className="p-2 text-right font-medium text-primary">
+                                {item.cantidad_recibida}
                               </td>
                             </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
+
+                {/* Collapsible section for full OC summary */}
+                <Collapsible open={resumenOCExpandido} onOpenChange={setResumenOCExpandido}>
+                  <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-2">
+                    {resumenOCExpandido ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                    Ver resumen total de la OC
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="mt-2 border rounded-lg overflow-hidden">
+                      <div className="bg-muted/50 px-3 py-2 text-xs text-muted-foreground border-b">
+                        Cantidades acumuladas de toda la Orden de Compra
+                      </div>
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted">
+                          <tr>
+                            <th className="text-left p-2">Código</th>
+                            <th className="text-left p-2">Producto</th>
+                            <th className="text-right p-2">Ordenado</th>
+                            <th className="text-right p-2">Recibido</th>
+                            <th className="text-left p-2">Diferencia</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {productos.map((p) => {
+                            const hasDiferencia = p.cantidad_recibida < p.cantidad_ordenada;
+                            return (
+                              <tr 
+                                key={p.id} 
+                                className={`border-t ${hasDiferencia ? "bg-destructive/10" : ""}`}
+                              >
+                                <td className="p-2 font-mono text-xs">{p.producto?.codigo}</td>
+                                <td className="p-2">{p.producto ? getDisplayName(p.producto) : '-'}</td>
+                                <td className="p-2 text-right">{p.cantidad_ordenada}</td>
+                                <td className={`p-2 text-right font-medium ${hasDiferencia ? "text-destructive" : ""}`}>
+                                  {p.cantidad_recibida}
+                                </td>
+                                <td className="p-2">
+                                  {hasDiferencia && (
+                                    <div className="flex flex-col gap-1">
+                                      <Badge variant="destructive" className="text-xs w-fit">
+                                        -{p.cantidad_ordenada - p.cantidad_recibida}
+                                      </Badge>
+                                      {p.razon_diferencia && (
+                                        <span className="text-xs text-muted-foreground">
+                                          {RAZON_LABELS[p.razon_diferencia] || p.razon_diferencia}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
 
                 <Separator />
 
