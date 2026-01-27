@@ -1,56 +1,114 @@
 
 
-# Plan: Corrección Definitiva del Scroll en ProcesarPagoOCDialog
+# Plan: Corregir Calendario de Entregas para Mostrar Entregas Parciales/Faltantes
 
-## Diagnóstico Actualizado
+## El Problema Identificado
 
-Revisando el código, veo que:
+Tu OC-202601-0002 tiene estos datos en la base de datos:
 
-1. **`DialogContent` base** (en `dialog.tsx` línea 39) tiene `grid` como clase por defecto
-2. Aunque usamos `!flex !flex-col`, hay un problema con cómo Tailwind procesa los modificadores `!important` cuando se mezclan con clases existentes en `cn()`
-3. El `ScrollArea` de Radix tiene un `Viewport` interno con `h-full` que depende de que su padre tenga altura definida
+| # Entrega | Fecha Programada | Fecha Real | Status | Origen Faltante | Productos |
+|-----------|------------------|------------|--------|-----------------|-----------|
+| 1 | 2026-01-22 | 2026-01-23 | recibida | false | Entrega original |
+| 2 | 2026-01-26 | 2026-01-26 | recibida | **true** | 40x Papel Blanco Revolucion |
 
-## Solución Definitiva
+**Pero la OC tiene `entregas_multiples = false`**, lo cual causa que el calendario la ignore incorrectamente.
 
-Vamos a tomar un enfoque más directo: **usar estilos inline para forzar el display flex**, ya que los estilos inline siempre tienen mayor especificidad que las clases CSS.
+### Causa Raiz del Bug
 
-### Cambio en `ProcesarPagoOCDialog.tsx`
+El calendario tiene **dos queries separadas**:
 
-**Ubicación**: Línea 520
+1. **Query 1** (`entregasProgramadas`): Solo obtiene entregas de OCs con `entregas_multiples = true`
+2. **Query 2** (`ordenesSimples`): Obtiene OCs con `entregas_multiples = false`, pero solo considera la **primera** entrega (`ordenes_compra_entregas?.[0]`)
 
-**Cambio**:
+Cuando se crea automáticamente una entrega de faltante (Entrega #2), esta queda "invisible" porque:
+- La OC sigue marcada como `entregas_multiples = false`
+- El código solo lee la primera entrega de la lista
+
+---
+
+## Solucion Propuesta
+
+### Cambio 1: Modificar la Query de Entregas Multiples
+
+Actualmente filtra por `entregas_multiples = true`. Necesitamos **también incluir entregas con `origen_faltante = true`**, sin importar el flag de la OC.
+
 ```tsx
-// ANTES:
-<DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden !flex !flex-col">
+// ANTES (linea 95):
+.eq("ordenes_compra.entregas_multiples", true)
 
-// DESPUÉS:
-<DialogContent 
-  className="max-w-4xl max-h-[90vh] overflow-hidden" 
-  style={{ display: 'flex', flexDirection: 'column' }}
->
+// DESPUES:
+// Sin filtro - traer TODAS las entregas de ordenes_compra_entregas
+// El filtro se aplica en el cliente para mostrar correctamente
 ```
 
-Al usar `style={{ display: 'flex', flexDirection: 'column' }}`, garantizamos que:
-- El estilo inline tiene mayor especificidad que cualquier clase Tailwind
-- No hay conflicto con la clase `grid` del componente base
-- El `ScrollArea` con `flex-1 min-h-0` funcionará correctamente
+### Cambio 2: Excluir de ordenesSimples las OC que ya tienen entregas en la otra query
+
+Para evitar duplicados, las OCs que aparecen en `entregasProgramadas` no deben aparecer tambien en `ordenesSimples`.
+
+### Cambio 3: Ajustar la logica de "esCompletada" para entregas individuales
+
+Una entrega de faltante puede estar pendiente aunque la OC este "completada". La logica debe basarse en el status de la entrega individual, no de la OC.
 
 ---
 
-## Validación Post-Cambio
+## Estructura Visual Esperada
 
-1. Abrir una OC con muchos productos
-2. Hacer clic en "Procesar Pago"
-3. Verificar que aparece la barra de scroll a la derecha
-4. Hacer scroll hasta ver "Datos del Pago"
-5. Verificar que se puede subir el comprobante
-6. Confirmar que los botones del footer son visibles y accesibles
+Despues del cambio, el calendario deberia mostrar:
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│                    ENERO 2026                                │
+├──────────────────────────────────────────────────────────────┤
+│  ...  │  22  │  23  │  24  │  25  │  26  │  27  │           │
+│       │      │ [*]  │      │      │ [*]  │      │           │
+│       │      │ OC-2 │      │      │ OC-2 │      │           │
+│       │      │ #1   │      │      │ #2   │      │           │
+│       │      │recib │      │      │(falt)│      │           │
+└──────────────────────────────────────────────────────────────┘
+
+[*] = punto verde (recibida)
+```
+
+Dia 23: Entrega #1 de OC-202601-0002 (recibida)
+Dia 26: Entrega #2 de OC-202601-0002 - FALTANTE (recibida)
 
 ---
 
-## Archivo a Modificar
+## Cambios en Codigo
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/components/compras/ProcesarPagoOCDialog.tsx` | Línea 520: usar `style` inline para forzar flex |
+### Archivo: `src/components/compras/CalendarioEntregasTab.tsx`
+
+**Cambio A - Query `entregasProgramadas` (lineas 59-101):**
+- Quitar el filtro `.eq("ordenes_compra.entregas_multiples", true)`
+- Esto traera TODAS las entregas individuales de la tabla `ordenes_compra_entregas`
+
+**Cambio B - Query `ordenesSimples` (lineas 105-135):**
+- Agregar filtro para excluir OCs que ya estan en `ordenes_compra_entregas`
+- O usar un enfoque mas simple: solo mostrar OCs que NO tienen registros en la tabla de entregas
+
+**Cambio C - Mapeo `todasLasEntregas` (lineas 162-212):**
+- Para entregas multiples: mantener logica actual pero usar fecha_entrega_real cuando existe
+- Para entregas simples: solo incluir OCs que realmente no tienen entregas en la otra tabla
+- Agregar indicador visual para entregas de faltantes (`origen_faltante = true`)
+
+**Cambio D - Agregar badge "Faltante" en la UI:**
+- Mostrar un badge naranja/amarillo cuando `origen_faltante = true`
+- Esto ayuda a identificar rapidamente las entregas de seguimiento
+
+---
+
+## Beneficio para el Usuario
+
+1. **Visibilidad completa**: Cada entrega aparece en su fecha correcta (programada o real)
+2. **Sin duplicados**: Cada OC/entrega aparece una sola vez
+3. **Trazabilidad**: Puedes ver el historial completo de una OC con multiples entregas
+4. **Identificacion clara**: Badge "Faltante" indica que es una entrega de seguimiento
+
+---
+
+## Archivos a Modificar
+
+| Archivo | Cambios |
+|---------|---------|
+| `src/components/compras/CalendarioEntregasTab.tsx` | Modificar queries y logica de mapeo |
 
