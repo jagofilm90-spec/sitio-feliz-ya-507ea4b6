@@ -1,221 +1,306 @@
 
 
-# Plan: Agregar Resumen Visual de Recibido vs Pendiente
+# Plan: Corrección de Lógica del Calendario de Entregas
 
-## Objetivo
+## Problemas Identificados
 
-Agregar un panel visual tipo "dashboard" en el `RecepcionDetalleDialog` que muestre de forma clara y compacta:
-- Cuantos productos se han recibido completamente
-- Cuantos productos estan pendientes
-- Progreso general de la OC
+### Problema 1: El calendario muestra TODOS los productos de la OC en cada entrega
+**Ubicacion:** `CalendarioEntregasTab.tsx` lineas 645-655
 
-## Diseño Propuesto
+**Causa:** La propiedad `productos` se obtiene de `ordenes_compra_detalles` (linea 187), que contiene los totales acumulados de TODA la OC, no los productos especificos de cada entrega.
 
+**Ejemplo real:**
+- Entrega #1 (23 Ene): Muestra "250 Papel Bala Rojo, 40 Papel Blanco Revolucion"
+- Deberia mostrar: Solo "250 Papel Bala Rojo" (lo unico que llego ese dia)
+
+### Problema 2: La alerta de "Productos recibidos" solo aparece para entregas de tipo "faltante"
+**Ubicacion:** `CalendarioEntregasTab.tsx` lineas 661-675
+
+**Causa:** La condicion `entrega.esFaltante && entrega.productosFaltantes` solo muestra la alerta para entregas de seguimiento, pero las entregas originales tambien necesitan mostrar que llego especificamente.
+
+### Problema 3: No hay distincion visual entre entregas parciales y completas en el popup del dia
+**Ubicacion:** Dialog del dia (lineas 592-706)
+
+**Causa:** Se muestra la lista general de productos de la OC sin indicar cuales fueron recibidos en ESA entrega especifica vs cuales estan pendientes.
+
+### Problema 4: La columna de productos en vista lista muestra cantidad_ordenada en vez de cantidad recibida para entregas completadas
+**Ubicacion:** `CalendarioEntregasTab.tsx` lineas 516-531
+
+**Causa:** Siempre muestra `d.cantidad_ordenada` incluso para entregas ya recibidas, deberia mostrar lo que realmente llego.
+
+---
+
+## Solucion Propuesta
+
+### Enfoque: Usar `inventario_lotes` para determinar productos por entrega
+
+Los lotes de inventario tienen el patron `lote_referencia = "REC-{FOLIO}-{NUMERO_ENTREGA}"` que permite identificar exactamente que productos llegaron en cada entrega:
+
+**Datos reales verificados:**
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│              Resumen de la Orden de Compra                  │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
-│  │     2/3      │  │   1 prod     │  │    83%       │       │
-│  │  Completados │  │   Pendiente  │  │   ━━━━━━░░   │       │
-│  │   [verde]    │  │   [naranja]  │  │   Avance     │       │
-│  └──────────────┘  └──────────────┘  └──────────────┘       │
-├─────────────────────────────────────────────────────────────┤
-│  Productos Pendientes:                                      │
-│  • 50 uds - Papel Blanco Revolucion (faltan 50 de 100)     │
-└─────────────────────────────────────────────────────────────┘
+REC-OC-202601-0002-1 -> 250 Papel Bala Rojo (Entrega #1, 23 Ene)
+REC-OC-202601-0002-2 -> 40 Papel Blanco Revolucion (Entrega #2, 26 Ene - Faltante)
 ```
+
+---
 
 ## Cambios Tecnicos
 
-### Archivo: `src/components/compras/RecepcionDetalleDialog.tsx`
+### Archivo: `src/components/compras/CalendarioEntregasTab.tsx`
 
-**Cambio 1: Agregar calculo de resumen**
+**Cambio 1: Agregar campo `productosRecibidosEntrega` a la estructura de datos**
 
-Despues de cargar los productos (linea 219), calcular el resumen:
+Lineas 170-228 - Modificar el mapeo de `todasLasEntregas` para incluir informacion especifica de cada entrega:
 
 ```tsx
-// Calcular resumen de productos
-const productosCompletados = productos.filter(p => p.cantidad_recibida >= p.cantidad_ordenada);
-const productosPendientes = productos.filter(p => p.cantidad_recibida < p.cantidad_ordenada);
-const totalOrdenado = productos.reduce((sum, p) => sum + p.cantidad_ordenada, 0);
-const totalRecibido = productos.reduce((sum, p) => sum + p.cantidad_recibida, 0);
-const porcentajeAvance = totalOrdenado > 0 ? Math.round((totalRecibido / totalOrdenado) * 100) : 0;
+// Nuevo: Para entregas recibidas, obtener productos especificos de inventario_lotes
+// Agregar un estado para cargar esta informacion bajo demanda
+
+const [productosEntregaMap, setProductosEntregaMap] = useState<Record<string, Array<{
+  nombre: string;
+  codigo: string;
+  cantidad: number;
+}>>>({});
 ```
 
-**Cambio 2: Agregar nuevo estado para el resumen**
+**Cambio 2: Funcion para cargar productos de una entrega especifica**
+
+Agregar funcion que consulte `inventario_lotes` cuando se selecciona un dia:
 
 ```tsx
-const [resumenOC, setResumenOC] = useState<{
-  completados: number;
-  pendientes: number;
-  totalProductos: number;
-  porcentajeAvance: number;
-  productosPendientesDetalle: Array<{
-    nombre: string;
-    codigo: string;
-    ordenado: number;
-    recibido: number;
-    faltante: number;
-  }>;
-} | null>(null);
+const cargarProductosEntrega = async (entregaId: string, ocId: string, folio: string, numeroEntrega: number) => {
+  // Ya tenemos esto en cache?
+  if (productosEntregaMap[entregaId]) return;
+
+  const patronLote = `REC-${folio}-${numeroEntrega}`;
+  const { data: lotes } = await supabase
+    .from("inventario_lotes")
+    .select(`cantidad_disponible, producto:productos(nombre, codigo)`)
+    .eq("orden_compra_id", ocId)
+    .like("lote_referencia", `${patronLote}%`);
+
+  if (lotes && lotes.length > 0) {
+    setProductosEntregaMap(prev => ({
+      ...prev,
+      [entregaId]: lotes.map((l: any) => ({
+        nombre: l.producto?.nombre || 'Producto',
+        codigo: l.producto?.codigo || '',
+        cantidad: l.cantidad_disponible
+      }))
+    }));
+  }
+};
 ```
 
-**Cambio 3: Agregar componente visual del resumen**
+**Cambio 3: Cargar productos cuando se abre el dialogo del dia**
 
-Ubicacion: Despues del alert de faltante (linea 596) y antes del primer `<Separator />`:
+Modificar `handleDiaClick` (linea 287-293):
 
 ```tsx
-{/* Resumen Visual de la OC */}
-{resumenOC && (
-  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-    <h3 className="font-medium mb-3 flex items-center gap-2 text-blue-800 dark:text-blue-300">
-      <BarChart3 className="w-4 h-4" />
-      Resumen de la Orden de Compra
-    </h3>
+const handleDiaClick = async (dia: Date) => {
+  const entregas = getEntregasDelDia(dia);
+  if (entregas.length > 0) {
+    setDiaSeleccionado(dia);
+    setDialogDiaOpen(true);
     
-    <div className="grid grid-cols-3 gap-4 mb-4">
-      {/* Productos Completados */}
-      <div className="text-center p-3 bg-white/50 dark:bg-white/5 rounded-lg">
-        <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-          {resumenOC.completados}/{resumenOC.totalProductos}
-        </div>
-        <div className="text-xs text-muted-foreground">
-          Productos Completos
-        </div>
-      </div>
-      
-      {/* Productos Pendientes */}
-      <div className="text-center p-3 bg-white/50 dark:bg-white/5 rounded-lg">
-        <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-          {resumenOC.pendientes}
-        </div>
-        <div className="text-xs text-muted-foreground">
-          Pendientes
-        </div>
-      </div>
-      
-      {/* Porcentaje de Avance */}
-      <div className="text-center p-3 bg-white/50 dark:bg-white/5 rounded-lg">
-        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-          {resumenOC.porcentajeAvance}%
-        </div>
-        <div className="text-xs text-muted-foreground">
-          Avance Total
-        </div>
-      </div>
-    </div>
-    
-    {/* Barra de progreso */}
-    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-3">
-      <div 
-        className={`h-2 rounded-full transition-all ${
-          resumenOC.porcentajeAvance === 100 
-            ? 'bg-green-500' 
-            : resumenOC.porcentajeAvance >= 50 
-              ? 'bg-blue-500' 
-              : 'bg-orange-500'
-        }`}
-        style={{ width: `${resumenOC.porcentajeAvance}%` }}
-      />
-    </div>
-    
-    {/* Lista de pendientes si hay */}
-    {resumenOC.productosPendientesDetalle.length > 0 && (
-      <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-700">
-        <p className="text-sm font-medium text-orange-700 dark:text-orange-400 mb-2 flex items-center gap-1">
-          <AlertTriangle className="w-3 h-3" />
-          Productos Pendientes:
-        </p>
-        <ul className="space-y-1">
-          {resumenOC.productosPendientesDetalle.map((p, idx) => (
-            <li key={idx} className="text-sm text-muted-foreground flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-              <span className="font-mono text-xs">{p.codigo}</span>
-              <span>{p.nombre}</span>
-              <span className="ml-auto text-orange-600 dark:text-orange-400 font-medium">
-                {p.recibido}/{p.ordenado}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    )}
-    
-    {/* Mensaje de completado */}
-    {resumenOC.pendientes === 0 && (
-      <div className="mt-3 flex items-center gap-2 text-green-700 dark:text-green-400 text-sm">
-        <CheckCircle2 className="w-4 h-4" />
-        <span className="font-medium">Todos los productos han sido recibidos completamente</span>
-      </div>
-    )}
+    // Cargar productos especificos para entregas recibidas
+    for (const entrega of entregas) {
+      if (entrega.esCompletada && entrega.orden && entrega.numeroEntrega) {
+        await cargarProductosEntrega(
+          entrega.id, 
+          entrega.orden.id, 
+          entrega.folio, 
+          entrega.numeroEntrega
+        );
+      }
+    }
+  }
+};
+```
+
+**Cambio 4: Mostrar productos especificos en el dialog del dia**
+
+Reemplazar lineas 645-675 con logica mejorada:
+
+```tsx
+{/* Mostrar productos especificos de esta entrega */}
+{entrega.esCompletada && productosEntregaMap[entrega.id] ? (
+  // Entrega recibida - mostrar lo que realmente llego desde inventario_lotes
+  <div className="space-y-1">
+    <p className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-1">
+      <CheckCircle2 className="w-3 h-3" />
+      Productos recibidos en esta entrega:
+    </p>
+    <ul className="text-sm ml-4 list-disc text-muted-foreground">
+      {productosEntregaMap[entrega.id].map((p, idx) => (
+        <li key={idx}>
+          <span className="font-medium">{p.cantidad}</span> {p.nombre}
+        </li>
+      ))}
+    </ul>
   </div>
+) : entrega.esFaltante && entrega.productosFaltantes?.length > 0 ? (
+  // Entrega de faltante - mostrar desde productos_faltantes
+  <Alert className="mt-3 bg-orange-50 border-orange-200">
+    <AlertTriangle className="h-4 w-4 text-orange-600" />
+    <AlertDescription className="text-orange-700">
+      <span className="font-medium">Productos de esta entrega (faltantes):</span>
+      <ul className="mt-1 ml-4 list-disc">
+        {entrega.productosFaltantes.map((p: any, idx: number) => (
+          <li key={idx}>
+            <span className="font-medium">{p.cantidad_faltante}</span> {p.nombre}
+          </li>
+        ))}
+      </ul>
+    </AlertDescription>
+  </Alert>
+) : (
+  // Entrega pendiente/programada - mostrar productos de la OC general
+  <p className="text-sm text-muted-foreground">
+    {entrega.productos?.slice(0, 3).map((d: any, idx: number) => (
+      <span key={idx}>
+        {idx > 0 && ", "}
+        <span className="font-medium">{d.cantidad_ordenada}</span> {d.productos?.nombre}
+      </span>
+    ))}
+    {entrega.productos?.length > 3 && (
+      <span> +{entrega.productos.length - 3} mas</span>
+    )}
+  </p>
 )}
 ```
 
-**Cambio 4: Importar iconos adicionales**
+**Cambio 5: Agregar indicador visual de "entrega parcial" vs "entrega completa"**
 
-Agregar a los imports (linea 33):
+Para entregas recibidas que NO completaron todos los productos de la OC, agregar badge:
 
 ```tsx
-import { BarChart3, CheckCircle2 } from "lucide-react";
+{/* Detectar si fue entrega parcial (no todo lo ordenado llego) */}
+{entrega.esCompletada && productosEntregaMap[entrega.id] && (
+  (() => {
+    const productosRecibidos = productosEntregaMap[entrega.id];
+    const productosOC = entrega.productos || [];
+    const esEntregaParcial = productosRecibidos.length < productosOC.length;
+    
+    return esEntregaParcial ? (
+      <Badge className="text-xs bg-amber-100 text-amber-700 border-amber-300">
+        Parcial ({productosRecibidos.length}/{productosOC.length} productos)
+      </Badge>
+    ) : null;
+  })()
+)}
+```
+
+**Cambio 6: Actualizar vista lista para mostrar cantidad recibida**
+
+Lineas 516-531 - Mostrar cantidad_recibida para entregas completadas:
+
+```tsx
+<TableCell>
+  <div className="text-sm">
+    {entrega.esCompletada && productosEntregaMap[entrega.id] ? (
+      // Mostrar productos reales recibidos
+      productosEntregaMap[entrega.id].slice(0, 2).map((p, idx) => (
+        <span key={idx}>
+          {idx > 0 && ", "}
+          <span className="font-medium">{p.cantidad}</span> {p.nombre}
+        </span>
+      ))
+    ) : (
+      // Mostrar productos ordenados para pendientes
+      entrega.productos?.slice(0, 2).map((d: any, idx: number) => (
+        <span key={idx}>
+          {idx > 0 && ", "}
+          <span className="font-medium">{d.cantidad_ordenada}</span> {d.productos?.nombre}
+        </span>
+      ))
+    )}
+    {/* Indicador de mas productos */}
+    {(entrega.esCompletada && productosEntregaMap[entrega.id]?.length > 2) && (
+      <span className="text-muted-foreground"> +{productosEntregaMap[entrega.id].length - 2} mas</span>
+    )}
+    {(!entrega.esCompletada && entrega.productos?.length > 2) && (
+      <span className="text-muted-foreground"> +{entrega.productos.length - 2} mas</span>
+    )}
+  </div>
+</TableCell>
+```
+
+**Cambio 7: Pre-cargar productos para entregas visibles en vista lista**
+
+Para la vista lista, cargar productos de entregas recibidas cuando se monta el componente:
+
+```tsx
+// useEffect para pre-cargar productos de entregas recibidas
+useEffect(() => {
+  const cargarProductosEntregasRecibidas = async () => {
+    const entregasRecibidas = todasLasEntregas.filter(e => e.esCompletada && e.numeroEntrega);
+    
+    for (const entrega of entregasRecibidas.slice(0, 20)) { // Limitar a las primeras 20
+      if (!productosEntregaMap[entrega.id] && entrega.orden) {
+        await cargarProductosEntrega(
+          entrega.id,
+          entrega.orden.id,
+          entrega.folio,
+          entrega.numeroEntrega
+        );
+      }
+    }
+  };
+  
+  if (!vistaCalendario && todasLasEntregas.length > 0) {
+    cargarProductosEntregasRecibidas();
+  }
+}, [vistaCalendario, todasLasEntregas]);
 ```
 
 ---
 
-## Resultado Visual Esperado
+## Resultado Esperado
 
-### Cuando hay productos pendientes (OC parcial):
-
+### Dia 23 - Entrega #1 (Original):
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│  [chart icon] Resumen de la Orden de Compra                 │
-├─────────────────────────────────────────────────────────────┤
-│  ┌────────────┐   ┌────────────┐   ┌────────────┐          │
-│  │    1/2     │   │     1      │   │    62%     │          │
-│  │  Completos │   │ Pendientes │   │   Avance   │          │
-│  │   verde    │   │   naranja  │   │    azul    │          │
-│  └────────────┘   └────────────┘   └────────────┘          │
-│                                                             │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━░░░░░░░░░░░░░  62%                │
-│                                                             │
-│  ⚠ Productos Pendientes:                                   │
-│    ● PAP-002 - Papel Blanco Revolucion      40/100         │
-└─────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│ OC-202601-0002                [Recibida] [Parcial 1/2]     │
+├────────────────────────────────────────────────────────────┤
+│ PAPELERIA EJEMPLO S.A.                                     │
+│                                                            │
+│ ✓ Productos recibidos en esta entrega:                     │
+│   • 250 Papel Bala Rojo                                    │
+│                                                            │
+│ [Ver Recepcion]  [Acciones]                                │
+└────────────────────────────────────────────────────────────┘
 ```
 
-### Cuando todo esta completo:
-
+### Dia 26 - Entrega #2 (Faltante):
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│  [chart icon] Resumen de la Orden de Compra                 │
-├─────────────────────────────────────────────────────────────┤
-│  ┌────────────┐   ┌────────────┐   ┌────────────┐          │
-│  │    2/2     │   │     0      │   │   100%     │          │
-│  │  Completos │   │ Pendientes │   │   Avance   │          │
-│  │   verde    │   │   verde    │   │   verde    │          │
-│  └────────────┘   └────────────┘   └────────────┘          │
-│                                                             │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  100%              │
-│                                                             │
-│  ✓ Todos los productos han sido recibidos completamente    │
-└─────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│ OC-202601-0002        [Recibida] [Faltante] [#2]           │
+├────────────────────────────────────────────────────────────┤
+│ PAPELERIA EJEMPLO S.A.                                     │
+│                                                            │
+│ ⚠ Productos de esta entrega (faltantes):                   │
+│   • 40 Papel Blanco Revolucion                             │
+│                                                            │
+│ [Ver Recepcion]  [Acciones]                                │
+└────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Archivo a Modificar
+## Archivos a Modificar
 
 | Archivo | Cambios |
 |---------|---------|
-| `src/components/compras/RecepcionDetalleDialog.tsx` | 1. Agregar imports de iconos (BarChart3, CheckCircle2) 2. Agregar estado resumenOC 3. Calcular resumen despues de cargar productos 4. Agregar componente visual del resumen |
+| `src/components/compras/CalendarioEntregasTab.tsx` | 1. Agregar estado productosEntregaMap 2. Agregar funcion cargarProductosEntrega 3. Modificar handleDiaClick para cargar productos 4. Actualizar renderizado de productos en dialog del dia 5. Actualizar vista lista para mostrar productos reales 6. Agregar indicador de entrega parcial 7. Pre-cargar productos en vista lista |
 
 ---
 
 ## Beneficios
 
-1. **Vision instantanea**: Sin hacer scroll, ves el estado general de la OC
-2. **Claridad visual**: Colores y numeros grandes facilitan la comprension
-3. **Accionable**: Lista especifica de pendientes para dar seguimiento
-4. **Contexto completo**: Combina bien con la seccion de "Productos Recibidos en Esta Entrega"
+1. **Claridad por entrega**: Cada entrega muestra exactamente que llego ese dia
+2. **Sin confusion**: No se mezclan totales de OC con entregas individuales
+3. **Trazabilidad completa**: Se puede ver el historico de cada recepcion
+4. **Indicadores visuales**: Badges claros para parcial, completa, faltante
+5. **Performance**: Carga bajo demanda con cache para evitar re-queries
 
