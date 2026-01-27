@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useUserRoles } from "@/hooks/useUserRoles";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -103,6 +104,7 @@ interface EntregaProgramada {
 const OrdenesCompraTab = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAdmin } = useUserRoles();
   const [searchParams, setSearchParams] = useSearchParams();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -1377,12 +1379,69 @@ const OrdenesCompraTab = () => {
     try {
       const orden = ordenParaEliminar;
       
-      // Block deletion of completed/received orders to protect inventory integrity
-      if (orden.status === 'completada' || orden.status === 'recibida') {
+      const nombreProveedor = orden?.proveedores?.nombre || orden?.proveedor_nombre_manual || '';
+      const folio = orden?.folio || '';
+      
+      // Detectar si es OC de prueba
+      const esOCPruebaLocal = nombreProveedor.toLowerCase().includes('prueba') || 
+                              nombreProveedor.toLowerCase().includes('test') ||
+                              folio.toUpperCase().includes('TEST') ||
+                              folio.toUpperCase().includes('PRUEBA');
+      
+      // Block deletion of completed/received orders unless it's a test OC and user is admin
+      if ((orden.status === 'completada' || orden.status === 'recibida') && !esOCPruebaLocal) {
         throw new Error(
           "No se puede eliminar una orden que ya fue recibida. El inventario ya fue afectado. " +
           "Contacte al administrador para realizar ajustes de inventario si es necesario."
         );
+      }
+      
+      // Si es OC recibida de prueba, eliminar también los lotes de inventario en cascada
+      if ((orden.status === 'completada' || orden.status === 'recibida') && esOCPruebaLocal) {
+        console.log("🧹 Eliminando OC de prueba con datos de inventario:", orden.folio);
+        
+        // 1. Eliminar lotes de inventario asociados (trigger actualizará stock)
+        const { error: lotesError } = await supabase
+          .from("inventario_lotes")
+          .delete()
+          .eq("orden_compra_id", orden.id);
+        
+        if (lotesError) {
+          console.error("Error eliminando lotes:", lotesError);
+          throw new Error("Error al eliminar lotes de inventario: " + lotesError.message);
+        }
+        
+        // 2. Eliminar entregas programadas
+        const { error: entregasError } = await supabase
+          .from("ordenes_compra_entregas")
+          .delete()
+          .eq("orden_compra_id", orden.id);
+        
+        if (entregasError) {
+          console.error("Error eliminando entregas:", entregasError);
+        }
+        
+        // 3. Eliminar recepciones participantes (si existen)
+        const { data: recepciones } = await (supabase as any)
+          .from("ordenes_compra_recepciones")
+          .select("id")
+          .eq("orden_compra_id", orden.id);
+        
+        if (recepciones && recepciones.length > 0) {
+          const recepcionIds = recepciones.map((r: any) => r.id);
+          
+          await (supabase as any)
+            .from("recepciones_participantes")
+            .delete()
+            .in("recepcion_id", recepcionIds);
+          
+          await (supabase as any)
+            .from("ordenes_compra_recepciones")
+            .delete()
+            .eq("orden_compra_id", orden.id);
+        }
+        
+        console.log("✅ Datos de inventario y recepciones eliminados para OC de prueba:", orden.folio);
       }
 
       const emailDestinatario = orden?.proveedores?.email || orden?.proveedor_email_manual;
