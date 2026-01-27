@@ -1,149 +1,166 @@
 
 
-# Plan: Mejorar Información de Entregas Parciales en Calendario
+# Plan: Mostrar Productos Recibidos por Entrega Específica
 
-## Problema Actual
+## El Problema Real
 
-Cuando haces clic en un día del calendario y ves una entrega (como la del día 23 para OC-202601-0002):
+Cuando ves la recepción del día 23 (Entrega #1):
+- **Actualmente muestra**: Ambos productos con cantidades totales (250 Bala Rojo + 40 Papel Blanco)
+- **Debería mostrar**: Solo lo que llegó ese día (250 Papel Bala Rojo)
 
-1. **No hay alerta indicando qué se recibió específicamente ese día** - Solo muestra los productos generales de la OC
-2. **En "Ver Recepción"** - Muestra TODOS los productos de la OC con cantidades acumuladas, sin distinguir qué se recibió en cada entrega
+### Causa Raíz
+El `RecepcionDetalleDialog` obtiene productos de `ordenes_compra_detalles`, que guarda **totales acumulados**, no por entrega.
 
-### Datos actuales en BD
-
-| Entrega | Fecha | Tipo | productos_faltantes |
-|---------|-------|------|---------------------|
-| #1 | 2026-01-23 | Original | null |
-| #2 | 2026-01-26 | Faltante | `[{cantidad: 40, nombre: "Papel Blanco Revolución"}]` |
+### Solución Disponible
+Los **lotes de inventario** (`inventario_lotes`) SÍ tienen el número de entrega en `lote_referencia`:
+- `REC-OC-202601-0002-1` → Entrega 1 → Papel Bala Rojo (250)
+- `REC-OC-202601-0002-2` → Entrega 2 → Papel Blanco Revolución (40)
 
 ---
 
 ## Solución Propuesta
 
-### Cambio 1: Alerta en Diálogo del Día (CalendarioEntregasTab.tsx)
+### Enfoque A: Usar lotes de inventario para mostrar productos por entrega
 
-Cuando una entrega tiene `origen_faltante = true` o `productos_faltantes`, mostrar una alerta naranja/amarilla con los productos específicos de esa entrega.
+Modificar `RecepcionDetalleDialog` para:
 
-**Ubicación**: Diálogo de detalle del día (líneas 583-680)
+1. **Obtener productos desde `inventario_lotes`** filtrando por el patrón de lote_referencia que incluye el número de entrega
+2. **Mostrar solo los productos que realmente llegaron en ESA entrega**
+3. **Mantener la vista general de la OC** como referencia secundaria
 
-**Agregar**:
+### Cambios en RecepcionDetalleDialog.tsx
+
+**Cambio 1: Nueva query para obtener productos por entrega**
+
 ```tsx
-{/* Alerta para entregas de faltante */}
-{entrega.esFaltante && entrega.productosFaltantes && entrega.productosFaltantes.length > 0 && (
-  <Alert className="bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800">
-    <AlertTriangle className="h-4 w-4 text-orange-600" />
-    <AlertDescription>
-      <span className="font-medium">Productos recibidos en esta entrega:</span>
-      <ul className="mt-1 ml-4 list-disc">
-        {entrega.productosFaltantes.map((p, idx) => (
-          <li key={idx}>
-            <span className="font-medium">{p.cantidad_faltante}</span> {p.nombre}
-          </li>
-        ))}
-      </ul>
-    </AlertDescription>
-  </Alert>
-)}
+// Después de cargar la entrega, obtener lotes específicos de esta entrega
+const patronLote = `REC-${(entrega as any).orden_compra.folio}-${(entrega as any).numero_entrega}`;
+
+const { data: lotesEntrega } = await supabase
+  .from("inventario_lotes")
+  .select(`
+    id, cantidad_disponible, lote_referencia, fecha_entrada,
+    producto:productos(id, codigo, nombre, marca, especificaciones)
+  `)
+  .eq("orden_compra_id", (entrega as any).orden_compra.id)
+  .like("lote_referencia", `${patronLote}%`);
 ```
 
-### Cambio 2: Actualizar Query de Entregas
+**Cambio 2: Nuevo estado para productos de esta entrega**
 
-Incluir el campo `productos_faltantes` en la query de `entregasProgramadas`:
-
-**Ubicación**: Query principal (líneas 59-101)
-
-**Agregar al SELECT**:
 ```tsx
-productos_faltantes
+const [productosEntrega, setProductosEntrega] = useState<ProductoEntrega[]>([]);
 ```
 
-### Cambio 3: Actualizar Interface de Entrega
-
-Agregar la propiedad `productosFaltantes` al tipo de entrega:
+**Cambio 3: Mostrar sección diferenciada**
 
 ```tsx
-productosFaltantes?: Array<{
-  producto_id: string;
-  codigo: string;
-  nombre: string;
-  cantidad_faltante: number;
-}>;
-```
-
-### Cambio 4: Mapear productos_faltantes en todasLasEntregas
-
-En el useMemo de `todasLasEntregas` (líneas 162-219):
-
-```tsx
-productosFaltantes: entrega.productos_faltantes || null,
-```
-
----
-
-## Cambio 5: Mejorar RecepcionDetalleDialog
-
-Cuando la entrega tiene `origen_faltante = true`, mostrar una sección destacada al inicio indicando:
-
-**Ubicación**: Después del header info (línea 532)
-
-```tsx
-{/* Alerta de entrega de faltante */}
-{esEntregaFaltante && (
-  <Alert className="bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800">
-    <AlertTriangle className="h-4 w-4 text-orange-600" />
-    <AlertTitle className="text-orange-800 dark:text-orange-300">
-      Entrega de Productos Faltantes
-    </AlertTitle>
-    <AlertDescription className="text-orange-700 dark:text-orange-400">
-      Esta recepción corresponde a productos que no llegaron en entregas anteriores.
-      {productosFaltantes && productosFaltantes.length > 0 && (
-        <ul className="mt-2 list-disc ml-4">
-          {productosFaltantes.map((p, idx) => (
-            <li key={idx}>
-              <span className="font-medium">{p.cantidad_faltante}</span> {p.nombre} ({p.codigo})
-            </li>
+{/* Productos recibidos EN ESTA ENTREGA */}
+<div className="space-y-2">
+  <h4 className="font-medium flex items-center gap-2">
+    <Package className="h-4 w-4" />
+    Productos Recibidos en Esta Entrega
+  </h4>
+  
+  {productosEntrega.length === 0 ? (
+    <p className="text-muted-foreground text-sm">
+      No se encontraron registros de lotes para esta entrega
+    </p>
+  ) : (
+    <div className="border rounded-lg overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Producto</TableHead>
+            <TableHead className="text-right">Cantidad Recibida</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {productosEntrega.map((item) => (
+            <TableRow key={item.id}>
+              <TableCell>{item.producto.nombre}</TableCell>
+              <TableCell className="text-right font-medium">
+                {item.cantidad_disponible}
+              </TableCell>
+            </TableRow>
           ))}
-        </ul>
-      )}
-    </AlertDescription>
-  </Alert>
-)}
-```
+        </TableBody>
+      </Table>
+    </div>
+  )}
+</div>
 
-### Cambio 6: Actualizar Query en RecepcionDetalleDialog
+{/* Separador */}
+<Separator />
 
-Incluir `origen_faltante` y `productos_faltantes` en la query de entrega:
-
-**Ubicación**: loadRecepcion (líneas 148-162)
-
-**Agregar al SELECT**:
-```tsx
-origen_faltante, productos_faltantes
+{/* Resumen General de la OC (colapsable o secundario) */}
+<Collapsible>
+  <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground">
+    <ChevronRight className="h-4 w-4" />
+    Ver resumen total de la OC
+  </CollapsibleTrigger>
+  <CollapsibleContent>
+    {/* Tabla actual de productos totales */}
+  </CollapsibleContent>
+</Collapsible>
 ```
 
 ---
 
-## Resumen de Cambios
+## Cambios Adicionales para el Calendario
 
-| Archivo | Cambios |
-|---------|---------|
-| `src/components/compras/CalendarioEntregasTab.tsx` | 1. Agregar `productos_faltantes` a query 2. Agregar `productosFaltantes` al mapeo 3. Mostrar alerta en diálogo del día |
-| `src/components/compras/RecepcionDetalleDialog.tsx` | 1. Agregar campos a query 2. Mostrar alerta destacada cuando es faltante |
+### CalendarioEntregasTab.tsx - Mostrar info en el día 23
+
+Para la entrega original (no faltante), también mostrar qué llegó:
+
+1. **Si NO es faltante**: Podemos consultar los lotes y mostrar un resumen
+2. **Si ES faltante**: Ya lo tenemos en `productos_faltantes`
+
+Agregar una query adicional o usar la información de lotes para mostrar en el popup del día.
 
 ---
 
 ## Resultado Esperado
 
-### Al hacer clic en el día 23 (Entrega original):
-- Se ve la OC con badge "Recibida"
-- Lista de productos ordenados (sin alerta especial)
+### Día 23 - Entrega #1 (Original):
+```text
+┌────────────────────────────────────────────┐
+│ OC-202601-0002                    [Recibida]│
+├────────────────────────────────────────────┤
+│ Productos Recibidos en Esta Entrega:       │
+│ • 250x Papel Bala Rojo                     │
+│                                            │
+│ [▶ Ver resumen total de la OC]             │
+└────────────────────────────────────────────┘
+```
 
-### Al hacer clic en el día 26 (Entrega de faltante):
-- Se ve la OC con badges "Recibida" + "Faltante"
-- **Alerta naranja**: "Productos recibidos en esta entrega: 40x Papel Blanco Revolución"
+### Día 26 - Entrega #2 (Faltante):
+```text
+┌────────────────────────────────────────────┐
+│ OC-202601-0002           [Recibida][Faltante]│
+├────────────────────────────────────────────┤
+│ ⚠️ Productos recibidos en esta entrega:    │
+│ • 40x Papel Blanco Revolución              │
+│                                            │
+│ [▶ Ver resumen total de la OC]             │
+└────────────────────────────────────────────┘
+```
 
-### En "Ver Recepción" de la entrega del día 26:
-- **Alerta naranja al inicio**: "Esta recepción corresponde a productos que no llegaron en entregas anteriores."
-- Lista específica: "40 Papel Blanco Revolución (PAP-001)"
-- La tabla de productos muestra todo el contexto de la OC para referencia
+---
+
+## Archivos a Modificar
+
+| Archivo | Cambios |
+|---------|---------|
+| `src/components/compras/RecepcionDetalleDialog.tsx` | 1. Nueva query para lotes por entrega 2. Nuevo estado productosEntrega 3. Mostrar productos específicos de la entrega primero 4. Mover tabla general a sección colapsable |
+| `src/components/compras/CalendarioEntregasTab.tsx` | Opcional: mostrar productos recibidos en el popup del día |
+
+---
+
+## Beneficios
+
+1. **Claridad total**: Ves exactamente qué llegó en cada entrega
+2. **Trazabilidad**: Puedes verificar cada recepción individual
+3. **Sin ambigüedad**: No confundes totales acumulados con recepciones específicas
+4. **Contexto completo**: La información general de la OC sigue disponible como referencia
 
