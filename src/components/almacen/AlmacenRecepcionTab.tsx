@@ -428,10 +428,23 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
 
   if (entregas.length === 0) {
     return (
-      <div className="p-8 text-center text-muted-foreground">
-        <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p>No hay entregas de proveedores pendientes</p>
-      </div>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Package className="w-5 h-5" />
+            Recepciones pendientes
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="p-8 text-center text-muted-foreground">
+            <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p>No hay entregas programadas para hoy</p>
+            <p className="text-sm mt-1">Pero puedes buscar llegadas anticipadas abajo</p>
+          </div>
+          {/* Panel de llegada anticipada - siempre visible */}
+          <BusquedaLlegadaAnticipada onEntregaReprogramada={loadEntregas} />
+        </CardContent>
+      </Card>
     );
   }
 
