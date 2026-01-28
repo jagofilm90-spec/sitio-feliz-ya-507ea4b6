@@ -441,8 +441,8 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
             <p>No hay entregas programadas para hoy</p>
             <p className="text-sm mt-1">Pero puedes buscar llegadas anticipadas abajo</p>
           </div>
-          {/* Panel de llegada anticipada - siempre visible */}
-          <BusquedaLlegadaAnticipada onEntregaReprogramada={loadEntregas} />
+          {/* Panel de llegada anticipada - abierto por defecto cuando no hay entregas */}
+          <BusquedaLlegadaAnticipada onEntregaReprogramada={loadEntregas} defaultOpen={true} />
         </CardContent>
       </Card>
     );
@@ -749,6 +749,7 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
   // Verificar si otro usuario está trabajando en esta recepción
   const otroUsuarioTrabajando = entrega.trabajando_por && entrega.trabajando_por !== currentUserId;
   const yoEstoyTrabajando = entrega.trabajando_por === currentUserId;
+  const esLlegadaAnticipada = entrega.notas?.includes("Llegada anticipada");
   
   // Verificar si el timeout de 4 horas ha pasado
   const tiempoTrabajando = entrega.trabajando_desde 
@@ -783,9 +784,18 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
         <div className="flex-1 min-w-0 space-y-2">
           {/* Línea 1: Proveedor + Cantidad */}
           <div className="flex items-center justify-between gap-2">
-            <span className="font-semibold text-lg truncate">
-              {proveedorNombre}
-            </span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="font-semibold text-lg truncate">
+                {proveedorNombre}
+              </span>
+              {/* Badge de llegada anticipada */}
+              {esLlegadaAnticipada && (
+                <Badge variant="outline" className="gap-1 border-amber-500 text-amber-600 dark:text-amber-400 flex-shrink-0">
+                  <Clock className="w-3 h-3" />
+                  Anticipada
+                </Badge>
+              )}
+            </div>
             <Badge className="text-base font-bold bg-primary text-primary-foreground flex-shrink-0">
               {entrega.cantidad_bultos.toLocaleString()} bultos
             </Badge>
