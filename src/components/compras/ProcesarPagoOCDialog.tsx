@@ -186,6 +186,27 @@ export function ProcesarPagoOCDialog({
 
   const tieneFacturasRegistradas = facturasProveedor.length > 0;
 
+  // Query para verificar entregas pendientes de esta OC
+  const { data: entregasPendientes = [] } = useQuery({
+    queryKey: ["entregas-pendientes-pago", orden?.id],
+    queryFn: async () => {
+      if (!orden?.id) return [];
+      
+      const { data, error } = await supabase
+        .from("ordenes_compra_entregas")
+        .select("id, numero_entrega, fecha_programada, origen_faltante, status, productos_faltantes")
+        .eq("orden_compra_id", orden.id)
+        .in("status", ["programada", "pendiente", "en_descarga"]);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!orden?.id && open,
+  });
+
+  const tieneEntregasPendientes = entregasPendientes.length > 0;
+  const tieneFaltantesPendientes = entregasPendientes.some((e: any) => e.origen_faltante);
+
   // Query para obtener devoluciones
   const { data: devolucionesDetalle = [] } = useQuery({
     queryKey: ["devoluciones-pago", orden?.id],
@@ -592,6 +613,38 @@ export function ProcesarPagoOCDialog({
               </Alert>
             )}
 
+            {/* Alerta si hay entregas pendientes */}
+            {tieneEntregasPendientes && isPagoCompleto && (
+              <Alert className="border-orange-300 bg-orange-50 dark:bg-orange-950/30">
+                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                <AlertTitle className="text-orange-800 dark:text-orange-300">
+                  Entregas pendientes de recepción
+                </AlertTitle>
+                <AlertDescription className="text-orange-700 dark:text-orange-400">
+                  <p className="mb-2">
+                    Esta OC tiene {entregasPendientes.length} entrega(s) sin recibir
+                    {tieneFaltantesPendientes && " (incluye faltantes programados)"}.
+                  </p>
+                  <ul className="list-disc ml-5 text-sm space-y-1">
+                    {entregasPendientes.slice(0, 3).map((e: any) => (
+                      <li key={e.id}>
+                        Entrega #{e.numero_entrega} - {format(new Date(e.fecha_programada), "dd/MM/yyyy")}
+                        {e.origen_faltante && <Badge variant="outline" className="ml-2 text-xs">Faltante</Badge>}
+                      </li>
+                    ))}
+                    {entregasPendientes.length > 3 && (
+                      <li className="text-muted-foreground">
+                        y {entregasPendientes.length - 3} más...
+                      </li>
+                    )}
+                  </ul>
+                  <p className="mt-2 text-sm font-medium">
+                    ¿Desea continuar con el pago de los productos ya recibidos?
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Tabla de productos con checkboxes */}
             <div className="border rounded-lg overflow-hidden">
               <div className="bg-muted/30 p-3 border-b flex items-center justify-between">
@@ -944,7 +997,12 @@ export function ProcesarPagoOCDialog({
             ) : (
               <>
                 <CheckCircle2 className="h-4 w-4 mr-2" />
-                {isPagoCompleto ? "Confirmar Pago Completo" : "Confirmar Pago Parcial"}
+                {tieneEntregasPendientes && isPagoCompleto
+                  ? "Confirmar Pago Parcial (mercancía recibida)"
+                  : isPagoCompleto 
+                    ? "Confirmar Pago Completo" 
+                    : `Pagar ${calcularTotalesSeleccionados.cantidadProductos} producto(s)`
+                }
               </>
             )}
           </Button>
