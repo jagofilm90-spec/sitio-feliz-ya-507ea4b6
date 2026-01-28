@@ -19,7 +19,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DollarSign, Loader2, Save, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { DollarSign, Loader2, Save, AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -112,6 +113,11 @@ export const AjustarCostosOCDialog = ({
     return acc + diferencia;
   }, 0);
 
+  // Productos con incremento de costo
+  const productosConIncremento = productosCostos.filter(
+    (p) => p.precio_editado > p.precio_actual
+  );
+
   const ajustarCostosMutation = useMutation({
     mutationFn: async () => {
       if (!ordenCompra?.id) throw new Error("No hay orden seleccionada");
@@ -157,6 +163,27 @@ export const AjustarCostosOCDialog = ({
             notas: `Ajuste de costo en OC ${ordenCompra.folio}`,
           });
         }
+      }
+
+      // If there are cost increases, create a notification for admin
+      const productosIncrementados = productosConCambios.filter((p) => {
+        const original = productosCostos.find((x) => x.producto_id === p.producto_id);
+        return original && p.precio_facturado > original.precio_actual;
+      });
+
+      if (productosIncrementados.length > 0) {
+        const impactoTotal = productosIncrementados.reduce((acc, p) => {
+          const original = productosCostos.find((x) => x.producto_id === p.producto_id);
+          if (!original) return acc;
+          return acc + (p.precio_facturado - original.precio_actual) * p.cantidad;
+        }, 0);
+
+        await supabase.from("notificaciones").insert({
+          tipo: "costo_incrementado",
+          titulo: `⚠️ Costo mayor: ${ordenCompra.folio}`,
+          descripcion: `Se detectó incremento de costo en ${productosIncrementados.length} producto(s). Impacto: +$${impactoTotal.toFixed(2)}`,
+          leida: false,
+        });
       }
     },
     onSuccess: () => {
@@ -216,18 +243,37 @@ export const AjustarCostosOCDialog = ({
                     (producto.precio_editado - producto.precio_actual) *
                     producto.cantidad_recibida;
                   const cambiado = producto.precio_editado !== producto.precio_actual;
+                  const esIncremento = producto.precio_editado > producto.precio_actual;
+                  const porcentajeCambio = producto.precio_actual > 0
+                    ? ((producto.precio_editado - producto.precio_actual) / producto.precio_actual * 100)
+                    : 0;
 
                   return (
                     <TableRow
                       key={producto.producto_id}
-                      className={cambiado ? "bg-amber-50 dark:bg-amber-950/20" : ""}
+                      className={cambiado ? (esIncremento ? "bg-red-50 dark:bg-red-950/20" : "bg-green-50 dark:bg-green-950/20") : ""}
                     >
                       <TableCell>
-                        <div>
-                          <div className="font-medium">{producto.nombre}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {producto.codigo}
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <div className="font-medium">{producto.nombre}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {producto.codigo}
+                            </div>
                           </div>
+                          {/* Badge de alerta para incrementos de costo */}
+                          {esIncremento && (
+                            <Badge className="bg-red-100 text-red-700 border border-red-300 dark:bg-red-950/50 dark:text-red-400 dark:border-red-700">
+                              <TrendingUp className="w-3 h-3 mr-1" />
+                              +{porcentajeCambio.toFixed(1)}%
+                            </Badge>
+                          )}
+                          {cambiado && !esIncremento && (
+                            <Badge className="bg-green-100 text-green-700 border border-green-300 dark:bg-green-950/50 dark:text-green-400 dark:border-green-700">
+                              <TrendingDown className="w-3 h-3 mr-1" />
+                              {porcentajeCambio.toFixed(1)}%
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
@@ -251,16 +297,16 @@ export const AjustarCostosOCDialog = ({
                               parseFloat(e.target.value) || 0
                             )
                           }
-                          className="w-28 text-right ml-auto"
+                          className={`w-28 text-right ml-auto ${esIncremento ? "border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-950/30" : ""}`}
                         />
                       </TableCell>
                       <TableCell className="text-right">
                         <span
                           className={
                             diferencia > 0
-                              ? "text-red-600"
+                              ? "text-red-600 font-medium"
                               : diferencia < 0
-                              ? "text-green-600"
+                              ? "text-green-600 font-medium"
                               : "text-muted-foreground"
                           }
                         >
@@ -279,6 +325,17 @@ export const AjustarCostosOCDialog = ({
             </Table>
           )}
         </ScrollArea>
+
+        {/* Warning for cost increases */}
+        {productosConIncremento.length > 0 && (
+          <Alert className="border-red-300 bg-red-50 dark:bg-red-950/30">
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-700 dark:text-red-400">
+              <strong>⚠️ Alerta de Costo:</strong> Se detectaron {productosConIncremento.length} producto(s) 
+              con costo mayor al registrado. Se creará una notificación para el administrador al guardar.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {hayCambios && (
           <div className="p-4 bg-muted/50 rounded-lg">

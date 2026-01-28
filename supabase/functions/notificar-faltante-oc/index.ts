@@ -10,13 +10,20 @@ interface ProductoFaltante {
   cantidad_faltante: number;
 }
 
+interface ProductoCancelado {
+  producto_id: string | null;
+  nombre: string;
+  cantidad_pendiente: number;
+}
+
 interface RequestBody {
-  tipo: 'faltante_creado' | 'fecha_modificada' | 'faltante_cancelado' | 'recordatorio';
+  tipo: 'faltante_creado' | 'fecha_modificada' | 'faltante_cancelado' | 'recordatorio' | 'productos_modificados';
   entrega_id: string;
   orden_folio: string;
   proveedor_email: string;
   proveedor_nombre: string;
   productos_faltantes?: ProductoFaltante[];
+  productos_cancelados?: ProductoCancelado[];
   fecha_programada?: string;
   fecha_anterior?: string;
   fecha_nueva?: string;
@@ -60,6 +67,7 @@ Deno.serve(async (req) => {
       proveedor_email, 
       proveedor_nombre,
       productos_faltantes,
+      productos_cancelados,
       fecha_programada,
       fecha_anterior,
       fecha_nueva,
@@ -220,6 +228,44 @@ Deno.serve(async (req) => {
           </div>
           
           <p>Por favor asegúrese de contar con los productos para la fecha indicada.</p>
+          
+          <p style="margin-top: 30px;">Saludos cordiales,<br><strong>Departamento de Compras</strong></p>
+          ${footerHTML}
+        `;
+        break;
+
+      case 'productos_modificados':
+        asunto = `📝 Modificación de Orden - ${orden_folio}`;
+        const getProductosCanceladosHTML = (productos: ProductoCancelado[] | undefined): string => {
+          if (!productos || productos.length === 0) {
+            return '<li>Ver detalles en la orden</li>';
+          }
+          return productos.map(p => 
+            `<li><strong>${p.cantidad_pendiente}</strong> x ${p.nombre}</li>`
+          ).join('');
+        };
+        
+        cuerpoHTML = `
+          ${headerHTML}
+          <h2 style="color: #f59e0b; margin-top: 0;">Modificación de Orden de Compra</h2>
+          <p>Estimado ${proveedor_nombre},</p>
+          <p>Le informamos que la orden <strong>${orden_folio}</strong> ha sido modificada.</p>
+          
+          <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
+            <p style="font-weight: bold; color: #92400e; margin: 0 0 10px;">Productos cancelados de esta orden:</p>
+            <ul style="margin: 0; padding-left: 20px; color: #92400e;">
+              ${getProductosCanceladosHTML(productos_cancelados)}
+            </ul>
+            ${motivo_cancelacion ? `<p style="margin-top: 15px;"><strong>Motivo:</strong> ${motivo_cancelacion}</p>` : ''}
+          </div>
+          
+          <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0;">
+            <p style="margin: 0; font-weight: bold; color: #dc2626;">
+              ⚠️ IMPORTANTE: Los productos listados arriba <strong>ya no deben ser enviados</strong>.
+            </p>
+          </div>
+          
+          <p>Por favor tome nota de esta modificación.</p>
           
           <p style="margin-top: 30px;">Saludos cordiales,<br><strong>Departamento de Compras</strong></p>
           ${footerHTML}
