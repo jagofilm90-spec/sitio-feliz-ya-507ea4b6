@@ -91,7 +91,19 @@ npx cap open ios
 3. **Configurar Bundle Identifier**:
    - Debe coincidir con `com.almasa.erp`
 
-4. **Configurar Permisos de Ubicación** (Info.plist):
+4. **Configurar Permisos de Cámara y Galería** (Info.plist) - **CRÍTICO**:
+   
+   > ⚠️ **Sin estos permisos, la app crasheará al intentar tomar fotos y Apple rechazará la app.**
+   
+   ```xml
+   <key>NSCameraUsageDescription</key>
+   <string>ALMASA necesita acceso a la cámara para capturar evidencias de carga, fotos de documentos de vehículos y comprobantes de pago.</string>
+   
+   <key>NSPhotoLibraryUsageDescription</key>
+   <string>ALMASA necesita acceso a tu galería para seleccionar fotos de documentos y evidencias.</string>
+   ```
+
+5. **Configurar Permisos de Ubicación** (Info.plist):
    ```xml
    <key>NSLocationWhenInUseUsageDescription</key>
    <string>ALMASA necesita tu ubicación para mostrar tu posición en la ruta de entregas.</string>
@@ -100,7 +112,7 @@ npx cap open ios
    <string>ALMASA necesita acceso continuo a tu ubicación para que el administrador pueda monitorear el progreso de tu ruta de entregas en tiempo real, incluso cuando cambies de app o bloquees la pantalla.</string>
    ```
 
-5. **Configurar Background Modes** (Info.plist):
+6. **Configurar Background Modes** (Info.plist):
    ```xml
    <key>UIBackgroundModes</key>
    <array>
@@ -109,7 +121,7 @@ npx cap open ios
    </array>
    ```
 
-6. **Habilitar Push Notifications**:
+7. **Habilitar Push Notifications**:
    - En "Signing & Capabilities", click en "+ Capability"
    - Agregar "Push Notifications"
    - Agregar "Background Modes" → marcar "Remote notifications" y "Location updates"
@@ -276,6 +288,27 @@ const config: CapacitorConfig = {
 ---
 
 ## Solución de Problemas
+
+### Error: Crash al usar cámara (NSCameraUsageDescription) - **CRÍTICO**
+
+Si la app crashea al intentar tomar fotos o Apple rechaza la app con este mensaje:
+
+```
+"This app has crashed because it attempted to access privacy-sensitive data 
+without a usage description. The app's Info.plist must contain an 
+NSCameraUsageDescription key..."
+```
+
+**Solución:**
+1. Abrir el proyecto en Xcode: `npx cap open ios`
+2. Ir a `App > App > Info.plist`
+3. Click derecho > "Add Row"
+4. Agregar `Privacy - Camera Usage Description` con valor:
+   - "ALMASA necesita acceso a la cámara para capturar evidencias de carga, fotos de documentos de vehículos y comprobantes de pago."
+5. Agregar `Privacy - Photo Library Usage Description` con valor:
+   - "ALMASA necesita acceso a tu galería para seleccionar fotos de documentos y evidencias."
+6. Recompilar: `npm run build && npx cap sync`
+7. En Xcode: Product > Archive > Distribute App
 
 ### Error: "Could not find a storyboard..."
 
