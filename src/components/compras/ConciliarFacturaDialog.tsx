@@ -149,6 +149,10 @@ const ConciliarFacturaDialog = ({
     mutationFn: async () => {
       if (!factura?.id) throw new Error("No hay factura seleccionada");
 
+      // Get current user for audit trail
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuario no autenticado");
+
       // Prepare productos data for the RPC function
       const productosData = productos.map((p) => ({
         producto_id: p.producto_id,
@@ -170,9 +174,36 @@ const ConciliarFacturaDialog = ({
           precio_original_oc: precioOriginal,
           diferencia: (precioOriginal - p.precioFacturado) * cantidad,
         });
+
+        // ===== NUEVO: Actualizar ultimo_costo_compra del producto (COSTO FINAL CONFIRMADO) =====
+        const { data: productoActual } = await supabase
+          .from("productos")
+          .select("ultimo_costo_compra")
+          .eq("id", p.producto_id)
+          .single();
+
+        const costoAnterior = productoActual?.ultimo_costo_compra || 0;
+
+        await supabase
+          .from("productos")
+          .update({ ultimo_costo_compra: p.precioFacturado })
+          .eq("id", p.producto_id);
+
+        // Registrar en historial de costos
+        if (costoAnterior !== p.precioFacturado && p.precioFacturado > 0) {
+          await supabase.from("productos_historial_costos").insert({
+            producto_id: p.producto_id,
+            costo_anterior: costoAnterior,
+            costo_nuevo: p.precioFacturado,
+            fuente: "conciliacion_factura",
+            referencia_id: factura.id,
+            usuario_id: user.id,
+            notas: `Conciliación factura ${factura.numero_factura} - OC ${ordenCompra?.folio || ''}`
+          });
+        }
       }
 
-      // Call the RPC function to update costs
+      // Call the RPC function to update costs in inventory lots
       const { error } = await supabase.rpc("conciliar_factura_proveedor", {
         p_factura_id: factura.id,
         p_productos: productosData,
@@ -188,11 +219,36 @@ const ConciliarFacturaDialog = ({
           requiere_conciliacion: false,
         })
         .eq("id", factura.id);
+
+      // ===== NUEVO: Marcar lotes de inventario como conciliados =====
+      if (ordenCompra?.id) {
+        await supabase
+          .from("inventario_lotes")
+          .update({ conciliado: true })
+          .eq("orden_compra_id", ordenCompra.id);
+
+        // Marcar entregas como conciliadas
+        await supabase
+          .from("ordenes_compra_entregas")
+          .update({ 
+            status_conciliacion: 'conciliada',
+            conciliado_por: user.id,
+            conciliado_en: new Date().toISOString()
+          })
+          .eq("orden_compra_id", ordenCompra.id)
+          .eq("status", "recibida");
+
+        // Actualizar status_conciliacion de la OC
+        await supabase
+          .from("ordenes_compra")
+          .update({ status_conciliacion: 'conciliada' })
+          .eq("id", ordenCompra.id);
+      }
     },
     onSuccess: () => {
       toast({
         title: "Conciliación aplicada",
-        description: "Los costos de inventario han sido actualizados.",
+        description: "Los costos de inventario y catálogo han sido actualizados.",
       });
       queryClient.invalidateQueries({ queryKey: ["proveedor-facturas"] });
       queryClient.invalidateQueries({ queryKey: ["ordenes-compra"] });

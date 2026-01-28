@@ -846,6 +846,8 @@ export const AlmacenRecepcionSheet = ({
                       producto_id: producto.producto_id,
                       cantidad_disponible: lote.cantidad,
                       precio_compra: precioCompra,
+                      precio_compra_provisional: precioCompra, // Costo OC como provisional
+                      conciliado: false, // Pendiente de verificar con factura
                       fecha_entrada: new Date().toISOString(),
                       fecha_caducidad: lote.fecha_caducidad || null,
                       lote_referencia: lote.numero_lote || loteReferencia,
@@ -870,6 +872,8 @@ export const AlmacenRecepcionSheet = ({
                   producto_id: producto.producto_id,
                   cantidad_disponible: cantidadARecibir,
                   precio_compra: precioCompra,
+                  precio_compra_provisional: precioCompra, // Costo OC como provisional
+                  conciliado: false, // Pendiente de verificar con factura
                   fecha_entrada: new Date().toISOString(),
                   fecha_caducidad: fechaCaducidad || null,
                   lote_referencia: loteReferencia,
@@ -886,36 +890,9 @@ export const AlmacenRecepcionSheet = ({
             }
 
             // Nota: El stock ahora se actualiza automáticamente via trigger SQL (sync_stock_from_lotes)
-            // Solo actualizamos el último costo de compra manualmente
-            const { data: productoActual } = await supabase
-              .from("productos")
-              .select("ultimo_costo_compra")
-              .eq("id", producto.producto_id)
-              .single();
-
-            const costoAnterior = productoActual?.ultimo_costo_compra || 0;
-
-            // Solo actualizar último costo de compra (el stock lo actualiza el trigger)
-            await supabase
-              .from("productos")
-              .update({ 
-                ultimo_costo_compra: precioCompra
-              })
-              .eq("id", producto.producto_id);
-
-            // Registrar en historial de costos si el costo cambió
-            if (costoAnterior !== precioCompra && precioCompra > 0) {
-              await supabase.from("productos_historial_costos").insert({
-                producto_id: producto.producto_id,
-                proveedor_id: entrega.orden_compra?.proveedor?.id || null,
-                costo_anterior: costoAnterior,
-                costo_nuevo: precioCompra,
-                fuente: "recepcion_oc",
-                referencia_id: entrega.orden_compra.id,
-                usuario_id: user.id,
-                notas: `Recepción OC ${entrega.orden_compra.folio} - Entrega #${entrega.numero_entrega}`
-              });
-            }
+            // IMPORTANTE: NO actualizar ultimo_costo_compra aquí - se actualiza en conciliación
+            // El costo del producto solo se actualizará cuando se verifique con la factura del proveedor
+            // Esto garantiza que el catálogo de productos refleje costos confirmados, no provisionales
           }
         }
       }
@@ -923,6 +900,7 @@ export const AlmacenRecepcionSheet = ({
       // Actualizar status de la entrega con TODOS los nuevos campos
       const updateEntrega: any = {
         status: "recibida",
+        status_conciliacion: "por_conciliar", // Marcar como pendiente de verificar costos
         fecha_entrega_real: new Date().toISOString().split("T")[0],
         recibido_por: user.id,
         recepcion_finalizada_en: new Date().toISOString(),
