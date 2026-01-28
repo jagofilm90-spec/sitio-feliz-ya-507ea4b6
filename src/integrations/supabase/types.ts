@@ -2859,7 +2859,6 @@ export type Database = {
           creado_por: string
           created_at: string
           email_enviado_en: string | null
-          email_leido_en: string | null
           entregas_multiples: boolean | null
           fecha_autorizacion: string | null
           fecha_entrega_programada: string | null
@@ -2897,7 +2896,6 @@ export type Database = {
           creado_por: string
           created_at?: string
           email_enviado_en?: string | null
-          email_leido_en?: string | null
           entregas_multiples?: boolean | null
           fecha_autorizacion?: string | null
           fecha_entrega_programada?: string | null
@@ -2935,7 +2933,6 @@ export type Database = {
           creado_por?: string
           created_at?: string
           email_enviado_en?: string | null
-          email_leido_en?: string | null
           entregas_multiples?: boolean | null
           fecha_autorizacion?: string | null
           fecha_entrega_programada?: string | null
@@ -3001,41 +2998,6 @@ export type Database = {
             columns: ["rechazado_por"]
             isOneToOne: false
             referencedRelation: "profiles_chat"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      ordenes_compra_confirmaciones: {
-        Row: {
-          confirmado_en: string | null
-          created_at: string
-          id: string
-          ip_address: string | null
-          orden_compra_id: string
-          user_agent: string | null
-        }
-        Insert: {
-          confirmado_en?: string | null
-          created_at?: string
-          id?: string
-          ip_address?: string | null
-          orden_compra_id: string
-          user_agent?: string | null
-        }
-        Update: {
-          confirmado_en?: string | null
-          created_at?: string
-          id?: string
-          ip_address?: string | null
-          orden_compra_id?: string
-          user_agent?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ordenes_compra_confirmaciones_orden_compra_id_fkey"
-            columns: ["orden_compra_id"]
-            isOneToOne: false
-            referencedRelation: "ordenes_compra"
             referencedColumns: ["id"]
           },
         ]
@@ -3334,69 +3296,6 @@ export type Database = {
             columns: ["entrega_id"]
             isOneToOne: false
             referencedRelation: "ordenes_compra_entregas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      ordenes_compra_respuestas_proveedor: {
-        Row: {
-          created_at: string | null
-          entrega_id: string | null
-          fecha_original: string | null
-          fecha_propuesta: string | null
-          id: string
-          ip_address: string | null
-          motivo: string | null
-          orden_compra_id: string
-          revisado: boolean | null
-          revisado_en: string | null
-          revisado_por: string | null
-          tipo_respuesta: string
-          user_agent: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          entrega_id?: string | null
-          fecha_original?: string | null
-          fecha_propuesta?: string | null
-          id?: string
-          ip_address?: string | null
-          motivo?: string | null
-          orden_compra_id: string
-          revisado?: boolean | null
-          revisado_en?: string | null
-          revisado_por?: string | null
-          tipo_respuesta: string
-          user_agent?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          entrega_id?: string | null
-          fecha_original?: string | null
-          fecha_propuesta?: string | null
-          id?: string
-          ip_address?: string | null
-          motivo?: string | null
-          orden_compra_id?: string
-          revisado?: boolean | null
-          revisado_en?: string | null
-          revisado_por?: string | null
-          tipo_respuesta?: string
-          user_agent?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ordenes_compra_respuestas_proveedor_entrega_id_fkey"
-            columns: ["entrega_id"]
-            isOneToOne: false
-            referencedRelation: "ordenes_compra_entregas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ordenes_compra_respuestas_proveedor_orden_compra_id_fkey"
-            columns: ["orden_compra_id"]
-            isOneToOne: false
-            referencedRelation: "ordenes_compra"
             referencedColumns: ["id"]
           },
         ]

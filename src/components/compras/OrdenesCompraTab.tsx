@@ -42,7 +42,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, Search, MoreVertical, Loader2, Truck, Send, Bell, CalendarCheck, CalendarX, RefreshCw, Calendar as CalendarIcon, Receipt, Check, CreditCard, Clock, FileCheck, Hash, Upload, ExternalLink, X, PackageX } from "lucide-react";
+import { Plus, Trash2, Search, MoreVertical, Loader2, Truck, Send, CalendarCheck, CalendarX, RefreshCw, Calendar as CalendarIcon, Receipt, Check, CreditCard, Clock, FileCheck, Hash, Upload, ExternalLink, X, PackageX } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -147,6 +147,8 @@ const OrdenesCompraTab = () => {
   const [entregasMultiples, setEntregasMultiples] = useState(false);
   const [bultosPorEntrega, setBultosPorEntrega] = useState("");
   const [entregasProgramadas, setEntregasProgramadas] = useState<EntregaProgramada[]>([]);
+  
+  // REMOVED: enviandoRecordatorioId state - confirmation system deprecated
   
   // Estado para envío de recordatorio
   const [enviandoRecordatorioId, setEnviandoRecordatorioId] = useState<string | null>(null);
@@ -493,21 +495,7 @@ const OrdenesCompraTab = () => {
     refetchInterval: 60000, // Actualizar cada minuto
   });
 
-  // Fetch confirmaciones separately to avoid RLS issues with embedded selects
-  const { data: confirmaciones = [] } = useQuery({
-    queryKey: ["ordenes_compra_confirmaciones"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ordenes_compra_confirmaciones")
-        .select("orden_compra_id, confirmado_en")
-        .not("confirmado_en", "is", null);
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Create a Set of order IDs that have confirmations for quick lookup
-  const ordenesConfirmadas = new Set(confirmaciones.map(c => c.orden_compra_id));
+  // REMOVED: confirmaciones query - confirmation system deprecated
 
   // Fetch entregas to know scheduling status per order
   const { data: todasEntregas = [] } = useQuery({
@@ -1283,115 +1271,7 @@ const OrdenesCompraTab = () => {
   const totalesOrden = calcularTotalesOrden();
   const cantidadTotalBultos = productosEnOrden.reduce((sum, p) => sum + p.cantidad, 0);
 
-  // Función para enviar recordatorio de confirmación al proveedor
-  const handleEnviarRecordatorio = async (orden: any) => {
-    const proveedorEmail = orden.proveedores?.email;
-    if (!proveedorEmail) {
-      toast({
-        title: "Sin correo",
-        description: "Este proveedor no tiene correo registrado",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Verificar si ya está confirmada
-    if (ordenesConfirmadas.has(orden.id)) {
-      toast({
-        title: "Ya confirmada",
-        description: "Esta orden ya fue confirmada por el proveedor",
-      });
-      return;
-    }
-
-    setEnviandoRecordatorioId(orden.id);
-
-    try {
-      // Generate signed confirmation URL via edge function
-      const { data: urlData, error: urlError } = await supabase.functions.invoke("generate-oc-confirmation-url", {
-        body: {
-          ordenId: orden.id,
-          action: "confirm",
-        },
-      });
-
-      if (urlError || !urlData?.url) {
-        console.error("Error generating signed URL:", urlError);
-        throw new Error("No se pudo generar URL de confirmación");
-      }
-
-      const confirmUrl = urlData.url;
-      const trackingPixelUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/confirmar-oc?id=${orden.id}&action=track`;
-
-      const htmlBody = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #f57c00;">⏰ Recordatorio: Orden de Compra Pendiente de Confirmar</h2>
-          <p>Estimado proveedor <strong>${orden.proveedores?.nombre}</strong>,</p>
-          <p>Le recordamos que la siguiente orden de compra está <strong>pendiente de confirmación</strong>:</p>
-          
-          <div style="background-color: #fff3e0; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f57c00;">
-            <p style="margin: 5px 0;"><strong>Folio:</strong> ${orden.folio}</p>
-            <p style="margin: 5px 0;"><strong>Total:</strong> $${orden.total?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
-            <p style="margin: 5px 0;"><strong>Fecha de la orden:</strong> ${new Date(orden.fecha_orden).toLocaleDateString('es-MX')}</p>
-          </div>
-
-          <p>Por favor confirme la recepción de esta orden haciendo clic en el siguiente botón:</p>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${confirmUrl}" 
-               style="display: inline-block; background-color: #2e7d32; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
-              ✓ Confirmar Recepción de Orden
-            </a>
-          </div>
-
-          <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;" />
-          <p style="color: #666; font-size: 12px;">
-            Este es un recordatorio automático del sistema de Abarrotes La Manita.<br/>
-            Si ya confirmó esta orden, por favor ignore este mensaje.
-          </p>
-          <img src="${trackingPixelUrl}" width="1" height="1" style="display:none;" alt="" />
-        </div>
-      `;
-
-      const asunto = `[RECORDATORIO] Orden de Compra ${orden.folio} - Pendiente de Confirmar`;
-      const { data, error } = await supabase.functions.invoke('gmail-api', {
-        body: {
-          action: 'send',
-          email: 'compras@almasa.com.mx',
-          to: proveedorEmail,
-          subject: asunto,
-          body: htmlBody,
-        },
-      });
-
-      // Registrar el correo enviado
-      await registrarCorreoEnviado({
-        tipo: "recordatorio_oc",
-        referencia_id: orden.id,
-        destinatario: proveedorEmail,
-        asunto: asunto,
-        gmail_message_id: data?.messageId || null,
-        error: error?.message || null,
-        contenido_preview: `Recordatorio de OC pendiente de confirmación para ${orden.proveedores?.nombre}`,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Recordatorio enviado",
-        description: `Se envió recordatorio a ${proveedorEmail}`,
-      });
-    } catch (error: any) {
-      console.error('Error sending reminder:', error);
-      toast({
-        title: "Error al enviar",
-        description: error.message || "No se pudo enviar el recordatorio",
-        variant: "destructive",
-      });
-    } finally {
-      setEnviandoRecordatorioId(null);
-    }
-  };
+  // REMOVED: handleEnviarRecordatorio function - confirmation system deprecated
 
   // Función para eliminar OC con notificación al proveedor
   const handleEliminarOrden = async () => {
@@ -1748,7 +1628,6 @@ const OrdenesCompraTab = () => {
               <TableHead className="w-32">Recepción</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead>Pago</TableHead>
-              <TableHead>Confirmación</TableHead>
               <TableHead>Programación</TableHead>
               <TableHead>Acciones</TableHead>
             </TableRow>
@@ -1756,13 +1635,12 @@ const OrdenesCompraTab = () => {
           <TableBody>
             {filteredOrdenes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center text-muted-foreground">
+                <TableCell colSpan={9} className="text-center text-muted-foreground">
                   No hay órdenes de compra registradas
                 </TableCell>
               </TableRow>
             ) : (
               filteredOrdenes.map((orden) => {
-                const tieneConfirmacion = ordenesConfirmadas.has(orden.id);
                 const entregasStatus = entregasStatusPorOrden[orden.id];
 
                 return (
@@ -1940,17 +1818,7 @@ const OrdenesCompraTab = () => {
                         </div>
                       )}
                     </TableCell>
-                    <TableCell>
-                      {tieneConfirmacion ? (
-                        <Badge variant="default" className="bg-green-600 hover:bg-green-700">
-                          Confirmada
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-muted-foreground">
-                          No confirmada
-                        </Badge>
-                      )}
-                    </TableCell>
+                    {/* REMOVED: Confirmation column - confirmation system deprecated */}
                     <TableCell>
                       <EntregasPopover 
                         orden={orden} 
@@ -1989,20 +1857,7 @@ const OrdenesCompraTab = () => {
                         >
                           <Send className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          title="Enviar recordatorio de confirmación"
-                          disabled={enviandoRecordatorioId === orden.id || tieneConfirmacion || !orden.proveedores?.email}
-                          onClick={() => handleEnviarRecordatorio(orden)}
-                        >
-                          {enviandoRecordatorioId === orden.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Bell className="h-4 w-4" />
-                          )}
-                        </Button>
+                        {/* REMOVED: Bell reminder button - confirmation system deprecated */}
                         <Button
                           variant="ghost"
                           size="icon"

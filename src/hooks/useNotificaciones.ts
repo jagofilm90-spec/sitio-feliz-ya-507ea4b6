@@ -120,52 +120,10 @@ export const useNotificaciones = () => {
     }
   };
 
+  // REMOVED: cargarConfirmacionesProveedor function - confirmation system deprecated
   const cargarConfirmacionesProveedor = async (): Promise<ConfirmacionProveedor[]> => {
-    try {
-      // Obtener confirmaciones de las últimas 24 horas
-      const hace24Horas = new Date();
-      hace24Horas.setHours(hace24Horas.getHours() - 24);
-
-      const { data: confirmaciones, error } = await supabase
-        .from("ordenes_compra_confirmaciones")
-        .select(`
-          id,
-          orden_compra_id,
-          confirmado_en
-        `)
-        .gte("confirmado_en", hace24Horas.toISOString())
-        .order("confirmado_en", { ascending: false });
-
-      if (error || !confirmaciones) return [];
-
-      // Obtener detalles de las órdenes
-      const result: ConfirmacionProveedor[] = [];
-      for (const conf of confirmaciones) {
-        const { data: orden } = await supabase
-          .from("ordenes_compra")
-          .select(`
-            folio,
-            proveedores:proveedor_id (nombre)
-          `)
-          .eq("id", conf.orden_compra_id)
-          .maybeSingle();
-
-        if (orden) {
-          result.push({
-            id: conf.id,
-            orden_compra_id: conf.orden_compra_id,
-            folio: orden.folio,
-            proveedor_nombre: (orden.proveedores as any)?.nombre || "Proveedor",
-            confirmado_en: conf.confirmado_en || "",
-          });
-        }
-      }
-
-      return result;
-    } catch (error) {
-      console.error("Error cargando confirmaciones de proveedor:", error);
-      return [];
-    }
+    // Confirmation system was removed - always return empty array
+    return [];
   };
 
   const cargarAlertasCaducidad = async (): Promise<ProductoCaducidad[]> => {
