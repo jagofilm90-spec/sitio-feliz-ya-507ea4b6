@@ -1,240 +1,190 @@
 
-# Plan: Separación de Costos en el Flujo de Compras
+# Plan: Simplificación del Módulo de Órdenes de Compra (OC)
 
-## Resumen Ejecutivo
+## Análisis Completado
 
-Rediseño del manejo de costos para separar claramente tres etapas: **Costo OC (Esperado)**, **Costo Recepción (Provisional)** y **Costo Final (Conciliado)**. El costo del producto solo se actualizará al momento de la conciliación, no durante la recepción.
+He revisado todos los componentes relacionados con el módulo de Compras y encontré **varias áreas de redundancia** que se acumularon después de los múltiples cambios recientes. A continuación presento mi análisis de qué es necesario y qué puede eliminarse o simplificarse.
 
 ---
 
-## Diagrama del Flujo Propuesto
+## 1. Funcionalidad de Confirmación del Proveedor - CANDIDATO A ELIMINAR
+
+### Qué hace actualmente:
+- Cuando envías una OC, el correo incluye dos botones: "Confirmar Fecha" y "Proponer Otra Fecha"
+- El proveedor hace clic en el enlace y eso registra la confirmación en `ordenes_compra_confirmaciones`
+- En la tabla aparece una columna "Confirmada / No confirmada"
+- Hay un botón de campana (Bell) para enviar recordatorio de confirmación
+
+### Por qué es redundante:
+- **En la práctica**, cuando envías la OC ya quedas de acuerdo con el proveedor en la fecha (por teléfono o WhatsApp)
+- El proveedor **rara vez** hace clic en el enlace del correo
+- La columna de "Confirmada" solo agrega ruido visual
+- El botón de recordatorio casi nunca se usa
+
+### Componentes y elementos a eliminar:
+| Componente/Elemento | Ubicación |
+|---------------------|-----------|
+| Columna "Confirmada" en tabla | `OrdenesCompraTab.tsx:1943-1953` |
+| Botón de recordatorio (Bell) | `OrdenesCompraTab.tsx:1992-2005` |
+| Query de confirmaciones | `OrdenesCompraTab.tsx:497-506` |
+| Edge function `confirmar-oc` | `supabase/functions/confirmar-oc/` |
+| Edge function `generate-oc-confirmation-url` | `supabase/functions/generate-oc-confirmation-url/` |
+| Tabla `ordenes_compra_confirmaciones` | BD |
+| Tabla `ordenes_compra_respuestas_proveedor` | BD |
+| Generación de URLs firmadas en envío | `OrdenAccionesDialog.tsx:1347-1376` |
+| Generación de URLs en reenvío | `ReenviarOCDialog.tsx:364-390` |
+
+**Ahorro estimado**: Menos código, menos iconos, UI más limpia.
+
+---
+
+## 2. Botón "Reenviar OC" - CONSERVAR PERO SIMPLIFICAR
+
+### Qué hace:
+- Permite reenviar la OC al proveedor si hubo algún cambio o si el proveedor no la recibió
+
+### Recomendación:
+- **Conservar** el botón de reenvío (Send icon)
+- **Simplificar**: Eliminar la generación de URLs de confirmación dentro del reenvío (ya que eliminamos esa funcionalidad)
+
+---
+
+## 3. Diálogo de Acciones (MoreVertical) - REVISAR Y SIMPLIFICAR
+
+### Qué contiene actualmente:
+- Ver detalles de la OC
+- Enviar email
+- Editar OC
+- Programar entregas
+- Eliminar OC
+- Autorización
+- Historial de correos
+- Evidencias
+
+### Recomendación:
+- La mayoría de estas acciones son necesarias
+- El botón de **eliminar** ya está duplicado en la tabla (Trash2), se puede remover del diálogo
+
+---
+
+## 4. Botones duplicados en la tabla - SIMPLIFICAR
+
+### Situación actual (demasiados iconos por fila):
+1. 📄 Facturas (Receipt)
+2. ✉️ Reenviar (Send)  
+3. 🔔 Recordatorio (Bell) - **ELIMINAR**
+4. 🗑️ Eliminar (Trash2)
+5. ⋮ Más acciones (MoreVertical)
+
+### Propuesta (4 iconos máximo):
+1. 📄 Facturas (Receipt) - conservar
+2. ✉️ Reenviar (Send) - conservar
+3. 🗑️ Eliminar (Trash2) - mover a "Más acciones" para OCs que no sean borrador
+4. ⋮ Más acciones (MoreVertical) - conservar
+
+**Resultado**: Menos iconos, interfaz más limpia.
+
+---
+
+## 5. Columnas de la tabla - REVISAR
+
+### Columnas actuales:
+| Columna | Necesaria? |
+|---------|------------|
+| Folio | ✅ Sí |
+| Proveedor | ✅ Sí |
+| Total | ✅ Sí |
+| Fecha Entrega | ✅ Sí |
+| Recepción (progreso) | ✅ Sí |
+| Estado | ✅ Sí |
+| Pago | ✅ Sí |
+| **Confirmada** | ❌ Eliminar |
+| Entregas | ✅ Sí (popover) |
+| Acciones | ✅ Sí (simplificar) |
+
+---
+
+## 6. Componentes que SÍ son necesarios
+
+| Componente | Razón |
+|------------|-------|
+| `CrearOrdenCompraWizard.tsx` | Crear nuevas OCs |
+| `OrdenAccionesDialog.tsx` | Ver detalles y acciones |
+| `ReenviarOCDialog.tsx` | Reenviar correo (simplificado) |
+| `AutorizacionOCDialog.tsx` | Flujo de autorización |
+| `ProveedorFacturasDialog.tsx` | Gestión de facturas |
+| `ConciliarFacturaDialog.tsx` | Conciliar costos con factura |
+| `ConciliacionRapidaDialog.tsx` | Confirmar costos sin factura |
+| `ProcesarPagoOCDialog.tsx` | Procesar pagos |
+| `MarcarPagadoDialog.tsx` | Pagos anticipados |
+| `ProgramarEntregasDialog.tsx` | Programar entregas múltiples |
+| `EntregasPopover.tsx` | Ver estado de entregas |
+| `NotificarCambiosOCDialog.tsx` | Notificar cambios post-edición |
+| `HistorialCorreosOC.tsx` | Ver correos enviados |
+
+---
+
+## 7. Componentes que podrían revisarse (uso bajo)
+
+| Componente | Situación |
+|------------|-----------|
+| `ConvertirEntregasMultiplesDialog.tsx` | Ya marcado como "rarely used" en código |
+| `DividirEntregaDialog.tsx` | Ya marcado como "rarely used" en código |
+| `RecepcionDetalleDialog.tsx` | Verificar si se usa |
+
+---
+
+## Resumen de Acciones Propuestas
+
+### Eliminar completamente:
+1. Sistema de confirmación de proveedor (URLs firmadas, botón recordatorio, columna "Confirmada")
+2. Edge functions: `confirmar-oc`, `generate-oc-confirmation-url`
+3. Tablas: `ordenes_compra_confirmaciones`, `ordenes_compra_respuestas_proveedor`
+
+### Simplificar:
+1. Reducir iconos en tabla de 5 a 3-4
+2. Mover botón eliminar dentro de "Más acciones" (excepto para borradores)
+3. Eliminar generación de URLs de confirmación en envío/reenvío de OC
+
+### Mantener:
+1. Todo el flujo de conciliación (nuevo, importante)
+2. Flujo de pagos (anticipado/contra entrega)
+3. Flujo de autorización
+4. Gestión de facturas
+5. Entregas múltiples
+
+---
+
+## Sección Técnica
+
+### Archivos a modificar:
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           FLUJO DE COSTOS                                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  1. OC CREADA                2. RECEPCIÓN                 3. CONCILIACIÓN    │
-│  ─────────────              ─────────────                 ───────────────    │
-│  precio_unitario_compra      precio_compra (lote)         Costo Final        │
-│  (solo referencia)           = Costo OC                   = Factura/Manual   │
-│                              Status: "por_conciliar"                         │
-│                                                                              │
-│  NO actualiza:               NO actualiza:                SÍ actualiza:      │
-│  - productos                 - ultimo_costo_compra        - ultimo_costo     │
-│  - inventario                - costo_promedio             - costo_promedio   │
-│                                                           - inventario_lotes │
-│                                                                              │
-│  ┌─────────┐               ┌─────────────────┐           ┌────────────────┐  │
-│  │         │               │                 │           │                │  │
-│  │   OC    │──────────────▶│   Recepción     │──────────▶│  Conciliación  │  │
-│  │         │               │                 │           │                │  │
-│  └─────────┘               └─────────────────┘           └────────────────┘  │
-│                                    │                             │           │
-│                                    ▼                             ▼           │
-│                            Status: "por_conciliar"       Status: "conciliada"│
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+ELIMINAR:
+- supabase/functions/confirmar-oc/
+- supabase/functions/generate-oc-confirmation-url/
+
+MODIFICAR:
+- src/components/compras/OrdenesCompraTab.tsx
+  - Eliminar columna "Confirmada" (líneas 1943-1953)
+  - Eliminar botón Bell (líneas 1992-2005)
+  - Eliminar query de confirmaciones (líneas 497-506)
+  
+- src/components/compras/OrdenAccionesDialog.tsx
+  - Eliminar generación de URLs de confirmación (líneas 1347-1376)
+  - Simplificar envío de email sin botones de confirmación
+  
+- src/components/compras/ReenviarOCDialog.tsx
+  - Eliminar generación de URLs de confirmación (líneas 364-390)
 ```
 
----
+### Migraciones SQL:
 
-## Cambios en Base de Datos
-
-### 1. Nueva columna en `ordenes_compra_entregas`
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `status_conciliacion` | TEXT | Estados: 'pendiente', 'por_conciliar', 'conciliada' |
-| `conciliado_por` | UUID | Usuario que concilió |
-| `conciliado_en` | TIMESTAMP | Fecha/hora de conciliación |
-
-### 2. Nueva columna en `inventario_lotes`
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `precio_compra_provisional` | NUMERIC | Costo de la OC (provisional) |
-| `precio_compra` | NUMERIC | Costo final conciliado (se actualiza en conciliación) |
-| `conciliado` | BOOLEAN | Indica si el costo ya fue conciliado |
-
-### 3. Nueva columna en `ordenes_compra`
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `status_conciliacion` | TEXT | 'pendiente', 'parcial', 'conciliada' |
-
----
-
-## Cambios en Estados
-
-### Estados de OC (Sin cambios)
-- `creada` → `enviada` → `confirmada` → `parcial`/`completa`
-
-### Estados de Recepción/Entrega (Nuevo campo)
-El campo `status` existente permanece igual. Se agrega `status_conciliacion`:
-- `pendiente` → No ha llegado mercancía
-- `por_conciliar` → Mercancía recibida, costo provisional aplicado
-- `conciliada` → Costo final confirmado (factura registrada)
-
-### Estados de Pago (Sin cambios)
-- `pendiente` → `parcial` → `pagado`
-
----
-
-## Cambios en Código
-
-### Archivo: `AlmacenRecepcionSheet.tsx`
-**Líneas afectadas: 898-904**
-
-**Antes:**
-```typescript
-// Solo actualizar último costo de compra
-await supabase
-  .from("productos")
-  .update({ ultimo_costo_compra: precioCompra })
-  .eq("id", producto.producto_id);
-```
-
-**Después:**
-```typescript
-// NO actualizar ultimo_costo_compra aquí
-// El costo se actualiza solo en la conciliación
-// Marcar entrega como "por_conciliar"
-```
-
-Además, al crear el lote de inventario:
-```typescript
-// Guardar el costo OC como provisional
-await supabase.from("inventario_lotes").insert({
-  ...datosLote,
-  precio_compra: precioCompra,           // Provisional
-  precio_compra_provisional: precioCompra,
-  conciliado: false
-});
-
-// Marcar entrega como pendiente de conciliación
-await supabase
-  .from("ordenes_compra_entregas")
-  .update({ status_conciliacion: 'por_conciliar' })
-  .eq("id", entrega.id);
-```
-
-### Archivo: `ConciliarFacturaDialog.tsx` (Existente)
-**Mejoras:**
-- Al conciliar, actualizar `ultimo_costo_compra` del producto
-- Marcar lotes como `conciliado = true`
-- Cambiar `status_conciliacion` de entregas a 'conciliada'
-
-### Archivo: `ProcesarPagoOCDialog.tsx`
-**Mejoras:**
-- Mostrar advertencia si hay entregas "por_conciliar"
-- Permitir conciliar desde el flujo de pago si no hay factura
-
-### Nuevo: Componente de Conciliación Rápida
-Para OCs sin factura formal, permitir confirmar el costo de la OC como final:
-- Botón "Confirmar Costos" en detalle de OC
-- Actualiza todos los lotes como conciliados
-- Actualiza `ultimo_costo_compra` de productos
-
----
-
-## UI: Indicadores Visuales
-
-### En Tabla de OCs
-- Badge "Por Conciliar" (naranja) si hay entregas pendientes
-- Badge "Conciliada" (verde) cuando todo está verificado
-
-### En Detalle de Recepción
-- Columna "Costo OC" (gris, referencia)
-- Columna "Costo Final" (editable en conciliación)
-- Estado de conciliación visible
-
-### En Lista de Precios (/precios)
-- El `ultimo_costo_compra` solo cambiará cuando se concilie
-
----
-
-## Flujo Actualizado Paso a Paso
-
-### Paso 1: Crear OC
-1. Usuario crea OC con productos y precios
-2. Se guarda `precio_unitario_compra` en `ordenes_compra_detalles`
-3. **NO se modifica ningún costo de producto**
-
-### Paso 2: Recepción de Mercancía
-1. Almacén recibe productos
-2. Se crea lote en `inventario_lotes` con:
-   - `precio_compra` = Costo de la OC (provisional)
-   - `precio_compra_provisional` = Costo de la OC
-   - `conciliado` = false
-3. Se actualiza stock del producto (trigger existente)
-4. Se calcula WAC provisional (trigger existente)
-5. **NO se actualiza `ultimo_costo_compra`**
-6. Entrega marcada con `status_conciliacion` = 'por_conciliar'
-
-### Paso 3: Conciliación (Factura o Manual)
-1. Usuario abre diálogo de conciliación
-2. Captura costo real por producto (puede ser diferente al OC)
-3. Al confirmar:
-   - Actualiza `precio_compra` en lotes de inventario
-   - Recalcula WAC del producto
-   - **SÍ actualiza `ultimo_costo_compra`**
-   - Marca lotes como `conciliado = true`
-   - Cambia `status_conciliacion` a 'conciliada'
-4. Registra en historial de costos
-
-### Paso 4: Pago
-1. Usuario procesa pago
-2. **NO modifica costos** (ya conciliados)
-3. Solo cierra cuenta por pagar
-
----
-
-## Migración de Datos Existentes
-
-Para datos históricos donde el costo ya se actualizó en recepción:
 ```sql
--- Marcar lotes existentes como conciliados
-UPDATE inventario_lotes
-SET conciliado = true,
-    precio_compra_provisional = precio_compra
-WHERE precio_compra > 0;
+-- Eliminar tablas no utilizadas (opcional, después de confirmar)
+DROP TABLE IF EXISTS ordenes_compra_confirmaciones;
+DROP TABLE IF EXISTS ordenes_compra_respuestas_proveedor;
 
--- Marcar entregas recibidas como conciliadas
-UPDATE ordenes_compra_entregas
-SET status_conciliacion = 'conciliada'
-WHERE status = 'recibida';
-```
-
----
-
-## Archivos a Modificar
-
-| Archivo | Cambio |
-|---------|--------|
-| `AlmacenRecepcionSheet.tsx` | Remover actualización de `ultimo_costo_compra`, agregar estado por_conciliar |
-| `ConciliarFacturaDialog.tsx` | Agregar actualización de `ultimo_costo_compra` y marcar conciliado |
-| `ProcesarPagoOCDialog.tsx` | Advertencia de conciliación pendiente |
-| `OrdenesCompraTab.tsx` | Badge de estado de conciliación |
-| `RecepcionDetalleDialog.tsx` | Mostrar estado de conciliación por producto |
-| Nueva migración SQL | Agregar columnas y migrar datos |
-
----
-
-## Beneficios
-
-1. **Precisión de costos**: El catálogo de productos solo refleja costos confirmados
-2. **Trazabilidad**: Clara separación entre costo esperado vs real
-3. **Control financiero**: Permite detectar variaciones OC vs Factura
-4. **Auditoría**: Historial completo de cambios de costos con fuente
-
----
-
-## Resumen de Estados Finales
-
-```text
-OC Estados:        creada → enviada → confirmada → parcial/completa
-Entrega Status:    programada → en_camino → recibida
-Conciliación:      pendiente → por_conciliar → conciliada
-Pago:              pendiente → parcial → pagado
+-- Eliminar columnas relacionadas
+ALTER TABLE ordenes_compra DROP COLUMN IF EXISTS email_leido_en;
 ```
