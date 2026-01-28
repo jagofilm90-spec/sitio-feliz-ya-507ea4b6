@@ -110,15 +110,72 @@ const ProgramarEntregasDialog = ({ open, onOpenChange, orden }: ProgramarEntrega
           };
         });
 
+        // Identify deliveries without dates (pending)
+        const entregasSinFecha = entregas.filter((e: any) => 
+          !e.fecha_programada && !fechasActualizadas[e.id]
+        );
+
+        // All currently scheduled deliveries (existing + new)
+        const todasProgramadas = entregas
+          .filter((e: any) => e.fecha_programada || fechasActualizadas[e.id])
+          .map((e: any) => {
+            const fechaStr = fechasActualizadas[e.id] || e.fecha_programada;
+            const [year, month, day] = fechaStr.split('-').map(Number);
+            const fechaLocal = new Date(year, month - 1, day);
+            return {
+              numero: e.numero_entrega,
+              bultos: e.cantidad_bultos,
+              fecha: fechaLocal.toLocaleDateString("es-MX", {
+                weekday: "long",
+                day: "numeric", 
+                month: "long",
+                year: "numeric"
+              })
+            };
+          });
+
         // Call edge function to send email
         try {
+          // Build enhanced HTML with pending section
           const htmlBody = `
-            <h2>Fechas de entrega actualizadas</h2>
-            <p>Le informamos las nuevas fechas programadas para la orden <strong>${orden.folio}</strong>:</p>
-            <ul>
-              ${entregasNuevas.map(e => `<li>Tráiler ${e.numero}: ${e.bultos?.toLocaleString()} bultos - <strong>${e.fecha}</strong></li>`).join("")}
-            </ul>
-            <p>Saludos cordiales,<br>Abarrotes La Manita</p>
+            <div style="font-family: Arial, sans-serif; max-width: 600px;">
+              <h2 style="color: #1e3a5f;">Fechas de entrega actualizadas - ${orden.folio}</h2>
+              <p>Estimado proveedor,</p>
+              <p>Le informamos las fechas programadas para su orden de compra:</p>
+              
+              <div style="background-color: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                <h3 style="margin: 0 0 10px 0; color: #155724;">✅ Entregas Programadas</h3>
+                <ul style="margin: 0; padding-left: 20px;">
+                  ${todasProgramadas.map(e => 
+                    `<li><strong>Tráiler ${e.numero}:</strong> ${e.bultos?.toLocaleString()} bultos - ${e.fecha}</li>`
+                  ).join("")}
+                </ul>
+              </div>
+              
+              ${entregasSinFecha.length > 0 ? `
+                <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                  <h3 style="margin: 0 0 10px 0; color: #856404;">⏳ Entregas Pendientes de Programar</h3>
+                  <ul style="margin: 0; padding-left: 20px;">
+                    ${entregasSinFecha.map((e: any) => 
+                      `<li><strong>Tráiler ${e.numero_entrega}:</strong> ${e.cantidad_bultos?.toLocaleString()} bultos (fecha por confirmar)</li>`
+                    ).join("")}
+                  </ul>
+                  <p style="margin: 10px 0 0 0; font-style: italic; color: #856404; font-size: 13px;">
+                    Le notificaremos cuando se asignen las fechas restantes.
+                  </p>
+                </div>
+              ` : ''}
+              
+              <div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                <h4 style="margin: 0 0 8px 0; color: #1e3a5f;">📊 Resumen</h4>
+                <p style="margin: 5px 0;">• Total entregas: <strong>${entregas.length}</strong></p>
+                <p style="margin: 5px 0;">• Programadas: <strong>${todasProgramadas.length}</strong></p>
+                ${entregasSinFecha.length > 0 ? `<p style="margin: 5px 0;">• Pendientes: <strong>${entregasSinFecha.length}</strong></p>` : ''}
+                <p style="margin: 5px 0;">• Total bultos: <strong>${entregas.reduce((sum: number, e: any) => sum + (e.cantidad_bultos || 0), 0).toLocaleString()}</strong></p>
+              </div>
+              
+              <p>Saludos cordiales,<br><strong>Abarrotes La Manita</strong></p>
+            </div>
           `;
           
           const asunto = `Nuevas fechas programadas - ${orden.folio}`;
@@ -140,14 +197,14 @@ const ProgramarEntregasDialog = ({ open, onOpenChange, orden }: ProgramarEntrega
             asunto: asunto,
             gmail_message_id: emailData?.messageId || null,
             error: emailError?.message || null,
-            contenido_preview: `Nuevas fechas programadas: ${entregasNuevas.map(e => e.fecha).join(", ")}`,
+            contenido_preview: `Nuevas fechas programadas: ${entregasNuevas.map(e => e.fecha).join(", ")}${entregasSinFecha.length > 0 ? ` | ${entregasSinFecha.length} pendientes` : ''}`,
           });
           
           if (emailError) throw emailError;
           
           toast({
             title: "Fechas guardadas y notificación enviada",
-            description: `Se envió notificación a ${orden.proveedores.email}`,
+            description: `Se envió notificación a ${orden.proveedores.email}${entregasSinFecha.length > 0 ? ` (${entregasSinFecha.length} pendientes por programar)` : ''}`,
           });
         } catch (emailError: any) {
           console.error("Error sending email:", emailError);

@@ -1540,8 +1540,9 @@ const OrdenesCompraTab = () => {
   );
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; variant: any }> = {
+    const statusConfig: Record<string, { label: string; variant: any; className?: string }> = {
       pendiente: { label: "Pendiente", variant: "secondary" },
+      pendiente_pago: { label: "💳 Pend. Pago", variant: "outline", className: "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800" },
       pendiente_autorizacion: { label: "Por Autorizar", variant: "outline" },
       autorizada: { label: "Autorizada", variant: "default" },
       rechazada: { label: "Rechazada", variant: "destructive" },
@@ -1551,7 +1552,7 @@ const OrdenesCompraTab = () => {
       devuelta: { label: "Devuelta", variant: "destructive" },
     };
     const config = statusConfig[status] || { label: status, variant: "secondary" };
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+    return <Badge variant={config.variant} className={config.className}>{config.label}</Badge>;
   };
 
   // Calcular porcentaje de recepción de una OC

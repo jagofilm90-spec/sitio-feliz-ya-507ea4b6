@@ -826,7 +826,8 @@ const CrearOrdenCompraWizard = ({
           total,
           notas,
           creado_por: user.id,
-          status: "pendiente",
+          // Si es pago anticipado, la OC queda pendiente de pago; sino, pendiente de autorización
+          status: tipoPago === 'anticipado' ? "pendiente_pago" : "pendiente",
           entregas_multiples: entregasMultiples,
           tipo_pago: tipoPago,
           status_pago: 'pendiente',
@@ -2214,7 +2215,28 @@ const CrearOrdenCompraWizard = ({
                 </div>
               </div>
 
-              {/* Entregas programadas */}
+              {/* Alerta de Pago Anticipado */}
+              {tipoPago === 'anticipado' && (
+                <div className="p-4 rounded-lg border-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+                  <div className="flex items-start gap-3">
+                    <CreditCard className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-amber-800 dark:text-amber-200">
+                        ⚠️ Orden con Pago Anticipado
+                      </h4>
+                      <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                        Esta orden requiere <strong>pago antes de la entrega</strong>. 
+                        Las entregas quedarán <strong>pendientes de programar</strong> hasta que registres el pago en el sistema.
+                      </p>
+                      <ul className="text-xs text-amber-600 dark:text-amber-400 mt-2 space-y-1">
+                        <li>• La OC se creará con status "Pendiente de Pago"</li>
+                        <li>• Almacén no verá las entregas hasta confirmar el pago</li>
+                        <li>• Al registrar el pago, podrás programar las fechas de entrega</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="border rounded-lg p-4 bg-primary/5">
                 <h4 className="font-semibold mb-3 flex items-center gap-2">
                   <CalendarIcon className="h-4 w-4" />
