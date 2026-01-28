@@ -417,6 +417,9 @@ export const AdminListaPreciosTab = () => {
                   {sortField === 'nombre' && <ArrowUpDown className="h-3 w-3" />}
                 </div>
               </TableHead>
+              <TableHead className="w-[80px] py-2 px-2 text-[10px]">
+                Marca
+              </TableHead>
               <TableHead 
                 className="w-[80px] py-2 px-2 text-[10px] text-right cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('costo')}
@@ -490,6 +493,15 @@ export const AdminListaPreciosTab = () => {
                         </span>
                       )}
                     </span>
+                  </TableCell>
+                  <TableCell className="py-1 px-2">
+                    {producto.marca ? (
+                      <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                        {producto.marca}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell className="py-1 px-2 text-right">
                     <span className="text-xs font-medium text-muted-foreground">

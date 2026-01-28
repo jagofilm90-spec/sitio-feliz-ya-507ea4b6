@@ -430,6 +430,7 @@ export const SecretariaListaPreciosTab = () => {
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="w-[70px] py-2 px-2 text-[10px]">Código</TableHead>
                   <TableHead className="py-2 px-2 text-[10px]">Producto</TableHead>
+                  <TableHead className="w-[100px] py-2 px-2 text-[10px]">Marca</TableHead>
                   <TableHead className="w-[90px] py-2 px-2 text-[10px] text-right">Precio</TableHead>
                   <TableHead className="w-[120px] py-2 px-2 text-[10px] text-right">Descuento</TableHead>
                   <TableHead className="w-[60px] py-2 px-1 text-[10px] text-center">Acciones</TableHead>
@@ -440,7 +441,7 @@ export const SecretariaListaPreciosTab = () => {
                   <>
                     {/* Separador de categoría */}
                     <TableRow key={`cat-${categoria}`} className="bg-muted/60 hover:bg-muted/60">
-                      <TableCell colSpan={5} className="py-1 px-2 font-semibold text-[10px] uppercase tracking-wide text-muted-foreground">
+                      <TableCell colSpan={6} className="py-1 px-2 font-semibold text-[10px] uppercase tracking-wide text-muted-foreground">
                         {categoria} ({prods.length})
                       </TableCell>
                     </TableRow>
@@ -480,18 +481,21 @@ export const SecretariaListaPreciosTab = () => {
                                 {producto.descripcion_promocion}
                               </div>
                             )}
-                            {(producto.marca || producto.contenido_empaque) && (
-                              <div className="text-[10px] text-muted-foreground flex items-center gap-1 flex-wrap">
-                                {producto.marca && (
-                                  <span className="font-medium text-blue-600 dark:text-blue-400">{producto.marca}</span>
-                                )}
-                                {producto.marca && producto.contenido_empaque && <span>•</span>}
-                                {producto.contenido_empaque && (
-                                  <span>{producto.contenido_empaque}</span>
-                                )}
+                            {producto.contenido_empaque && (
+                              <div className="text-[10px] text-muted-foreground">
+                                {producto.contenido_empaque}
                               </div>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell className="py-1 px-2">
+                          {producto.marca ? (
+                            <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                              {producto.marca}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="py-1 px-2 text-right font-semibold text-xs">
                           {formatCurrency(producto.precio_venta)}
