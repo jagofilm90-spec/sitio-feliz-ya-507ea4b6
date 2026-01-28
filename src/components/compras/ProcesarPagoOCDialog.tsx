@@ -194,9 +194,9 @@ export function ProcesarPagoOCDialog({
       
       const { data, error } = await supabase
         .from("ordenes_compra_entregas")
-        .select("id, numero_entrega, fecha_programada, origen_faltante, status, productos_faltantes")
+        .select("id, numero_entrega, fecha_programada, origen_faltante, status, productos_faltantes, status_conciliacion")
         .eq("orden_compra_id", orden.id)
-        .in("status", ["programada", "pendiente", "en_descarga"]);
+        .in("status", ["programada", "pendiente", "en_descarga", "recibida"]);
       
       if (error) throw error;
       return data || [];
@@ -204,8 +204,15 @@ export function ProcesarPagoOCDialog({
     enabled: !!orden?.id && open,
   });
 
-  const tieneEntregasPendientes = entregasPendientes.length > 0;
-  const tieneFaltantesPendientes = entregasPendientes.some((e: any) => e.origen_faltante);
+  const entregasSinRecibir = entregasPendientes.filter((e: any) => e.status !== 'recibida');
+  const tieneEntregasPendientes = entregasSinRecibir.length > 0;
+  const tieneFaltantesPendientes = entregasSinRecibir.some((e: any) => e.origen_faltante);
+  
+  // Check if there are deliveries pending reconciliation
+  const entregasPorConciliar = entregasPendientes.filter(
+    (e: any) => e.status === 'recibida' && e.status_conciliacion === 'por_conciliar'
+  );
+  const tieneConciliacionPendiente = entregasPorConciliar.length > 0;
 
   // Query para obtener devoluciones
   const { data: devolucionesDetalle = [] } = useQuery({
@@ -613,6 +620,27 @@ export function ProcesarPagoOCDialog({
               </Alert>
             )}
 
+            {/* NUEVA ALERTA: Conciliación pendiente */}
+            {tieneConciliacionPendiente && (
+              <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+                <Receipt className="h-4 w-4 text-amber-600" />
+                <AlertTitle className="text-amber-800 dark:text-amber-300">
+                  ⚠️ Costos pendientes de conciliar
+                </AlertTitle>
+                <AlertDescription className="text-amber-700 dark:text-amber-400">
+                  <p className="mb-2">
+                    {entregasPorConciliar.length} entrega(s) tienen costos provisionales que no han sido verificados con la factura del proveedor.
+                  </p>
+                  <p className="text-sm">
+                    <strong>Recomendación:</strong> Registra la factura del proveedor y concilia los costos antes de procesar el pago para asegurar que el monto pagado sea correcto.
+                  </p>
+                  <p className="mt-2 text-sm font-medium">
+                    Si procedes sin conciliar, se pagará con los costos de la OC original.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Alerta si hay entregas pendientes */}
             {tieneEntregasPendientes && isPagoCompleto && (
               <Alert className="border-orange-300 bg-orange-50 dark:bg-orange-950/30">
@@ -622,19 +650,19 @@ export function ProcesarPagoOCDialog({
                 </AlertTitle>
                 <AlertDescription className="text-orange-700 dark:text-orange-400">
                   <p className="mb-2">
-                    Esta OC tiene {entregasPendientes.length} entrega(s) sin recibir
+                    Esta OC tiene {entregasSinRecibir.length} entrega(s) sin recibir
                     {tieneFaltantesPendientes && " (incluye faltantes programados)"}.
                   </p>
                   <ul className="list-disc ml-5 text-sm space-y-1">
-                    {entregasPendientes.slice(0, 3).map((e: any) => (
+                    {entregasSinRecibir.slice(0, 3).map((e: any) => (
                       <li key={e.id}>
                         Entrega #{e.numero_entrega} - {format(new Date(e.fecha_programada), "dd/MM/yyyy")}
                         {e.origen_faltante && <Badge variant="outline" className="ml-2 text-xs">Faltante</Badge>}
                       </li>
                     ))}
-                    {entregasPendientes.length > 3 && (
+                    {entregasSinRecibir.length > 3 && (
                       <li className="text-muted-foreground">
-                        y {entregasPendientes.length - 3} más...
+                        y {entregasSinRecibir.length - 3} más...
                       </li>
                     )}
                   </ul>

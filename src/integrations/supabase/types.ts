@@ -2402,6 +2402,7 @@ export type Database = {
         Row: {
           bodega_id: string | null
           cantidad_disponible: number
+          conciliado: boolean | null
           created_at: string
           fecha_caducidad: string | null
           fecha_entrada: string
@@ -2411,6 +2412,7 @@ export type Database = {
           notas: string | null
           orden_compra_id: string | null
           precio_compra: number
+          precio_compra_provisional: number | null
           producto_id: string
           recibido_por: string | null
           updated_at: string
@@ -2418,6 +2420,7 @@ export type Database = {
         Insert: {
           bodega_id?: string | null
           cantidad_disponible?: number
+          conciliado?: boolean | null
           created_at?: string
           fecha_caducidad?: string | null
           fecha_entrada?: string
@@ -2427,6 +2430,7 @@ export type Database = {
           notas?: string | null
           orden_compra_id?: string | null
           precio_compra: number
+          precio_compra_provisional?: number | null
           producto_id: string
           recibido_por?: string | null
           updated_at?: string
@@ -2434,6 +2438,7 @@ export type Database = {
         Update: {
           bodega_id?: string | null
           cantidad_disponible?: number
+          conciliado?: boolean | null
           created_at?: string
           fecha_caducidad?: string | null
           fecha_entrada?: string
@@ -2443,6 +2448,7 @@ export type Database = {
           notas?: string | null
           orden_compra_id?: string | null
           precio_compra?: number
+          precio_compra_provisional?: number | null
           producto_id?: string
           recibido_por?: string | null
           updated_at?: string
@@ -2877,6 +2883,7 @@ export type Database = {
           rechazado_por: string | null
           referencia_pago: string | null
           status: string
+          status_conciliacion: string | null
           status_pago: string | null
           subtotal: number
           tipo_pago: string | null
@@ -2914,6 +2921,7 @@ export type Database = {
           rechazado_por?: string | null
           referencia_pago?: string | null
           status?: string
+          status_conciliacion?: string | null
           status_pago?: string | null
           subtotal?: number
           tipo_pago?: string | null
@@ -2951,6 +2959,7 @@ export type Database = {
           rechazado_por?: string | null
           referencia_pago?: string | null
           status?: string
+          status_conciliacion?: string | null
           status_pago?: string | null
           subtotal?: number
           tipo_pago?: string | null
@@ -3108,6 +3117,8 @@ export type Database = {
           cancelacion_firma_chofer: string | null
           cancelacion_tipo: string | null
           cantidad_bultos: number
+          conciliado_en: string | null
+          conciliado_por: string | null
           created_at: string
           descarga_cancelada_en: string | null
           descarga_cancelada_por: string | null
@@ -3142,6 +3153,7 @@ export type Database = {
           recibido_por: string | null
           sin_sellos: boolean | null
           status: string
+          status_conciliacion: string | null
           trabajando_desde: string | null
           trabajando_por: string | null
           updated_at: string
@@ -3152,6 +3164,8 @@ export type Database = {
           cancelacion_firma_chofer?: string | null
           cancelacion_tipo?: string | null
           cantidad_bultos: number
+          conciliado_en?: string | null
+          conciliado_por?: string | null
           created_at?: string
           descarga_cancelada_en?: string | null
           descarga_cancelada_por?: string | null
@@ -3186,6 +3200,7 @@ export type Database = {
           recibido_por?: string | null
           sin_sellos?: boolean | null
           status?: string
+          status_conciliacion?: string | null
           trabajando_desde?: string | null
           trabajando_por?: string | null
           updated_at?: string
@@ -3196,6 +3211,8 @@ export type Database = {
           cancelacion_firma_chofer?: string | null
           cancelacion_tipo?: string | null
           cantidad_bultos?: number
+          conciliado_en?: string | null
+          conciliado_por?: string | null
           created_at?: string
           descarga_cancelada_en?: string | null
           descarga_cancelada_por?: string | null
@@ -3230,6 +3247,7 @@ export type Database = {
           recibido_por?: string | null
           sin_sellos?: boolean | null
           status?: string
+          status_conciliacion?: string | null
           trabajando_desde?: string | null
           trabajando_por?: string | null
           updated_at?: string

@@ -420,6 +420,7 @@ const OrdenesCompraTab = () => {
         .from("ordenes_compra")
         .select(`
           *,
+          status_conciliacion,
           proveedores (
             id, nombre, rfc, regimen_fiscal,
             calle, numero_exterior, numero_interior,
@@ -1821,6 +1822,27 @@ const OrdenesCompraTab = () => {
                           >
                             <PackageX className="h-3 w-3 mr-1" />
                             Faltante
+                          </Badge>
+                        )}
+                        {/* Badge de conciliación pendiente */}
+                        {(orden as any).status_conciliacion === 'por_conciliar' && (
+                          <Badge 
+                            variant="outline" 
+                            className="bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800 text-xs"
+                            title="Costo pendiente de verificar con factura"
+                          >
+                            <Receipt className="h-3 w-3 mr-1" />
+                            Por Conciliar
+                          </Badge>
+                        )}
+                        {(orden as any).status_conciliacion === 'conciliada' && (orden.status === 'parcial' || orden.status === 'completada') && (
+                          <Badge 
+                            variant="outline" 
+                            className="bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800 text-xs"
+                            title="Costos verificados con factura"
+                          >
+                            <FileCheck className="h-3 w-3 mr-1" />
+                            Conciliada
                           </Badge>
                         )}
                       </div>
