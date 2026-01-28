@@ -1914,6 +1914,21 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                 )}
               </Button>
             )}
+            
+            {/* Botón Ajustar Costos - movido aquí para mayor visibilidad */}
+            {(orden?.status === 'recibida' || orden?.status === 'parcial' || orden?.status === 'completada') && (
+              <Button
+                variant="outline"
+                className="w-full justify-start text-blue-600 hover:text-blue-700 border-blue-200"
+                onClick={() => setAjustarCostosOpen(true)}
+              >
+                <DollarSign className="mr-2 h-4 w-4" />
+                Ajustar Costos de Compra
+                <Badge variant="secondary" className="ml-auto">
+                  {orden?.ordenes_compra_detalles?.length || 0} productos
+                </Badge>
+              </Button>
+            )}
             </div>
 
             <Separator />
@@ -1937,17 +1952,6 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
               </Button>
               )}
               
-              {/* Botón Ajustar Costos - visible en OCs recibidas/completadas */}
-              {(orden?.status === 'recibida' || orden?.status === 'parcial' || orden?.status === 'completada') && (
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => setAjustarCostosOpen(true)}
-                >
-                  <DollarSign className="mr-2 h-4 w-4" />
-                  Ajustar Costos
-                </Button>
-              )}
               
               {/* View photo evidences button */}
               {(orden?.status === "recibida" || orden?.status === "parcial") && (
