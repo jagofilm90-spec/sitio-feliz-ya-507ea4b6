@@ -615,37 +615,46 @@ const CalendarioEntregasTab = () => {
                   
                   {/* Dots indicator - checkmark for completed, colored dots for pending */}
                   {tieneEntregas && (
-                    <div className="flex justify-center gap-1 mt-1">
-                      {entregas.slice(0, 3).map((entrega, idx) => (
-                        entrega.esCompletada ? (
-                          <span
-                            key={idx}
-                            className="w-4 h-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center"
-                          >
-                            <CheckCircle2 className="w-3 h-3 text-green-600 dark:text-green-400" />
-                          </span>
-                        ) : entrega.esFaltante ? (
-                          <span
-                            key={idx}
-                            className="w-4 h-4 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center"
-                          >
-                            <PackageX className="w-3 h-3 text-orange-600 dark:text-orange-400" />
-                          </span>
-                        ) : (
-                          <span
-                            key={idx}
-                            className={cn(
-                              "w-2 h-2 rounded-full",
-                              entrega.estadoPago === 'anticipado_pagado' && "bg-green-500",
-                              entrega.estadoPago === 'anticipado_pendiente' && "bg-yellow-500",
-                              entrega.estadoPago === 'contra_entrega' && "bg-rose-500"
-                            )}
-                          />
-                        )
-                      ))}
-                      {entregas.length > 3 && (
-                        <span className="text-xs text-muted-foreground">+{entregas.length - 3}</span>
-                      )}
+                    <div className="flex flex-col items-center gap-1 mt-1">
+                      <div className="flex justify-center gap-1">
+                        {entregas.slice(0, 3).map((entrega, idx) => (
+                          entrega.esCompletada ? (
+                            <span
+                              key={idx}
+                              className="w-4 h-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center"
+                            >
+                              <CheckCircle2 className="w-3 h-3 text-green-600 dark:text-green-400" />
+                            </span>
+                          ) : entrega.esFaltante ? (
+                            <span
+                              key={idx}
+                              className="w-4 h-4 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center"
+                            >
+                              <PackageX className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+                            </span>
+                          ) : entrega.reprogramada ? (
+                            <span
+                              key={idx}
+                              className="w-4 h-4 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center"
+                            >
+                              <RotateCcw className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />
+                            </span>
+                          ) : (
+                            <span
+                              key={idx}
+                              className={cn(
+                                "w-2 h-2 rounded-full",
+                                entrega.estadoPago === 'anticipado_pagado' && "bg-green-500",
+                                entrega.estadoPago === 'anticipado_pendiente' && "bg-yellow-500",
+                                entrega.estadoPago === 'contra_entrega' && "bg-rose-500"
+                              )}
+                            />
+                          )
+                        ))}
+                        {entregas.length > 3 && (
+                          <span className="text-xs text-muted-foreground">+{entregas.length - 3}</span>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -654,7 +663,7 @@ const CalendarioEntregasTab = () => {
           </div>
 
           {/* Legend */}
-          <div className="flex items-center justify-center gap-6 pt-4 text-sm text-muted-foreground flex-wrap">
+          <div className="flex items-center justify-center gap-4 pt-4 text-sm text-muted-foreground flex-wrap">
             <div className="flex items-center gap-2">
               <span className="w-4 h-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                 <CheckCircle2 className="w-3 h-3 text-green-600 dark:text-green-400" />
@@ -668,12 +677,18 @@ const CalendarioEntregasTab = () => {
               <span>Faltante</span>
             </div>
             <div className="flex items-center gap-2">
+              <span className="w-4 h-4 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                <RotateCcw className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />
+              </span>
+              <span>Reprog.</span>
+            </div>
+            <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-green-500" />
-              <span>Anticipado pagado</span>
+              <span>Anticipado</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-yellow-500" />
-              <span>Anticipado pendiente</span>
+              <span>Antic. pend.</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-rose-500" />

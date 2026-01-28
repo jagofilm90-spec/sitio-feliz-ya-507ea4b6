@@ -50,6 +50,7 @@ import { HistorialCorreosOC, registrarCorreoEnviado } from "./HistorialCorreosOC
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ConciliacionRapidaDialog } from "./ConciliacionRapidaDialog";
 import { AjustarCostosOCDialog } from "./AjustarCostosOCDialog";
+import { ModificarProductosOCDialog } from "./ModificarProductosOCDialog";
 import logoAlmasa from "@/assets/logo-almasa.png";
 
 // Helper function to convert image to base64
@@ -96,6 +97,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   const [confirmEditOpen, setConfirmEditOpen] = useState(false);
   const [ajustarCostosOpen, setAjustarCostosOpen] = useState(false);
   const [conciliacionRapidaOpen, setConciliacionRapidaOpen] = useState(false);
+  const [modificarProductosOpen, setModificarProductosOpen] = useState(false);
   
   // Estado para confirmación de folio (borrado especial de OC de prueba)
   const [folioConfirmacion, setFolioConfirmacion] = useState('');
@@ -1939,6 +1941,21 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
               </Button>
             )}
             
+            {/* Botón Modificar Productos - antes de recepción */}
+            {(orden?.status === 'borrador' || orden?.status === 'autorizada' || orden?.status === 'enviada' || orden?.status === 'confirmada' || orden?.status === 'parcial') && (
+              <Button
+                variant="outline"
+                className="w-full justify-start text-amber-600 hover:text-amber-700 border-amber-200"
+                onClick={() => setModificarProductosOpen(true)}
+              >
+                <Scissors className="mr-2 h-4 w-4" />
+                Modificar Productos
+                <Badge variant="secondary" className="ml-auto">
+                  {orden?.ordenes_compra_detalles?.length || 0}
+                </Badge>
+              </Button>
+            )}
+            
             {/* Botón Ajustar Costos - movido aquí para mayor visibilidad */}
             {(orden?.status === 'recibida' || orden?.status === 'parcial' || orden?.status === 'completada') && (
               <Button
@@ -2381,6 +2398,23 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+    
+    {/* Dialog para modificar productos */}
+    <ModificarProductosOCDialog
+      open={modificarProductosOpen}
+      onOpenChange={setModificarProductosOpen}
+      ordenCompra={orden ? {
+        id: orden.id,
+        folio: orden.folio,
+        status: orden.status,
+        proveedor_id: orden.proveedor_id,
+        proveedor_nombre: orden.proveedores?.nombre || orden.proveedor_nombre_manual || 'Proveedor',
+        proveedor_email: orden.proveedores?.email || orden.proveedor_email_manual || null,
+        subtotal: orden.subtotal || 0,
+        impuestos: orden.impuestos || 0,
+        total: orden.total || 0,
+      } : null}
+    />
     </>
   );
 };
