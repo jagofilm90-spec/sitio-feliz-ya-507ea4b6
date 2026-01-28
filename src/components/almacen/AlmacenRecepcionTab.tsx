@@ -145,15 +145,18 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
           trabajando_desde,
           origen_faltante,
           productos_faltantes,
-          orden_compra:ordenes_compra(
+          orden_compra:ordenes_compra!inner(
             id,
             folio,
+            status,
             proveedor_id,
             proveedor_nombre_manual,
             proveedor:proveedores(id, nombre)
           )
         `)
         .in("status", ["programada", "en_transito", "en_descarga"])
+        // Exclude deliveries for OCs with pending advance payment
+        .neq("orden_compra.status", "pendiente_pago")
         .order("fecha_programada", { ascending: true });
 
       if (error) throw error;

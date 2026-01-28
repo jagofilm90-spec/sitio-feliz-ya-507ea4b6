@@ -92,7 +92,8 @@ const ProgramarEntregasDialog = ({ open, onOpenChange, orden }: ProgramarEntrega
       }
 
       // Send email to supplier if they have email
-      if (orden?.proveedores?.email) {
+      // Send email to supplier ONLY if not pending payment
+      if (orden?.proveedores?.email && orden?.status !== 'pendiente_pago') {
         const entregasNuevas = fechasParaActualizar.map(([entregaId, fecha]) => {
           const entrega = entregas.find((e: any) => e.id === entregaId);
           // Parse date without timezone conversion
@@ -213,6 +214,12 @@ const ProgramarEntregasDialog = ({ open, onOpenChange, orden }: ProgramarEntrega
             description: "Las fechas se guardaron pero no se pudo enviar el correo al proveedor",
           });
         }
+      } else if (orden?.status === 'pendiente_pago') {
+        // OC has pending advance payment - don't notify supplier
+        toast({
+          title: "Fechas guardadas (sin notificación)",
+          description: "La OC tiene pago anticipado pendiente. El proveedor será notificado cuando se registre el pago.",
+        });
       } else {
         toast({
           title: "Fechas guardadas",
