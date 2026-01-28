@@ -1,199 +1,166 @@
 
 
-# Plan: Agregar Columna de Marca en Lista de Precios
+# Plan: Optimizar Layout de Lista de Precios
 
-## Objetivo
-Agregar una columna dedicada "Marca" en las tres vistas de Lista de Precios para facilitar la identificación de productos con el mismo nombre pero de diferentes marcas.
+## Problema Detectado
 
----
+Después de agregar la columna "Marca", hay dos problemas:
 
-## Componentes a Modificar
-
-### 1. AdminListaPreciosTab.tsx
-**Cambios en tabla (Desktop):**
-- Agregar columna "Marca" entre "Producto" y "Costo"
-- Ancho: ~80px
-- Mostrar marca con texto azul distintivo
-- Si no tiene marca: mostrar "—"
-
-### 2. SecretariaListaPreciosTab.tsx
-**Cambios en tabla (Desktop):**
-- Agregar columna "Marca" entre "Producto" y "Precio"
-- Mantener consistencia visual con Admin
-- Actualizar colspan de separadores de categoría (de 5 a 6)
-
-### 3. VendedorListaPreciosTab.tsx
-**Cambios en tabla (Desktop):**
-- Agregar columna "Marca" entre "Producto" y "Precio"
-- Solo lectura, estilo visual consistente
-- Actualizar colspan de separadores de categoría (de 4 a 5)
+1. **Nombres truncados**: En la vista Admin, los nombres de producto se cortan (ej: "Almendrera" en vez del nombre completo) debido a `line-clamp-1`
+2. **Espacio desperdiciado**: La tabla tiene anchos de columna fijos muy pequeños que no aprovechan pantallas grandes
 
 ---
 
-## Vista Móvil
-En las vistas móviles, la marca ya se muestra como subtexto debajo del nombre del producto. Este comportamiento se mantiene porque en móvil agregar columnas adicionales no es práctico.
+## Solución Propuesta
+
+### Cambio 1: Eliminar truncado de nombres
+
+Quitar `line-clamp-1` de la columna "Producto" para que los nombres se muestren completos.
+
+### Cambio 2: Optimizar anchos de columnas
+
+Usar anchos proporcionales con `min-w-[X]` en vez de `w-[X]` fijos para que las columnas crezcan en pantallas grandes.
+
+### Cambio 3: Reducir padding del contenedor
+
+Actualmente hay `p-6` en el contenedor de `/precios`. Cambiarlo a `p-4` o `p-2` para maximizar espacio de tabla.
 
 ---
 
-## Resultado Visual (Desktop)
+## Resultado Visual Esperado
 
-### Admin:
 ```text
-| Código | Producto         | Marca      | Costo  | Precio | Dto Max | Margen | Piso | Espacio | Estado | Acciones |
-|--------|------------------|------------|--------|--------|---------|--------|------|---------|--------|----------|
-| AZU001 | Azúcar refinada  | Potrero    | $520   | $680   | $50     | 24%    | $550 | $130    | OK     | 🔧       |
-| AZU002 | Azúcar refinada  | Zulka      | $540   | $700   | $40     | 23%    | $560 | $140    | OK     | 🔧       |
-```
+ANTES:
+| Código | Producto       | Marca | Costo | Precio | ... |  <-- nombres truncados, mucho margen
+| AZU001 | Almendrera...  | Zulka | $520  | $680   |     |
 
-### Secretaria:
-```text
-| Código | Producto         | Marca      | Precio  | Descuento | Acciones |
-|--------|------------------|------------|---------|-----------|----------|
-| AZU001 | Azúcar refinada  | Potrero    | $680.00 | -$50→$630 | ✏️ 📜    |
-| AZU002 | Azúcar refinada  | Zulka      | $700.00 | -$40→$660 | ✏️ 📜    |
-```
-
-### Vendedor (solo lectura):
-```text
-| Código | Producto         | Marca      | Precio  | Descuento |
-|--------|------------------|------------|---------|-----------|
-| AZU001 | Azúcar refinada  | Potrero    | $680.00 | -$50→$630 |
-| AZU002 | Azúcar refinada  | Zulka      | $700.00 | -$40→$660 |
+DESPUES:
+| Código | Producto                          | Marca | Costo | Precio | Dto Max | Margen | ... |
+| AZU001 | Almendrera garapiñada fileteada   | Zulka | $520  | $680   | $50     | 24%    |     |
 ```
 
 ---
 
-## Sección Técnica
+## Sección Tecnica
 
-### AdminListaPreciosTab.tsx
+### Archivo 1: `src/pages/Precios.tsx`
 
-**Línea ~411-417 - Agregar TableHead para Marca:**
-```tsx
-<TableHead 
-  className="py-2 px-2 text-[10px] cursor-pointer hover:bg-muted/50"
-  onClick={() => handleSort('nombre')}
->
-  ...Producto
-</TableHead>
-// AGREGAR AQUÍ:
-<TableHead className="w-[80px] py-2 px-2 text-[10px]">
-  Marca
-</TableHead>
-<TableHead 
-  className="w-[80px] py-2 px-2 text-[10px] text-right cursor-pointer hover:bg-muted/50"
-  onClick={() => handleSort('costo')}
->
-  ...Costo
-</TableHead>
-```
+**Linea ~25-31** - Reducir padding del contenedor:
 
-**Línea ~483-493 - Agregar TableCell para Marca:**
-```tsx
-<TableCell className="py-1 px-2">
-  <span className="text-xs line-clamp-1">
-    {producto.nombre}
-    {producto.especificaciones && (
-      <span className="text-purple-600 dark:text-purple-400 ml-1">
-        {producto.especificaciones}
-      </span>
-    )}
-  </span>
-</TableCell>
-// AGREGAR AQUÍ:
-<TableCell className="py-1 px-2">
-  {producto.marca ? (
-    <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-      {producto.marca}
-    </span>
-  ) : (
-    <span className="text-xs text-muted-foreground">—</span>
-  )}
-</TableCell>
-```
-
----
-
-### SecretariaListaPreciosTab.tsx
-
-**Líneas ~431-436 - Agregar TableHead:**
-```tsx
-<TableHead className="py-2 px-2 text-[10px]">Producto</TableHead>
-// AGREGAR:
-<TableHead className="w-[100px] py-2 px-2 text-[10px]">Marca</TableHead>
-<TableHead className="w-[90px] py-2 px-2 text-[10px] text-right">Precio</TableHead>
-```
-
-**Línea ~443 - Actualizar colspan:**
 ```tsx
 // ANTES:
-<TableCell colSpan={5} ...>
-// DESPUÉS:
-<TableCell colSpan={6} ...>
-```
+<div className="p-6">
 
-**Líneas ~453-472 - Agregar TableCell (después de Producto):**
-```tsx
-// Después de la celda de Producto, agregar:
-<TableCell className="py-1 px-2">
-  {producto.marca ? (
-    <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-      {producto.marca}
-    </span>
-  ) : (
-    <span className="text-xs text-muted-foreground">—</span>
-  )}
-</TableCell>
+// DESPUES:
+<div className="p-2 sm:p-4">
 ```
 
 ---
 
-### VendedorListaPreciosTab.tsx
+### Archivo 2: `src/components/admin/AdminListaPreciosTab.tsx`
 
-**Líneas ~143-147 - Agregar TableHead:**
-```tsx
-<TableHead className="py-2 px-2 text-[10px]">Producto</TableHead>
-// AGREGAR:
-<TableHead className="w-[100px] py-2 px-2 text-[10px]">Marca</TableHead>
-<TableHead className="w-[80px] py-2 px-2 text-[10px] text-right">Precio</TableHead>
-```
+**Linea 488** - Eliminar line-clamp-1:
 
-**Línea ~154 - Actualizar colspan:**
 ```tsx
 // ANTES:
-<TableCell colSpan={4} ...>
-// DESPUÉS:
-<TableCell colSpan={5} ...>
+<span className="text-xs line-clamp-1">
+
+// DESPUES:
+<span className="text-xs">
 ```
 
-**Líneas ~164-206 - Agregar TableCell (después de Producto):**
+**Lineas 402-470** - Optimizar anchos de columnas en TableHeader:
+
 ```tsx
-// Después de la celda de Producto (línea ~206), agregar:
-<TableCell className="py-1 px-2">
-  {producto.marca ? (
-    <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-      {producto.marca}
-    </span>
-  ) : (
-    <span className="text-xs text-muted-foreground">—</span>
-  )}
-</TableCell>
+// ANTES (ejemplo):
+<TableHead className="w-[70px] py-2 px-2 text-[10px]">Codigo</TableHead>
+<TableHead className="py-2 px-2 text-[10px]">Producto</TableHead>
+<TableHead className="w-[80px] py-2 px-2 text-[10px]">Marca</TableHead>
+
+// DESPUES:
+<TableHead className="w-[60px] py-2 px-1.5 text-[10px]">Codigo</TableHead>
+<TableHead className="min-w-[180px] py-2 px-1.5 text-[10px]">Producto</TableHead>
+<TableHead className="w-[70px] py-2 px-1.5 text-[10px]">Marca</TableHead>
 ```
+
+Cambios especificos por columna:
+- Codigo: `w-[70px]` a `w-[60px]`
+- Producto: sin ancho fijo, agregar `min-w-[180px]` para garantizar espacio minimo
+- Marca: `w-[80px]` a `w-[70px]`
+- Costo: `w-[80px]` a `w-[70px]`
+- Precio: `w-[80px]` a `w-[70px]`
+- Dto Max: `w-[70px]` a `w-[60px]`
+- Margen: `w-[65px]` a `w-[55px]`
+- Piso: `w-[70px]` a `w-[60px]`
+- Espacio: `w-[65px]` a `w-[55px]`
+- Estado: `w-[80px]` a `w-[70px]`
+- Acciones: `w-[70px]` a `w-[60px]`
+
+Reducir padding en celdas: `px-2` a `px-1.5`
+
+---
+
+### Archivo 3: `src/components/secretaria/SecretariaListaPreciosTab.tsx`
+
+**Lineas 431-437** - Optimizar anchos:
+
+```tsx
+// ANTES:
+<TableHead className="w-[70px]">Codigo</TableHead>
+<TableHead>Producto</TableHead>
+<TableHead className="w-[100px]">Marca</TableHead>
+<TableHead className="w-[90px]">Precio</TableHead>
+<TableHead className="w-[120px]">Descuento</TableHead>
+<TableHead className="w-[60px]">Acciones</TableHead>
+
+// DESPUES:
+<TableHead className="w-[60px]">Codigo</TableHead>
+<TableHead className="min-w-[200px]">Producto</TableHead>
+<TableHead className="w-[80px]">Marca</TableHead>
+<TableHead className="w-[80px]">Precio</TableHead>
+<TableHead className="w-[100px]">Descuento</TableHead>
+<TableHead className="w-[55px]">Acciones</TableHead>
+```
+
+---
+
+### Archivo 4: `src/components/vendedor/VendedorListaPreciosTab.tsx`
+
+**Lineas 143-148** - Optimizar anchos:
+
+```tsx
+// ANTES:
+<TableHead className="w-[70px]">Codigo</TableHead>
+<TableHead>Producto</TableHead>
+<TableHead className="w-[100px]">Marca</TableHead>
+<TableHead className="w-[80px]">Precio</TableHead>
+<TableHead className="w-[100px]">Descuento</TableHead>
+
+// DESPUES:
+<TableHead className="w-[60px]">Codigo</TableHead>
+<TableHead className="min-w-[200px]">Producto</TableHead>
+<TableHead className="w-[80px]">Marca</TableHead>
+<TableHead className="w-[70px]">Precio</TableHead>
+<TableHead className="w-[90px]">Descuento</TableHead>
+```
+
+---
+
+## Resumen de Cambios
+
+| Componente | Cambio |
+|------------|--------|
+| Precios.tsx | Reducir padding de `p-6` a `p-2 sm:p-4` |
+| AdminListaPreciosTab | Quitar `line-clamp-1`, reducir anchos fijos, agregar `min-w` a Producto |
+| SecretariaListaPreciosTab | Reducir anchos fijos, agregar `min-w` a Producto |
+| VendedorListaPreciosTab | Reducir anchos fijos, agregar `min-w` a Producto |
 
 ---
 
 ## Beneficios
 
-| Antes | Después |
-|-------|---------|
-| Marca como subtexto en Producto | Columna dedicada "Marca" |
-| Difícil escanear visualmente | Fácil comparar productos por marca |
-| Inconsistente entre vistas | Consistente en Admin, Secretaria y Vendedor |
-| Solo visible en vista móvil | Visible en desktop y móvil |
-
----
-
-## Notas
-- La búsqueda por marca ya funciona en los tres componentes
-- El estilo azul para marca mantiene consistencia con el diseño actual
-- Las vistas móviles mantienen su diseño compacto actual donde la marca ya aparece
+1. Los nombres de productos se mostraran completos
+2. La tabla aprovechara mejor el espacio disponible en pantallas grandes
+3. Las columnas numericas mantendran su alineacion
+4. El diseño seguira siendo compacto pero legible
 
