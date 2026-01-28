@@ -111,9 +111,9 @@ export function VendedorListaPreciosTab() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-[calc(100vh-8rem)]">
       {/* Header compacto con búsqueda */}
-      <div className="p-3 border-b bg-background sticky top-0 z-20">
+      <div className="pb-3 border-b bg-background sticky top-0 z-20">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
