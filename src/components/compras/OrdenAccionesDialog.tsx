@@ -37,7 +37,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera, Scissors, History, AlertTriangle, FileCheck } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera, Scissors, History, AlertTriangle, FileCheck, DollarSign } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +48,7 @@ import { EvidenciasGallery, EvidenciasBadge } from "./EvidenciasGallery";
 import { HistorialCorreosOC, registrarCorreoEnviado } from "./HistorialCorreosOC";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ConciliacionRapidaDialog } from "./ConciliacionRapidaDialog";
+import { AjustarCostosOCDialog } from "./AjustarCostosOCDialog";
 import logoAlmasa from "@/assets/logo-almasa.png";
 
 // Helper function to convert image to base64
@@ -92,6 +93,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   // Removed: convertirEntregasOpen, dividirEntregaOpen - rarely used functionality
   const [evidenciasGalleryOpen, setEvidenciasGalleryOpen] = useState(false);
   const [confirmEditOpen, setConfirmEditOpen] = useState(false);
+  const [ajustarCostosOpen, setAjustarCostosOpen] = useState(false);
   const [conciliacionRapidaOpen, setConciliacionRapidaOpen] = useState(false);
   
   // Estado para confirmación de folio (borrado especial de OC de prueba)
@@ -1932,6 +1934,18 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                   <Badge variant="secondary" className="ml-auto bg-amber-100 text-amber-700">
                     Por Conciliar
                   </Badge>
+              </Button>
+              )}
+              
+              {/* Botón Ajustar Costos - visible en OCs recibidas/completadas */}
+              {(orden?.status === 'recibida' || orden?.status === 'parcial' || orden?.status === 'completada') && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => setAjustarCostosOpen(true)}
+                >
+                  <DollarSign className="mr-2 h-4 w-4" />
+                  Ajustar Costos
                 </Button>
               )}
               
@@ -2299,6 +2313,12 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
     <ConciliacionRapidaDialog
       open={conciliacionRapidaOpen}
       onOpenChange={setConciliacionRapidaOpen}
+      ordenCompra={orden ? { id: orden.id, folio: orden.folio } : null}
+    />
+
+    <AjustarCostosOCDialog
+      open={ajustarCostosOpen}
+      onOpenChange={setAjustarCostosOpen}
       ordenCompra={orden ? { id: orden.id, folio: orden.folio } : null}
     />
 
