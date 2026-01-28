@@ -129,22 +129,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
     enabled: !!ordenId && !!orden?.entregas_multiples,
   });
 
-  // Fetch email confirmation status
-  const { data: confirmacionProveedor } = useQuery({
-    queryKey: ["confirmacion-oc", orden?.id],
-    queryFn: async () => {
-      if (!orden?.id) return null;
-      const { data, error } = await supabase
-        .from("ordenes_compra_confirmaciones")
-        .select("confirmado_en")
-        .eq("orden_compra_id", orden.id)
-        .not("confirmado_en", "is", null)
-        .single();
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows returned
-      return data;
-    },
-    enabled: !!orden?.id && orden?.status === "enviada",
-  });
+  // REMOVED: confirmacionProveedor query - confirmation system deprecated
 
   // Query to check if there are active receptions (blocks editing)
   const { data: tieneRecepcionesActivas = false } = useQuery({
@@ -1341,44 +1326,21 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       // Convert HTML to base64 for attachment
       const pdfBase64 = btoa(unescape(encodeURIComponent(pdfContent)));
 
-      // Get fecha_entrega for the propose-date action
-      const fechaEntrega = orden.fecha_entrega ? new Date(orden.fecha_entrega).toISOString().split('T')[0] : null;
-
-      // Generate signed confirmation URL via edge function
-      const { data: confirmUrlData, error: confirmUrlError } = await supabase.functions.invoke("generate-oc-confirmation-url", {
-        body: {
-          ordenId: orden.id,
-          action: "confirm",
-        },
-      });
-
-      if (confirmUrlError || !confirmUrlData?.url) {
-        console.error("Error generating confirm URL:", confirmUrlError);
-        throw new Error("No se pudo generar URL de confirmación");
-      }
-
-      // Generate signed propose-date URL
-      const { data: proposeDateUrlData, error: proposeDateUrlError } = await supabase.functions.invoke("generate-oc-confirmation-url", {
-        body: {
-          ordenId: orden.id,
-          action: "propose-date",
-          fechaOriginal: fechaEntrega,
-        },
-      });
-
-      if (proposeDateUrlError || !proposeDateUrlData?.url) {
-        console.error("Error generating propose-date URL:", proposeDateUrlError);
-        throw new Error("No se pudo generar URL de propuesta de fecha");
-      }
-
-      const confirmUrl = confirmUrlData.url;
-      const proposeDateUrl = proposeDateUrlData.url;
-      const trackingPixelUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/confirmar-oc?id=${orden.id}&action=track`;
+      // NOTE: Confirmation URL generation removed - confirmation system deprecated
+      // Email is sent without confirmation buttons
 
       // Get logo URL from current origin
       const logoUrl = `${window.location.origin}/logo-almasa-header.png`;
 
-      // Email body with two action buttons: confirm and propose new date
+      // Simplified email without confirmation buttons
+      const fechaEntregaStr = orden.fecha_entrega_programada 
+        ? (() => {
+            const [year, month, day] = orden.fecha_entrega_programada.split('-').map(Number);
+            return new Date(year, month - 1, day).toLocaleDateString('es-MX');
+          })()
+        : null;
+
+      // Email body without confirmation buttons (confirmation system deprecated)
       const htmlBody = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
           <div style="text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: 8px 8px 0 0; border-bottom: 3px solid #c41e3a;">
@@ -1394,40 +1356,16 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
             <p style="margin: 5px 0;"><strong>Folio:</strong> ${orden.folio}</p>
             <p style="margin: 5px 0;"><strong>Total:</strong> $${orden.total?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
             <p style="margin: 5px 0;"><strong>Fecha de la orden:</strong> ${new Date(orden.fecha_orden).toLocaleDateString('es-MX')}</p>
-            ${fechaEntrega ? `<p style="margin: 5px 0;"><strong>Fecha de entrega solicitada:</strong> ${new Date(fechaEntrega).toLocaleDateString('es-MX')}</p>` : ''}
+            ${fechaEntregaStr ? `<p style="margin: 5px 0;"><strong>Fecha de entrega solicitada:</strong> ${fechaEntregaStr}</p>` : ''}
           </div>
           
           ${orden.notas ? `<p><strong>Notas:</strong> ${orden.notas}</p>` : ''}
 
-          <div style="text-align: center; margin: 30px 0;">
-            <p style="color: #333; font-size: 14px; margin-bottom: 20px;">
-              <strong>¿Puede cumplir con la fecha de entrega?</strong>
-            </p>
-            
-            <div style="display: inline-block;">
-              <a href="${confirmUrl}" 
-                 style="display: inline-block; background-color: #22c55e; color: white; padding: 14px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin: 5px;">
-                ✓ Confirmar Fecha
-              </a>
-              
-              <a href="${proposeDateUrl}" 
-                 style="display: inline-block; background-color: #f59e0b; color: white; padding: 14px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin: 5px;">
-                📅 Proponer Otra Fecha
-              </a>
-            </div>
-            
-            <p style="color: #666; font-size: 12px; margin-top: 15px;">
-              Si puede cumplir con la fecha, haga clic en "Confirmar Fecha".<br/>
-              Si necesita cambiar la fecha, haga clic en "Proponer Otra Fecha".
-            </p>
-          </div>
-
           <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;" />
           <p style="color: #666; font-size: 12px;">
             Este correo fue enviado desde el sistema de Abarrotes La Manita.<br/>
-            <strong>Importante:</strong> Su respuesta nos ayuda a planificar mejor nuestras operaciones.
+            Para cualquier duda o cambio en la fecha de entrega, favor de comunicarse a compras@almasa.com.mx
           </p>
-          <img src="${trackingPixelUrl}" width="1" height="1" style="display:none;" alt="" />
           </div>
         </div>
       `;
@@ -1695,17 +1633,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                     Leído
                   </Badge>
                 )}
-                {confirmacionProveedor?.confirmado_en ? (
-                  <Badge variant="default" className="bg-green-600">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Confirmado por proveedor
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-amber-600 border-amber-300">
-                    <Mail className="h-3 w-3 mr-1" />
-                    Pendiente confirmación
-                  </Badge>
-                )}
+                {/* REMOVED: confirmacionProveedor - confirmation system deprecated */}
               </div>
             )}
             {orden?.status === "enviada" && !orden?.email_enviado_en && (
