@@ -400,7 +400,7 @@ export const AdminListaPreciosTab = () => {
           <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow>
               <TableHead 
-                className="w-[70px] py-2 px-2 text-[10px] cursor-pointer hover:bg-muted/50"
+                className="w-[60px] py-2 px-1.5 text-[10px] cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('codigo')}
               >
                 <div className="flex items-center gap-1">
@@ -409,7 +409,7 @@ export const AdminListaPreciosTab = () => {
                 </div>
               </TableHead>
               <TableHead 
-                className="py-2 px-2 text-[10px] cursor-pointer hover:bg-muted/50"
+                className="min-w-[180px] py-2 px-1.5 text-[10px] cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('nombre')}
               >
                 <div className="flex items-center gap-1">
@@ -417,11 +417,11 @@ export const AdminListaPreciosTab = () => {
                   {sortField === 'nombre' && <ArrowUpDown className="h-3 w-3" />}
                 </div>
               </TableHead>
-              <TableHead className="w-[80px] py-2 px-2 text-[10px]">
+              <TableHead className="w-[70px] py-2 px-1.5 text-[10px]">
                 Marca
               </TableHead>
               <TableHead 
-                className="w-[80px] py-2 px-2 text-[10px] text-right cursor-pointer hover:bg-muted/50"
+                className="w-[70px] py-2 px-1.5 text-[10px] text-right cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('costo')}
               >
                 <div className="flex items-center justify-end gap-1">
@@ -430,7 +430,7 @@ export const AdminListaPreciosTab = () => {
                 </div>
               </TableHead>
               <TableHead 
-                className="w-[80px] py-2 px-2 text-[10px] text-right cursor-pointer hover:bg-muted/50"
+                className="w-[70px] py-2 px-1.5 text-[10px] text-right cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('precio')}
               >
                 <div className="flex items-center justify-end gap-1">
@@ -438,11 +438,11 @@ export const AdminListaPreciosTab = () => {
                   {sortField === 'precio' && <ArrowUpDown className="h-3 w-3" />}
                 </div>
               </TableHead>
-              <TableHead className="w-[70px] py-2 px-2 text-[10px] text-right">
+              <TableHead className="w-[60px] py-2 px-1.5 text-[10px] text-right">
                 Dto Max
               </TableHead>
               <TableHead 
-                className="w-[65px] py-2 px-2 text-[10px] text-right cursor-pointer hover:bg-muted/50"
+                className="w-[55px] py-2 px-1.5 text-[10px] text-right cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('margen')}
               >
                 <div className="flex items-center justify-end gap-1">
@@ -450,14 +450,14 @@ export const AdminListaPreciosTab = () => {
                   {sortField === 'margen' && <ArrowUpDown className="h-3 w-3" />}
                 </div>
               </TableHead>
-              <TableHead className="w-[70px] py-2 px-2 text-[10px] text-right">
+              <TableHead className="w-[60px] py-2 px-1.5 text-[10px] text-right">
                 Piso
               </TableHead>
-              <TableHead className="w-[65px] py-2 px-2 text-[10px] text-right">
+              <TableHead className="w-[55px] py-2 px-1.5 text-[10px] text-right">
                 Espacio
               </TableHead>
               <TableHead 
-                className="w-[80px] py-2 px-2 text-[10px] text-center cursor-pointer hover:bg-muted/50"
+                className="w-[70px] py-2 px-1.5 text-[10px] text-center cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('estado')}
               >
                 <div className="flex items-center justify-center gap-1">
@@ -465,7 +465,7 @@ export const AdminListaPreciosTab = () => {
                   {sortField === 'estado' && <ArrowUpDown className="h-3 w-3" />}
                 </div>
               </TableHead>
-              <TableHead className="w-[70px] py-2 px-1 text-[10px] text-center">
+              <TableHead className="w-[60px] py-2 px-1 text-[10px] text-center">
                 Acciones
               </TableHead>
             </TableRow>
@@ -481,11 +481,11 @@ export const AdminListaPreciosTab = () => {
               
               return (
                 <TableRow key={producto.id} className={rowClass}>
-                  <TableCell className="py-1 px-2 text-[10px] font-mono text-muted-foreground">
+                  <TableCell className="py-1 px-1.5 text-[10px] font-mono text-muted-foreground">
                     {producto.codigo}
                   </TableCell>
-                  <TableCell className="py-1 px-2">
-                    <span className="text-xs line-clamp-1">
+                  <TableCell className="py-1 px-1.5">
+                    <span className="text-xs">
                       {producto.nombre}
                       {producto.especificaciones && (
                         <span className="text-purple-600 dark:text-purple-400 ml-1">
@@ -494,7 +494,7 @@ export const AdminListaPreciosTab = () => {
                       )}
                     </span>
                   </TableCell>
-                  <TableCell className="py-1 px-2">
+                  <TableCell className="py-1 px-1.5">
                     {producto.marca ? (
                       <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
                         {producto.marca}
@@ -503,22 +503,22 @@ export const AdminListaPreciosTab = () => {
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="py-1 px-2 text-right">
+                  <TableCell className="py-1 px-1.5 text-right">
                     <span className="text-xs font-medium text-muted-foreground">
                       {analisis.costo_referencia > 0 ? formatCurrency(analisis.costo_referencia) : "-"}
                     </span>
                   </TableCell>
-                  <TableCell className="py-1 px-2 text-right">
+                  <TableCell className="py-1 px-1.5 text-right">
                     <span className="text-xs font-semibold">
                       {formatCurrency(producto.precio_venta)}
                     </span>
                   </TableCell>
-                  <TableCell className="py-1 px-2 text-right">
+                  <TableCell className="py-1 px-1.5 text-right">
                     <span className="text-[11px] text-muted-foreground">
                       {producto.descuento_maximo ? formatCurrency(producto.descuento_maximo) : "-"}
                     </span>
                   </TableCell>
-                  <TableCell className="py-1 px-2 text-right">
+                  <TableCell className="py-1 px-1.5 text-right">
                     <span className={cn(
                       "text-xs font-medium",
                       analisis.margen_porcentaje < 0 && "text-red-600",
@@ -529,12 +529,12 @@ export const AdminListaPreciosTab = () => {
                       {analisis.costo_referencia > 0 ? `${analisis.margen_porcentaje}%` : "-"}
                     </span>
                   </TableCell>
-                  <TableCell className="py-1 px-2 text-right">
+                  <TableCell className="py-1 px-1.5 text-right">
                     <span className="text-[11px] text-muted-foreground">
                       {formatCurrency(analisis.piso_minimo)}
                     </span>
                   </TableCell>
-                  <TableCell className="py-1 px-2 text-right">
+                  <TableCell className="py-1 px-1.5 text-right">
                     <span className={cn(
                       "text-[11px]",
                       analisis.espacio_negociacion < 0 && "text-red-600 font-medium",
@@ -543,7 +543,7 @@ export const AdminListaPreciosTab = () => {
                       {analisis.costo_referencia > 0 ? formatCurrency(analisis.espacio_negociacion) : "-"}
                     </span>
                   </TableCell>
-                  <TableCell className="py-1 px-2 text-center">
+                  <TableCell className="py-1 px-1.5 text-center">
                     {getEstadoBadge(analisis.estado_margen)}
                   </TableCell>
                   <TableCell className="py-1 px-1 text-center">
