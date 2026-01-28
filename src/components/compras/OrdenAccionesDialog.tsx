@@ -33,6 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1652,6 +1653,18 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
             )}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Alert for pending advance payment */}
+        {orden?.status === 'pendiente_pago' && (
+          <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+            <DollarSign className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <AlertDescription className="text-amber-800 dark:text-amber-200">
+              <strong>Pago Anticipado Pendiente</strong>
+              <br />
+              Las entregas están bloqueadas para el almacén y el proveedor no recibirá notificaciones hasta que se registre el pago.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* ====== RESUMEN DE LA ORDEN ====== */}
         <div className="bg-muted/30 border rounded-lg p-4 space-y-3">

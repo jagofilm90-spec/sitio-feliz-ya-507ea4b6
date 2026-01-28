@@ -107,7 +107,8 @@ const CalendarioEntregasTab = () => {
           )
         `
         )
-        // No filter on entregas_multiples - fetch ALL delivery records
+        // Exclude deliveries for OCs with pending advance payment
+        .neq("ordenes_compra.status", "pendiente_pago")
         .order("fecha_programada");
 
       if (error) throw error;
@@ -144,6 +145,8 @@ const CalendarioEntregasTab = () => {
         )
         .not("fecha_entrega_programada", "is", null)
         .not("status", "eq", "cancelada")
+        // Exclude OCs with pending advance payment
+        .neq("status", "pendiente_pago")
         .order("fecha_entrega_programada");
 
       if (error) throw error;
