@@ -1683,34 +1683,45 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
               }
             </p>
             
-            {/* Indicador de Entregas Programadas */}
+            {/* Panel de Progreso de Entregas */}
             {entregasResumen && entregasResumen.total > 0 && (
-              <div className="flex flex-wrap items-center gap-2 pt-2 mt-2 border-t border-border/50">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Truck className="h-3.5 w-3.5" />
-                  <span>{entregasResumen.total} entrega{entregasResumen.total > 1 ? 's' : ''}</span>
+              <div className="pt-3 mt-2 border-t border-border/50">
+                <div className="flex items-center gap-2 mb-3">
+                  <Truck className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">Progreso de Entregas</span>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {entregasResumen.pendientes > 0 && (
-                    <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-400 dark:border-yellow-800">
-                      {entregasResumen.pendientes} pendiente{entregasResumen.pendientes > 1 ? 's' : ''}
-                    </Badge>
-                  )}
-                  {entregasResumen.enProceso > 0 && (
-                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800">
-                      {entregasResumen.enProceso} en proceso
-                    </Badge>
-                  )}
-                  {entregasResumen.completadas > 0 && (
-                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800">
-                      {entregasResumen.completadas} completada{entregasResumen.completadas > 1 ? 's' : ''}
-                    </Badge>
-                  )}
-                  {entregasResumen.rechazadas > 0 && (
-                    <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800">
-                      {entregasResumen.rechazadas} rechazada{entregasResumen.rechazadas > 1 ? 's' : ''}
-                    </Badge>
-                  )}
+                
+                {/* Dashboard visual con contadores */}
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-center">
+                    <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{entregasResumen.pendientes}</p>
+                    <p className="text-[10px] text-amber-700 dark:text-amber-300 font-medium">Sin Fecha</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-center">
+                    <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{entregasResumen.total - entregasResumen.pendientes - entregasResumen.enProceso - entregasResumen.completadas}</p>
+                    <p className="text-[10px] text-blue-700 dark:text-blue-300 font-medium">Programadas</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-center">
+                    <p className="text-xl font-bold text-orange-600 dark:text-orange-400">{entregasResumen.enProceso}</p>
+                    <p className="text-[10px] text-orange-700 dark:text-orange-300 font-medium">En Descarga</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-center">
+                    <p className="text-xl font-bold text-green-600 dark:text-green-400">{entregasResumen.completadas}</p>
+                    <p className="text-[10px] text-green-700 dark:text-green-300 font-medium">Recibidas</p>
+                  </div>
+                </div>
+                
+                {/* Barra de progreso visual */}
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-green-500 to-green-400 transition-all"
+                      style={{ width: `${(entregasResumen.completadas / entregasResumen.total) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground min-w-[45px]">
+                    {entregasResumen.completadas}/{entregasResumen.total}
+                  </span>
                 </div>
               </div>
             )}

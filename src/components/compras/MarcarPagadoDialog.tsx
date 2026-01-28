@@ -281,15 +281,32 @@ export function MarcarPagadoDialog({
         setUploading(false);
       }
 
+      // First fetch current order status to determine if we need to update main status
+      const { data: currentOrder, error: fetchError } = await supabase
+        .from("ordenes_compra")
+        .select("status, tipo_pago")
+        .eq("id", orden?.id)
+        .single();
+      
+      if (fetchError) throw fetchError;
+
+      // Build update payload
+      const updatePayload: any = {
+        status_pago: "pagado",
+        fecha_pago: fechaPago.toISOString(),
+        referencia_pago: referenciaPago,
+        comprobante_pago_url: comprobanteUrl,
+      };
+
+      // If this was an advance payment OC that was pending payment, unlock it to autorizada
+      if (currentOrder?.status === "pendiente_pago" && currentOrder?.tipo_pago === "anticipado") {
+        updatePayload.status = "autorizada";
+      }
+
       // Update order in database
       const { error } = await supabase
         .from("ordenes_compra")
-        .update({
-          status_pago: "pagado",
-          fecha_pago: fechaPago.toISOString(),
-          referencia_pago: referenciaPago,
-          comprobante_pago_url: comprobanteUrl,
-        })
+        .update(updatePayload)
         .eq("id", orden?.id);
 
       if (error) throw error;
