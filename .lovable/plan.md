@@ -1,128 +1,131 @@
 
-# Plan: Agregar Botón "Confirmar Costos" en Menú de Acciones de OC
 
-## Objetivo
-Agregar un botón directo de "Confirmar Costos" en el diálogo de acciones de cada Orden de Compra (`OrdenAccionesDialog`) para poder conciliar los costos sin necesidad de registrar una factura formal.
+# Plan: Permitir Ajuste de Costo de Compra en OCs Ya Conciliadas
+
+## Problema Identificado
+
+Actualmente:
+- El botón "Confirmar Costos" solo aparece cuando `status_conciliacion === 'por_conciliar'`
+- Todas tus OCs ya están marcadas como `conciliada`
+- El "Papel Blanco Revolución" tiene costo $550 y ya está conciliado
+- **No hay forma de corregir el costo** una vez conciliado
+
+---
+
+## Solución Propuesta
+
+Agregar un botón **"Ajustar Costos"** que esté disponible SIEMPRE en las OCs recibidas/completadas, independientemente de si ya fueron conciliadas. Esto permite:
+- Corregir errores de captura
+- Actualizar costos si el proveedor cambia el precio después
+- Ajustar costos cuando llegue la factura real
 
 ---
 
 ## Cambios a Implementar
 
-### Archivo: `src/components/compras/OrdenAccionesDialog.tsx`
+### 1. Crear `AjustarCostosOCDialog.tsx`
+Un nuevo diálogo que permite editar los costos de cualquier OC recibida, mostrando:
+- Lista de productos con costo actual editable
+- Cálculo de diferencia vs costo original
+- Actualización del costo promedio ponderado
 
-#### 1. Importar el Componente de Conciliación Rápida
-Agregar el import del componente `ConciliacionRapidaDialog` que ya existe y funciona correctamente.
-
-#### 2. Agregar Estado para el Diálogo
-Crear un nuevo estado `conciliacionRapidaOpen` para controlar la apertura/cierre del diálogo.
-
-#### 3. Agregar Botón en Sección "Otras Acciones"
-Insertar un nuevo botón en la sección "Otras Acciones" que:
-- Solo se muestre cuando `status_conciliacion === 'por_conciliar'`
-- Tenga estilo destacado (color ámbar) para indicar acción pendiente
-- Incluya el icono `FileCheck` (consistente con otros indicadores de conciliación)
-- Abra el diálogo `ConciliacionRapidaDialog` al hacer clic
-
-#### 4. Renderizar el Diálogo
-Agregar el componente `ConciliacionRapidaDialog` al final del componente, después de los otros diálogos existentes.
+### 2. Modificar `OrdenAccionesDialog.tsx`
+- Agregar botón "Ajustar Costos" visible cuando la OC tenga status `recibida`, `parcial` o `completada`
+- Este botón estará disponible **independientemente** del `status_conciliacion`
+- Aparecerá en la sección "Otras Acciones"
 
 ---
 
-## Lógica de Visibilidad del Botón
+## Lógica de Visibilidad
 
-El botón "Confirmar Costos" será visible cuando:
-
-| Condición | Descripción |
-|-----------|-------------|
-| `status_conciliacion === 'por_conciliar'` | La OC tiene entregas recibidas pendientes de verificar costos |
-
-El botón NO se muestra cuando:
-- La OC aún no ha sido recibida (`status_conciliacion === 'pendiente'`)
-- La OC ya está conciliada (`status_conciliacion === 'conciliada'`)
+| Botón | Cuándo aparece |
+|-------|----------------|
+| **Confirmar Costos** (existente) | Solo cuando `status_conciliacion === 'por_conciliar'` |
+| **Ajustar Costos** (nuevo) | Cuando OC tiene status `recibida`, `parcial` o `completada` |
 
 ---
 
-## Resultado Visual Esperado
-
-En la sección **"Otras Acciones"** del diálogo, aparecerá un nuevo botón:
+## Flujo de Usuario
 
 ```text
-┌──────────────────────────────────────────┐
-│ Otras Acciones                           │
-├──────────────────────────────────────────┤
-│ ✓ Confirmar Costos     [Por Conciliar]   │  ← NUEVO (solo si aplica)
-│ 📷 Ver Evidencias Fotográficas           │
-│ 📜 Historial de Correos Enviados         │
-└──────────────────────────────────────────┘
+1. Usuario abre OC-202601-0002 (completada, conciliada)
+2. Ve botón "Ajustar Costos" en Otras Acciones
+3. Click -> Se abre diálogo con productos
+4. Cambia el costo del "Papel Blanco Revolución" de $550 a $500
+5. Click "Guardar Cambios"
+6. Sistema actualiza:
+   - inventario_lotes.precio_compra → $500
+   - ordenes_compra_detalles.precio_unitario_compra → $500
+   - productos.ultimo_costo_compra → $500
+   - productos.costo_promedio_ponderado → recalculado
+   - productos_historial_costos → registro del cambio
 ```
-
-El botón tendrá:
-- Icono `FileCheck` (✓ con documento)
-- Texto "Confirmar Costos"
-- Borde ámbar para destacar la acción pendiente
-- Badge "Por Conciliar" para reforzar visualmente el estado
 
 ---
 
 ## Sección Técnica
 
-### Cambios de Código
+### Nuevo archivo: `src/components/compras/AjustarCostosOCDialog.tsx`
 
 ```text
-Archivo: src/components/compras/OrdenAccionesDialog.tsx
+Componente que:
+1. Recibe ordenCompra (id, folio)
+2. Carga productos de ordenes_compra_detalles con sus costos actuales
+3. Permite editar precio_compra inline por producto
+4. Al guardar:
+   - Llama a ajustar_costos_oc() (función existente en BD)
+   - Actualiza inventario_lotes
+   - Recalcula costo_promedio_ponderado
+   - Registra en productos_historial_costos
+```
 
-AGREGAR IMPORT (línea ~47):
-+ import { ConciliacionRapidaDialog } from "./ConciliacionRapidaDialog";
-+ import { FileCheck } from "lucide-react"; // Si no está importado
+### Modificar: `src/components/compras/OrdenAccionesDialog.tsx`
 
-AGREGAR ESTADO (después de línea ~93):
-+ const [conciliacionRapidaOpen, setConciliacionRapidaOpen] = useState(false);
+```text
+AGREGAR IMPORT:
++ import { AjustarCostosOCDialog } from "./AjustarCostosOCDialog";
 
-AGREGAR BOTÓN en sección "Otras Acciones" (después de línea ~1918):
-+ {/* Botón de Confirmar Costos - visible cuando hay conciliación pendiente */}
-+ {(orden as any)?.status_conciliacion === 'por_conciliar' && (
+AGREGAR ESTADO:
++ const [ajustarCostosOpen, setAjustarCostosOpen] = useState(false);
+
+AGREGAR BOTÓN en "Otras Acciones":
++ {(orden?.status === 'recibida' || orden?.status === 'parcial' || orden?.status === 'completada') && (
 +   <Button
 +     variant="outline"
-+     className="w-full justify-start text-amber-600 hover:text-amber-700 border-amber-300"
-+     onClick={() => setConciliacionRapidaOpen(true)}
++     className="w-full justify-start"
++     onClick={() => setAjustarCostosOpen(true)}
 +   >
-+     <FileCheck className="mr-2 h-4 w-4" />
-+     Confirmar Costos
-+     <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700">
-+       Por Conciliar
-+     </Badge>
++     <DollarSign className="mr-2 h-4 w-4" />
++     Ajustar Costos
 +   </Button>
 + )}
 
-AGREGAR DIÁLOGO (después de línea ~2280):
-+ <ConciliacionRapidaDialog
-+   open={conciliacionRapidaOpen}
-+   onOpenChange={setConciliacionRapidaOpen}
+AGREGAR DIÁLOGO:
++ <AjustarCostosOCDialog
++   open={ajustarCostosOpen}
++   onOpenChange={setAjustarCostosOpen}
 +   ordenCompra={orden ? { id: orden.id, folio: orden.folio } : null}
 + />
 ```
 
-### Flujo de Usuario
+---
 
-```text
-1. Usuario abre OC que tiene status_conciliacion = 'por_conciliar'
-2. En el menú de acciones ve el botón "Confirmar Costos" destacado en ámbar
-3. Hace clic en el botón
-4. Se abre ConciliacionRapidaDialog mostrando los productos y costos
-5. Usuario puede editar los costos si es necesario
-6. Hace clic en "Confirmar Costos"
-7. Sistema actualiza:
-   - ultimo_costo_compra en productos
-   - Marca lotes como conciliados
-   - Cambia status_conciliacion a 'conciliada'
-8. El badge 'Por Conciliar' desaparece de la tabla principal
-```
+## Diferencia con "Confirmar Costos"
+
+| Característica | Confirmar Costos | Ajustar Costos |
+|----------------|------------------|----------------|
+| **Cuándo aparece** | Solo si `status_conciliacion = 'por_conciliar'` | Siempre en OCs recibidas |
+| **Propósito** | Primera validación de costos | Corrección posterior |
+| **Editable** | Solo confirma lo existente | Permite cambiar valores |
+| **Cambia status_conciliacion** | Sí, a 'conciliada' | No |
 
 ---
 
-## Beneficios
+## Resultado
 
-1. **Acceso Directo**: No es necesario ir a Facturas → Registrar Factura → Conciliar
-2. **Flujo Simplificado**: Un solo clic para conciliar OCs sin factura formal
-3. **Visibilidad Clara**: El botón solo aparece cuando hay algo pendiente
-4. **Consistencia**: Usa el mismo diálogo `ConciliacionRapidaDialog` que ya está probado
+Podrás:
+1. Abrir OC-202601-0002
+2. Click en "Ajustar Costos"
+3. Cambiar el Papel Blanco Revolución de $550 a tu valor correcto
+4. El sistema actualizará todos los campos relacionados automáticamente
+
