@@ -396,11 +396,11 @@ export const AdminListaPreciosTab = () => {
 
       {/* Table */}
       <div className="flex-1 overflow-auto">
-        <Table>
+        <Table className="table-fixed w-full">
           <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow>
               <TableHead 
-                className="w-[60px] py-2 px-1.5 text-[10px] cursor-pointer hover:bg-muted/50"
+                className="w-[55px] py-2 px-1.5 text-[10px] cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('codigo')}
               >
                 <div className="flex items-center gap-1">
@@ -409,7 +409,7 @@ export const AdminListaPreciosTab = () => {
                 </div>
               </TableHead>
               <TableHead 
-                className="min-w-[180px] py-2 px-1.5 text-[10px] cursor-pointer hover:bg-muted/50"
+                className="py-2 px-1.5 text-[10px] cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('nombre')}
               >
                 <div className="flex items-center gap-1">
@@ -417,11 +417,11 @@ export const AdminListaPreciosTab = () => {
                   {sortField === 'nombre' && <ArrowUpDown className="h-3 w-3" />}
                 </div>
               </TableHead>
-              <TableHead className="w-[70px] py-2 px-1.5 text-[10px]">
+              <TableHead className="w-[65px] py-2 px-1.5 text-[10px]">
                 Marca
               </TableHead>
               <TableHead 
-                className="w-[70px] py-2 px-1.5 text-[10px] text-right cursor-pointer hover:bg-muted/50"
+                className="w-[65px] py-2 px-1.5 text-[10px] text-right cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('costo')}
               >
                 <div className="flex items-center justify-end gap-1">
@@ -430,7 +430,7 @@ export const AdminListaPreciosTab = () => {
                 </div>
               </TableHead>
               <TableHead 
-                className="w-[70px] py-2 px-1.5 text-[10px] text-right cursor-pointer hover:bg-muted/50"
+                className="w-[65px] py-2 px-1.5 text-[10px] text-right cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('precio')}
               >
                 <div className="flex items-center justify-end gap-1">
@@ -438,11 +438,11 @@ export const AdminListaPreciosTab = () => {
                   {sortField === 'precio' && <ArrowUpDown className="h-3 w-3" />}
                 </div>
               </TableHead>
-              <TableHead className="w-[60px] py-2 px-1.5 text-[10px] text-right">
+              <TableHead className="w-[55px] py-2 px-1.5 text-[10px] text-right">
                 Dto Max
               </TableHead>
               <TableHead 
-                className="w-[55px] py-2 px-1.5 text-[10px] text-right cursor-pointer hover:bg-muted/50"
+                className="w-[50px] py-2 px-1.5 text-[10px] text-right cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('margen')}
               >
                 <div className="flex items-center justify-end gap-1">
@@ -450,14 +450,14 @@ export const AdminListaPreciosTab = () => {
                   {sortField === 'margen' && <ArrowUpDown className="h-3 w-3" />}
                 </div>
               </TableHead>
-              <TableHead className="w-[60px] py-2 px-1.5 text-[10px] text-right">
+              <TableHead className="w-[55px] py-2 px-1.5 text-[10px] text-right">
                 Piso
               </TableHead>
-              <TableHead className="w-[55px] py-2 px-1.5 text-[10px] text-right">
+              <TableHead className="w-[50px] py-2 px-1.5 text-[10px] text-right">
                 Espacio
               </TableHead>
               <TableHead 
-                className="w-[70px] py-2 px-1.5 text-[10px] text-center cursor-pointer hover:bg-muted/50"
+                className="w-[65px] py-2 px-1.5 text-[10px] text-center cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('estado')}
               >
                 <div className="flex items-center justify-center gap-1">
@@ -465,7 +465,7 @@ export const AdminListaPreciosTab = () => {
                   {sortField === 'estado' && <ArrowUpDown className="h-3 w-3" />}
                 </div>
               </TableHead>
-              <TableHead className="w-[60px] py-2 px-1 text-[10px] text-center">
+              <TableHead className="w-[55px] py-2 px-1 text-[10px] text-center">
                 Acciones
               </TableHead>
             </TableRow>
