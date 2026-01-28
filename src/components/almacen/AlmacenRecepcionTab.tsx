@@ -126,6 +126,22 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
   const loadEntregas = async () => {
     setLoading(true);
     try {
+      // ========================================
+      // VENTANA DE VISIBILIDAD (24h DINÁMICAS)
+      // ========================================
+      // Por la mañana (antes de 14:00): solo entregas de HOY
+      // Por la tarde (después de 14:00): HOY + MAÑANA
+      // Entregas en proceso (en_transito, en_descarga): siempre visibles
+      const ahora = new Date();
+      const horaActual = ahora.getHours();
+      
+      const fechaLimite = new Date();
+      // Después de las 14:00, incluir día siguiente
+      if (horaActual >= 14) {
+        fechaLimite.setDate(fechaLimite.getDate() + 1);
+      }
+      fechaLimite.setHours(23, 59, 59, 999);
+
       const { data, error } = await supabase
         .from("ordenes_compra_entregas")
         .select(`
@@ -161,7 +177,24 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
 
       if (error) throw error;
 
-      let entregasData = (data as any[]) || [];
+      // Filtrar entregas por ventana de visibilidad
+      // - Las que están en_transito o en_descarga siempre se muestran
+      // - Las programadas solo si caen dentro de la ventana de 24h
+      let entregasData = ((data as any[]) || []).filter(entrega => {
+        // Siempre mostrar entregas en proceso (ya llegaron o están descargando)
+        if (entrega.status === "en_transito" || entrega.status === "en_descarga") {
+          return true;
+        }
+        
+        // Sin fecha programada - mostrar (llegada no programada/improvista)
+        if (!entrega.fecha_programada) {
+          return true;
+        }
+        
+        // Verificar si está dentro de la ventana de visibilidad
+        const fechaEntrega = new Date(entrega.fecha_programada + "T23:59:59");
+        return fechaEntrega <= fechaLimite;
+      });
       
       // Cargar nombres de quienes están trabajando y quién registró llegada
       const trabajandoPorIds = entregasData
