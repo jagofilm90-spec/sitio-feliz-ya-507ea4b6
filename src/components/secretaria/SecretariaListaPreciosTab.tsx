@@ -377,9 +377,9 @@ export const SecretariaListaPreciosTab = () => {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-[calc(100vh-8rem)]">
       {/* Header compacto */}
-      <div className="p-3 border-b bg-background sticky top-0 z-20 space-y-2">
+      <div className="pb-3 border-b bg-background sticky top-0 z-20 space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-primary" />
