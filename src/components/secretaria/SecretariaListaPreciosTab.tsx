@@ -425,15 +425,15 @@ export const SecretariaListaPreciosTab = () => {
         <>
           {/* Tabla compacta - Desktop */}
           <div className="hidden md:block flex-1 overflow-auto">
-            <Table>
+            <Table className="table-fixed w-full">
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-[60px] py-2 px-1.5 text-[10px]">Código</TableHead>
-                  <TableHead className="min-w-[200px] py-2 px-1.5 text-[10px]">Producto</TableHead>
-                  <TableHead className="w-[80px] py-2 px-1.5 text-[10px]">Marca</TableHead>
-                  <TableHead className="w-[80px] py-2 px-1.5 text-[10px] text-right">Precio</TableHead>
-                  <TableHead className="w-[100px] py-2 px-1.5 text-[10px] text-right">Descuento</TableHead>
-                  <TableHead className="w-[55px] py-2 px-1 text-[10px] text-center">Acciones</TableHead>
+                  <TableHead className="w-[55px] py-2 px-1.5 text-[10px]">Código</TableHead>
+                  <TableHead className="py-2 px-1.5 text-[10px]">Producto</TableHead>
+                  <TableHead className="w-[70px] py-2 px-1.5 text-[10px]">Marca</TableHead>
+                  <TableHead className="w-[70px] py-2 px-1.5 text-[10px] text-right">Precio</TableHead>
+                  <TableHead className="w-[90px] py-2 px-1.5 text-[10px] text-right">Descuento</TableHead>
+                  <TableHead className="w-[50px] py-2 px-1 text-[10px] text-center">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
