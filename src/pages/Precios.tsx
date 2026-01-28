@@ -23,7 +23,7 @@ const Precios = () => {
   // Vendedor: Vista solo lectura
   return (
     <Layout>
-      <div className="p-6">
+      <div className="p-2 sm:p-4">
         {isAdmin ? (
           <AdminListaPreciosTab />
         ) : isSecretaria ? (
