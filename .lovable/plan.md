@@ -1,229 +1,343 @@
 
-# Plan de Pruebas: Flujo Completo de Orden de Compra con Faltantes
+# Plan: Entregas Escalonadas con Notificaciones y Pagos Anticipados
 
-## Objetivo
+## Resumen Ejecutivo
 
-Verificar que el ciclo completo de una OC funciona correctamente:
-1. Crear una orden de compra
-2. Simular recepcion parcial (con faltantes)
-3. Confirmar que se envia correo al proveedor
-4. Verificar que se reprograma la entrega automaticamente
-
----
-
-## Preparacion: Datos Requeridos
-
-### Proveedor con Email (ya existen en BD)
-
-| Proveedor | Email |
-|-----------|-------|
-| GRUPO INDUSTRIAL VIDA | trinidad.ibarra@grupovida.com |
-| COMERCIALIZADORA GOLDENOUS | comercializadoragoldenous@gmail.com |
-| ALIMENTOS BALANCEADOS PENJAMO | alanderos@albapesa.com.mx |
-
-### Productos Disponibles
-
-| Producto | ID |
-|----------|-----|
-| Durazno Mitades | 1ad00492-fb85-4673-ac4c-0b601be19833 |
-| Sal Molida | c851041c-3e1d-4624-84f4-c015ab8973e4 |
-| Arroz Americano | 6e565ee2-f122-435b-a913-5ce879bb7838 |
+Implementar un flujo mejorado para ordenes de compra que contemple:
+1. **Entregas escalonadas** - Programar entregas individualmente (1 de 5 trailers, luego 3 mas, etc.)
+2. **Notificaciones completas** - Informar al proveedor de entregas programadas Y pendientes
+3. **Dashboard de progreso** - Visibilidad clara del estado de entregas
+4. **Pagos anticipados** - Flujo para OCs con pago previo a la entrega
 
 ---
 
-## Paso 1: Crear Orden de Compra
+## Funcionalidades Actuales vs. Requeridas
 
-### Acciones
-
-1. Ir a **Secretaria Panel** o **Compras** (modulo administrativo)
-2. Click en **"Nueva OC"**
-3. Seleccionar proveedor: **COMERCIALIZADORA GOLDENOUS** (tiene email configurado)
-4. Agregar productos:
-   - **Sal Molida** x 100 unidades @ $15.00
-   - **Arroz Americano** x 50 unidades @ $25.00
-5. Configurar fecha de entrega: **Hoy o mañana**
-6. Guardar y enviar
-
-### Verificaciones
-
-- Se genera folio automatico (formato `OC-YYYYMM-XXXX`)
-- Se envia correo al proveedor con PDF adjunto
-- La OC aparece en calendario con status "enviada"
+| Funcionalidad | Estado Actual | Mejora Requerida |
+|---------------|---------------|------------------|
+| Crear entregas multiples | Basico | Sin cambios |
+| Programar fechas parciales | Funciona | Mejorar notificacion |
+| Notificar entregas programadas | Solo lista fechas | Incluir resumen completo |
+| Mostrar pendientes al proveedor | No existe | Agregar "Quedan X entregas sin programar" |
+| Dashboard de progreso interno | Basico | Panel visual con contadores |
+| Pago anticipado | Campo existe | Agregar flujo de validacion |
+| Bloquear entregas sin pago | No existe | Implementar |
 
 ---
 
-## Paso 2: Simular Llegada del Proveedor (Fase 1)
+## Flujo Propuesto
 
-### Acciones
-
-1. Ir a **Almacen Tablet** > **Recepcion**
-2. Localizar la OC creada en la lista de entregas pendientes
-3. Click en **"Registrar Llegada"**
-4. Completar datos obligatorios:
-   - Placas del vehiculo: `ABC-123`
-   - Foto del chofer (capturar cualquier imagen)
-   - Numero de sello: `SELLO-001` (o marcar "Sin Sellos")
-5. Guardar llegada
-
-### Verificaciones
-
-- Entrega cambia a status `llegada_registrada`
-- Se registra la hora de llegada
-- Boton "Completar Recepcion" habilitado
-
----
-
-## Paso 3: Completar Recepcion con Faltante (Fase 2)
-
-### Acciones
-
-1. Click en **"Completar Recepcion"**
-2. En la lista de productos:
-   - **Sal Molida**: Recibido = **80** (de 100 ordenadas)
-   - **Arroz Americano**: Recibido = **50** (completo)
-3. Para la diferencia de Sal Molida, seleccionar razon: **"No llego completo"**
-4. Capturar foto de remision del proveedor
-5. Seleccionar bodega destino
-6. Firmar digitalmente
-7. Click **"Finalizar Recepcion"**
-
-### Verificaciones
-
-- El sistema detecta 20 unidades faltantes de Sal Molida
-- Se crea automaticamente una nueva entrega programada para el **siguiente dia habil**
-- La OC cambia a status **"parcial"**
-- Se crea lote de inventario con 80 unidades de Sal Molida
-- Se actualizan stock y costo promedio ponderado
-
----
-
-## Paso 4: Verificar Notificacion al Proveedor
-
-### Metodo 1: Ver Logs de Edge Function
-
-Usa la herramienta de logs para ver si `notificar-faltante-oc` se ejecuto correctamente:
-
-```
-Edge Function: notificar-faltante-oc
-Buscar: "faltante_creado"
+```text
+                         CREACION DE OC
+                              |
+                              v
+    +--------------------------------------------------+
+    |  Paso 1: Seleccionar Proveedor y Tipo de Pago    |
+    |  [Pago Anticipado] vs [Pago Contra Entrega]      |
+    +--------------------------------------------------+
+                              |
+                              v
+    +--------------------------------------------------+
+    |  Paso 2: Agregar Productos (5 trailers ejemplo)  |
+    +--------------------------------------------------+
+                              |
+                              v
+    +--------------------------------------------------+
+    |  Paso 3: Programar Entregas                      |
+    |                                                  |
+    |  Trailer 1: [Fecha: 15/Feb]                      |
+    |  Trailer 2: [Sin fecha - pendiente]              |
+    |  Trailer 3: [Sin fecha - pendiente]              |
+    |  Trailer 4: [Sin fecha - pendiente]              |
+    |  Trailer 5: [Sin fecha - pendiente]              |
+    +--------------------------------------------------+
+                              |
+                              v
+    +--------------------------------------------------+
+    |  Paso 4: Resumen y Envio                         |
+    |                                                  |
+    |  SI PAGO ANTICIPADO:                             |
+    |    - Mostrar alerta "Requiere pago antes de      |
+    |      programar entregas"                         |
+    |    - Crear OC en status "pendiente_pago"         |
+    |                                                  |
+    |  SI PAGO CONTRA ENTREGA:                         |
+    |    - Enviar email al proveedor con:              |
+    |      * Trailer 1: 15/Feb (Programada)            |
+    |      * Trailers 2-5: Pendientes                  |
+    +--------------------------------------------------+
 ```
 
-**Respuesta esperada:**
-```json
-{
-  "success": true,
-  "tipo": "faltante_creado",
-  "email": "comercializadoragoldenous@gmail.com"
+---
+
+## Mejora 1: Notificacion Mejorada de Entregas Programadas
+
+### Email al Proveedor (nuevo formato)
+
+```html
+Estimado [Proveedor],
+
+Le informamos las fechas programadas para la orden OC-202601-0005:
+
+ENTREGAS PROGRAMADAS:
+- Trailer 1: 15 de febrero 2026 (1,200 bultos)
+- Trailer 2: 18 de febrero 2026 (1,200 bultos)
+- Trailer 3: 20 de febrero 2026 (1,200 bultos)
+
+ENTREGAS PENDIENTES DE PROGRAMAR:
+- Trailer 4: 1,200 bultos (fecha por confirmar)
+- Trailer 5: 1,200 bultos (fecha por confirmar)
+
+RESUMEN:
+- Total entregas: 5
+- Programadas: 3
+- Pendientes: 2
+- Total bultos: 6,000
+
+Le notificaremos cuando se asignen las fechas restantes.
+```
+
+### Archivo a Modificar
+
+`src/components/compras/ProgramarEntregasDialog.tsx`
+
+Agregar seccion de "Entregas Pendientes" al email:
+- Incluir lista de entregas sin fecha
+- Agregar contador resumen
+- Mantener coherencia con formato actual
+
+---
+
+## Mejora 2: Nueva Edge Function para Notificaciones Completas
+
+### Crear: `supabase/functions/notificar-entregas-programadas/index.ts`
+
+```typescript
+interface RequestBody {
+  tipo: 'nuevas_fechas' | 'recordatorio_pendientes';
+  orden_id: string;
+  orden_folio: string;
+  proveedor_email: string;
+  proveedor_nombre: string;
+  entregas_programadas: {
+    numero: number;
+    bultos: number;
+    fecha: string;
+  }[];
+  entregas_pendientes: {
+    numero: number;
+    bultos: number;
+  }[];
+  total_bultos: number;
 }
 ```
 
-### Metodo 2: Verificar Historial de Correos
-
-1. Ir a la OC en **Ordenes de Compra**
-2. Abrir **"Historial de Correos"** (icono de sobre)
-3. Debe aparecer:
-   - Correo original de OC
-   - Correo de notificacion de faltante
-
----
-
-## Paso 5: Verificar Reprogramacion en Calendario
-
-### Acciones
-
-1. Ir a **Compras** > **Calendario**
-2. Navegar al **siguiente dia habil**
-
-### Verificaciones
-
-- Aparece nueva entrega con badge naranja **"Faltante"**
-- Detalle muestra solo los productos faltantes (20 unidades de Sal Molida)
-- La entrega original muestra "Recibida" con badge verde
+Esta funcion:
+1. Genera email HTML con formato profesional
+2. Incluye seccion verde de "Programadas"
+3. Incluye seccion amarilla de "Pendientes"
+4. Agrega resumen con contadores
+5. Registra en `correos_enviados`
 
 ---
 
-## Paso 6: Probar Recepcion del Faltante
+## Mejora 3: Panel de Progreso en Detalle de OC
 
-### Acciones
+### Archivo a Modificar
 
-1. Ir a **Almacen** > **Recepcion**
-2. Localizar la entrega de faltante (badge naranja)
-3. Registrar llegada
-4. Completar recepcion con las 20 unidades de Sal Molida
-5. Finalizar
+`src/components/compras/OrdenAccionesDialog.tsx`
 
-### Verificaciones
+Agregar componente visual de progreso:
 
-- OC cambia a status **"completada"**
-- Stock total de Sal Molida = 100 unidades
-- No quedan entregas pendientes
-
----
-
-## Diagrama de Flujo del Sistema
-
-```text
-+-------------------+     +------------------+     +-------------------+
-|  Crear OC         | --> |  Enviar Email    | --> |  Calendario       |
-|  (CrearOrdenWiz)  |     |  (gmail-api)     |     |  (Pendiente)      |
-+-------------------+     +------------------+     +-------------------+
-                                                           |
-                                                           v
-+-------------------+     +------------------+     +-------------------+
-|  Registrar        | --> |  Recepcion       | --> |  ¿Faltantes?      |
-|  Llegada (Fase 1) |     |  (Fase 2)        |     |                   |
-+-------------------+     +------------------+     +-------------------+
-                                                           |
-                          +--------------------------------+
-                          |                                |
-                          v                                v
-              +-----------------------+        +------------------------+
-              | SI: Crear entrega     |        | NO: Marcar OC como     |
-              | programada para       |        | "completada"           |
-              | siguiente dia habil   |        +------------------------+
-              +-----------------------+
-                          |
-                          v
-              +-----------------------+
-              | notificar-faltante-oc |
-              | (Email automatico)    |
-              +-----------------------+
+```tsx
+// Nuevo componente dentro del dialog
+<div className="grid grid-cols-4 gap-3 mb-4">
+  <div className="bg-amber-50 p-3 rounded-lg text-center">
+    <p className="text-2xl font-bold text-amber-600">{pendientes}</p>
+    <p className="text-xs text-amber-700">Pendientes</p>
+  </div>
+  <div className="bg-blue-50 p-3 rounded-lg text-center">
+    <p className="text-2xl font-bold text-blue-600">{programadas}</p>
+    <p className="text-xs text-blue-700">Programadas</p>
+  </div>
+  <div className="bg-orange-50 p-3 rounded-lg text-center">
+    <p className="text-2xl font-bold text-orange-600">{enProceso}</p>
+    <p className="text-xs text-orange-700">En Descarga</p>
+  </div>
+  <div className="bg-green-50 p-3 rounded-lg text-center">
+    <p className="text-2xl font-bold text-green-600">{recibidas}</p>
+    <p className="text-xs text-green-700">Recibidas</p>
+  </div>
+</div>
 ```
 
 ---
 
-## Correos que se Envian Automaticamente
+## Mejora 4: Flujo de Pago Anticipado
 
-| Evento | Edge Function | Destinatario | Contenido |
-|--------|---------------|--------------|-----------|
-| OC Creada | `gmail-api` | Proveedor | PDF de la orden |
-| Faltante detectado | `notificar-faltante-oc` | Proveedor | Lista de faltantes + nueva fecha |
-| Devolucion registrada | `notificar-cierre-oc` | Proveedor | Productos devueltos + motivo |
-| Fin de recepcion | `gmail-api` | Contacto logistica | PDF de recepcion |
+### Logica de Negocio
+
+1. **Al crear OC con `tipo_pago = 'anticipado'`**:
+   - OC se crea con `status = 'pendiente_pago'`
+   - NO se envian entregas al calendario de almacen
+   - Email al proveedor indica "Pedido recibido, pendiente de pago"
+
+2. **Al registrar pago**:
+   - OC cambia a `status = 'pagada'`
+   - Se habilita boton "Programar Entregas"
+   - Se pueden asignar fechas a las entregas
+
+3. **Al programar primera entrega**:
+   - OC cambia a `status = 'enviada'`
+   - Entregas aparecen en calendario de almacen
+   - Email al proveedor con fechas programadas
+
+### Archivos a Modificar
+
+**`src/components/compras/CrearOrdenCompraWizard.tsx`**
+- En paso de resumen, mostrar alerta si es pago anticipado
+- Cambiar status inicial a `pendiente_pago` si aplica
+
+**`src/components/compras/ProcesarPagoOCDialog.tsx`**
+- Agregar logica para desbloquear programacion de entregas
+
+**`src/components/compras/OrdenAccionesDialog.tsx`**
+- Mostrar banner "Pendiente de pago" si aplica
+- Deshabilitar "Programar Entregas" hasta pago
 
 ---
 
-## Seccion Tecnica: Archivos Clave
+## Mejora 5: Tabla de OC con Columna de Progreso Entregas
 
-| Archivo | Funcion |
-|---------|---------|
-| `src/components/compras/CrearOrdenCompraWizard.tsx` | Creacion de OC y envio inicial |
-| `src/components/almacen/AlmacenRecepcionSheet.tsx` | Recepcion en 2 fases, deteccion de faltantes |
-| `supabase/functions/notificar-faltante-oc/index.ts` | Email automatico de faltantes |
-| `supabase/functions/notificar-cierre-oc/index.ts` | Email de devoluciones |
-| `supabase/functions/auto-reschedule-deliveries/index.ts` | CRON para reprogramar entregas vencidas |
-| `src/lib/emailNotificationsUtils.ts` | Copias internas a admin/secretaria |
+### Archivo a Modificar
+
+`src/components/compras/OrdenesCompraTab.tsx`
+
+Agregar columna visual:
+
+```tsx
+<TableCell>
+  <div className="flex items-center gap-2">
+    <div className="text-xs">
+      {recibidas}/{total}
+    </div>
+    <Progress 
+      value={(recibidas/total)*100} 
+      className="w-16 h-2"
+    />
+  </div>
+</TableCell>
+```
+
+---
+
+## Esquema de Base de Datos
+
+### Campo nuevo sugerido (opcional)
+
+```sql
+-- Agregar status_pago 'parcial' ya existente
+-- status_pago: 'pendiente', 'pagado', 'parcial'
+
+-- Ya existe tipo_pago: 'anticipado', 'contra_entrega'
+
+-- Agregar flag para bloquear entregas sin pago
+ALTER TABLE ordenes_compra
+ADD COLUMN IF NOT EXISTS entregas_bloqueadas BOOLEAN DEFAULT false;
+```
+
+---
+
+## Archivos a Crear/Modificar
+
+| Archivo | Accion | Descripcion |
+|---------|--------|-------------|
+| `supabase/functions/notificar-entregas-programadas/index.ts` | Crear | Nueva edge function para emails completos |
+| `src/components/compras/ProgramarEntregasDialog.tsx` | Modificar | Mejorar email y agregar pendientes |
+| `src/components/compras/OrdenAccionesDialog.tsx` | Modificar | Agregar panel de progreso visual |
+| `src/components/compras/OrdenesCompraTab.tsx` | Modificar | Agregar columna de progreso |
+| `src/components/compras/CrearOrdenCompraWizard.tsx` | Modificar | Logica de pago anticipado |
+| `supabase/config.toml` | Modificar | Registrar nueva edge function |
+
+---
+
+## Seccion Tecnica: Codigo Clave
+
+### ProgramarEntregasDialog - Email Mejorado
+
+```typescript
+// Construir HTML con pendientes
+const entregasNuevas = fechasParaActualizar.map(([entregaId, fecha]) => {
+  const entrega = entregas.find((e: any) => e.id === entregaId);
+  return {
+    numero: entrega?.numero_entrega,
+    bultos: entrega?.cantidad_bultos,
+    fecha: formatFechaLocal(fecha)
+  };
+});
+
+const entregasSinFecha = entregas.filter((e: any) => 
+  !e.fecha_programada && !fechasActualizadas[e.id]
+);
+
+const htmlBody = `
+  <h2>Fechas de entrega actualizadas - ${orden.folio}</h2>
+  
+  <h3 style="color: green;">✅ Entregas Programadas</h3>
+  <ul>
+    ${entregasNuevas.map(e => 
+      `<li>Trailer ${e.numero}: ${e.bultos} bultos - ${e.fecha}</li>`
+    ).join("")}
+  </ul>
+  
+  ${entregasSinFecha.length > 0 ? `
+    <h3 style="color: orange;">⏳ Entregas Pendientes de Programar</h3>
+    <ul>
+      ${entregasSinFecha.map((e: any) => 
+        `<li>Trailer ${e.numero_entrega}: ${e.cantidad_bultos} bultos</li>`
+      ).join("")}
+    </ul>
+    <p><em>Le notificaremos cuando se asignen las fechas.</em></p>
+  ` : ''}
+  
+  <p><strong>Resumen:</strong> ${entregas.length} entregas totales</p>
+`;
+```
+
+### OrdenAccionesDialog - Panel de Progreso
+
+```typescript
+// Ya existe query entregasResumen, solo falta UI mejorada
+{orden?.entregas_multiples && entregasResumen && (
+  <div className="grid grid-cols-4 gap-2 p-3 bg-muted/30 rounded-lg">
+    <div className="text-center">
+      <div className="text-lg font-bold text-amber-600">
+        {entregasResumen.pendientes}
+      </div>
+      <div className="text-xs text-muted-foreground">Sin fecha</div>
+    </div>
+    // ... otros contadores
+  </div>
+)}
+```
 
 ---
 
 ## Resultado Esperado
 
-Al completar todas las pruebas:
+1. **Proveedor recibe emails claros** con entregas programadas Y pendientes
+2. **Almacen ve dashboard** con contadores de estado por OC
+3. **Secretaria puede programar escalonado** (1 trailer hoy, 3 la proxima semana)
+4. **Pago anticipado bloquea entregas** hasta confirmar deposito
+5. **Historial completo** de notificaciones por cada OC
 
-1. **OC con folio unico** generada y enviada por email
-2. **Recepcion parcial** registrada con stock actualizado
-3. **Entrega de faltantes** programada automaticamente
-4. **Email de notificacion** enviado al proveedor
-5. **OC completada** al recibir todos los productos
-6. **Historial completo** de correos y entregas visible en el sistema
+---
 
+## Orden de Implementacion
+
+1. Modificar `ProgramarEntregasDialog.tsx` (email mejorado)
+2. Modificar `OrdenAccionesDialog.tsx` (panel progreso)
+3. Crear edge function `notificar-entregas-programadas`
+4. Modificar `CrearOrdenCompraWizard.tsx` (flujo pago anticipado)
+5. Modificar `OrdenesCompraTab.tsx` (columna progreso)
+6. Pruebas de integracion completas
