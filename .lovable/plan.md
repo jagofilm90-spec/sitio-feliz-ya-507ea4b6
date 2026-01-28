@@ -1,85 +1,125 @@
 
-
-# Plan: Maximizar Uso de Espacio en Tabla de Precios
+# Plan: Eliminar Bordes/Espacios Alrededor de la Tabla de Precios
 
 ## Problema Identificado
 
-Mirando tu captura de pantalla, veo claramente que:
-1. La tabla tiene espacio en blanco a la derecha que no se aprovecha
-2. Las columnas tienen anchos fijos muy pequenos que no crecen
-3. La columna "Producto" no se expande para llenar el espacio disponible
+Analizando tu captura de pantalla, veo claramente:
+
+1. **Borde izquierdo** (junto a "Código"): Espacio vacío entre el sidebar y la tabla
+2. **Borde superior** (arriba de "Análisis"): Espacio vacío entre el header y el contenido
+3. **La tabla no ocupa todo el ancho disponible**
+
+## Causa Raíz
+
+Hay **múltiples capas de padding acumulado**:
+
+```text
+Layout.tsx       → main tiene p-6 (24px en todos lados)
+Precios.tsx      → div tiene p-2 sm:p-4 (8-16px adicionales)
+AdminListaPrecios→ header tiene p-3 (12px más)
+                 → Table wrapper no tiene padding negativo
+```
+
+Total de espacio desperdiciado: ~44-52px por lado
 
 ---
 
-## Causa Raiz
+## Solución Propuesta
 
-El problema es que todas las columnas tienen anchos fijos (`w-[60px]`, `w-[70px]`, etc.) y la columna "Producto" solo tiene `min-w-[180px]` pero no tiene nada que le diga que debe **expandirse** para llenar el espacio restante.
+### Estrategia: Eliminar paddings redundantes y ajustar a pantalla completa
 
----
-
-## Solucion Propuesta
-
-### Estrategia: Hacer que "Producto" sea columna flexible
-
-1. Quitar `min-w-[180px]` de la columna Producto
-2. Agregar clase `flex-1` equivalente para tablas: dejar la columna **sin ancho fijo** para que absorba todo el espacio disponible
-3. Agregar `table-fixed` al contenedor para mejor control de anchos
+1. **En `Precios.tsx`**: Cambiar `p-2 sm:p-4` a `p-0` (sin padding, el Layout ya tiene)
+2. **En `AdminListaPreciosTab.tsx`**: Reducir padding del header de `p-3` a `px-0 py-2`
+3. **En `AdminListaPreciosTab.tsx`**: Agregar `mx-0` y `-mx-` para compensar padding del Layout si es necesario
 
 ---
 
 ## Resultado Visual Esperado
 
 ```text
-ANTES (tu captura):
-| Código | Producto | Marca | Costo | Precio | ... | Acciones | [espacio vacio] |
+ANTES:
+┌─────────────────────────────────────────────┐
+│ [sidebar] │    ┌──────────────────┐         │
+│           │    │ Análisis...     │         │  ← espacios negros
+│           │    │ Tabla...        │         │
+│           │    └──────────────────┘         │
+└─────────────────────────────────────────────┘
 
-DESPUES:
-| Código | Producto (se expande a llenar) | Marca | Costo | Precio | ... | Acciones |
+DESPUÉS:
+┌─────────────────────────────────────────────┐
+│ [sidebar] │ Análisis de Precios...          │
+│           │ ┌─────────────────────────────┐ │  ← tabla pegada al borde
+│           │ │ Código │ Producto │ ...     │ │
+│           │ └─────────────────────────────┘ │
+└─────────────────────────────────────────────┘
 ```
 
 ---
 
-## Seccion Tecnica
+## Sección Técnica
 
-### Archivo: `src/components/admin/AdminListaPreciosTab.tsx`
+### Archivo 1: `src/pages/Precios.tsx`
 
-**Cambio 1 - Linea 399**: Agregar `table-fixed` al componente Table:
+**Línea 26** - Eliminar padding del contenedor:
+
 ```tsx
 // ANTES:
-<Table>
+<div className="p-2 sm:p-4">
 
-// DESPUES:
-<Table className="table-fixed w-full">
+// DESPUÉS:
+<div className="h-full">
 ```
 
-**Cambio 2 - Linea 411-419**: Modificar columna Producto para que sea flexible:
+(Nota: El Layout ya aplica p-6 al main, así que este padding adicional es redundante)
+
+---
+
+### Archivo 2: `src/components/admin/AdminListaPreciosTab.tsx`
+
+**Línea 323** - Hacer que ocupe todo el alto disponible:
+
 ```tsx
 // ANTES:
-<TableHead 
-  className="min-w-[180px] py-2 px-1.5 text-[10px] cursor-pointer hover:bg-muted/50"
-  onClick={() => handleSort('nombre')}
->
+<div className="flex flex-col h-full">
 
-// DESPUES:
-<TableHead 
-  className="py-2 px-1.5 text-[10px] cursor-pointer hover:bg-muted/50"
-  onClick={() => handleSort('nombre')}
->
+// DESPUÉS:
+<div className="flex flex-col h-[calc(100vh-8rem)]">
 ```
-(Sin ancho fijo, la columna tomara todo el espacio restante)
 
-**Cambio 3**: Ajustar anchos de las demas columnas para que sean mas compactas:
+**Línea 325** - Reducir padding del header:
+
 ```tsx
-// Codigo: w-[55px] (era w-[60px])
-// Marca: w-[65px] (era w-[70px])
-// Costo: w-[65px] (era w-[70px])
-// Precio: w-[65px] (era w-[70px])
-// Dto Max: w-[55px] (era w-[60px])
-// Margen: w-[50px] (era w-[55px])
-// Piso: w-[55px] (era w-[60px])
-// Espacio: w-[50px] (era w-[55px])
-// Estado: w-[65px] (era w-[70px])
-// Acciones: w-[55px] (era w-[60px])
+// ANTES:
+<div className="p-3 border-b bg-background sticky top-0 z-20 space-y-3">
+
+// DESPUÉS:
+<div className="pb-3 border-b bg-background sticky top-0 z-20 space-y-3">
+```
+
+(Quitamos el padding izquierdo/derecho/superior ya que el Layout lo proporciona)
+
+**Línea 398** - Asegurar que la tabla no tenga márgenes extra:
+
+```tsx
+// ANTES:
+<div className="flex-1 overflow-auto">
+
+// DESPUÉS:
+<div className="flex-1 overflow-auto -mx-0">
+```
+
+---
+
+### Archivo 3: `src/components/Layout.tsx` (opcional, si los cambios anteriores no son suficientes)
+
+**Línea 456** - Reducir padding del main para la página de precios:
+
+```tsx
+// ANTES:
+<main className="flex-1 p-6 overflow-auto">{children}</main>
+
+// DESPUÉS:
+<main className="flex-1 p-4 overflow-auto">{children}</main>
 ```
 
 ---
@@ -88,13 +128,16 @@ DESPUES:
 
 | Archivo | Cambio |
 |---------|--------|
-| AdminListaPreciosTab.tsx | Agregar `table-fixed`, quitar ancho de Producto, reducir anchos fijos |
-| SecretariaListaPreciosTab.tsx | Mismos cambios para consistencia |
-| VendedorListaPreciosTab.tsx | Mismos cambios para consistencia |
+| `Precios.tsx` | Eliminar padding del wrapper (`p-2 sm:p-4` → sin padding) |
+| `AdminListaPreciosTab.tsx` | Reducir padding header, agregar altura calculada |
+| `SecretariaListaPreciosTab.tsx` | Mismos cambios para consistencia |
+| `VendedorListaPreciosTab.tsx` | Mismos cambios para consistencia |
 
 ---
 
 ## Beneficio
 
-La columna "Producto" ahora absorbera todo el espacio disponible, mostrando nombres completos y eliminando el espacio desperdiciado a la derecha de la tabla.
-
+- La tabla se extenderá de borde a borde del área de contenido
+- Se eliminarán los "bordes negros" visibles en tu captura
+- Mayor aprovechamiento del espacio disponible en pantalla
+- Los nombres de productos tendrán aún más espacio para mostrarse completos
