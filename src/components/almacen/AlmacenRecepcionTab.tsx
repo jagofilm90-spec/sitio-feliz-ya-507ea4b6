@@ -37,7 +37,14 @@ import {
 import { RegistrarLlegadaSheet } from "./RegistrarLlegadaSheet";
 import { AlmacenRecepcionSheet } from "./AlmacenRecepcionSheet";
 import { CancelarDescargaDialog } from "./CancelarDescargaDialog";
+import { BusquedaLlegadaAnticipada } from "./BusquedaLlegadaAnticipada";
 import { getCompactDisplayName } from "@/lib/productUtils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface TrabajandoPor {
   id: string;
@@ -479,6 +486,9 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                   onCancelarDescarga={setCancelarDescargaEntrega}
                 />
               ))}
+              
+              {/* Panel para buscar llegadas anticipadas */}
+              <BusquedaLlegadaAnticipada onEntregaReprogramada={loadEntregas} />
             </div>
           </ScrollArea>
         </CardContent>
@@ -733,6 +743,25 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
     : 0;
   const timeoutExpirado = tiempoTrabajando > 4;
 
+  // ========================================
+  // LÓGICA PARA DESHABILITAR BOTÓN "REGISTRAR LLEGADA"
+  // ========================================
+  // Solo se puede registrar llegada si la fecha programada es hoy o anterior
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  
+  const fechaProgramada = entrega.fecha_programada 
+    ? new Date(entrega.fecha_programada + "T00:00:00") 
+    : null;
+  
+  // Puede registrar si: no hay fecha programada O la fecha es hoy o anterior
+  const puedeRegistrarLlegada = !fechaProgramada || fechaProgramada <= hoy;
+  
+  // Calcular días restantes para el tooltip
+  const diasRestantes = fechaProgramada 
+    ? Math.ceil((fechaProgramada.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
+    : 0;
+
   return (
     <div className="p-4 hover:bg-muted/50 transition-colors">
       <div className="flex items-start gap-4">
@@ -845,15 +874,47 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
                 )}
               </>
             ) : (
-              <Button 
-                size="lg" 
-                variant="outline"
-                onClick={() => onRegistrarLlegada(entrega)}
-                className="gap-2 h-12 px-5 touch-manipulation"
-              >
-                <Truck className="w-5 h-5" />
-                Registrar Llegada
-              </Button>
+              puedeRegistrarLlegada ? (
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  onClick={() => onRegistrarLlegada(entrega)}
+                  className="gap-2 h-12 px-5 touch-manipulation"
+                >
+                  <Truck className="w-5 h-5" />
+                  Registrar Llegada
+                </Button>
+              ) : (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0}>
+                        <Button 
+                          size="lg" 
+                          variant="outline"
+                          disabled
+                          className="gap-2 h-12 px-5 touch-manipulation cursor-not-allowed"
+                        >
+                          <Truck className="w-5 h-5" />
+                          Registrar Llegada
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      <p className="text-sm">
+                        {diasRestantes === 1 
+                          ? "Esta entrega está programada para mañana" 
+                          : `Esta entrega está programada para dentro de ${diasRestantes} días`}
+                        {fechaProgramada && (
+                          <span className="block text-xs text-muted-foreground mt-1">
+                            Fecha: {format(fechaProgramada, "dd/MM/yyyy", { locale: es })}
+                          </span>
+                        )}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )
             )}
           </div>
         </div>
