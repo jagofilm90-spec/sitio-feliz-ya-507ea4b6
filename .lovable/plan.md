@@ -1,190 +1,128 @@
 
-# Plan: Simplificación del Módulo de Órdenes de Compra (OC)
+# Plan: Agregar Botón "Confirmar Costos" en Menú de Acciones de OC
 
-## Análisis Completado
-
-He revisado todos los componentes relacionados con el módulo de Compras y encontré **varias áreas de redundancia** que se acumularon después de los múltiples cambios recientes. A continuación presento mi análisis de qué es necesario y qué puede eliminarse o simplificarse.
-
----
-
-## 1. Funcionalidad de Confirmación del Proveedor - CANDIDATO A ELIMINAR
-
-### Qué hace actualmente:
-- Cuando envías una OC, el correo incluye dos botones: "Confirmar Fecha" y "Proponer Otra Fecha"
-- El proveedor hace clic en el enlace y eso registra la confirmación en `ordenes_compra_confirmaciones`
-- En la tabla aparece una columna "Confirmada / No confirmada"
-- Hay un botón de campana (Bell) para enviar recordatorio de confirmación
-
-### Por qué es redundante:
-- **En la práctica**, cuando envías la OC ya quedas de acuerdo con el proveedor en la fecha (por teléfono o WhatsApp)
-- El proveedor **rara vez** hace clic en el enlace del correo
-- La columna de "Confirmada" solo agrega ruido visual
-- El botón de recordatorio casi nunca se usa
-
-### Componentes y elementos a eliminar:
-| Componente/Elemento | Ubicación |
-|---------------------|-----------|
-| Columna "Confirmada" en tabla | `OrdenesCompraTab.tsx:1943-1953` |
-| Botón de recordatorio (Bell) | `OrdenesCompraTab.tsx:1992-2005` |
-| Query de confirmaciones | `OrdenesCompraTab.tsx:497-506` |
-| Edge function `confirmar-oc` | `supabase/functions/confirmar-oc/` |
-| Edge function `generate-oc-confirmation-url` | `supabase/functions/generate-oc-confirmation-url/` |
-| Tabla `ordenes_compra_confirmaciones` | BD |
-| Tabla `ordenes_compra_respuestas_proveedor` | BD |
-| Generación de URLs firmadas en envío | `OrdenAccionesDialog.tsx:1347-1376` |
-| Generación de URLs en reenvío | `ReenviarOCDialog.tsx:364-390` |
-
-**Ahorro estimado**: Menos código, menos iconos, UI más limpia.
+## Objetivo
+Agregar un botón directo de "Confirmar Costos" en el diálogo de acciones de cada Orden de Compra (`OrdenAccionesDialog`) para poder conciliar los costos sin necesidad de registrar una factura formal.
 
 ---
 
-## 2. Botón "Reenviar OC" - CONSERVAR PERO SIMPLIFICAR
+## Cambios a Implementar
 
-### Qué hace:
-- Permite reenviar la OC al proveedor si hubo algún cambio o si el proveedor no la recibió
+### Archivo: `src/components/compras/OrdenAccionesDialog.tsx`
 
-### Recomendación:
-- **Conservar** el botón de reenvío (Send icon)
-- **Simplificar**: Eliminar la generación de URLs de confirmación dentro del reenvío (ya que eliminamos esa funcionalidad)
+#### 1. Importar el Componente de Conciliación Rápida
+Agregar el import del componente `ConciliacionRapidaDialog` que ya existe y funciona correctamente.
 
----
+#### 2. Agregar Estado para el Diálogo
+Crear un nuevo estado `conciliacionRapidaOpen` para controlar la apertura/cierre del diálogo.
 
-## 3. Diálogo de Acciones (MoreVertical) - REVISAR Y SIMPLIFICAR
+#### 3. Agregar Botón en Sección "Otras Acciones"
+Insertar un nuevo botón en la sección "Otras Acciones" que:
+- Solo se muestre cuando `status_conciliacion === 'por_conciliar'`
+- Tenga estilo destacado (color ámbar) para indicar acción pendiente
+- Incluya el icono `FileCheck` (consistente con otros indicadores de conciliación)
+- Abra el diálogo `ConciliacionRapidaDialog` al hacer clic
 
-### Qué contiene actualmente:
-- Ver detalles de la OC
-- Enviar email
-- Editar OC
-- Programar entregas
-- Eliminar OC
-- Autorización
-- Historial de correos
-- Evidencias
-
-### Recomendación:
-- La mayoría de estas acciones son necesarias
-- El botón de **eliminar** ya está duplicado en la tabla (Trash2), se puede remover del diálogo
+#### 4. Renderizar el Diálogo
+Agregar el componente `ConciliacionRapidaDialog` al final del componente, después de los otros diálogos existentes.
 
 ---
 
-## 4. Botones duplicados en la tabla - SIMPLIFICAR
+## Lógica de Visibilidad del Botón
 
-### Situación actual (demasiados iconos por fila):
-1. 📄 Facturas (Receipt)
-2. ✉️ Reenviar (Send)  
-3. 🔔 Recordatorio (Bell) - **ELIMINAR**
-4. 🗑️ Eliminar (Trash2)
-5. ⋮ Más acciones (MoreVertical)
+El botón "Confirmar Costos" será visible cuando:
 
-### Propuesta (4 iconos máximo):
-1. 📄 Facturas (Receipt) - conservar
-2. ✉️ Reenviar (Send) - conservar
-3. 🗑️ Eliminar (Trash2) - mover a "Más acciones" para OCs que no sean borrador
-4. ⋮ Más acciones (MoreVertical) - conservar
+| Condición | Descripción |
+|-----------|-------------|
+| `status_conciliacion === 'por_conciliar'` | La OC tiene entregas recibidas pendientes de verificar costos |
 
-**Resultado**: Menos iconos, interfaz más limpia.
+El botón NO se muestra cuando:
+- La OC aún no ha sido recibida (`status_conciliacion === 'pendiente'`)
+- La OC ya está conciliada (`status_conciliacion === 'conciliada'`)
 
 ---
 
-## 5. Columnas de la tabla - REVISAR
+## Resultado Visual Esperado
 
-### Columnas actuales:
-| Columna | Necesaria? |
-|---------|------------|
-| Folio | ✅ Sí |
-| Proveedor | ✅ Sí |
-| Total | ✅ Sí |
-| Fecha Entrega | ✅ Sí |
-| Recepción (progreso) | ✅ Sí |
-| Estado | ✅ Sí |
-| Pago | ✅ Sí |
-| **Confirmada** | ❌ Eliminar |
-| Entregas | ✅ Sí (popover) |
-| Acciones | ✅ Sí (simplificar) |
+En la sección **"Otras Acciones"** del diálogo, aparecerá un nuevo botón:
 
----
+```text
+┌──────────────────────────────────────────┐
+│ Otras Acciones                           │
+├──────────────────────────────────────────┤
+│ ✓ Confirmar Costos     [Por Conciliar]   │  ← NUEVO (solo si aplica)
+│ 📷 Ver Evidencias Fotográficas           │
+│ 📜 Historial de Correos Enviados         │
+└──────────────────────────────────────────┘
+```
 
-## 6. Componentes que SÍ son necesarios
-
-| Componente | Razón |
-|------------|-------|
-| `CrearOrdenCompraWizard.tsx` | Crear nuevas OCs |
-| `OrdenAccionesDialog.tsx` | Ver detalles y acciones |
-| `ReenviarOCDialog.tsx` | Reenviar correo (simplificado) |
-| `AutorizacionOCDialog.tsx` | Flujo de autorización |
-| `ProveedorFacturasDialog.tsx` | Gestión de facturas |
-| `ConciliarFacturaDialog.tsx` | Conciliar costos con factura |
-| `ConciliacionRapidaDialog.tsx` | Confirmar costos sin factura |
-| `ProcesarPagoOCDialog.tsx` | Procesar pagos |
-| `MarcarPagadoDialog.tsx` | Pagos anticipados |
-| `ProgramarEntregasDialog.tsx` | Programar entregas múltiples |
-| `EntregasPopover.tsx` | Ver estado de entregas |
-| `NotificarCambiosOCDialog.tsx` | Notificar cambios post-edición |
-| `HistorialCorreosOC.tsx` | Ver correos enviados |
-
----
-
-## 7. Componentes que podrían revisarse (uso bajo)
-
-| Componente | Situación |
-|------------|-----------|
-| `ConvertirEntregasMultiplesDialog.tsx` | Ya marcado como "rarely used" en código |
-| `DividirEntregaDialog.tsx` | Ya marcado como "rarely used" en código |
-| `RecepcionDetalleDialog.tsx` | Verificar si se usa |
-
----
-
-## Resumen de Acciones Propuestas
-
-### Eliminar completamente:
-1. Sistema de confirmación de proveedor (URLs firmadas, botón recordatorio, columna "Confirmada")
-2. Edge functions: `confirmar-oc`, `generate-oc-confirmation-url`
-3. Tablas: `ordenes_compra_confirmaciones`, `ordenes_compra_respuestas_proveedor`
-
-### Simplificar:
-1. Reducir iconos en tabla de 5 a 3-4
-2. Mover botón eliminar dentro de "Más acciones" (excepto para borradores)
-3. Eliminar generación de URLs de confirmación en envío/reenvío de OC
-
-### Mantener:
-1. Todo el flujo de conciliación (nuevo, importante)
-2. Flujo de pagos (anticipado/contra entrega)
-3. Flujo de autorización
-4. Gestión de facturas
-5. Entregas múltiples
+El botón tendrá:
+- Icono `FileCheck` (✓ con documento)
+- Texto "Confirmar Costos"
+- Borde ámbar para destacar la acción pendiente
+- Badge "Por Conciliar" para reforzar visualmente el estado
 
 ---
 
 ## Sección Técnica
 
-### Archivos a modificar:
+### Cambios de Código
 
 ```text
-ELIMINAR:
-- supabase/functions/confirmar-oc/
-- supabase/functions/generate-oc-confirmation-url/
+Archivo: src/components/compras/OrdenAccionesDialog.tsx
 
-MODIFICAR:
-- src/components/compras/OrdenesCompraTab.tsx
-  - Eliminar columna "Confirmada" (líneas 1943-1953)
-  - Eliminar botón Bell (líneas 1992-2005)
-  - Eliminar query de confirmaciones (líneas 497-506)
-  
-- src/components/compras/OrdenAccionesDialog.tsx
-  - Eliminar generación de URLs de confirmación (líneas 1347-1376)
-  - Simplificar envío de email sin botones de confirmación
-  
-- src/components/compras/ReenviarOCDialog.tsx
-  - Eliminar generación de URLs de confirmación (líneas 364-390)
+AGREGAR IMPORT (línea ~47):
++ import { ConciliacionRapidaDialog } from "./ConciliacionRapidaDialog";
++ import { FileCheck } from "lucide-react"; // Si no está importado
+
+AGREGAR ESTADO (después de línea ~93):
++ const [conciliacionRapidaOpen, setConciliacionRapidaOpen] = useState(false);
+
+AGREGAR BOTÓN en sección "Otras Acciones" (después de línea ~1918):
++ {/* Botón de Confirmar Costos - visible cuando hay conciliación pendiente */}
++ {(orden as any)?.status_conciliacion === 'por_conciliar' && (
++   <Button
++     variant="outline"
++     className="w-full justify-start text-amber-600 hover:text-amber-700 border-amber-300"
++     onClick={() => setConciliacionRapidaOpen(true)}
++   >
++     <FileCheck className="mr-2 h-4 w-4" />
++     Confirmar Costos
++     <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700">
++       Por Conciliar
++     </Badge>
++   </Button>
++ )}
+
+AGREGAR DIÁLOGO (después de línea ~2280):
++ <ConciliacionRapidaDialog
++   open={conciliacionRapidaOpen}
++   onOpenChange={setConciliacionRapidaOpen}
++   ordenCompra={orden ? { id: orden.id, folio: orden.folio } : null}
++ />
 ```
 
-### Migraciones SQL:
+### Flujo de Usuario
 
-```sql
--- Eliminar tablas no utilizadas (opcional, después de confirmar)
-DROP TABLE IF EXISTS ordenes_compra_confirmaciones;
-DROP TABLE IF EXISTS ordenes_compra_respuestas_proveedor;
-
--- Eliminar columnas relacionadas
-ALTER TABLE ordenes_compra DROP COLUMN IF EXISTS email_leido_en;
+```text
+1. Usuario abre OC que tiene status_conciliacion = 'por_conciliar'
+2. En el menú de acciones ve el botón "Confirmar Costos" destacado en ámbar
+3. Hace clic en el botón
+4. Se abre ConciliacionRapidaDialog mostrando los productos y costos
+5. Usuario puede editar los costos si es necesario
+6. Hace clic en "Confirmar Costos"
+7. Sistema actualiza:
+   - ultimo_costo_compra en productos
+   - Marca lotes como conciliados
+   - Cambia status_conciliacion a 'conciliada'
+8. El badge 'Por Conciliar' desaparece de la tabla principal
 ```
+
+---
+
+## Beneficios
+
+1. **Acceso Directo**: No es necesario ir a Facturas → Registrar Factura → Conciliar
+2. **Flujo Simplificado**: Un solo clic para conciliar OCs sin factura formal
+3. **Visibilidad Clara**: El botón solo aparece cuando hay algo pendiente
+4. **Consistencia**: Usa el mismo diálogo `ConciliacionRapidaDialog` que ya está probado
