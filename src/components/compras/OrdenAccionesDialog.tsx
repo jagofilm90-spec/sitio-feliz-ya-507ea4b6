@@ -37,7 +37,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera, Scissors, History, AlertTriangle } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle, XCircle, Mail, Loader2, Pencil, Trash2, FileText, ShieldCheck, ShieldX, Send, Truck, Plus, X, Package, Camera, Scissors, History, AlertTriangle, FileCheck } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +47,7 @@ import ProgramarEntregasDialog from "./ProgramarEntregasDialog";
 import { EvidenciasGallery, EvidenciasBadge } from "./EvidenciasGallery";
 import { HistorialCorreosOC, registrarCorreoEnviado } from "./HistorialCorreosOC";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ConciliacionRapidaDialog } from "./ConciliacionRapidaDialog";
 import logoAlmasa from "@/assets/logo-almasa.png";
 
 // Helper function to convert image to base64
@@ -91,6 +92,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   // Removed: convertirEntregasOpen, dividirEntregaOpen - rarely used functionality
   const [evidenciasGalleryOpen, setEvidenciasGalleryOpen] = useState(false);
   const [confirmEditOpen, setConfirmEditOpen] = useState(false);
+  const [conciliacionRapidaOpen, setConciliacionRapidaOpen] = useState(false);
   
   // Estado para confirmación de folio (borrado especial de OC de prueba)
   const [folioConfirmacion, setFolioConfirmacion] = useState('');
@@ -1918,6 +1920,21 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Otras Acciones</p>
               
+              {/* Botón Confirmar Costos - visible cuando status_conciliacion === 'por_conciliar' */}
+              {(orden as any)?.status_conciliacion === 'por_conciliar' && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-amber-600 hover:text-amber-700 border-amber-300"
+                  onClick={() => setConciliacionRapidaOpen(true)}
+                >
+                  <FileCheck className="mr-2 h-4 w-4" />
+                  Confirmar Costos
+                  <Badge variant="secondary" className="ml-auto bg-amber-100 text-amber-700">
+                    Por Conciliar
+                  </Badge>
+                </Button>
+              )}
+              
               {/* View photo evidences button */}
               {(orden?.status === "recibida" || orden?.status === "parcial") && (
                 <Button
@@ -2277,6 +2294,12 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       ordenCompraId={orden?.id || ""}
       open={evidenciasGalleryOpen}
       onOpenChange={setEvidenciasGalleryOpen}
+    />
+
+    <ConciliacionRapidaDialog
+      open={conciliacionRapidaOpen}
+      onOpenChange={setConciliacionRapidaOpen}
+      ordenCompra={orden ? { id: orden.id, folio: orden.folio } : null}
     />
 
     {/* Alert dialog for editing sent/confirmed orders */}
