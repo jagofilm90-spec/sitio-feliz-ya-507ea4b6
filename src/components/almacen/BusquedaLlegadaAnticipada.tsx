@@ -17,6 +17,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Calendar, 
   ChevronDown, 
@@ -39,6 +49,7 @@ interface EntregaFutura {
   orden_compra: {
     id: string;
     folio: string;
+    status: string;
     proveedor_id: string | null;
     proveedor_nombre_manual: string | null;
     proveedor: {
@@ -50,14 +61,19 @@ interface EntregaFutura {
 
 interface BusquedaLlegadaAnticipadaProps {
   onEntregaReprogramada: () => void;
+  defaultOpen?: boolean;
 }
 
-export const BusquedaLlegadaAnticipada = ({ onEntregaReprogramada }: BusquedaLlegadaAnticipadaProps) => {
-  const [isOpen, setIsOpen] = useState(false);
+export const BusquedaLlegadaAnticipada = ({ 
+  onEntregaReprogramada, 
+  defaultOpen = false 
+}: BusquedaLlegadaAnticipadaProps) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const [searchQuery, setSearchQuery] = useState("");
   const [entregasFuturas, setEntregasFuturas] = useState<EntregaFutura[]>([]);
   const [loading, setLoading] = useState(false);
   const [forzandoId, setForzandoId] = useState<string | null>(null);
+  const [confirmandoEntrega, setConfirmandoEntrega] = useState<EntregaFutura | null>(null);
   const { toast } = useToast();
 
   // Cargar entregas futuras cuando se abre el panel
@@ -89,7 +105,7 @@ export const BusquedaLlegadaAnticipada = ({ onEntregaReprogramada }: BusquedaLle
           fecha_programada,
           status,
           notas,
-          orden_compra:ordenes_compra!inner(
+          orden_compra:ordenes_compra(
             id,
             folio,
             status,
@@ -99,13 +115,17 @@ export const BusquedaLlegadaAnticipada = ({ onEntregaReprogramada }: BusquedaLle
           )
         `)
         .eq("status", "programada")
-        .neq("orden_compra.status", "pendiente_pago")
+        // Nota: El filtro de pendiente_pago se aplica post-query
         .gt("fecha_programada", hoy.toISOString().split('T')[0])
         .lte("fecha_programada", en7Dias.toISOString().split('T')[0])
         .order("fecha_programada", { ascending: true });
 
       if (error) throw error;
-      setEntregasFuturas((data as EntregaFutura[]) || []);
+      // Filtrar OCs que están pendientes de pago (no deben aparecer)
+      const entregasFiltradas = (data as EntregaFutura[] || []).filter(
+        entrega => entrega.orden_compra?.status !== "pendiente_pago"
+      );
+      setEntregasFuturas(entregasFiltradas);
     } catch (error) {
       console.error("Error cargando entregas futuras:", error);
       toast({
@@ -287,7 +307,7 @@ export const BusquedaLlegadaAnticipada = ({ onEntregaReprogramada }: BusquedaLle
                                 variant="secondary"
                                 size="lg"
                                 className="gap-2 h-11 touch-manipulation"
-                                onClick={() => handleForzarLlegadaAnticipada(entrega)}
+                                onClick={() => setConfirmandoEntrega(entrega)}
                                 disabled={esForzando}
                               >
                                 {esForzando ? (
@@ -318,6 +338,55 @@ export const BusquedaLlegadaAnticipada = ({ onEntregaReprogramada }: BusquedaLle
           </div>
         </CollapsibleContent>
       </Collapsible>
+
+      {/* Diálogo de confirmación */}
+      <AlertDialog open={!!confirmandoEntrega} onOpenChange={(open) => !open && setConfirmandoEntrega(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-amber-600" />
+              Confirmar llegada anticipada
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Esta entrega de{" "}
+                  <strong>
+                    {confirmandoEntrega?.orden_compra?.proveedor_id
+                      ? confirmandoEntrega?.orden_compra?.proveedor?.nombre
+                      : confirmandoEntrega?.orden_compra?.proveedor_nombre_manual || "Proveedor"}
+                  </strong>{" "}
+                  estaba programada para el{" "}
+                  <strong>
+                    {confirmandoEntrega?.fecha_programada
+                      ? format(new Date(confirmandoEntrega.fecha_programada + "T12:00:00"), "dd 'de' MMMM", { locale: es })
+                      : "fecha desconocida"}
+                  </strong>.
+                </p>
+                <p>Al confirmar:</p>
+                <ul className="list-disc ml-4 space-y-1 text-sm">
+                  <li>La fecha se actualizará a hoy</li>
+                  <li>Se guardará una nota con la fecha original</li>
+                  <li>Aparecerá en la lista principal para registrar llegada</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (confirmandoEntrega) {
+                  handleForzarLlegadaAnticipada(confirmandoEntrega);
+                }
+                setConfirmandoEntrega(null);
+              }}
+            >
+              Sí, llegó antes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
