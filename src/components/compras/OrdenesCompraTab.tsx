@@ -42,7 +42,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, Search, MoreVertical, Loader2, Truck, Send, Bell, CalendarCheck, CalendarX, RefreshCw, Calendar as CalendarIcon, Receipt, Check, CreditCard, Clock, FileCheck, Hash, Upload, ExternalLink, X } from "lucide-react";
+import { Plus, Trash2, Search, MoreVertical, Loader2, Truck, Send, Bell, CalendarCheck, CalendarX, RefreshCw, Calendar as CalendarIcon, Receipt, Check, CreditCard, Clock, FileCheck, Hash, Upload, ExternalLink, X, PackageX } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -469,6 +469,28 @@ const OrdenesCompraTab = () => {
     p.nombre.toLowerCase().includes(proveedorNombreManual.toLowerCase()) && 
     proveedorNombreManual.length > 0
   );
+
+  // Fetch count of pending faltantes per OC
+  const { data: faltantesPorOC = {} } = useQuery({
+    queryKey: ["faltantes-pendientes-por-oc"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ordenes_compra_entregas")
+        .select("orden_compra_id")
+        .eq("origen_faltante", true)
+        .in("status", ["programada", "pendiente"]);
+      
+      if (error) throw error;
+      
+      // Agrupar por orden_compra_id y contar
+      const conteo: Record<string, number> = {};
+      (data || []).forEach((item: any) => {
+        conteo[item.orden_compra_id] = (conteo[item.orden_compra_id] || 0) + 1;
+      });
+      return conteo;
+    },
+    refetchInterval: 60000, // Actualizar cada minuto
+  });
 
   // Fetch confirmaciones separately to avoid RLS issues with embedded selects
   const { data: confirmaciones = [] } = useQuery({
@@ -1787,7 +1809,22 @@ const OrdenesCompraTab = () => {
                         );
                       })()}
                     </TableCell>
-                    <TableCell>{getStatusBadge(orden.status)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {getStatusBadge(orden.status)}
+                        {/* Badge de faltantes pendientes */}
+                        {(faltantesPorOC as Record<string, number>)[orden.id] > 0 && (
+                          <Badge 
+                            variant="outline" 
+                            className="bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800 text-xs"
+                            title={`${(faltantesPorOC as Record<string, number>)[orden.id]} entrega(s) de faltantes pendientes`}
+                          >
+                            <PackageX className="h-3 w-3 mr-1" />
+                            Faltante
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       {orden.tipo_pago === 'anticipado' ? (
                         orden.status_pago === 'pagado' ? (
