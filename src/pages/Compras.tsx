@@ -128,14 +128,16 @@ const Compras = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-8">
-            <TabsTrigger value="proveedores" className="flex items-center gap-2">
+          <TabsList className="flex w-full overflow-x-auto">
+            <TabsTrigger value="proveedores" className="flex items-center gap-2 flex-shrink-0">
               <Package className="h-4 w-4" />
-              Proveedores
+              <span className="hidden sm:inline">Proveedores</span>
+              <span className="sm:hidden">Prov.</span>
             </TabsTrigger>
-            <TabsTrigger value="ordenes" className="flex items-center gap-2">
+            <TabsTrigger value="ordenes" className="flex items-center gap-2 flex-shrink-0">
               <Truck className="h-4 w-4" />
-              Órdenes de Compra
+              <span className="hidden sm:inline">Órdenes de Compra</span>
+              <span className="sm:hidden">OC</span>
               {pendingCount > 0 && (
                 <Badge 
                   variant="destructive" 
@@ -145,13 +147,15 @@ const Compras = () => {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="calendario" className="flex items-center gap-2">
+            <TabsTrigger value="calendario" className="flex items-center gap-2 flex-shrink-0">
               <Calendar className="h-4 w-4" />
-              Calendario
+              <span className="hidden sm:inline">Calendario</span>
+              <span className="sm:hidden">Cal.</span>
             </TabsTrigger>
-            <TabsTrigger value="devoluciones" className="flex items-center gap-2">
+            <TabsTrigger value="devoluciones" className="flex items-center gap-2 flex-shrink-0">
               <AlertTriangle className="h-4 w-4" />
-              Devoluciones
+              <span className="hidden sm:inline">Devoluciones</span>
+              <span className="sm:hidden">Dev.</span>
               {devolucionesPendientesCount > 0 && (
                 <Badge 
                   variant="destructive" 
@@ -161,13 +165,15 @@ const Compras = () => {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="historial" className="flex items-center gap-2">
+            <TabsTrigger value="historial" className="flex items-center gap-2 flex-shrink-0">
               <History className="h-4 w-4" />
-              Historial
+              <span className="hidden sm:inline">Historial</span>
+              <span className="sm:hidden">Hist.</span>
             </TabsTrigger>
-            <TabsTrigger value="faltantes" className="flex items-center gap-2">
+            <TabsTrigger value="faltantes" className="flex items-center gap-2 flex-shrink-0">
               <PackageX className="h-4 w-4" />
-              Faltantes
+              <span className="hidden sm:inline">Faltantes</span>
+              <span className="sm:hidden">Falt.</span>
               {faltantesPendientesCount > 0 && (
                 <Badge 
                   variant="secondary" 
@@ -177,7 +183,7 @@ const Compras = () => {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="adeudos" className="flex items-center gap-2">
+            <TabsTrigger value="adeudos" className="flex items-center gap-2 flex-shrink-0">
               <CreditCard className="h-4 w-4" />
               Adeudos
               {adeudosCount > 0 && (
@@ -189,7 +195,7 @@ const Compras = () => {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center gap-2">
+            <TabsTrigger value="analytics" className="flex items-center gap-2 flex-shrink-0">
               <BarChart3 className="h-4 w-4" />
               Analytics
             </TabsTrigger>
