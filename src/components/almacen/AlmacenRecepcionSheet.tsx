@@ -90,6 +90,19 @@ interface ProductoFaltante {
   codigo?: string;
 }
 
+// Interface para créditos de reposición del proveedor
+interface CreditoReposicion {
+  id: string;
+  producto_id: string;
+  producto_nombre: string;
+  cantidad: number;
+  monto_total: number;
+  oc_origen_folio: string;
+  motivo: string;
+  status: string;
+  precio_unitario: number;
+}
+
 interface EntregaCompra {
   id: string;
   numero_entrega: number;
@@ -227,6 +240,10 @@ export const AlmacenRecepcionSheet = ({
   const [showFirmaAlmacenistaDialog, setShowFirmaAlmacenistaDialog] = useState(false);
   const [firmaChoferConformidad, setFirmaChoferConformidad] = useState<string | null>(null);
   const [firmaAlmacenista, setFirmaAlmacenista] = useState<string | null>(null);
+  
+  // Estado para créditos de reposición (excedentes)
+  const [creditosReposicionEsperada, setCreditosReposicionEsperada] = useState<CreditoReposicion[]>([]);
+  const [excedentesConfirmados, setExcedentesConfirmados] = useState<Record<string, 'reposicion' | 'aceptar' | 'rechazar' | null>>({});
   
   const { toast } = useToast();
 
@@ -448,6 +465,31 @@ export const AlmacenRecepcionSheet = ({
       setCantidadesRecibidas(cantidades);
       setFechasCaducidad(fechas);
       setLotesInputs(lotesInit);
+      
+      // Cargar créditos de reposición esperada para este proveedor
+      if (proveedorId) {
+        const { data: creditosData } = await supabase
+          .from("proveedor_creditos_pendientes")
+          .select(`
+            id, producto_id, producto_nombre, cantidad, precio_unitario, monto_total, motivo, status,
+            ordenes_compra:orden_compra_origen_id (folio)
+          `)
+          .eq("proveedor_id", proveedorId)
+          .in("status", ["pendiente", "reposicion_esperada"]);
+        
+        const creditos = (creditosData || []).map((c: any) => ({
+          id: c.id,
+          producto_id: c.producto_id,
+          producto_nombre: c.producto_nombre,
+          cantidad: c.cantidad,
+          precio_unitario: c.precio_unitario || 0,
+          monto_total: c.monto_total,
+          motivo: c.motivo,
+          status: c.status,
+          oc_origen_folio: c.ordenes_compra?.folio || "Desconocido"
+        }));
+        setCreditosReposicionEsperada(creditos);
+      }
     } catch (error) {
       console.error("Error cargando productos:", error);
       toast({
@@ -599,6 +641,85 @@ export const AlmacenRecepcionSheet = ({
     });
   };
 
+  // ========== FUNCIONES PARA MANEJO DE EXCEDENTES ==========
+  
+  // Obtener productos con excedente (llegó MÁS de lo esperado)
+  const getProductosConExcedente = () => {
+    return productos.filter(p => {
+      const tieneLotesMultiples = p.lotesConfig?.dividir_en_lotes && lotesInputs[p.id]?.length > 0;
+      const cantidadActual = tieneLotesMultiples ? getTotalLotes(p.id) : getCantidadNumerica(p.id);
+      const faltante = p.cantidad_ordenada - p.cantidad_recibida;
+      return cantidadActual > faltante;
+    });
+  };
+
+  // Buscar crédito de reposición para un producto específico
+  const getCreditoParaProducto = (productoId: string): CreditoReposicion | undefined => {
+    return creditosReposicionEsperada.find(
+      c => c.producto_id === productoId && 
+           (c.status === 'reposicion_esperada' || c.status === 'pendiente')
+    );
+  };
+
+  // Confirmar que el excedente es una reposición de un crédito pendiente
+  const handleConfirmarReposicion = async (producto: ProductoEntrega, credito: CreditoReposicion) => {
+    try {
+      // Marcar el crédito como "repuesto" en la base de datos
+      const { error } = await supabase
+        .from("proveedor_creditos_pendientes")
+        .update({
+          status: "repuesto",
+          resolucion_notas: `Repuesto en recepción de ${entrega.orden_compra.folio} entrega #${entrega.numero_entrega}`,
+          fecha_aplicacion: new Date().toISOString()
+        })
+        .eq("id", credito.id);
+
+      if (error) throw error;
+
+      // Remover de la lista local
+      setCreditosReposicionEsperada(prev => prev.filter(c => c.id !== credito.id));
+      
+      // Marcar como confirmado
+      setExcedentesConfirmados(prev => ({ ...prev, [producto.id]: 'reposicion' }));
+      
+      toast({
+        title: "Reposición confirmada",
+        description: `${credito.cantidad} bulto(s) de reposición de ${credito.oc_origen_folio} registrados correctamente`
+      });
+    } catch (error) {
+      console.error("Error confirmando reposición:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo confirmar la reposición",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Aceptar excedente sin crédito (se pagará extra)
+  const handleAceptarExcedenteYPagar = (productoId: string, cantidad: number) => {
+    setExcedentesConfirmados(prev => ({ ...prev, [productoId]: 'aceptar' }));
+    toast({
+      title: "Excedente aceptado",
+      description: `Se registrarán ${cantidad} unidades. Recuerda verificar con el proveedor.`,
+    });
+  };
+
+  // Rechazar excedente - ajustar cantidad al esperado
+  const handleRechazarExcedente = (productoId: string, cantidadEsperada: number) => {
+    setCantidadesRecibidas(prev => ({ ...prev, [productoId]: cantidadEsperada }));
+    setExcedentesConfirmados(prev => ({ ...prev, [productoId]: 'rechazar' }));
+    toast({
+      title: "Excedente rechazado",
+      description: `Se registrarán solo ${cantidadEsperada} unidades esperadas`
+    });
+  };
+
+  // Formatear moneda
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
+  };
+
   const validarRecepcion = (): boolean => {
     if (!bodegaSeleccionada) {
       toast({
@@ -713,6 +834,24 @@ export const AlmacenRecepcionSheet = ({
       toast({
         title: "Foto de producto dañado requerida",
         description: `Captura foto del producto "${productosRotos[0].producto?.nombre}" que está roto/dañado`,
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    // Validar excedentes no confirmados
+    const productosConExcedenteNoConfirmado = productos.filter(p => {
+      const tieneLotesMultiples = p.lotesConfig?.dividir_en_lotes && lotesInputs[p.id]?.length > 0;
+      const cantidadActual = tieneLotesMultiples ? getTotalLotes(p.id) : getCantidadNumerica(p.id);
+      const faltante = p.cantidad_ordenada - p.cantidad_recibida;
+      // Si tiene excedente y no se ha confirmado qué hacer con él
+      return cantidadActual > faltante && !excedentesConfirmados[p.id];
+    });
+
+    if (productosConExcedenteNoConfirmado.length > 0) {
+      toast({
+        title: "Confirma los excedentes",
+        description: `"${productosConExcedenteNoConfirmado[0].producto?.nombre}" tiene más unidades de las esperadas. Confirma si es reposición o acepta el excedente.`,
         variant: "destructive"
       });
       return false;
@@ -1601,13 +1740,18 @@ export const AlmacenRecepcionSheet = ({
                       const faltaFechaCaducidad = requiereCaducidad && cantidadActual > 0 && !tieneLotesMultiples && !fechasCaducidad[producto.id];
                       const faltaFotoCaducidad = requiereCaducidad && cantidadActual > 0 && !tieneLotesMultiples && !fotosCaducidad[producto.id];
                       const tieneDiferencia = cantidadActual < faltante;
+                      const tieneExcedente = cantidadActual > faltante;
+                      const excedenteConfirmado = excedentesConfirmados[producto.id];
+                      const creditoParaProducto = tieneExcedente ? getCreditoParaProducto(producto.producto_id) : undefined;
                       const faltaRazonDiferencia = tieneDiferencia && !razonesDiferencia[producto.id];
+                      const faltaConfirmarExcedente = tieneExcedente && !excedenteConfirmado;
                       const razonActual = razonesDiferencia[producto.id];
                       const esRazonDevolucion = RAZONES_REQUIEREN_DEVOLUCION.includes(razonActual);
                       
                       return (
                         <Card key={producto.id} className={cn(
-                          (faltaFechaCaducidad || faltaFotoCaducidad || faltaRazonDiferencia) && "border-destructive"
+                          (faltaFechaCaducidad || faltaFotoCaducidad || faltaRazonDiferencia || faltaConfirmarExcedente) && "border-destructive",
+                          tieneExcedente && excedenteConfirmado === 'reposicion' && "border-green-500"
                         )}>
                           <CardContent className="p-3 space-y-3">
                             <div className="flex items-start justify-between gap-3">
@@ -1642,7 +1786,6 @@ export const AlmacenRecepcionSheet = ({
                                   <Input
                                     type="number"
                                     min={0}
-                                    max={faltante}
                                     value={cantidadesRecibidas[producto.id] ?? ""}
                                     onChange={(e) => handleCantidadChange(producto.id, e.target.value)}
                                     className="text-center"
@@ -1837,6 +1980,124 @@ export const AlmacenRecepcionSheet = ({
                                       Los {faltante - getCantidadNumerica(producto.id)} bultos serán devueltos al chofer
                                     </span>
                                   </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* ========== SECCIÓN DE EXCEDENTE (llegó MÁS de lo esperado) ========== */}
+                            {tieneExcedente && (
+                              <div className={cn(
+                                "space-y-2 p-3 rounded-md border",
+                                excedenteConfirmado === 'reposicion' 
+                                  ? "bg-green-50 dark:bg-green-950/20 border-green-300 dark:border-green-800"
+                                  : excedenteConfirmado === 'aceptar'
+                                  ? "bg-blue-50 dark:bg-blue-950/20 border-blue-300 dark:border-blue-800"
+                                  : "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
+                              )}>
+                                <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 text-sm font-medium">
+                                  <Package className="w-4 h-4" />
+                                  Excedente de {cantidadActual - faltante} unidades
+                                </div>
+                                
+                                {/* Si ya se confirmó */}
+                                {excedenteConfirmado && (
+                                  <div className={cn(
+                                    "p-2 rounded text-sm",
+                                    excedenteConfirmado === 'reposicion' && "bg-green-100 dark:bg-green-900/30",
+                                    excedenteConfirmado === 'aceptar' && "bg-blue-100 dark:bg-blue-900/30"
+                                  )}>
+                                    {excedenteConfirmado === 'reposicion' && (
+                                      <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                                        <CheckCircle2 className="w-4 h-4" />
+                                        <span className="font-medium">✓ Confirmado como reposición</span>
+                                      </div>
+                                    )}
+                                    {excedenteConfirmado === 'aceptar' && (
+                                      <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
+                                        <CheckCircle2 className="w-4 h-4" />
+                                        <span className="font-medium">✓ Excedente aceptado - se pagará</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                {/* Si no se ha confirmado, mostrar opciones */}
+                                {!excedenteConfirmado && (
+                                  <>
+                                    {/* Hay crédito de reposición pendiente */}
+                                    {creditoParaProducto ? (
+                                      <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded text-sm">
+                                        <p className="text-green-700 dark:text-green-400 font-medium">
+                                          ✓ Posible reposición de faltante anterior
+                                        </p>
+                                        <p className="text-green-600 dark:text-green-500 text-xs mt-1">
+                                          De <span className="font-mono">{creditoParaProducto.oc_origen_folio}</span>: {creditoParaProducto.cantidad} bulto(s) 
+                                          {creditoParaProducto.motivo && ` (${creditoParaProducto.motivo})`}
+                                        </p>
+                                        <p className="text-green-600 dark:text-green-500 text-xs">
+                                          Valor: {formatCurrency(creditoParaProducto.monto_total)}
+                                        </p>
+                                        <div className="flex gap-2 mt-2">
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="border-green-500 text-green-700 hover:bg-green-100"
+                                            onClick={() => handleConfirmarReposicion(producto, creditoParaProducto)}
+                                          >
+                                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                                            Confirmar como reposición
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-muted-foreground"
+                                            onClick={() => handleAceptarExcedenteYPagar(producto.id, cantidadActual)}
+                                          >
+                                            No, es otra cosa
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      /* NO hay crédito pendiente - el proveedor puede estar equivocado */
+                                      <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded text-sm">
+                                        <div className="flex items-start gap-2">
+                                          <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                                          <div>
+                                            <p className="text-amber-700 dark:text-amber-400 font-medium">
+                                              ⚠️ Sin crédito pendiente registrado
+                                            </p>
+                                            <p className="text-amber-600 dark:text-amber-500 text-xs mt-1">
+                                              El proveedor envió {cantidadActual - faltante} extra pero no hay faltante previo registrado en el sistema.
+                                              Si aceptas, se pagarán <strong>{cantidadActual}</strong> unidades en vez de {faltante}.
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <div className="flex gap-2 mt-3">
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="border-green-500 text-green-700 hover:bg-green-100"
+                                            onClick={() => handleAceptarExcedenteYPagar(producto.id, cantidadActual)}
+                                          >
+                                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                                            Aceptar y pagar extra
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="border-amber-500 text-amber-700 hover:bg-amber-100"
+                                            onClick={() => handleRechazarExcedente(producto.id, faltante)}
+                                          >
+                                            Solo recibir {faltante}
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </>
                                 )}
                               </div>
                             )}
