@@ -1,143 +1,358 @@
 
-# Plan: Corregir Scroll en Diálogo de Procesar Pago
+# Plan: Créditos Pendientes en Wizard de Creación de OC
 
-## Análisis del Problema
+## Resumen
 
-### ¿Por qué no funciona el scroll?
+Cuando se selecciona un proveedor (del catálogo o manual) que tiene créditos pendientes, mostrar una sección colapsable que permita:
 
-1. **Conflicto CSS**: El componente `DialogContent` base tiene `display: grid` en sus estilos (línea 39 de `dialog.tsx`). Agregamos `flex flex-col`, pero `grid` tiene mayor especificidad.
+1. **Opción 1 - Descuento en $**: Aplicar el crédito como descuento monetario en la nueva OC
+2. **Opción 2 - Marcar como Reposición Pendiente**: El proveedor mandará los bultos físicos extra en alguna entrega de esta OC
 
-2. **ScrollArea de Radix**: El componente `ScrollArea` envuelve el contenido en un `Viewport` interno que necesita una altura definida explícitamente para calcular el área scrolleable. Actualmente solo definimos `max-h` en el Root, no en el Viewport.
-
-3. **Estructura actual incorrecta**:
-```
-DialogContent (grid + flex-col conflicto, max-h-[90vh])
-  └─ DialogHeader (flex-shrink-0)
-  └─ ScrollArea (flex-1 max-h-[calc(90vh-180px)])
-        └─ Viewport (h-full w-full - pero no tiene referencia de altura real)
-             └─ contenido
-  └─ DialogFooter (flex-shrink-0)
-```
-
-## Solución
-
-Reemplazar `ScrollArea` por un `div` con `overflow-y-auto` nativo que funciona más confiablemente en diálogos modales. Esto evita los problemas de cálculo de altura de Radix ScrollArea.
-
-### Modificar `src/components/compras/ProcesarPagoOCDialog.tsx`
-
-#### Cambio 1: Estructura del DialogContent (líneas 572-585)
-
-**Antes:**
-```tsx
-<DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-  <DialogHeader className="flex-shrink-0">
-    ...
-  </DialogHeader>
-
-  <ScrollArea className="flex-1 max-h-[calc(90vh-180px)] pr-4">
-    <div className="space-y-6 pb-4">
-```
-
-**Después:**
-```tsx
-<DialogContent className="max-w-4xl max-h-[90vh] !flex !flex-col overflow-hidden">
-  <DialogHeader className="flex-shrink-0">
-    ...
-  </DialogHeader>
-
-  <div className="flex-1 overflow-y-auto pr-4 min-h-0">
-    <div className="space-y-6 pb-4">
-```
-
-**Explicación:**
-- `!flex !flex-col` - Usa `!important` de Tailwind para sobrescribir el `grid` base
-- `overflow-hidden` en DialogContent - Previene doble scrollbar
-- `overflow-y-auto` en el contenedor - Scroll nativo del navegador
-- `min-h-0` - Crítico para que flex-1 calcule correctamente la altura en flex containers
-
-#### Cambio 2: Cerrar el div (línea ~1052)
-
-Cambiar el cierre de `</ScrollArea>` por `</div>`:
-
-**Antes:**
-```tsx
-        </ScrollArea>
-
-        <DialogFooter className="flex-shrink-0 border-t pt-4">
-```
-
-**Después:**
-```tsx
-        </div>
-
-        <DialogFooter className="flex-shrink-0 border-t pt-4">
-```
-
-#### Cambio 3: Remover import de ScrollArea si ya no se usa
-
-Si `ScrollArea` no se usa en otro lugar del archivo, remover el import:
-```tsx
-// Remover de línea 49:
-import { ScrollArea } from "@/components/ui/scroll-area";
-```
+El sistema registrará en `creditos_aplicados` y `creditos_aplicados_detalle` de la nueva OC los créditos usados.
 
 ---
 
-## Resultado Visual
+## Flujo de Usuario
 
-```
+### En el Wizard (Step 1 - Proveedor)
+
+```text
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Procesar Pago - OC-202601-0005                              [X]    │ ← Header fijo
-│ Selecciona los productos a pagar...                                 │
+│ ¿A quién le compras?                                                │
 ├─────────────────────────────────────────────────────────────────────┤
+│ Proveedor: [JOSAN de México ▼]                                      │
+│                                                                     │
+│ ¿Cómo pagarás?   ○ Contra Entrega   ● Pago Anticipado              │
+│                                                                     │
 │ ┌─────────────────────────────────────────────────────────────────┐ │
-│ │ [Contenido scrolleable]                                          │ │
-│ │ • Proveedor info                                                 │ │
-│ │ • Alertas                                                        │ │
-│ │ • Tabla de productos                                             │ │
-│ │ • Resumen de pago                                                │ │
-│ │ • Datos del pago (comprobante, etc.)        ← Se puede ver aquí │ │
+│ │ ⚠️ Este proveedor tiene créditos pendientes                     │ │
+│ │                                                                 │ │
+│ │ De OC-202601-0005:                                              │ │
+│ │   • 2 bultos de Azúcar Estándar - $800 (faltante)               │ │
+│ │     [  ] Aplicar como descuento ($800)                          │ │
+│ │     [  ] Esperar reposición física (2 bultos)                   │ │
+│ │                                                                 │ │
+│ │ De OC-202601-0003:                                              │ │
+│ │   • 1 bulto de Sal Refinada - $350 (dañado)                     │ │
+│ │     [  ] Aplicar como descuento ($350)                          │ │
+│ │     [  ] Esperar reposición física (1 bulto)                    │ │
+│ │                                                                 │ │
+│ │ Total seleccionado: $1,150 descuento + 0 bultos reposición      │ │
 │ └─────────────────────────────────────────────────────────────────┘ │
-├─────────────────────────────────────────────────────────────────────┤
-│           [Cancelar]  [✓ Confirmar Pago]                           │ ← Footer fijo
+│                                                                     │
+│ ▼ Opciones avanzadas                                                │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Alternativa: Usar Scrollbar Styling
+## Cambios Técnicos
 
-Si prefieres mantener una barra de scroll más estilizada como la de ScrollArea, podemos agregar estas clases CSS nativas:
+### 1. Estado en el Wizard
 
-```tsx
-<div className="flex-1 overflow-y-auto min-h-0 pr-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+Agregar al `CrearOrdenCompraWizard.tsx`:
+
+```typescript
+// Créditos pendientes del proveedor
+interface CreditoSeleccion {
+  id: string;
+  tipo: 'descuento' | 'reposicion' | null;
+  monto: number;
+  cantidad: number;
+  producto_nombre: string;
+  oc_origen_folio: string;
+}
+
+const [creditosPendientes, setCreditosPendientes] = useState<CreditoPendiente[]>([]);
+const [creditosSeleccionados, setCreditosSeleccionados] = useState<Map<string, CreditoSeleccion>>(new Map());
 ```
 
-Pero esto requiere el plugin `tailwind-scrollbar` que puede no estar instalado.
+### 2. Query para Créditos
+
+Cuando se selecciona un proveedor, cargar sus créditos:
+
+```typescript
+useEffect(() => {
+  const loadCreditos = async () => {
+    if (!proveedorId && tipoProveedor !== 'manual') {
+      setCreditosPendientes([]);
+      return;
+    }
+    
+    const { data } = await supabase
+      .from("proveedor_creditos_pendientes")
+      .select(`
+        id, producto_id, producto_nombre, cantidad, precio_unitario, monto_total,
+        motivo, orden_compra_origen_id,
+        ordenes_compra:orden_compra_origen_id (folio)
+      `)
+      .eq("proveedor_id", proveedorId)
+      .eq("status", "pendiente");
+    
+    setCreditosPendientes(data || []);
+  };
+  loadCreditos();
+}, [proveedorId]);
+```
+
+### 3. UI de Selección de Créditos
+
+Sección colapsable que aparece si `creditosPendientes.length > 0`:
+
+```tsx
+{creditosPendientes.length > 0 && (
+  <div className="p-4 rounded-lg border-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+    <div className="flex items-center gap-2 mb-3">
+      <DollarSign className="h-5 w-5 text-amber-600" />
+      <span className="font-medium">Créditos pendientes de este proveedor</span>
+      <Badge variant="outline" className="text-amber-700 border-amber-400">
+        {formatCurrency(totalCreditosPendientes)}
+      </Badge>
+    </div>
+    
+    <div className="space-y-3">
+      {creditosPendientes.map((credito) => (
+        <div key={credito.id} className="p-3 bg-white dark:bg-card rounded border">
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <Badge variant="outline" className="font-mono text-xs">
+                {credito.ordenes_compra?.folio}
+              </Badge>
+              <p className="font-medium mt-1">{credito.producto_nombre}</p>
+              <p className="text-sm text-muted-foreground">
+                {credito.cantidad} bulto{credito.cantidad !== 1 ? 's' : ''} × ${credito.precio_unitario} = 
+                <span className="text-amber-600 font-bold ml-1">{formatCurrency(credito.monto_total)}</span>
+              </p>
+            </div>
+            <Badge className={motivoColors[credito.motivo]}>
+              {motivoLabels[credito.motivo]}
+            </Badge>
+          </div>
+          
+          <div className="flex gap-3 mt-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name={`credito-${credito.id}`}
+                checked={creditosSeleccionados.get(credito.id)?.tipo === 'descuento'}
+                onChange={() => seleccionarCredito(credito, 'descuento')}
+              />
+              <span className="text-sm">
+                Aplicar descuento ({formatCurrency(credito.monto_total)})
+              </span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name={`credito-${credito.id}`}
+                checked={creditosSeleccionados.get(credito.id)?.tipo === 'reposicion'}
+                onChange={() => seleccionarCredito(credito, 'reposicion')}
+              />
+              <span className="text-sm">
+                Esperar reposición ({credito.cantidad} bultos)
+              </span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-muted-foreground">
+              <input
+                type="radio"
+                name={`credito-${credito.id}`}
+                checked={!creditosSeleccionados.has(credito.id) || creditosSeleccionados.get(credito.id)?.tipo === null}
+                onChange={() => deseleccionarCredito(credito.id)}
+              />
+              <span className="text-sm">No aplicar</span>
+            </label>
+          </div>
+        </div>
+      ))}
+    </div>
+    
+    {/* Resumen de selección */}
+    {(totalDescuentoSeleccionado > 0 || totalReposicionBultos > 0) && (
+      <div className="mt-3 pt-3 border-t border-amber-200">
+        <div className="flex justify-between text-sm">
+          <span>Descuento a aplicar:</span>
+          <span className="font-bold text-green-600">-{formatCurrency(totalDescuentoSeleccionado)}</span>
+        </div>
+        {totalReposicionBultos > 0 && (
+          <div className="flex justify-between text-sm mt-1">
+            <span>Bultos pendientes de reposición:</span>
+            <span className="font-bold text-blue-600">+{totalReposicionBultos} bultos</span>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+)}
+```
+
+### 4. Modificar Creación de OC
+
+En `createOrden.mutate()`, después de crear la OC:
+
+```typescript
+// Aplicar créditos seleccionados
+if (creditosSeleccionados.size > 0) {
+  const creditosDescuento: any[] = [];
+  const creditosReposicion: any[] = [];
+  let totalDescuento = 0;
+  
+  for (const [creditoId, seleccion] of creditosSeleccionados) {
+    if (seleccion.tipo === 'descuento') {
+      creditosDescuento.push({
+        credito_id: creditoId,
+        monto: seleccion.monto,
+        producto: seleccion.producto_nombre,
+        oc_origen_folio: seleccion.oc_origen_folio
+      });
+      totalDescuento += seleccion.monto;
+      
+      // Marcar crédito como aplicado
+      await supabase
+        .from("proveedor_creditos_pendientes")
+        .update({
+          status: "aplicado",
+          tipo_resolucion: "descuento_oc",
+          orden_compra_aplicada_id: orden.id,
+          fecha_aplicacion: new Date().toISOString(),
+          resolucion_notas: `Aplicado como descuento en ${orden.folio}`
+        })
+        .eq("id", creditoId);
+        
+    } else if (seleccion.tipo === 'reposicion') {
+      creditosReposicion.push({
+        credito_id: creditoId,
+        cantidad: seleccion.cantidad,
+        producto: seleccion.producto_nombre,
+        oc_origen_folio: seleccion.oc_origen_folio
+      });
+      
+      // Marcar crédito como pendiente de reposición
+      await supabase
+        .from("proveedor_creditos_pendientes")
+        .update({
+          status: "reposicion_esperada",
+          tipo_resolucion: "reposicion_producto",
+          orden_compra_aplicada_id: orden.id,
+          resolucion_notas: `Reposición esperada en entregas de ${orden.folio}`
+        })
+        .eq("id", creditoId);
+    }
+  }
+  
+  // Actualizar OC con créditos aplicados
+  if (totalDescuento > 0 || creditosReposicion.length > 0) {
+    await supabase
+      .from("ordenes_compra")
+      .update({
+        creditos_aplicados: totalDescuento,
+        creditos_aplicados_detalle: {
+          descuentos: creditosDescuento,
+          reposiciones: creditosReposicion
+        },
+        // Ajustar total si hay descuentos
+        total_ajustado: total - totalDescuento
+      })
+      .eq("id", orden.id);
+  }
+}
+```
+
+### 5. Detección de Reposición en Recepción
+
+En `AlmacenRecepcionSheet.tsx`, al registrar recepción, detectar si llegaron más bultos de los ordenados:
+
+```typescript
+// Si la cantidad recibida > cantidad ordenada, verificar si es reposición
+if (cantidadRecibida > cantidadOrdenada) {
+  const diferencia = cantidadRecibida - cantidadOrdenada;
+  
+  // Buscar créditos de reposición esperada para este proveedor/producto
+  const { data: creditosReposicion } = await supabase
+    .from("proveedor_creditos_pendientes")
+    .select("*")
+    .eq("producto_id", productoId)
+    .eq("status", "reposicion_esperada")
+    .order("created_at");
+    
+  if (creditosReposicion && creditosReposicion.length > 0) {
+    // Mostrar diálogo: "Llegaron X bultos extra. ¿Es reposición del faltante de OC-XXXXX?"
+    // Si confirma: marcar crédito como "repuesto"
+    // Si no: registrar como diferencia normal
+  }
+}
+```
+
+### 6. Mostrar Créditos en Step 4 (Resumen)
+
+Agregar en el resumen final:
+
+```tsx
+{creditosAplicados > 0 && (
+  <div className="flex justify-between text-green-600">
+    <span>Créditos aplicados:</span>
+    <span>-{formatCurrency(creditosAplicados)}</span>
+  </div>
+)}
+{reposicionesPendientes > 0 && (
+  <div className="flex justify-between text-blue-600 text-sm">
+    <span>Bultos esperados (reposición):</span>
+    <span>+{reposicionesPendientes} bultos</span>
+  </div>
+)}
+```
 
 ---
 
-## Resumen de Cambios
+## Ejemplo Práctico
 
-| Ubicación | Cambio |
-|-----------|--------|
-| Línea 573 | Agregar `!flex !flex-col overflow-hidden` al DialogContent |
-| Línea 584 | Cambiar `<ScrollArea className="flex-1 max-h-[calc(90vh-180px)] pr-4">` por `<div className="flex-1 overflow-y-auto pr-4 min-h-0">` |
-| Línea 1052 | Cambiar `</ScrollArea>` por `</div>` |
-| Línea 49 | Opcional: remover import de ScrollArea si no se usa en otro lugar |
+### Escenario: OC anterior de 6000 bultos, recibidos 5998 (2 faltantes)
+
+**En la nueva OC (6000 bultos × $400 = $2,400,000):**
+
+**Opción 1 - Descuento:**
+- Usuario selecciona "Aplicar descuento ($800)"
+- Total OC: $2,400,000 - $800 = **$2,399,200**
+- Se paga $2,399,200
+- Se esperan recibir 6000 bultos
+
+**Opción 2 - Reposición:**
+- Usuario selecciona "Esperar reposición (2 bultos)"
+- Total OC: **$2,400,000** (sin cambio)
+- Se esperan recibir **6002 bultos** (6000 + 2 de reposición)
+- Al recibir trailer con 1202 bultos en vez de 1200, sistema pregunta si son los 2 de reposición
 
 ---
 
-## Nota sobre los Bultos = 0
+## Archivos a Modificar
 
-El código para calcular `cantidad` basado en `tipo_pago === 'anticipado'` **ya está correctamente implementado** (líneas 143-150). Si aún muestra 0, puede ser:
+| Archivo | Cambio |
+|---------|--------|
+| `CrearOrdenCompraWizard.tsx` | Agregar estado, query y UI de créditos pendientes |
+| `CrearOrdenCompraWizard.tsx` | Modificar mutation para aplicar créditos seleccionados |
+| `ordenes_compra` (DB) | Ya tiene columnas `creditos_aplicados` y `creditos_aplicados_detalle` |
+| `proveedor_creditos_pendientes` | Agregar status "reposicion_esperada" |
+| `AlmacenRecepcionSheet.tsx` | (Futuro) Detectar reposiciones automáticamente |
 
-1. **Caché del navegador** - El usuario necesita hacer hard refresh (Cmd+Shift+R en Mac)
-2. **React Query cache** - Los datos viejos siguen en memoria hasta que se invalida la query
+---
 
-Después de implementar este cambio de scroll, el usuario debería:
-1. Cerrar el diálogo
-2. Refrescar la página (hard refresh)
-3. Volver a abrir el diálogo de pago
+## Migración de Base de Datos
 
-Esto forzará que la query se re-ejecute con la lógica corregida.
+Agregar status "reposicion_esperada" permitido:
+
+```sql
+-- No se requiere migración si status es TEXT sin constraint
+-- Los valores posibles ahora son:
+-- 'pendiente', 'aplicado', 'reposicion_esperada', 'repuesto', 'cancelado'
+```
+
+---
+
+## Notas Adicionales
+
+1. **Los créditos de proveedor manual**: Se buscan por `proveedor_nombre_manual` en lugar de `proveedor_id`
+
+2. **El total_ajustado**: Se calcula como `total - creditos_aplicados` cuando hay descuentos
+
+3. **PDF de la OC**: Debe mostrar línea de "Crédito aplicado" si corresponde
+
+4. **Email al proveedor**: Incluir nota sobre créditos aplicados o reposiciones esperadas
