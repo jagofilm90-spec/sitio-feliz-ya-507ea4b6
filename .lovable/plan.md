@@ -1,185 +1,173 @@
 
-# Plan: Actualizar KPIs y UI según el Toggle de Pagadas
 
-## Problema Actual
+# Plan: Archivar OCs Cerradas de la Pestaña Principal
 
-Cuando activas el switch "Pagadas", las tarjetas KPI siguen mostrando:
-- "Total Adeudado" (debería ser "Total Pagado")
-- "OCs Pendientes" (debería ser "OCs Pagadas")  
-- "Proveedores con Adeudo" (debería ser "Proveedores Pagados")
+## Situacion Actual
 
-También el gráfico de pie y los mensajes vacíos siguen usando terminología de "adeudos".
+Actualmente la misma OC puede aparecer en múltiples lugares:
 
-## Solución
+```text
+                    OC-202601-0003
+                         │
+    ┌────────────────────┼────────────────────┐
+    ▼                    ▼                    ▼
+┌─────────┐      ┌───────────────┐     ┌──────────────┐
+│ Pestaña │      │   Adeudos     │     │  Historial   │
+│   OC    │      │ (pendientes)  │     │  (pagadas)   │
+│ SIEMPRE │      │   temporal    │     │  permanente  │
+└─────────┘      └───────────────┘     └──────────────┘
+```
 
-Cambiar dinámicamente las etiquetas, íconos y colores de las tarjetas KPI según el estado del toggle `mostrarPagadas`.
+**Problema**: Después de pagar una OC:
+- Desaparece de Adeudos (correcto)
+- Aparece en Historial de Pagadas (correcto)
+- **Sigue apareciendo en la tabla OC** (innecesario)
+
+## Propuesta de Solución
+
+Agregar un filtro de "status activas" a la pestaña de OCs que, por defecto, oculte las OCs **cerradas** y **completadas+pagadas**:
+
+```text
+┌────────────────────────────────────────────────────────────────────┐
+│ Órdenes de Compra                              [Nueva Orden]       │
+├────────────────────────────────────────────────────────────────────┤
+│ 🔍 [Buscar...]     [Mostrar archivadas ○]  ← Toggle OFF default    │
+├────────────────────────────────────────────────────────────────────┤
+│ OCs activas (en proceso): enviada, parcial, recibida, pendiente   │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+### Logica de "OC Activa" vs "OC Archivada"
+
+**OC Activa** (visible por defecto):
+- `status` en: `borrador`, `pendiente`, `pendiente_autorizacion`, `autorizada`, `pendiente_pago`, `enviada`, `parcial`, `recibida`
+- O `status = completada` pero `status_pago != 'pagado'` (aun tiene adeudo)
+
+**OC Archivada** (oculta por defecto):
+- `status = cerrada` (ya cerrada financieramente)
+- `status = completada` **Y** `status_pago = 'pagado'` (todo recibido y pagado)
+- `status = cancelada` o `rechazada` (no proceden)
 
 ## Cambios a Realizar
 
-### Archivo: `src/components/compras/AdeudosProveedoresTab.tsx`
+### Archivo: `src/components/compras/OrdenesCompraTab.tsx`
 
-**1. Actualizar cálculo de KPIs (líneas 213-234):**
-
-Agregar cálculo de "total pagado" cuando `mostrarPagadas` está activo:
-
+**1. Agregar estado para toggle de archivadas:**
 ```typescript
-const kpis = useMemo(() => {
-  if (mostrarPagadas) {
-    // Historial de pagadas
-    const totalPagado = adeudosPorProveedor.reduce(
-      (sum, p) => sum + p.ordenes.reduce((s, o) => s + (o.monto_pagado || 0), 0),
-      0
-    );
-    const totalOCsPagadas = adeudosPorProveedor.reduce(
-      (sum, p) => sum + p.ordenes.length,
-      0
-    );
-    const proveedoresPagados = adeudosPorProveedor.length;
-
-    return {
-      total: totalPagado,
-      totalOCs: totalOCsPagadas,
-      proveedores: proveedoresPagados,
-      ocsAnticipadas: 0,
-    };
-  } else {
-    // Adeudos pendientes (actual)
-    const totalAdeudado = adeudosPorProveedor.reduce(
-      (sum, p) => sum + p.totalAdeudo,
-      0
-    );
-    // ... resto igual
-  }
-}, [adeudosPorProveedor, mostrarPagadas]);
+const [mostrarArchivadas, setMostrarArchivadas] = useState(false);
 ```
 
-**2. Actualizar las tarjetas KPI (líneas 368-414):**
-
-Cambiar dinámicamente según `mostrarPagadas`:
-
+**2. Agregar logica de filtrado:**
 ```typescript
-{/* KPI Cards */}
-<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-  <Card>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium">
-        {mostrarPagadas ? "Total Pagado" : "Total Adeudado"}
-      </CardTitle>
-      <DollarSign className={`h-4 w-4 ${mostrarPagadas ? 'text-green-600' : 'text-muted-foreground'}`} />
-    </CardHeader>
-    <CardContent>
-      <div className={`text-2xl font-bold ${mostrarPagadas ? 'text-green-600' : 'text-destructive'}`}>
-        {formatCurrency(kpis.total)}
-      </div>
-      <p className="text-xs text-muted-foreground mt-1">
-        {mostrarPagadas 
-          ? "Suma de todos los pagos realizados"
-          : "Suma de todos los adeudos pendientes"}
-      </p>
-    </CardContent>
-  </Card>
+const esOCArchivada = (orden: any): boolean => {
+  // Cerrada financieramente
+  if (orden.status === 'cerrada') return true;
+  // Cancelada o rechazada
+  if (orden.status === 'cancelada' || orden.status === 'rechazada') return true;
+  // Completada Y pagada (todo finalizado)
+  if (orden.status === 'completada' && orden.status_pago === 'pagado') return true;
+  return false;
+};
 
-  <Card>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium">
-        {mostrarPagadas ? "OCs Pagadas" : "OCs Pendientes"}
-      </CardTitle>
-      <FileText className={`h-4 w-4 ${mostrarPagadas ? 'text-green-600' : 'text-muted-foreground'}`} />
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold">{kpis.totalOCs}</div>
-      {!mostrarPagadas && kpis.ocsAnticipadas > 0 && (
-        <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          {kpis.ocsAnticipadas} con pago anticipado
-        </p>
-      )}
-    </CardContent>
-  </Card>
+const filteredOrdenes = ordenes.filter((orden) => {
+  // Filtro de busqueda existente
+  const matchesSearch = orden.folio.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    proveedorNombre?.toLowerCase().includes(searchTerm.toLowerCase());
+  
+  if (!matchesSearch) return false;
+  
+  // Filtro de archivadas
+  if (!mostrarArchivadas && esOCArchivada(orden)) return false;
+  
+  return true;
+});
+```
 
-  <Card>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium">
-        {mostrarPagadas ? "Proveedores Pagados" : "Proveedores con Adeudo"}
-      </CardTitle>
-      <Building2 className={`h-4 w-4 ${mostrarPagadas ? 'text-green-600' : 'text-muted-foreground'}`} />
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold">{kpis.proveedores}</div>
-      <p className="text-xs text-muted-foreground mt-1">
-        Proveedores únicos
-      </p>
-    </CardContent>
-  </Card>
+**3. Agregar toggle en la UI (junto al buscador):**
+```typescript
+<div className="flex items-center gap-4 mb-4">
+  <div className="relative flex-1">
+    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" />
+    <Input
+      placeholder="Buscar por folio o proveedor..."
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="pl-10"
+    />
+  </div>
+  
+  <div className="flex items-center gap-2">
+    <Switch
+      id="mostrar-archivadas"
+      checked={mostrarArchivadas}
+      onCheckedChange={setMostrarArchivadas}
+    />
+    <Label htmlFor="mostrar-archivadas" className="text-sm whitespace-nowrap">
+      Mostrar archivadas
+    </Label>
+  </div>
 </div>
 ```
 
-**3. Actualizar mensaje de lista vacía (líneas 472-481):**
-
+**4. Mostrar contador de archivadas (informativo):**
 ```typescript
-{adeudosPorProveedor.length === 0 ? (
-  <Card>
-    <CardContent className="py-12 text-center">
-      {mostrarPagadas ? (
-        <>
-          <History className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-          <h3 className="text-lg font-medium">Sin historial de pagos</h3>
-          <p className="text-sm text-muted-foreground">
-            No hay órdenes de compra pagadas registradas
-          </p>
-        </>
-      ) : (
-        <>
-          <TrendingDown className="h-12 w-12 mx-auto text-green-500 mb-3" />
-          <h3 className="text-lg font-medium">Sin adeudos pendientes</h3>
-          <p className="text-sm text-muted-foreground">
-            No hay órdenes de compra con pagos pendientes
-          </p>
-        </>
-      )}
-    </CardContent>
-  </Card>
-) : (
-  // ... lista de proveedores
+const ordenesArchivadas = ordenes.filter(esOCArchivada).length;
+
+// En la UI, mostrar junto al toggle:
+{ordenesArchivadas > 0 && !mostrarArchivadas && (
+  <span className="text-xs text-muted-foreground">
+    ({ordenesArchivadas} archivadas)
+  </span>
 )}
-```
-
-**4. Actualizar encabezado del proveedor (línea ~505):**
-
-Cambiar "Adeudo:" por "Pagado:" cuando está en modo historial:
-
-```typescript
-<span className={`font-semibold ${mostrarPagadas ? 'text-green-600' : 'text-destructive'}`}>
-  {mostrarPagadas ? 'Pagado: ' : 'Adeudo: '}
-  {formatCurrency(mostrarPagadas 
-    ? proveedor.ordenes.reduce((s, o) => s + (o.monto_pagado || 0), 0)
-    : proveedor.totalAdeudo
-  )}
-</span>
 ```
 
 ## Resultado Visual
 
-**Pendientes (toggle OFF):**
+**Vista por defecto (toggle OFF):**
 ```text
-┌────────────────┐  ┌────────────────┐  ┌────────────────┐
-│ Total Adeudado │  │ OCs Pendientes │  │ Provs con Adeudo│
-│   $234,756.00  │  │      12        │  │       5         │
-│   (rojo)       │  │                │  │                 │
-└────────────────┘  └────────────────┘  └────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│ Ordenes de Compra                                                   │
+├─────────────────────────────────────────────────────────────────────┤
+│ 🔍 [Buscar...]        [Mostrar archivadas ○] (15 archivadas)        │
+├─────────────────────────────────────────────────────────────────────┤
+│ Folio      │ Proveedor    │ Status   │ Pago      │ Total           │
+│ OC-0005    │ PRUEBA JOSAN │ Enviada  │ Anticipado│ $2,400,000      │
+│ OC-0002    │ ENVOLPAN     │Completada│ Pendiente │ $234,000        │
+└─────────────────────────────────────────────────────────────────────┘
+  Solo 2 ordenes activas
 ```
 
-**Pagadas (toggle ON):**
+**Con toggle ON:**
 ```text
-┌────────────────┐  ┌────────────────┐  ┌────────────────┐
-│  Total Pagado  │  │  OCs Pagadas   │  │ Provs Pagados  │
-│   $567,890.00  │  │      45        │  │       8         │
-│   (verde)      │  │                │  │                 │
-└────────────────┘  └────────────────┘  └────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│ 🔍 [Buscar...]        [Mostrar archivadas ●]                        │
+├─────────────────────────────────────────────────────────────────────┤
+│ Folio      │ Proveedor    │ Status    │ Pago    │ Total            │
+│ OC-0005    │ PRUEBA JOSAN │ Enviada   │ Pend.   │ $2,400,000       │
+│ OC-0003    │ Almar        │Completada │ Pagado  │ $197,250  ← gris │
+│ OC-0002    │ ENVOLPAN     │Completada │ Pend.   │ $234,000         │
+│ ...        │              │           │         │                  │
+└─────────────────────────────────────────────────────────────────────┘
+  17 ordenes (incluye archivadas)
 ```
 
 ## Beneficios
 
-- **Contexto correcto** - Las métricas reflejan lo que estás viendo
-- **Visual claro** - Colores verdes para pagado, rojos para adeudo
-- **Experiencia coherente** - Todo cambia según el modo seleccionado
+- **Tabla limpia por defecto** - Solo OCs que requieren atencion
+- **Nada se pierde** - Toggle para ver todo cuando sea necesario
+- **Separacion clara de responsabilidades**:
+  - Pestaña OC = Gestion activa
+  - Adeudos = Pagos pendientes
+  - Historial Pagadas = Archivo financiero
+- **Facil de entender** - Similar a "Mostrar archivados" en Gmail
+
+## Flujo Final del Ciclo de Vida
+
+```text
+Crear OC → Autorizar → Enviar → Recibir → Pagar → ARCHIVADA
+                                   │
+                                   └──→ Visible en:
+                                        • Pestaña OC (solo si toggle ON)
+                                        • Historial de Pagadas (toggle en Adeudos)
+```
+
