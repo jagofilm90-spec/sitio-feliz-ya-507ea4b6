@@ -91,17 +91,19 @@ npx cap open ios
 3. **Configurar Bundle Identifier**:
    - Debe coincidir con `com.almasa.erp`
 
-4. **Configurar Permisos de Cámara y Galería** (Info.plist) - **CRÍTICO**:
+4. **⚠️ CRÍTICO: Configurar Permisos de Cámara y Galería** (Info.plist):
    
-   > ⚠️ **Sin estos permisos, la app crasheará al intentar tomar fotos y Apple rechazará la app.**
+   > **Sin estos permisos, la app crasheará al intentar tomar fotos y Apple rechazará la app (Guideline 2.1).**
    
-   ```xml
-   <key>NSCameraUsageDescription</key>
-   <string>ALMASA necesita acceso a la cámara para capturar evidencias de carga, fotos de documentos de vehículos y comprobantes de pago.</string>
+   Ir a `App > App > Info.plist` y agregar las siguientes claves:
    
-   <key>NSPhotoLibraryUsageDescription</key>
-   <string>ALMASA necesita acceso a tu galería para seleccionar fotos de documentos y evidencias.</string>
-   ```
+   | Clave | Valor |
+   |-------|-------|
+   | `NSCameraUsageDescription` | ALMASA necesita acceso a la cámara para capturar evidencias de carga, fotos de documentos de vehículos y comprobantes de pago. |
+   | `NSPhotoLibraryUsageDescription` | ALMASA necesita acceso a tu galería para seleccionar fotos de documentos y evidencias. |
+   | `NSPhotoLibraryAddUsageDescription` | ALMASA necesita permiso para guardar fotos de evidencias en tu biblioteca. |
+   
+   **Verificación**: Buscar en Info.plist que las 3 claves existan antes de hacer Archive.
 
 5. **Configurar Permisos de Ubicación** (Info.plist):
    ```xml
@@ -125,6 +127,18 @@ npx cap open ios
    - En "Signing & Capabilities", click en "+ Capability"
    - Agregar "Push Notifications"
    - Agregar "Background Modes" → marcar "Remote notifications" y "Location updates"
+
+### Checklist Pre-Build iOS
+
+Antes de hacer Archive, verificar:
+- [ ] Info.plist tiene `NSCameraUsageDescription`
+- [ ] Info.plist tiene `NSPhotoLibraryUsageDescription`  
+- [ ] Info.plist tiene `NSPhotoLibraryAddUsageDescription`
+- [ ] Info.plist tiene `NSLocationWhenInUseUsageDescription`
+- [ ] Info.plist tiene `NSLocationAlwaysAndWhenInUseUsageDescription`
+- [ ] Background Modes: location y remote-notification habilitados
+- [ ] Push Notifications capability agregada
+- [ ] Team y Bundle ID configurados correctamente
 
 ### Ejecutar en Dispositivo
 

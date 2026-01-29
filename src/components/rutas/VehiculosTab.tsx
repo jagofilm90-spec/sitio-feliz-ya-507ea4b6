@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { compressImageForUpload } from "@/lib/imageUtils";
+import { compressImageForUpload, validateCapturedFile } from "@/lib/imageUtils";
 import {
   Table,
   TableBody,
@@ -792,7 +792,19 @@ const VehiculosTab = () => {
                     onChange={async (e) => {
                       try {
                         const file = e.target.files?.[0];
-                        if (!file) return;
+                        
+                        // Validación defensiva para iPad - evita crash si la cámara falla
+                        const validation = validateCapturedFile(file);
+                        if (!validation.valid) {
+                          if (validation.errorTitle) {
+                            toast({
+                              title: validation.errorTitle,
+                              description: validation.errorMessage,
+                              variant: "destructive",
+                            });
+                          }
+                          return;
+                        }
                         
                         // Para imágenes, comprimir antes de procesar (evita crash por memoria en iPad)
                         let processedFile = file;
@@ -1250,7 +1262,19 @@ const VehiculosTab = () => {
                       onChange={async (e) => {
                         try {
                           const file = e.target.files?.[0];
-                          if (!file) return;
+                          
+                          // Validación defensiva para iPad - evita crash si la cámara falla
+                          const validation = validateCapturedFile(file);
+                          if (!validation.valid) {
+                            if (validation.errorTitle) {
+                              toast({
+                                title: validation.errorTitle,
+                                description: validation.errorMessage,
+                                variant: "destructive",
+                              });
+                            }
+                            return;
+                          }
                           
                           // Para imágenes, comprimir antes de procesar (evita crash en iPad)
                           let processedFile = file;
@@ -1315,7 +1339,19 @@ const VehiculosTab = () => {
                     onChange={async (e) => {
                       try {
                         const file = e.target.files?.[0];
-                        if (!file) return;
+                        
+                        // Validación defensiva para iPad - evita crash si la cámara falla
+                        const validation = validateCapturedFile(file);
+                        if (!validation.valid) {
+                          if (validation.errorTitle) {
+                            toast({
+                              title: validation.errorTitle,
+                              description: validation.errorMessage,
+                              variant: "destructive",
+                            });
+                          }
+                          return;
+                        }
                         
                         // Para imágenes, comprimir antes de procesar (evita crash en iPad)
                         let processedFile = file;
