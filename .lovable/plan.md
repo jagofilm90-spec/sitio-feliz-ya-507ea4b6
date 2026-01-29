@@ -1,186 +1,122 @@
 
+# Plan: Optimizar Columnas del Panel de Adeudos
 
-# Plan: Corregir Columna de Recepción para Múltiples Entregas
+## Objetivo
+Ajustar el ancho de las columnas y compactar la información para que toda la tabla sea visible sin necesidad de hacer scroll horizontal, incluyendo el botón "Pagar".
 
-## Problema Identificado
+## Análisis del Estado Actual
 
-Encontré **2 problemas** en el código:
+La tabla actualmente tiene **9 columnas**:
+| Folio | Fecha | Status OC | Status Pago | Total | Pagado | Adeudo | Recepción | Pagar |
 
-### Problema 1: Status incorrecto
-El código filtra por `status === 'completada'`, pero en la base de datos las entregas finalizadas tienen `status = 'recibida'`:
+**Problemas identificados:**
+- Las columnas no tienen anchos definidos, ocupando más espacio del necesario
+- Los textos completos ocupan mucho espacio horizontal
+- El folio `OC-202601-0002` es largo y no está abreviado
 
-```text
-OC-202601-0002 (Envolapan):
-├── Entrega 1: status='recibida', finalizada 2026-01-23
-└── Entrega 2: status='recibida', finalizada 2026-01-26
-```
+## Cambios Propuestos
 
-**Por eso muestra "-"** - ninguna entrega tiene status `'completada'`.
-
-### Problema 2: Solo muestra una recepción
-El código actual usa `.find()` que solo devuelve la primera:
-```typescript
-const completada = orden.entregas.find(e => e.status === 'completada');
-```
-
-Cuando hay 2+ recepciones (entregas parciales), deberían mostrarse todas.
-
----
-
-## Solución Propuesta
-
-### Cambio 1: Corregir el filtro de status
-
-**De:**
-```typescript
-orden.entregas?.filter(e => e.status === 'completada')
-```
-
-**A:**
-```typescript
-orden.entregas?.filter(e => e.status === 'recibida')
-```
-
-### Cambio 2: Mostrar múltiples recepciones con Popover
-
-Cuando hay más de una entrega recibida, mostrar un botón que despliegue un menú con todas las recepciones disponibles:
+### 1. Reducir ancho de columnas con clases CSS
 
 ```text
-┌─────────────────────────────────┐
-│ Recepción                       │
-├─────────────────────────────────┤
-│ [Ver 2 ▼]                       │  ← Botón con contador
-│   ├── Recepción #1 - 23/01      │  ← Click abre dialog
-│   └── Recepción #2 - 26/01      │  ← Click abre dialog
-└─────────────────────────────────┘
+| Columna     | Cambio                                    |
+|-------------|-------------------------------------------|
+| Folio       | Mostrar solo número (ej: "0002")          |
+| Fecha       | Formato corto ya existe (dd/MM/yy) ✓      |
+| Status OC   | Ancho fijo: w-20                          |
+| Status Pago | Ancho fijo: w-20                          |
+| Total       | Ancho fijo: w-24, texto más pequeño       |
+| Pagado      | Ancho fijo: w-24, texto más pequeño       |
+| Adeudo      | Ancho fijo: w-24                          |
+| Recepción   | Ancho fijo: w-20                          |
+| Pagar       | Ancho fijo: w-16                          |
 ```
 
----
+### 2. Abreviar el folio
 
-## Implementación Detallada
+Cambiar de `OC-202601-0002` a solo el número: `0002` o `#0002`
+
+### 3. Hacer la tabla responsive
+
+Agregar `table-fixed` y anchos específicos para evitar que la tabla crezca más allá del contenedor.
+
+### 4. Aplicar texto más compacto
+
+Usar `text-xs` en celdas numéricas para reducir espacio.
+
+## Implementación
 
 ### Archivo: `src/components/compras/AdeudosProveedoresTab.tsx`
 
-**1. Agregar import de Popover:**
+**Cambios en TableHeader (líneas 486-497):**
 ```typescript
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+<Table className="table-fixed w-full">
+  <TableHeader>
+    <TableRow>
+      <TableHead className="w-16">Folio</TableHead>
+      <TableHead className="w-20">Fecha</TableHead>
+      <TableHead className="w-24">Status OC</TableHead>
+      <TableHead className="w-24">Status Pago</TableHead>
+      <TableHead className="w-24 text-right">Total</TableHead>
+      <TableHead className="w-24 text-right">Pagado</TableHead>
+      <TableHead className="w-24 text-right">Adeudo</TableHead>
+      <TableHead className="w-20">Recep.</TableHead>
+      <TableHead className="w-16"></TableHead>
+    </TableRow>
+  </TableHeader>
 ```
 
-**2. Reemplazar la celda de Recepción (líneas 526-548):**
+**Cambios en celdas (aplicar text-xs y truncate):**
 
+1. **Folio** - Extraer solo el número:
 ```typescript
-<TableCell>
-  {(() => {
-    const recibidas = orden.entregas?.filter(e => e.status === 'recibida') || [];
-    
-    if (recibidas.length === 0) {
-      return orden.tipo_pago === 'anticipado' 
-        ? <span className="text-xs text-muted-foreground">N/A</span>
-        : <span className="text-xs text-muted-foreground">-</span>;
-    }
-    
-    if (recibidas.length === 1) {
-      // Una sola recepción: botón directo
-      return (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="text-primary"
-          onClick={(e) => {
-            e.stopPropagation();
-            setSelectedEntregaId(recibidas[0].id);
-            setShowRecepcionDialog(true);
-          }}
-        >
-          <FileText className="h-3 w-3 mr-1" />
-          Ver
-        </Button>
-      );
-    }
-    
-    // Múltiples recepciones: mostrar popover con lista
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button size="sm" variant="ghost" className="text-primary">
-            <FileText className="h-3 w-3 mr-1" />
-            Ver {recibidas.length}
-            <ChevronDown className="h-3 w-3 ml-1" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-48 p-2" align="start">
-          <div className="space-y-1">
-            {recibidas.map((entrega) => (
-              <Button
-                key={entrega.id}
-                size="sm"
-                variant="ghost"
-                className="w-full justify-start text-xs"
-                onClick={() => {
-                  setSelectedEntregaId(entrega.id);
-                  setShowRecepcionDialog(true);
-                }}
-              >
-                <FileText className="h-3 w-3 mr-2" />
-                Recepción #{entrega.numero_entrega}
-                {entrega.recepcion_finalizada_en && (
-                  <span className="ml-auto text-muted-foreground">
-                    {format(new Date(entrega.recepcion_finalizada_en), 'dd/MM')}
-                  </span>
-                )}
-              </Button>
-            ))}
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
-  })()}
+<TableCell className="font-medium text-xs">
+  #{orden.folio.split('-').pop()}
 </TableCell>
 ```
 
-**3. Agregar import de ChevronDown:**
+2. **Fecha** - Más compacta:
 ```typescript
-import { ChevronDown } from "lucide-react";
+<TableCell className="text-xs">
+  {format(new Date(orden.fecha_orden), "dd/MM", { locale: es })}
+</TableCell>
 ```
 
----
-
-## Resultado Visual
-
-### Caso 1: Sin recepciones
-```
-| Recepción |
-|    -      |
+3. **Columnas numéricas** - Texto más pequeño:
+```typescript
+<TableCell className="text-right text-xs">
+  {formatCurrency(orden.total_ajustado || orden.total)}
+</TableCell>
 ```
 
-### Caso 2: Una recepción
-```
-| Recepción |
-| [Ver]     |
-```
-
-### Caso 3: Múltiples recepciones (como Envolapan)
-```
-| Recepción     |
-| [Ver 2 ▼]     |  ← Click despliega menú
-   ┌────────────────────────┐
-   │ 📄 Recepción #1  23/01 │
-   │ 📄 Recepción #2  26/01 │
-   └────────────────────────┘
+4. **Botón Pagar** - Más compacto:
+```typescript
+<Button size="sm" variant="outline" className="h-7 px-2 text-xs">
+  Pagar
+</Button>
 ```
 
----
+## Resultado Visual Esperado
+
+```text
+┌────────┬───────┬──────────┬──────────┬──────────┬──────────┬──────────┬────────┬────────┐
+│ Folio  │ Fecha │ Status   │ Status   │    Total │   Pagado │   Adeudo │ Recep. │        │
+│        │       │ OC       │ Pago     │          │          │          │        │        │
+├────────┼───────┼──────────┼──────────┼──────────┼──────────┼──────────┼────────┼────────┤
+│ #0002  │ 21/01 │ Recibida │ Pendiente│ $234,000 │       $0 │ $234,000 │ Ver 2▼ │ [Pagar]│
+│ #0012  │ 28/01 │ Enviada  │ Pendiente│ $2.4M    │       $0 │ $2.4M    │   -    │ [Pagar]│
+└────────┴───────┴──────────┴──────────┴──────────┴──────────┴──────────┴────────┴────────┘
+```
 
 ## Archivos a Modificar
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/components/compras/AdeudosProveedoresTab.tsx` | Corregir status filter, agregar Popover para múltiples recepciones |
+| Archivo | Cambios |
+|---------|---------|
+| `src/components/compras/AdeudosProveedoresTab.tsx` | Anchos fijos en columnas, abreviar folio, texto compacto |
 
-## Resumen de Cambios
+## Beneficios
 
-1. **Cambiar filtro** de `'completada'` a `'recibida'`
-2. **Agregar Popover** para listar múltiples recepciones
-3. **Mostrar contador** cuando hay más de una recepción
-4. **Mostrar fecha** de cada recepción en el menú desplegable
-
+- **Sin scroll horizontal** - Toda la información visible
+- **Mejor legibilidad** - Columnas alineadas consistentemente
+- **Responsive** - Se adapta al ancho disponible
+- **Botón Pagar siempre visible** - Acceso inmediato a la acción principal
