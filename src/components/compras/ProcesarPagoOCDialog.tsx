@@ -119,7 +119,7 @@ export function ProcesarPagoOCDialog({
 
   // Query para obtener productos recibidos con flags de impuestos
   const { data: productosRecibidos = [] } = useQuery({
-    queryKey: ["productos-recibidos-pago", orden?.id],
+    queryKey: ["productos-recibidos-pago", orden?.id, orden?.tipo_pago],
     queryFn: async () => {
       if (!orden?.id) return [];
       
@@ -140,19 +140,29 @@ export function ProcesarPagoOCDialog({
       if (error) throw error;
       if (!detalles) return [];
       
-      return detalles.map((d: any): ProductoRecibido => ({
-        detalle_id: d.id,
-        producto_id: d.producto_id,
-        codigo: d.productos?.codigo || "",
-        nombre: d.productos?.nombre || "Producto",
-        cantidad: d.cantidad_recibida ?? d.cantidad_ordenada,
-        precio_unitario: d.precio_unitario_compra || 0,
-        subtotal: (d.cantidad_recibida ?? d.cantidad_ordenada) * (d.precio_unitario_compra || 0),
-        aplica_iva: d.productos?.aplica_iva ?? true,
-        aplica_ieps: d.productos?.aplica_ieps ?? false,
-        pagado: d.pagado || false,
-        peso_kg: d.productos?.peso_kg || 0,
-      }));
+      const esPagoAnticipado = orden.tipo_pago === 'anticipado';
+      
+      return detalles.map((d: any): ProductoRecibido => {
+        // Para pago anticipado, siempre usar cantidad ordenada
+        // Para contra entrega, usar cantidad recibida (o ordenada si es null)
+        const cantidad = esPagoAnticipado 
+          ? d.cantidad_ordenada 
+          : (d.cantidad_recibida ?? d.cantidad_ordenada);
+        
+        return {
+          detalle_id: d.id,
+          producto_id: d.producto_id,
+          codigo: d.productos?.codigo || "",
+          nombre: d.productos?.nombre || "Producto",
+          cantidad: cantidad,
+          precio_unitario: d.precio_unitario_compra || 0,
+          subtotal: cantidad * (d.precio_unitario_compra || 0),
+          aplica_iva: d.productos?.aplica_iva ?? true,
+          aplica_ieps: d.productos?.aplica_ieps ?? false,
+          pagado: d.pagado || false,
+          peso_kg: d.productos?.peso_kg || 0,
+        };
+      });
     },
     enabled: !!orden?.id && open,
   });
@@ -560,11 +570,8 @@ export function ProcesarPagoOCDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="max-w-4xl max-h-[90vh] overflow-hidden" 
-        style={{ display: 'flex', flexDirection: 'column' }}
-      >
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
             Procesar Pago - {orden?.folio}
@@ -574,7 +581,7 @@ export function ProcesarPagoOCDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0 overflow-hidden px-1">
+        <ScrollArea className="flex-1 max-h-[calc(90vh-180px)] pr-4">
           <div className="space-y-6 pb-4">
             {/* Alert when there are registered invoices */}
             {tieneFacturasRegistradas && (
@@ -1044,7 +1051,7 @@ export function ProcesarPagoOCDialog({
           </div>
         </ScrollArea>
 
-        <DialogFooter className="border-t pt-4">
+        <DialogFooter className="flex-shrink-0 border-t pt-4">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
