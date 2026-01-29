@@ -1,323 +1,260 @@
 
-# Plan: Detección Automática de Reposición y Excedentes en Recepción
+# Plan: Generación Automática de Créditos al Completar OC de Pago Anticipado
 
-## Contexto del Problema
+## Problema Detectado
 
-Actualmente el sistema:
-- Limita el input de cantidad recibida a `max={faltante}` (no permite ingresar más de lo esperado)
-- Solo detecta cuando llega MENOS de lo ordenado
-- NO detecta cuando llega MÁS (posible reposición o error del proveedor)
+Actualmente cuando una OC de **Pago Anticipado** se completa (todas las entregas recibidas), el sistema:
+- ✅ Marca la OC como `status: "completada"`
+- ❌ NO verifica si el total pagado cuadra con lo recibido
+- ❌ NO genera créditos automáticos por la diferencia
 
-### Escenario Real Mencionado
-El proveedor dice que debía 2 bultos de azúcar de una entrega anterior, entonces manda 1202 en lugar de 1200. Al momento de checar, NO había ningún faltante pendiente registrado - el proveedor estaba equivocado, y se terminaron pagando 1202 bultos.
+### Ejemplo del Usuario
+- Se pagan 6000 bultos anticipadamente ($2,400,000)
+- Se reciben en total 5990 bultos (por faltantes o devoluciones)
+- El proveedor nos debe 10 bultos × $400 = **$4,000**
+- El sistema debe registrar automáticamente este crédito pendiente
 
 ---
 
-## Solución Propuesta
+## Solución: Verificación de Balance al Completar OC
 
-### Flujo de Detección
+### Dónde Agregar la Lógica
+
+En `AlmacenRecepcionSheet.tsx`, cuando se detecta que **no hay entregas pendientes** y se marca la OC como `"completada"`:
 
 ```text
-Almacenista ingresa cantidad recibida (ej: 1202)
-              │
-              ▼
-¿Es mayor a lo esperado (1200)?
-              │
-     ┌────────┴────────┐
-     │ NO              │ SÍ
-     ▼                 ▼
-Flujo normal    ¿Hay crédito de reposición
-                esperada para este producto
-                y proveedor?
-                       │
-              ┌────────┴────────┐
-              │ SÍ              │ NO
-              ▼                 ▼
-Mostrar diálogo:        Mostrar ALERTA:
-"Llegaron 2 extra.      "⚠️ El proveedor envió
-¿Es la reposición de    2 extra pero NO hay
-OC-XXXX?"               ningún crédito pendiente
-                        registrado"
-   │                           │
-   ├─ [Sí, confirmar]          ├─ [Aceptar y pagar]
-   │   → Marcar crédito        │   → Registrar los 1202
-   │     como "repuesto"       │   → Alertar para revisión
-   │                           │
-   └─ [No, es otra cosa]       └─ [Rechazar excedente]
-       → Preguntar qué hacer       → Solo registrar 1200
-```
-
----
-
-## Cambios Técnicos
-
-### 1. Remover Límite de Input (línea ~1645)
-
-**Antes:**
-```tsx
-<Input
-  type="number"
-  min={0}
-  max={faltante}  // ← Limita a lo esperado
-  value={...}
-/>
-```
-
-**Después:**
-```tsx
-<Input
-  type="number"
-  min={0}
-  // Sin max - permitir ingresar cualquier cantidad
-  value={...}
-/>
-```
-
-### 2. Nuevo Estado para Detectar Excedentes
-
-```typescript
-// Créditos de reposición esperada del proveedor
-const [creditosReposicionEsperada, setCreditosReposicionEsperada] = useState<CreditoReposicion[]>([]);
-
-// Diálogo de confirmación de excedente
-const [showExcedenteDialog, setShowExcedenteDialog] = useState(false);
-const [productoConExcedente, setProductoConExcedente] = useState<{
-  producto: ProductoEntrega;
-  cantidadRecibida: number;
-  cantidadEsperada: number;
-  diferencia: number;
-  creditosPosibles: CreditoReposicion[];
-} | null>(null);
-
-interface CreditoReposicion {
-  id: string;
-  producto_nombre: string;
-  cantidad: number;
-  monto_total: number;
-  oc_origen_folio: string;
-  motivo: string;
-  status: string;
-}
-```
-
-### 3. Cargar Créditos de Reposición al Abrir Sheet
-
-En `loadProductos()`, después de cargar los productos:
-
-```typescript
-// Cargar créditos de reposición esperada para este proveedor
-const proveedorId = entrega.orden_compra?.proveedor?.id;
-if (proveedorId) {
-  const { data: creditosData } = await supabase
-    .from("proveedor_creditos_pendientes")
-    .select(`
-      id, producto_id, producto_nombre, cantidad, monto_total, motivo, status,
-      ordenes_compra:orden_compra_origen_id (folio)
-    `)
-    .eq("proveedor_id", proveedorId)
-    .in("status", ["pendiente", "reposicion_esperada"]);
-  
-  const creditos = (creditosData || []).map(c => ({
-    ...c,
-    oc_origen_folio: c.ordenes_compra?.folio || "Desconocido"
-  }));
-  setCreditosReposicionEsperada(creditos);
-}
-```
-
-### 4. Detectar Excedente en UI
-
-En el render del producto, detectar si hay excedente:
-
-```tsx
-const tieneExcedente = cantidadActual > faltante;
-
-{/* Sección de EXCEDENTE (llegó MÁS de lo esperado) */}
-{tieneExcedente && (
-  <div className="space-y-2 p-2 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-200 dark:border-blue-800">
-    <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 text-sm font-medium">
-      <Package className="w-4 h-4" />
-      Excedente de {cantidadActual - faltante} unidades
-    </div>
-    
-    {/* Verificar si hay crédito de reposición para este producto */}
-    {(() => {
-      const creditoParaProducto = creditosReposicionEsperada.find(
-        c => c.producto_id === producto.producto_id && 
-             (c.status === 'reposicion_esperada' || c.status === 'pendiente')
-      );
-      
-      if (creditoParaProducto) {
-        return (
-          <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded text-sm">
-            <p className="text-green-700 dark:text-green-400 font-medium">
-              ✓ Posible reposición de faltante
-            </p>
-            <p className="text-green-600 dark:text-green-500 text-xs">
-              De {creditoParaProducto.oc_origen_folio}: {creditoParaProducto.cantidad} bulto(s) ({creditoParaProducto.motivo})
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-2 border-green-500 text-green-700"
-              onClick={() => handleConfirmarReposicion(producto, creditoParaProducto)}
-            >
-              <CheckCircle2 className="w-3 h-3 mr-1" />
-              Confirmar como reposición
-            </Button>
-          </div>
-        );
-      } else {
-        return (
-          <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded text-sm">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-amber-700 dark:text-amber-400 font-medium">
-                  Sin crédito pendiente registrado
-                </p>
-                <p className="text-amber-600 dark:text-amber-500 text-xs">
-                  El proveedor envió {cantidadActual - faltante} extra pero no hay faltante previo. 
-                  Si aceptas, se pagarán {cantidadActual} unidades.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2 mt-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="border-green-500 text-green-700"
-                onClick={() => handleAceptarExcedenteYPagar(producto.id, cantidadActual)}
-              >
-                Aceptar y pagar extra
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="border-amber-500 text-amber-700"
-                onClick={() => handleRechazarExcedente(producto.id, faltante)}
-              >
-                Solo recibir {faltante}
-              </Button>
-            </div>
-          </div>
-        );
-      }
-    })()}
-  </div>
-)}
-```
-
-### 5. Funciones de Manejo de Excedentes
-
-```typescript
-const handleConfirmarReposicion = async (producto: ProductoEntrega, credito: CreditoReposicion) => {
-  // Marcar el crédito como "repuesto" en la base de datos
+Líneas 1148-1156 actuales:
+if (!entregasPendientes || entregasPendientes.length === 0) {
   await supabase
-    .from("proveedor_creditos_pendientes")
-    .update({
-      status: "repuesto",
-      resolucion_notas: `Repuesto en recepción de ${entrega.orden_compra.folio} entrega #${entrega.numero_entrega}`,
-      fecha_aplicacion: new Date().toISOString()
-    })
-    .eq("id", credito.id);
-  
-  // Remover de la lista local
-  setCreditosReposicionEsperada(prev => prev.filter(c => c.id !== credito.id));
-  
-  toast({
-    title: "Reposición confirmada",
-    description: `${credito.cantidad} bulto(s) de reposición registrados correctamente`
-  });
-};
+    .from("ordenes_compra")
+    .update({ status: "completada", ... })
+    .eq("id", entrega.orden_compra.id);
+}
 
-const handleAceptarExcedenteYPagar = (detalleId: string, cantidad: number) => {
-  // Mantener la cantidad ingresada - se pagará
-  toast({
-    title: "Excedente aceptado",
-    description: `Se registrarán ${cantidad} unidades. Recuerda verificar con el proveedor.`,
-    variant: "warning"
-  });
-  // Opcionalmente crear notificación/alerta para admin
-};
+↓ Después de esto ↓
 
-const handleRechazarExcedente = (detalleId: string, cantidadEsperada: number) => {
-  // Ajustar la cantidad al esperado
-  setCantidadesRecibidas(prev => ({ ...prev, [detalleId]: cantidadEsperada }));
-  toast({
-    title: "Excedente rechazado",
-    description: `Se registrarán solo ${cantidadEsperada} unidades esperadas`
-  });
-};
-```
-
-### 6. Validación Previa a Guardar
-
-En `validarRecepcion()`, agregar validación para excedentes no confirmados:
-
-```typescript
-// Validar excedentes no confirmados
-const productosConExcedenteNoConfirmado = productos.filter(p => {
-  const cantidadActual = getCantidadNumerica(p.id);
-  const faltante = p.cantidad_ordenada - p.cantidad_recibida;
-  if (cantidadActual > faltante) {
-    // Verificar si hay crédito de reposición para este producto
-    const tieneCredito = creditosReposicionEsperada.some(
-      c => c.producto_id === p.producto_id && c.status === 'reposicion_esperada'
-    );
-    // Si hay crédito pero no se ha confirmado, o si no hay crédito, alertar
-    return !excedenteConfirmado[p.id];
-  }
-  return false;
-});
-
-if (productosConExcedenteNoConfirmado.length > 0) {
-  toast({
-    title: "Confirma los excedentes",
-    description: "Hay productos con más unidades de las esperadas. Confirma si son reposición o acepta el excedente.",
-    variant: "destructive"
-  });
-  return false;
+// Si es OC anticipada, verificar balance final
+if (entrega.orden_compra.tipo_pago === 'anticipado') {
+  // Calcular: total ordenado vs total recibido
+  // Si hay diferencia, generar créditos automáticos
 }
 ```
 
 ---
 
-## Diálogo Visual para Excedentes
+## Flujo de la Nueva Lógica
 
 ```text
-┌─────────────────────────────────────────────────────────────────────┐
-│ ⚠️ Excedente Detectado                                             │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│   Llegaron 2 bultos MÁS de lo esperado de:                         │
-│   "Azúcar Estándar 50kg" (código: AZU-001)                         │
-│                                                                     │
-│   ┌───────────────────────────────────────────────────────────────┐ │
-│   │ ✓ Crédito de reposición encontrado                            │ │
-│   │                                                               │ │
-│   │ De OC-202601-0005 (motivo: faltante)                          │ │
-│   │ 2 bultos × $400 = $800                                        │ │
-│   │                                                               │ │
-│   │ [✓ Confirmar como reposición]                                 │ │
-│   └───────────────────────────────────────────────────────────────┘ │
-│                                                                     │
-│   ─── O ───                                                         │
-│                                                                     │
-│   ┌───────────────────────────────────────────────────────────────┐ │
-│   │ ⚠️ Sin crédito pendiente                                      │ │
-│   │                                                               │ │
-│   │ El proveedor dice que debía pero NO hay registro.             │ │
-│   │ Si aceptas, pagarás 1202 en vez de 1200.                      │ │
-│   │                                                               │ │
-│   │ [Aceptar y pagar $800 extra]  [Rechazar excedente]            │ │
-│   └───────────────────────────────────────────────────────────────┘ │
-│                                                                     │
-│                                              [Cancelar]             │
-└─────────────────────────────────────────────────────────────────────┘
+OC Anticipada se completa (todas las entregas recibidas)
+                │
+                ▼
+Calcular diferencia = Σ(cantidad_ordenada) - Σ(cantidad_recibida)
+                │
+                ▼
+¿diferencia > 0?
+        │
+   ┌────┴────┐
+   │ NO      │ SÍ
+   ▼         ▼
+Fin      Por cada producto con diferencia:
+         - Crear registro en proveedor_creditos_pendientes
+         - Motivo: "saldo_oc_anticipada"
+         - Enviar email al proveedor con resumen
+```
+
+---
+
+## Cambios en AlmacenRecepcionSheet.tsx
+
+### 1. Agregar Verificación de Balance Final
+
+Después de marcar la OC como completada (línea ~1156):
+
+```typescript
+// === NUEVO: Verificación de balance para OC anticipadas ===
+if (entrega.orden_compra.tipo_pago === 'anticipado') {
+  // Obtener todos los detalles de la OC
+  const { data: detallesOC } = await supabase
+    .from("ordenes_compra_detalles")
+    .select("producto_id, cantidad_ordenada, cantidad_recibida, precio_unitario_compra")
+    .eq("orden_compra_id", entrega.orden_compra.id);
+
+  // Calcular diferencias por producto
+  const productosConSaldo = (detallesOC || []).filter(d => 
+    d.cantidad_ordenada > d.cantidad_recibida
+  );
+
+  if (productosConSaldo.length > 0) {
+    // Obtener nombres de productos
+    const productIds = productosConSaldo.map(p => p.producto_id);
+    const { data: productosInfo } = await supabase
+      .from("productos")
+      .select("id, nombre, codigo")
+      .in("id", productIds);
+    
+    const productosMap = new Map(
+      (productosInfo || []).map(p => [p.id, p])
+    );
+
+    // Crear créditos para cada producto con saldo
+    const creditosACrear = productosConSaldo.map(detalle => {
+      const diferencia = detalle.cantidad_ordenada - detalle.cantidad_recibida;
+      const productoInfo = productosMap.get(detalle.producto_id);
+      return {
+        proveedor_id: entrega.orden_compra.proveedor?.id || null,
+        proveedor_nombre_manual: entrega.orden_compra.proveedor_nombre_manual || null,
+        orden_compra_origen_id: entrega.orden_compra.id,
+        entrega_id: entrega.id, // Última entrega
+        producto_id: detalle.producto_id,
+        producto_nombre: productoInfo?.nombre || "Producto",
+        cantidad: diferencia,
+        precio_unitario: detalle.precio_unitario_compra,
+        monto_total: diferencia * detalle.precio_unitario_compra,
+        motivo: "saldo_oc_anticipada",
+        status: "pendiente",
+        notas: `Saldo automático al completar ${entrega.orden_compra.folio}`
+      };
+    });
+
+    // Insertar créditos
+    if (creditosACrear.length > 0) {
+      await supabase
+        .from("proveedor_creditos_pendientes")
+        .insert(creditosACrear);
+
+      // Calcular total de créditos generados
+      const totalCredito = creditosACrear.reduce((sum, c) => sum + c.monto_total, 0);
+
+      // Notificar por email al proveedor
+      await supabase.functions.invoke("notificar-faltante-anticipado", {
+        body: {
+          orden_compra_id: entrega.orden_compra.id,
+          faltantes: creditosACrear.map(c => ({
+            producto_id: c.producto_id,
+            producto_nombre: c.producto_nombre,
+            cantidad_faltante: c.cantidad,
+            precio_unitario: c.precio_unitario,
+            monto_total: c.monto_total,
+            motivo: "saldo_final"
+          })),
+          entrega_id: entrega.id
+        }
+      });
+
+      // Mostrar notificación al usuario
+      toast({
+        title: "Saldo registrado",
+        description: `Se registró crédito pendiente por ${creditosACrear.length} producto(s) 
+                       con valor de ${formatCurrency(totalCredito)}`,
+        variant: "warning"
+      });
+    }
+  }
+}
+```
+
+### 2. También Manejar Devoluciones (roto/rechazado) en Anticipadas
+
+Las devoluciones ya ajustan `monto_devoluciones`, pero para OC anticipadas también deben generar crédito porque ya se pagó.
+
+En `DevolucionProveedorDialog.tsx`, después de llamar a `agregar_devolucion_a_oc`:
+
+```typescript
+// Si es OC anticipada, también crear crédito pendiente
+const { data: oc } = await supabase
+  .from("ordenes_compra")
+  .select("tipo_pago, folio")
+  .eq("id", ordenCompraId)
+  .single();
+
+if (oc?.tipo_pago === 'anticipado') {
+  for (const producto of productosDevolucion) {
+    const montoDevolucion = producto.cantidadDevuelta * precioUnitario;
+    
+    await supabase.from("proveedor_creditos_pendientes").insert({
+      proveedor_id: proveedorId,
+      orden_compra_origen_id: ordenCompraId,
+      devolucion_id: devolucion.id,
+      entrega_id: entregaId,
+      producto_id: producto.productoId,
+      producto_nombre: producto.nombre,
+      cantidad: producto.cantidadDevuelta,
+      precio_unitario: precioUnitario,
+      monto_total: montoDevolucion,
+      motivo: producto.razon, // "roto" o "rechazado_calidad"
+      status: "pendiente",
+      notas: `Devolución en OC anticipada ${oc.folio}`
+    });
+  }
+}
+```
+
+---
+
+## Actualización del Panel de Créditos
+
+### Nuevo Motivo: "saldo_oc_anticipada"
+
+En `CreditosPendientesPanel.tsx`, actualizar la función de etiquetas:
+
+```typescript
+const getMotivoLabel = (motivo: string) => {
+  switch (motivo) {
+    case "faltante": return "No llegó";
+    case "roto": return "Dañado";
+    case "rechazado_calidad": return "Rechazado";
+    case "devolucion": return "Devolución";
+    case "saldo_oc_anticipada": return "Saldo OC Anticipada";
+    case "saldo_final": return "Saldo Final";
+    default: return motivo;
+  }
+};
+```
+
+---
+
+## Resumen Visual del Flujo Completo
+
+```text
+┌──────────────────────────────────────────────────────────────────────┐
+│                    OC PAGO ANTICIPADO                                │
+│                    6000 bultos × $400 = $2,400,000 PAGADO            │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ENTREGAS:                                                           │
+│  ┌─────────────────────────────────────────────────────────────┐     │
+│  │ Entrega #1: Esperados 2000, Recibidos 1998 (2 rotos)        │     │
+│  │             → Devolución registrada + Crédito creado ($800) │     │
+│  └─────────────────────────────────────────────────────────────┘     │
+│  ┌─────────────────────────────────────────────────────────────┐     │
+│  │ Entrega #2: Esperados 2000, Recibidos 1995 (5 no llegaron)  │     │
+│  │             → Nueva entrega programada                       │     │
+│  └─────────────────────────────────────────────────────────────┘     │
+│  ┌─────────────────────────────────────────────────────────────┐     │
+│  │ Entrega #3: Esperados 2005, Recibidos 1997 (3 rechazados)   │     │
+│  │             → Devolución + Crédito creado ($1,200)           │     │
+│  │             → 5 faltantes de entrega #2 no llegaron          │     │
+│  └─────────────────────────────────────────────────────────────┘     │
+│                                                                      │
+│  CIERRE AUTOMÁTICO:                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐     │
+│  │ ✓ Todas las entregas recibidas                              │     │
+│  │ ✓ OC marcada como "completada"                              │     │
+│  │                                                             │     │
+│  │ BALANCE FINAL:                                              │     │
+│  │ • Pagado: 6000 bultos                                       │     │
+│  │ • Recibido: 5990 bultos                                     │     │
+│  │ • Devoluciones ya registradas: 5 bultos ($2,000)            │     │
+│  │ • Faltantes finales: 5 bultos                               │     │
+│  │                                                             │     │
+│  │ → Sistema genera crédito: 5 × $400 = $2,000                 │     │
+│  │ → Email automático al proveedor                             │     │
+│  └─────────────────────────────────────────────────────────────┘     │
+│                                                                      │
+│  CRÉDITOS TOTALES PENDIENTES: $4,000                                │
+│  (5 rotos/rechazados + 5 faltantes finales)                          │
+│                                                                      │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -326,37 +263,32 @@ if (productosConExcedenteNoConfirmado.length > 0) {
 
 | Archivo | Cambio |
 |---------|--------|
-| `AlmacenRecepcionSheet.tsx` | Remover `max={faltante}` del input |
-| `AlmacenRecepcionSheet.tsx` | Agregar estado para créditos de reposición |
-| `AlmacenRecepcionSheet.tsx` | Cargar créditos al abrir sheet |
-| `AlmacenRecepcionSheet.tsx` | Detectar y mostrar UI de excedente |
-| `AlmacenRecepcionSheet.tsx` | Agregar funciones de confirmación/rechazo |
-| `AlmacenRecepcionSheet.tsx` | Validar excedentes antes de guardar |
+| `AlmacenRecepcionSheet.tsx` | Agregar verificación de balance al completar OC anticipada |
+| `DevolucionProveedorDialog.tsx` | Crear crédito cuando devolución es en OC anticipada |
+| `CreditosPendientesPanel.tsx` | Agregar etiqueta para motivo "saldo_oc_anticipada" |
 
 ---
 
-## Resumen del Flujo Completo
+## Consideraciones Importantes
 
-| Escenario | Detección | Acción |
-|-----------|-----------|--------|
-| Llegan 1200 (esperados 1200) | OK | Flujo normal |
-| Llegan 1198 (esperados 1200) | Faltante | Pedir razón, crear crédito/entrega |
-| Llegan 1202 + HAY crédito reposición | Excedente + Match | Preguntar si confirma reposición |
-| Llegan 1202 + NO hay crédito | Excedente sin match | ALERTAR que proveedor está mal |
+### Evitar Duplicados
+- Solo generar crédito de "saldo_final" al completar la OC
+- Las devoluciones ya generan su crédito individual al momento
+- El cálculo final debe considerar: `ordenado - recibido - (ya_creditado_por_devoluciones)`
+
+### Los 3 Escenarios de Resolución (Ya Implementados)
+
+1. **Depósito bancario** → En panel de créditos: "Marcar como Reembolsado"
+2. **Reposición física** → Se detecta al recibir excedente (implementado en flujo anterior)  
+3. **Descuento en próxima OC** → Wizard de creación de OC permite seleccionar créditos
 
 ---
 
-## Detalles Técnicos
+## Flujo de Email Automático
 
-### Status de Créditos
-- `pendiente` - Faltante o devolución aún no resuelta
-- `reposicion_esperada` - Usuario indicó que espera reposición física
-- `aplicado` - Se aplicó como descuento en otra OC
-- `repuesto` - Llegó la reposición física ✓
-- `cancelado` - Anulado por cualquier razón
+El edge function `notificar-faltante-anticipado` ya existe y:
+- Envía email al proveedor con tabla de productos faltantes
+- Incluye las 3 opciones de resolución
+- Registra en `correos_enviados` para trazabilidad
 
-### Columnas a usar
-- `proveedor_creditos_pendientes.producto_id` - Para hacer match con el producto que llega
-- `proveedor_creditos_pendientes.status` - Para filtrar solo pendientes/esperados
-- `proveedor_creditos_pendientes.cantidad` - Para verificar si coincide el excedente
-- `proveedor_creditos_pendientes.orden_compra_origen_id` - Para mostrar de qué OC viene
+Solo falta **llamarlo correctamente** cuando se complete la OC.
