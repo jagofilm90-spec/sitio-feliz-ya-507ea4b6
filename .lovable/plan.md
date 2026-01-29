@@ -1,50 +1,75 @@
 
-# Plan: Mejorar Visibilidad de Pestañas en Módulo de Compras
+# Plan: Filtrar Adeudos Solo para OCs Recibidas o Anticipadas
 
-## Problema Identificado
+## Problema Actual
+El panel de Adeudos muestra TODAS las OCs con pago pendiente/parcial, incluyendo aquellas que aún no se han recibido. Esto no tiene sentido porque no se debe dinero hasta que la mercancía llegue (excepto en pagos anticipados).
 
-El módulo de Compras tiene **8 pestañas** en un layout `grid-cols-8` que causa problemas de visibilidad:
-- En pantallas pequeñas o medianas, las pestañas se superponen o truncan
-- La pestaña "Adeudos" (posición 7) y "Analytics" (posición 8) pueden no ser visibles
-- El texto largo "Órdenes de Compra" agrava el problema de espacio
+## Lógica de Negocio Correcta
+Solo deben aparecer en el panel de adeudos:
+1. **OCs recibidas/completadas/cerradas** - Ya llegó la mercancía, se debe el dinero
+2. **OCs con pago anticipado** - Se debe pagar antes de recibir
 
-## Solución Propuesta
+## Cambio Técnico
 
-Cambiar el layout de pestañas a un diseño **responsivo con scroll horizontal** que funcione en todos los tamaños de pantalla.
+### Archivo: `src/components/compras/AdeudosProveedoresTab.tsx`
 
-## Cambios en el Código
+**Modificar el query principal (líneas 107-130):**
 
-### Archivo: `src/pages/Compras.tsx`
-
-**Cambio en TabsList (línea 131):**
-
-De:
+Cambiar de:
 ```typescript
-<TabsList className="grid w-full grid-cols-8">
+const { data, error } = await supabase
+  .from("ordenes_compra")
+  .select(...)
+  .in("status_pago", ["pendiente", "parcial"])
 ```
 
-A:
+A una lógica OR que incluya:
 ```typescript
-<TabsList className="flex w-full overflow-x-auto">
+const { data, error } = await supabase
+  .from("ordenes_compra")
+  .select(...)
+  .in("status_pago", ["pendiente", "parcial"])
+  .or('status.in.(recibida,completada,cerrada,parcial),tipo_pago.eq.anticipado')
 ```
 
-**Cambios adicionales en cada TabsTrigger:**
-- Agregar `flex-shrink-0` para evitar que se compriman
-- Usar texto abreviado en móvil con clases responsivas
+**Explicación del filtro:**
+- `status.in.(recibida,completada,cerrada,parcial)` - OCs donde ya llegó mercancía (total o parcialmente)
+- `tipo_pago.eq.anticipado` - OCs que requieren pago antes de recibir
 
-### Resultado Visual Esperado
+## Impacto Visual
 
-```text
-Escritorio (pantalla amplia):
-[Proveedores] [Órdenes de Compra] [Calendario] [Devoluciones] [Historial] [Faltantes] [Adeudos] [Analytics]
+Antes del cambio:
+- OC enviada sin recibir: ❌ Aparece en adeudos (incorrecto)
+- OC recibida sin pagar: ✅ Aparece en adeudos
+- OC anticipada sin pagar: ✅ Aparece en adeudos
 
-Tablet/Móvil (con scroll):
-[Proveedores] [OC] [Calendario] [Devoluc.] [Historial] [Faltantes] [Adeudos] ←→ scroll
+Después del cambio:
+- OC enviada sin recibir: ✅ NO aparece en adeudos
+- OC recibida sin pagar: ✅ Aparece en adeudos
+- OC anticipada sin pagar: ✅ Aparece en adeudos (aunque no esté recibida)
+
+## También actualizar el badge contador en Compras.tsx
+
+**Modificar query de adeudosCount (líneas 107-116):**
+
+Aplicar el mismo filtro OR para que el badge muestre el conteo correcto:
+```typescript
+const { count, error } = await supabase
+  .from("ordenes_compra")
+  .select("*", { count: "exact", head: true })
+  .in("status_pago", ["pendiente", "parcial"])
+  .or('status.in.(recibida,completada,cerrada,parcial),tipo_pago.eq.anticipado');
 ```
 
-## Beneficios
+## Archivos a Modificar
 
-1. Todas las 8 pestañas visibles sin superposición
-2. Scroll horizontal intuitivo en pantallas pequeñas
-3. Mantiene la funcionalidad completa en todos los dispositivos
-4. Consistente con el patrón usado en `SecretariaComprasTab`
+| Archivo | Cambio |
+|---------|--------|
+| `src/components/compras/AdeudosProveedoresTab.tsx` | Agregar filtro OR en query principal |
+| `src/pages/Compras.tsx` | Agregar mismo filtro en query del badge |
+
+## Resultado Final
+
+El panel de adeudos mostrará únicamente:
+- Deudas reales por mercancía ya recibida
+- Pagos anticipados pendientes que bloquean entregas
