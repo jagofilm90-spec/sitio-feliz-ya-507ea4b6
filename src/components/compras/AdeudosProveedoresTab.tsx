@@ -482,28 +482,28 @@ const AdeudosProveedoresTab = () => {
 
                   <CollapsibleContent>
                     <CardContent className="pt-0">
-                      <Table>
+                      <Table className="table-fixed w-full">
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Folio</TableHead>
-                            <TableHead>Fecha</TableHead>
-                            <TableHead>Status OC</TableHead>
-                            <TableHead>Status Pago</TableHead>
-                            <TableHead className="text-right">Total</TableHead>
-                            <TableHead className="text-right">Pagado</TableHead>
-                            <TableHead className="text-right">Adeudo</TableHead>
-                            <TableHead>Recepción</TableHead>
-                            <TableHead></TableHead>
+                            <TableHead className="w-14">Folio</TableHead>
+                            <TableHead className="w-16">Fecha</TableHead>
+                            <TableHead className="w-20">Status</TableHead>
+                            <TableHead className="w-20">Pago</TableHead>
+                            <TableHead className="w-20 text-right">Total</TableHead>
+                            <TableHead className="w-20 text-right">Pagado</TableHead>
+                            <TableHead className="w-20 text-right">Adeudo</TableHead>
+                            <TableHead className="w-16">Recep.</TableHead>
+                            <TableHead className="w-16"></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {proveedor.ordenes.map((orden) => (
                             <TableRow key={orden.id}>
-                              <TableCell className="font-medium">
-                                {orden.folio}
+                              <TableCell className="font-medium text-xs">
+                                #{orden.folio.split('-').pop()}
                               </TableCell>
-                              <TableCell>
-                                {format(new Date(orden.fecha_orden), "dd/MM/yy", {
+                              <TableCell className="text-xs">
+                                {format(new Date(orden.fecha_orden), "dd/MM", {
                                   locale: es,
                                 })}
                               </TableCell>
@@ -513,19 +513,19 @@ const AdeudosProveedoresTab = () => {
                                 {orden.tipo_pago === "anticipado" && (
                                   <Badge
                                     variant="outline"
-                                    className="ml-1 text-xs border-amber-500 text-amber-600"
+                                    className="ml-1 text-[10px] px-1 border-amber-500 text-amber-600"
                                   >
-                                    Ant.
+                                    Ant
                                   </Badge>
                                 )}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right text-xs">
                                 {formatCurrency(orden.total_ajustado || orden.total)}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right text-xs">
                                 {formatCurrency(orden.monto_pagado || 0)}
                               </TableCell>
-                              <TableCell className="text-right font-semibold text-destructive">
+                              <TableCell className="text-right text-xs font-semibold text-destructive">
                                 {formatCurrency(orden.adeudo)}
                               </TableCell>
                               <TableCell>
@@ -543,7 +543,7 @@ const AdeudosProveedoresTab = () => {
                                       <Button
                                         size="sm"
                                         variant="ghost"
-                                        className="text-primary"
+                                        className="text-primary h-7 px-2 text-xs"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           setSelectedEntregaId(recibidas[0].id);
@@ -559,27 +559,27 @@ const AdeudosProveedoresTab = () => {
                                   return (
                                     <Popover>
                                       <PopoverTrigger asChild>
-                                        <Button size="sm" variant="ghost" className="text-primary">
+                                        <Button size="sm" variant="ghost" className="text-primary h-7 px-2 text-xs">
                                           <FileText className="h-3 w-3 mr-1" />
-                                          Ver {recibidas.length}
-                                          <ChevronDown className="h-3 w-3 ml-1" />
+                                          {recibidas.length}
+                                          <ChevronDown className="h-3 w-3 ml-0.5" />
                                         </Button>
                                       </PopoverTrigger>
-                                      <PopoverContent className="w-52 p-2" align="start">
+                                      <PopoverContent className="w-48 p-2" align="start">
                                         <div className="space-y-1">
                                           {recibidas.map((entrega) => (
                                             <Button
                                               key={entrega.id}
                                               size="sm"
                                               variant="ghost"
-                                              className="w-full justify-start text-xs"
+                                              className="w-full justify-start text-xs h-7"
                                               onClick={() => {
                                                 setSelectedEntregaId(entrega.id);
                                                 setShowRecepcionDialog(true);
                                               }}
                                             >
                                               <FileText className="h-3 w-3 mr-2" />
-                                              Recepción #{entrega.numero_entrega}
+                                              #{entrega.numero_entrega}
                                               {entrega.recepcion_finalizada_en && (
                                                 <span className="ml-auto text-muted-foreground">
                                                   {format(new Date(entrega.recepcion_finalizada_en), 'dd/MM')}
@@ -597,6 +597,7 @@ const AdeudosProveedoresTab = () => {
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  className="h-7 px-2 text-xs"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleProcesarPago(orden);
