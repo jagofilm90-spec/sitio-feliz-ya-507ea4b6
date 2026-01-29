@@ -1,6 +1,7 @@
 // Component updated to include receipt column and payment history toggle
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -109,6 +110,7 @@ const formatCurrency = (value: number) => {
 
 const AdeudosProveedoresTab = () => {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [mostrarPagadas, setMostrarPagadas] = useState(false);
   const [filtroProveedor, setFiltroProveedor] = useState<string>("todos");
   const [filtroStatusPago, setFiltroStatusPago] = useState<string>("todos");
@@ -120,6 +122,9 @@ const AdeudosProveedoresTab = () => {
   const [showPagoDialog, setShowPagoDialog] = useState(false);
   const [selectedEntregaId, setSelectedEntregaId] = useState<string | null>(null);
   const [showRecepcionDialog, setShowRecepcionDialog] = useState(false);
+
+  // Auto-select OC from URL param ?oc=uuid
+  const ocIdFromUrl = searchParams.get("oc");
 
   // Query principal para obtener OCs con adeudos pendientes o pagadas
   const { data: ordenesConAdeudo = [], isLoading } = useQuery({
@@ -162,6 +167,22 @@ const AdeudosProveedoresTab = () => {
     },
     refetchInterval: 30000,
   });
+
+  // Auto-select OC from URL and open payment dialog
+  useEffect(() => {
+    if (ocIdFromUrl && ordenesConAdeudo.length > 0) {
+      const oc = ordenesConAdeudo.find((o) => o.id === ocIdFromUrl);
+      if (oc) {
+        setSelectedOC(oc);
+        setShowPagoDialog(true);
+        // Clear the URL param after selecting
+        setSearchParams((prev) => {
+          prev.delete("oc");
+          return prev;
+        });
+      }
+    }
+  }, [ocIdFromUrl, ordenesConAdeudo, setSearchParams]);
 
   // Agrupar por proveedor con filtros aplicados
   const adeudosPorProveedor = useMemo(() => {

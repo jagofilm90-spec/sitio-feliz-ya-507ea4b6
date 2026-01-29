@@ -113,9 +113,12 @@ const Compras = () => {
   // Combined count for Devoluciones/Faltantes tab
   const devFaltCombinedCount = devolucionesPendientesCount + faltantesPendientesCount;
 
-  // Auto-switch to ordenes tab when ?aprobar= param is present
+  // Auto-switch tabs based on URL params
   useEffect(() => {
-    if (searchParams.get("aprobar")) {
+    const tabParam = searchParams.get("tab");
+    if (tabParam && ["proveedores", "ordenes", "calendario", "devoluciones-faltantes", "historial", "adeudos", "analytics"].includes(tabParam)) {
+      setActiveTab(tabParam);
+    } else if (searchParams.get("aprobar")) {
       setActiveTab("ordenes");
     }
   }, [searchParams]);
