@@ -84,41 +84,75 @@ export const useUnreadEmails = (): UnreadEmailsData => {
 
   // Fetch unread counts for all accounts
   const loadUnreadCounts = useCallback(async () => {
+    // If we previously detected an auth issue, stop polling completely.
+    if (suppressNotificationsRef.current && !isInitialLoadRef.current) {
+      setIsLoading(false);
+      return;
+    }
     if (cuentas.length === 0) {
       setIsLoading(false);
       return;
     }
 
-    // Verify user is authenticated before calling edge function
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
+    // Verify user is authenticated (server-side) before calling backend function.
+    // getSession() can be stale locally; getUser() forces a server check.
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      setIsLoading(false);
+      return;
+    }
+
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData.user) {
+      // Session is stale/invalid on server (e.g. session_not_found). Stop polling.
+      suppressNotificationsRef.current = true;
+      setCounts({});
+      setCuentas([]);
       setIsLoading(false);
       return;
     }
 
     try {
       const results = await Promise.allSettled(
-        cuentas.map(cuenta =>
-          supabase.functions.invoke("gmail-api", {
-            body: { action: "getUnreadCount", email: cuenta.email },
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-            },
-          }).then(response => ({
-            email: cuenta.email,
-            count: response.data?.unreadCount ?? 0,
-          }))
+        cuentas.map((cuenta) =>
+          supabase.functions
+            .invoke("gmail-api", {
+              body: { action: "getUnreadCount", email: cuenta.email },
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            })
+            .then((response) => ({
+              email: cuenta.email,
+              count: response.data?.unreadCount ?? 0,
+              error: response.error,
+            }))
         )
       );
 
       const newCounts: Record<string, number> = {};
+      let sawAuthError = false;
       results.forEach((result, index) => {
         if (result.status === "fulfilled") {
           newCounts[result.value.email] = result.value.count;
+          if (
+            String((result.value as any).error?.message ?? "").includes("Invalid JWT") ||
+            (result.value as any).error?.status === 401
+          ) {
+            sawAuthError = true;
+          }
         } else {
           newCounts[cuentas[index].email] = 0;
         }
       });
+
+      // If we got auth errors, stop notifications/polling to avoid blank-screen loops.
+      if (sawAuthError) {
+        suppressNotificationsRef.current = true;
+        setCounts({});
+        setCuentas([]);
+      }
 
       // Check for new emails and show notifications
       if (!isInitialLoadRef.current && !suppressNotificationsRef.current) {

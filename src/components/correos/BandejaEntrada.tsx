@@ -16,6 +16,7 @@ import { Inbox, RefreshCw, PenSquare, Loader2, ChevronDown, Search, Trash2, Mail
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { invokeGmailApi } from "@/lib/gmailApiClient";
 import EmailListView from "./EmailListView";
 import EmailDetailView from "./EmailDetailView";
 import ComposeEmailDialog from "./ComposeEmailDialog";
@@ -133,11 +134,13 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
       // Fetch all counts in parallel instead of sequentially
       const results = await Promise.allSettled(
         cuentas.map(cuenta =>
-          supabase.functions.invoke("gmail-api", {
-            body: { action: "getUnreadCount", email: cuenta.email },
+          invokeGmailApi<{ unreadCount?: number }>({
+            action: "getUnreadCount",
+            email: cuenta.email,
           }).then(response => ({
             email: cuenta.email,
             count: response.data?.unreadCount ?? 0,
+            error: response.error,
           }))
         )
       );
@@ -278,17 +281,16 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
     queryFn: async () => {
       if (!selectedAccount) return { messages: [], nextPageToken: null };
 
-      const response = await supabase.functions.invoke("gmail-api", {
-        body: {
-          action: "list",
-          email: selectedAccount,
-          maxResults: 25, // Reduced for faster initial load
-          searchQuery: activeSearch || undefined,
-        },
+      const response = await invokeGmailApi<{ messages?: Email[]; nextPageToken?: string | null }>({
+        action: "list",
+        email: selectedAccount,
+        maxResults: 25,
+        searchQuery: activeSearch || undefined,
       });
 
       if (response.error) {
-        throw new Error(response.error.message);
+        // Avoid a blank-screen loop: surface a friendly error and let react-query retry.
+        throw new Error(String((response.error as any)?.message ?? "Error cargando correos"));
       }
 
       // If we were retrying and now succeeded, show success
@@ -347,18 +349,16 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
     
     setIsLoadingMore(true);
     try {
-      const response = await supabase.functions.invoke("gmail-api", {
-        body: {
-          action: "list",
-          email: selectedAccount,
-          maxResults: 50,
-          searchQuery: activeSearch || undefined,
-          pageToken: nextPageToken,
-        },
+      const response = await invokeGmailApi<{ messages?: Email[]; nextPageToken?: string | null }>({
+        action: "list",
+        email: selectedAccount,
+        maxResults: 50,
+        searchQuery: activeSearch || undefined,
+        pageToken: nextPageToken,
       });
 
       if (response.error) {
-        throw new Error(response.error.message);
+        throw new Error(String((response.error as any)?.message ?? "Error al cargar"));
       }
 
       const newMessages = (response.data?.messages as Email[]) || [];
@@ -401,17 +401,16 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
     queryFn: async () => {
       if (!selectedEmailId || !selectedAccount) return null;
 
-      const response = await supabase.functions.invoke("gmail-api", {
-        body: {
-          action: "read",
-          email: selectedAccount,
-          messageId: selectedEmailId,
-        },
+      const response = await invokeGmailApi<EmailDetail>({
+        action: "read",
+        email: selectedAccount,
+        messageId: selectedEmailId,
       });
 
       // Handle 404 - email was deleted (check both error object and data)
-      const errorMessage = response.error?.message || 
-        (response.data as { error?: string } | null)?.error || '';
+      const errorMessage =
+        String((response.error as any)?.message ?? "") ||
+        String((response.data as { error?: string } | null)?.error ?? "");
       
       if (errorMessage.toLowerCase().includes("no encontrado") || 
           errorMessage.toLowerCase().includes("eliminado") ||
@@ -425,7 +424,7 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
       }
 
       if (response.error) {
-        throw new Error(response.error.message);
+        throw new Error(String((response.error as any)?.message ?? "Error al abrir correo"));
       }
 
       return response.data as EmailDetail;
@@ -460,12 +459,10 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
       );
 
       // Call API to mark as read
-      supabase.functions.invoke("gmail-api", {
-        body: {
-          action: "markAsRead",
-          email: selectedAccount,
-          messageId: selectedEmailId,
-        },
+      invokeGmailApi({
+        action: "markAsRead",
+        email: selectedAccount,
+        messageId: selectedEmailId,
       }).then(() => {
         // Refresh to ensure sync with server
         queryClient.invalidateQueries({ queryKey: ["gmail-unread-counts"] });
