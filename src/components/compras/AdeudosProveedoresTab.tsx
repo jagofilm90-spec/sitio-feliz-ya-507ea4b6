@@ -1,3 +1,4 @@
+// Component updated to include receipt column
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
