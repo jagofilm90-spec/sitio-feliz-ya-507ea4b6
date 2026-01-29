@@ -65,6 +65,7 @@ interface ProductoRecibido {
   aplica_ieps: boolean;
   pagado: boolean;
   precioFacturado?: number;
+  peso_kg?: number;
 }
 
 interface ProcesarPagoOCDialogProps {
@@ -80,6 +81,7 @@ interface ProcesarPagoOCDialogProps {
     total_ajustado?: number | null;
     monto_pagado?: number | null;
     fecha_creacion?: string;
+    tipo_pago?: string | null;
   } | null;
   onOpenFacturas?: () => void;
 }
@@ -131,7 +133,7 @@ export function ProcesarPagoOCDialog({
           subtotal,
           producto_id,
           pagado,
-          productos (codigo, nombre, aplica_iva, aplica_ieps)
+          productos (codigo, nombre, aplica_iva, aplica_ieps, peso_kg)
         `)
         .eq("orden_compra_id", orden.id);
       
@@ -149,6 +151,7 @@ export function ProcesarPagoOCDialog({
         aplica_iva: d.productos?.aplica_iva ?? true,
         aplica_ieps: d.productos?.aplica_ieps ?? false,
         pagado: d.pagado || false,
+        peso_kg: d.productos?.peso_kg || 0,
       }));
     },
     enabled: !!orden?.id && open,
@@ -335,6 +338,18 @@ export function ProcesarPagoOCDialog({
       cantidadProductos: productosParaPagar.length,
     };
   }, [productosRecibidos, productosSeleccionados, preciosEditados]);
+
+  // Calcular totales logísticos (bultos y peso)
+  const totalesLogisticos = useMemo(() => {
+    const productosParaPagar = productosRecibidos.filter(
+      p => productosSeleccionados.has(p.detalle_id) && !p.pagado
+    );
+    
+    const totalBultos = productosParaPagar.reduce((sum, p) => sum + p.cantidad, 0);
+    const totalPeso = productosParaPagar.reduce((sum, p) => sum + (p.cantidad * (p.peso_kg || 0)), 0);
+    
+    return { totalBultos, totalPeso };
+  }, [productosRecibidos, productosSeleccionados]);
 
   const tieneDevoluciones = (orden?.monto_devoluciones ?? 0) > 0;
   const productosNoPagados = productosRecibidos.filter(p => !p.pagado);
@@ -594,6 +609,12 @@ export function ProcesarPagoOCDialog({
               <div>
                 <p className="text-sm text-muted-foreground">Proveedor</p>
                 <p className="font-semibold">{orden?.proveedor_nombre}</p>
+                {orden?.tipo_pago === 'anticipado' && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    <Package className="h-3 w-3 inline mr-1" />
+                    {totalesLogisticos.totalBultos.toLocaleString('es-MX')} bultos • {totalesLogisticos.totalPeso.toLocaleString('es-MX')} kg
+                  </p>
+                )}
               </div>
               <Button
                 variant="outline"
@@ -609,6 +630,21 @@ export function ProcesarPagoOCDialog({
                 Descargar Orden de Pago (PDF)
               </Button>
             </div>
+
+            {/* Alerta pago anticipado */}
+            {orden?.tipo_pago === 'anticipado' && (
+              <Alert className="border-blue-300 bg-blue-50 dark:bg-blue-950/30">
+                <Package className="h-4 w-4 text-blue-600" />
+                <AlertTitle className="text-blue-800 dark:text-blue-300">Pago Anticipado</AlertTitle>
+                <AlertDescription className="text-blue-700 dark:text-blue-400">
+                  <p>Este es un pago previo a la recepción de mercancía.</p>
+                  <div className="flex gap-6 mt-2 font-medium">
+                    <span>Total bultos: {totalesLogisticos.totalBultos.toLocaleString('es-MX')}</span>
+                    <span>Peso total: {totalesLogisticos.totalPeso.toLocaleString('es-MX')} kg</span>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* Productos ya pagados alert */}
             {algunosPagados && (
@@ -641,8 +677,8 @@ export function ProcesarPagoOCDialog({
               </Alert>
             )}
 
-            {/* Alerta si hay entregas pendientes */}
-            {tieneEntregasPendientes && isPagoCompleto && (
+            {/* Alerta si hay entregas pendientes - Solo para pagos contra entrega */}
+            {tieneEntregasPendientes && isPagoCompleto && orden?.tipo_pago !== 'anticipado' && (
               <Alert className="border-orange-300 bg-orange-50 dark:bg-orange-950/30">
                 <AlertTriangle className="h-4 w-4 text-orange-600" />
                 <AlertTitle className="text-orange-800 dark:text-orange-300">
@@ -708,7 +744,10 @@ export function ProcesarPagoOCDialog({
                   {productosRecibidos.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                        No hay productos recibidos
+                        {orden?.tipo_pago === 'anticipado' 
+                          ? "No hay productos en la orden"
+                          : "No hay productos recibidos"
+                        }
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -1026,7 +1065,9 @@ export function ProcesarPagoOCDialog({
               <>
                 <CheckCircle2 className="h-4 w-4 mr-2" />
                 {tieneEntregasPendientes && isPagoCompleto
-                  ? "Confirmar Pago Parcial (mercancía recibida)"
+                  ? orden?.tipo_pago === 'anticipado'
+                    ? "Confirmar Pago Anticipado (previo a entrega)"
+                    : "Confirmar Pago Parcial (mercancía recibida)"
                   : isPagoCompleto 
                     ? "Confirmar Pago Completo" 
                     : `Pagar ${calcularTotalesSeleccionados.cantidadProductos} producto(s)`

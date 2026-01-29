@@ -778,6 +778,7 @@ const AdeudosProveedoresTab = () => {
             total_ajustado: selectedOC.total_ajustado,
             monto_pagado: selectedOC.monto_pagado,
             monto_devoluciones: 0,
+            tipo_pago: selectedOC.tipo_pago,
           }}
           onOpenFacturas={() => {}}
         />
