@@ -91,7 +91,7 @@ export const useUnreadEmails = (): UnreadEmailsData => {
 
     // Verify user is authenticated before calling edge function
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    if (!session?.access_token) {
       setIsLoading(false);
       return;
     }
@@ -101,6 +101,9 @@ export const useUnreadEmails = (): UnreadEmailsData => {
         cuentas.map(cuenta =>
           supabase.functions.invoke("gmail-api", {
             body: { action: "getUnreadCount", email: cuenta.email },
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
           }).then(response => ({
             email: cuenta.email,
             count: response.data?.unreadCount ?? 0,
