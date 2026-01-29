@@ -1,100 +1,199 @@
 
+# Plan: Rediseño Profesional de PDFs de OC
 
-# Plan: Corregir Error "Invalid time value" en PDFs de OC
+## Análisis del Estado Actual
 
-## Diagnóstico
+Los PDFs de **Orden de Pago** y **Cierre de OC** tienen un diseño funcional pero básico comparado con el de Cotizaciones que es más profesional. Voy a aplicar las mejores prácticas del PDF de Cotizaciones:
 
-Los generadores de PDF de Orden de Pago y Cierre de OC fallan con el error `RangeError: Invalid time value` cuando `fecha_creacion` viene en formato ISO completo (timestamp de PostgreSQL).
+| Elemento | Actual | Propuesto |
+|----------|--------|-----------|
+| Header | Barra roja simple + logo pequeño | Header con gradiente visual + logo + badge prominente |
+| Tipografía | Tamaños inconsistentes | Jerarquía clara con pesos y tamaños definidos |
+| Espaciado | Muy comprimido | Más aire, secciones bien diferenciadas |
+| Cajas de datos | Bordes grises planos | Bordes redondeados con sombras sutiles |
+| Resumen financiero | Caja verde básica | Panel destacado con iconografía y mejor estructura |
+| Tablas | Headers grises genéricos | Headers con colores semánticos (verde=recibido, rojo=devolución) |
+| Footer | Solo fecha de generación | Footer corporativo completo con contacto |
 
-**Código problemático:**
-```typescript
-// Línea 128 en ordenPagoPdfGenerator.ts
-// Línea 122 en cierreOCPdfGenerator.ts
-const fechaFormateada = format(new Date(ordenCompra.fecha_creacion + "T12:00:00"), ...);
+## Cambios Visuales Propuestos
+
+### 1. Orden de Pago (`ordenPagoPdfGenerator.ts`)
+
+**Header Mejorado:**
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄ BARRA ROJA ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄ │
+├─────────────────────────────────────────────────────────────────┤
+│  [LOGO]                                    ┌─────────────────┐  │
+│  ALMASA                                    │  ORDEN DE PAGO  │  │
+│  ABARROTES LA MANITA, S.A. DE C.V.         │ DOCUMENTO INTERNO│  │
+│                                            └─────────────────┘  │
+│  RFC: AMA700701GI8                         Folio: OC-2025-0042  │
+│  Tel: 55 5552-0168                         Fecha: 29/01/2026   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-**Escenario que causa el crash:**
-- La BD devuelve: `"2026-01-15T18:30:00.000Z"`
-- El código genera: `"2026-01-15T18:30:00.000ZT12:00:00"` (INVÁLIDO)
+**Panel de Resumen Financiero (más prominente):**
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  💰 RESUMEN FINANCIERO                                          │
+├─────────────────────────────────────────────────────────────────┤
+│  Total Original:                              $125,450.00       │
+│  (-) Devoluciones:                             -$3,200.00       │
+│  ────────────────────────────────────────────────────────────   │
+│  ✓ MONTO A PAGAR                            $122,250.00        │
+└─────────────────────────────────────────────────────────────────┘
+  (Panel verde con borde grueso y tipografía grande)
+```
 
-## Solución
+**Datos Bancarios del Proveedor (más visual):**
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  🏦 DATOS BANCARIOS DEL PROVEEDOR                               │
+├────────────────────────────┬────────────────────────────────────┤
+│  Beneficiario:             │  PROVEEDOR EJEMPLO, S.A.           │
+│  Banco:                    │  BBVA BANCOMER                     │
+│  Cuenta:                   │  0123456789                        │
+│  CLABE:                    │  012180001234567891                │
+└────────────────────────────┴────────────────────────────────────┘
+  (Panel azul claro con iconografía)
+```
 
-Crear una función helper que normalice cualquier formato de fecha antes de crear el objeto Date.
+**Footer Profesional:**
+```text
+────────────────────────────────────────────────────────────────
+        ABARROTES LA MANITA, S.A. DE C.V.
+        compras@almasa.com.mx | Tel: 55 5552-0168
+        Documento generado el 29/01/2026 10:30 - USO INTERNO
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄ BARRA ROJA ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+```
 
-### Archivos a Modificar
+### 2. Cierre de OC / Estado de Cuenta (`cierreOCPdfGenerator.ts`)
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/utils/ordenPagoPdfGenerator.ts` | Agregar helper y usarlo en línea 128 |
-| `src/utils/cierreOCPdfGenerator.ts` | Agregar helper y usarlo en línea 122 |
+**Mismas mejoras de header y footer, más:**
 
-### Implementación Técnica
+**Tabla de Productos con mejor contraste:**
+- Header verde oscuro (#228B22) para productos recibidos
+- Header rojo (#B41E1E) para devoluciones
+- Filas zebra con colores más suaves
+- Subtotales en paneles coloreados
 
-**Nueva función helper (agregar en ambos archivos):**
+**Panel de Totales más impactante:**
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  📊 RESUMEN DE OPERACIÓN                                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Total Productos:    $128,650.00       ┌───────────────────┐   │
+│   (-) Devoluciones:    -$6,400.00       │ TOTAL A PAGAR     │   │
+│   ──────────────────────────────        │ $122,250.00       │   │
+│                                         └───────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+  (Monto destacado en badge rojo con tipografía grande)
+```
 
+## Archivos a Modificar
+
+| Archivo | Cambios |
+|---------|---------|
+| `src/utils/ordenPagoPdfGenerator.ts` | Rediseño completo del layout |
+| `src/utils/cierreOCPdfGenerator.ts` | Rediseño completo del layout |
+
+## Mejoras Técnicas Específicas
+
+### Paleta de Colores Unificada
 ```typescript
-/**
- * Normaliza una fecha que puede venir como:
- * - "2026-01-15" (solo fecha)
- * - "2026-01-15T18:30:00.000Z" (timestamp ISO)
- * - null/undefined
- * Retorna un Date válido o la fecha actual como fallback
- */
-const parseFechaSafe = (fecha: string | null | undefined): Date => {
-  if (!fecha) return new Date();
-  
-  try {
-    // Si es solo fecha (YYYY-MM-DD), agregar hora del mediodía para evitar problemas de timezone
-    if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
-      return new Date(fecha + "T12:00:00");
-    }
-    // Si ya es timestamp completo, usarlo directamente
-    const parsed = new Date(fecha);
-    if (isNaN(parsed.getTime())) {
-      return new Date(); // Fallback si aún es inválida
-    }
-    return parsed;
-  } catch {
-    return new Date();
-  }
+const COLORS = {
+  brandRed: { r: 139, g: 35, b: 50 },      // Rojo Almasa
+  success: { r: 34, g: 139, b: 34 },       // Verde para montos
+  accent: { r: 70, g: 130, b: 180 },       // Azul para datos
+  dark: { r: 33, g: 37, b: 41 },           // Texto principal
+  gray: { r: 100, g: 100, b: 100 },        // Texto secundario
+  lightBg: { r: 248, g: 248, b: 248 },     // Fondos claros
+  successBg: { r: 240, g: 255, b: 240 },   // Fondo verde claro
+  dangerBg: { r: 255, g: 240, b: 240 },    // Fondo rojo claro
+  infoBg: { r: 240, g: 248, b: 255 },      // Fondo azul claro
 };
 ```
 
-**Cambio en ordenPagoPdfGenerator.ts línea 128:**
-```typescript
-// ANTES
-const fechaFormateada = format(new Date(ordenCompra.fecha_creacion + "T12:00:00"), "dd/MM/yyyy", { locale: es });
+### Nuevos Elementos Visuales
+1. **Badges redondeados** para folio y estados
+2. **Iconografía** con emojis para secciones (💰🏦📊📝)
+3. **Líneas separadoras** con gradiente visual
+4. **Paneles con sombras** usando doble borde
+5. **Footer corporativo** con información de contacto
+6. **Mejor espaciado** entre secciones (+40% más aire)
 
-// DESPUÉS
-const fechaFormateada = format(parseFechaSafe(ordenCompra.fecha_creacion), "dd/MM/yyyy", { locale: es });
+### Estructura del Header Unificada
+```typescript
+const drawProfessionalHeader = async (doc: jsPDF, title: string, subtitle: string) => {
+  // Barra superior roja
+  doc.setFillColor(139, 35, 50);
+  doc.rect(0, 0, 210, 10, "F");
+  
+  // Logo con más espacio
+  const logoBase64 = await loadImageAsBase64('/logo-almasa-pdf.png');
+  if (logoBase64) {
+    doc.addImage(logoBase64, "PNG", 15, 15, 45, 16);
+  }
+  
+  // Badge del documento (derecha)
+  doc.setFillColor(139, 35, 50);
+  doc.roundedRect(130, 14, 65, 14, 3, 3, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text(title, 162.5, 23, { align: "center" });
+  
+  // Datos de empresa
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text("ABARROTES LA MANITA, S.A. DE C.V.", 15, 38);
+  doc.text(`RFC: ${COMPANY_DATA.rfc} | Tel: ${COMPANY_DATA.telefonos.principal}`, 15, 43);
+  
+  // Línea separadora elegante
+  doc.setDrawColor(139, 35, 50);
+  doc.setLineWidth(0.8);
+  doc.line(15, 48, 195, 48);
+};
 ```
 
-**Cambio en cierreOCPdfGenerator.ts línea 122:**
+### Footer Corporativo
 ```typescript
-// ANTES
-const fechaFormateada = format(new Date(ordenCompra.fecha_creacion + "T12:00:00"), "dd/MM/yyyy", { locale: es });
-
-// DESPUÉS
-const fechaFormateada = format(parseFechaSafe(ordenCompra.fecha_creacion), "dd/MM/yyyy", { locale: es });
+const drawProfessionalFooter = (doc: jsPDF) => {
+  const pageHeight = doc.internal.pageSize.height;
+  
+  // Línea separadora
+  doc.setDrawColor(139, 35, 50);
+  doc.setLineWidth(0.5);
+  doc.line(40, pageHeight - 25, 170, pageHeight - 25);
+  
+  // Datos de empresa
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(33, 37, 41);
+  doc.text(COMPANY_DATA.razonSocialLarga, 105, pageHeight - 20, { align: "center" });
+  
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`${COMPANY_DATA.emails.compras} | Tel: ${COMPANY_DATA.telefonos.principal}`, 105, pageHeight - 15, { align: "center" });
+  
+  // Fecha de generación
+  const fecha = format(new Date(), "dd/MM/yyyy HH:mm", { locale: es });
+  doc.text(`Documento generado el ${fecha}`, 105, pageHeight - 10, { align: "center" });
+  
+  // Barra inferior
+  doc.setFillColor(139, 35, 50);
+  doc.rect(0, pageHeight - 6, 210, 6, "F");
+};
 ```
 
-## Resumen de PDFs de OC
+## Resultado Esperado
 
-Una vez aplicada esta corrección, todos los generadores de PDF del módulo de Compras funcionarán correctamente:
-
-| PDF | Archivo | Estado |
-|-----|---------|--------|
-| Orden de Pago | `ordenPagoPdfGenerator.ts` | Por corregir |
-| Cierre de OC | `cierreOCPdfGenerator.ts` | Por corregir |
-| Comprobante de Recepción | `recepcionPdfGenerator.ts` | Funciona correctamente |
-| Reporte Recepciones del Día | `reporteRecepcionesDiaPdfGenerator.ts` | Funciona correctamente |
-
-## Prueba Recomendada
-
-Después de aplicar el fix:
-1. Ir a Compras > Órdenes de Compra
-2. Seleccionar una OC completada/recibida
-3. Abrir "Procesar Pago"
-4. Hacer clic en "Descargar Orden de Pago"
-5. Verificar que el PDF se genera sin errores
-
+- PDFs con apariencia ejecutiva y profesional
+- Consistencia visual con el PDF de Cotizaciones
+- Mejor legibilidad y jerarquía de información
+- Información de contacto corporativo visible
+- Montos destacados y fáciles de identificar
+- Datos bancarios claros para facilitar pagos
