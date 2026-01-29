@@ -175,6 +175,51 @@ export const DevolucionProveedorDialog = ({
         });
       }
 
+      // === CRÉDITOS PARA OC ANTICIPADAS ===
+      // Si es OC anticipada, también crear crédito pendiente porque ya se pagó
+      try {
+        const { data: oc } = await supabase
+          .from("ordenes_compra")
+          .select("tipo_pago, folio, proveedor_id, proveedor_nombre_manual")
+          .eq("id", ordenCompraId)
+          .single();
+
+        if (oc?.tipo_pago === 'anticipado') {
+          for (const producto of productosDevolucion) {
+            // Obtener precio unitario
+            const { data: detalleOC } = await supabase
+              .from("ordenes_compra_detalles")
+              .select("precio_unitario_compra")
+              .eq("orden_compra_id", ordenCompraId)
+              .eq("producto_id", producto.productoId)
+              .maybeSingle();
+
+            const precioUnitario = detalleOC?.precio_unitario_compra || 0;
+            const montoDevolucion = producto.cantidadDevuelta * precioUnitario;
+
+            if (montoDevolucion > 0) {
+              await supabase.from("proveedor_creditos_pendientes").insert({
+                proveedor_id: oc.proveedor_id,
+                proveedor_nombre_manual: oc.proveedor_nombre_manual,
+                orden_compra_origen_id: ordenCompraId,
+                entrega_id: entregaId,
+                producto_id: producto.productoId,
+                producto_nombre: producto.productoNombre,
+                cantidad: producto.cantidadDevuelta,
+                precio_unitario: precioUnitario,
+                monto_total: montoDevolucion,
+                motivo: producto.razon, // "roto" o "rechazado_calidad"
+                status: "pendiente",
+                notas: `Devolución en OC anticipada ${oc.folio}`
+              });
+            }
+          }
+        }
+      } catch (creditError) {
+        console.error("Error creando crédito para devolución:", creditError);
+        // No bloqueamos la operación principal si falla el crédito
+      }
+
       toast({
         title: "Devolución registrada",
         description: `Se registró devolución con firma de ${nombreChofer}`

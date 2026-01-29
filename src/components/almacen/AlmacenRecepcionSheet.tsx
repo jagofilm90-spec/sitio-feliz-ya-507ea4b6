@@ -123,6 +123,7 @@ interface EntregaCompra {
   orden_compra: {
     id: string;
     folio: string;
+    tipo_pago?: string;
     proveedor_id: string | null;
     proveedor_nombre_manual: string | null;
     proveedor: {
@@ -1153,6 +1154,115 @@ export const AlmacenRecepcionSheet = ({
               fecha_entrega_programada: new Date().toISOString().split("T")[0]
             })
             .eq("id", entrega.orden_compra.id);
+
+          // === VERIFICACIÓN DE BALANCE PARA OC ANTICIPADAS ===
+          // Si es pago anticipado, verificar que se recibió todo lo pagado
+          if (entrega.orden_compra.tipo_pago === 'anticipado') {
+            try {
+              // Obtener todos los detalles de la OC
+              const { data: detallesOC } = await supabase
+                .from("ordenes_compra_detalles")
+                .select("producto_id, cantidad_ordenada, cantidad_recibida, precio_unitario_compra")
+                .eq("orden_compra_id", entrega.orden_compra.id);
+
+              // Calcular diferencias por producto
+              const productosConSaldo = (detallesOC || []).filter(d => 
+                (d.cantidad_ordenada || 0) > (d.cantidad_recibida || 0)
+              );
+
+              if (productosConSaldo.length > 0) {
+                // Obtener nombres de productos
+                const productIds = productosConSaldo.map(p => p.producto_id);
+                const { data: productosInfo } = await supabase
+                  .from("productos")
+                  .select("id, nombre, codigo")
+                  .in("id", productIds);
+                
+                const productosMap = new Map(
+                  (productosInfo || []).map(p => [p.id, p])
+                );
+
+                // Verificar créditos ya existentes para evitar duplicados
+                const { data: creditosExistentes } = await supabase
+                  .from("proveedor_creditos_pendientes")
+                  .select("producto_id, cantidad")
+                  .eq("orden_compra_origen_id", entrega.orden_compra.id)
+                  .in("status", ["pendiente", "aplicado"]);
+
+                const creditosExistentesMap = new Map<string, number>();
+                (creditosExistentes || []).forEach(c => {
+                  const actual = creditosExistentesMap.get(c.producto_id) || 0;
+                  creditosExistentesMap.set(c.producto_id, actual + c.cantidad);
+                });
+
+                // Crear créditos solo por la diferencia no cubierta
+                const creditosACrear = productosConSaldo
+                  .map(detalle => {
+                    const diferencia = (detalle.cantidad_ordenada || 0) - (detalle.cantidad_recibida || 0);
+                    const yaCreditado = creditosExistentesMap.get(detalle.producto_id) || 0;
+                    const pendiente = diferencia - yaCreditado;
+                    
+                    if (pendiente <= 0) return null;
+                    
+                    const productoInfo = productosMap.get(detalle.producto_id);
+                    return {
+                      proveedor_id: entrega.orden_compra.proveedor?.id || null,
+                      proveedor_nombre_manual: entrega.orden_compra.proveedor_nombre_manual || null,
+                      orden_compra_origen_id: entrega.orden_compra.id,
+                      entrega_id: entrega.id,
+                      producto_id: detalle.producto_id,
+                      producto_nombre: productoInfo?.nombre || "Producto",
+                      cantidad: pendiente,
+                      precio_unitario: detalle.precio_unitario_compra || 0,
+                      monto_total: pendiente * (detalle.precio_unitario_compra || 0),
+                      motivo: "saldo_oc_anticipada",
+                      status: "pendiente",
+                      notas: `Saldo automático al completar ${entrega.orden_compra.folio}`
+                    };
+                  })
+                  .filter(Boolean);
+
+                // Insertar créditos
+                if (creditosACrear.length > 0) {
+                  await supabase
+                    .from("proveedor_creditos_pendientes")
+                    .insert(creditosACrear);
+
+                  // Calcular total de créditos generados
+                  const totalCredito = creditosACrear.reduce((sum, c) => sum + (c?.monto_total || 0), 0);
+
+                  // Notificar por email al proveedor
+                  try {
+                    await supabase.functions.invoke("notificar-faltante-anticipado", {
+                      body: {
+                        orden_compra_id: entrega.orden_compra.id,
+                        faltantes: creditosACrear.map(c => ({
+                          producto_id: c?.producto_id,
+                          producto_nombre: c?.producto_nombre,
+                          cantidad_faltante: c?.cantidad,
+                          precio_unitario: c?.precio_unitario,
+                          monto_total: c?.monto_total,
+                          motivo: "saldo_final"
+                        })),
+                        entrega_id: entrega.id
+                      }
+                    });
+                  } catch (emailError) {
+                    console.error("Error enviando notificación de saldo:", emailError);
+                  }
+
+                  // Mostrar notificación al usuario
+                  toast({
+                    title: "Saldo registrado",
+                    description: `Se registró crédito pendiente por ${creditosACrear.length} producto(s) con valor de ${formatCurrency(totalCredito)}`,
+                    variant: "default"
+                  });
+                }
+              }
+            } catch (balanceError) {
+              console.error("Error verificando balance de OC anticipada:", balanceError);
+            }
+          }
         }
       }
 

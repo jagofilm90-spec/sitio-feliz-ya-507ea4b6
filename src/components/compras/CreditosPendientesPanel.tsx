@@ -212,6 +212,8 @@ const CreditosPendientesPanel = () => {
       case "roto": return "Dañado";
       case "rechazado_calidad": return "Rechazado";
       case "devolucion": return "Devolución";
+      case "saldo_oc_anticipada": return "Saldo OC Anticipada";
+      case "saldo_final": return "Saldo Final";
       default: return motivo;
     }
   };
