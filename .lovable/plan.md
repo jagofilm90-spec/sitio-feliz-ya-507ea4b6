@@ -1,251 +1,141 @@
 
-# Plan: Sistema Completo de OC - Cancelación de Productos y Alertas de Costos
+# Plan: Corregir Crash de Cámara en Registro de Vehículos (Guideline 2.1)
 
-## Entendimiento de los Escenarios
+## Diagnóstico
 
-Hay **dos escenarios distintos** de cancelación de productos que debo implementar:
+Apple reporta que la app crashea al seleccionar "Take Photo" durante el registro de un vehículo en iPad Air 11-inch (M3). Después de analizar el código:
 
-### Escenario A: Error de Captura (ANTES de recepción)
-El administrador o secretaria crea una OC con 3 productos, pero por error de captura o cambio de necesidades, necesita **cancelar un producto** antes de que llegue.
+1. **El código JavaScript ya tiene protecciones**: Compresión de imágenes y manejo de errores try-catch están implementados en `VehiculosTab.tsx`
 
-**Flujo:**
-1. Abrir OC en estado `borrador`, `autorizada`, `enviada` o `confirmada`
-2. Seleccionar producto(s) a eliminar de la OC
-3. Especificar motivo de cancelación
-4. Sistema modifica la OC y recalcula totales
-5. Si la OC ya fue enviada al proveedor, enviar email notificando la modificación
+2. **El problema es a nivel nativo de iOS**: El crash ocurre ANTES de que el código JavaScript reciba el archivo, cuando iOS intenta abrir la cámara
 
-### Escenario B: Producto Faltante que Ya No Se Requiere (DESPUÉS de recepción parcial)
-El día de entrega solo llega 1 de 2 productos. Días después, el producto faltante ya no se necesita.
+3. **Causa probable**: Los permisos de cámara en `Info.plist` pueden no estar correctamente configurados o la app no maneja graciosamente cuando iOS deniega el acceso
 
-**Flujo:**
-1. OC está en estado `parcial` con entregas programadas de faltantes
-2. Admin/Secretaria decide cancelar el producto que no llegó
-3. Sistema marca la entrega programada como `cancelada`
-4. Sistema verifica si ya no hay entregas pendientes → marca OC como `completada`
-5. Notifica al proveedor que el producto ya no se requiere
-6. OC procede a proceso de pago solo por lo recibido
+## Solución Propuesta
 
----
+### Parte 1: Verificación de Info.plist (Manual en Xcode)
 
-## Cambios a Implementar
+Asegurar que estos permisos están configurados en `ios/App/App/Info.plist`:
 
-### 1. Nuevo Componente: `ModificarProductosOCDialog.tsx`
-
-**Propósito:** Permite eliminar productos de una OC **antes** de que sean recibidos.
-
-**Funcionalidad:**
-- Lista todos los productos de la OC con checkbox de selección
-- Muestra cantidad ordenada vs cantidad ya recibida (si aplica)
-- Solo permite eliminar productos con cantidad_recibida = 0
-- Campo para motivo de modificación
-- Recalcula subtotal, IVA y total automáticamente
-- Si OC ya fue enviada: genera email de modificación al proveedor
-
-**Ubicación:** `src/components/compras/ModificarProductosOCDialog.tsx`
-
-**Integración:** Agregar botón "Modificar productos" en `OrdenAccionesDialog.tsx` visible cuando:
-- Status: `borrador`, `autorizada`, `enviada`, `confirmada`, `parcial`
-- Al menos un producto tiene cantidad_recibida = 0
-
----
-
-### 2. Mejora a `FaltantesPendientesTab.tsx`
-
-**Cambio:** Ya existe funcionalidad de cancelar faltantes. Solo necesito:
-- Mejorar el diálogo de confirmación para ser más explícito
-- Agregar badge visual indicando que la OC pasará a `completada` si no hay más pendientes
-
-**Ya funciona:**
-- Cancelar entrega de faltante ✓
-- Notificar al proveedor ✓
-- Marcar OC como completada si no hay más pendientes ✓
-
----
-
-### 3. Alertas de Costo Mayor en `AjustarCostosOCDialog.tsx`
-
-**Cambios:**
-
-**A) Visual Badge por producto:**
-```typescript
-// En cada fila de producto, si precio_editado > precio_actual
-{producto.precio_editado > producto.precio_actual && (
-  <Badge className="bg-red-100 text-red-700 border border-red-300 ml-2">
-    <AlertTriangle className="w-3 h-3 mr-1" />
-    +{((producto.precio_editado - producto.precio_actual) / producto.precio_actual * 100).toFixed(1)}%
-  </Badge>
-)}
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ NSCameraUsageDescription                                        │
+│ "ALMASA ERP necesita acceso a la cámara para fotografiar       │
+│ documentos de vehículos y evidencias de entrega."              │
+├─────────────────────────────────────────────────────────────────┤
+│ NSPhotoLibraryUsageDescription                                  │
+│ "ALMASA ERP necesita acceso a tus fotos para subir            │
+│ documentos de vehículos y evidencias."                         │
+├─────────────────────────────────────────────────────────────────┤
+│ NSPhotoLibraryAddUsageDescription                               │
+│ "ALMASA ERP necesita permiso para guardar fotos de            │
+│ evidencias en tu biblioteca."                                   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-**B) Crear notificación al guardar:**
-```typescript
-// Después de ajustar costos exitosamente
-const productosConIncremento = productosConCambios.filter(
-  p => p.precio_facturado > productosCostos.find(x => x.producto_id === p.producto_id)?.precio_actual
-);
+### Parte 2: Mejoras Defensivas en el Código
 
-if (productosConIncremento.length > 0) {
-  await supabase.from("notificaciones").insert({
-    tipo: "costo_incrementado",
-    titulo: `⚠️ Costo mayor: ${ordenCompra.folio}`,
-    descripcion: `Se detectó incremento de costo en ${productosConIncremento.length} producto(s). Impacto: +$${diferenciaTotalMonto.toFixed(2)}`,
-    leida: false
-  });
-}
-```
+Agregar validación adicional ANTES de intentar procesar archivos para manejar casos edge donde iOS no entrega correctamente el archivo:
 
----
+**Archivo: `src/components/rutas/VehiculosTab.tsx`**
 
-### 4. Actualizar Edge Function `notificar-faltante-oc`
+1. Agregar función helper para validar archivos de cámara con manejo especial para iPad
+2. Agregar validación de permisos usando Capacitor Camera API (opcional pero recomendado)
+3. Mejorar mensajes de error para guiar al usuario
 
-**Agregar nuevo tipo:** `productos_modificados`
+**Archivo: `src/lib/imageUtils.ts`**
 
-**Uso:** Cuando se eliminan productos de una OC ya enviada, notificar al proveedor con la lista de cambios.
+4. Agregar timeout y manejo de errores más robusto en la compresión de imágenes
+5. Agregar validación de blob nulo que puede ocurrir en iPads con poca memoria
 
-**Nuevo template de email:**
-```typescript
-case 'productos_modificados':
-  asunto = `📝 Modificación de Orden - ${orden_folio}`;
-  cuerpoHTML = `
-    <p>Estimado ${proveedor_nombre},</p>
-    <p>Le informamos que la orden <strong>${orden_folio}</strong> ha sido modificada.</p>
-    
-    <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
-      <p style="font-weight: bold; color: #92400e; margin: 0 0 10px;">Productos cancelados:</p>
-      <ul style="margin: 0; padding-left: 20px; color: #92400e;">
-        ${getProductosHTML(productos_cancelados)}
-      </ul>
-      ${motivo_cancelacion ? `<p style="margin-top: 10px;"><strong>Motivo:</strong> ${motivo_cancelacion}</p>` : ''}
-    </div>
-    
-    <p>Por favor tome nota de esta modificación. Los productos listados arriba <strong>ya no deben ser enviados</strong>.</p>
-    
-    <p>Saludos cordiales,<br><strong>Departamento de Compras</strong></p>
-  `;
-  break;
-```
+### Parte 3: Actualizar Guía de Build
 
----
+**Archivo: `MOBILE_BUILD_GUIDE.md`**
 
-### 5. Mejora Visual en Calendario (Iconografía)
+6. Documentar claramente que los tres permisos de cámara/foto son obligatorios
+7. Agregar verificación de permisos al checklist pre-upload
 
-**Archivo:** `CalendarioEntregasTab.tsx`
-
-Ya tiene iconografía diferenciada:
-- ✅ CheckCircle2 verde = Recibida
-- ⚠️ PackageX naranja = Faltante pendiente
-- 🟢 Punto verde = Anticipado pagado
-- 🟡 Punto amarillo = Anticipado pendiente
-- 🔴 Punto rojo = Contra entrega
-
-**Mejora adicional:** Agregar badge de "Reprogramada" cuando `notas` contiene `[AUTO]`:
-
-```typescript
-// En el mapeo de entregas del grid
-{entrega.notas?.includes('[AUTO]') && (
-  <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-600">
-    Reprog.
-  </Badge>
-)}
-```
-
----
-
-### 6. Sincronización Realtime en `OrdenesCompraTab.tsx`
-
-**Agregar subscripción** para actualizar la barra de progreso de recepción en tiempo real:
-
-```typescript
-useEffect(() => {
-  const channel = supabase
-    .channel('oc-entregas-sync')
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'ordenes_compra_entregas'
-      },
-      () => {
-        queryClient.invalidateQueries({ queryKey: ["ordenes_compra"] });
-      }
-    )
-    .subscribe();
-
-  return () => {
-    supabase.removeChannel(channel);
-  };
-}, []);
-```
-
----
-
-## Resumen de Archivos
+## Archivos a Modificar
 
 | Archivo | Cambios |
 |---------|---------|
-| `ModificarProductosOCDialog.tsx` | **NUEVO** - Eliminar productos antes de recepción |
-| `OrdenAccionesDialog.tsx` | Agregar botón "Modificar productos" |
-| `AjustarCostosOCDialog.tsx` | Badge de alerta + notificación de costo mayor |
-| `CalendarioEntregasTab.tsx` | Badge "Reprog." para entregas auto-reprogramadas |
-| `OrdenesCompraTab.tsx` | Subscripción Realtime para sincronización |
-| `notificar-faltante-oc/index.ts` | Nuevo tipo `productos_modificados` |
+| `src/components/rutas/VehiculosTab.tsx` | Agregar validación defensiva de archivos capturados |
+| `src/lib/imageUtils.ts` | Agregar timeout y validación de blob nulo |
+| `MOBILE_BUILD_GUIDE.md` | Documentar permisos obligatorios de cámara |
 
----
+## Sección Técnica
 
-## Flujos Completos Después de la Implementación
+### Cambio Principal en VehiculosTab.tsx
 
-### Flujo A: Cancelar producto por error de captura
-
-```text
-1. OC con 3 productos creada y enviada al proveedor
-2. Admin detecta error → abre menú "Acciones" → "Modificar productos"
-3. Selecciona producto a eliminar, escribe motivo
-4. Sistema:
-   - Elimina el producto de ordenes_compra_detalles
-   - Recalcula subtotal, IVA, total
-   - Envía email al proveedor notificando la modificación
-5. Proveedor recibe email con productos cancelados
-6. OC continúa con 2 productos
+```typescript
+// Validación defensiva antes de procesar
+const validateCapturedFile = (file: File | undefined): file is File => {
+  if (!file) {
+    toast({
+      title: "No se capturó la imagen",
+      description: "Por favor intenta de nuevo",
+      variant: "destructive",
+    });
+    return false;
+  }
+  
+  // iPad puede entregar archivos vacíos si hay problemas de memoria
+  if (file.size === 0) {
+    toast({
+      title: "Imagen vacía",
+      description: "La cámara no pudo capturar la imagen. Intenta cerrar otras apps.",
+      variant: "destructive",
+    });
+    return false;
+  }
+  
+  // Validar tamaño máximo (50MB) para prevenir crash por memoria
+  const MAX_SIZE = 50 * 1024 * 1024;
+  if (file.size > MAX_SIZE) {
+    toast({
+      title: "Imagen muy grande",
+      description: "Por favor toma la foto con menor resolución",
+      variant: "destructive",
+    });
+    return false;
+  }
+  
+  return true;
+};
 ```
 
-### Flujo B: Recepción parcial + cancelar faltante
+### Cambio en imageUtils.ts - Timeout de Seguridad
 
-```text
-1. OC con 2 productos, llega solo 1
-2. Almacén marca producto 2 como "no_llego"
-3. Sistema crea entrega automática para día siguiente
-4. Admin decide que ya no necesita producto 2
-5. Va a "Faltantes" → Cancela el faltante pendiente
-6. Sistema:
-   - Marca entrega como cancelada
-   - Verifica: no hay más entregas pendientes
-   - Cambia OC a status "completada"
-   - Notifica al proveedor
-7. OC procede a pago solo por producto 1
+```typescript
+export async function compressImageForUpload(
+  file: File,
+  profile: ImageCompressionProfile = 'evidence'
+): Promise<File> {
+  const TIMEOUT_MS = 30000; // 30 segundos máximo
+  
+  return Promise.race([
+    compressImageInternal(file, profile),
+    new Promise<File>((_, reject) => 
+      setTimeout(() => reject(new Error('Timeout al procesar imagen')), TIMEOUT_MS)
+    )
+  ]).catch(() => file); // Fallback: retornar original si hay error
+}
 ```
 
-### Flujo C: Detección de costo mayor
+## Pasos para Resubmit a Apple
 
-```text
-1. OC registrada a $100/unidad
-2. Proveedor factura a $120/unidad
-3. Usuario abre "Ajustar Costos" en OC
-4. Al cambiar precio:
-   - Badge rojo aparece: "+20%"
-   - Input se resalta en amarillo
-5. Al guardar:
-   - Sistema actualiza lotes y WAC
-   - Crea notificación: "⚠️ Costo mayor: OC-XXXX - +$200"
-6. Admin ve alerta en Centro de Notificaciones
-```
+1. Aplicar los cambios de código
+2. Hacer git pull en tu Mac
+3. Abrir Xcode y verificar/agregar los permisos en Info.plist:
+   - `NSCameraUsageDescription`
+   - `NSPhotoLibraryUsageDescription`  
+   - `NSPhotoLibraryAddUsageDescription`
+4. Incrementar Build Number (ej: 1.0 Build 3)
+5. Hacer Archive y Upload a App Store Connect
+6. **IMPORTANTE**: NO enviar a revisión hasta recibir confirmación del Unlisted App (Guideline 3.2)
 
----
+## Notas Importantes
 
-## Notas Técnicas
-
-- El componente `FaltantesPendientesTab` ya maneja correctamente la cancelación de faltantes después de recepción
-- La única parte faltante era cancelar productos **antes** de la recepción (nuevo `ModificarProductosOCDialog`)
-- Las alertas de costo son solo internas, nunca se notifica al proveedor del incremento
-- La sincronización Realtime asegura que todos los paneles (Almacén, Secretaría, Admin) vean los cambios inmediatamente
+- El crash de Guideline 2.1 debe corregirse, pero NO debes reenviar la app hasta que Apple confirme la aprobación del Unlisted App
+- Una vez recibas el email de confirmación de Unlisted, podrás subir el nuevo build y enviarlo a revisión
+- El nuevo build tendrá tanto la corrección del crash como la configuración de Unlisted App
