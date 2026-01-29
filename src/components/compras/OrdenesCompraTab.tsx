@@ -1558,10 +1558,14 @@ const OrdenesCompraTab = () => {
       
       if (!matchesSearch) return false;
       
-      // Filtro de archivadas
-      if (!mostrarArchivadas && esOCArchivada(orden)) return false;
-      
-      return true;
+      // Filtro de archivadas (exclusivo)
+      if (mostrarArchivadas) {
+        // Si el switch está ON, solo mostrar archivadas
+        return esOCArchivada(orden);
+      } else {
+        // Si el switch está OFF, solo mostrar activas
+        return !esOCArchivada(orden);
+      }
     }
   );
 
