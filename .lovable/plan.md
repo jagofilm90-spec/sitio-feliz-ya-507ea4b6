@@ -1,174 +1,143 @@
 
-# Plan: Corregir Diálogo de Pago Anticipado - Bultos y Scroll
+# Plan: Corregir Scroll en Diálogo de Procesar Pago
 
-## Problemas Identificados
+## Análisis del Problema
 
-### Problema 1: Cantidad de Bultos Muestra 0
-**Ubicación:** `src/components/compras/ProcesarPagoOCDialog.tsx`, línea 148
+### ¿Por qué no funciona el scroll?
 
-**Causa raíz:** El código actual usa el operador `??` (nullish coalescing):
-```typescript
-cantidad: d.cantidad_recibida ?? d.cantidad_ordenada
+1. **Conflicto CSS**: El componente `DialogContent` base tiene `display: grid` en sus estilos (línea 39 de `dialog.tsx`). Agregamos `flex flex-col`, pero `grid` tiene mayor especificidad.
+
+2. **ScrollArea de Radix**: El componente `ScrollArea` envuelve el contenido en un `Viewport` interno que necesita una altura definida explícitamente para calcular el área scrolleable. Actualmente solo definimos `max-h` en el Root, no en el Viewport.
+
+3. **Estructura actual incorrecta**:
+```
+DialogContent (grid + flex-col conflicto, max-h-[90vh])
+  └─ DialogHeader (flex-shrink-0)
+  └─ ScrollArea (flex-1 max-h-[calc(90vh-180px)])
+        └─ Viewport (h-full w-full - pero no tiene referencia de altura real)
+             └─ contenido
+  └─ DialogFooter (flex-shrink-0)
 ```
 
-El operador `??` solo actúa cuando el valor es `null` o `undefined`. Para OCs con pago anticipado sin recepción, `cantidad_recibida` es `0` (no null), por lo que NO cae al fallback `cantidad_ordenada`.
+## Solución
 
-**Solución:** Para OCs con pago anticipado, SIEMPRE usar `cantidad_ordenada`:
-```typescript
-// Si es pago anticipado, usar cantidad ordenada
-// Si no, usar recibida (con fallback a ordenada si es null)
-cantidad: orden?.tipo_pago === 'anticipado' 
-  ? d.cantidad_ordenada 
-  : (d.cantidad_recibida ?? d.cantidad_ordenada)
-```
+Reemplazar `ScrollArea` por un `div` con `overflow-y-auto` nativo que funciona más confiablemente en diálogos modales. Esto evita los problemas de cálculo de altura de Radix ScrollArea.
 
-### Problema 2: No Se Puede Hacer Scroll
-**Ubicación:** `src/components/compras/ProcesarPagoOCDialog.tsx`, líneas 563-577
+### Modificar `src/components/compras/ProcesarPagoOCDialog.tsx`
 
-**Causa raíz:** La combinación de estilos causa problemas en Safari:
-```tsx
-<DialogContent 
-  className="max-w-4xl max-h-[90vh] overflow-hidden" 
-  style={{ display: 'flex', flexDirection: 'column' }}
->
-  ...
-  <ScrollArea className="flex-1 min-h-0 overflow-hidden px-1">
-```
-
-El `overflow-hidden` en el DialogContent junto con `flex-1 min-h-0` no calcula correctamente la altura disponible para el ScrollArea.
-
-**Solución:** Agregar altura explícita al ScrollArea y remover `overflow-hidden` redundante:
-```tsx
-<DialogContent 
-  className="max-w-4xl max-h-[90vh] flex flex-col"
->
-  ...
-  <ScrollArea className="flex-1 max-h-[calc(90vh-200px)] pr-4">
-```
-
----
-
-## Archivos a Modificar
-
-### `src/components/compras/ProcesarPagoOCDialog.tsx`
-
-#### Cambio 1: Query de productos (líneas 121-158)
-Pasar el `tipo_pago` al mapeo de productos para usar la cantidad correcta:
-
-```typescript
-const { data: productosRecibidos = [] } = useQuery({
-  queryKey: ["productos-recibidos-pago", orden?.id, orden?.tipo_pago],
-  queryFn: async () => {
-    if (!orden?.id) return [];
-    
-    const { data: detalles, error } = await supabase
-      .from("ordenes_compra_detalles")
-      .select(`
-        id,
-        cantidad_ordenada,
-        cantidad_recibida,
-        precio_unitario_compra,
-        subtotal,
-        producto_id,
-        pagado,
-        productos (codigo, nombre, aplica_iva, aplica_ieps, peso_kg)
-      `)
-      .eq("orden_compra_id", orden.id);
-    
-    if (error) throw error;
-    if (!detalles) return [];
-    
-    const esPagoAnticipado = orden.tipo_pago === 'anticipado';
-    
-    return detalles.map((d: any): ProductoRecibido => {
-      // Para pago anticipado, siempre usar cantidad ordenada
-      // Para contra entrega, usar cantidad recibida (o ordenada si es null)
-      const cantidad = esPagoAnticipado 
-        ? d.cantidad_ordenada 
-        : (d.cantidad_recibida ?? d.cantidad_ordenada);
-      
-      return {
-        detalle_id: d.id,
-        producto_id: d.producto_id,
-        codigo: d.productos?.codigo || "",
-        nombre: d.productos?.nombre || "Producto",
-        cantidad: cantidad,
-        precio_unitario: d.precio_unitario_compra || 0,
-        subtotal: cantidad * (d.precio_unitario_compra || 0),
-        aplica_iva: d.productos?.aplica_iva ?? true,
-        aplica_ieps: d.productos?.aplica_ieps ?? false,
-        pagado: d.pagado || false,
-        peso_kg: d.productos?.peso_kg || 0,
-      };
-    });
-  },
-  enabled: !!orden?.id && open,
-});
-```
-
-#### Cambio 2: Estructura del diálogo (líneas 562-577)
-Corregir el scroll con altura explícita:
-
-```tsx
-<Dialog open={open} onOpenChange={onOpenChange}>
-  <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-    <DialogHeader className="flex-shrink-0">
-      <DialogTitle className="flex items-center gap-2">
-        <Package className="h-5 w-5" />
-        Procesar Pago - {orden?.folio}
-      </DialogTitle>
-      <DialogDescription>
-        Selecciona los productos a pagar. Los impuestos se recalculan automáticamente.
-      </DialogDescription>
-    </DialogHeader>
-
-    <ScrollArea className="flex-1 max-h-[calc(90vh-180px)] pr-4">
-      <div className="space-y-6 pb-4">
-        {/* ... contenido ... */}
-      </div>
-    </ScrollArea>
-
-    <DialogFooter className="flex-shrink-0 border-t pt-4">
-      {/* ... botones ... */}
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
-```
-
----
-
-## Resultado Esperado
-
-### Para OC Anticipada OC-202601-0005 (6,000 bultos de Azúcar a $400)
+#### Cambio 1: Estructura del DialogContent (líneas 572-585)
 
 **Antes:**
-```
-Total bultos: 0    Peso total: 0 kg
-Cant: 0  |  Costo OC: $400  |  Subtotal: $0.00
-MONTO A PAGAR: $0.00
+```tsx
+<DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+  <DialogHeader className="flex-shrink-0">
+    ...
+  </DialogHeader>
+
+  <ScrollArea className="flex-1 max-h-[calc(90vh-180px)] pr-4">
+    <div className="space-y-6 pb-4">
 ```
 
 **Después:**
-```
-Total bultos: 6,000    Peso total: 150,000 kg
-Cant: 6,000  |  Costo OC: $400  |  Subtotal: $2,400,000.00
-MONTO A PAGAR: $2,400,000.00
+```tsx
+<DialogContent className="max-w-4xl max-h-[90vh] !flex !flex-col overflow-hidden">
+  <DialogHeader className="flex-shrink-0">
+    ...
+  </DialogHeader>
+
+  <div className="flex-1 overflow-y-auto pr-4 min-h-0">
+    <div className="space-y-6 pb-4">
 ```
 
-### Scroll
-- El contenido del diálogo será scrolleable
-- Los botones del footer permanecerán fijos en la parte inferior
-- El header permanecerá fijo en la parte superior
+**Explicación:**
+- `!flex !flex-col` - Usa `!important` de Tailwind para sobrescribir el `grid` base
+- `overflow-hidden` en DialogContent - Previene doble scrollbar
+- `overflow-y-auto` en el contenedor - Scroll nativo del navegador
+- `min-h-0` - Crítico para que flex-1 calcule correctamente la altura en flex containers
+
+#### Cambio 2: Cerrar el div (línea ~1052)
+
+Cambiar el cierre de `</ScrollArea>` por `</div>`:
+
+**Antes:**
+```tsx
+        </ScrollArea>
+
+        <DialogFooter className="flex-shrink-0 border-t pt-4">
+```
+
+**Después:**
+```tsx
+        </div>
+
+        <DialogFooter className="flex-shrink-0 border-t pt-4">
+```
+
+#### Cambio 3: Remover import de ScrollArea si ya no se usa
+
+Si `ScrollArea` no se usa en otro lugar del archivo, remover el import:
+```tsx
+// Remover de línea 49:
+import { ScrollArea } from "@/components/ui/scroll-area";
+```
+
+---
+
+## Resultado Visual
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ Procesar Pago - OC-202601-0005                              [X]    │ ← Header fijo
+│ Selecciona los productos a pagar...                                 │
+├─────────────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────────────────────┐ │
+│ │ [Contenido scrolleable]                                          │ │
+│ │ • Proveedor info                                                 │ │
+│ │ • Alertas                                                        │ │
+│ │ • Tabla de productos                                             │ │
+│ │ • Resumen de pago                                                │ │
+│ │ • Datos del pago (comprobante, etc.)        ← Se puede ver aquí │ │
+│ └─────────────────────────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────────────────────┤
+│           [Cancelar]  [✓ Confirmar Pago]                           │ ← Footer fijo
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Alternativa: Usar Scrollbar Styling
+
+Si prefieres mantener una barra de scroll más estilizada como la de ScrollArea, podemos agregar estas clases CSS nativas:
+
+```tsx
+<div className="flex-1 overflow-y-auto min-h-0 pr-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+```
+
+Pero esto requiere el plugin `tailwind-scrollbar` que puede no estar instalado.
 
 ---
 
 ## Resumen de Cambios
 
-| Línea(s) | Cambio |
-|----------|--------|
-| 122 | Agregar `orden?.tipo_pago` al queryKey para refetch correcto |
-| 143-155 | Calcular `cantidad` basado en `tipo_pago` |
-| 563-565 | Cambiar estilos del DialogContent a clases Tailwind |
-| 567 | Agregar `flex-shrink-0` al DialogHeader |
-| 577 | Cambiar ScrollArea a `max-h-[calc(90vh-180px)]` |
-| 1047 | Agregar `flex-shrink-0` al DialogFooter |
+| Ubicación | Cambio |
+|-----------|--------|
+| Línea 573 | Agregar `!flex !flex-col overflow-hidden` al DialogContent |
+| Línea 584 | Cambiar `<ScrollArea className="flex-1 max-h-[calc(90vh-180px)] pr-4">` por `<div className="flex-1 overflow-y-auto pr-4 min-h-0">` |
+| Línea 1052 | Cambiar `</ScrollArea>` por `</div>` |
+| Línea 49 | Opcional: remover import de ScrollArea si no se usa en otro lugar |
+
+---
+
+## Nota sobre los Bultos = 0
+
+El código para calcular `cantidad` basado en `tipo_pago === 'anticipado'` **ya está correctamente implementado** (líneas 143-150). Si aún muestra 0, puede ser:
+
+1. **Caché del navegador** - El usuario necesita hacer hard refresh (Cmd+Shift+R en Mac)
+2. **React Query cache** - Los datos viejos siguen en memoria hasta que se invalida la query
+
+Después de implementar este cambio de scroll, el usuario debería:
+1. Cerrar el diálogo
+2. Refrescar la página (hard refresh)
+3. Volver a abrir el diálogo de pago
+
+Esto forzará que la query se re-ejecute con la lógica corregida.
