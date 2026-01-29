@@ -216,6 +216,9 @@ const OrdenesCompraTab = () => {
   const [ordenParaEliminar, setOrdenParaEliminar] = useState<any>(null);
   const [eliminandoOrden, setEliminandoOrden] = useState(false);
 
+  // Estado para toggle de OCs archivadas
+  const [mostrarArchivadas, setMostrarArchivadas] = useState(false);
+
   // Función para detectar cambios entre versión anterior y nueva de la OC
   const detectarCambiosOC = (
     anterior: { productosEnOrden: ProductoEnOrden[]; fechaEntrega: string; entregasProgramadas: EntregaProgramada[] },
@@ -1529,13 +1532,36 @@ const OrdenesCompraTab = () => {
     }
   };
 
+  // Función para determinar si una OC está archivada
+  const esOCArchivada = (orden: any): boolean => {
+    // Cerrada financieramente
+    if (orden.status === 'cerrada') return true;
+    // Cancelada o rechazada
+    if (orden.status === 'cancelada' || orden.status === 'rechazada') return true;
+    // Completada Y pagada (todo finalizado)
+    if (orden.status === 'completada' && orden.status_pago === 'pagado') return true;
+    return false;
+  };
+
+  // Contador de OCs archivadas
+  const ordenesArchivadas = ordenes.filter(esOCArchivada).length;
+
   const filteredOrdenes = ordenes.filter(
     (orden) => {
       const proveedorNombre = orden.proveedor_id 
         ? orden.proveedores?.nombre 
         : orden.proveedor_nombre_manual;
-      return orden.folio.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      
+      // Filtro de búsqueda
+      const matchesSearch = orden.folio.toLowerCase().includes(searchTerm.toLowerCase()) ||
         proveedorNombre?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (!matchesSearch) return false;
+      
+      // Filtro de archivadas
+      if (!mostrarArchivadas && esOCArchivada(orden)) return false;
+      
+      return true;
     }
   );
 
@@ -1606,8 +1632,8 @@ const OrdenesCompraTab = () => {
         }}
       />
 
-      <div className="mb-4">
-        <div className="relative">
+      <div className="flex items-center gap-4 mb-4">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por folio o proveedor..."
@@ -1615,6 +1641,22 @@ const OrdenesCompraTab = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
           />
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Switch
+            id="mostrar-archivadas"
+            checked={mostrarArchivadas}
+            onCheckedChange={setMostrarArchivadas}
+          />
+          <Label htmlFor="mostrar-archivadas" className="text-sm whitespace-nowrap cursor-pointer">
+            Mostrar archivadas
+          </Label>
+          {ordenesArchivadas > 0 && !mostrarArchivadas && (
+            <span className="text-xs text-muted-foreground">
+              ({ordenesArchivadas})
+            </span>
+          )}
         </div>
       </div>
 
