@@ -491,7 +491,7 @@ const AdeudosProveedoresTab = () => {
                             <TableHead className="w-20">Pago</TableHead>
                             <TableHead className="w-20 text-right">Total</TableHead>
                             <TableHead className="w-20 text-right">Pagado</TableHead>
-                            <TableHead className="w-20 text-right">Adeudo</TableHead>
+                            
                             <TableHead className="w-16">Recep.</TableHead>
                             <TableHead className="w-16"></TableHead>
                           </TableRow>
@@ -524,9 +524,6 @@ const AdeudosProveedoresTab = () => {
                               </TableCell>
                               <TableCell className="text-right text-xs">
                                 {formatCurrency(orden.monto_pagado || 0)}
-                              </TableCell>
-                              <TableCell className="text-right text-xs font-semibold text-destructive">
-                                {formatCurrency(orden.adeudo)}
                               </TableCell>
                               <TableCell>
                                 {(() => {
