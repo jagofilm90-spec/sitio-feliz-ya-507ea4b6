@@ -116,6 +116,7 @@ const AdeudosProveedoresTab = () => {
         `
         )
         .in("status_pago", ["pendiente", "parcial"])
+        .or('status.in.(recibida,completada,cerrada,parcial),tipo_pago.eq.anticipado')
         .order("fecha_orden", { ascending: false });
 
       if (error) throw error;

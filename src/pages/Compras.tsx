@@ -98,7 +98,8 @@ const Compras = () => {
       const { count, error } = await supabase
         .from("ordenes_compra")
         .select("*", { count: "exact", head: true })
-        .in("status_pago", ["pendiente", "parcial"]);
+        .in("status_pago", ["pendiente", "parcial"])
+        .or('status.in.(recibida,completada,cerrada,parcial),tipo_pago.eq.anticipado');
 
       if (error) {
         console.error("Error fetching adeudos count:", error);
