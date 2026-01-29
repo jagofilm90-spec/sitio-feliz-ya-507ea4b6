@@ -1,4 +1,4 @@
-// Component updated to include receipt column
+// Component updated to include receipt column and payment history toggle
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,9 +14,13 @@ import {
   AlertTriangle,
   Clock,
   TrendingDown,
+  CheckCircle2,
+  History,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -105,6 +109,7 @@ const formatCurrency = (value: number) => {
 
 const AdeudosProveedoresTab = () => {
   const queryClient = useQueryClient();
+  const [mostrarPagadas, setMostrarPagadas] = useState(false);
   const [filtroProveedor, setFiltroProveedor] = useState<string>("todos");
   const [filtroStatusPago, setFiltroStatusPago] = useState<string>("todos");
   const [filtroTipoPago, setFiltroTipoPago] = useState<string>("todos");
@@ -116,11 +121,11 @@ const AdeudosProveedoresTab = () => {
   const [selectedEntregaId, setSelectedEntregaId] = useState<string | null>(null);
   const [showRecepcionDialog, setShowRecepcionDialog] = useState(false);
 
-  // Query principal para obtener OCs con adeudos pendientes
+  // Query principal para obtener OCs con adeudos pendientes o pagadas
   const { data: ordenesConAdeudo = [], isLoading } = useQuery({
-    queryKey: ["ordenes-con-adeudo"],
+    queryKey: ["ordenes-con-adeudo", mostrarPagadas],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("ordenes_compra")
         .select(
           `
@@ -132,10 +137,19 @@ const AdeudosProveedoresTab = () => {
             id, numero_entrega, status, recepcion_finalizada_en
           )
         `
-        )
-        .in("status_pago", ["pendiente", "parcial"])
-        .or('status.in.(recibida,completada,cerrada,parcial),tipo_pago.eq.anticipado')
-        .order("fecha_orden", { ascending: false });
+        );
+      
+      if (mostrarPagadas) {
+        // Historial: solo pagadas
+        query = query.eq("status_pago", "pagado");
+      } else {
+        // Adeudos pendientes
+        query = query
+          .in("status_pago", ["pendiente", "parcial"])
+          .or('status.in.(recibida,completada,cerrada,parcial),tipo_pago.eq.anticipado');
+      }
+      
+      const { data, error } = await query.order("fecha_orden", { ascending: false });
 
       if (error) throw error;
 
@@ -311,15 +325,43 @@ const AdeudosProveedoresTab = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <CreditCard className="h-5 w-5 text-amber-600" />
-          Adeudos a Proveedores
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Gestión de pagos pendientes y cuentas por pagar
-        </p>
+      {/* Header con Toggle */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            {mostrarPagadas ? (
+              <>
+                <History className="h-5 w-5 text-green-600" />
+                Historial de Pagos a Proveedores
+              </>
+            ) : (
+              <>
+                <CreditCard className="h-5 w-5 text-amber-600" />
+                Adeudos a Proveedores
+              </>
+            )}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {mostrarPagadas 
+              ? "Órdenes de compra con pago completado"
+              : "Gestión de pagos pendientes y cuentas por pagar"}
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-3 bg-muted/50 rounded-lg p-3">
+          <Label htmlFor="toggle-pagadas" className="text-sm cursor-pointer">
+            Pendientes
+          </Label>
+          <Switch 
+            id="toggle-pagadas"
+            checked={mostrarPagadas} 
+            onCheckedChange={setMostrarPagadas} 
+          />
+          <Label htmlFor="toggle-pagadas" className="text-sm cursor-pointer flex items-center gap-1">
+            <CheckCircle2 className="h-4 w-4 text-green-600" />
+            Pagadas
+          </Label>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -591,18 +633,25 @@ const AdeudosProveedoresTab = () => {
                                 })()}
                               </TableCell>
                               <TableCell>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 px-2 text-xs"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleProcesarPago(orden);
-                                  }}
-                                >
-                                  <CreditCard className="h-3 w-3 mr-1" />
-                                  Pagar
-                                </Button>
+                                {mostrarPagadas ? (
+                                  <Badge className="bg-green-600 text-white text-xs">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Pagado
+                                  </Badge>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleProcesarPago(orden);
+                                    }}
+                                  >
+                                    <CreditCard className="h-3 w-3 mr-1" />
+                                    Pagar
+                                  </Button>
+                                )}
                               </TableCell>
                             </TableRow>
                           ))}

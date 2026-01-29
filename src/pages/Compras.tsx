@@ -4,14 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import Layout from "@/components/Layout";
-import { Package, Truck, Calendar, BarChart3, History, AlertTriangle, PackageX, CreditCard } from "lucide-react";
+import { Package, Truck, Calendar, BarChart3, History, AlertTriangle, CreditCard } from "lucide-react";
 import ProveedoresTab from "@/components/compras/ProveedoresTab";
 import OrdenesCompraTab from "@/components/compras/OrdenesCompraTab";
 import CalendarioEntregasTab from "@/components/compras/CalendarioEntregasTab";
 import ComprasAnalyticsTab from "@/components/compras/ComprasAnalyticsTab";
 import HistorialComprasProductoTab from "@/components/compras/HistorialComprasProductoTab";
-import DevolucionesPendientesTab from "@/components/compras/DevolucionesPendientesTab";
-import FaltantesPendientesTab from "@/components/compras/FaltantesPendientesTab";
+import DevolucionesFaltantesTab from "@/components/compras/DevolucionesFaltantesTab";
 import AdeudosProveedoresTab from "@/components/compras/AdeudosProveedoresTab";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -111,6 +110,9 @@ const Compras = () => {
     refetchInterval: 60000,
   });
 
+  // Combined count for Devoluciones/Faltantes tab
+  const devFaltCombinedCount = devolucionesPendientesCount + faltantesPendientesCount;
+
   // Auto-switch to ordenes tab when ?aprobar= param is present
   useEffect(() => {
     if (searchParams.get("aprobar")) {
@@ -153,16 +155,16 @@ const Compras = () => {
               <span className="hidden sm:inline">Calendario</span>
               <span className="sm:hidden">Cal.</span>
             </TabsTrigger>
-            <TabsTrigger value="devoluciones" className="flex items-center gap-2 flex-shrink-0">
+            <TabsTrigger value="devoluciones-faltantes" className="flex items-center gap-2 flex-shrink-0">
               <AlertTriangle className="h-4 w-4" />
-              <span className="hidden sm:inline">Devoluciones</span>
-              <span className="sm:hidden">Dev.</span>
-              {devolucionesPendientesCount > 0 && (
+              <span className="hidden sm:inline">Devoluciones / Faltantes</span>
+              <span className="sm:hidden">Dev/Falt</span>
+              {devFaltCombinedCount > 0 && (
                 <Badge 
                   variant="destructive" 
                   className="ml-1 h-5 min-w-5 px-1.5 text-xs font-bold"
                 >
-                  {devolucionesPendientesCount}
+                  {devFaltCombinedCount}
                 </Badge>
               )}
             </TabsTrigger>
@@ -170,19 +172,6 @@ const Compras = () => {
               <History className="h-4 w-4" />
               <span className="hidden sm:inline">Historial</span>
               <span className="sm:hidden">Hist.</span>
-            </TabsTrigger>
-            <TabsTrigger value="faltantes" className="flex items-center gap-2 flex-shrink-0">
-              <PackageX className="h-4 w-4" />
-              <span className="hidden sm:inline">Faltantes</span>
-              <span className="sm:hidden">Falt.</span>
-              {faltantesPendientesCount > 0 && (
-                <Badge 
-                  variant="secondary" 
-                  className="ml-1 h-5 min-w-5 px-1.5 text-xs font-bold bg-orange-500 text-white"
-                >
-                  {faltantesPendientesCount}
-                </Badge>
-              )}
             </TabsTrigger>
             <TabsTrigger value="adeudos" className="flex items-center gap-2 flex-shrink-0">
               <CreditCard className="h-4 w-4" />
@@ -214,16 +203,12 @@ const Compras = () => {
             <CalendarioEntregasTab />
           </TabsContent>
 
-          <TabsContent value="devoluciones">
-            <DevolucionesPendientesTab />
+          <TabsContent value="devoluciones-faltantes">
+            <DevolucionesFaltantesTab />
           </TabsContent>
 
           <TabsContent value="historial">
             <HistorialComprasProductoTab />
-          </TabsContent>
-
-          <TabsContent value="faltantes">
-            <FaltantesPendientesTab />
           </TabsContent>
 
           <TabsContent value="adeudos">
