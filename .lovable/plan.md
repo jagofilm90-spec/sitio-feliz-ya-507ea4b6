@@ -1,294 +1,316 @@
 
-# Plan: Generación Automática de Créditos al Completar OC de Pago Anticipado
 
-## Problema Detectado
+# Plan: Notificación Automática con Datos Bancarios al Solicitar Depósito
 
-Actualmente cuando una OC de **Pago Anticipado** se completa (todas las entregas recibidas), el sistema:
-- ✅ Marca la OC como `status: "completada"`
-- ❌ NO verifica si el total pagado cuadra con lo recibido
-- ❌ NO genera créditos automáticos por la diferencia
+## Situación Actual
 
-### Ejemplo del Usuario
-- Se pagan 6000 bultos anticipadamente ($2,400,000)
-- Se reciben en total 5990 bultos (por faltantes o devoluciones)
-- El proveedor nos debe 10 bultos × $400 = **$4,000**
-- El sistema debe registrar automáticamente este crédito pendiente
+Cuando se selecciona "Marcar como Reembolsado" en `CreditosPendientesPanel.tsx`:
+- Solo actualiza el status del crédito a `"aplicado"`
+- **NO** envía ningún correo al proveedor
+- El proveedor no sabe a qué cuenta depositar
+
+## Solución
+
+Cuando se selecciona la opción de **depósito/reembolso**, el sistema enviará automáticamente un correo al proveedor con:
+1. Los datos bancarios de ALMASA
+2. El monto exacto a depositar
+3. La referencia del crédito (OC origen)
+4. La instrucción de enviar comprobante a `pagos@almasa.com.mx`
 
 ---
 
-## Solución: Verificación de Balance al Completar OC
-
-### Dónde Agregar la Lógica
-
-En `AlmacenRecepcionSheet.tsx`, cuando se detecta que **no hay entregas pendientes** y se marca la OC como `"completada"`:
+## Flujo Propuesto
 
 ```text
-Líneas 1148-1156 actuales:
-if (!entregasPendientes || entregasPendientes.length === 0) {
-  await supabase
-    .from("ordenes_compra")
-    .update({ status: "completada", ... })
-    .eq("id", entrega.orden_compra.id);
-}
-
-↓ Después de esto ↓
-
-// Si es OC anticipada, verificar balance final
-if (entrega.orden_compra.tipo_pago === 'anticipado') {
-  // Calcular: total ordenado vs total recibido
-  // Si hay diferencia, generar créditos automáticos
-}
-```
-
----
-
-## Flujo de la Nueva Lógica
-
-```text
-OC Anticipada se completa (todas las entregas recibidas)
+Usuario selecciona: "Marcar como Reembolsado"
                 │
                 ▼
-Calcular diferencia = Σ(cantidad_ordenada) - Σ(cantidad_recibida)
+┌────────────────────────────────────────────────────┐
+│ Dialog de Confirmación (YA EXISTE)                 │
+│                                                    │
+│ "¿Confirmas que el proveedor reembolsó $4,000?"    │
+│                                                    │
+│ [x] ¿Ya depositó? (marcar como resuelto)           │
+│ [ ] Solicitar depósito (enviar datos bancarios)   │
+│                                                    │
+│ [Cancelar] [Confirmar]                             │
+└────────────────────────────────────────────────────┘
                 │
                 ▼
-¿diferencia > 0?
-        │
-   ┌────┴────┐
-   │ NO      │ SÍ
-   ▼         ▼
-Fin      Por cada producto con diferencia:
-         - Crear registro en proveedor_creditos_pendientes
-         - Motivo: "saldo_oc_anticipada"
-         - Enviar email al proveedor con resumen
+Si seleccionó "Solicitar depósito":
+                │
+                ▼
+Sistema envía email automático al proveedor:
+┌────────────────────────────────────────────────────┐
+│ Asunto: 📋 Datos para Depósito/Transferencia -     │
+│         Crédito Pendiente OC-202601-0005           │
+│                                                    │
+│ Estimado Proveedor X,                              │
+│                                                    │
+│ Le enviamos los datos bancarios para realizar      │
+│ el depósito correspondiente al crédito pendiente:  │
+│                                                    │
+│ MONTO A DEPOSITAR: $4,000.00 MXN                   │
+│ REFERENCIA: OC-202601-0005 / Faltante             │
+│                                                    │
+│ ════════════════════════════════════════════       │
+│ DATOS BANCARIOS:                                   │
+│ Beneficiario: ABARROTES LA MANITA, S.A. DE C.V.   │
+│ Banco: BBVA BANCOMER, S.A.                         │
+│ Sucursal: 0122 (Plaza Jamaica)                     │
+│ Cuenta: 0442413388                                 │
+│ CLABE: 012180004424133881                          │
+│ ════════════════════════════════════════════       │
+│                                                    │
+│ ⚠️ IMPORTANTE: Una vez realizado el depósito,      │
+│ favor de enviar el comprobante a:                  │
+│ 📧 pagos@almasa.com.mx                             │
+│                                                    │
+│ Indicando como referencia: OC-202601-0005          │
+└────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Cambios en AlmacenRecepcionSheet.tsx
+## Cambios Técnicos
 
-### 1. Agregar Verificación de Balance Final
+### 1. Modificar `CreditosPendientesPanel.tsx`
 
-Después de marcar la OC como completada (línea ~1156):
+Agregar opción para distinguir entre:
+- **Ya depositó** → Solo marcar como resuelto
+- **Solicitar depósito** → Marcar + enviar email con datos bancarios
 
 ```typescript
-// === NUEVO: Verificación de balance para OC anticipadas ===
-if (entrega.orden_compra.tipo_pago === 'anticipado') {
-  // Obtener todos los detalles de la OC
-  const { data: detallesOC } = await supabase
-    .from("ordenes_compra_detalles")
-    .select("producto_id, cantidad_ordenada, cantidad_recibida, precio_unitario_compra")
-    .eq("orden_compra_id", entrega.orden_compra.id);
+// Nuevo estado
+const [solicitarDeposito, setSolicitarDeposito] = useState(false);
 
-  // Calcular diferencias por producto
-  const productosConSaldo = (detallesOC || []).filter(d => 
-    d.cantidad_ordenada > d.cantidad_recibida
-  );
-
-  if (productosConSaldo.length > 0) {
-    // Obtener nombres de productos
-    const productIds = productosConSaldo.map(p => p.producto_id);
-    const { data: productosInfo } = await supabase
-      .from("productos")
-      .select("id, nombre, codigo")
-      .in("id", productIds);
-    
-    const productosMap = new Map(
-      (productosInfo || []).map(p => [p.id, p])
-    );
-
-    // Crear créditos para cada producto con saldo
-    const creditosACrear = productosConSaldo.map(detalle => {
-      const diferencia = detalle.cantidad_ordenada - detalle.cantidad_recibida;
-      const productoInfo = productosMap.get(detalle.producto_id);
-      return {
-        proveedor_id: entrega.orden_compra.proveedor?.id || null,
-        proveedor_nombre_manual: entrega.orden_compra.proveedor_nombre_manual || null,
-        orden_compra_origen_id: entrega.orden_compra.id,
-        entrega_id: entrega.id, // Última entrega
-        producto_id: detalle.producto_id,
-        producto_nombre: productoInfo?.nombre || "Producto",
-        cantidad: diferencia,
-        precio_unitario: detalle.precio_unitario_compra,
-        monto_total: diferencia * detalle.precio_unitario_compra,
-        motivo: "saldo_oc_anticipada",
-        status: "pendiente",
-        notas: `Saldo automático al completar ${entrega.orden_compra.folio}`
-      };
-    });
-
-    // Insertar créditos
-    if (creditosACrear.length > 0) {
-      await supabase
-        .from("proveedor_creditos_pendientes")
-        .insert(creditosACrear);
-
-      // Calcular total de créditos generados
-      const totalCredito = creditosACrear.reduce((sum, c) => sum + c.monto_total, 0);
-
-      // Notificar por email al proveedor
-      await supabase.functions.invoke("notificar-faltante-anticipado", {
-        body: {
-          orden_compra_id: entrega.orden_compra.id,
-          faltantes: creditosACrear.map(c => ({
-            producto_id: c.producto_id,
-            producto_nombre: c.producto_nombre,
-            cantidad_faltante: c.cantidad,
-            precio_unitario: c.precio_unitario,
-            monto_total: c.monto_total,
-            motivo: "saldo_final"
-          })),
-          entrega_id: entrega.id
-        }
-      });
-
-      // Mostrar notificación al usuario
-      toast({
-        title: "Saldo registrado",
-        description: `Se registró crédito pendiente por ${creditosACrear.length} producto(s) 
-                       con valor de ${formatCurrency(totalCredito)}`,
-        variant: "warning"
-      });
-    }
-  }
-}
+// En el dialog de confirmación, agregar opciones:
+{tipoResolucion === "reembolso_efectivo" && (
+  <div className="space-y-2 my-3">
+    <label className="flex items-center gap-2">
+      <input 
+        type="radio" 
+        name="tipoReembolso" 
+        checked={!solicitarDeposito}
+        onChange={() => setSolicitarDeposito(false)}
+      />
+      <span>El proveedor YA depositó</span>
+    </label>
+    <label className="flex items-center gap-2">
+      <input 
+        type="radio" 
+        name="tipoReembolso" 
+        checked={solicitarDeposito}
+        onChange={() => setSolicitarDeposito(true)}
+      />
+      <span>Solicitar depósito (enviar datos bancarios por email)</span>
+    </label>
+  </div>
+)}
 ```
 
-### 2. También Manejar Devoluciones (roto/rechazado) en Anticipadas
+### 2. Crear Edge Function: `notificar-solicitud-deposito`
 
-Las devoluciones ya ajustan `monto_devoluciones`, pero para OC anticipadas también deben generar crédito porque ya se pagó.
-
-En `DevolucionProveedorDialog.tsx`, después de llamar a `agregar_devolucion_a_oc`:
+Nueva función que envía email al proveedor con datos bancarios:
 
 ```typescript
-// Si es OC anticipada, también crear crédito pendiente
-const { data: oc } = await supabase
-  .from("ordenes_compra")
-  .select("tipo_pago, folio")
-  .eq("id", ordenCompraId)
-  .single();
+// supabase/functions/notificar-solicitud-deposito/index.ts
 
-if (oc?.tipo_pago === 'anticipado') {
-  for (const producto of productosDevolucion) {
-    const montoDevolucion = producto.cantidadDevuelta * precioUnitario;
-    
-    await supabase.from("proveedor_creditos_pendientes").insert({
-      proveedor_id: proveedorId,
-      orden_compra_origen_id: ordenCompraId,
-      devolucion_id: devolucion.id,
-      entrega_id: entregaId,
-      producto_id: producto.productoId,
-      producto_nombre: producto.nombre,
-      cantidad: producto.cantidadDevuelta,
-      precio_unitario: precioUnitario,
-      monto_total: montoDevolucion,
-      motivo: producto.razon, // "roto" o "rechazado_calidad"
-      status: "pendiente",
-      notas: `Devolución en OC anticipada ${oc.folio}`
-    });
-  }
-}
-```
-
----
-
-## Actualización del Panel de Créditos
-
-### Nuevo Motivo: "saldo_oc_anticipada"
-
-En `CreditosPendientesPanel.tsx`, actualizar la función de etiquetas:
-
-```typescript
-const getMotivoLabel = (motivo: string) => {
-  switch (motivo) {
-    case "faltante": return "No llegó";
-    case "roto": return "Dañado";
-    case "rechazado_calidad": return "Rechazado";
-    case "devolucion": return "Devolución";
-    case "saldo_oc_anticipada": return "Saldo OC Anticipada";
-    case "saldo_final": return "Saldo Final";
-    default: return motivo;
-  }
+const DATOS_BANCARIOS = {
+  beneficiario: "ABARROTES LA MANITA, S.A. DE C.V.",
+  banco: "BBVA BANCOMER, S.A.",
+  plaza: "JAMAICA",
+  sucursal: "0122",
+  cuenta: "0442413388",
+  clabe: "012180004424133881",
+  emailPagos: "pagos@almasa.com.mx"
 };
+
+// Generar HTML del email
+const emailBody = `
+  <div style="font-family: Arial, sans-serif; max-width: 600px;">
+    <h2 style="color: #1e40af;">📋 Datos para Depósito - Crédito Pendiente</h2>
+    
+    <p>Estimado <strong>${proveedorNombre}</strong>,</p>
+    
+    <p>Le enviamos los datos bancarios para realizar el depósito 
+    correspondiente al siguiente crédito pendiente:</p>
+    
+    <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0;">
+      <p style="margin: 0; font-size: 18px;">
+        <strong>MONTO A DEPOSITAR:</strong> 
+        <span style="color: #b45309; font-size: 24px; font-weight: bold;">
+          $${monto.toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN
+        </span>
+      </p>
+      <p style="margin: 10px 0 0 0; color: #78350f;">
+        <strong>Referencia:</strong> ${ocFolio} / ${productoNombre}
+      </p>
+    </div>
+    
+    <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+      <h3 style="margin-top: 0; color: #374151;">🏦 DATOS BANCARIOS</h3>
+      <table style="width: 100%;">
+        <tr><td><strong>Beneficiario:</strong></td><td>${DATOS_BANCARIOS.beneficiario}</td></tr>
+        <tr><td><strong>Banco:</strong></td><td>${DATOS_BANCARIOS.banco}</td></tr>
+        <tr><td><strong>Sucursal:</strong></td><td>${DATOS_BANCARIOS.sucursal} (Plaza ${DATOS_BANCARIOS.plaza})</td></tr>
+        <tr><td><strong>Cuenta:</strong></td><td style="font-family: monospace; font-size: 16px;">${DATOS_BANCARIOS.cuenta}</td></tr>
+        <tr><td><strong>CLABE:</strong></td><td style="font-family: monospace; font-size: 16px; color: #1e40af;">${DATOS_BANCARIOS.clabe}</td></tr>
+      </table>
+    </div>
+    
+    <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border-left: 4px solid #dc2626;">
+      <p style="margin: 0;">
+        ⚠️ <strong>IMPORTANTE:</strong> Una vez realizado el depósito o transferencia, 
+        favor de enviar el comprobante a:
+      </p>
+      <p style="margin: 10px 0 0 0; font-size: 18px;">
+        📧 <a href="mailto:${DATOS_BANCARIOS.emailPagos}" style="color: #dc2626;">
+          ${DATOS_BANCARIOS.emailPagos}
+        </a>
+      </p>
+      <p style="margin: 10px 0 0 0; color: #7f1d1d;">
+        Indicando como referencia: <strong>${ocFolio}</strong>
+      </p>
+    </div>
+    
+    <p>Quedamos atentos a su comprobante.</p>
+    
+    <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+    <p style="color: #666; font-size: 12px;">
+      Este es un correo automático del sistema de gestión de ALMASA.
+    </p>
+  </div>
+`;
+```
+
+### 3. Flujo de Llamada
+
+En `CreditosPendientesPanel.tsx`, modificar la mutación:
+
+```typescript
+const resolverCredito = useMutation({
+  mutationFn: async ({ creditoId, tipo, notas, solicitarDeposito }: { 
+    creditoId: string; 
+    tipo: string; 
+    notas: string;
+    solicitarDeposito?: boolean;
+  }) => {
+    // Actualizar status del crédito
+    const { error } = await supabase
+      .from("proveedor_creditos_pendientes")
+      .update({
+        status: tipo === "cancelar" ? "cancelado" : 
+                (solicitarDeposito ? "deposito_solicitado" : "aplicado"),
+        tipo_resolucion: tipo,
+        resolucion_notas: notas,
+        fecha_aplicacion: new Date().toISOString(),
+      })
+      .eq("id", creditoId);
+
+    if (error) throw error;
+
+    // Si es reembolso Y se solicitó enviar datos bancarios
+    if (tipo === "reembolso_efectivo" && solicitarDeposito) {
+      // Obtener datos del crédito para el email
+      const { data: credito } = await supabase
+        .from("proveedor_creditos_pendientes")
+        .select(`
+          *, 
+          proveedores (nombre, email, proveedor_contactos (email, proposito))
+        `)
+        .eq("id", creditoId)
+        .single();
+
+      if (credito) {
+        await supabase.functions.invoke("notificar-solicitud-deposito", {
+          body: {
+            credito_id: creditoId,
+            proveedor_id: credito.proveedor_id,
+            proveedor_nombre: credito.proveedores?.nombre || credito.proveedor_nombre_manual,
+            monto: credito.monto_total,
+            producto_nombre: credito.producto_nombre,
+            oc_folio: credito.ordenes_compra?.folio,
+            motivo: credito.motivo
+          }
+        });
+      }
+    }
+  },
+  // ... resto igual
+});
 ```
 
 ---
 
-## Resumen Visual del Flujo Completo
+## Nuevo Status: "deposito_solicitado"
+
+Agregar un status intermedio para cuando se envió el email pero aún no se confirma el pago:
+
+| Status | Significado |
+|--------|-------------|
+| `pendiente` | Crédito sin resolver |
+| `deposito_solicitado` | Se enviaron datos bancarios, esperando comprobante |
+| `aplicado` | Crédito resuelto (pagado, repuesto o descontado) |
+| `cancelado` | Crédito cancelado |
+
+Esto permite ver en el panel qué créditos están "en proceso de cobro".
+
+---
+
+## Archivos a Crear/Modificar
+
+| Archivo | Acción | Descripción |
+|---------|--------|-------------|
+| `supabase/functions/notificar-solicitud-deposito/index.ts` | **Crear** | Edge function para enviar email con datos bancarios |
+| `CreditosPendientesPanel.tsx` | **Modificar** | Agregar opciones y llamar edge function |
+| `supabase/config.toml` | **Modificar** | Registrar nueva función |
+
+---
+
+## Vista Previa del Email
 
 ```text
-┌──────────────────────────────────────────────────────────────────────┐
-│                    OC PAGO ANTICIPADO                                │
-│                    6000 bultos × $400 = $2,400,000 PAGADO            │
-├──────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  ENTREGAS:                                                           │
-│  ┌─────────────────────────────────────────────────────────────┐     │
-│  │ Entrega #1: Esperados 2000, Recibidos 1998 (2 rotos)        │     │
-│  │             → Devolución registrada + Crédito creado ($800) │     │
-│  └─────────────────────────────────────────────────────────────┘     │
-│  ┌─────────────────────────────────────────────────────────────┐     │
-│  │ Entrega #2: Esperados 2000, Recibidos 1995 (5 no llegaron)  │     │
-│  │             → Nueva entrega programada                       │     │
-│  └─────────────────────────────────────────────────────────────┘     │
-│  ┌─────────────────────────────────────────────────────────────┐     │
-│  │ Entrega #3: Esperados 2005, Recibidos 1997 (3 rechazados)   │     │
-│  │             → Devolución + Crédito creado ($1,200)           │     │
-│  │             → 5 faltantes de entrega #2 no llegaron          │     │
-│  └─────────────────────────────────────────────────────────────┘     │
-│                                                                      │
-│  CIERRE AUTOMÁTICO:                                                  │
-│  ┌─────────────────────────────────────────────────────────────┐     │
-│  │ ✓ Todas las entregas recibidas                              │     │
-│  │ ✓ OC marcada como "completada"                              │     │
-│  │                                                             │     │
-│  │ BALANCE FINAL:                                              │     │
-│  │ • Pagado: 6000 bultos                                       │     │
-│  │ • Recibido: 5990 bultos                                     │     │
-│  │ • Devoluciones ya registradas: 5 bultos ($2,000)            │     │
-│  │ • Faltantes finales: 5 bultos                               │     │
-│  │                                                             │     │
-│  │ → Sistema genera crédito: 5 × $400 = $2,000                 │     │
-│  │ → Email automático al proveedor                             │     │
-│  └─────────────────────────────────────────────────────────────┘     │
-│                                                                      │
-│  CRÉDITOS TOTALES PENDIENTES: $4,000                                │
-│  (5 rotos/rechazados + 5 faltantes finales)                          │
-│                                                                      │
-└──────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ 📋 Datos para Depósito - Crédito Pendiente                   │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│ Estimado PROVEEDOR X,                                        │
+│                                                              │
+│ Le enviamos los datos bancarios para realizar el depósito:   │
+│                                                              │
+│ ┌──────────────────────────────────────────────────────────┐ │
+│ │ MONTO A DEPOSITAR: $4,000.00 MXN                        │ │
+│ │ Referencia: OC-202601-0005 / Producto ABC               │ │
+│ └──────────────────────────────────────────────────────────┘ │
+│                                                              │
+│ ┌──────────────────────────────────────────────────────────┐ │
+│ │ 🏦 DATOS BANCARIOS                                       │ │
+│ │                                                          │ │
+│ │ Beneficiario: ABARROTES LA MANITA, S.A. DE C.V.         │ │
+│ │ Banco:        BBVA BANCOMER, S.A.                        │ │
+│ │ Sucursal:     0122 (Plaza Jamaica)                       │ │
+│ │ Cuenta:       0442413388                                 │ │
+│ │ CLABE:        012180004424133881                         │ │
+│ └──────────────────────────────────────────────────────────┘ │
+│                                                              │
+│ ⚠️ IMPORTANTE:                                               │
+│ Una vez realizado el depósito, enviar comprobante a:         │
+│ 📧 pagos@almasa.com.mx                                       │
+│ Indicando referencia: OC-202601-0005                         │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Archivos a Modificar
+## Registro en correos_enviados
 
-| Archivo | Cambio |
-|---------|--------|
-| `AlmacenRecepcionSheet.tsx` | Agregar verificación de balance al completar OC anticipada |
-| `DevolucionProveedorDialog.tsx` | Crear crédito cuando devolución es en OC anticipada |
-| `CreditosPendientesPanel.tsx` | Agregar etiqueta para motivo "saldo_oc_anticipada" |
+Cada email enviado se registrará en la tabla `correos_enviados` con:
+- `tipo`: `"solicitud_deposito_credito"`
+- `referencia_id`: ID del crédito
+- `destinatario`: Email del proveedor
+- `asunto`: "Datos para Depósito - Crédito Pendiente OC-XXXX"
 
----
+Esto permite trazabilidad completa de cuándo se solicitó el depósito.
 
-## Consideraciones Importantes
-
-### Evitar Duplicados
-- Solo generar crédito de "saldo_final" al completar la OC
-- Las devoluciones ya generan su crédito individual al momento
-- El cálculo final debe considerar: `ordenado - recibido - (ya_creditado_por_devoluciones)`
-
-### Los 3 Escenarios de Resolución (Ya Implementados)
-
-1. **Depósito bancario** → En panel de créditos: "Marcar como Reembolsado"
-2. **Reposición física** → Se detecta al recibir excedente (implementado en flujo anterior)  
-3. **Descuento en próxima OC** → Wizard de creación de OC permite seleccionar créditos
-
----
-
-## Flujo de Email Automático
-
-El edge function `notificar-faltante-anticipado` ya existe y:
-- Envía email al proveedor con tabla de productos faltantes
-- Incluye las 3 opciones de resolución
-- Registra en `correos_enviados` para trazabilidad
-
-Solo falta **llamarlo correctamente** cuando se complete la OC.
