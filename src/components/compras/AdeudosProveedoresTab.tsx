@@ -31,6 +31,11 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Table,
   TableBody,
   TableCell,
@@ -524,28 +529,69 @@ const AdeudosProveedoresTab = () => {
                                 {formatCurrency(orden.adeudo)}
                               </TableCell>
                               <TableCell>
-                                {orden.entregas?.filter(e => e.status === 'completada').length > 0 ? (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="text-primary"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const completada = orden.entregas.find(e => e.status === 'completada');
-                                      if (completada) {
-                                        setSelectedEntregaId(completada.id);
-                                        setShowRecepcionDialog(true);
-                                      }
-                                    }}
-                                  >
-                                    <FileText className="h-3 w-3 mr-1" />
-                                    Ver
-                                  </Button>
-                                ) : orden.tipo_pago === 'anticipado' ? (
-                                  <span className="text-xs text-muted-foreground">N/A</span>
-                                ) : (
-                                  <span className="text-xs text-muted-foreground">-</span>
-                                )}
+                                {(() => {
+                                  const recibidas = orden.entregas?.filter(e => e.status === 'recibida') || [];
+                                  
+                                  if (recibidas.length === 0) {
+                                    return orden.tipo_pago === 'anticipado' 
+                                      ? <span className="text-xs text-muted-foreground">N/A</span>
+                                      : <span className="text-xs text-muted-foreground">-</span>;
+                                  }
+                                  
+                                  if (recibidas.length === 1) {
+                                    return (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="text-primary"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedEntregaId(recibidas[0].id);
+                                          setShowRecepcionDialog(true);
+                                        }}
+                                      >
+                                        <FileText className="h-3 w-3 mr-1" />
+                                        Ver
+                                      </Button>
+                                    );
+                                  }
+                                  
+                                  return (
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button size="sm" variant="ghost" className="text-primary">
+                                          <FileText className="h-3 w-3 mr-1" />
+                                          Ver {recibidas.length}
+                                          <ChevronDown className="h-3 w-3 ml-1" />
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-52 p-2" align="start">
+                                        <div className="space-y-1">
+                                          {recibidas.map((entrega) => (
+                                            <Button
+                                              key={entrega.id}
+                                              size="sm"
+                                              variant="ghost"
+                                              className="w-full justify-start text-xs"
+                                              onClick={() => {
+                                                setSelectedEntregaId(entrega.id);
+                                                setShowRecepcionDialog(true);
+                                              }}
+                                            >
+                                              <FileText className="h-3 w-3 mr-2" />
+                                              Recepción #{entrega.numero_entrega}
+                                              {entrega.recepcion_finalizada_en && (
+                                                <span className="ml-auto text-muted-foreground">
+                                                  {format(new Date(entrega.recepcion_finalizada_en), 'dd/MM')}
+                                                </span>
+                                              )}
+                                            </Button>
+                                          ))}
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                  );
+                                })()}
                               </TableCell>
                               <TableCell>
                                 <Button
