@@ -1,199 +1,241 @@
 
-# Plan: Rediseño Profesional de PDFs de OC
+# Plan: Panel de Adeudos a Proveedores
 
-## Análisis del Estado Actual
+## Objetivo
+Crear una nueva pestaña en el modulo de Compras que permita visualizar de un vistazo todos los adeudos pendientes con proveedores, con capacidad de filtrado y resumen grafico.
 
-Los PDFs de **Orden de Pago** y **Cierre de OC** tienen un diseño funcional pero básico comparado con el de Cotizaciones que es más profesional. Voy a aplicar las mejores prácticas del PDF de Cotizaciones:
+## Estructura Visual Propuesta
 
-| Elemento | Actual | Propuesto |
-|----------|--------|-----------|
-| Header | Barra roja simple + logo pequeño | Header con gradiente visual + logo + badge prominente |
-| Tipografía | Tamaños inconsistentes | Jerarquía clara con pesos y tamaños definidos |
-| Espaciado | Muy comprimido | Más aire, secciones bien diferenciadas |
-| Cajas de datos | Bordes grises planos | Bordes redondeados con sombras sutiles |
-| Resumen financiero | Caja verde básica | Panel destacado con iconografía y mejor estructura |
-| Tablas | Headers grises genéricos | Headers con colores semánticos (verde=recibido, rojo=devolución) |
-| Footer | Solo fecha de generación | Footer corporativo completo con contacto |
-
-## Cambios Visuales Propuestos
-
-### 1. Orden de Pago (`ordenPagoPdfGenerator.ts`)
-
-**Header Mejorado:**
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│ ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄ BARRA ROJA ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄ │
-├─────────────────────────────────────────────────────────────────┤
-│  [LOGO]                                    ┌─────────────────┐  │
-│  ALMASA                                    │  ORDEN DE PAGO  │  │
-│  ABARROTES LA MANITA, S.A. DE C.V.         │ DOCUMENTO INTERNO│  │
-│                                            └─────────────────┘  │
-│  RFC: AMA700701GI8                         Folio: OC-2025-0042  │
-│  Tel: 55 5552-0168                         Fecha: 29/01/2026   │
-└─────────────────────────────────────────────────────────────────┘
++-----------------------------------------------------------------------+
+|  ADEUDOS A PROVEEDORES                                                |
++-----------------------------------------------------------------------+
+|                                                                       |
+|  [KPI Cards - Resumen Global]                                         |
+|  +-----------------+  +-----------------+  +-----------------+        |
+|  | Total Adeudado  |  | OCs Pendientes  |  | Proveedores     |        |
+|  | $2,768,400.00   |  | 3               |  | 2               |        |
+|  | -12% vs mes ant |  | 1 anticipado    |  | Con adeudo      |        |
+|  +-----------------+  +-----------------+  +-----------------+        |
+|                                                                       |
++-----------------------------------------------------------------------+
+|                                                                       |
+|  [Filtros]                                                            |
+|  Proveedor: [Todos]  Status Pago: [Pendiente/Parcial]  Tipo: [Todos] |
+|                                                                       |
++-----------------------------------------------------------------------+
+|                                                                       |
+|  [Resumen por Proveedor - Cards Colapsables]                         |
+|  +-----------------------------------------------------------------+ |
+|  | SAÑUDO SA DE CV                          Total: $134,400.00     | |
+|  | 1 OC pendiente                           [Ver detalle v]        | |
+|  +-----------------------------------------------------------------+ |
+|  |  Folio       | Status OC   | Status Pago | Total     | Adeudo   | |
+|  |  OC-2601-04  | enviada     | pendiente   | $134,400  | $134,400 | |
+|  +-----------------------------------------------------------------+ |
+|                                                                       |
+|  +-----------------------------------------------------------------+ |
+|  | PRUEBA JOSAN                             Total: $2,400,000.00   | |
+|  | 1 OC pendiente (pago anticipado)         [Ver detalle v]        | |
+|  +-----------------------------------------------------------------+ |
+|                                                                       |
++-----------------------------------------------------------------------+
+|                                                                       |
+|  [Grafico - Distribucion de Adeudos]                                 |
+|  Pie Chart: Adeudo por proveedor                                     |
+|                                                                       |
++-----------------------------------------------------------------------+
 ```
 
-**Panel de Resumen Financiero (más prominente):**
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  💰 RESUMEN FINANCIERO                                          │
-├─────────────────────────────────────────────────────────────────┤
-│  Total Original:                              $125,450.00       │
-│  (-) Devoluciones:                             -$3,200.00       │
-│  ────────────────────────────────────────────────────────────   │
-│  ✓ MONTO A PAGAR                            $122,250.00        │
-└─────────────────────────────────────────────────────────────────┘
-  (Panel verde con borde grueso y tipografía grande)
-```
+## Archivos a Crear
 
-**Datos Bancarios del Proveedor (más visual):**
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  🏦 DATOS BANCARIOS DEL PROVEEDOR                               │
-├────────────────────────────┬────────────────────────────────────┤
-│  Beneficiario:             │  PROVEEDOR EJEMPLO, S.A.           │
-│  Banco:                    │  BBVA BANCOMER                     │
-│  Cuenta:                   │  0123456789                        │
-│  CLABE:                    │  012180001234567891                │
-└────────────────────────────┴────────────────────────────────────┘
-  (Panel azul claro con iconografía)
-```
-
-**Footer Profesional:**
-```text
-────────────────────────────────────────────────────────────────
-        ABARROTES LA MANITA, S.A. DE C.V.
-        compras@almasa.com.mx | Tel: 55 5552-0168
-        Documento generado el 29/01/2026 10:30 - USO INTERNO
-▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄ BARRA ROJA ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-```
-
-### 2. Cierre de OC / Estado de Cuenta (`cierreOCPdfGenerator.ts`)
-
-**Mismas mejoras de header y footer, más:**
-
-**Tabla de Productos con mejor contraste:**
-- Header verde oscuro (#228B22) para productos recibidos
-- Header rojo (#B41E1E) para devoluciones
-- Filas zebra con colores más suaves
-- Subtotales en paneles coloreados
-
-**Panel de Totales más impactante:**
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  📊 RESUMEN DE OPERACIÓN                                        │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│   Total Productos:    $128,650.00       ┌───────────────────┐   │
-│   (-) Devoluciones:    -$6,400.00       │ TOTAL A PAGAR     │   │
-│   ──────────────────────────────        │ $122,250.00       │   │
-│                                         └───────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-  (Monto destacado en badge rojo con tipografía grande)
-```
+| Archivo | Descripcion |
+|---------|-------------|
+| `src/components/compras/AdeudosProveedoresTab.tsx` | Componente principal del panel |
 
 ## Archivos a Modificar
 
-| Archivo | Cambios |
-|---------|---------|
-| `src/utils/ordenPagoPdfGenerator.ts` | Rediseño completo del layout |
-| `src/utils/cierreOCPdfGenerator.ts` | Rediseño completo del layout |
+| Archivo | Cambio |
+|---------|--------|
+| `src/pages/Compras.tsx` | Agregar nueva pestana "Adeudos" con icono y badge |
+| `src/components/secretaria/SecretariaComprasTab.tsx` | Agregar pestana de Adeudos para Secretaria |
 
-## Mejoras Técnicas Específicas
+## Implementacion Tecnica
 
-### Paleta de Colores Unificada
+### 1. Nuevo Componente: AdeudosProveedoresTab.tsx
+
+**Estructura del componente:**
+
 ```typescript
-const COLORS = {
-  brandRed: { r: 139, g: 35, b: 50 },      // Rojo Almasa
-  success: { r: 34, g: 139, b: 34 },       // Verde para montos
-  accent: { r: 70, g: 130, b: 180 },       // Azul para datos
-  dark: { r: 33, g: 37, b: 41 },           // Texto principal
-  gray: { r: 100, g: 100, b: 100 },        // Texto secundario
-  lightBg: { r: 248, g: 248, b: 248 },     // Fondos claros
-  successBg: { r: 240, g: 255, b: 240 },   // Fondo verde claro
-  dangerBg: { r: 255, g: 240, b: 240 },    // Fondo rojo claro
-  infoBg: { r: 240, g: 248, b: 255 },      // Fondo azul claro
-};
+// Query principal para obtener OCs con adeudos pendientes
+const { data: ordenesConAdeudo = [] } = useQuery({
+  queryKey: ["ordenes-con-adeudo"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("ordenes_compra")
+      .select(`
+        id, folio, fecha_orden, total, total_ajustado, 
+        monto_pagado, status, status_pago, tipo_pago,
+        proveedor_id, proveedor_nombre_manual,
+        proveedores (id, nombre, telefono, email)
+      `)
+      .in("status_pago", ["pendiente", "parcial"])
+      .order("fecha_orden", { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+});
 ```
 
-### Nuevos Elementos Visuales
-1. **Badges redondeados** para folio y estados
-2. **Iconografía** con emojis para secciones (💰🏦📊📝)
-3. **Líneas separadoras** con gradiente visual
-4. **Paneles con sombras** usando doble borde
-5. **Footer corporativo** con información de contacto
-6. **Mejor espaciado** entre secciones (+40% más aire)
+**Datos calculados:**
 
-### Estructura del Header Unificada
 ```typescript
-const drawProfessionalHeader = async (doc: jsPDF, title: string, subtitle: string) => {
-  // Barra superior roja
-  doc.setFillColor(139, 35, 50);
-  doc.rect(0, 0, 210, 10, "F");
+// Agrupar por proveedor
+const adeudosPorProveedor = useMemo(() => {
+  const map = new Map<string, {
+    proveedorId: string | null;
+    proveedorNombre: string;
+    totalAdeudo: number;
+    ordenes: OrdenConAdeudo[];
+    tieneAnticipado: boolean;
+  }>();
   
-  // Logo con más espacio
-  const logoBase64 = await loadImageAsBase64('/logo-almasa-pdf.png');
-  if (logoBase64) {
-    doc.addImage(logoBase64, "PNG", 15, 15, 45, 16);
-  }
+  ordenesConAdeudo.forEach(oc => {
+    const nombre = oc.proveedores?.nombre || oc.proveedor_nombre_manual || "Sin proveedor";
+    const adeudo = (oc.total_ajustado || oc.total) - (oc.monto_pagado || 0);
+    
+    if (!map.has(nombre)) {
+      map.set(nombre, {
+        proveedorId: oc.proveedor_id,
+        proveedorNombre: nombre,
+        totalAdeudo: 0,
+        ordenes: [],
+        tieneAnticipado: false,
+      });
+    }
+    
+    const entry = map.get(nombre)!;
+    entry.totalAdeudo += adeudo;
+    entry.ordenes.push({ ...oc, adeudo });
+    if (oc.tipo_pago === 'anticipado') entry.tieneAnticipado = true;
+  });
   
-  // Badge del documento (derecha)
-  doc.setFillColor(139, 35, 50);
-  doc.roundedRect(130, 14, 65, 14, 3, 3, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text(title, 162.5, 23, { align: "center" });
-  
-  // Datos de empresa
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  doc.text("ABARROTES LA MANITA, S.A. DE C.V.", 15, 38);
-  doc.text(`RFC: ${COMPANY_DATA.rfc} | Tel: ${COMPANY_DATA.telefonos.principal}`, 15, 43);
-  
-  // Línea separadora elegante
-  doc.setDrawColor(139, 35, 50);
-  doc.setLineWidth(0.8);
-  doc.line(15, 48, 195, 48);
-};
+  return Array.from(map.values()).sort((a, b) => b.totalAdeudo - a.totalAdeudo);
+}, [ordenesConAdeudo]);
 ```
 
-### Footer Corporativo
+### 2. Componentes Visuales
+
+**KPI Cards (3 tarjetas):**
+- **Total Adeudado**: Suma de todos los adeudos pendientes con formato moneda
+- **OCs Pendientes**: Conteo de ordenes con pago pendiente/parcial
+- **Proveedores con Adeudo**: Conteo de proveedores unicos
+
+**Filtros:**
+- Dropdown de proveedor (todos / especifico)
+- Dropdown de status pago (pendiente / parcial / todos)
+- Dropdown de tipo pago (contra_entrega / anticipado / todos)
+
+**Cards por Proveedor (Collapsible):**
+- Header con nombre proveedor y total adeudado
+- Badge si tiene OC con pago anticipado
+- Tabla interna con:
+  - Folio (clickeable para abrir OC)
+  - Fecha
+  - Status OC
+  - Status Pago (badge con color semantico)
+  - Total
+  - Pagado
+  - **Adeudo** (calculado: total_ajustado - monto_pagado)
+  - Boton "Procesar Pago"
+
+**Grafico Pie:**
+- Distribucion del adeudo total por proveedor
+- Usando Recharts (ya instalado)
+- Colores de la paleta existente
+
+### 3. Modificacion de Compras.tsx
+
 ```typescript
-const drawProfessionalFooter = (doc: jsPDF) => {
-  const pageHeight = doc.internal.pageSize.height;
-  
-  // Línea separadora
-  doc.setDrawColor(139, 35, 50);
-  doc.setLineWidth(0.5);
-  doc.line(40, pageHeight - 25, 170, pageHeight - 25);
-  
-  // Datos de empresa
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.setTextColor(33, 37, 41);
-  doc.text(COMPANY_DATA.razonSocialLarga, 105, pageHeight - 20, { align: "center" });
-  
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7);
-  doc.setTextColor(100, 100, 100);
-  doc.text(`${COMPANY_DATA.emails.compras} | Tel: ${COMPANY_DATA.telefonos.principal}`, 105, pageHeight - 15, { align: "center" });
-  
-  // Fecha de generación
-  const fecha = format(new Date(), "dd/MM/yyyy HH:mm", { locale: es });
-  doc.text(`Documento generado el ${fecha}`, 105, pageHeight - 10, { align: "center" });
-  
-  // Barra inferior
-  doc.setFillColor(139, 35, 50);
-  doc.rect(0, pageHeight - 6, 210, 6, "F");
-};
+// Nueva importacion
+import AdeudosProveedoresTab from "@/components/compras/AdeudosProveedoresTab";
+
+// Nuevo query para badge de adeudos
+const { data: adeudosCount = 0 } = useQuery({
+  queryKey: ["adeudos-pendientes-count"],
+  queryFn: async () => {
+    const { count, error } = await supabase
+      .from("ordenes_compra")
+      .select("*", { count: "exact", head: true })
+      .in("status_pago", ["pendiente", "parcial"]);
+    if (error) return 0;
+    return count || 0;
+  },
+  refetchInterval: 60000,
+});
+
+// Nueva pestana (insertar entre "Faltantes" y "Analytics")
+<TabsTrigger value="adeudos" className="flex items-center gap-2">
+  <CreditCard className="h-4 w-4" />
+  Adeudos
+  {adeudosCount > 0 && (
+    <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-xs font-bold bg-amber-500 text-white">
+      {adeudosCount}
+    </Badge>
+  )}
+</TabsTrigger>
+
+<TabsContent value="adeudos">
+  <AdeudosProveedoresTab />
+</TabsContent>
 ```
 
-## Resultado Esperado
+### 4. Integracion con Procesar Pago
 
-- PDFs con apariencia ejecutiva y profesional
-- Consistencia visual con el PDF de Cotizaciones
-- Mejor legibilidad y jerarquía de información
-- Información de contacto corporativo visible
-- Montos destacados y fáciles de identificar
-- Datos bancarios claros para facilitar pagos
+El boton "Procesar Pago" en cada fila abrira el `ProcesarPagoOCDialog` existente, pasando la orden seleccionada.
+
+### 5. Indicadores Visuales de Status
+
+| Status Pago | Color Badge | Descripcion |
+|-------------|-------------|-------------|
+| `pendiente` | Rojo/Destructive | Sin pagos registrados |
+| `parcial` | Amarillo/Warning | Pago parcial realizado |
+| `pagado` | Verde/Success | Completamente pagado |
+
+| Tipo Pago | Indicador |
+|-----------|-----------|
+| `anticipado` | Badge especial "Anticipo requerido" |
+| `contra_entrega` | Sin indicador especial |
+
+## Flujo de Usuario
+
+1. Usuario accede a Compras > Adeudos
+2. Ve resumen global en KPIs
+3. Filtra por proveedor/status si lo necesita
+4. Expande card de proveedor para ver detalle de OCs
+5. Click en "Procesar Pago" abre dialog existente
+6. Registra pago con comprobante
+7. Panel se actualiza automaticamente (React Query invalidation)
+
+## Casos Edge Cubiertos
+
+- OC sin proveedor catalogado (usa proveedor_nombre_manual)
+- OC con pagos parciales (muestra monto restante)
+- OC con devoluciones (usa total_ajustado)
+- OC con pago anticipado pendiente (badge especial)
+
+## Dependencias Existentes Reutilizadas
+
+- `ProcesarPagoOCDialog` - Para registrar pagos
+- `OrdenAccionesDialog` - Para ver detalle de OC
+- Recharts - Para grafico pie
+- Componentes UI de shadcn (Card, Badge, Collapsible, Table)
+
+## Resultado Final
+
+Panel completo que permite:
+1. Ver de un vistazo cuanto se debe a cada proveedor
+2. Identificar rapidamente OCs pendientes de pago
+3. Distinguir entre pagos anticipados y contra entrega
+4. Procesar pagos directamente desde el panel
+5. Visualizar distribucion grafica de adeudos
