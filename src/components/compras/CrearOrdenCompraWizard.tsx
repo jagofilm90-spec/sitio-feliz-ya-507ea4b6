@@ -45,7 +45,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { 
   Plus, Trash2, Loader2, Truck, ArrowRight, ArrowLeft, Check, 
-  Calendar as CalendarIcon, CreditCard, ChevronDown, ChevronUp, Package, Mail, Gift
+  Calendar as CalendarIcon, CreditCard, ChevronDown, ChevronUp, Package, Mail, Gift, DollarSign, AlertTriangle
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
@@ -54,6 +54,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 // Helper para parsear fechas evitando problemas de zona horaria
 const parseDateLocal = (dateStr: string) => {
@@ -64,6 +65,29 @@ const parseDateLocal = (dateStr: string) => {
 import { formatCurrency } from "@/lib/utils";
 import { sendPushNotification } from "@/services/pushNotifications";
 import { registrarCorreoEnviado } from "@/components/compras/HistorialCorreosOC";
+
+// Interfaz para créditos pendientes del proveedor
+interface CreditoPendiente {
+  id: string;
+  producto_id: string | null;
+  producto_nombre: string;
+  cantidad: number;
+  precio_unitario: number;
+  monto_total: number;
+  motivo: string;
+  orden_compra_origen_id: string;
+  ordenes_compra?: { folio: string } | null;
+}
+
+interface CreditoSeleccion {
+  id: string;
+  tipo: 'descuento' | 'reposicion' | null;
+  monto: number;
+  cantidad: number;
+  producto_nombre: string;
+  oc_origen_folio: string;
+  producto_id: string | null;
+}
 
 interface ProductoEnOrden {
   producto_id: string;
@@ -246,6 +270,11 @@ const CrearOrdenCompraWizard = ({
   // Proveedor productos config
   const [productosProveedorConfig, setProductosProveedorConfig] = useState<ProveedorConfig[]>([]);
   
+  // Créditos pendientes del proveedor
+  const [creditosPendientes, setCreditosPendientes] = useState<CreditoPendiente[]>([]);
+  const [creditosSeleccionados, setCreditosSeleccionados] = useState<Map<string, CreditoSeleccion>>(new Map());
+  const [loadingCreditos, setLoadingCreditos] = useState(false);
+  
   // Auto-calculate precio unitario when using precio por kg
   const precioUnitarioCalculado = usaPrecioPorKg && precioPorKg && kgPorUnidad
     ? (parseFloat(precioPorKg) * parseFloat(kgPorUnidad)).toFixed(2)
@@ -320,6 +349,130 @@ const CrearOrdenCompraWizard = ({
     };
     loadConfig();
   }, [proveedorId]);
+
+  // Load pending credits for selected provider
+  useEffect(() => {
+    const loadCreditos = async () => {
+      // Reset credits when no provider selected
+      if (!proveedorId && tipoProveedor === 'catalogo') {
+        setCreditosPendientes([]);
+        setCreditosSeleccionados(new Map());
+        return;
+      }
+      
+      // For manual providers, we don't have credits tracking yet
+      if (tipoProveedor === 'manual') {
+        setCreditosPendientes([]);
+        setCreditosSeleccionados(new Map());
+        return;
+      }
+      
+      setLoadingCreditos(true);
+      try {
+        const { data, error } = await supabase
+          .from("proveedor_creditos_pendientes")
+          .select(`
+            id, producto_id, producto_nombre, cantidad, precio_unitario, monto_total,
+            motivo, orden_compra_origen_id
+          `)
+          .eq("proveedor_id", proveedorId)
+          .eq("status", "pendiente");
+        
+        if (!error && data) {
+          // Fetch folios separately to avoid the relationship conflict
+          const creditosWithFolios: CreditoPendiente[] = [];
+          for (const credito of data) {
+            let folio = 'N/A';
+            if (credito.orden_compra_origen_id) {
+              const { data: ocData } = await supabase
+                .from("ordenes_compra")
+                .select("folio")
+                .eq("id", credito.orden_compra_origen_id)
+                .maybeSingle();
+              if (ocData?.folio) {
+                folio = ocData.folio;
+              }
+            }
+            creditosWithFolios.push({
+              ...credito,
+              ordenes_compra: { folio }
+            });
+          }
+          setCreditosPendientes(creditosWithFolios);
+        } else {
+          setCreditosPendientes([]);
+        }
+      } catch (err) {
+        console.error("Error loading credits:", err);
+        setCreditosPendientes([]);
+      } finally {
+        setLoadingCreditos(false);
+      }
+    };
+    loadCreditos();
+  }, [proveedorId, tipoProveedor]);
+
+  // Helper functions for credit selection
+  const seleccionarCredito = (credito: CreditoPendiente, tipo: 'descuento' | 'reposicion') => {
+    const newMap = new Map(creditosSeleccionados);
+    newMap.set(credito.id, {
+      id: credito.id,
+      tipo,
+      monto: credito.monto_total,
+      cantidad: credito.cantidad,
+      producto_nombre: credito.producto_nombre,
+      oc_origen_folio: credito.ordenes_compra?.folio || 'N/A',
+      producto_id: credito.producto_id
+    });
+    setCreditosSeleccionados(newMap);
+  };
+
+  const deseleccionarCredito = (creditoId: string) => {
+    const newMap = new Map(creditosSeleccionados);
+    newMap.delete(creditoId);
+    setCreditosSeleccionados(newMap);
+  };
+
+  // Calculate totals for selected credits
+  const totalDescuentoSeleccionado = useMemo(() => {
+    let total = 0;
+    for (const seleccion of creditosSeleccionados.values()) {
+      if (seleccion.tipo === 'descuento') {
+        total += seleccion.monto;
+      }
+    }
+    return total;
+  }, [creditosSeleccionados]);
+
+  const totalReposicionBultos = useMemo(() => {
+    let total = 0;
+    for (const seleccion of creditosSeleccionados.values()) {
+      if (seleccion.tipo === 'reposicion') {
+        total += seleccion.cantidad;
+      }
+    }
+    return total;
+  }, [creditosSeleccionados]);
+
+  const totalCreditosPendientes = useMemo(() => {
+    return creditosPendientes.reduce((sum, c) => sum + c.monto_total, 0);
+  }, [creditosPendientes]);
+
+  const motivoLabels: Record<string, string> = {
+    'faltante': 'Faltante',
+    'devolucion': 'Devolución',
+    'danado': 'Dañado',
+    'rechazado_calidad': 'Rechazado',
+    'no_llego': 'No llegó'
+  };
+
+  const motivoColors: Record<string, string> = {
+    'faltante': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+    'devolucion': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    'danado': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    'rechazado_calidad': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+    'no_llego': 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
+  };
 
   const generateNextFolio = async () => {
     setGeneratingFolio(true);
@@ -772,6 +925,9 @@ const CrearOrdenCompraWizard = ({
     setEntregasProgramadas([]);
     setModoCreacion('manual');
     setFolio("");
+    // Reset credits
+    setCreditosPendientes([]);
+    setCreditosSeleccionados(new Map());
   };
   
   // Create orden mutation
@@ -894,6 +1050,72 @@ const CrearOrdenCompraWizard = ({
           .eq("id", p.producto_id);
       }
 
+      // Apply selected credits to the OC
+      if (creditosSeleccionados.size > 0) {
+        const creditosDescuento: any[] = [];
+        const creditosReposicion: any[] = [];
+        let totalDescuento = 0;
+        
+        for (const [creditoId, seleccion] of creditosSeleccionados) {
+          if (seleccion.tipo === 'descuento') {
+            creditosDescuento.push({
+              credito_id: creditoId,
+              monto: seleccion.monto,
+              producto: seleccion.producto_nombre,
+              oc_origen_folio: seleccion.oc_origen_folio
+            });
+            totalDescuento += seleccion.monto;
+            
+            // Mark credit as applied
+            await supabase
+              .from("proveedor_creditos_pendientes")
+              .update({
+                status: "aplicado",
+                tipo_resolucion: "descuento_oc",
+                orden_compra_aplicada_id: orden.id,
+                fecha_aplicacion: new Date().toISOString(),
+                resolucion_notas: `Aplicado como descuento en ${folio}`
+              })
+              .eq("id", creditoId);
+              
+          } else if (seleccion.tipo === 'reposicion') {
+            creditosReposicion.push({
+              credito_id: creditoId,
+              cantidad: seleccion.cantidad,
+              producto: seleccion.producto_nombre,
+              oc_origen_folio: seleccion.oc_origen_folio
+            });
+            
+            // Mark credit as pending replacement
+            await supabase
+              .from("proveedor_creditos_pendientes")
+              .update({
+                status: "reposicion_esperada",
+                tipo_resolucion: "reposicion_producto",
+                orden_compra_aplicada_id: orden.id,
+                resolucion_notas: `Reposición esperada en entregas de ${folio}`
+              })
+              .eq("id", creditoId);
+          }
+        }
+        
+        // Update OC with applied credits
+        if (totalDescuento > 0 || creditosReposicion.length > 0) {
+          await supabase
+            .from("ordenes_compra")
+            .update({
+              creditos_aplicados: totalDescuento,
+              creditos_aplicados_detalle: {
+                descuentos: creditosDescuento,
+                reposiciones: creditosReposicion
+              },
+              // Adjust total if there are discounts
+              total_ajustado: total - totalDescuento
+            })
+            .eq("id", orden.id);
+        }
+      }
+
       return orden;
     },
     onSuccess: async (orden) => {
@@ -901,6 +1123,8 @@ const CrearOrdenCompraWizard = ({
       queryClient.invalidateQueries({ queryKey: ["ordenes_calendario"] });
       queryClient.invalidateQueries({ queryKey: ["productos"] });
       queryClient.invalidateQueries({ queryKey: ["proveedores-manuales-autocomplete"] });
+      // Invalidate credits cache so they're refreshed next time
+      queryClient.invalidateQueries({ queryKey: ["proveedor-creditos-pendientes"] });
       toast({
         title: "Orden creada",
         description: tipoEntrega === 'multiple' 
@@ -1559,6 +1783,99 @@ const CrearOrdenCompraWizard = ({
                   </label>
                 </div>
               </div>
+
+              {/* Créditos pendientes del proveedor */}
+              {tipoProveedor === 'catalogo' && proveedorId && (
+                loadingCreditos ? (
+                  <div className="flex items-center gap-2 p-4 rounded-lg border border-dashed">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm text-muted-foreground">Verificando créditos pendientes...</span>
+                  </div>
+                ) : creditosPendientes.length > 0 ? (
+                  <div className="p-4 rounded-lg border-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+                    <div className="flex items-center gap-2 mb-3">
+                      <AlertTriangle className="h-5 w-5 text-amber-600" />
+                      <span className="font-medium text-amber-800 dark:text-amber-200">
+                        Este proveedor tiene créditos pendientes
+                      </span>
+                      <Badge variant="outline" className="text-amber-700 border-amber-400 dark:text-amber-300 dark:border-amber-600">
+                        {formatCurrency(totalCreditosPendientes)}
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {creditosPendientes.map((credito) => (
+                        <div key={credito.id} className="p-3 bg-background rounded-lg border">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <Badge variant="outline" className="font-mono text-xs">
+                                {credito.ordenes_compra?.folio || 'N/A'}
+                              </Badge>
+                              <p className="font-medium mt-1">{credito.producto_nombre}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {credito.cantidad} bulto{credito.cantidad !== 1 ? 's' : ''} × ${credito.precio_unitario.toLocaleString()} = 
+                                <span className="text-amber-600 font-bold ml-1">{formatCurrency(credito.monto_total)}</span>
+                              </p>
+                            </div>
+                            <Badge className={motivoColors[credito.motivo] || 'bg-muted text-muted-foreground'}>
+                              {motivoLabels[credito.motivo] || credito.motivo}
+                            </Badge>
+                          </div>
+                          
+                          <RadioGroup
+                            value={creditosSeleccionados.get(credito.id)?.tipo || 'none'}
+                            onValueChange={(value) => {
+                              if (value === 'none') {
+                                deseleccionarCredito(credito.id);
+                              } else {
+                                seleccionarCredito(credito, value as 'descuento' | 'reposicion');
+                              }
+                            }}
+                            className="flex flex-wrap gap-3 mt-2"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="descuento" id={`descuento-${credito.id}`} />
+                              <Label htmlFor={`descuento-${credito.id}`} className="text-sm cursor-pointer">
+                                Aplicar descuento ({formatCurrency(credito.monto_total)})
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="reposicion" id={`reposicion-${credito.id}`} />
+                              <Label htmlFor={`reposicion-${credito.id}`} className="text-sm cursor-pointer">
+                                Esperar reposición ({credito.cantidad} bultos)
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="none" id={`none-${credito.id}`} />
+                              <Label htmlFor={`none-${credito.id}`} className="text-sm text-muted-foreground cursor-pointer">
+                                No aplicar
+                              </Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Resumen de selección */}
+                    {(totalDescuentoSeleccionado > 0 || totalReposicionBultos > 0) && (
+                      <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-700">
+                        {totalDescuentoSeleccionado > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span>Descuento a aplicar:</span>
+                            <span className="font-bold text-green-600">-{formatCurrency(totalDescuentoSeleccionado)}</span>
+                          </div>
+                        )}
+                        {totalReposicionBultos > 0 && (
+                          <div className="flex justify-between text-sm mt-1">
+                            <span>Bultos pendientes de reposición:</span>
+                            <span className="font-bold text-blue-600">+{totalReposicionBultos} bultos</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : null
+              )}
 
               {/* Advanced options - collapsed */}
               <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
@@ -2312,10 +2629,25 @@ const CrearOrdenCompraWizard = ({
                       <span>{formatCurrency(totalesOrden.ieps)}</span>
                     </div>
                   )}
+                  {/* Show applied credits if any */}
+                  {totalDescuentoSeleccionado > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Créditos aplicados:</span>
+                      <span>-{formatCurrency(totalDescuentoSeleccionado)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-xl pt-2 border-t">
                     <span>Total:</span>
-                    <span className="text-primary">{formatCurrency(totalesOrden.total)}</span>
+                    <span className="text-primary">
+                      {formatCurrency(totalesOrden.total - totalDescuentoSeleccionado)}
+                    </span>
                   </div>
+                  {totalReposicionBultos > 0 && (
+                    <div className="flex justify-between text-blue-600 text-sm pt-1">
+                      <span>Bultos esperados (reposición):</span>
+                      <span>+{totalReposicionBultos} bultos</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
