@@ -8,6 +8,32 @@ const BRAND_RED = { r: 180, g: 30, b: 30 };
 const BRAND_DARK = { r: 40, g: 40, b: 40 };
 const BRAND_GRAY = { r: 100, g: 100, b: 100 };
 
+/**
+ * Normaliza una fecha que puede venir como:
+ * - "2026-01-15" (solo fecha)
+ * - "2026-01-15T18:30:00.000Z" (timestamp ISO)
+ * - null/undefined
+ * Retorna un Date válido o la fecha actual como fallback
+ */
+const parseFechaSafe = (fecha: string | null | undefined): Date => {
+  if (!fecha) return new Date();
+  
+  try {
+    // Si es solo fecha (YYYY-MM-DD), agregar hora del mediodía para evitar problemas de timezone
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+      return new Date(fecha + "T12:00:00");
+    }
+    // Si ya es timestamp completo, usarlo directamente
+    const parsed = new Date(fecha);
+    if (isNaN(parsed.getTime())) {
+      return new Date(); // Fallback si aún es inválida
+    }
+    return parsed;
+  } catch {
+    return new Date();
+  }
+};
+
 export interface OrdenPagoData {
   ordenCompra: {
     id: string;
@@ -125,7 +151,7 @@ const generarDocumentoPDF = async (data: OrdenPagoData): Promise<{ doc: jsPDF; f
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
-  const fechaFormateada = format(new Date(ordenCompra.fecha_creacion + "T12:00:00"), "dd/MM/yyyy", { locale: es });
+  const fechaFormateada = format(parseFechaSafe(ordenCompra.fecha_creacion), "dd/MM/yyyy", { locale: es });
   doc.text(`Fecha OC: ${fechaFormateada}`, 195, yPos + 1, { align: "right" });
   
   yPos += 18;
