@@ -3,7 +3,7 @@ import { useUserRoles } from "@/hooks/useUserRoles";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
@@ -105,6 +105,7 @@ const OrdenesCompraTab = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isAdmin } = useUserRoles();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -1776,93 +1777,52 @@ const OrdenesCompraTab = () => {
                       {orden.tipo_pago === 'anticipado' ? (
                         orden.status_pago === 'pagado' ? (
                           <Badge className="bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
-                            💳 Anticipado ✓
+                            💳 Pagada
                           </Badge>
                         ) : (
-                          <div className="flex items-center gap-1">
-                            <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800">
-                              💳 Pendiente
-                            </Badge>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 px-2 text-xs text-primary hover:text-primary"
-                              onClick={() => {
-                                setOrdenParaPago({
-                                  id: orden.id,
-                                  folio: orden.folio,
-                                  proveedor_id: orden.proveedor_id || null,
-                                  proveedor_nombre: orden.proveedor_id ? orden.proveedores?.nombre : orden.proveedor_nombre_manual,
-                                  proveedor_email: orden.proveedor_id ? orden.proveedores?.email : null,
-                                  total: orden.total,
-                                  monto_devoluciones: orden.monto_devoluciones || null,
-                                  total_ajustado: orden.total_ajustado || null,
-                                });
-                                setMarcarPagadoDialogOpen(true);
-                              }}
-                            >
-                              <CreditCard className="h-3 w-3 mr-1" />
-                              Pagar
-                            </Button>
-                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs text-primary hover:text-primary hover:bg-primary/10"
+                            onClick={() => navigate(`/compras?tab=adeudos&oc=${orden.id}`)}
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            Ir a Pago
+                          </Button>
                         )
                       ) : (
-                        <div className="flex items-center gap-1">
+                        // Contra Entrega
+                        orden.status_pago === 'pagado' ? (
+                          <Badge className="bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800 text-xs">
+                            ✓ Pagado
+                          </Badge>
+                        ) : (orden.status === 'completada' || orden.status === 'recibida' || orden.status === 'parcial') ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs text-primary hover:text-primary hover:bg-primary/10"
+                            onClick={() => navigate(`/compras?tab=adeudos&oc=${orden.id}`)}
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            Ir a Pago
+                          </Button>
+                        ) : orden.status_pago === 'parcial' ? (
+                          <Badge 
+                            className="bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800 text-xs cursor-pointer"
+                            onClick={() => navigate(`/compras?tab=adeudos&oc=${orden.id}`)}
+                          >
+                            🟡 Pago Parcial
+                            {(orden as any).monto_pagado > 0 && (
+                              <span className="ml-1">
+                                (${((orden as any).monto_pagado || 0).toLocaleString("es-MX", { minimumFractionDigits: 0 })})
+                              </span>
+                            )}
+                          </Badge>
+                        ) : (
                           <Badge variant="outline" className="text-muted-foreground">
                             🚚 Contra Entrega
                           </Badge>
-                          {/* Botón procesar pago para OC completadas/parciales */}
-                          {(orden.status === 'completada' || orden.status === 'parcial') && 
-                           orden.status_pago !== 'pagado' && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 px-2 text-xs text-primary hover:text-primary"
-                              onClick={() => {
-                                setOrdenParaProcesarPago({
-                                  id: orden.id,
-                                  folio: orden.folio,
-                                  proveedor_id: orden.proveedor_id || null,
-                                  proveedor_nombre: orden.proveedor_id ? orden.proveedores?.nombre : orden.proveedor_nombre_manual,
-                                  total: orden.total,
-                                  monto_devoluciones: orden.monto_devoluciones || null,
-                                  total_ajustado: orden.total_ajustado || null,
-                                  fecha_creacion: orden.fecha_orden,
-                                });
-                                setProcesarPagoDialogOpen(true);
-                              }}
-                            >
-                              <CreditCard className="h-3 w-3 mr-1" />
-                              Pagar
-                            </Button>
-                          )}
-                          {orden.status_pago === 'pagado' && (
-                            <Badge className="bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800 text-xs">
-                              ✓ Pagado
-                            </Badge>
-                          )}
-                          {orden.status_pago === 'parcial' && (
-                            <Badge 
-                              className="bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800 text-xs cursor-pointer"
-                              onClick={() => {
-                                setOrdenParaFacturas({
-                                  id: orden.id,
-                                  folio: orden.folio,
-                                  proveedor_nombre: orden.proveedor_id ? orden.proveedores?.nombre : orden.proveedor_nombre_manual,
-                                  total: orden.total,
-                                });
-                                setFacturasDialogOpen(true);
-                              }}
-                            >
-                              🟡 Pago Parcial
-                              {(orden as any).monto_pagado > 0 && (
-                                <span className="ml-1">
-                                  (${((orden as any).monto_pagado || 0).toLocaleString("es-MX", { minimumFractionDigits: 0 })})
-                                </span>
-                              )}
-                            </Badge>
-                          )}
-                        </div>
+                        )
                       )}
                     </TableCell>
                     {/* REMOVED: Confirmation column - confirmation system deprecated */}

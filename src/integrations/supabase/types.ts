@@ -2858,6 +2858,8 @@ export type Database = {
           comprobante_pago_url: string | null
           creado_por: string
           created_at: string
+          creditos_aplicados: number | null
+          creditos_aplicados_detalle: Json | null
           email_enviado_en: string | null
           entregas_multiples: boolean | null
           fecha_autorizacion: string | null
@@ -2895,6 +2897,8 @@ export type Database = {
           comprobante_pago_url?: string | null
           creado_por: string
           created_at?: string
+          creditos_aplicados?: number | null
+          creditos_aplicados_detalle?: Json | null
           email_enviado_en?: string | null
           entregas_multiples?: boolean | null
           fecha_autorizacion?: string | null
@@ -2932,6 +2936,8 @@ export type Database = {
           comprobante_pago_url?: string | null
           creado_por?: string
           created_at?: string
+          creditos_aplicados?: number | null
+          creditos_aplicados_detalle?: Json | null
           email_enviado_en?: string | null
           entregas_multiples?: boolean | null
           fecha_autorizacion?: string | null
@@ -4157,6 +4163,125 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "proveedor_correos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proveedor_creditos_pendientes: {
+        Row: {
+          cantidad: number
+          created_at: string | null
+          devolucion_id: string | null
+          entrega_id: string | null
+          fecha_aplicacion: string | null
+          id: string
+          monto_total: number
+          motivo: string
+          notas: string | null
+          orden_compra_aplicada_id: string | null
+          orden_compra_origen_id: string
+          precio_unitario: number
+          producto_id: string | null
+          producto_nombre: string
+          proveedor_id: string | null
+          proveedor_nombre_manual: string | null
+          resolucion_notas: string | null
+          status: string
+          tipo_resolucion: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          cantidad: number
+          created_at?: string | null
+          devolucion_id?: string | null
+          entrega_id?: string | null
+          fecha_aplicacion?: string | null
+          id?: string
+          monto_total: number
+          motivo: string
+          notas?: string | null
+          orden_compra_aplicada_id?: string | null
+          orden_compra_origen_id: string
+          precio_unitario: number
+          producto_id?: string | null
+          producto_nombre: string
+          proveedor_id?: string | null
+          proveedor_nombre_manual?: string | null
+          resolucion_notas?: string | null
+          status?: string
+          tipo_resolucion?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string | null
+          devolucion_id?: string | null
+          entrega_id?: string | null
+          fecha_aplicacion?: string | null
+          id?: string
+          monto_total?: number
+          motivo?: string
+          notas?: string | null
+          orden_compra_aplicada_id?: string | null
+          orden_compra_origen_id?: string
+          precio_unitario?: number
+          producto_id?: string | null
+          producto_nombre?: string
+          proveedor_id?: string | null
+          proveedor_nombre_manual?: string | null
+          resolucion_notas?: string | null
+          status?: string
+          tipo_resolucion?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proveedor_creditos_pendientes_devolucion_id_fkey"
+            columns: ["devolucion_id"]
+            isOneToOne: false
+            referencedRelation: "devoluciones_proveedor"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedor_creditos_pendientes_entrega_id_fkey"
+            columns: ["entrega_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_compra_entregas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedor_creditos_pendientes_orden_compra_aplicada_id_fkey"
+            columns: ["orden_compra_aplicada_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_compra"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedor_creditos_pendientes_orden_compra_origen_id_fkey"
+            columns: ["orden_compra_origen_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_compra"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedor_creditos_pendientes_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedor_creditos_pendientes_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedor_creditos_pendientes_proveedor_id_fkey"
             columns: ["proveedor_id"]
             isOneToOne: false
             referencedRelation: "proveedores"

@@ -3,11 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, PackageX } from "lucide-react";
+import { AlertTriangle, PackageX, DollarSign } from "lucide-react";
 import DevolucionesPendientesTab from "./DevolucionesPendientesTab";
 import FaltantesPendientesTab from "./FaltantesPendientesTab";
+import CreditosPendientesPanel from "./CreditosPendientesPanel";
 
-type Vista = "devoluciones" | "faltantes";
+type Vista = "devoluciones" | "faltantes" | "creditos";
 
 const DevolucionesFaltantesTab = () => {
   const [vista, setVista] = useState<Vista>("devoluciones");
@@ -36,6 +37,21 @@ const DevolucionesFaltantesTab = () => {
         .select("*", { count: "exact", head: true })
         .eq("origen_faltante", true)
         .in("status", ["programada", "pendiente"]);
+
+      if (error) return 0;
+      return count || 0;
+    },
+    refetchInterval: 60000,
+  });
+
+  // Fetch count of pending credits
+  const { data: creditosCount = 0 } = useQuery({
+    queryKey: ["creditos-pendientes-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("proveedor_creditos_pendientes")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pendiente");
 
       if (error) return 0;
       return count || 0;
@@ -83,15 +99,25 @@ const DevolucionesFaltantesTab = () => {
               </Badge>
             )}
           </ToggleGroupItem>
+          <ToggleGroupItem 
+            value="creditos" 
+            className="flex items-center gap-2 px-4 py-2 data-[state=on]:bg-background data-[state=on]:shadow-sm"
+          >
+            <DollarSign className="h-4 w-4 text-amber-600" />
+            <span>Créditos</span>
+            {creditosCount > 0 && (
+              <Badge className="ml-1 h-5 min-w-5 px-1.5 text-xs bg-amber-500 text-white">
+                {creditosCount}
+              </Badge>
+            )}
+          </ToggleGroupItem>
         </ToggleGroup>
       </div>
 
       {/* Contenido condicional */}
-      {vista === "devoluciones" ? (
-        <DevolucionesPendientesTab />
-      ) : (
-        <FaltantesPendientesTab />
-      )}
+      {vista === "devoluciones" && <DevolucionesPendientesTab />}
+      {vista === "faltantes" && <FaltantesPendientesTab />}
+      {vista === "creditos" && <CreditosPendientesPanel />}
     </div>
   );
 };

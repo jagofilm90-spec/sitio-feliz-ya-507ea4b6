@@ -114,3 +114,6 @@ verify_jwt = true
 
 [functions.notificar-entregas-programadas]
 verify_jwt = false
+
+[functions.notificar-faltante-anticipado]
+verify_jwt = false
