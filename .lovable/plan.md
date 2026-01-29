@@ -1,122 +1,58 @@
 
-# Plan: Optimizar Columnas del Panel de Adeudos
 
-## Objetivo
-Ajustar el ancho de las columnas y compactar la información para que toda la tabla sea visible sin necesidad de hacer scroll horizontal, incluyendo el botón "Pagar".
+# Plan: Eliminar Columna "Adeudo" Duplicada
 
-## Análisis del Estado Actual
+## Problema Actual
 
-La tabla actualmente tiene **9 columnas**:
-| Folio | Fecha | Status OC | Status Pago | Total | Pagado | Adeudo | Recepción | Pagar |
-
-**Problemas identificados:**
-- Las columnas no tienen anchos definidos, ocupando más espacio del necesario
-- Los textos completos ocupan mucho espacio horizontal
-- El folio `OC-202601-0002` es largo y no está abreviado
-
-## Cambios Propuestos
-
-### 1. Reducir ancho de columnas con clases CSS
+El adeudo se muestra **3 veces** en la misma vista:
 
 ```text
-| Columna     | Cambio                                    |
-|-------------|-------------------------------------------|
-| Folio       | Mostrar solo número (ej: "0002")          |
-| Fecha       | Formato corto ya existe (dd/MM/yy) ✓      |
-| Status OC   | Ancho fijo: w-20                          |
-| Status Pago | Ancho fijo: w-20                          |
-| Total       | Ancho fijo: w-24, texto más pequeño       |
-| Pagado      | Ancho fijo: w-24, texto más pequeño       |
-| Adeudo      | Ancho fijo: w-24                          |
-| Recepción   | Ancho fijo: w-20                          |
-| Pagar       | Ancho fijo: w-16                          |
+┌─────────────────────────────────────────────────────────────────┐
+│ Envolapan                                        $234,756.00    │ ← Adeudo #1
+├─────────────────────────────────────────────────────────────────┤
+│ Folio │ Fecha │ Status │ Pago │ Total │ Pagado │ Adeudo │ Recep │
+│                                                  ^^^^^^         │ ← Adeudo #2
+│ #0002 │ 21/01 │ Recib. │ Pend │ $234k │   $0   │ $234k  │ Ver 2▼│ ← Adeudo #3
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### 2. Abreviar el folio
+## Solución
 
-Cambiar de `OC-202601-0002` a solo el número: `0002` o `#0002`
+Eliminar la columna "Adeudo" de la tabla, ya que:
+- El **total del adeudo** ya está en el encabezado del proveedor
+- El adeudo por OC se puede inferir de (Total - Pagado)
 
-### 3. Hacer la tabla responsive
-
-Agregar `table-fixed` y anchos específicos para evitar que la tabla crezca más allá del contenedor.
-
-### 4. Aplicar texto más compacto
-
-Usar `text-xs` en celdas numéricas para reducir espacio.
-
-## Implementación
+## Cambios a Realizar
 
 ### Archivo: `src/components/compras/AdeudosProveedoresTab.tsx`
 
-**Cambios en TableHeader (líneas 486-497):**
-```typescript
-<Table className="table-fixed w-full">
-  <TableHeader>
-    <TableRow>
-      <TableHead className="w-16">Folio</TableHead>
-      <TableHead className="w-20">Fecha</TableHead>
-      <TableHead className="w-24">Status OC</TableHead>
-      <TableHead className="w-24">Status Pago</TableHead>
-      <TableHead className="w-24 text-right">Total</TableHead>
-      <TableHead className="w-24 text-right">Pagado</TableHead>
-      <TableHead className="w-24 text-right">Adeudo</TableHead>
-      <TableHead className="w-20">Recep.</TableHead>
-      <TableHead className="w-16"></TableHead>
-    </TableRow>
-  </TableHeader>
+**1. Eliminar el TableHead de "Adeudo" (línea 494):**
+```diff
+- <TableHead className="w-20 text-right">Adeudo</TableHead>
 ```
 
-**Cambios en celdas (aplicar text-xs y truncate):**
-
-1. **Folio** - Extraer solo el número:
-```typescript
-<TableCell className="font-medium text-xs">
-  #{orden.folio.split('-').pop()}
-</TableCell>
+**2. Eliminar el TableCell de "Adeudo" (líneas 528-530):**
+```diff
+- <TableCell className="text-right text-xs font-semibold text-destructive">
+-   {formatCurrency(orden.adeudo)}
+- </TableCell>
 ```
 
-2. **Fecha** - Más compacta:
-```typescript
-<TableCell className="text-xs">
-  {format(new Date(orden.fecha_orden), "dd/MM", { locale: es })}
-</TableCell>
-```
-
-3. **Columnas numéricas** - Texto más pequeño:
-```typescript
-<TableCell className="text-right text-xs">
-  {formatCurrency(orden.total_ajustado || orden.total)}
-</TableCell>
-```
-
-4. **Botón Pagar** - Más compacto:
-```typescript
-<Button size="sm" variant="outline" className="h-7 px-2 text-xs">
-  Pagar
-</Button>
-```
-
-## Resultado Visual Esperado
+## Resultado Final
 
 ```text
-┌────────┬───────┬──────────┬──────────┬──────────┬──────────┬──────────┬────────┬────────┐
-│ Folio  │ Fecha │ Status   │ Status   │    Total │   Pagado │   Adeudo │ Recep. │        │
-│        │       │ OC       │ Pago     │          │          │          │        │        │
-├────────┼───────┼──────────┼──────────┼──────────┼──────────┼──────────┼────────┼────────┤
-│ #0002  │ 21/01 │ Recibida │ Pendiente│ $234,000 │       $0 │ $234,000 │ Ver 2▼ │ [Pagar]│
-│ #0012  │ 28/01 │ Enviada  │ Pendiente│ $2.4M    │       $0 │ $2.4M    │   -    │ [Pagar]│
-└────────┴───────┴──────────┴──────────┴──────────┴──────────┴──────────┴────────┴────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│ Envolapan                                        $234,756.00    │ ← Único adeudo mostrado
+├─────────────────────────────────────────────────────────────────┤
+│ Folio │ Fecha │ Status │ Pago │  Total │ Pagado │ Recep. │      │
+│ #0002 │ 21/01 │ Recib. │ Pend │ $234k  │   $0   │ Ver 2▼ │[Pagar]│
+└─────────────────────────────────────────────────────────────────┘
 ```
-
-## Archivos a Modificar
-
-| Archivo | Cambios |
-|---------|---------|
-| `src/components/compras/AdeudosProveedoresTab.tsx` | Anchos fijos en columnas, abreviar folio, texto compacto |
 
 ## Beneficios
 
-- **Sin scroll horizontal** - Toda la información visible
-- **Mejor legibilidad** - Columnas alineadas consistentemente
-- **Responsive** - Se adapta al ancho disponible
-- **Botón Pagar siempre visible** - Acceso inmediato a la acción principal
+- Sin información duplicada
+- Más espacio horizontal para las demás columnas
+- El botón "Pagar" más accesible
+- Interfaz más limpia
+
