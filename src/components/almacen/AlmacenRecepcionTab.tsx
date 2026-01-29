@@ -172,6 +172,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
             id,
             folio,
             status,
+            tipo_pago,
             proveedor_id,
             proveedor_nombre_manual,
             proveedor:proveedores(id, nombre)
