@@ -46,7 +46,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Constantes de impuestos
@@ -570,7 +570,7 @@ export function ProcesarPagoOCDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh] !flex !flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
@@ -581,7 +581,7 @@ export function ProcesarPagoOCDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 max-h-[calc(90vh-180px)] pr-4">
+        <div className="flex-1 overflow-y-auto pr-4 min-h-0">
           <div className="space-y-6 pb-4">
             {/* Alert when there are registered invoices */}
             {tieneFacturasRegistradas && (
@@ -1049,7 +1049,7 @@ export function ProcesarPagoOCDialog({
               )}
             </div>
           </div>
-        </ScrollArea>
+        </div>
 
         <DialogFooter className="flex-shrink-0 border-t pt-4">
           <Button
