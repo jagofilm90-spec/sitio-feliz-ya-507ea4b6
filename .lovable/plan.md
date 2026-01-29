@@ -1,161 +1,185 @@
 
+# Plan: Actualizar KPIs y UI según el Toggle de Pagadas
 
-# Plan: Toggle de Historial en Adeudos + Fusionar Devoluciones/Faltantes
+## Problema Actual
 
-## Resumen
+Cuando activas el switch "Pagadas", las tarjetas KPI siguen mostrando:
+- "Total Adeudado" (debería ser "Total Pagado")
+- "OCs Pendientes" (debería ser "OCs Pagadas")  
+- "Proveedores con Adeudo" (debería ser "Proveedores Pagados")
 
-Dos mejoras para simplificar la navegación del módulo de Compras:
+También el gráfico de pie y los mensajes vacíos siguen usando terminología de "adeudos".
 
-1. **Toggle en Adeudos** - Agregar un switch para ver OCs pendientes vs pagadas (historial)
-2. **Fusionar Devoluciones/Faltantes** - Combinar ambas pestañas en una sola con filtro interno
+## Solución
 
-## Resultado Visual
+Cambiar dinámicamente las etiquetas, íconos y colores de las tarjetas KPI según el estado del toggle `mostrarPagadas`.
 
-```text
-ANTES (8 pestañas):
-┌─────────┬────┬─────┬──────────────┬──────────┬──────────┬─────────┬──────────┐
-│ Provs   │ OC │ Cal │ Devoluciones │ Historial│ Faltantes│ Adeudos │ Analytics│
-└─────────┴────┴─────┴──────────────┴──────────┴──────────┴─────────┴──────────┘
+## Cambios a Realizar
 
-DESPUÉS (7 pestañas):
-┌─────────┬────┬─────┬───────────────────────┬──────────┬─────────┬──────────┐
-│ Provs   │ OC │ Cal │ Devoluciones/Faltantes│ Historial│ Adeudos │ Analytics│
-└─────────┴────┴─────┴───────────────────────┴──────────┴─────────┴──────────┘
+### Archivo: `src/components/compras/AdeudosProveedoresTab.tsx`
+
+**1. Actualizar cálculo de KPIs (líneas 213-234):**
+
+Agregar cálculo de "total pagado" cuando `mostrarPagadas` está activo:
+
+```typescript
+const kpis = useMemo(() => {
+  if (mostrarPagadas) {
+    // Historial de pagadas
+    const totalPagado = adeudosPorProveedor.reduce(
+      (sum, p) => sum + p.ordenes.reduce((s, o) => s + (o.monto_pagado || 0), 0),
+      0
+    );
+    const totalOCsPagadas = adeudosPorProveedor.reduce(
+      (sum, p) => sum + p.ordenes.length,
+      0
+    );
+    const proveedoresPagados = adeudosPorProveedor.length;
+
+    return {
+      total: totalPagado,
+      totalOCs: totalOCsPagadas,
+      proveedores: proveedoresPagados,
+      ocsAnticipadas: 0,
+    };
+  } else {
+    // Adeudos pendientes (actual)
+    const totalAdeudado = adeudosPorProveedor.reduce(
+      (sum, p) => sum + p.totalAdeudo,
+      0
+    );
+    // ... resto igual
+  }
+}, [adeudosPorProveedor, mostrarPagadas]);
 ```
 
-## Parte 1: Toggle en Adeudos para ver Pagadas
+**2. Actualizar las tarjetas KPI (líneas 368-414):**
 
-### Cambio en `src/components/compras/AdeudosProveedoresTab.tsx`
+Cambiar dinámicamente según `mostrarPagadas`:
 
-**Agregar estado para toggle:**
 ```typescript
-const [mostrarPagadas, setMostrarPagadas] = useState(false);
-```
+{/* KPI Cards */}
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium">
+        {mostrarPagadas ? "Total Pagado" : "Total Adeudado"}
+      </CardTitle>
+      <DollarSign className={`h-4 w-4 ${mostrarPagadas ? 'text-green-600' : 'text-muted-foreground'}`} />
+    </CardHeader>
+    <CardContent>
+      <div className={`text-2xl font-bold ${mostrarPagadas ? 'text-green-600' : 'text-destructive'}`}>
+        {formatCurrency(kpis.total)}
+      </div>
+      <p className="text-xs text-muted-foreground mt-1">
+        {mostrarPagadas 
+          ? "Suma de todos los pagos realizados"
+          : "Suma de todos los adeudos pendientes"}
+      </p>
+    </CardContent>
+  </Card>
 
-**Modificar query para incluir OCs pagadas cuando toggle esté activo:**
-```typescript
-// Cambiar de:
-.in("status_pago", ["pendiente", "parcial"])
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium">
+        {mostrarPagadas ? "OCs Pagadas" : "OCs Pendientes"}
+      </CardTitle>
+      <FileText className={`h-4 w-4 ${mostrarPagadas ? 'text-green-600' : 'text-muted-foreground'}`} />
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold">{kpis.totalOCs}</div>
+      {!mostrarPagadas && kpis.ocsAnticipadas > 0 && (
+        <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          {kpis.ocsAnticipadas} con pago anticipado
+        </p>
+      )}
+    </CardContent>
+  </Card>
 
-// A:
-.in("status_pago", mostrarPagadas 
-  ? ["pagado"] 
-  : ["pendiente", "parcial"])
-```
-
-**Agregar Switch en el header:**
-```typescript
-<div className="flex items-center gap-2">
-  <Switch 
-    checked={mostrarPagadas} 
-    onCheckedChange={setMostrarPagadas} 
-  />
-  <Label className="text-sm">
-    {mostrarPagadas ? "Historial pagadas" : "Pendientes"}
-  </Label>
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium">
+        {mostrarPagadas ? "Proveedores Pagados" : "Proveedores con Adeudo"}
+      </CardTitle>
+      <Building2 className={`h-4 w-4 ${mostrarPagadas ? 'text-green-600' : 'text-muted-foreground'}`} />
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold">{kpis.proveedores}</div>
+      <p className="text-xs text-muted-foreground mt-1">
+        Proveedores únicos
+      </p>
+    </CardContent>
+  </Card>
 </div>
 ```
 
-**Ajustar UI cuando muestra pagadas:**
-- Cambiar título a "Historial de Pagos a Proveedores"
-- Ocultar botón "Pagar" (ya están pagadas)
-- Mostrar badge verde "Pagado" en lugar de rojo
-
-## Parte 2: Fusionar Devoluciones y Faltantes
-
-### Crear nuevo componente combinado
-
-**Nuevo archivo: `src/components/compras/DevolucionesFaltantesTab.tsx`**
-
-Combinar ambos componentes con un ToggleGroup interno:
+**3. Actualizar mensaje de lista vacía (líneas 472-481):**
 
 ```typescript
-export const DevolucionesFaltantesTab = () => {
-  const [vista, setVista] = useState<"devoluciones" | "faltantes">("devoluciones");
-  
-  return (
-    <div className="space-y-4">
-      {/* Toggle interno */}
-      <ToggleGroup type="single" value={vista} onValueChange={setVista}>
-        <ToggleGroupItem value="devoluciones">
-          <AlertTriangle className="h-4 w-4 mr-2" />
-          Devoluciones {devCount > 0 && <Badge>{devCount}</Badge>}
-        </ToggleGroupItem>
-        <ToggleGroupItem value="faltantes">
-          <PackageX className="h-4 w-4 mr-2" />
-          Faltantes {faltCount > 0 && <Badge>{faltCount}</Badge>}
-        </ToggleGroupItem>
-      </ToggleGroup>
-      
-      {/* Contenido condicional */}
-      {vista === "devoluciones" ? (
-        <DevolucionesPendientesTab />
+{adeudosPorProveedor.length === 0 ? (
+  <Card>
+    <CardContent className="py-12 text-center">
+      {mostrarPagadas ? (
+        <>
+          <History className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+          <h3 className="text-lg font-medium">Sin historial de pagos</h3>
+          <p className="text-sm text-muted-foreground">
+            No hay órdenes de compra pagadas registradas
+          </p>
+        </>
       ) : (
-        <FaltantesPendientesTab />
+        <>
+          <TrendingDown className="h-12 w-12 mx-auto text-green-500 mb-3" />
+          <h3 className="text-lg font-medium">Sin adeudos pendientes</h3>
+          <p className="text-sm text-muted-foreground">
+            No hay órdenes de compra con pagos pendientes
+          </p>
+        </>
       )}
-    </div>
-  );
-};
+    </CardContent>
+  </Card>
+) : (
+  // ... lista de proveedores
+)}
 ```
 
-### Actualizar `src/pages/Compras.tsx`
+**4. Actualizar encabezado del proveedor (línea ~505):**
 
-**Cambios:**
-1. Eliminar pestañas separadas de "Devoluciones" y "Faltantes"
-2. Agregar nueva pestaña "Devoluciones / Faltantes" 
-3. Combinar los contadores de badges
+Cambiar "Adeudo:" por "Pagado:" cuando está en modo historial:
 
 ```typescript
-// Nueva pestaña combinada
-<TabsTrigger value="devoluciones-faltantes">
-  <AlertTriangle className="h-4 w-4" />
-  <span className="hidden sm:inline">Devoluciones / Faltantes</span>
-  <span className="sm:hidden">Dev/Falt</span>
-  {(devolucionesPendientesCount + faltantesPendientesCount) > 0 && (
-    <Badge variant="destructive">
-      {devolucionesPendientesCount + faltantesPendientesCount}
-    </Badge>
+<span className={`font-semibold ${mostrarPagadas ? 'text-green-600' : 'text-destructive'}`}>
+  {mostrarPagadas ? 'Pagado: ' : 'Adeudo: '}
+  {formatCurrency(mostrarPagadas 
+    ? proveedor.ordenes.reduce((s, o) => s + (o.monto_pagado || 0), 0)
+    : proveedor.totalAdeudo
   )}
-</TabsTrigger>
-
-<TabsContent value="devoluciones-faltantes">
-  <DevolucionesFaltantesTab />
-</TabsContent>
+</span>
 ```
 
-## Archivos a Modificar/Crear
+## Resultado Visual
 
-| Archivo | Acción | Cambios |
-|---------|--------|---------|
-| `src/components/compras/AdeudosProveedoresTab.tsx` | Modificar | Agregar toggle pagadas/pendientes |
-| `src/components/compras/DevolucionesFaltantesTab.tsx` | **Crear** | Nuevo componente que combina ambos |
-| `src/pages/Compras.tsx` | Modificar | Fusionar pestañas, actualizar imports |
-| `src/components/secretaria/SecretariaComprasTab.tsx` | Modificar | Agregar pestaña combinada (si aplica) |
-
-## Detalles Técnicos
-
-### Toggle de Adeudos
-
-El switch cambiará el filtro del query:
-- **OFF (default)**: `status_pago IN ('pendiente', 'parcial')` - Adeudos actuales
-- **ON**: `status_pago = 'pagado'` - Historial de pagadas
-
-La query key incluirá el toggle para refetch correcto:
-```typescript
-queryKey: ["ordenes-con-adeudo", mostrarPagadas],
+**Pendientes (toggle OFF):**
+```text
+┌────────────────┐  ┌────────────────┐  ┌────────────────┐
+│ Total Adeudado │  │ OCs Pendientes │  │ Provs con Adeudo│
+│   $234,756.00  │  │      12        │  │       5         │
+│   (rojo)       │  │                │  │                 │
+└────────────────┘  └────────────────┘  └────────────────┘
 ```
 
-### Pestaña Combinada
-
-El ToggleGroup interno permite cambiar entre vistas sin recargar la página:
-- Los componentes originales `DevolucionesPendientesTab` y `FaltantesPendientesTab` se mantienen intactos
-- Solo se renderizan condicionalmente según la selección
-- Los contadores de badges se suman en la pestaña principal pero se muestran separados en el toggle interno
+**Pagadas (toggle ON):**
+```text
+┌────────────────┐  ┌────────────────┐  ┌────────────────┐
+│  Total Pagado  │  │  OCs Pagadas   │  │ Provs Pagados  │
+│   $567,890.00  │  │      45        │  │       8         │
+│   (verde)      │  │                │  │                 │
+└────────────────┘  └────────────────┘  └────────────────┘
+```
 
 ## Beneficios
 
-- **1 pestaña menos** - De 8 a 7 pestañas principales
-- **Historial de pagos accesible** - Sin buscar en OCs generales  
-- **Contexto relacionado junto** - Devoluciones y faltantes están conceptualmente relacionados
-- **UI más limpia** - Menos scroll horizontal en tablets
-
+- **Contexto correcto** - Las métricas reflejan lo que estás viendo
+- **Visual claro** - Colores verdes para pagado, rojos para adeudo
+- **Experiencia coherente** - Todo cambia según el modo seleccionado
