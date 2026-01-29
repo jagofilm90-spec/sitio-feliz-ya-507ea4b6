@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/chart";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from "recharts";
 import { ProcesarPagoOCDialog } from "./ProcesarPagoOCDialog";
+import { RecepcionDetalleDialog } from "./RecepcionDetalleDialog";
 
 interface OrdenConAdeudo {
   id: string;
@@ -64,6 +65,12 @@ interface OrdenConAdeudo {
     telefono: string | null;
     email: string | null;
   } | null;
+  entregas: {
+    id: string;
+    numero_entrega: number;
+    status: string;
+    recepcion_finalizada_en: string | null;
+  }[];
   adeudo: number;
 }
 
@@ -100,6 +107,8 @@ const AdeudosProveedoresTab = () => {
   );
   const [selectedOC, setSelectedOC] = useState<OrdenConAdeudo | null>(null);
   const [showPagoDialog, setShowPagoDialog] = useState(false);
+  const [selectedEntregaId, setSelectedEntregaId] = useState<string | null>(null);
+  const [showRecepcionDialog, setShowRecepcionDialog] = useState(false);
 
   // Query principal para obtener OCs con adeudos pendientes
   const { data: ordenesConAdeudo = [], isLoading } = useQuery({
@@ -112,7 +121,10 @@ const AdeudosProveedoresTab = () => {
           id, folio, fecha_orden, total, total_ajustado, 
           monto_pagado, status, status_pago, tipo_pago,
           proveedor_id, proveedor_nombre_manual,
-          proveedores (id, nombre, telefono, email)
+          proveedores (id, nombre, telefono, email),
+          ordenes_compra_entregas (
+            id, numero_entrega, status, recepcion_finalizada_en
+          )
         `
         )
         .in("status_pago", ["pendiente", "parcial"])
@@ -123,6 +135,7 @@ const AdeudosProveedoresTab = () => {
 
       return (data || []).map((oc: any) => ({
         ...oc,
+        entregas: oc.ordenes_compra_entregas || [],
         adeudo:
           (oc.total_ajustado || oc.total) - (oc.monto_pagado || 0),
       })) as OrdenConAdeudo[];
@@ -473,6 +486,7 @@ const AdeudosProveedoresTab = () => {
                             <TableHead className="text-right">Total</TableHead>
                             <TableHead className="text-right">Pagado</TableHead>
                             <TableHead className="text-right">Adeudo</TableHead>
+                            <TableHead>Recepción</TableHead>
                             <TableHead></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -507,6 +521,30 @@ const AdeudosProveedoresTab = () => {
                               </TableCell>
                               <TableCell className="text-right font-semibold text-destructive">
                                 {formatCurrency(orden.adeudo)}
+                              </TableCell>
+                              <TableCell>
+                                {orden.entregas?.filter(e => e.status === 'completada').length > 0 ? (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-primary"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const completada = orden.entregas.find(e => e.status === 'completada');
+                                      if (completada) {
+                                        setSelectedEntregaId(completada.id);
+                                        setShowRecepcionDialog(true);
+                                      }
+                                    }}
+                                  >
+                                    <FileText className="h-3 w-3 mr-1" />
+                                    Ver
+                                  </Button>
+                                ) : orden.tipo_pago === 'anticipado' ? (
+                                  <span className="text-xs text-muted-foreground">N/A</span>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">-</span>
+                                )}
                               </TableCell>
                               <TableCell>
                                 <Button
@@ -607,6 +645,16 @@ const AdeudosProveedoresTab = () => {
           onOpenFacturas={() => {}}
         />
       )}
+
+      {/* Dialog de Detalle de Recepción */}
+      <RecepcionDetalleDialog
+        entregaId={selectedEntregaId}
+        open={showRecepcionDialog}
+        onOpenChange={(open) => {
+          setShowRecepcionDialog(open);
+          if (!open) setSelectedEntregaId(null);
+        }}
+      />
     </div>
   );
 };
