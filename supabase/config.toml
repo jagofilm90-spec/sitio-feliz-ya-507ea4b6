@@ -117,3 +117,6 @@ verify_jwt = false
 
 [functions.notificar-faltante-anticipado]
 verify_jwt = false
+
+[functions.notificar-solicitud-deposito]
+verify_jwt = false
