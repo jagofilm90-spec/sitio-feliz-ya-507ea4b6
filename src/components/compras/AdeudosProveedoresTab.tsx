@@ -209,29 +209,50 @@ const AdeudosProveedoresTab = () => {
     return result;
   }, [ordenesConAdeudo, filtroProveedor, filtroStatusPago, filtroTipoPago]);
 
-  // Calcular KPIs
+  // Calcular KPIs - dinámico según el toggle
   const kpis = useMemo(() => {
-    const totalAdeudado = adeudosPorProveedor.reduce(
-      (sum, p) => sum + p.totalAdeudo,
-      0
-    );
-    const totalOCsPendientes = adeudosPorProveedor.reduce(
-      (sum, p) => sum + p.ordenes.length,
-      0
-    );
-    const proveedoresConAdeudo = adeudosPorProveedor.length;
-    const ocsAnticipadas = adeudosPorProveedor.reduce(
-      (sum, p) => sum + p.ordenes.filter((o) => o.tipo_pago === "anticipado").length,
-      0
-    );
+    if (mostrarPagadas) {
+      // Historial de pagadas
+      const totalPagado = adeudosPorProveedor.reduce(
+        (sum, p) => sum + p.ordenes.reduce((s, o) => s + (o.monto_pagado || 0), 0),
+        0
+      );
+      const totalOCsPagadas = adeudosPorProveedor.reduce(
+        (sum, p) => sum + p.ordenes.length,
+        0
+      );
+      const proveedoresPagados = adeudosPorProveedor.length;
 
-    return {
-      totalAdeudado,
-      totalOCsPendientes,
-      proveedoresConAdeudo,
-      ocsAnticipadas,
-    };
-  }, [adeudosPorProveedor]);
+      return {
+        total: totalPagado,
+        totalOCs: totalOCsPagadas,
+        proveedores: proveedoresPagados,
+        ocsAnticipadas: 0,
+      };
+    } else {
+      // Adeudos pendientes
+      const totalAdeudado = adeudosPorProveedor.reduce(
+        (sum, p) => sum + p.totalAdeudo,
+        0
+      );
+      const totalOCsPendientes = adeudosPorProveedor.reduce(
+        (sum, p) => sum + p.ordenes.length,
+        0
+      );
+      const proveedoresConAdeudo = adeudosPorProveedor.length;
+      const ocsAnticipadas = adeudosPorProveedor.reduce(
+        (sum, p) => sum + p.ordenes.filter((o) => o.tipo_pago === "anticipado").length,
+        0
+      );
+
+      return {
+        total: totalAdeudado,
+        totalOCs: totalOCsPendientes,
+        proveedores: proveedoresConAdeudo,
+        ocsAnticipadas,
+      };
+    }
+  }, [adeudosPorProveedor, mostrarPagadas]);
 
   // Lista única de proveedores para el filtro
   const proveedoresUnicos = useMemo(() => {
@@ -364,31 +385,37 @@ const AdeudosProveedoresTab = () => {
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards - Dinámicos según toggle */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Adeudado</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">
+              {mostrarPagadas ? "Total Pagado" : "Total Adeudado"}
+            </CardTitle>
+            <DollarSign className={`h-4 w-4 ${mostrarPagadas ? 'text-green-600' : 'text-muted-foreground'}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">
-              {formatCurrency(kpis.totalAdeudado)}
+            <div className={`text-2xl font-bold ${mostrarPagadas ? 'text-green-600' : 'text-destructive'}`}>
+              {formatCurrency(kpis.total)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Suma de todos los adeudos pendientes
+              {mostrarPagadas 
+                ? "Suma de todos los pagos realizados"
+                : "Suma de todos los adeudos pendientes"}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">OCs Pendientes</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">
+              {mostrarPagadas ? "OCs Pagadas" : "OCs Pendientes"}
+            </CardTitle>
+            <FileText className={`h-4 w-4 ${mostrarPagadas ? 'text-green-600' : 'text-muted-foreground'}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpis.totalOCsPendientes}</div>
-            {kpis.ocsAnticipadas > 0 && (
+            <div className="text-2xl font-bold">{kpis.totalOCs}</div>
+            {!mostrarPagadas && kpis.ocsAnticipadas > 0 && (
               <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
                 <Clock className="h-3 w-3" />
                 {kpis.ocsAnticipadas} con pago anticipado
@@ -400,12 +427,12 @@ const AdeudosProveedoresTab = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Proveedores con Adeudo
+              {mostrarPagadas ? "Proveedores Pagados" : "Proveedores con Adeudo"}
             </CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <Building2 className={`h-4 w-4 ${mostrarPagadas ? 'text-green-600' : 'text-muted-foreground'}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpis.proveedoresConAdeudo}</div>
+            <div className="text-2xl font-bold">{kpis.proveedores}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Proveedores únicos
             </p>
@@ -472,11 +499,23 @@ const AdeudosProveedoresTab = () => {
           {adeudosPorProveedor.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
-                <TrendingDown className="h-12 w-12 mx-auto text-green-500 mb-3" />
-                <h3 className="text-lg font-medium">Sin adeudos pendientes</h3>
-                <p className="text-sm text-muted-foreground">
-                  No hay órdenes de compra con pagos pendientes
-                </p>
+                {mostrarPagadas ? (
+                  <>
+                    <History className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                    <h3 className="text-lg font-medium">Sin historial de pagos</h3>
+                    <p className="text-sm text-muted-foreground">
+                      No hay órdenes de compra pagadas registradas
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <TrendingDown className="h-12 w-12 mx-auto text-green-500 mb-3" />
+                    <h3 className="text-lg font-medium">Sin adeudos pendientes</h3>
+                    <p className="text-sm text-muted-foreground">
+                      No hay órdenes de compra con pagos pendientes
+                    </p>
+                  </>
+                )}
               </CardContent>
             </Card>
           ) : (
@@ -509,14 +548,18 @@ const AdeudosProveedoresTab = () => {
                           </CardTitle>
                           <p className="text-sm text-muted-foreground">
                             {proveedor.ordenes.length} OC
-                            {proveedor.ordenes.length > 1 ? "s" : ""} pendiente
+                            {proveedor.ordenes.length > 1 ? "s" : ""} {mostrarPagadas ? "pagada" : "pendiente"}
                             {proveedor.ordenes.length > 1 ? "s" : ""}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-bold text-destructive">
-                          {formatCurrency(proveedor.totalAdeudo)}
+                        <p className={`text-lg font-bold ${mostrarPagadas ? 'text-green-600' : 'text-destructive'}`}>
+                          {mostrarPagadas ? 'Pagado: ' : 'Adeudo: '}
+                          {formatCurrency(mostrarPagadas 
+                            ? proveedor.ordenes.reduce((s, o) => s + (o.monto_pagado || 0), 0)
+                            : proveedor.totalAdeudo
+                          )}
                         </p>
                       </div>
                     </CardHeader>
