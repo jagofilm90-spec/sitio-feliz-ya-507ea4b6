@@ -3,10 +3,20 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { COMPANY_DATA } from "@/constants/companyData";
 
-// Brand colors (RGB)
-const BRAND_RED = { r: 180, g: 30, b: 30 };
-const BRAND_DARK = { r: 40, g: 40, b: 40 };
-const BRAND_GRAY = { r: 100, g: 100, b: 100 };
+// Professional color palette (RGB)
+const COLORS = {
+  brandRed: { r: 139, g: 35, b: 50 },
+  success: { r: 34, g: 139, b: 34 },
+  accent: { r: 70, g: 130, b: 180 },
+  dark: { r: 33, g: 37, b: 41 },
+  gray: { r: 100, g: 100, b: 100 },
+  lightGray: { r: 150, g: 150, b: 150 },
+  lightBg: { r: 248, g: 248, b: 248 },
+  successBg: { r: 240, g: 255, b: 240 },
+  dangerBg: { r: 255, g: 240, b: 240 },
+  infoBg: { r: 240, g: 248, b: 255 },
+  white: { r: 255, g: 255, b: 255 },
+};
 
 /**
  * Normaliza una fecha que puede venir como:
@@ -19,14 +29,12 @@ const parseFechaSafe = (fecha: string | null | undefined): Date => {
   if (!fecha) return new Date();
   
   try {
-    // Si es solo fecha (YYYY-MM-DD), agregar hora del mediodía para evitar problemas de timezone
     if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
       return new Date(fecha + "T12:00:00");
     }
-    // Si ya es timestamp completo, usarlo directamente
     const parsed = new Date(fecha);
     if (isNaN(parsed.getTime())) {
-      return new Date(); // Fallback si aún es inválida
+      return new Date();
     }
     return parsed;
   } catch {
@@ -61,7 +69,6 @@ export interface CierreOCData {
   }>;
 }
 
-// Map motivo codes to labels
 const MOTIVO_LABELS: Record<string, string> = {
   roto: "Empaque roto",
   rechazado_calidad: "Calidad rechazada",
@@ -72,7 +79,6 @@ const MOTIVO_LABELS: Record<string, string> = {
   error_cantidad: "Error cantidad",
 };
 
-// Helper function to load image as base64
 const loadImageAsBase64 = async (url: string): Promise<string | null> => {
   try {
     const response = await fetch(url);
@@ -91,130 +97,166 @@ const loadImageAsBase64 = async (url: string): Promise<string | null> => {
   }
 };
 
-// Función interna que genera el documento PDF y lo retorna
+// Draw professional footer
+const drawProfessionalFooter = (doc: jsPDF) => {
+  const pageHeight = doc.internal.pageSize.height;
+  
+  // Separator line
+  doc.setDrawColor(COLORS.brandRed.r, COLORS.brandRed.g, COLORS.brandRed.b);
+  doc.setLineWidth(0.5);
+  doc.line(40, pageHeight - 28, 170, pageHeight - 28);
+  
+  // Company name
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
+  doc.text(COMPANY_DATA.razonSocialLarga, 105, pageHeight - 22, { align: "center" });
+  
+  // Contact info
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+  doc.text(`${COMPANY_DATA.emails.compras} | Tel: ${COMPANY_DATA.telefonos.principal}`, 105, pageHeight - 17, { align: "center" });
+  
+  // Generation date
+  const fecha = format(new Date(), "dd/MM/yyyy HH:mm", { locale: es });
+  doc.text(`Documento generado el ${fecha}`, 105, pageHeight - 12, { align: "center" });
+  
+  // Bottom bar
+  doc.setFillColor(COLORS.brandRed.r, COLORS.brandRed.g, COLORS.brandRed.b);
+  doc.rect(0, pageHeight - 8, 210, 8, "F");
+};
+
 const generarDocumentoPDF = async (data: CierreOCData): Promise<{ doc: jsPDF; fileName: string }> => {
   const { ordenCompra, productosRecibidos, devoluciones } = data;
   const doc = new jsPDF();
   
-  // ================ HEADER WITH BRAND BAR ================
-  // Red top bar
-  doc.setFillColor(BRAND_RED.r, BRAND_RED.g, BRAND_RED.b);
-  doc.rect(0, 0, 210, 8, "F");
+  // ================ PROFESSIONAL HEADER ================
+  // Top red bar
+  doc.setFillColor(COLORS.brandRed.r, COLORS.brandRed.g, COLORS.brandRed.b);
+  doc.rect(0, 0, 210, 10, "F");
   
   // Load and add logo
   try {
     const logoUrl = `${window.location.origin}/logo-almasa-pdf.png`;
     const logoBase64 = await loadImageAsBase64(logoUrl);
     if (logoBase64) {
-      doc.addImage(logoBase64, "PNG", 15, 12, 35, 14);
+      doc.addImage(logoBase64, "PNG", 15, 14, 45, 16);
     }
   } catch (logoError) {
     console.warn("No se pudo cargar el logo:", logoError);
   }
   
-  // Title and company info - right aligned
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
-  doc.text("ESTADO DE CUENTA", 195, 18, { align: "right" });
-  doc.setFontSize(12);
-  doc.text("ORDEN DE COMPRA", 195, 25, { align: "right" });
-  
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
-  doc.text(COMPANY_DATA.razonSocial, 195, 31, { align: "right" });
-  
-  // Horizontal line
-  doc.setDrawColor(220, 220, 220);
-  doc.setLineWidth(0.5);
-  doc.line(15, 38, 195, 38);
-  
-  // ================ DOCUMENT INFO SECTION ================
-  let yPos = 46;
-  
-  // OC Folio badge
-  doc.setFillColor(BRAND_RED.r, BRAND_RED.g, BRAND_RED.b);
-  doc.roundedRect(15, yPos - 5, 60, 12, 2, 2, "F");
-  doc.setFontSize(11);
+  // Document badge (right side)
+  doc.setFillColor(COLORS.brandRed.r, COLORS.brandRed.g, COLORS.brandRed.b);
+  doc.roundedRect(120, 14, 75, 16, 3, 3, "F");
+  doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(255, 255, 255);
-  doc.text(ordenCompra.folio, 45, yPos + 2, { align: "center" });
-  
-  // Fecha
-  doc.setFontSize(9);
+  doc.text("ESTADO DE CUENTA", 157.5, 21, { align: "center" });
+  doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
-  const fechaFormateada = format(parseFechaSafe(ordenCompra.fecha_creacion), "dd/MM/yyyy", { locale: es });
+  doc.text("ORDEN DE COMPRA", 157.5, 27, { align: "center" });
+  
+  // Company info
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+  doc.text(COMPANY_DATA.razonSocial, 15, 36);
+  doc.text(`RFC: ${COMPANY_DATA.rfc} | Tel: ${COMPANY_DATA.telefonos.principal}`, 15, 41);
+  
+  // Elegant separator
+  doc.setDrawColor(COLORS.brandRed.r, COLORS.brandRed.g, COLORS.brandRed.b);
+  doc.setLineWidth(0.8);
+  doc.line(15, 46, 195, 46);
+  
+  // ================ FOLIO AND DATE SECTION ================
+  let yPos = 56;
+  
+  // Folio badge
+  doc.setFillColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
+  doc.roundedRect(15, yPos - 6, 70, 14, 3, 3, "F");
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  doc.text(ordenCompra.folio, 50, yPos + 2, { align: "center" });
+  
+  // Date
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+  const fechaFormateada = format(parseFechaSafe(ordenCompra.fecha_creacion), "dd 'de' MMMM 'de' yyyy", { locale: es });
   doc.text(`Fecha: ${fechaFormateada}`, 195, yPos + 1, { align: "right" });
   
-  yPos += 18;
+  yPos += 20;
   
   // ================ PROVEEDOR INFO BOX ================
-  doc.setFillColor(250, 250, 250);
-  doc.setDrawColor(230, 230, 230);
-  doc.roundedRect(15, yPos, 180, 14, 3, 3, "FD");
+  doc.setFillColor(COLORS.lightBg.r, COLORS.lightBg.g, COLORS.lightBg.b);
+  doc.setDrawColor(220, 220, 220);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(15, yPos, 180, 18, 4, 4, "FD");
   
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
-  doc.text("PROVEEDOR", 20, yPos + 6);
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
-  const proveedorTruncado = ordenCompra.proveedor_nombre.length > 60 
-    ? ordenCompra.proveedor_nombre.substring(0, 57) + "..." 
-    : ordenCompra.proveedor_nombre;
-  doc.text(proveedorTruncado, 55, yPos + 6);
+  doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+  doc.text("PROVEEDOR", 22, yPos + 7);
   
-  yPos += 22;
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
+  const proveedorTruncado = ordenCompra.proveedor_nombre.length > 55 
+    ? ordenCompra.proveedor_nombre.substring(0, 52) + "..." 
+    : ordenCompra.proveedor_nombre;
+  doc.text(proveedorTruncado, 22, yPos + 14);
+  
+  yPos += 26;
   
   // ================ PRODUCTOS RECIBIDOS TABLE ================
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+  doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
   doc.text("PRODUCTOS RECIBIDOS", 15, yPos);
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
-  doc.text(`(${productosRecibidos.length} productos)`, 72, yPos);
+  doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+  doc.text(`(${productosRecibidos.length} productos)`, 78, yPos);
   
-  yPos += 8;
+  yPos += 7;
   
   // Table header
-  doc.setFillColor(34, 139, 34); // Green for received
-  doc.rect(15, yPos - 4, 180, 8, "F");
+  doc.setFillColor(COLORS.success.r, COLORS.success.g, COLORS.success.b);
+  doc.roundedRect(15, yPos - 4, 180, 9, 2, 2, "F");
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(255, 255, 255);
-  doc.text("CÓDIGO", 17, yPos + 1);
-  doc.text("PRODUCTO", 45, yPos + 1);
-  doc.text("CANT.", 135, yPos + 1, { align: "right" });
-  doc.text("P.U.", 160, yPos + 1, { align: "right" });
-  doc.text("SUBTOTAL", 192, yPos + 1, { align: "right" });
+  doc.text("CÓDIGO", 18, yPos + 2);
+  doc.text("PRODUCTO", 48, yPos + 2);
+  doc.text("CANT.", 135, yPos + 2, { align: "right" });
+  doc.text("P.U.", 160, yPos + 2, { align: "right" });
+  doc.text("SUBTOTAL", 192, yPos + 2, { align: "right" });
   
-  yPos += 8;
+  yPos += 9;
   
   let totalProductosRecibidos = 0;
   
   productosRecibidos.forEach((p, index) => {
-    // Check if we need a new page
-    if (yPos > 250) {
+    if (yPos > 240) {
+      drawProfessionalFooter(doc);
       doc.addPage();
       yPos = 20;
       
-      // Repeat header on new page
-      doc.setFillColor(34, 139, 34);
-      doc.rect(15, yPos - 4, 180, 8, "F");
+      // Repeat header
+      doc.setFillColor(COLORS.success.r, COLORS.success.g, COLORS.success.b);
+      doc.roundedRect(15, yPos - 4, 180, 9, 2, 2, "F");
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(255, 255, 255);
-      doc.text("CÓDIGO", 17, yPos + 1);
-      doc.text("PRODUCTO", 45, yPos + 1);
-      doc.text("CANT.", 135, yPos + 1, { align: "right" });
-      doc.text("P.U.", 160, yPos + 1, { align: "right" });
-      doc.text("SUBTOTAL", 192, yPos + 1, { align: "right" });
-      yPos += 8;
+      doc.text("CÓDIGO", 18, yPos + 2);
+      doc.text("PRODUCTO", 48, yPos + 2);
+      doc.text("CANT.", 135, yPos + 2, { align: "right" });
+      doc.text("P.U.", 160, yPos + 2, { align: "right" });
+      doc.text("SUBTOTAL", 192, yPos + 2, { align: "right" });
+      yPos += 9;
     }
     
     // Alternating row colors
@@ -227,13 +269,13 @@ const generarDocumentoPDF = async (data: CierreOCData): Promise<{ doc: jsPDF; fi
     
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+    doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
     
-    const codigoTruncado = p.codigo.length > 12 ? p.codigo.substring(0, 10) + ".." : p.codigo;
-    doc.text(codigoTruncado, 17, yPos + 1);
+    const codigoTruncado = p.codigo.length > 14 ? p.codigo.substring(0, 12) + ".." : p.codigo;
+    doc.text(codigoTruncado, 18, yPos + 1);
     
     const nombreTruncado = p.nombre.length > 45 ? p.nombre.substring(0, 42) + "..." : p.nombre;
-    doc.text(nombreTruncado, 45, yPos + 1);
+    doc.text(nombreTruncado, 48, yPos + 1);
     
     doc.text(p.cantidad.toLocaleString("es-MX"), 135, yPos + 1, { align: "right" });
     doc.text(`$${p.precio_unitario.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, 160, yPos + 1, { align: "right" });
@@ -244,71 +286,70 @@ const generarDocumentoPDF = async (data: CierreOCData): Promise<{ doc: jsPDF; fi
   });
   
   // Subtotal productos recibidos
-  doc.setFillColor(240, 255, 240);
-  doc.rect(15, yPos - 2, 180, 7, "F");
-  doc.setFontSize(8);
+  doc.setFillColor(COLORS.successBg.r, COLORS.successBg.g, COLORS.successBg.b);
+  doc.roundedRect(15, yPos - 2, 180, 8, 2, 2, "F");
+  doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(34, 139, 34);
-  doc.text("Subtotal Productos Recibidos:", 135, yPos + 2, { align: "right" });
-  doc.text(`$${totalProductosRecibidos.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, 192, yPos + 2, { align: "right" });
-  yPos += 12;
+  doc.setTextColor(COLORS.success.r, COLORS.success.g, COLORS.success.b);
+  doc.text("Subtotal Productos Recibidos:", 140, yPos + 3, { align: "right" });
+  doc.text(`$${totalProductosRecibidos.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, 192, yPos + 3, { align: "right" });
+  yPos += 14;
   
   // ================ PRODUCTOS DEVUELTOS TABLE ================
   if (devoluciones.length > 0) {
-    // Check if we need a new page
-    if (yPos > 200) {
+    if (yPos > 190) {
+      drawProfessionalFooter(doc);
       doc.addPage();
       yPos = 20;
     }
     
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(BRAND_RED.r, BRAND_RED.g, BRAND_RED.b);
+    doc.setTextColor(COLORS.brandRed.r, COLORS.brandRed.g, COLORS.brandRed.b);
     doc.text("PRODUCTOS DEVUELTOS", 15, yPos);
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
-    doc.text(`(${devoluciones.length} productos)`, 72, yPos);
+    doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+    doc.text(`(${devoluciones.length} productos)`, 78, yPos);
     
-    yPos += 8;
+    yPos += 7;
     
-    // Table header - red for returns
-    doc.setFillColor(BRAND_RED.r, BRAND_RED.g, BRAND_RED.b);
-    doc.rect(15, yPos - 4, 180, 8, "F");
+    // Table header - red
+    doc.setFillColor(COLORS.brandRed.r, COLORS.brandRed.g, COLORS.brandRed.b);
+    doc.roundedRect(15, yPos - 4, 180, 9, 2, 2, "F");
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(255, 255, 255);
-    doc.text("CÓDIGO", 17, yPos + 1);
-    doc.text("PRODUCTO", 45, yPos + 1);
-    doc.text("CANT.", 115, yPos + 1, { align: "right" });
-    doc.text("MOTIVO", 145, yPos + 1);
-    doc.text("DESCUENTO", 192, yPos + 1, { align: "right" });
+    doc.text("CÓDIGO", 18, yPos + 2);
+    doc.text("PRODUCTO", 48, yPos + 2);
+    doc.text("CANT.", 115, yPos + 2, { align: "right" });
+    doc.text("MOTIVO", 140, yPos + 2);
+    doc.text("DESCUENTO", 192, yPos + 2, { align: "right" });
     
-    yPos += 8;
+    yPos += 9;
     
     devoluciones.forEach((d, index) => {
-      // Check if we need a new page
-      if (yPos > 265) {
+      if (yPos > 250) {
+        drawProfessionalFooter(doc);
         doc.addPage();
         yPos = 20;
         
-        // Repeat header on new page
-        doc.setFillColor(BRAND_RED.r, BRAND_RED.g, BRAND_RED.b);
-        doc.rect(15, yPos - 4, 180, 8, "F");
+        doc.setFillColor(COLORS.brandRed.r, COLORS.brandRed.g, COLORS.brandRed.b);
+        doc.roundedRect(15, yPos - 4, 180, 9, 2, 2, "F");
         doc.setFontSize(8);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(255, 255, 255);
-        doc.text("CÓDIGO", 17, yPos + 1);
-        doc.text("PRODUCTO", 45, yPos + 1);
-        doc.text("CANT.", 115, yPos + 1, { align: "right" });
-        doc.text("MOTIVO", 145, yPos + 1);
-        doc.text("DESCUENTO", 192, yPos + 1, { align: "right" });
-        yPos += 8;
+        doc.text("CÓDIGO", 18, yPos + 2);
+        doc.text("PRODUCTO", 48, yPos + 2);
+        doc.text("CANT.", 115, yPos + 2, { align: "right" });
+        doc.text("MOTIVO", 140, yPos + 2);
+        doc.text("DESCUENTO", 192, yPos + 2, { align: "right" });
+        yPos += 9;
       }
       
-      // Alternating row colors - pinkish for returns
+      // Alternating row colors - pinkish
       if (index % 2 === 0) {
-        doc.setFillColor(255, 245, 245);
+        doc.setFillColor(255, 248, 248);
       } else {
         doc.setFillColor(255, 255, 255);
       }
@@ -316,109 +357,108 @@ const generarDocumentoPDF = async (data: CierreOCData): Promise<{ doc: jsPDF; fi
       
       doc.setFontSize(7);
       doc.setFont("helvetica", "normal");
-      doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+      doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
       
-      const codigoTruncado = d.codigo.length > 12 ? d.codigo.substring(0, 10) + ".." : d.codigo;
-      doc.text(codigoTruncado, 17, yPos + 1);
+      const codigoTruncado = d.codigo.length > 14 ? d.codigo.substring(0, 12) + ".." : d.codigo;
+      doc.text(codigoTruncado, 18, yPos + 1);
       
       const nombreTruncado = d.nombre.length > 35 ? d.nombre.substring(0, 32) + "..." : d.nombre;
-      doc.text(nombreTruncado, 45, yPos + 1);
+      doc.text(nombreTruncado, 48, yPos + 1);
       
       doc.text(d.cantidad.toLocaleString("es-MX"), 115, yPos + 1, { align: "right" });
       
       const motivoLabel = MOTIVO_LABELS[d.motivo] || d.motivo;
       doc.setFontSize(6);
-      doc.text(motivoLabel.substring(0, 15), 145, yPos + 1);
+      doc.text(motivoLabel.substring(0, 18), 140, yPos + 1);
       
       doc.setFontSize(7);
-      doc.setTextColor(BRAND_RED.r, BRAND_RED.g, BRAND_RED.b);
+      doc.setTextColor(COLORS.brandRed.r, COLORS.brandRed.g, COLORS.brandRed.b);
       doc.setFont("helvetica", "bold");
       doc.text(`-$${d.monto.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, 192, yPos + 1, { align: "right" });
       
-      doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+      doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
       doc.setFont("helvetica", "normal");
       
       yPos += 7;
     });
     
     // Total devoluciones
-    doc.setFillColor(255, 235, 235);
-    doc.rect(15, yPos - 2, 180, 7, "F");
-    doc.setFontSize(8);
+    doc.setFillColor(COLORS.dangerBg.r, COLORS.dangerBg.g, COLORS.dangerBg.b);
+    doc.roundedRect(15, yPos - 2, 180, 8, 2, 2, "F");
+    doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(BRAND_RED.r, BRAND_RED.g, BRAND_RED.b);
-    doc.text("Total Devoluciones:", 145, yPos + 2, { align: "right" });
-    doc.text(`-$${ordenCompra.monto_devoluciones.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, 192, yPos + 2, { align: "right" });
-    yPos += 12;
+    doc.setTextColor(COLORS.brandRed.r, COLORS.brandRed.g, COLORS.brandRed.b);
+    doc.text("Total Devoluciones:", 145, yPos + 3, { align: "right" });
+    doc.text(`-$${ordenCompra.monto_devoluciones.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, 192, yPos + 3, { align: "right" });
+    yPos += 14;
   }
   
   // ================ RESUMEN FINANCIERO ================
-  // Check if we need a new page
-  if (yPos > 230) {
+  if (yPos > 210) {
+    drawProfessionalFooter(doc);
     doc.addPage();
     yPos = 20;
   }
   
-  yPos += 5;
+  const tieneDevoluciones = devoluciones.length > 0;
+  const panelHeight = tieneDevoluciones ? 48 : 32;
   
-  // Box para resumen
-  const resumenHeight = devoluciones.length > 0 ? 40 : 25;
-  doc.setFillColor(248, 248, 255);
-  doc.setDrawColor(200, 200, 220);
-  doc.setLineWidth(1);
-  doc.roundedRect(15, yPos, 180, resumenHeight, 4, 4, "FD");
+  // Shadow effect
+  doc.setFillColor(200, 210, 230);
+  doc.roundedRect(17, yPos + 2, 178, panelHeight, 5, 5, "F");
   
-  yPos += 10;
+  // Main panel
+  doc.setFillColor(COLORS.infoBg.r, COLORS.infoBg.g, COLORS.infoBg.b);
+  doc.setDrawColor(COLORS.accent.r, COLORS.accent.g, COLORS.accent.b);
+  doc.setLineWidth(1.5);
+  doc.roundedRect(15, yPos, 180, panelHeight, 5, 5, "FD");
   
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
+  // Panel title
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(COLORS.accent.r, COLORS.accent.g, COLORS.accent.b);
+  doc.text("RESUMEN DE OPERACION", 22, yPos + 10);
   
-  if (devoluciones.length > 0) {
+  if (tieneDevoluciones) {
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
+    
     // Total original
-    doc.text("Total Original:", 20, yPos);
+    doc.text("Total Original:", 22, yPos + 22);
     doc.setFont("helvetica", "bold");
-    doc.text(`$${ordenCompra.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, 190, yPos, { align: "right" });
-    yPos += 8;
+    doc.text(`$${ordenCompra.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, 95, yPos + 22, { align: "right" });
     
     // Devoluciones
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(BRAND_RED.r, BRAND_RED.g, BRAND_RED.b);
-    doc.text("(-) Devoluciones:", 20, yPos);
+    doc.setTextColor(COLORS.brandRed.r, COLORS.brandRed.g, COLORS.brandRed.b);
+    doc.text("(-) Devoluciones:", 22, yPos + 32);
     doc.setFont("helvetica", "bold");
-    doc.text(`-$${ordenCompra.monto_devoluciones.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, 190, yPos, { align: "right" });
-    yPos += 4;
+    doc.text(`-$${ordenCompra.monto_devoluciones.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, 95, yPos + 32, { align: "right" });
     
-    // Línea divisoria
-    doc.setDrawColor(150, 150, 180);
-    doc.setLineWidth(0.5);
-    doc.line(90, yPos, 190, yPos);
-    yPos += 8;
+    // Badge for total to pay
+    doc.setFillColor(COLORS.brandRed.r, COLORS.brandRed.g, COLORS.brandRed.b);
+    doc.roundedRect(105, yPos + 14, 85, 28, 4, 4, "F");
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("TOTAL A PAGAR", 147.5, yPos + 24, { align: "center" });
+    doc.setFontSize(16);
+    doc.text(`$${ordenCompra.total_ajustado.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, 147.5, yPos + 36, { align: "center" });
+  } else {
+    // Badge for total to pay (centered)
+    doc.setFillColor(COLORS.brandRed.r, COLORS.brandRed.g, COLORS.brandRed.b);
+    doc.roundedRect(105, yPos + 6, 85, 22, 4, 4, "F");
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("TOTAL A PAGAR", 147.5, yPos + 14, { align: "center" });
+    doc.setFontSize(16);
+    doc.text(`$${ordenCompra.total_ajustado.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, 147.5, yPos + 24, { align: "center" });
   }
   
-  // Total a pagar - destacado
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(34, 139, 34); // Green
-  doc.text("TOTAL A PAGAR:", 20, yPos);
-  doc.setFontSize(14);
-  doc.text(`$${ordenCompra.total_ajustado.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, 190, yPos, { align: "right" });
-  
-  yPos += resumenHeight - 5;
-  
   // ================ FOOTER ================
-  yPos += 15;
-  
-  // Fecha de generación
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
-  const fechaGeneracion = format(new Date(), "dd/MM/yyyy HH:mm", { locale: es });
-  doc.text(`Documento generado el ${fechaGeneracion}`, 105, yPos, { align: "center" });
-  
-  // Red bottom bar
-  doc.setFillColor(BRAND_RED.r, BRAND_RED.g, BRAND_RED.b);
-  doc.rect(0, 289, 210, 8, "F");
+  drawProfessionalFooter(doc);
   
   const fileName = `Estado_Cuenta_${ordenCompra.folio}.pdf`;
   
@@ -449,10 +489,7 @@ export const generarCierreOCPDFBase64 = async (data: CierreOCData): Promise<{
   try {
     const { doc, fileName } = await generarDocumentoPDF(data);
     
-    // Obtener el PDF como base64
     const pdfOutput = doc.output("datauristring");
-    // El formato es: data:application/pdf;base64,XXXXX
-    // Necesitamos solo la parte base64
     const base64 = pdfOutput.split(",")[1];
     
     console.log("PDF de cierre OC generado en base64:", fileName);
