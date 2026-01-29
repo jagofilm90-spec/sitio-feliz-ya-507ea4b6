@@ -1,39 +1,100 @@
 
-# Plan: Corregir Crash de Cámara en Registro de Vehículos (Guideline 2.1)
 
-## ✅ COMPLETADO
+# Plan: Corregir Error "Invalid time value" en PDFs de OC
 
-### Cambios Aplicados
+## Diagnóstico
 
-1. **`src/lib/imageUtils.ts`**:
-   - Agregado timeout de 30 segundos con `Promise.race` para evitar que la app se cuelgue
-   - Agregada validación de blob nulo/vacío en la compresión
-   - Nueva función `validateCapturedFile()` para validar archivos antes de procesarlos
-   - Exportada constante `MAX_FILE_SIZE_BYTES` (50MB)
+Los generadores de PDF de Orden de Pago y Cierre de OC fallan con el error `RangeError: Invalid time value` cuando `fecha_creacion` viene en formato ISO completo (timestamp de PostgreSQL).
 
-2. **`src/components/rutas/VehiculosTab.tsx`**:
-   - Los 3 inputs de archivo (Tarjeta, Póliza, Factura) ahora usan `validateCapturedFile()`
-   - Se valida archivo vacío, nulo y tamaño máximo ANTES de procesar
-   - Mensajes de error claros para guiar al usuario
+**Código problemático:**
+```typescript
+// Línea 128 en ordenPagoPdfGenerator.ts
+// Línea 122 en cierreOCPdfGenerator.ts
+const fechaFormateada = format(new Date(ordenCompra.fecha_creacion + "T12:00:00"), ...);
+```
 
-3. **`MOBILE_BUILD_GUIDE.md`**:
-   - Agregado checklist pre-build con los 3 permisos de cámara obligatorios
-   - Documentación mejorada sobre `NSPhotoLibraryAddUsageDescription`
+**Escenario que causa el crash:**
+- La BD devuelve: `"2026-01-15T18:30:00.000Z"`
+- El código genera: `"2026-01-15T18:30:00.000ZT12:00:00"` (INVÁLIDO)
 
-## Pasos para Resubmit a Apple
+## Solución
 
-1. ✅ Cambios de código aplicados
-2. Hacer `git pull` en tu Mac
-3. Abrir Xcode y verificar/agregar los permisos en Info.plist:
-   - `NSCameraUsageDescription`
-   - `NSPhotoLibraryUsageDescription`  
-   - `NSPhotoLibraryAddUsageDescription`
-4. Incrementar Build Number (ej: 1.0 Build 3)
-5. Hacer Archive y Upload a App Store Connect
-6. **IMPORTANTE**: NO enviar a revisión hasta recibir confirmación del Unlisted App (Guideline 3.2)
+Crear una función helper que normalice cualquier formato de fecha antes de crear el objeto Date.
 
-## Estado Actual
+### Archivos a Modificar
 
-- **Guideline 2.1 (Crash)**: ✅ Código corregido, pendiente build en Xcode
-- **Guideline 3.2 (Business)**: ⏳ Esperando respuesta de Apple sobre Unlisted App
+| Archivo | Cambio |
+|---------|--------|
+| `src/utils/ordenPagoPdfGenerator.ts` | Agregar helper y usarlo en línea 128 |
+| `src/utils/cierreOCPdfGenerator.ts` | Agregar helper y usarlo en línea 122 |
+
+### Implementación Técnica
+
+**Nueva función helper (agregar en ambos archivos):**
+
+```typescript
+/**
+ * Normaliza una fecha que puede venir como:
+ * - "2026-01-15" (solo fecha)
+ * - "2026-01-15T18:30:00.000Z" (timestamp ISO)
+ * - null/undefined
+ * Retorna un Date válido o la fecha actual como fallback
+ */
+const parseFechaSafe = (fecha: string | null | undefined): Date => {
+  if (!fecha) return new Date();
+  
+  try {
+    // Si es solo fecha (YYYY-MM-DD), agregar hora del mediodía para evitar problemas de timezone
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+      return new Date(fecha + "T12:00:00");
+    }
+    // Si ya es timestamp completo, usarlo directamente
+    const parsed = new Date(fecha);
+    if (isNaN(parsed.getTime())) {
+      return new Date(); // Fallback si aún es inválida
+    }
+    return parsed;
+  } catch {
+    return new Date();
+  }
+};
+```
+
+**Cambio en ordenPagoPdfGenerator.ts línea 128:**
+```typescript
+// ANTES
+const fechaFormateada = format(new Date(ordenCompra.fecha_creacion + "T12:00:00"), "dd/MM/yyyy", { locale: es });
+
+// DESPUÉS
+const fechaFormateada = format(parseFechaSafe(ordenCompra.fecha_creacion), "dd/MM/yyyy", { locale: es });
+```
+
+**Cambio en cierreOCPdfGenerator.ts línea 122:**
+```typescript
+// ANTES
+const fechaFormateada = format(new Date(ordenCompra.fecha_creacion + "T12:00:00"), "dd/MM/yyyy", { locale: es });
+
+// DESPUÉS
+const fechaFormateada = format(parseFechaSafe(ordenCompra.fecha_creacion), "dd/MM/yyyy", { locale: es });
+```
+
+## Resumen de PDFs de OC
+
+Una vez aplicada esta corrección, todos los generadores de PDF del módulo de Compras funcionarán correctamente:
+
+| PDF | Archivo | Estado |
+|-----|---------|--------|
+| Orden de Pago | `ordenPagoPdfGenerator.ts` | Por corregir |
+| Cierre de OC | `cierreOCPdfGenerator.ts` | Por corregir |
+| Comprobante de Recepción | `recepcionPdfGenerator.ts` | Funciona correctamente |
+| Reporte Recepciones del Día | `reporteRecepcionesDiaPdfGenerator.ts` | Funciona correctamente |
+
+## Prueba Recomendada
+
+Después de aplicar el fix:
+1. Ir a Compras > Órdenes de Compra
+2. Seleccionar una OC completada/recibida
+3. Abrir "Procesar Pago"
+4. Hacer clic en "Descargar Orden de Pago"
+5. Verificar que el PDF se genera sin errores
 
