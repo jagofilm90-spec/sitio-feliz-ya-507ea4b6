@@ -6,6 +6,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Helper to properly encode UTF-8 strings (including emojis) to Base64
+// This fixes the issue where btoa() fails with multibyte characters like emojis
+function utf8ToBase64(str: string): string {
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(str);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 // Retry helper for network calls with exponential backoff
 async function fetchWithRetry(
   url: string, 
@@ -592,7 +604,7 @@ serve(async (req) => {
         headers.push(`Bcc: ${bcc}`);
       }
       
-      headers.push(`Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`);
+      headers.push(`Subject: =?UTF-8?B?${utf8ToBase64(subject)}?=`);
 
       if (emailAttachments && emailAttachments.length > 0) {
         // Email with attachments - multipart/mixed
@@ -605,8 +617,8 @@ serve(async (req) => {
           `Content-Type: text/html; charset=UTF-8`,
           `Content-Transfer-Encoding: base64`,
           "",
-          btoa(unescape(encodeURIComponent(emailBody || ""))),
-        ].join("\r\n");
+        utf8ToBase64(emailBody || ""),
+      ].join("\r\n");
 
         // Add attachments
         for (const att of emailAttachments) {
@@ -630,9 +642,9 @@ serve(async (req) => {
           `Content-Type: text/html; charset=utf-8`,
           `Content-Transfer-Encoding: base64`,
           "",
-          btoa(unescape(encodeURIComponent(emailBody || ""))),
-        ].join("\r\n");
-      }
+        utf8ToBase64(emailBody || ""),
+      ].join("\r\n");
+    }
 
       const rawEmail = btoa(emailContent)
         .replace(/\+/g, "-")
