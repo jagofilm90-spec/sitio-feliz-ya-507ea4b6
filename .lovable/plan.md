@@ -1,316 +1,267 @@
 
 
-# Plan: Notificación Automática con Datos Bancarios al Solicitar Depósito
+# Plan: Vincular Facturas de Proveedores desde Correo CFDI
 
-## Situación Actual
+## Problema Actual
 
-Cuando se selecciona "Marcar como Reembolsado" en `CreditosPendientesPanel.tsx`:
-- Solo actualiza el status del crédito a `"aplicado"`
-- **NO** envía ningún correo al proveedor
-- El proveedor no sabe a qué cuenta depositar
-
-## Solución
-
-Cuando se selecciona la opción de **depósito/reembolso**, el sistema enviará automáticamente un correo al proveedor con:
-1. Los datos bancarios de ALMASA
-2. El monto exacto a depositar
-3. La referencia del crédito (OC origen)
-4. La instrucción de enviar comprobante a `pagos@almasa.com.mx`
-
----
-
-## Flujo Propuesto
+El flujo actual para registrar una factura de proveedor es:
 
 ```text
-Usuario selecciona: "Marcar como Reembolsado"
-                │
-                ▼
-┌────────────────────────────────────────────────────┐
-│ Dialog de Confirmación (YA EXISTE)                 │
-│                                                    │
-│ "¿Confirmas que el proveedor reembolsó $4,000?"    │
-│                                                    │
-│ [x] ¿Ya depositó? (marcar como resuelto)           │
-│ [ ] Solicitar depósito (enviar datos bancarios)   │
-│                                                    │
-│ [Cancelar] [Confirmar]                             │
-└────────────────────────────────────────────────────┘
-                │
-                ▼
-Si seleccionó "Solicitar depósito":
-                │
-                ▼
-Sistema envía email automático al proveedor:
-┌────────────────────────────────────────────────────┐
-│ Asunto: 📋 Datos para Depósito/Transferencia -     │
-│         Crédito Pendiente OC-202601-0005           │
-│                                                    │
-│ Estimado Proveedor X,                              │
-│                                                    │
-│ Le enviamos los datos bancarios para realizar      │
-│ el depósito correspondiente al crédito pendiente:  │
-│                                                    │
-│ MONTO A DEPOSITAR: $4,000.00 MXN                   │
-│ REFERENCIA: OC-202601-0005 / Faltante             │
-│                                                    │
-│ ════════════════════════════════════════════       │
-│ DATOS BANCARIOS:                                   │
-│ Beneficiario: ABARROTES LA MANITA, S.A. DE C.V.   │
-│ Banco: BBVA BANCOMER, S.A.                         │
-│ Sucursal: 0122 (Plaza Jamaica)                     │
-│ Cuenta: 0442413388                                 │
-│ CLABE: 012180004424133881                          │
-│ ════════════════════════════════════════════       │
-│                                                    │
-│ ⚠️ IMPORTANTE: Una vez realizado el depósito,      │
-│ favor de enviar el comprobante a:                  │
-│ 📧 pagos@almasa.com.mx                             │
-│                                                    │
-│ Indicando como referencia: OC-202601-0005          │
-└────────────────────────────────────────────────────┘
+Proveedor envía factura XML/PDF
+        ↓
+Llega a cfd@almasa.com.mx
+        ↓
+Secretaria abre Outlook/Gmail
+        ↓
+Descarga el archivo adjunto
+        ↓
+Abre el ERP → Compras → OC → Facturas
+        ↓
+Sube el archivo manualmente
+        ↓
+Captura datos (folio, fecha, monto)
 ```
+
+**Pasos manuales: 5-6**
+
+## Solución Propuesta
+
+Agregar un botón "Vincular Factura a OC" en la bandeja de correos cuando se está en la cuenta `cfd@almasa.com.mx`:
+
+```text
+Proveedor envía factura XML/PDF
+        ↓
+Llega a cfd@almasa.com.mx
+        ↓
+Secretaria ve el correo en ERP → Correos
+        ↓
+Click en "Vincular Factura" (nuevo botón)
+        ↓
+Sistema detecta OC por RFC/proveedor
+        ↓
+Secretaria confirma OC correcta
+        ↓
+Sistema descarga adjuntos y extrae datos
+        ↓
+Factura vinculada automáticamente
+```
+
+**Pasos manuales: 2-3**
 
 ---
 
-## Cambios Técnicos
+## Componentes a Crear/Modificar
 
-### 1. Modificar `CreditosPendientesPanel.tsx`
+### 1. Nuevo Componente: `VincularFacturaDialog.tsx`
 
-Agregar opción para distinguir entre:
-- **Ya depositó** → Solo marcar como resuelto
-- **Solicitar depósito** → Marcar + enviar email con datos bancarios
+Un diálogo similar a `ProcesarPedidoDialog` pero para facturas:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ 📄 Vincular Factura de Proveedor                            │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ De: facturacion@molinos-xyz.com                             │
+│ Asunto: CFDI - Factura F-12345 ALMASA                       │
+│                                                             │
+│ Archivos adjuntos detectados:                               │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ ☑ F-12345.xml  (12 KB) ← CFDI                          │ │
+│ │ ☑ F-12345.pdf  (85 KB) ← Representación impresa        │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ Datos extraídos del XML:                    [Procesando...] │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ RFC Emisor:     MOL123456ABC                           │ │
+│ │ Proveedor:      MOLINOS XYZ SA DE CV                   │ │
+│ │ Folio:          F-12345                                │ │
+│ │ Fecha:          25/01/2026                             │ │
+│ │ Subtotal:       $45,000.00                             │ │
+│ │ IVA:            $7,200.00                              │ │
+│ │ Total:          $52,200.00                             │ │
+│ │ UUID:           abc123-def456-...                      │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ OCs pendientes de este proveedor:                           │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ ○ OC-202601-0034 | $52,000 | Recibida 23/01           │ │
+│ │ ● OC-202601-0035 | $52,200 | Recibida 25/01  ← Match! │ │
+│ │ ○ OC-202601-0038 | $18,500 | Parcial                  │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│                              [Cancelar]  [Vincular Factura] │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 2. Nueva Edge Function: `parse-cfdi-xml`
+
+Extrae datos del XML CFDI:
+- RFC del emisor
+- Razón social
+- Folio y serie
+- Fecha de emisión
+- Subtotal, IVA, IEPS, Total
+- UUID (Timbre Fiscal)
+- Lista de conceptos (productos)
+
+### 3. Modificar `EmailDetailView.tsx`
+
+Agregar botón condicional cuando:
+- La cuenta actual es `cfd@almasa.com.mx`
+- El correo tiene adjuntos `.xml` o `.pdf`
 
 ```typescript
-// Nuevo estado
-const [solicitarDeposito, setSolicitarDeposito] = useState(false);
-
-// En el dialog de confirmación, agregar opciones:
-{tipoResolucion === "reembolso_efectivo" && (
-  <div className="space-y-2 my-3">
-    <label className="flex items-center gap-2">
-      <input 
-        type="radio" 
-        name="tipoReembolso" 
-        checked={!solicitarDeposito}
-        onChange={() => setSolicitarDeposito(false)}
-      />
-      <span>El proveedor YA depositó</span>
-    </label>
-    <label className="flex items-center gap-2">
-      <input 
-        type="radio" 
-        name="tipoReembolso" 
-        checked={solicitarDeposito}
-        onChange={() => setSolicitarDeposito(true)}
-      />
-      <span>Solicitar depósito (enviar datos bancarios por email)</span>
-    </label>
-  </div>
+{esCuentaCFDI && tieneAdjuntosFactura && (
+  <Button onClick={() => setVincularFacturaOpen(true)}>
+    <FileText className="h-4 w-4 mr-2" />
+    Vincular Factura a OC
+  </Button>
 )}
 ```
 
-### 2. Crear Edge Function: `notificar-solicitud-deposito`
-
-Nueva función que envía email al proveedor con datos bancarios:
-
-```typescript
-// supabase/functions/notificar-solicitud-deposito/index.ts
-
-const DATOS_BANCARIOS = {
-  beneficiario: "ABARROTES LA MANITA, S.A. DE C.V.",
-  banco: "BBVA BANCOMER, S.A.",
-  plaza: "JAMAICA",
-  sucursal: "0122",
-  cuenta: "0442413388",
-  clabe: "012180004424133881",
-  emailPagos: "pagos@almasa.com.mx"
-};
-
-// Generar HTML del email
-const emailBody = `
-  <div style="font-family: Arial, sans-serif; max-width: 600px;">
-    <h2 style="color: #1e40af;">📋 Datos para Depósito - Crédito Pendiente</h2>
-    
-    <p>Estimado <strong>${proveedorNombre}</strong>,</p>
-    
-    <p>Le enviamos los datos bancarios para realizar el depósito 
-    correspondiente al siguiente crédito pendiente:</p>
-    
-    <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0;">
-      <p style="margin: 0; font-size: 18px;">
-        <strong>MONTO A DEPOSITAR:</strong> 
-        <span style="color: #b45309; font-size: 24px; font-weight: bold;">
-          $${monto.toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN
-        </span>
-      </p>
-      <p style="margin: 10px 0 0 0; color: #78350f;">
-        <strong>Referencia:</strong> ${ocFolio} / ${productoNombre}
-      </p>
-    </div>
-    
-    <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-      <h3 style="margin-top: 0; color: #374151;">🏦 DATOS BANCARIOS</h3>
-      <table style="width: 100%;">
-        <tr><td><strong>Beneficiario:</strong></td><td>${DATOS_BANCARIOS.beneficiario}</td></tr>
-        <tr><td><strong>Banco:</strong></td><td>${DATOS_BANCARIOS.banco}</td></tr>
-        <tr><td><strong>Sucursal:</strong></td><td>${DATOS_BANCARIOS.sucursal} (Plaza ${DATOS_BANCARIOS.plaza})</td></tr>
-        <tr><td><strong>Cuenta:</strong></td><td style="font-family: monospace; font-size: 16px;">${DATOS_BANCARIOS.cuenta}</td></tr>
-        <tr><td><strong>CLABE:</strong></td><td style="font-family: monospace; font-size: 16px; color: #1e40af;">${DATOS_BANCARIOS.clabe}</td></tr>
-      </table>
-    </div>
-    
-    <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border-left: 4px solid #dc2626;">
-      <p style="margin: 0;">
-        ⚠️ <strong>IMPORTANTE:</strong> Una vez realizado el depósito o transferencia, 
-        favor de enviar el comprobante a:
-      </p>
-      <p style="margin: 10px 0 0 0; font-size: 18px;">
-        📧 <a href="mailto:${DATOS_BANCARIOS.emailPagos}" style="color: #dc2626;">
-          ${DATOS_BANCARIOS.emailPagos}
-        </a>
-      </p>
-      <p style="margin: 10px 0 0 0; color: #7f1d1d;">
-        Indicando como referencia: <strong>${ocFolio}</strong>
-      </p>
-    </div>
-    
-    <p>Quedamos atentos a su comprobante.</p>
-    
-    <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-    <p style="color: #666; font-size: 12px;">
-      Este es un correo automático del sistema de gestión de ALMASA.
-    </p>
-  </div>
-`;
-```
-
-### 3. Flujo de Llamada
-
-En `CreditosPendientesPanel.tsx`, modificar la mutación:
-
-```typescript
-const resolverCredito = useMutation({
-  mutationFn: async ({ creditoId, tipo, notas, solicitarDeposito }: { 
-    creditoId: string; 
-    tipo: string; 
-    notas: string;
-    solicitarDeposito?: boolean;
-  }) => {
-    // Actualizar status del crédito
-    const { error } = await supabase
-      .from("proveedor_creditos_pendientes")
-      .update({
-        status: tipo === "cancelar" ? "cancelado" : 
-                (solicitarDeposito ? "deposito_solicitado" : "aplicado"),
-        tipo_resolucion: tipo,
-        resolucion_notas: notas,
-        fecha_aplicacion: new Date().toISOString(),
-      })
-      .eq("id", creditoId);
-
-    if (error) throw error;
-
-    // Si es reembolso Y se solicitó enviar datos bancarios
-    if (tipo === "reembolso_efectivo" && solicitarDeposito) {
-      // Obtener datos del crédito para el email
-      const { data: credito } = await supabase
-        .from("proveedor_creditos_pendientes")
-        .select(`
-          *, 
-          proveedores (nombre, email, proveedor_contactos (email, proposito))
-        `)
-        .eq("id", creditoId)
-        .single();
-
-      if (credito) {
-        await supabase.functions.invoke("notificar-solicitud-deposito", {
-          body: {
-            credito_id: creditoId,
-            proveedor_id: credito.proveedor_id,
-            proveedor_nombre: credito.proveedores?.nombre || credito.proveedor_nombre_manual,
-            monto: credito.monto_total,
-            producto_nombre: credito.producto_nombre,
-            oc_folio: credito.ordenes_compra?.folio,
-            motivo: credito.motivo
-          }
-        });
-      }
-    }
-  },
-  // ... resto igual
-});
-```
-
 ---
 
-## Nuevo Status: "deposito_solicitado"
-
-Agregar un status intermedio para cuando se envió el email pero aún no se confirma el pago:
-
-| Status | Significado |
-|--------|-------------|
-| `pendiente` | Crédito sin resolver |
-| `deposito_solicitado` | Se enviaron datos bancarios, esperando comprobante |
-| `aplicado` | Crédito resuelto (pagado, repuesto o descontado) |
-| `cancelado` | Crédito cancelado |
-
-Esto permite ver en el panel qué créditos están "en proceso de cobro".
-
----
-
-## Archivos a Crear/Modificar
-
-| Archivo | Acción | Descripción |
-|---------|--------|-------------|
-| `supabase/functions/notificar-solicitud-deposito/index.ts` | **Crear** | Edge function para enviar email con datos bancarios |
-| `CreditosPendientesPanel.tsx` | **Modificar** | Agregar opciones y llamar edge function |
-| `supabase/config.toml` | **Modificar** | Registrar nueva función |
-
----
-
-## Vista Previa del Email
+## Flujo Técnico
 
 ```text
-┌──────────────────────────────────────────────────────────────┐
-│ 📋 Datos para Depósito - Crédito Pendiente                   │
-├──────────────────────────────────────────────────────────────┤
-│                                                              │
-│ Estimado PROVEEDOR X,                                        │
-│                                                              │
-│ Le enviamos los datos bancarios para realizar el depósito:   │
-│                                                              │
-│ ┌──────────────────────────────────────────────────────────┐ │
-│ │ MONTO A DEPOSITAR: $4,000.00 MXN                        │ │
-│ │ Referencia: OC-202601-0005 / Producto ABC               │ │
-│ └──────────────────────────────────────────────────────────┘ │
-│                                                              │
-│ ┌──────────────────────────────────────────────────────────┐ │
-│ │ 🏦 DATOS BANCARIOS                                       │ │
-│ │                                                          │ │
-│ │ Beneficiario: ABARROTES LA MANITA, S.A. DE C.V.         │ │
-│ │ Banco:        BBVA BANCOMER, S.A.                        │ │
-│ │ Sucursal:     0122 (Plaza Jamaica)                       │ │
-│ │ Cuenta:       0442413388                                 │ │
-│ │ CLABE:        012180004424133881                         │ │
-│ └──────────────────────────────────────────────────────────┘ │
-│                                                              │
-│ ⚠️ IMPORTANTE:                                               │
-│ Una vez realizado el depósito, enviar comprobante a:         │
-│ 📧 pagos@almasa.com.mx                                       │
-│ Indicando referencia: OC-202601-0005                         │
-│                                                              │
-└──────────────────────────────────────────────────────────────┘
+1. Usuario abre correo en cfd@almasa.com.mx
+              │
+              ▼
+2. EmailDetailView detecta adjuntos XML/PDF
+              │
+              ▼
+3. Muestra botón "Vincular Factura a OC"
+              │
+              ▼
+4. Click → Abre VincularFacturaDialog
+              │
+              ▼
+5. Sistema descarga adjunto XML vía gmail-api
+              │
+              ▼
+6. Envía XML a parse-cfdi-xml (Edge Function)
+              │
+              ▼
+7. Extrae: RFC, Folio, Fecha, Total, UUID, Productos
+              │
+              ▼
+8. Busca proveedor por RFC en tabla proveedores
+              │
+              ▼
+9. Lista OCs del proveedor con status recibida/parcial
+              │
+              ▼
+10. Sugiere la OC con monto más cercano al Total
+              │
+              ▼
+11. Usuario confirma OC
+              │
+              ▼
+12. Sistema:
+    - Descarga XML y PDF del correo
+    - Sube archivos a bucket proveedor-facturas
+    - Crea registro en proveedor_facturas
+    - Vincula con OC seleccionada
+    - Si diferencia > $1, marca requiere_conciliacion
+              │
+              ▼
+13. Email marcado como "Procesado" (label o flag interno)
 ```
 
 ---
 
-## Registro en correos_enviados
+## Archivos a Crear
 
-Cada email enviado se registrará en la tabla `correos_enviados` con:
-- `tipo`: `"solicitud_deposito_credito"`
-- `referencia_id`: ID del crédito
-- `destinatario`: Email del proveedor
-- `asunto`: "Datos para Depósito - Crédito Pendiente OC-XXXX"
+| Archivo | Descripción |
+|---------|-------------|
+| `src/components/correos/VincularFacturaDialog.tsx` | Diálogo principal para vincular facturas |
+| `supabase/functions/parse-cfdi-xml/index.ts` | Extrae datos del XML CFDI |
 
-Esto permite trazabilidad completa de cuándo se solicitó el depósito.
+## Archivos a Modificar
+
+| Archivo | Cambio |
+|---------|--------|
+| `src/components/correos/EmailDetailView.tsx` | Agregar botón "Vincular Factura" cuando es cuenta CFD |
+| `supabase/config.toml` | Registrar nueva función parse-cfdi-xml |
+
+---
+
+## Datos a Extraer del CFDI (XML)
+
+El XML CFDI tiene esta estructura:
+
+```xml
+<cfdi:Comprobante 
+  Serie="F" 
+  Folio="12345" 
+  Fecha="2026-01-25T12:00:00"
+  SubTotal="45000.00"
+  Total="52200.00">
+  
+  <cfdi:Emisor 
+    Rfc="MOL123456ABC" 
+    Nombre="MOLINOS XYZ SA DE CV" 
+    RegimenFiscal="601"/>
+  
+  <cfdi:Receptor 
+    Rfc="AMA700701GI8" 
+    Nombre="ABARROTES LA MANITA SA DE CV"/>
+  
+  <cfdi:Conceptos>
+    <cfdi:Concepto 
+      ClaveProdServ="10112301" 
+      Cantidad="100" 
+      ClaveUnidad="XBX"
+      Descripcion="HARINA DE TRIGO"
+      ValorUnitario="450.00"
+      Importe="45000.00"/>
+  </cfdi:Conceptos>
+  
+  <tfd:TimbreFiscalDigital 
+    UUID="abc123-def456-ghi789"/>
+    
+</cfdi:Comprobante>
+```
+
+---
+
+## Match Automático de OC
+
+El sistema sugerirá automáticamente la OC más probable basándose en:
+
+1. **RFC del proveedor** (match exacto)
+2. **Monto similar** (tolerancia de $100 o 2%)
+3. **Fecha de recepción reciente** (últimos 30 días)
+4. **Status**: recibida, parcial o completada (no pagada)
+
+---
+
+## Beneficios
+
+| Antes | Después |
+|-------|---------|
+| 5-6 pasos manuales | 2-3 clicks |
+| Descargar archivo | Automático |
+| Capturar folio manualmente | Extraído del XML |
+| Capturar monto manualmente | Extraído del XML |
+| Buscar OC correcta | Sugerida automáticamente |
+| Posibles errores de captura | Datos del SAT (confiables) |
+
+---
+
+## Consideraciones
+
+### Si el XML no viene adjunto
+Algunos proveedores envían solo el PDF. En ese caso:
+- Mostrar advertencia: "No se detectó XML CFDI"
+- Permitir vincular solo el PDF
+- Captura manual de folio/monto (como actualmente)
+
+### Validación del UUID
+El UUID del timbre fiscal es único y podría usarse para:
+- Evitar duplicados (si ya existe una factura con ese UUID)
+- Verificar autenticidad consultando al SAT (futuro)
+
+### Marcar correo como procesado
+Agregar label interno o guardar referencia en `proveedor_facturas.email_id` para saber qué correos ya fueron procesados.
 
