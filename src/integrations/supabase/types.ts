@@ -3111,6 +3111,7 @@ export type Database = {
           numero_entrega: number
           numero_remision_proveedor: string | null
           numero_sello_llegada: string | null
+          numero_talon: string | null
           orden_compra_id: string
           origen_faltante: boolean | null
           placas_vehiculo: string | null
@@ -3158,6 +3159,7 @@ export type Database = {
           numero_entrega: number
           numero_remision_proveedor?: string | null
           numero_sello_llegada?: string | null
+          numero_talon?: string | null
           orden_compra_id: string
           origen_faltante?: boolean | null
           placas_vehiculo?: string | null
@@ -3205,6 +3207,7 @@ export type Database = {
           numero_entrega?: number
           numero_remision_proveedor?: string | null
           numero_sello_llegada?: string | null
+          numero_talon?: string | null
           orden_compra_id?: string
           origen_faltante?: boolean | null
           placas_vehiculo?: string | null

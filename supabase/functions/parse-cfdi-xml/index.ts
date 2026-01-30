@@ -68,6 +68,10 @@ interface CFDIData {
     tipoRelacion: string;
     uuid: string;
   }>;
+  
+  // Observaciones y número de talón para vinculación
+  observaciones?: string;
+  numeroTalonExtraido?: string;
 }
 
 function extractAttribute(xmlString: string, attributeName: string): string | undefined {
@@ -123,6 +127,29 @@ function extractAllElementBlocks(xmlString: string, tagName: string): string[] {
     }
   }
   return results;
+}
+
+// Extract talon number from text using common patterns
+function extractNumeroTalon(textos: string[]): string | null {
+  const patterns = [
+    /n[uú]mero\s*(?:de\s*)?tal[oó]n[:\s]*(\d+)/i,
+    /tal[oó]n[:\s]*(\d+)/i,
+    /ticket[:\s]*(\d+)/i,
+    /boleto[:\s]*(\d+)/i,
+    /nota[:\s]*(\d{4,})/i, // At least 4 digits to avoid false positives
+  ];
+  
+  const combinedText = textos.filter(Boolean).join(' ');
+  
+  for (const pattern of patterns) {
+    const match = combinedText.match(pattern);
+    if (match) {
+      console.log("Talon number found:", match[1], "using pattern:", pattern.toString());
+      return match[1];
+    }
+  }
+  
+  return null;
 }
 
 function parseCFDI(xmlContent: string): CFDIData {
@@ -235,6 +262,24 @@ function parseCFDI(xmlContent: string): CFDIData {
       uuid: extractAttribute(rel, 'UUID') || '',
     }));
   }
+  
+  // Extract observaciones and talon number
+  // Sources: CondicionesDePago, Concepto descriptions, Addenda
+  const condiciones = result.condicionesDePago || '';
+  const descripciones = result.conceptos.map(c => c.descripcion);
+  
+  // Try to extract Addenda text (proprietary extensions)
+  const addendaMatch = cleanXml.match(/<[a-z]*:?Addenda[^>]*>([\s\S]*?)<\/[a-z]*:?Addenda>/i);
+  const addendaText = addendaMatch ? addendaMatch[1] : '';
+  
+  // Combine all possible sources for observaciones
+  const allTexts = [condiciones, ...descripciones, addendaText].filter(Boolean);
+  result.observaciones = condiciones || (addendaText ? addendaText.substring(0, 500) : undefined);
+  
+  // Extract numero de talon from any source
+  result.numeroTalonExtraido = extractNumeroTalon(allTexts) || undefined;
+  console.log("Observaciones:", result.observaciones?.substring(0, 100));
+  console.log("Numero talon extraido:", result.numeroTalonExtraido);
   
   return result;
 }
