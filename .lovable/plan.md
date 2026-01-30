@@ -1,284 +1,111 @@
 
+# Plan: Corregir Encoding UTF-8 en Asuntos de Correos con Emojis
 
-# Plan: Número de Talón para Vincular Recepciones con Facturas
+## Problema Identificado
 
-## Situación Actual
+Los correos del sistema muestran caracteres como "Ã¢Â ÃŒ" en lugar del emoji "❌" porque la función `btoa()` no maneja correctamente caracteres multibyte como emojis.
 
-Actualmente existe:
-- Campo `numero_remision_proveedor` en recepciones
-- Etiquetado como "Número de remisión"
-- No hay lógica para extraer/vincular por número de talón
+Ejemplo afectado:
+- **Esperado:** `❌ ORDEN CANCELADA: OC-202601-0005`
+- **Actual:** `Ã¢Â ÃŒ ORDEN CANCELADA: OC-202601-0005`
 
-La factura de Azúcares Selectos muestra en **Observaciones**: `"Numero de talon: XXXX"` que es el identificador único que conecta la recepción física con la factura.
+## Causa Raíz
 
----
-
-## Solución Propuesta
-
-### 1. Agregar Campo "Número de Talón" en Recepciones
-
-En `ordenes_compra_entregas`:
-- Nuevo campo: `numero_talon` (varchar)
-- El almacenista lo captura al finalizar la descarga
-- Proveedores como Azúcares Selectos lo usan como referencia en su factura
-
-### 2. Extraer Número de Talón del CFDI
-
-Actualizar `parse-cfdi-xml` para extraer:
-- `CondicionesDePago` (ya existe)
-- **Nuevo**: Campo de observaciones del concepto o addenda
-- Buscar patrones: `"talon"`, `"talón"`, `"ticket"`, `"remision"`
-
-### 3. Match Automático por Número de Talón
-
-En `VincularFacturaDialog`:
-- Si el CFDI tiene observaciones con número de talón
-- Buscar en `ordenes_compra_entregas.numero_talon`
-- Match exacto = alta confianza de vinculación
-
----
-
-## Flujo Completo
-
-```text
-ALMACÉN                           FACTURA
-──────                            ───────
-                                     
-Recibe mercancía                 Proveedor genera factura
-      │                                    │
-      ▼                                    ▼
-Captura "Número de Talón"        En Observaciones: "Talon: 19094"
-      │                                    │
-      ▼                                    ▼
-Se guarda en BD                  Llega a cfd@almasa.com.mx
-ordenes_compra_entregas                    │
-.numero_talon = "19094"                    ▼
-                                 Sistema extrae Observaciones
-                                           │
-                                           ▼
-                                 Busca: "19094" en entregas
-                                           │
-                                           ▼
-                                 Match automático OC correcta
+En `gmail-api/index.ts` línea 595:
+```typescript
+headers.push(`Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`);
 ```
 
----
+El problema es que `btoa()` espera una cadena con caracteres de 1 byte, pero los emojis ocupan 4 bytes en UTF-8. La técnica `unescape(encodeURIComponent())` funciona para caracteres latinos, pero falla con emojis.
+
+## Solución
+
+Usar `TextEncoder` + conversión a binary string para manejar correctamente todos los caracteres UTF-8 incluyendo emojis:
+
+```typescript
+// Función helper para codificar UTF-8 a Base64 correctamente
+function utf8ToBase64(str: string): string {
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(str);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+// Uso:
+headers.push(`Subject: =?UTF-8?B?${utf8ToBase64(subject)}?=`);
+```
+
+Esta función:
+1. Convierte el string a bytes UTF-8 con `TextEncoder`
+2. Convierte cada byte a un carácter (0-255)
+3. Aplica `btoa()` a la cadena de bytes
 
 ## Cambios Técnicos
 
-### 1. Migración de Base de Datos
+### Archivo a modificar: `supabase/functions/gmail-api/index.ts`
 
-```sql
--- Agregar campo numero_talon a entregas
-ALTER TABLE ordenes_compra_entregas 
-ADD COLUMN numero_talon VARCHAR(100);
-
--- Índice para búsqueda rápida
-CREATE INDEX idx_entregas_numero_talon 
-ON ordenes_compra_entregas(numero_talon) 
-WHERE numero_talon IS NOT NULL;
-```
-
-### 2. Modificar Recepción (`AlmacenRecepcionSheet.tsx`)
-
-Cambiar el campo existente de "Número de remisión" a "Número de Talón" o agregar un campo adicional si ambos son necesarios.
-
+1. **Agregar función helper** al inicio del archivo:
 ```typescript
-// Estado para el nuevo campo
-const [numeroTalon, setNumeroTalon] = useState("");
-
-// En el formulario:
-<div className="space-y-2">
-  <Label>Número de Talón</Label>
-  <Input
-    value={numeroTalon}
-    onChange={(e) => setNumeroTalon(e.target.value)}
-    placeholder="Ej: 19094 (viene en el documento del proveedor)"
-  />
-  <span className="text-xs text-muted-foreground">
-    Este número debe coincidir con las Observaciones de la factura
-  </span>
-</div>
-
-// Al guardar:
-const updateEntrega = {
-  ...
-  numero_talon: numeroTalon.trim() || null,
-};
-```
-
-### 3. Actualizar `parse-cfdi-xml` para extraer observaciones
-
-El número de talón puede aparecer en varios lugares del CFDI:
-- `CondicionesDePago` del Comprobante
-- Campo `Descripcion` de los Conceptos
-- Addenda (extensiones propietarias)
-
-```typescript
-// Agregar a CFDIData interface
-observaciones?: string;
-numeroTalonExtraido?: string;
-
-// En parseCFDI function:
-// Extraer CondicionesDePago (ya existe)
-const condiciones = extractAttribute(comprobanteTag, 'CondicionesDePago');
-
-// Buscar patrón de talón en condiciones o conceptos
-const talonPatterns = [
-  /tal[oó]n[:\s]*(\d+)/i,
-  /ticket[:\s]*(\d+)/i,
-  /ref(?:erencia)?[:\s]*(\d+)/i,
-];
-
-let numeroTalon = null;
-const textosBusqueda = [
-  condiciones,
-  ...result.conceptos.map(c => c.descripcion),
-].filter(Boolean).join(' ');
-
-for (const pattern of talonPatterns) {
-  const match = textosBusqueda.match(pattern);
-  if (match) {
-    numeroTalon = match[1];
-    break;
+// Helper to properly encode UTF-8 strings (including emojis) to Base64
+function utf8ToBase64(str: string): string {
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(str);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
   }
+  return btoa(binary);
 }
-
-result.observaciones = condiciones || '';
-result.numeroTalonExtraido = numeroTalon;
 ```
 
-### 4. Actualizar `VincularFacturaDialog.tsx`
-
-Agregar lógica de match por talón además del match por monto:
-
+2. **Reemplazar línea 595** (encoding del subject):
 ```typescript
-// Buscar OC por número de talón si está disponible
-const { data: entregaPorTalon } = useQuery({
-  queryKey: ["entrega-por-talon", cfdiData?.numeroTalonExtraido],
-  queryFn: async () => {
-    if (!cfdiData?.numeroTalonExtraido) return null;
-    
-    const { data } = await supabase
-      .from("ordenes_compra_entregas")
-      .select(`
-        id, numero_talon,
-        orden_compra:ordenes_compra (
-          id, folio, total, total_ajustado, status, proveedor_id,
-          proveedores (nombre, rfc)
-        )
-      `)
-      .eq("numero_talon", cfdiData.numeroTalonExtraido)
-      .eq("status", "recibida")
-      .maybeSingle();
-    
-    return data;
-  },
-  enabled: !!cfdiData?.numeroTalonExtraido,
-});
+// Antes (mal):
+headers.push(`Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`);
 
-// En el UI:
-{entregaPorTalon && (
-  <Alert className="border-green-500 bg-green-50">
-    <CheckCircle className="h-4 w-4 text-green-600" />
-    <AlertDescription className="text-green-800">
-      <strong>Match por Número de Talón:</strong> La factura menciona 
-      talón "{cfdiData.numeroTalonExtraido}" que coincide con la recepción de la OC 
-      <strong>{entregaPorTalon.orden_compra.folio}</strong>
-    </AlertDescription>
-  </Alert>
-)}
+// Después (bien):
+headers.push(`Subject: =?UTF-8?B?${utf8ToBase64(subject)}?=`);
 ```
 
----
+3. **Reemplazar líneas 608 y 633** (encoding del body) para consistencia:
+```typescript
+// Antes:
+btoa(unescape(encodeURIComponent(emailBody || "")))
 
-## UI de Recepción Actualizada
-
-```text
-┌────────────────────────────────────────────────────────┐
-│ 📄 Documento del Proveedor                              │
-├────────────────────────────────────────────────────────┤
-│                                                        │
-│ Número de Remisión          Número de Talón            │
-│ ┌────────────────────┐      ┌────────────────────┐     │
-│ │ REM-2025-001234    │      │ 19094              │     │
-│ └────────────────────┘      └────────────────────┘     │
-│                             ℹ️ Coincidirá con la       │
-│                             factura del proveedor      │
-│                                                        │
-│ 📷 Foto de la remisión                                 │
-│ ┌─────────┐                                            │
-│ │         │ [Tomar foto]                               │
-│ └─────────┘                                            │
-│                                                        │
-└────────────────────────────────────────────────────────┘
+// Después:
+utf8ToBase64(emailBody || "")
 ```
 
----
+## Impacto
 
-## UI del Dialog de Vincular Factura
+Con este cambio, todos los correos con emojis se mostrarán correctamente:
+- ❌ ORDEN CANCELADA
+- ⚠️ Faltante en OC
+- 📅 Cambio de fecha
+- 🔔 Recordatorio
+- 📋 Datos para Depósito
+- Etc.
 
-Cuando hay match por talón:
+## Archivos a Modificar
 
-```text
-┌─────────────────────────────────────────────────────────┐
-│ 📄 Vincular Factura de Proveedor                        │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│ ✅ MATCH POR NÚMERO DE TALÓN                           │
-│ ┌─────────────────────────────────────────────────────┐ │
-│ │ La factura menciona: "Talon: 19094"                 │ │
-│ │ Que coincide con la recepción de OC-202501-0034     │ │
-│ │ Recibida el 28/01/2026                              │ │
-│ └─────────────────────────────────────────────────────┘ │
-│                                                         │
-│ Datos del CFDI:                                         │
-│ ┌─────────────────────────────────────────────────────┐ │
-│ │ Emisor: AZUCARES SELECTOS DE MEXICO SA DE CV        │ │
-│ │ RFC:    ASM020712PX7                                │ │
-│ │ Folio:  DT-19094                                    │ │
-│ │ Total:  $534,000.00                                 │ │
-│ └─────────────────────────────────────────────────────┘ │
-│                                                         │
-│ OC Sugerida:                                            │
-│ ● OC-202501-0034 | $534,000 | Recibida ← Match!        │
-│                                                         │
-│                          [Cancelar] [Vincular Factura]  │
-└─────────────────────────────────────────────────────────┘
-```
+| Archivo | Cambio |
+|---------|--------|
+| `supabase/functions/gmail-api/index.ts` | Agregar helper UTF-8 y usarlo para subject y body |
 
 ---
 
-## Archivos a Crear/Modificar
+## Nota sobre el Correo de Apple (ITMS-90725)
 
-| Archivo | Acción | Descripción |
-|---------|--------|-------------|
-| Migración SQL | **Crear** | Agregar columna `numero_talon` |
-| `AlmacenRecepcionSheet.tsx` | **Modificar** | Agregar campo de captura de talón |
-| `parse-cfdi-xml/index.ts` | **Modificar** | Extraer observaciones y número de talón |
-| `VincularFacturaDialog.tsx` | **Modificar** | Match por número de talón |
+El correo de Apple es un **warning informativo**, no un error bloqueante:
 
----
+> "A partir de abril de 2026, todas las apps deben crearse con el SDK de iOS 26"
 
-## Consideraciones
+**Acciones:**
+- **Ahora:** No requiere acción inmediata. La build actual puede pasar review.
+- **Futuro (antes de abril 2026):** Actualizar macOS y Xcode 26 cuando esté disponible.
+- **Prioridad actual:** Esperar respuesta de Apple sobre el status "Unlisted" (Guideline 3.2).
 
-### Compatibilidad con Proveedores
-
-No todos los proveedores usan número de talón:
-- Si no hay talón en la recepción → vinculación normal por monto/RFC
-- Si no hay talón en la factura → vinculación normal
-- Si ambos tienen talón → prioridad al match exacto
-
-### Formato del Talón
-
-El talón puede venir en diferentes formatos:
-- Solo números: `19094`
-- Con prefijo: `DT-19094` (como en el folio de Azúcares)
-- Con texto: `"Observaciones: Numero de talon 19094"`
-
-El sistema debe extraer solo los dígitos para comparación.
-
-### Campo Opcional
-
-El número de talón será opcional en la recepción para no afectar a proveedores que no lo usan.
-
+Este es un aviso de que el SDK actual (iOS 18.5) quedará obsoleto en abril, pero no impide la aprobación actual.
