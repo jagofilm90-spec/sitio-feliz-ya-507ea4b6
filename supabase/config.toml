@@ -120,3 +120,6 @@ verify_jwt = false
 
 [functions.notificar-solicitud-deposito]
 verify_jwt = false
+
+[functions.parse-cfdi-xml]
+verify_jwt = true
