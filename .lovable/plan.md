@@ -1,267 +1,284 @@
 
 
-# Plan: Vincular Facturas de Proveedores desde Correo CFDI
+# Plan: Número de Talón para Vincular Recepciones con Facturas
 
-## Problema Actual
+## Situación Actual
 
-El flujo actual para registrar una factura de proveedor es:
+Actualmente existe:
+- Campo `numero_remision_proveedor` en recepciones
+- Etiquetado como "Número de remisión"
+- No hay lógica para extraer/vincular por número de talón
 
-```text
-Proveedor envía factura XML/PDF
-        ↓
-Llega a cfd@almasa.com.mx
-        ↓
-Secretaria abre Outlook/Gmail
-        ↓
-Descarga el archivo adjunto
-        ↓
-Abre el ERP → Compras → OC → Facturas
-        ↓
-Sube el archivo manualmente
-        ↓
-Captura datos (folio, fecha, monto)
-```
-
-**Pasos manuales: 5-6**
-
-## Solución Propuesta
-
-Agregar un botón "Vincular Factura a OC" en la bandeja de correos cuando se está en la cuenta `cfd@almasa.com.mx`:
-
-```text
-Proveedor envía factura XML/PDF
-        ↓
-Llega a cfd@almasa.com.mx
-        ↓
-Secretaria ve el correo en ERP → Correos
-        ↓
-Click en "Vincular Factura" (nuevo botón)
-        ↓
-Sistema detecta OC por RFC/proveedor
-        ↓
-Secretaria confirma OC correcta
-        ↓
-Sistema descarga adjuntos y extrae datos
-        ↓
-Factura vinculada automáticamente
-```
-
-**Pasos manuales: 2-3**
+La factura de Azúcares Selectos muestra en **Observaciones**: `"Numero de talon: XXXX"` que es el identificador único que conecta la recepción física con la factura.
 
 ---
 
-## Componentes a Crear/Modificar
+## Solución Propuesta
 
-### 1. Nuevo Componente: `VincularFacturaDialog.tsx`
+### 1. Agregar Campo "Número de Talón" en Recepciones
 
-Un diálogo similar a `ProcesarPedidoDialog` pero para facturas:
+En `ordenes_compra_entregas`:
+- Nuevo campo: `numero_talon` (varchar)
+- El almacenista lo captura al finalizar la descarga
+- Proveedores como Azúcares Selectos lo usan como referencia en su factura
+
+### 2. Extraer Número de Talón del CFDI
+
+Actualizar `parse-cfdi-xml` para extraer:
+- `CondicionesDePago` (ya existe)
+- **Nuevo**: Campo de observaciones del concepto o addenda
+- Buscar patrones: `"talon"`, `"talón"`, `"ticket"`, `"remision"`
+
+### 3. Match Automático por Número de Talón
+
+En `VincularFacturaDialog`:
+- Si el CFDI tiene observaciones con número de talón
+- Buscar en `ordenes_compra_entregas.numero_talon`
+- Match exacto = alta confianza de vinculación
+
+---
+
+## Flujo Completo
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│ 📄 Vincular Factura de Proveedor                            │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│ De: facturacion@molinos-xyz.com                             │
-│ Asunto: CFDI - Factura F-12345 ALMASA                       │
-│                                                             │
-│ Archivos adjuntos detectados:                               │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │ ☑ F-12345.xml  (12 KB) ← CFDI                          │ │
-│ │ ☑ F-12345.pdf  (85 KB) ← Representación impresa        │ │
-│ └─────────────────────────────────────────────────────────┘ │
-│                                                             │
-│ Datos extraídos del XML:                    [Procesando...] │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │ RFC Emisor:     MOL123456ABC                           │ │
-│ │ Proveedor:      MOLINOS XYZ SA DE CV                   │ │
-│ │ Folio:          F-12345                                │ │
-│ │ Fecha:          25/01/2026                             │ │
-│ │ Subtotal:       $45,000.00                             │ │
-│ │ IVA:            $7,200.00                              │ │
-│ │ Total:          $52,200.00                             │ │
-│ │ UUID:           abc123-def456-...                      │ │
-│ └─────────────────────────────────────────────────────────┘ │
-│                                                             │
-│ OCs pendientes de este proveedor:                           │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │ ○ OC-202601-0034 | $52,000 | Recibida 23/01           │ │
-│ │ ● OC-202601-0035 | $52,200 | Recibida 25/01  ← Match! │ │
-│ │ ○ OC-202601-0038 | $18,500 | Parcial                  │ │
-│ └─────────────────────────────────────────────────────────┘ │
-│                                                             │
-│                              [Cancelar]  [Vincular Factura] │
-└─────────────────────────────────────────────────────────────┘
+ALMACÉN                           FACTURA
+──────                            ───────
+                                     
+Recibe mercancía                 Proveedor genera factura
+      │                                    │
+      ▼                                    ▼
+Captura "Número de Talón"        En Observaciones: "Talon: 19094"
+      │                                    │
+      ▼                                    ▼
+Se guarda en BD                  Llega a cfd@almasa.com.mx
+ordenes_compra_entregas                    │
+.numero_talon = "19094"                    ▼
+                                 Sistema extrae Observaciones
+                                           │
+                                           ▼
+                                 Busca: "19094" en entregas
+                                           │
+                                           ▼
+                                 Match automático OC correcta
 ```
 
-### 2. Nueva Edge Function: `parse-cfdi-xml`
+---
 
-Extrae datos del XML CFDI:
-- RFC del emisor
-- Razón social
-- Folio y serie
-- Fecha de emisión
-- Subtotal, IVA, IEPS, Total
-- UUID (Timbre Fiscal)
-- Lista de conceptos (productos)
+## Cambios Técnicos
 
-### 3. Modificar `EmailDetailView.tsx`
+### 1. Migración de Base de Datos
 
-Agregar botón condicional cuando:
-- La cuenta actual es `cfd@almasa.com.mx`
-- El correo tiene adjuntos `.xml` o `.pdf`
+```sql
+-- Agregar campo numero_talon a entregas
+ALTER TABLE ordenes_compra_entregas 
+ADD COLUMN numero_talon VARCHAR(100);
+
+-- Índice para búsqueda rápida
+CREATE INDEX idx_entregas_numero_talon 
+ON ordenes_compra_entregas(numero_talon) 
+WHERE numero_talon IS NOT NULL;
+```
+
+### 2. Modificar Recepción (`AlmacenRecepcionSheet.tsx`)
+
+Cambiar el campo existente de "Número de remisión" a "Número de Talón" o agregar un campo adicional si ambos son necesarios.
 
 ```typescript
-{esCuentaCFDI && tieneAdjuntosFactura && (
-  <Button onClick={() => setVincularFacturaOpen(true)}>
-    <FileText className="h-4 w-4 mr-2" />
-    Vincular Factura a OC
-  </Button>
+// Estado para el nuevo campo
+const [numeroTalon, setNumeroTalon] = useState("");
+
+// En el formulario:
+<div className="space-y-2">
+  <Label>Número de Talón</Label>
+  <Input
+    value={numeroTalon}
+    onChange={(e) => setNumeroTalon(e.target.value)}
+    placeholder="Ej: 19094 (viene en el documento del proveedor)"
+  />
+  <span className="text-xs text-muted-foreground">
+    Este número debe coincidir con las Observaciones de la factura
+  </span>
+</div>
+
+// Al guardar:
+const updateEntrega = {
+  ...
+  numero_talon: numeroTalon.trim() || null,
+};
+```
+
+### 3. Actualizar `parse-cfdi-xml` para extraer observaciones
+
+El número de talón puede aparecer en varios lugares del CFDI:
+- `CondicionesDePago` del Comprobante
+- Campo `Descripcion` de los Conceptos
+- Addenda (extensiones propietarias)
+
+```typescript
+// Agregar a CFDIData interface
+observaciones?: string;
+numeroTalonExtraido?: string;
+
+// En parseCFDI function:
+// Extraer CondicionesDePago (ya existe)
+const condiciones = extractAttribute(comprobanteTag, 'CondicionesDePago');
+
+// Buscar patrón de talón en condiciones o conceptos
+const talonPatterns = [
+  /tal[oó]n[:\s]*(\d+)/i,
+  /ticket[:\s]*(\d+)/i,
+  /ref(?:erencia)?[:\s]*(\d+)/i,
+];
+
+let numeroTalon = null;
+const textosBusqueda = [
+  condiciones,
+  ...result.conceptos.map(c => c.descripcion),
+].filter(Boolean).join(' ');
+
+for (const pattern of talonPatterns) {
+  const match = textosBusqueda.match(pattern);
+  if (match) {
+    numeroTalon = match[1];
+    break;
+  }
+}
+
+result.observaciones = condiciones || '';
+result.numeroTalonExtraido = numeroTalon;
+```
+
+### 4. Actualizar `VincularFacturaDialog.tsx`
+
+Agregar lógica de match por talón además del match por monto:
+
+```typescript
+// Buscar OC por número de talón si está disponible
+const { data: entregaPorTalon } = useQuery({
+  queryKey: ["entrega-por-talon", cfdiData?.numeroTalonExtraido],
+  queryFn: async () => {
+    if (!cfdiData?.numeroTalonExtraido) return null;
+    
+    const { data } = await supabase
+      .from("ordenes_compra_entregas")
+      .select(`
+        id, numero_talon,
+        orden_compra:ordenes_compra (
+          id, folio, total, total_ajustado, status, proveedor_id,
+          proveedores (nombre, rfc)
+        )
+      `)
+      .eq("numero_talon", cfdiData.numeroTalonExtraido)
+      .eq("status", "recibida")
+      .maybeSingle();
+    
+    return data;
+  },
+  enabled: !!cfdiData?.numeroTalonExtraido,
+});
+
+// En el UI:
+{entregaPorTalon && (
+  <Alert className="border-green-500 bg-green-50">
+    <CheckCircle className="h-4 w-4 text-green-600" />
+    <AlertDescription className="text-green-800">
+      <strong>Match por Número de Talón:</strong> La factura menciona 
+      talón "{cfdiData.numeroTalonExtraido}" que coincide con la recepción de la OC 
+      <strong>{entregaPorTalon.orden_compra.folio}</strong>
+    </AlertDescription>
+  </Alert>
 )}
 ```
 
 ---
 
-## Flujo Técnico
+## UI de Recepción Actualizada
 
 ```text
-1. Usuario abre correo en cfd@almasa.com.mx
-              │
-              ▼
-2. EmailDetailView detecta adjuntos XML/PDF
-              │
-              ▼
-3. Muestra botón "Vincular Factura a OC"
-              │
-              ▼
-4. Click → Abre VincularFacturaDialog
-              │
-              ▼
-5. Sistema descarga adjunto XML vía gmail-api
-              │
-              ▼
-6. Envía XML a parse-cfdi-xml (Edge Function)
-              │
-              ▼
-7. Extrae: RFC, Folio, Fecha, Total, UUID, Productos
-              │
-              ▼
-8. Busca proveedor por RFC en tabla proveedores
-              │
-              ▼
-9. Lista OCs del proveedor con status recibida/parcial
-              │
-              ▼
-10. Sugiere la OC con monto más cercano al Total
-              │
-              ▼
-11. Usuario confirma OC
-              │
-              ▼
-12. Sistema:
-    - Descarga XML y PDF del correo
-    - Sube archivos a bucket proveedor-facturas
-    - Crea registro en proveedor_facturas
-    - Vincula con OC seleccionada
-    - Si diferencia > $1, marca requiere_conciliacion
-              │
-              ▼
-13. Email marcado como "Procesado" (label o flag interno)
+┌────────────────────────────────────────────────────────┐
+│ 📄 Documento del Proveedor                              │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│ Número de Remisión          Número de Talón            │
+│ ┌────────────────────┐      ┌────────────────────┐     │
+│ │ REM-2025-001234    │      │ 19094              │     │
+│ └────────────────────┘      └────────────────────┘     │
+│                             ℹ️ Coincidirá con la       │
+│                             factura del proveedor      │
+│                                                        │
+│ 📷 Foto de la remisión                                 │
+│ ┌─────────┐                                            │
+│ │         │ [Tomar foto]                               │
+│ └─────────┘                                            │
+│                                                        │
+└────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Archivos a Crear
+## UI del Dialog de Vincular Factura
 
-| Archivo | Descripción |
-|---------|-------------|
-| `src/components/correos/VincularFacturaDialog.tsx` | Diálogo principal para vincular facturas |
-| `supabase/functions/parse-cfdi-xml/index.ts` | Extrae datos del XML CFDI |
+Cuando hay match por talón:
 
-## Archivos a Modificar
-
-| Archivo | Cambio |
-|---------|--------|
-| `src/components/correos/EmailDetailView.tsx` | Agregar botón "Vincular Factura" cuando es cuenta CFD |
-| `supabase/config.toml` | Registrar nueva función parse-cfdi-xml |
-
----
-
-## Datos a Extraer del CFDI (XML)
-
-El XML CFDI tiene esta estructura:
-
-```xml
-<cfdi:Comprobante 
-  Serie="F" 
-  Folio="12345" 
-  Fecha="2026-01-25T12:00:00"
-  SubTotal="45000.00"
-  Total="52200.00">
-  
-  <cfdi:Emisor 
-    Rfc="MOL123456ABC" 
-    Nombre="MOLINOS XYZ SA DE CV" 
-    RegimenFiscal="601"/>
-  
-  <cfdi:Receptor 
-    Rfc="AMA700701GI8" 
-    Nombre="ABARROTES LA MANITA SA DE CV"/>
-  
-  <cfdi:Conceptos>
-    <cfdi:Concepto 
-      ClaveProdServ="10112301" 
-      Cantidad="100" 
-      ClaveUnidad="XBX"
-      Descripcion="HARINA DE TRIGO"
-      ValorUnitario="450.00"
-      Importe="45000.00"/>
-  </cfdi:Conceptos>
-  
-  <tfd:TimbreFiscalDigital 
-    UUID="abc123-def456-ghi789"/>
-    
-</cfdi:Comprobante>
+```text
+┌─────────────────────────────────────────────────────────┐
+│ 📄 Vincular Factura de Proveedor                        │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│ ✅ MATCH POR NÚMERO DE TALÓN                           │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ La factura menciona: "Talon: 19094"                 │ │
+│ │ Que coincide con la recepción de OC-202501-0034     │ │
+│ │ Recibida el 28/01/2026                              │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                                                         │
+│ Datos del CFDI:                                         │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ Emisor: AZUCARES SELECTOS DE MEXICO SA DE CV        │ │
+│ │ RFC:    ASM020712PX7                                │ │
+│ │ Folio:  DT-19094                                    │ │
+│ │ Total:  $534,000.00                                 │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                                                         │
+│ OC Sugerida:                                            │
+│ ● OC-202501-0034 | $534,000 | Recibida ← Match!        │
+│                                                         │
+│                          [Cancelar] [Vincular Factura]  │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Match Automático de OC
+## Archivos a Crear/Modificar
 
-El sistema sugerirá automáticamente la OC más probable basándose en:
-
-1. **RFC del proveedor** (match exacto)
-2. **Monto similar** (tolerancia de $100 o 2%)
-3. **Fecha de recepción reciente** (últimos 30 días)
-4. **Status**: recibida, parcial o completada (no pagada)
-
----
-
-## Beneficios
-
-| Antes | Después |
-|-------|---------|
-| 5-6 pasos manuales | 2-3 clicks |
-| Descargar archivo | Automático |
-| Capturar folio manualmente | Extraído del XML |
-| Capturar monto manualmente | Extraído del XML |
-| Buscar OC correcta | Sugerida automáticamente |
-| Posibles errores de captura | Datos del SAT (confiables) |
+| Archivo | Acción | Descripción |
+|---------|--------|-------------|
+| Migración SQL | **Crear** | Agregar columna `numero_talon` |
+| `AlmacenRecepcionSheet.tsx` | **Modificar** | Agregar campo de captura de talón |
+| `parse-cfdi-xml/index.ts` | **Modificar** | Extraer observaciones y número de talón |
+| `VincularFacturaDialog.tsx` | **Modificar** | Match por número de talón |
 
 ---
 
 ## Consideraciones
 
-### Si el XML no viene adjunto
-Algunos proveedores envían solo el PDF. En ese caso:
-- Mostrar advertencia: "No se detectó XML CFDI"
-- Permitir vincular solo el PDF
-- Captura manual de folio/monto (como actualmente)
+### Compatibilidad con Proveedores
 
-### Validación del UUID
-El UUID del timbre fiscal es único y podría usarse para:
-- Evitar duplicados (si ya existe una factura con ese UUID)
-- Verificar autenticidad consultando al SAT (futuro)
+No todos los proveedores usan número de talón:
+- Si no hay talón en la recepción → vinculación normal por monto/RFC
+- Si no hay talón en la factura → vinculación normal
+- Si ambos tienen talón → prioridad al match exacto
 
-### Marcar correo como procesado
-Agregar label interno o guardar referencia en `proveedor_facturas.email_id` para saber qué correos ya fueron procesados.
+### Formato del Talón
+
+El talón puede venir en diferentes formatos:
+- Solo números: `19094`
+- Con prefijo: `DT-19094` (como en el folio de Azúcares)
+- Con texto: `"Observaciones: Numero de talon 19094"`
+
+El sistema debe extraer solo los dígitos para comparación.
+
+### Campo Opcional
+
+El número de talón será opcional en la recepción para no afectar a proveedores que no lo usan.
 
