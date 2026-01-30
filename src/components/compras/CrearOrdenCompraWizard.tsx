@@ -582,6 +582,31 @@ const CrearOrdenCompraWizard = ({
       prev.map((e, i) => i === index ? { ...e, cantidad_bultos: cantidad } : e)
     );
   };
+  
+  // Auto-advance to next delivery without a date when entregasProgramadas changes
+  // This useEffect ensures we use the updated state instead of stale closure
+  useEffect(() => {
+    if (entregaEnEdicion === null) return;
+    
+    // Check if the current delivery now has a date
+    const currentEntrega = entregasProgramadas[entregaEnEdicion];
+    if (!currentEntrega?.fecha_programada) return; // Still needs a date, don't advance
+    
+    // Find next delivery without a date (after current index)
+    const siguienteSinFecha = entregasProgramadas.findIndex(
+      (e, i) => i > entregaEnEdicion && !e.fecha_programada
+    );
+    
+    if (siguienteSinFecha >= 0) {
+      setEntregaEnEdicion(siguienteSinFecha);
+    } else {
+      // Check if there's any without date before current
+      const anteriorSinFecha = entregasProgramadas.findIndex(
+        (e) => !e.fecha_programada
+      );
+      setEntregaEnEdicion(anteriorSinFecha >= 0 ? anteriorSinFecha : null);
+    }
+  }, [entregasProgramadas]);
 
   // Initialize single delivery date when entering step 3
   useEffect(() => {
@@ -2455,20 +2480,7 @@ const CrearOrdenCompraWizard = ({
                             onDateSelect={(date) => {
                               if (entregaEnEdicion !== null) {
                                 updateFechaEntrega(entregaEnEdicion, format(date, "yyyy-MM-dd"));
-                                
-                                // Auto-advance to next delivery without a date
-                                const siguienteSinFecha = entregasProgramadas.findIndex(
-                                  (e, i) => i > entregaEnEdicion && !e.fecha_programada
-                                );
-                                if (siguienteSinFecha >= 0) {
-                                  setEntregaEnEdicion(siguienteSinFecha);
-                                } else {
-                                  // Check if there's any without date before current
-                                  const anteriorSinFecha = entregasProgramadas.findIndex(
-                                    (e) => !e.fecha_programada
-                                  );
-                                  setEntregaEnEdicion(anteriorSinFecha >= 0 ? anteriorSinFecha : null);
-                                }
+                                // Auto-advance is now handled by useEffect to avoid stale closure
                               }
                             }}
                             entregasLocales={entregasProgramadas}
