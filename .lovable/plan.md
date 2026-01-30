@@ -1,171 +1,131 @@
 
 
-# Plan: Mostrar Entregas Locales (sin guardar) en el Calendario de Ocupación
+# Plan: Corregir el Conteo Incremental en Calendario de Ocupación
 
 ## Problema Identificado
 
-Cuando programas entregas en el wizard y seleccionas "04 feb", la fecha aparece en la lista de entregas pero el calendario **no muestra el puntito** porque:
+Cuando asignas 3 entregas al mismo día haciendo click repetido, el calendario muestra "1 1 1" separados (o el número no incrementa visualmente) en lugar de acumular "1 → 2 → 3" en el mismo badge.
 
-1. El `CalendarioOcupacion` solo consulta entregas **guardadas en la base de datos**
-2. Las fechas que estás asignando están en **estado local** del wizard (aún no guardadas)
-3. Por eso ves "04 feb" en la lista pero no el indicador visual en el calendario
+**Causa raíz:** El `onDateSelect` usa `entregasProgramadas` del closure (estado anterior), no el estado actualizado después de `setEntregasProgramadas`. Entonces el cálculo de "siguiente sin fecha" se hace con datos obsoletos.
+
+## Flujo Actual (con bug)
+
+```text
+Estado inicial: [#1: --, #2: --, #3: --]
+entregaEnEdicion = 0
+
+Click día 5:
+  → updateFechaEntrega(0, "2026-02-05")  ✓ funciona
+  → entregasProgramadas.findIndex(...) ← USA EL ESTADO VIEJO [#1:--, #2:--, #3:--]
+  → Encuentra #1 (index 0) como "sin fecha" porque React aún no actualizó
+  → setEntregaEnEdicion(0) ← SE QUEDA EN EL MISMO
+
+Resultado: Siempre edita la misma entrega
+```
 
 ## Solución
 
-Agregar una prop `entregasLocales` al componente `CalendarioOcupacion` para que pueda mostrar tanto las entregas de la BD como las que estás programando en ese momento.
-
----
-
-## Flujo Visual Mejorado
-
-```text
-ANTES (problema actual):
-┌─────────────────────────────────────────┐
-│  Calendario                   Lista     │
-│  ┌───────────────────┐   ┌──────────┐  │
-│  │ 3   4   5   6     │   │ #1: 04feb│  │
-│  │         ← sin     │   │ #2: 06feb│  │
-│  │            punto  │   │ #3: --   │  │
-│  └───────────────────┘   └──────────┘  │
-└─────────────────────────────────────────┘
-
-DESPUÉS (solución):
-┌─────────────────────────────────────────┐
-│  Calendario                   Lista     │
-│  ┌───────────────────┐   ┌──────────┐  │
-│  │ 3   4●  5   6●    │   │ #1: 04feb│  │
-│  │     ↑      ↑      │   │ #2: 06feb│  │
-│  │   puntitos        │   │ #3: --   │  │
-│  │   visibles!       │   └──────────┘  │
-│  └───────────────────┘                  │
-│  ● = Tu nueva OC (verde claro)          │
-│  ● = Otras OCs existentes               │
-└─────────────────────────────────────────┘
-```
+Usar una función callback en el `findIndex` que tome en cuenta la actualización que acabamos de hacer, o mover la lógica de auto-avance a un `useEffect` que observe cambios en `entregasProgramadas`.
 
 ---
 
 ## Cambios Técnicos
 
-### 1. Modificar `CalendarioOcupacion.tsx`
+### Modificar `CrearOrdenCompraWizard.tsx`
 
-Agregar prop para recibir entregas locales:
-
-```typescript
-// Nueva interface para entregas locales
-interface EntregaLocal {
-  numero_entrega: number;
-  cantidad_bultos: number;
-  fecha_programada: string;
-}
-
-interface CalendarioOcupacionProps {
-  selectedDate?: Date;
-  onDateSelect: (date: Date) => void;
-  initialMonth?: Date;
-  className?: string;
-  // NUEVO: Entregas que se están programando (no guardadas aún)
-  entregasLocales?: EntregaLocal[];
-  proveedorNombre?: string; // Para mostrar en tooltip
-}
-```
-
-Combinar entregas de BD con entregas locales:
+**Opción A (más limpia): Calcular el siguiente índice excluyendo el actual**
 
 ```typescript
-const ocupacionPorFecha = useMemo(() => {
-  const mapa: Record<string, OcupacionDia> = {};
-  
-  // Entregas de la base de datos
-  for (const entrega of entregasProgramadasDB) {
-    if (!entrega.fecha_programada) continue;
-    const key = entrega.fecha_programada;
-    if (!mapa[key]) {
-      mapa[key] = { count: 0, entregas: [], entregasLocales: 0 };
+onDateSelect={(date) => {
+  if (entregaEnEdicion !== null) {
+    const fechaStr = format(date, "yyyy-MM-dd");
+    updateFechaEntrega(entregaEnEdicion, fechaStr);
+    
+    // Auto-avance: buscar el siguiente SIN fecha, EXCLUYENDO el que acabamos de asignar
+    // Usamos el estado actual pero ignoramos el índice que acabamos de editar
+    const siguienteSinFecha = entregasProgramadas.findIndex(
+      (e, i) => i !== entregaEnEdicion && i > entregaEnEdicion && !e.fecha_programada
+    );
+    
+    if (siguienteSinFecha >= 0) {
+      setEntregaEnEdicion(siguienteSinFecha);
+    } else {
+      // Buscar cualquier otro sin fecha (antes del actual)
+      const cualquierOtroSinFecha = entregasProgramadas.findIndex(
+        (e, i) => i !== entregaEnEdicion && !e.fecha_programada
+      );
+      setEntregaEnEdicion(cualquierOtroSinFecha >= 0 ? cualquierOtroSinFecha : null);
     }
-    mapa[key].count++;
-    mapa[key].entregas.push(entrega);
   }
-  
-  // NUEVO: Agregar entregas locales (la OC que se está creando)
-  for (const entrega of entregasLocales) {
-    if (!entrega.fecha_programada) continue;
-    const key = entrega.fecha_programada;
-    if (!mapa[key]) {
-      mapa[key] = { count: 0, entregas: [], entregasLocales: 0 };
+}}
+```
+
+**Opción B (más robusta): Usar useEffect para el auto-avance**
+
+```typescript
+// Agregar useEffect que observe cambios en entregasProgramadas
+useEffect(() => {
+  // Si hay una entrega en edición que YA tiene fecha, buscar la siguiente sin fecha
+  if (entregaEnEdicion !== null && entregasProgramadas[entregaEnEdicion]?.fecha_programada) {
+    const siguienteSinFecha = entregasProgramadas.findIndex(
+      (e, i) => i > entregaEnEdicion && !e.fecha_programada
+    );
+    
+    if (siguienteSinFecha >= 0) {
+      setEntregaEnEdicion(siguienteSinFecha);
+    } else {
+      const cualquierOtroSinFecha = entregasProgramadas.findIndex(e => !e.fecha_programada);
+      setEntregaEnEdicion(cualquierOtroSinFecha >= 0 ? cualquierOtroSinFecha : null);
     }
-    mapa[key].count++;
-    mapa[key].entregasLocales++;
   }
-  
-  return mapa;
-}, [entregasProgramadasDB, entregasLocales]);
+}, [entregasProgramadas]); // Se ejecuta cuando cambia el estado
+
+// onDateSelect simplificado:
+onDateSelect={(date) => {
+  if (entregaEnEdicion !== null) {
+    updateFechaEntrega(entregaEnEdicion, format(date, "yyyy-MM-dd"));
+    // El useEffect se encarga del auto-avance
+  }
+}}
 ```
 
-Actualizar el badge para diferenciar visualmente:
-
-```typescript
-{/* Badge con indicador de entregas locales */}
-{ocupacion && ocupacion.count > 0 && (
-  <span
-    className={cn(
-      "absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center",
-      // Si incluye entregas locales, usar borde punteado o color diferente
-      ocupacion.entregasLocales > 0 
-        ? "bg-blue-500 ring-2 ring-blue-200" // Tu OC actual
-        : getOccupancyColor(ocupacion.count)
-    )}
-  >
-    {ocupacion.count}
-  </span>
-)}
-```
-
-### 2. Modificar `CrearOrdenCompraWizard.tsx`
-
-Pasar las entregas locales al calendario:
-
-```typescript
-<CalendarioOcupacion
-  selectedDate={...}
-  onDateSelect={(date) => {...}}
-  // NUEVO: Pasar entregas que se están programando
-  entregasLocales={entregasProgramadas}
-  proveedorNombre={proveedorSeleccionado?.nombre}
-/>
-```
-
----
-
-## Diferenciación Visual
-
-| Tipo | Color del Badge | Significado |
-|------|-----------------|-------------|
-| Solo BD (1-2) | Verde | Ocupación baja |
-| Solo BD (3-4) | Ámbar | Ocupación media |
-| Solo BD (5+) | Rojo | Ocupación alta |
-| Incluye tu OC | Azul con ring | Tu programación actual |
-
-El tooltip también mostrará:
-- "Esta OC: 2 entregas"
-- "+ 3 entregas de otras OCs"
-
----
-
-## Archivos a Modificar
-
-| Archivo | Cambio |
-|---------|--------|
-| `src/components/compras/CalendarioOcupacion.tsx` | Agregar prop `entregasLocales`, combinar en ocupación, estilo diferenciado |
-| `src/components/compras/CrearOrdenCompraWizard.tsx` | Pasar `entregasProgramadas` como prop al calendario |
+**Recomiendo Opción B** porque:
+- Separa responsabilidades (asignar vs avanzar)
+- Siempre usa el estado actualizado
+- Más fácil de debuguear
 
 ---
 
 ## Resultado Esperado
 
-1. Creas OC con 3 tráilers
-2. Seleccionas Tráiler 1 → click en 04 Feb → **aparece puntito azul en 04**
-3. Seleccionas Tráiler 2 → click en 06 Feb → **aparece puntito azul en 06**
-4. El calendario muestra en tiempo real las fechas que vas eligiendo
-5. Si ya había entregas de otras OCs ese día, el número suma (ej: "3" = 2 existentes + 1 tuya)
+```text
+Estado inicial: [#1: --, #2: --, #3: --]
+entregaEnEdicion = 0
+
+Click día 5:
+  → #1 = "2026-02-05"
+  → useEffect detecta que #1 ya tiene fecha
+  → Avanza a #2 (entregaEnEdicion = 1)
+  → Calendario muestra "1" en día 5
+
+Click día 5 otra vez:
+  → #2 = "2026-02-05"
+  → useEffect detecta que #2 ya tiene fecha
+  → Avanza a #3 (entregaEnEdicion = 2)
+  → Calendario muestra "2" en día 5
+
+Click día 5 otra vez:
+  → #3 = "2026-02-05"
+  → useEffect detecta que #3 ya tiene fecha
+  → No hay más sin fecha, entregaEnEdicion = null
+  → Calendario muestra "3" en día 5 ✓
+```
+
+---
+
+## Archivo a Modificar
+
+| Archivo | Cambio |
+|---------|--------|
+| `src/components/compras/CrearOrdenCompraWizard.tsx` | Agregar `useEffect` para auto-avance y simplificar `onDateSelect` |
 
