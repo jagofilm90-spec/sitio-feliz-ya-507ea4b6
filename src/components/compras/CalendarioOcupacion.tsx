@@ -27,9 +27,17 @@ interface EntregaOcupacion {
   };
 }
 
+// Interface for local deliveries being scheduled (not yet saved)
+interface EntregaLocal {
+  numero_entrega: number;
+  cantidad_bultos: number;
+  fecha_programada: string;
+}
+
 interface OcupacionDia {
   count: number;
   entregas: EntregaOcupacion[];
+  entregasLocales: number; // Count of local deliveries on this day
 }
 
 interface CalendarioOcupacionProps {
@@ -37,6 +45,9 @@ interface CalendarioOcupacionProps {
   onDateSelect: (date: Date) => void;
   initialMonth?: Date;
   className?: string;
+  // NEW: Local deliveries being scheduled (not yet saved to DB)
+  entregasLocales?: EntregaLocal[];
+  proveedorNombre?: string; // For tooltip display
 }
 
 export function CalendarioOcupacion({
@@ -44,11 +55,13 @@ export function CalendarioOcupacion({
   onDateSelect,
   initialMonth,
   className,
+  entregasLocales = [],
+  proveedorNombre,
 }: CalendarioOcupacionProps) {
   const [currentMonth, setCurrentMonth] = useState(initialMonth || new Date());
   
   // Fetch scheduled deliveries from the database
-  const { data: entregasProgramadas = [], isLoading } = useQuery({
+  const { data: entregasProgramadasDB = [], isLoading } = useQuery({
     queryKey: ["entregas-ocupacion-calendario", format(currentMonth, "yyyy-MM")],
     queryFn: async () => {
       const monthStart = startOfMonth(subMonths(currentMonth, 1));
@@ -79,23 +92,36 @@ export function CalendarioOcupacion({
     staleTime: 10000,
   });
   
-  // Group by date for occupancy display
+  // Group by date for occupancy display (combining DB + local deliveries)
   const ocupacionPorFecha = useMemo(() => {
     const mapa: Record<string, OcupacionDia> = {};
     
-    for (const entrega of entregasProgramadas) {
+    // Deliveries from database
+    for (const entrega of entregasProgramadasDB) {
       if (!entrega.fecha_programada) continue;
       
       const key = entrega.fecha_programada;
       if (!mapa[key]) {
-        mapa[key] = { count: 0, entregas: [] };
+        mapa[key] = { count: 0, entregas: [], entregasLocales: 0 };
       }
       mapa[key].count++;
       mapa[key].entregas.push(entrega);
     }
     
+    // Add local deliveries (the OC being created)
+    for (const entrega of entregasLocales) {
+      if (!entrega.fecha_programada) continue;
+      
+      const key = entrega.fecha_programada;
+      if (!mapa[key]) {
+        mapa[key] = { count: 0, entregas: [], entregasLocales: 0 };
+      }
+      mapa[key].count++;
+      mapa[key].entregasLocales++;
+    }
+    
     return mapa;
-  }, [entregasProgramadas]);
+  }, [entregasProgramadasDB, entregasLocales]);
   
   // Generate calendar days
   const calendarDays = useMemo(() => {
@@ -185,12 +211,14 @@ export function CalendarioOcupacion({
               >
                 <span>{format(day, "d")}</span>
                 
-                {/* Occupancy badge */}
+                {/* Occupancy badge - blue for local deliveries, colored by occupancy for DB only */}
                 {ocupacion && ocupacion.count > 0 && (
                   <span
                     className={cn(
                       "absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center",
-                      getOccupancyColor(ocupacion.count),
+                      ocupacion.entregasLocales > 0 
+                        ? "bg-primary ring-2 ring-primary/30" // Your current OC
+                        : getOccupancyColor(ocupacion.count),
                       isSelected && "ring-2 ring-background"
                     )}
                   >
@@ -213,19 +241,34 @@ export function CalendarioOcupacion({
                         <Truck className="h-3 w-3" />
                         {ocupacion.count} entrega{ocupacion.count !== 1 ? "s" : ""} programada{ocupacion.count !== 1 ? "s" : ""}
                       </p>
-                      <div className="text-xs space-y-0.5 max-h-32 overflow-y-auto">
-                        {ocupacion.entregas.slice(0, 5).map((e) => (
-                          <div key={e.id} className="text-muted-foreground">
-                            • {e.ordenes_compra?.proveedores?.nombre || "Sin proveedor"} 
-                            <span className="opacity-70"> ({e.ordenes_compra?.folio})</span>
-                          </div>
-                        ))}
-                        {ocupacion.entregas.length > 5 && (
-                          <div className="text-muted-foreground italic">
-                            +{ocupacion.entregas.length - 5} más...
-                          </div>
-                        )}
-                      </div>
+                      
+                      {/* Show local deliveries (current OC) */}
+                      {ocupacion.entregasLocales > 0 && (
+                        <div className="text-xs text-primary font-medium">
+                          Esta OC: {ocupacion.entregasLocales} entrega{ocupacion.entregasLocales !== 1 ? "s" : ""}
+                          {proveedorNombre && ` (${proveedorNombre})`}
+                        </div>
+                      )}
+                      
+                      {/* Show DB deliveries */}
+                      {ocupacion.entregas.length > 0 && (
+                        <div className="text-xs space-y-0.5 max-h-32 overflow-y-auto">
+                          {ocupacion.entregasLocales > 0 && ocupacion.entregas.length > 0 && (
+                            <div className="text-muted-foreground text-[10px] mt-1">Otras OCs:</div>
+                          )}
+                          {ocupacion.entregas.slice(0, 5).map((e) => (
+                            <div key={e.id} className="text-muted-foreground">
+                              • {e.ordenes_compra?.proveedores?.nombre || "Sin proveedor"} 
+                              <span className="opacity-70"> ({e.ordenes_compra?.folio})</span>
+                            </div>
+                          ))}
+                          {ocupacion.entregas.length > 5 && (
+                            <div className="text-muted-foreground italic">
+                              +{ocupacion.entregas.length - 5} más...
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </TooltipContent>
                 </Tooltip>

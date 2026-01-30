@@ -2471,6 +2471,8 @@ const CrearOrdenCompraWizard = ({
                                 }
                               }
                             }}
+                            entregasLocales={entregasProgramadas}
+                            proveedorNombre={tipoProveedor === 'catalogo' ? proveedores.find(p => p.id === proveedorId)?.nombre : proveedorNombreManual}
                           />
                         </div>
                         
