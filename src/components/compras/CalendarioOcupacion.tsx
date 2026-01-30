@@ -37,7 +37,7 @@ interface EntregaLocal {
 interface OcupacionDia {
   count: number;
   entregas: EntregaOcupacion[];
-  entregasLocales: number; // Count of local deliveries on this day
+  entregasLocalesNumeros: number[]; // Delivery numbers (1, 2, 3) on this day
 }
 
 interface CalendarioOcupacionProps {
@@ -92,6 +92,28 @@ export function CalendarioOcupacion({
     staleTime: 10000,
   });
   
+  // Helper to format local delivery numbers for badge display
+  const formatLocalNumbers = (nums: number[]): string => {
+    if (nums.length === 0) return "";
+    if (nums.length === 1) return nums[0].toString();
+    
+    const sorted = [...nums].sort((a, b) => a - b);
+    
+    // Check if consecutive
+    const isConsecutive = sorted.every((n, i) => i === 0 || n === sorted[i - 1] + 1);
+    
+    if (isConsecutive && sorted.length > 2) {
+      return `${sorted[0]}-${sorted[sorted.length - 1]}`;
+    }
+    
+    // If too many, show range
+    if (sorted.length > 3) {
+      return `${sorted[0]}-${sorted[sorted.length - 1]}`;
+    }
+    
+    return sorted.join(",");
+  };
+
   // Group by date for occupancy display (combining DB + local deliveries)
   const ocupacionPorFecha = useMemo(() => {
     const mapa: Record<string, OcupacionDia> = {};
@@ -102,22 +124,22 @@ export function CalendarioOcupacion({
       
       const key = entrega.fecha_programada;
       if (!mapa[key]) {
-        mapa[key] = { count: 0, entregas: [], entregasLocales: 0 };
+        mapa[key] = { count: 0, entregas: [], entregasLocalesNumeros: [] };
       }
       mapa[key].count++;
       mapa[key].entregas.push(entrega);
     }
     
-    // Add local deliveries (the OC being created)
+    // Add local deliveries (the OC being created) - store delivery numbers
     for (const entrega of entregasLocales) {
       if (!entrega.fecha_programada) continue;
       
       const key = entrega.fecha_programada;
       if (!mapa[key]) {
-        mapa[key] = { count: 0, entregas: [], entregasLocales: 0 };
+        mapa[key] = { count: 0, entregas: [], entregasLocalesNumeros: [] };
       }
       mapa[key].count++;
-      mapa[key].entregasLocales++;
+      mapa[key].entregasLocalesNumeros.push(entrega.numero_entrega);
     }
     
     return mapa;
@@ -211,18 +233,20 @@ export function CalendarioOcupacion({
               >
                 <span>{format(day, "d")}</span>
                 
-                {/* Occupancy badge - blue for local deliveries, colored by occupancy for DB only */}
+                {/* Occupancy badge - shows delivery numbers for local, count for DB only */}
                 {ocupacion && ocupacion.count > 0 && (
                   <span
                     className={cn(
                       "absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center",
-                      ocupacion.entregasLocales > 0 
+                      ocupacion.entregasLocalesNumeros.length > 0 
                         ? "bg-primary ring-2 ring-primary/30" // Your current OC
                         : getOccupancyColor(ocupacion.count),
                       isSelected && "ring-2 ring-background"
                     )}
                   >
-                    {ocupacion.count}
+                    {ocupacion.entregasLocalesNumeros.length > 0
+                      ? formatLocalNumbers(ocupacion.entregasLocalesNumeros)
+                      : ocupacion.count}
                   </span>
                 )}
               </button>
@@ -239,13 +263,13 @@ export function CalendarioOcupacion({
                     <div className="space-y-1">
                       <p className="font-semibold flex items-center gap-1">
                         <Truck className="h-3 w-3" />
-                        {ocupacion.count} entrega{ocupacion.count !== 1 ? "s" : ""} programada{ocupacion.count !== 1 ? "s" : ""}
+                        Ocupación total: {ocupacion.count} entrega{ocupacion.count !== 1 ? "s" : ""}
                       </p>
                       
-                      {/* Show local deliveries (current OC) */}
-                      {ocupacion.entregasLocales > 0 && (
+                      {/* Show local deliveries (current OC) with specific numbers */}
+                      {ocupacion.entregasLocalesNumeros.length > 0 && (
                         <div className="text-xs text-primary font-medium">
-                          Esta OC: {ocupacion.entregasLocales} entrega{ocupacion.entregasLocales !== 1 ? "s" : ""}
+                          Esta OC: #{ocupacion.entregasLocalesNumeros.sort((a, b) => a - b).join(", #")}
                           {proveedorNombre && ` (${proveedorNombre})`}
                         </div>
                       )}
@@ -253,7 +277,7 @@ export function CalendarioOcupacion({
                       {/* Show DB deliveries */}
                       {ocupacion.entregas.length > 0 && (
                         <div className="text-xs space-y-0.5 max-h-32 overflow-y-auto">
-                          {ocupacion.entregasLocales > 0 && ocupacion.entregas.length > 0 && (
+                          {ocupacion.entregasLocalesNumeros.length > 0 && ocupacion.entregas.length > 0 && (
                             <div className="text-muted-foreground text-[10px] mt-1">Otras OCs:</div>
                           )}
                           {ocupacion.entregas.slice(0, 5).map((e) => (
