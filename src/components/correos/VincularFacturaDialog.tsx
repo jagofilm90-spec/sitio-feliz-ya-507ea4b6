@@ -65,6 +65,27 @@ interface CFDIData {
     valorUnitario: number;
     importe: number;
   }>;
+  // Observaciones y número de talón para vinculación automática
+  observaciones?: string;
+  numeroTalonExtraido?: string;
+}
+
+interface EntregaPorTalon {
+  id: string;
+  numero_talon: string;
+  fecha_entrega_real: string;
+  orden_compra: {
+    id: string;
+    folio: string;
+    total: number;
+    total_ajustado?: number;
+    status: string;
+    proveedor_id: string;
+    proveedores?: {
+      nombre: string;
+      rfc?: string;
+    };
+  };
 }
 
 interface OrdenCompra {
@@ -283,6 +304,43 @@ export default function VincularFacturaDialog({
     enabled: open && !!cfdiData?.uuid,
   });
 
+  // Search for entrega by numero_talon if extracted from CFDI
+  const { data: entregaPorTalon, isLoading: loadingTalon } = useQuery({
+    queryKey: ["entrega-por-talon", cfdiData?.numeroTalonExtraido],
+    queryFn: async (): Promise<EntregaPorTalon | null> => {
+      if (!cfdiData?.numeroTalonExtraido) return null;
+      
+      const { data, error } = await supabase
+        .from("ordenes_compra_entregas")
+        .select(`
+          id, numero_talon, fecha_entrega_real,
+          ordenes_compra:orden_compra_id (
+            id, folio, total, total_ajustado, status, proveedor_id,
+            proveedores (nombre, rfc)
+          )
+        `)
+        .eq("numero_talon", cfdiData.numeroTalonExtraido)
+        .eq("status", "recibida")
+        .limit(1);
+      
+      if (error) {
+        console.error("Error searching by talon:", error);
+        return null;
+      }
+      
+      if (!data || data.length === 0) return null;
+      
+      const row = data[0] as any;
+      return {
+        id: row.id,
+        numero_talon: row.numero_talon,
+        fecha_entrega_real: row.fecha_entrega_real,
+        orden_compra: row.ordenes_compra,
+      };
+    },
+    enabled: open && !!cfdiData?.numeroTalonExtraido,
+  });
+
   // Find best matching OC by amount
   const suggestedOC = ordenesCompra?.find(oc => {
     if (!cfdiData?.total) return false;
@@ -291,12 +349,14 @@ export default function VincularFacturaDialog({
     return diff < 100 || diff / ocTotal < 0.02; // $100 tolerance or 2%
   });
 
-  // Auto-select suggested OC
+  // Auto-select OC: prioritize talon match, then amount match
   useEffect(() => {
-    if (suggestedOC && !selectedOC) {
+    if (entregaPorTalon?.orden_compra?.id && !selectedOC) {
+      setSelectedOC(entregaPorTalon.orden_compra.id);
+    } else if (suggestedOC && !selectedOC) {
       setSelectedOC(suggestedOC.id);
     }
-  }, [suggestedOC, selectedOC]);
+  }, [entregaPorTalon, suggestedOC, selectedOC]);
 
   // Mutation to link factura
   const vincularMutation = useMutation({
@@ -491,6 +551,33 @@ export default function VincularFacturaDialog({
                   Esta factura (UUID: {cfdiData?.uuid?.substring(0, 8)}...) ya está registrada
                   como <strong>{existingFactura.numero_factura}</strong> vinculada a la OC{" "}
                   <strong>{(existingFactura as any).ordenes_compra?.folio}</strong>.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Match por Número de Talón */}
+            {cfdiData?.numeroTalonExtraido && entregaPorTalon && (
+              <Alert className="border-green-500 bg-green-50 dark:bg-green-950/30">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800 dark:text-green-300">
+                  <strong>Match por Número de Talón:</strong> La factura menciona talón "{cfdiData.numeroTalonExtraido}" 
+                  que coincide con la recepción de <strong>{entregaPorTalon.orden_compra.folio}</strong>
+                  {entregaPorTalon.fecha_entrega_real && (
+                    <span className="ml-1">
+                      (recibida el {format(parseISO(entregaPorTalon.fecha_entrega_real), "dd/MM/yyyy", { locale: es })})
+                    </span>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Talón no encontrado warning */}
+            {cfdiData?.numeroTalonExtraido && !entregaPorTalon && !loadingTalon && (
+              <Alert variant="default" className="border-amber-400 bg-amber-50 dark:bg-amber-950/30">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800 dark:text-amber-300">
+                  Se detectó número de talón "{cfdiData.numeroTalonExtraido}" pero no se encontró 
+                  ninguna recepción con ese número. Selecciona la OC manualmente.
                 </AlertDescription>
               </Alert>
             )}

@@ -235,6 +235,7 @@ export const AlmacenRecepcionSheet = ({
   
   // Nuevos campos: remisión proveedor, foto caja vacía, firmas conformidad
   const [numeroRemisionProveedor, setNumeroRemisionProveedor] = useState("");
+  const [numeroTalon, setNumeroTalon] = useState("");
   const [fotoRemisionProveedor, setFotoRemisionProveedor] = useState<{ file: File; preview: string } | null>(null);
   const [fotoCajaVacia, setFotoCajaVacia] = useState<{ file: File; preview: string } | null>(null);
   const [showFirmaChoferConformidadDialog, setShowFirmaChoferConformidadDialog] = useState(false);
@@ -1049,6 +1050,7 @@ export const AlmacenRecepcionSheet = ({
         trabajando_desde: null,
         // Nuevos campos
         numero_remision_proveedor: numeroRemisionProveedor.trim(),
+        numero_talon: numeroTalon.trim() || null, // Para vincular con factura CFDI
         firma_chofer_conformidad: firmaConformidadChofer,
         firma_chofer_conformidad_fecha: firmaConformidadChofer ? new Date().toISOString() : null,
         firma_almacenista: firmaConformidadAlmacenista,
@@ -2388,17 +2390,31 @@ export const AlmacenRecepcionSheet = ({
                     Documento del Proveedor
                   </h3>
                   
-                  <div className="space-y-2">
-                    <Label>Número de remisión *</Label>
-                    <Input
-                      value={numeroRemisionProveedor}
-                      onChange={(e) => setNumeroRemisionProveedor(e.target.value)}
-                      placeholder="Ej: REM-12345"
-                      className={cn(!numeroRemisionProveedor && "border-destructive")}
-                    />
-                    {!numeroRemisionProveedor && (
-                      <span className="text-xs text-destructive">* Campo obligatorio</span>
-                    )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>Número de remisión *</Label>
+                      <Input
+                        value={numeroRemisionProveedor}
+                        onChange={(e) => setNumeroRemisionProveedor(e.target.value)}
+                        placeholder="Ej: REM-12345"
+                        className={cn(!numeroRemisionProveedor && "border-destructive")}
+                      />
+                      {!numeroRemisionProveedor && (
+                        <span className="text-xs text-destructive">* Campo obligatorio</span>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Número de talón</Label>
+                      <Input
+                        value={numeroTalon}
+                        onChange={(e) => setNumeroTalon(e.target.value)}
+                        placeholder="Ej: 19094"
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        Coincide con Observaciones en la factura
+                      </span>
+                    </div>
                   </div>
                   
                   <div className="space-y-2">
