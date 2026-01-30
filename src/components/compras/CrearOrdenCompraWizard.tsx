@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { COMPANY_DATA } from "@/constants/companyData";
 import { formatDireccionFiscal } from "@/lib/proveedorUtils";
 import { getRegimenDescripcion } from "@/constants/catalogoSAT";
+import { CalendarioOcupacion } from "./CalendarioOcupacion";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -254,6 +256,7 @@ const CrearOrdenCompraWizard = ({
   const [fechaEntregaUnica, setFechaEntregaUnica] = useState("");
   const [bultosPorEntrega, setBultosPorEntrega] = useState("");
   const [entregasProgramadas, setEntregasProgramadas] = useState<EntregaProgramada[]>([]);
+  const [entregaEnEdicion, setEntregaEnEdicion] = useState<number | null>(null);
   
   // Folio (auto-generated)
   const [folio, setFolio] = useState("");
@@ -2410,6 +2413,7 @@ const CrearOrdenCompraWizard = ({
               {/* Múltiples entregas */}
               {tipoEntrega === 'multiple' && (
                 <div className="p-4 border rounded-lg space-y-4">
+                  {/* Bultos por entrega calculator */}
                   <div className="grid grid-cols-3 gap-4 items-end">
                     <div>
                       <Label>Total bultos</Label>
@@ -2424,47 +2428,126 @@ const CrearOrdenCompraWizard = ({
                         placeholder="Ej: 1200"
                       />
                     </div>
-                    <Button type="button" variant="secondary" onClick={calcularEntregas}>
+                    <Button type="button" variant="secondary" onClick={() => {
+                      calcularEntregas();
+                      // Auto-select first delivery for assignment
+                      setEntregaEnEdicion(0);
+                    }}>
                       Calcular
                     </Button>
                   </div>
 
                   {entregasProgramadas.length > 0 && (
                     <>
-                      <div className="border rounded-lg overflow-hidden">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-16">#</TableHead>
-                              <TableHead>Bultos</TableHead>
-                              <TableHead>Fecha</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {entregasProgramadas.map((entrega, index) => (
-                              <TableRow key={index}>
-                                <TableCell>
-                                  <Badge variant="outline">{entrega.numero_entrega}</Badge>
-                                </TableCell>
-                                <TableCell>
+                      {/* Two-column layout: Calendar + Delivery list */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {/* Left column: Occupancy calendar */}
+                        <div>
+                          <Label className="text-sm text-muted-foreground mb-2 block">
+                            Haz click en un día para asignar la entrega seleccionada:
+                          </Label>
+                          <CalendarioOcupacion
+                            selectedDate={
+                              entregaEnEdicion !== null && entregasProgramadas[entregaEnEdicion]?.fecha_programada
+                                ? parseISO(entregasProgramadas[entregaEnEdicion].fecha_programada)
+                                : undefined
+                            }
+                            onDateSelect={(date) => {
+                              if (entregaEnEdicion !== null) {
+                                updateFechaEntrega(entregaEnEdicion, format(date, "yyyy-MM-dd"));
+                                
+                                // Auto-advance to next delivery without a date
+                                const siguienteSinFecha = entregasProgramadas.findIndex(
+                                  (e, i) => i > entregaEnEdicion && !e.fecha_programada
+                                );
+                                if (siguienteSinFecha >= 0) {
+                                  setEntregaEnEdicion(siguienteSinFecha);
+                                } else {
+                                  // Check if there's any without date before current
+                                  const anteriorSinFecha = entregasProgramadas.findIndex(
+                                    (e) => !e.fecha_programada
+                                  );
+                                  setEntregaEnEdicion(anteriorSinFecha >= 0 ? anteriorSinFecha : null);
+                                }
+                              }
+                            }}
+                          />
+                        </div>
+                        
+                        {/* Right column: Delivery list */}
+                        <div className="space-y-2">
+                          <Label className="text-sm text-muted-foreground block">
+                            Selecciona una entrega y asígnale fecha:
+                          </Label>
+                          {entregasProgramadas.map((entrega, index) => (
+                            <div 
+                              key={index}
+                              onClick={() => setEntregaEnEdicion(index)}
+                              className={cn(
+                                "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all",
+                                entregaEnEdicion === index 
+                                  ? "border-primary bg-primary/10 ring-2 ring-primary/20" 
+                                  : "border-border hover:border-muted-foreground/50",
+                                entrega.fecha_programada 
+                                  ? "bg-green-50 dark:bg-green-950/20" 
+                                  : "bg-amber-50 dark:bg-amber-950/20"
+                              )}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Badge variant="outline" className="font-mono">
+                                  #{entrega.numero_entrega}
+                                </Badge>
+                                <div className="flex items-center gap-1">
                                   <Input
                                     type="number"
                                     value={entrega.cantidad_bultos}
-                                    onChange={(e) => updateCantidadEntrega(index, parseInt(e.target.value) || 0)}
-                                    className="w-24"
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      updateCantidadEntrega(index, parseInt(e.target.value) || 0);
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-20 h-8 text-sm"
                                   />
-                                </TableCell>
-                                <TableCell>
-                                  <Input
-                                    type="date"
-                                    value={entrega.fecha_programada}
-                                    onChange={(e) => updateFechaEntrega(index, e.target.value)}
-                                  />
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+                                  <span className="text-sm text-muted-foreground">bultos</span>
+                                </div>
+                              </div>
+                              {entrega.fecha_programada ? (
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-green-700 dark:text-green-400">
+                                    {format(parseISO(entrega.fecha_programada), "dd MMM", { locale: es })}
+                                  </span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateFechaEntrega(index, "");
+                                      setEntregaEnEdicion(index);
+                                    }}
+                                  >
+                                    ×
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                                  Sin fecha
+                                </Badge>
+                              )}
+                            </div>
+                          ))}
+                          
+                          {/* Pending deliveries warning */}
+                          {entregasProgramadas.filter(e => !e.fecha_programada).length > 0 && (
+                            <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800">
+                              <AlertDescription className="text-amber-700 dark:text-amber-300 text-sm">
+                                {entregasProgramadas.filter(e => !e.fecha_programada).length} entrega(s) 
+                                quedarán pendientes de programar
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                        </div>
                       </div>
 
                       {/* Validation message */}
