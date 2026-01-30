@@ -34,9 +34,11 @@ import {
   FileSpreadsheet,
   ShoppingCart,
   AlertTriangle,
+  Receipt,
 } from "lucide-react";
 import CrearCotizacionDialog from "@/components/cotizaciones/CrearCotizacionDialog";
 import ProcesarPedidoDialog from "./ProcesarPedidoDialog";
+import VincularFacturaDialog from "./VincularFacturaDialog";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -104,7 +106,19 @@ const EmailDetailView = ({
   const [forwardOpen, setForwardOpen] = useState(false);
   const [cotizacionOpen, setCotizacionOpen] = useState(false);
   const [procesarPedidoOpen, setProcesarPedidoOpen] = useState(false);
+  const [vincularFacturaOpen, setVincularFacturaOpen] = useState(false);
   const [downloadingAttachment, setDownloadingAttachment] = useState<string | null>(null);
+
+  // Check if this is the CFD account (for invoice linking)
+  const esCuentaCFD = cuentaEmail?.toLowerCase().includes("cfd@") || 
+                       cuentaEmail?.toLowerCase().includes("cfdi@") ||
+                       cuentaEmail?.toLowerCase().includes("facturas@");
+  
+  // Check if email has XML/PDF attachments (potential invoices)
+  const tieneAdjuntosFactura = email.attachments?.some(att => 
+    att.filename.toLowerCase().endsWith(".xml") || 
+    att.filename.toLowerCase().endsWith(".pdf")
+  );
 
   // Verificar si el correo tiene un pedido acumulativo activo (borrador)
   const { data: acumulativoActivo, refetch: refetchAcumulativo } = useQuery({
@@ -137,7 +151,7 @@ const EmailDetailView = ({
 
   // Keyboard navigation with arrow keys
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (replyOpen || replyAllOpen || forwardOpen || procesarPedidoOpen) return; // Don't navigate when dialogs are open
+    if (replyOpen || replyAllOpen || forwardOpen || procesarPedidoOpen || vincularFacturaOpen) return; // Don't navigate when dialogs are open
     
     if (e.key === "ArrowRight" && hasNext && onNavigateNext) {
       e.preventDefault();
@@ -146,7 +160,7 @@ const EmailDetailView = ({
       e.preventDefault();
       onNavigatePrev();
     }
-  }, [hasNext, hasPrev, onNavigateNext, onNavigatePrev, replyOpen, replyAllOpen, forwardOpen, procesarPedidoOpen]);
+  }, [hasNext, hasPrev, onNavigateNext, onNavigatePrev, replyOpen, replyAllOpen, forwardOpen, procesarPedidoOpen, vincularFacturaOpen]);
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
@@ -358,6 +372,17 @@ const EmailDetailView = ({
                   <FileSpreadsheet className="h-4 w-4 mr-2" />
                   Crear Cotización
                 </Button>
+                {esCuentaCFD && tieneAdjuntosFactura && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setVincularFacturaOpen(true)}
+                    className="border-amber-500 text-amber-700 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-950"
+                  >
+                    <Receipt className="h-4 w-4 mr-2" />
+                    Vincular Factura
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={() => setReplyOpen(true)}>
                   <Reply className="h-4 w-4 mr-2" />
                   Responder
@@ -576,6 +601,18 @@ const EmailDetailView = ({
         emailFrom={email.from}
         emailId={email.id}
         emailAttachments={email.attachments}
+        cuentaEmail={cuentaEmail}
+        onSuccess={onBack}
+      />
+
+      {/* Vincular Factura dialog */}
+      <VincularFacturaDialog
+        open={vincularFacturaOpen}
+        onOpenChange={setVincularFacturaOpen}
+        emailId={email.id}
+        emailSubject={email.subject}
+        emailFrom={email.from}
+        attachments={email.attachments}
         cuentaEmail={cuentaEmail}
         onSuccess={onBack}
       />

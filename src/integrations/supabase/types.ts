@@ -4415,6 +4415,7 @@ export type Database = {
           status_pago: string
           tipo_pago: string
           updated_at: string
+          uuid: string | null
         }
         Insert: {
           archivo_url?: string | null
@@ -4435,6 +4436,7 @@ export type Database = {
           status_pago?: string
           tipo_pago?: string
           updated_at?: string
+          uuid?: string | null
         }
         Update: {
           archivo_url?: string | null
@@ -4455,6 +4457,7 @@ export type Database = {
           status_pago?: string
           tipo_pago?: string
           updated_at?: string
+          uuid?: string | null
         }
         Relationships: [
           {
