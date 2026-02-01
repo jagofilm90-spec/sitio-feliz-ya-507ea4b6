@@ -1,113 +1,77 @@
 
 
-# Plan: Optimización de Vista Móvil para ALMASA ERP
+# Implementación: Optimización Móvil para ALMASA ERP
 
-## Contexto
-Tu app está funcionando en iOS, pero la experiencia móvil necesita optimización. Actualmente las tablas usan scroll horizontal que es incómodo en pantallas pequeñas.
+## Resumen
+Voy a implementar vistas optimizadas para móvil que reemplazan las tablas con scroll horizontal por cards apiladas verticalmente. El cambio detecta automáticamente si estás en celular usando `useIsMobile()`.
 
-## Enfoque
-Crear una **experiencia móvil enfocada en consumo de información** - ideal para cuando estás en reuniones y necesitas:
-- Recibir y actuar sobre notificaciones de autorización
-- Ver correos (✅ ya está optimizado)
-- Consultar lista de precios (✅ ya está optimizado)  
-- Ver inventario rápidamente
-- Aprobar/rechazar pedidos de vendedores
+## Archivos a Crear
 
-## Cambios Propuestos
+### 1. `PedidoCardMobile.tsx`
+Card compacta para mostrar pedidos sin scroll horizontal:
+- Folio destacado con ícono de estado
+- Nombre del cliente y sucursal
+- Productos y peso en una línea
+- Total prominente
+- Botón de acción (Revisar/Ver detalle)
 
-### 1. Nueva Vista "Pedidos por Autorizar" Optimizada para Móvil
-Actualmente la tabla de autorización tiene 8 columnas que requieren scroll. Se creará una vista de **cards apiladas** para móvil:
+### 2. `AutorizacionRapidaSheet.tsx`  
+Panel deslizable (Sheet) optimizado para autorizar pedidos desde el celular:
+- Resumen del cliente y pedido
+- Lista de productos con precios
+- Botones grandes de **Autorizar** y **Rechazar**
+- Navegación al siguiente pedido pendiente
 
-```
-┌─────────────────────────────────┐
-│ 🔶 PED-2024-0412                │
-│ Cliente: Lecaroz Sucursal Norte │
-│ 📦 12 productos • 2,450 kg      │
-│ 💰 $45,200.00                   │
-│ ──────────────────────────────  │
-│ [Revisar Precios]               │
-└─────────────────────────────────┘
-```
+### 3. `InventarioItemMobile.tsx`
+Componente para mostrar un producto en la lista de inventario:
+- Nombre del producto
+- Stock actual vs mínimo
+- Indicador visual (✅ OK / ⚠️ Bajo)
 
-### 2. Panel de Autorización Rápida
-Diálogo optimizado para móvil donde puedas:
-- Ver resumen del pedido (productos principales)
-- Ajustar precios si es necesario
-- **Autorizar** o **Rechazar** con un solo toque
-- Navegar al siguiente pedido pendiente
+## Archivos a Modificar
 
-### 3. Vista de Inventario Móvil
-Cambiar de tabla a lista vertical simple:
-
-```
-┌─────────────────────────────────┐
-│ AZUCAR ESTANDAR 50kg            │
-│ Stock: 245 | Mínimo: 100     ✅ │
-├─────────────────────────────────┤
-│ LINAZA DORADA 10kg              │
-│ Stock: 12 | Mínimo: 50       ⚠️ │
-└─────────────────────────────────┘
-```
-
-### 4. Vista de Pedidos Recientes Móvil
-Cards compactas mostrando:
-- Folio + Cliente
-- Status (badge colorido)
-- Total
-- Acción rápida (ver detalle)
-
-### 5. Centro de Notificaciones Mejorado
-Hacer que las notificaciones de autorización sean más prominentes y permitan actuar directamente desde la notificación.
-
----
-
-## Implementación Técnica
-
-### Archivos a Modificar
-
-| Archivo | Cambio |
-|---------|--------|
-| `src/components/pedidos/PedidosPorAutorizarTab.tsx` | Agregar vista de cards para `isMobile` |
-| `src/components/secretaria/SecretariaPedidosTab.tsx` | Agregar vista de cards para móvil |
-| `src/components/secretaria/SecretariaInventarioTab.tsx` | Agregar vista de lista vertical para móvil |
-| `src/hooks/use-mobile.tsx` | Ya existe - se reutilizará |
-
-### Nuevos Componentes a Crear
-
-| Componente | Propósito |
-|------------|-----------|
-| `PedidoCardMobile.tsx` | Card compacta para lista de pedidos |
-| `AutorizacionRapidaSheet.tsx` | Sheet de autorización optimizado para móvil |
-| `InventarioItemMobile.tsx` | Row de inventario para vista móvil |
-
-### Patrón de Implementación
-Cada componente usará el patrón ya establecido en `EmailListView.tsx`:
-
-```typescript
+### 4. `PedidosPorAutorizarTab.tsx`
+Agregar detección móvil y renderizar cards en lugar de tabla:
+```tsx
 const isMobile = useIsMobile();
 
 if (isMobile) {
-  return <VistaMobilOptimizada />;
+  return <VistaMobileCards pedidos={pedidos} />;
 }
-
-// Vista desktop existente (sin cambios)
-return <TablaActual />;
+// Tabla desktop sin cambios
 ```
 
----
+### 5. `SecretariaPedidosTab.tsx`
+Mismo patrón - cards para móvil, tabla para desktop
 
-## Beneficios
+### 6. `SecretariaInventarioTab.tsx`
+Lista vertical simple en móvil con indicadores de stock
 
-1. **Sin scroll horizontal** en las vistas principales
-2. **Acciones rápidas** - autorizar/rechazar desde el celular
-3. **Información priorizada** - solo lo esencial en móvil
-4. **Consistencia visual** - mismo patrón que Correos y Precios
-5. **Navegación fluida** - mantiene la navegación inferior existente
+## Estructura Visual Móvil
+
+```
+┌─────────────────────────────────┐
+│ 🔶 PED-2024-0412               │
+│ ─────────────────────────────  │
+│ Cliente: Lecaroz Sucursal Norte│
+│ 📦 12 productos • 2,450 kg     │
+│ ─────────────────────────────  │
+│ 💰 $45,200.00                  │
+│                                │
+│ [    Revisar Precios    ]      │
+└─────────────────────────────────┘
+```
 
 ## Lo Que NO Cambia
+- Vistas de desktop/tablet permanecen exactamente igual
+- Toda la lógica de negocio (autorización, rechazo, etc.)
+- Sistema de notificaciones push
+- Módulos ya optimizados (Correos, Lista de Precios)
 
-- Vistas de desktop/tablet permanecen igual
-- Funcionalidades completas siguen disponibles
-- Correos y Lista de Precios (ya optimizados) no se tocan
-- Sistema de notificaciones push sigue funcionando
+## Beneficios
+✅ Sin scroll horizontal en móvil  
+✅ Información priorizada y legible  
+✅ Acciones rápidas con un solo toque  
+✅ Consistente con el diseño de Correos  
+✅ Detección automática de dispositivo
 
