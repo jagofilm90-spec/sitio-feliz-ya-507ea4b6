@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Search,
   Loader2,
@@ -38,6 +39,7 @@ import { es } from "date-fns/locale";
 import { formatCurrency } from "@/lib/utils";
 import PedidoDetalleDialog from "@/components/pedidos/PedidoDetalleDialog";
 import { useNavigate } from "react-router-dom";
+import { PedidoCardMobileSecretaria } from "./PedidoCardMobileSecretaria";
 
 interface Pedido {
   id: string;
@@ -83,6 +85,7 @@ export const SecretariaPedidosTab = () => {
   const [showDetalle, setShowDetalle] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   // Fetch recent orders (last 7 days + all pending)
   const { data: pedidos, isLoading } = useQuery({
@@ -173,6 +176,92 @@ export const SecretariaPedidosTab = () => {
     );
   }
 
+  // Mobile view
+  if (isMobile) {
+    return (
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-semibold">Pedidos</h2>
+          <Button variant="outline" size="sm" onClick={handleIrAPedidos}>
+            Ver todo
+          </Button>
+        </div>
+
+        {/* Summary Cards - horizontal scroll on mobile */}
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
+          {[
+            { status: "por_autorizar", label: "Por autorizar", color: "bg-amber-100 dark:bg-amber-950/30 text-amber-700" },
+            { status: "pendiente", label: "Pendientes", color: "bg-blue-100 dark:bg-blue-950/30 text-blue-700" },
+            { status: "en_ruta", label: "En ruta", color: "bg-violet-100 dark:bg-violet-950/30 text-violet-700" },
+            { status: "entregado", label: "Entregados", color: "bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700" },
+          ].map((item) => (
+            <Card
+              key={item.status}
+              className={`shrink-0 cursor-pointer transition-all ${
+                statusFilter === item.status ? "ring-2 ring-primary" : ""
+              } ${item.color}`}
+              onClick={() => setStatusFilter(statusFilter === item.status ? "all" : item.status)}
+            >
+              <CardContent className="p-3 text-center min-w-[80px]">
+                <p className="text-xl font-bold">{statusCounts[item.status] || 0}</p>
+                <p className="text-xs font-medium whitespace-nowrap">{item.label}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar pedido..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        {/* Cards list */}
+        <div className="space-y-3">
+          {filteredPedidos && filteredPedidos.length > 0 ? (
+            filteredPedidos.map((pedido) => (
+              <PedidoCardMobileSecretaria
+                key={pedido.id}
+                folio={pedido.folio}
+                clienteNombre={pedido.clientes?.nombre || "Cliente"}
+                sucursalNombre={pedido.cliente_sucursales?.nombre}
+                fechaPedido={pedido.fecha_pedido}
+                pesoKg={pedido.peso_total_kg}
+                total={pedido.total}
+                status={pedido.status}
+                tieneFactura={pedido.facturas && pedido.facturas.length > 0}
+                facturaStatus={
+                  pedido.facturas?.[0]?.cfdi_uuid ? "timbrada" : pedido.facturas?.length ? "por_timbrar" : null
+                }
+                onVerDetalle={() => handleVerDetalle(pedido)}
+              />
+            ))
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No se encontraron pedidos
+            </div>
+          )}
+        </div>
+
+        {/* Dialog */}
+        {selectedPedido && (
+          <PedidoDetalleDialog
+            open={showDetalle}
+            onOpenChange={setShowDetalle}
+            pedidoId={selectedPedido.id}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Desktop view
   return (
     <div className="space-y-4">
       {/* Header with link to full module */}

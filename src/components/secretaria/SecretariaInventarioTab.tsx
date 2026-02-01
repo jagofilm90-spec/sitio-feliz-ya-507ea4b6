@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Search,
   Loader2,
@@ -26,6 +27,7 @@ import {
   ArrowDown,
   Boxes,
 } from "lucide-react";
+import { InventarioItemMobile } from "./InventarioItemMobile";
 
 interface Producto {
   id: string;
@@ -60,6 +62,7 @@ interface Movimiento {
 export const SecretariaInventarioTab = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("stock");
+  const isMobile = useIsMobile();
 
   // Fetch products with stock
   const { data: productos, isLoading: loadingProductos } = useQuery({
@@ -222,42 +225,59 @@ export const SecretariaInventarioTab = () => {
             />
           </div>
 
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Producto</TableHead>
-                    <TableHead className="text-right">Stock</TableHead>
-                    <TableHead className="text-right hidden sm:table-cell">Mínimo</TableHead>
-                    <TableHead className="text-right hidden sm:table-cell">Unidad</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProductos?.slice(0, 50).map((producto) => (
-                    <TableRow key={producto.id}>
-                      <TableCell className="font-mono font-medium">{producto.codigo}</TableCell>
-                      <TableCell>{producto.nombre}</TableCell>
-                      <TableCell className="text-right">
-                        <Badge
-                          variant={producto.stock_actual <= producto.stock_minimo ? "destructive" : "secondary"}
-                        >
-                          {producto.stock_actual}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right hidden sm:table-cell text-muted-foreground">
-                        {producto.stock_minimo}
-                      </TableCell>
-                      <TableCell className="text-right hidden sm:table-cell text-xs">
-                        {producto.unidad}
-                      </TableCell>
+          {isMobile ? (
+            // Mobile: vertical list
+            <div className="space-y-2">
+              {filteredProductos?.slice(0, 50).map((producto) => (
+                <InventarioItemMobile
+                  key={producto.id}
+                  codigo={producto.codigo}
+                  nombre={producto.nombre}
+                  stockActual={producto.stock_actual}
+                  stockMinimo={producto.stock_minimo}
+                  unidad={producto.unidad}
+                />
+              ))}
+            </div>
+          ) : (
+            // Desktop: table
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Código</TableHead>
+                      <TableHead>Producto</TableHead>
+                      <TableHead className="text-right">Stock</TableHead>
+                      <TableHead className="text-right hidden sm:table-cell">Mínimo</TableHead>
+                      <TableHead className="text-right hidden sm:table-cell">Unidad</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProductos?.slice(0, 50).map((producto) => (
+                      <TableRow key={producto.id}>
+                        <TableCell className="font-mono font-medium">{producto.codigo}</TableCell>
+                        <TableCell>{producto.nombre}</TableCell>
+                        <TableCell className="text-right">
+                          <Badge
+                            variant={producto.stock_actual <= producto.stock_minimo ? "destructive" : "secondary"}
+                          >
+                            {producto.stock_actual}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right hidden sm:table-cell text-muted-foreground">
+                          {producto.stock_minimo}
+                        </TableCell>
+                        <TableCell className="text-right hidden sm:table-cell text-xs">
+                          {producto.unidad}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Lotes Tab */}
