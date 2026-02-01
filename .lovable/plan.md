@@ -1,112 +1,258 @@
 
-## Objetivo (lo que estás pidiendo)
-En el calendario del wizard, en vez de que cada fecha muestre “1” (porque hoy está mostrando “cantidad de entregas en ese día”), quieres que muestre el número de la entrega de tu OC:
-- Feb 04 → “1”
-- Feb 06 → “2”
-- Feb 11 → “3”
 
-Y si dos entregas caen el mismo día, idealmente que se vea algo como “1-2” o “1,2”.
+# Guía Completa: Publicar ALMASA ERP en TestFlight
 
----
+## Información de tu App
 
-## Diagnóstico (por qué hoy se ve “1 1 1”)
-El componente `CalendarioOcupacion.tsx` actualmente pone en el badge esto:
-
-- `ocupacion.count` = (entregas de BD + entregasLocales) para ese día
-
-Entonces:
-- Si en Feb 04 solo hay 1 entrega local, mostrará “1”
-- Si en Feb 06 solo hay 1 entrega local, mostrará “1”
-- Si en Feb 11 solo hay 1 entrega local, mostrará “1”
-
-Eso es correcto para “ocupación”, pero no para “orden de entrega”.
+| Campo | Valor |
+|-------|-------|
+| **App ID** | `com.almasa.erp` |
+| **Nombre** | ALMASA ERP |
+| **Servidor** | `https://erp.almasa.com.mx` |
 
 ---
 
-## Solución propuesta (sin perder la ocupación)
-Cuando el día incluya entregasLocales (tu OC en creación), el badge debe mostrar **los números de entrega locales** (1/2/3), y el color/fondo puede seguir representando **ocupación total** (para que sigas viendo si el día está saturado).
+## Requisitos Previos
 
-### Comportamiento final
-- Si un día tiene entregasLocales: el badge muestra “1”, “2”, “3” (según corresponda).
-- Si un día tiene varias entregasLocales en el mismo día: mostrar “1-3” si son consecutivas, o “1,3” si no lo son.
-- El color del badge (verde/ámbar/rojo) seguirá basándose en la ocupación total (BD + tu OC) para conservar la señal de saturación.
-- Un “ring/borde” seguirá indicando “incluye esta OC”.
+### Lo que necesitas tener instalado en tu Mac:
 
----
+- **Xcode 14+** (descargar desde App Store)
+- **Xcode Command Line Tools**: Ejecutar en Terminal: `xcode-select --install`
+- **CocoaPods**: Ejecutar en Terminal: `sudo gem install cocoapods`
+- **Node.js v18+** (verificar con `node -v`)
 
-## Cambios concretos a implementar
+### Lo que necesitas tener configurado:
 
-### 1) Actualizar el modelo de ocupación por día en `CalendarioOcupacion.tsx`
-Hoy:
-- `entregasLocales: number` (solo cuenta)
-
-Propuesto:
-- Guardar **qué entregas** locales caen en ese día, por ejemplo:
-  - `entregasLocalesNumeros: number[]`
-
-Ejemplo:
-- Feb 04: `[1]`
-- Feb 06: `[2]`
-- Feb 11: `[3]`
-- Si dos en mismo día: `[1,2]`
-
-### 2) Construir el “label” que se pinta en el calendario
-Agregar una función helper en `CalendarioOcupacion.tsx`:
-
-- Ordena y elimina duplicados
-- Si hay 1 número → `"1"`
-- Si hay varios consecutivos → `"1-3"`
-- Si hay varios no consecutivos → `"1,3"`
-- Si por alguna razón no cabe (muchos números), fallback tipo `"1-6"` (rango) para evitar textos largos
-
-### 3) Cambiar el badge para mostrar números de entrega cuando haya entregasLocales
-En el render del día:
-
-- Si `ocupacion.entregasLocalesNumeros.length > 0`
-  - texto del badge = `labelLocal` (ej. “2”)
-  - mantener ring/borde para indicar “tu OC”
-- Si no hay entregasLocales
-  - texto = `ocupacion.count` (ocupación normal)
-
-### 4) Tooltip más claro (para evitar confusión)
-Actualizar tooltip:
-- “Ocupación total: X”
-- “Esta OC: #1, #2 … (Proveedor)”
-- “Otras OCs:” (lista existente)
-
-### 5) Leyenda (opcional pero recomendado)
-Mantener:
-- Verde 1-2 / Ámbar 3-4 / Rojo 5+
-
-Agregar una mini-nota:
-- “Borde = esta OC” (para que el usuario entienda el ring)
+- **Cuenta Apple Developer** ($99/año) - Ya la tienes ✓
+- **Certificado de Distribución** - Se crea automáticamente en Xcode
 
 ---
 
-## Archivos a modificar
-1) `src/components/compras/CalendarioOcupacion.tsx`
-- Cambiar la estructura `OcupacionDia`
-- Guardar números de entregas locales por fecha
-- Mostrar label local (“1/2/3”) en el badge
-- Ajustar tooltip
+## PASO 1: Preparar el Código
 
-`CrearOrdenCompraWizard.tsx` no debería requerir cambios (ya manda `entregasLocales={entregasProgramadas}` con `numero_entrega`).
+Abre Terminal y ejecuta estos comandos en orden:
+
+```bash
+# 1. Ir a la carpeta del proyecto
+cd almasa-erp
+
+# 2. Obtener la última versión del código
+git pull origin main
+
+# 3. Instalar dependencias
+npm install
+
+# 4. Compilar el proyecto web
+npm run build
+
+# 5. Sincronizar con iOS
+npx cap sync ios
+```
 
 ---
 
-## Pruebas rápidas (lo que voy a validar al terminar)
-1) OC con 3 entregas en 3 fechas distintas:
-- Debe verse “1”, “2”, “3” en sus días.
-2) OC con 3 entregas el mismo día:
-- Debe verse “1-3” (o “1,2,3” si decidimos ese formato).
-3) Quitar una fecha con “×”:
-- Debe desaparecer el número de ese día inmediatamente.
-4) Día con otras OCs + tu entrega:
-- El badge debe mostrar tu número, pero el color debe reflejar ocupación total (y tooltip debe mostrar el desglose).
+## PASO 2: Abrir el Proyecto en Xcode
+
+```bash
+npx cap open ios
+```
+
+Se abrirá Xcode automáticamente con tu proyecto.
 
 ---
 
-## Nota importante (para confirmar expectativa)
-Con este cambio, el número en el calendario ya no significa “cuántos camiones hay ese día” cuando es tu OC; significa “qué entrega(s) de tu OC cae(n) ese día”.  
-La ocupación total seguirá visible por color y por tooltip (y si quieres, en una segunda marquita pequeña también se puede agregar después).
+## PASO 3: Configurar la Firma de la App
+
+1. En Xcode, en el panel izquierdo, haz clic en **"App"** (el ícono de la carpeta azul)
+2. Selecciona el target **"App"** en la lista
+3. Ve a la pestaña **"Signing & Capabilities"**
+4. Marca la casilla **"Automatically manage signing"**
+5. En **"Team"**, selecciona tu cuenta de Apple Developer (ej: "ALMASA Distribuidora...")
+6. Verifica que **"Bundle Identifier"** diga: `com.almasa.erp`
+
+Si Xcode muestra un error de certificado, haz clic en "Fix Issue" o "Register Device".
+
+---
+
+## PASO 4: Verificar Permisos (MUY IMPORTANTE)
+
+En Xcode, navega a: **App > App > Info** (o abre `Info.plist`)
+
+Verifica que existan estas claves (si no existen, agrégalas):
+
+| Clave | Valor |
+|-------|-------|
+| Privacy - Camera Usage Description | ALMASA necesita acceso a la cámara para capturar evidencias de carga, fotos de documentos de vehículos y comprobantes de pago. |
+| Privacy - Photo Library Usage Description | ALMASA necesita acceso a tu galería para seleccionar fotos de documentos y evidencias. |
+| Privacy - Photo Library Additions Usage Description | ALMASA necesita permiso para guardar fotos de evidencias en tu biblioteca. |
+| Privacy - Location When In Use Usage Description | ALMASA necesita tu ubicación para mostrar tu posición en la ruta de entregas. |
+| Privacy - Location Always and When In Use Usage Description | ALMASA necesita acceso continuo a tu ubicación para que el administrador pueda monitorear el progreso de tu ruta de entregas en tiempo real. |
+
+**Para agregar una clave:**
+1. Haz clic derecho en la lista
+2. Selecciona "Add Row"
+3. Escribe el nombre de la clave
+4. Escribe el valor
+
+---
+
+## PASO 5: Crear el Archive (Compilar para Distribución)
+
+1. En la barra superior de Xcode, junto al botón ▶️, asegúrate de que diga **"Any iOS Device (arm64)"** (NO un simulador)
+2. Menú: **Product → Archive**
+3. Espera 5-10 minutos mientras compila
+4. Cuando termine, se abrirá automáticamente el **Organizer**
+
+---
+
+## PASO 6: Subir a App Store Connect
+
+En la ventana del Organizer:
+
+1. Selecciona el Archive que acabas de crear
+2. Haz clic en **"Distribute App"**
+3. Selecciona **"App Store Connect"**
+4. Selecciona **"Upload"**
+5. Deja las opciones por defecto (todas marcadas)
+6. Haz clic en **"Next"** → **"Next"** → **"Upload"**
+7. Espera 5-10 minutos mientras sube
+
+Cuando veas "Upload Successful", ¡ya está en la nube de Apple!
+
+---
+
+## PASO 7: Configurar en App Store Connect (Web)
+
+1. Abre el navegador y ve a: **https://appstoreconnect.apple.com**
+2. Inicia sesión con tu Apple ID de desarrollador
+3. Ve a **"My Apps"**
+
+### Si es la primera vez (no existe la app):
+
+1. Haz clic en el botón **"+"** → **"New App"**
+2. Completa el formulario:
+   - **Platform**: iOS
+   - **Name**: ALMASA ERP
+   - **Primary Language**: Spanish (Mexico)
+   - **Bundle ID**: com.almasa.erp
+   - **SKU**: almasa-erp-2024
+3. Haz clic en **"Create"**
+
+### Si la app ya existe:
+
+1. Haz clic en **"ALMASA ERP"** para abrirla
+
+---
+
+## PASO 8: Habilitar TestFlight
+
+1. En App Store Connect, con tu app seleccionada
+2. Haz clic en la pestaña **"TestFlight"** (arriba)
+3. Espera 5-30 minutos - Apple procesa el build automáticamente
+4. Cuando el estado cambie de "Processing" a **"Ready to Submit"**, continúa
+
+### Llenar información de cumplimiento:
+
+Apple te preguntará sobre encriptación. Responde:
+- **"Does your app use encryption?"** → Selecciona **"No"** (solo usamos HTTPS estándar)
+
+---
+
+## PASO 9: Agregar Testers (Usuarios de Prueba)
+
+### Método A: Testers Internos (tu equipo inmediato)
+
+1. En TestFlight → **"Internal Testing"**
+2. Haz clic en **"+"** junto a "App Store Connect Users"
+3. Agrega los correos de tus usuarios internos (máximo 100)
+4. Les llegará un email para descargar TestFlight
+
+### Método B: Testers Externos (empleados de ALMASA)
+
+1. En TestFlight → **"External Testing"**
+2. Haz clic en **"+"** → **"Create New Group"**
+3. Nombre del grupo: "Equipo ALMASA"
+4. Haz clic en **"+"** → **"Add Testers"**
+5. Puedes agregar hasta 10,000 correos electrónicos
+6. Haz clic en **"Submit for Review"**
+
+Para testing externo, Apple hace una revisión rápida (24-48 horas) antes de aprobar.
+
+---
+
+## PASO 10: Instalación en Dispositivos
+
+### Los testers recibirán un email con estas instrucciones:
+
+1. **Descargar TestFlight** desde la App Store (gratis)
+2. Abrir el **email de invitación** de Apple
+3. Hacer clic en **"View in TestFlight"**
+4. En TestFlight, hacer clic en **"Install"** junto a ALMASA ERP
+5. La app aparecerá en la pantalla de inicio
+
+---
+
+## Actualizaciones Futuras
+
+Cada vez que quieras subir una nueva versión:
+
+```bash
+# En Terminal
+git pull origin main
+npm install
+npm run build
+npx cap sync ios
+npx cap open ios
+```
+
+En Xcode:
+1. **Product → Archive**
+2. **Distribute App → App Store Connect → Upload**
+
+En App Store Connect:
+1. El nuevo build aparecerá automáticamente en TestFlight
+2. Selecciónalo y haz clic en "Add to Testing"
+
+Los testers verán la actualización automáticamente en TestFlight.
+
+---
+
+## Checklist Final (Antes de Subir)
+
+- [ ] `npm run build` ejecutado sin errores
+- [ ] `npx cap sync ios` ejecutado
+- [ ] Team configurado en Xcode
+- [ ] Bundle ID: `com.almasa.erp`
+- [ ] Permisos de cámara en Info.plist
+- [ ] Permisos de galería en Info.plist  
+- [ ] Permisos de ubicación en Info.plist
+- [ ] Dispositivo seleccionado: "Any iOS Device"
+- [ ] Archive creado exitosamente
+- [ ] Upload completado
+
+---
+
+## Solución de Problemas Comunes
+
+### "No signing certificate found"
+→ En Xcode: Preferences → Accounts → Download Manual Profiles
+
+### "App could not be verified"
+→ En el iPhone: Settings → General → VPN & Device Management → Trust
+
+### "Processing" en App Store Connect por más de 1 hora
+→ Es normal la primera vez. Si pasa más de 4 horas, contacta a Apple
+
+### Los testers no reciben el email
+→ Verificar carpeta de spam
+→ Reenviar invitación desde App Store Connect
+
+---
+
+## Notas Importantes
+
+1. **Los builds de TestFlight expiran en 90 días** - Sube nuevas versiones regularmente
+2. **Push Notifications** funcionarán automáticamente si ya configuraste APNs
+3. **Los testers pueden dar feedback** directamente desde TestFlight
+4. Cuando Apple apruebe "Unlisted", podrás mover la app al App Store sin perder los testers
 
