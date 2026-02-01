@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   CheckCircle2, 
   XCircle, 
@@ -49,6 +50,8 @@ import { format, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { ordenarProductosAzucarPrimero } from "@/lib/calculos";
 import { formatCurrency } from "@/lib/utils";
+import { PedidoCardMobile } from "./PedidoCardMobile";
+import { AutorizacionRapidaSheet } from "./AutorizacionRapidaSheet";
 
 interface PedidoPorAutorizar {
   id: string;
@@ -100,8 +103,11 @@ export function PedidosPorAutorizarTab() {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [expandedHistorial, setExpandedHistorial] = useState<string | null>(null);
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const [selectedMobileIndex, setSelectedMobileIndex] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   // Fetch pedidos por autorizar
   const { data: pedidos, isLoading } = useQuery({
@@ -393,6 +399,61 @@ export function PedidosPorAutorizarTab() {
     );
   }
 
+  // Mobile handlers
+  const handleMobileCardClick = (index: number) => {
+    setSelectedMobileIndex(index);
+    setMobileSheetOpen(true);
+  };
+
+  const handleMobileNext = () => {
+    if (pedidos && selectedMobileIndex < pedidos.length - 1) {
+      setSelectedMobileIndex(selectedMobileIndex + 1);
+    } else {
+      setMobileSheetOpen(false);
+    }
+  };
+
+  // Mobile view
+  if (isMobile) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="gap-1">
+            <Clock className="h-3 w-3" />
+            {pedidos.length} por autorizar
+          </Badge>
+        </div>
+
+        <div className="space-y-3">
+          {pedidos.map((pedido, index) => (
+            <PedidoCardMobile
+              key={pedido.id}
+              folio={pedido.folio}
+              clienteNombre={pedido.clientes?.nombre || "Cliente"}
+              sucursalNombre={pedido.cliente_sucursales?.nombre}
+              fechaPedido={pedido.fecha_pedido}
+              numProductos={pedido.pedidos_detalles.length}
+              pesoKg={calcularPesoTotalPedido(pedido.pedidos_detalles)}
+              total={pedido.total}
+              status="por_autorizar"
+              onAction={() => handleMobileCardClick(index)}
+              showStatus={false}
+            />
+          ))}
+        </div>
+
+        <AutorizacionRapidaSheet
+          open={mobileSheetOpen}
+          onOpenChange={setMobileSheetOpen}
+          pedido={pedidos[selectedMobileIndex] || null}
+          onNext={handleMobileNext}
+          hasNext={selectedMobileIndex < pedidos.length - 1}
+        />
+      </div>
+    );
+  }
+
+  // Desktop view
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
