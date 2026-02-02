@@ -1,238 +1,107 @@
 
-# Plan: Adaptar Módulo de Inventario a Móvil
+# Plan: Corregir Diálogo "Ver Recepción" para Móvil
 
-## Estado Actual
+## Problema Detectado
 
-El módulo de Inventario tiene **3 pestañas** con tablas de datos de escritorio que no se adaptan a móvil:
+El diálogo `RecepcionDetalleDialog` que se abre al hacer clic en **"Ver recepción"** desde las tarjetas de lotes en móvil **no tiene las clases CSS correctas para adaptarse a pantallas pequeñas**.
 
-1. **Lotes (Entradas)** - Tabla con 9 columnas: Fecha, Producto, Cantidad, Bodega, Lote, Caducidad, OC, Recibido por, Acciones
-2. **Movimientos Manuales** - Tabla con 11 columnas: Fecha, Producto, Tipo, Cantidad, Stock Anterior/Nuevo, Lote, Caducidad, Usuario, Referencia, Acciones
-3. **Por Categoría** - Tabla expandible con 8 columnas por producto
+**Código actual (línea 572):**
+```tsx
+<DialogContent className="max-w-3xl max-h-[90vh]">
+```
 
-Además:
-- Filtros en layout horizontal (inputs de fecha + selects + botones) que desbordan
-- Diálogo de "Registrar Movimiento" con grids de 2 columnas
-- Sin uso de `useIsMobile()` para detectar dispositivo
+**Problema:** Sin `w-[calc(100vw-2rem)]`, el diálogo mantiene un ancho fijo de `max-w-3xl` (768px) que es mayor que la pantalla del iPhone, causando que el diálogo aparezca fuera del viewport o completamente invisible.
 
 ---
 
 ## Solución
 
-### 1. Crear Componentes de Tarjetas Móviles
+### Cambio en RecepcionDetalleDialog.tsx
 
-#### LoteCardMobile (nuevo)
-Tarjeta compacta para lotes/entradas:
-```
-┌─────────────────────────────────────┐
-│ 📅 15 Ene 2025       OC-2025-001   │
-├─────────────────────────────────────┤
-│ POLVO123                            │
-│ Polvo para hornear                  │
-├─────────────────────────────────────┤
-│ 150 uds    📦 Bodega Central        │
-│ 🏷️ Lote: L20250115                  │
-│ ⏰ Vence: 30 días [Badge amarillo]  │
-│ 👤 Juan Pérez                       │
-└─────────────────────────────────────┘
+**Archivo:** `src/components/compras/RecepcionDetalleDialog.tsx` (línea 572)
+
+```tsx
+// Antes
+<DialogContent className="max-w-3xl max-h-[90vh]">
+
+// Después
+<DialogContent className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[90vh] overflow-x-hidden">
 ```
 
-#### MovimientoCardMobile (nuevo)
-Tarjeta para movimientos manuales:
-```
-┌─────────────────────────────────────┐
-│ 15 Ene 10:30    [Entrada] ← Badge  │
-├─────────────────────────────────────┤
-│ AZUCAR01 - Azúcar estándar         │
-├─────────────────────────────────────┤
-│ Cantidad: +50          Stock: 150  │
-│              (antes: 100) ↗ +50    │
-│ Lote: L2025   Ref: Compra #45      │
-│ 👤 María García                     │
-├─────────────────────────────────────┤
-│ [Editar]            [Eliminar]     │
-└─────────────────────────────────────┘
+**Explicación de las clases:**
+- `w-[calc(100vw-2rem)]` → En móvil, usa el ancho completo menos 1rem de margen a cada lado
+- `sm:max-w-3xl` → En pantallas >= 640px, limita al máximo de 768px
+- `overflow-x-hidden` → Previene scroll horizontal si algún contenido interno es muy ancho
+
+### Adaptaciones Adicionales del Contenido Interno
+
+El contenido interno también tiene grids que podrían causar problemas en móvil:
+
+**Grid de cabecera (línea 590):**
+```tsx
+// Antes
+<div className="grid grid-cols-2 gap-4">
+
+// Después  
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 ```
 
-### 2. Adaptar Filtros a Móvil
+**Grid del resumen OC (línea 645):**
+```tsx
+// Antes
+<div className="grid grid-cols-3 gap-4 mb-4">
 
-**Antes (desktop):**
+// Después
+<div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 text-xs sm:text-base">
 ```
-[🔍 Buscar...            ] [Bodega ▼] [Desde: ___] [Hasta: ___] [Limpiar]
-```
-
-**Después (móvil):**
-```
-┌─────────────────────────────────────┐
-│ [🔍 Buscar...                    ]  │
-├─────────────────────────────────────┤
-│ [Bodega ▼      ] [Tipo ▼        ]  │
-├─────────────────────────────────────┤
-│ [Desde: ____   ] [Hasta: ____   ]  │
-├─────────────────────────────────────┤
-│ [Limpiar filtros                ]  │
-│ Mostrando 45 de 120 lotes          │
-└─────────────────────────────────────┘
-```
-
-- Búsqueda: ancho completo
-- Selects: 2 columnas en móvil
-- Fechas: 2 columnas, inputs más pequeños
-- Limpiar: botón ancho completo
-- Contador: texto centrado debajo
-
-### 3. Adaptar Diálogo "Registrar Movimiento"
-
-**Cambios:**
-- `DialogContent`: `w-[calc(100vw-2rem)] sm:max-w-2xl overflow-x-hidden`
-- Grids de 2 columnas → 1 columna en móvil
-- Botones Cancelar/Registrar → stack vertical en móvil
-
-### 4. Adaptar Pestaña "Por Categoría"
-
-#### Cabecera de categoría (móvil):
-```
-┌─────────────────────────────────────┐
-│ ▼ 📦 HARINAS                        │
-│    12 productos                     │
-│    Stock: 1,234 • $45,678.00       │
-└─────────────────────────────────────┘
-```
-
-#### Productos dentro (móvil):
-Reutilizar concepto de `InventarioItemMobile` existente pero extendido:
-```
-┌─────────────────────────────────────┐
-│ HARINA01                            │
-│ Harina de trigo integral            │
-│ Marca: La Fama                      │
-├─────────────────────────────────────┤
-│ Stock: 150 kg   Costo: $25.00      │
-│ Precio: $35.00  Valor: $3,750.00   │
-│ [Ver lotes]                         │
-└─────────────────────────────────────┘
-```
-
-### 5. Totales Globales (móvil)
-
-**Después:**
-```
-┌─────────────────────────────────────┐
-│ Stock Total Global: 12,345         │
-│ Valor Inventario: $567,890.00      │
-└─────────────────────────────────────┘
-```
-Stack vertical con texto centrado.
 
 ---
 
-## Archivos a Crear
-
-| Archivo | Descripción |
-|---------|-------------|
-| `src/components/inventario/LoteCardMobile.tsx` | Tarjeta para lotes/entradas |
-| `src/components/inventario/MovimientoCardMobile.tsx` | Tarjeta para movimientos |
-| `src/components/inventario/CategoriaProductoMobile.tsx` | Producto expandido en categoría |
-
-## Archivos a Modificar
+## Archivo a Modificar
 
 | Archivo | Cambios |
 |---------|---------|
-| `src/pages/Inventario.tsx` | Agregar `useIsMobile`, condicionar tablas vs tarjetas, adaptar filtros y diálogo |
-| `src/components/inventario/InventarioPorCategoria.tsx` | Agregar `useIsMobile`, adaptar header categoría y usar tarjetas móviles |
-
----
-
-## Código Clave
-
-### Inventario.tsx - Estructura Condicional
-```tsx
-import { useIsMobile } from "@/hooks/use-mobile";
-
-// En el componente
-const isMobile = useIsMobile();
-
-// En el render de lotes
-{isMobile ? (
-  <div className="space-y-3">
-    {filteredLotes.map(lote => (
-      <LoteCardMobile key={lote.id} lote={lote} onVerRecepcion={...} />
-    ))}
-  </div>
-) : (
-  <Table>...</Table>
-)}
-```
-
-### Filtros Responsivos
-```tsx
-<div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-4`}>
-  {/* Búsqueda - siempre ancho completo en móvil */}
-  <div className="relative flex-1">
-    <Search className="absolute left-3 top-3 h-4 w-4" />
-    <Input placeholder="Buscar..." className="pl-10" />
-  </div>
-  
-  {/* Selects - 2 columnas en móvil */}
-  <div className={`grid ${isMobile ? 'grid-cols-2' : 'flex'} gap-2`}>
-    <Select>...</Select>
-  </div>
-  
-  {/* Fechas - 2 columnas */}
-  <div className="grid grid-cols-2 gap-2">
-    <Input type="date" />
-    <Input type="date" />
-  </div>
-  
-  {/* Limpiar - ancho completo en móvil */}
-  <Button className={isMobile ? 'w-full' : ''}>Limpiar</Button>
-</div>
-```
-
-### Diálogo Registrar Movimiento
-```tsx
-<DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl overflow-x-hidden">
-  {/* Grids adaptables */}
-  <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
-    {/* campos */}
-  </div>
-  
-  {/* Botones */}
-  <div className={`flex ${isMobile ? 'flex-col gap-2' : 'justify-end gap-2'}`}>
-    {isMobile ? (
-      <>
-        <Button type="submit" className="w-full">Registrar</Button>
-        <Button variant="outline" className="w-full">Cancelar</Button>
-      </>
-    ) : (
-      <>
-        <Button variant="outline">Cancelar</Button>
-        <Button type="submit">Registrar</Button>
-      </>
-    )}
-  </div>
-</DialogContent>
-```
+| `src/components/compras/RecepcionDetalleDialog.tsx` | DialogContent con ancho móvil + grids responsivos |
 
 ---
 
 ## Resultado Esperado
 
-### Móvil:
-- Lotes y movimientos como tarjetas verticales scrolleables
-- Filtros apilados sin overflow horizontal
-- Diálogo de movimiento con campos en columna única
-- Categorías con headers compactos y productos en tarjetas
-- Sin tablas, todo vertical y táctil
+### Móvil (antes):
+- Diálogo invisible o parcialmente visible
+- Usuario no puede ver el contenido de recepción
 
-### Desktop:
-- Sin cambios (mantiene tablas actuales)
+### Móvil (después):
+```
+┌─────────────────────────────────┐
+│ 📦 Detalle de Recepción      ✕ │
+├─────────────────────────────────┤
+│ OC-2025-001                     │
+│ Entrega #1                      │
+│ Proveedor XYZ                   │
+├─────────────────────────────────┤
+│ ┌─────┐ ┌─────┐ ┌─────┐        │
+│ │ 5/6 │ │  1  │ │ 83% │        │
+│ │Comp.│ │Pend.│ │Avanc│        │
+│ └─────┘ └─────┘ └─────┘        │
+│ ▓▓▓▓▓▓▓▓▓▓▓░░░ 83%             │
+├─────────────────────────────────┤
+│ Productos en esta entrega:      │
+│ • AZUCAR01 - 100 kg             │
+│ • HARINA02 - 50 kg              │
+├─────────────────────────────────┤
+│ Evidencias: 📷 📷               │
+│ Firmas: ✓ Chofer ✓ Almacén     │
+├─────────────────────────────────┤
+│ [Descargar PDF] [Reenviar ✉️]   │
+└─────────────────────────────────┘
+```
 
 ---
 
 ## Lo que NO cambia
 
-- Lógica de carga de datos
-- Queries a Supabase
-- Filtros y búsqueda (solo layout, no funcionalidad)
-- Suscripciones realtime
-- Validaciones de formulario
+- Lógica de carga de datos de la recepción
+- Funcionalidad de descargar PDF
+- Funcionalidad de reenviar correo
+- Estructura del diálogo (solo clases CSS)
