@@ -957,7 +957,7 @@ const Clientes = () => {
 
   // Renderizar el contenido del Dialog compartido entre móvil y desktop
   const renderDialogContent = () => (
-    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+    <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
       <DialogHeader>
         <DialogTitle>
           {editingClient ? "Editar Cliente" : "Nuevo Cliente"}
