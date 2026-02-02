@@ -955,44 +955,273 @@ const Clientes = () => {
     );
   };
 
+  // Renderizar el contenido del Dialog compartido entre móvil y desktop
+  const renderDialogContent = () => (
+    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle>
+          {editingClient ? "Editar Cliente" : "Nuevo Cliente"}
+        </DialogTitle>
+        <DialogDescription>
+          {editingClient 
+            ? "Modifica la información del cliente" 
+            : "Completa la información del cliente y sus sucursales de entrega"}
+        </DialogDescription>
+      </DialogHeader>
+      
+      {/* Vendedor assignment section */}
+      <div className="border rounded-lg p-4 mb-4 bg-muted/30">
+        <Label className="text-sm font-medium mb-2 block">Vendedor asignado</Label>
+        <Select
+          value={formData.vendedor_asignado || "__none__"}
+          onValueChange={(value) => setFormData({ ...formData, vendedor_asignado: value === "__none__" ? null : value })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Casa (sin vendedor)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">
+              <div className="flex items-center gap-2">
+                <Home className="h-4 w-4" />
+                Casa (sin comisión)
+              </div>
+            </SelectItem>
+            {VENDEDORES.map((v) => (
+              <SelectItem key={v.user_id} value={v.user_id}>
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  {v.nombre}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {formData.vendedor_asignado && formData.vendedor_asignado !== "__none__" && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Este cliente genera comisión del 1% para el vendedor
+          </p>
+        )}
+      </div>
+      
+      {editingClient ? (
+        <Tabs defaultValue="datos" className="w-full">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-6' : 'grid-cols-5'}`}>
+            <TabsTrigger value="datos">Datos</TabsTrigger>
+            <TabsTrigger value="productos" className="flex items-center gap-1">
+              <Package className="h-4 w-4" />
+              Productos
+            </TabsTrigger>
+            <TabsTrigger value="cortesias" className="flex items-center gap-1">
+              <Gift className="h-4 w-4 text-amber-500" />
+              Cortesías
+            </TabsTrigger>
+            <TabsTrigger value="creditos" className="flex items-center gap-1">
+              <CreditCard className="h-4 w-4" />
+              Plazos
+            </TabsTrigger>
+            <TabsTrigger value="programacion" className="flex items-center gap-1">
+              <CalendarDays className="h-4 w-4 text-blue-500" />
+              Días
+            </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="usuario" className="flex items-center gap-1">
+                <User className="h-4 w-4" />
+                Portal
+                {editingClient.user_id && (
+                  <Badge variant="default" className="ml-1 h-5 bg-green-500">✓</Badge>
+                )}
+              </TabsTrigger>
+            )}
+          </TabsList>
+          <TabsContent value="productos" className="mt-4">
+            <ClienteProductosTab clienteId={editingClient.id} />
+          </TabsContent>
+          <TabsContent value="cortesias" className="mt-4">
+            <ClienteCortesiasTab 
+              clienteId={editingClient.id}
+              clienteNombre={editingClient.nombre}
+            />
+          </TabsContent>
+          <TabsContent value="creditos" className="mt-4">
+            <ClienteCreditosExcepcionesTab 
+              clienteId={editingClient.id}
+              clienteNombre={editingClient.nombre}
+              terminoDefault={editingClient.termino_credito}
+            />
+          </TabsContent>
+          <TabsContent value="programacion" className="mt-4">
+            <ClienteProgramacionTab 
+              clienteId={editingClient.id}
+              clienteNombre={editingClient.nombre}
+            />
+          </TabsContent>
+          {isAdmin && (
+            <TabsContent value="usuario" className="mt-4">
+              <ClienteUsuarioTab 
+                cliente={{
+                  id: editingClient.id,
+                  nombre: editingClient.nombre,
+                  email: editingClient.email,
+                  user_id: editingClient.user_id,
+                }}
+                onUserCreated={() => {
+                  loadClientes();
+                  supabase
+                    .from("clientes")
+                    .select("*")
+                    .eq("id", editingClient.id)
+                    .single()
+                    .then(({ data }) => {
+                      if (data) setEditingClient(data);
+                    });
+                }}
+              />
+            </TabsContent>
+          )}
+          <TabsContent value="datos" className="mt-4">
+            <ClienteFormContent 
+              formData={formData}
+              setFormData={setFormData}
+              zonas={zonas}
+              handleSave={handleSave}
+              editingClient={editingClient}
+              setDialogOpen={setDialogOpen}
+              csfFile={csfFile}
+              setCsfFile={setCsfFile}
+              parsingCsf={parsingCsf}
+              handleParseCsf={handleParseCsf}
+              entregarMismaDireccion={entregarMismaDireccion}
+              setEntregarMismaDireccion={setEntregarMismaDireccion}
+              sucursales={sucursales}
+              setSucursales={setSucursales}
+              addSucursal={addSucursal}
+              removeSucursal={removeSucursal}
+              updateSucursal={updateSucursal}
+              correos={correos}
+              setCorreos={setCorreos}
+              newCorreoEmail={newCorreoEmail}
+              setNewCorreoEmail={setNewCorreoEmail}
+              newCorreoNombre={newCorreoNombre}
+              setNewCorreoNombre={setNewCorreoNombre}
+              handleAddCorreo={handleAddCorreo}
+              handleRemoveCorreo={handleRemoveCorreo}
+              handleSetPrincipal={handleSetPrincipal}
+            />
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <ClienteFormContent 
+          formData={formData}
+          setFormData={setFormData}
+          zonas={zonas}
+          handleSave={handleSave}
+          editingClient={editingClient}
+          setDialogOpen={setDialogOpen}
+          csfFile={csfFile}
+          setCsfFile={setCsfFile}
+          parsingCsf={parsingCsf}
+          handleParseCsf={handleParseCsf}
+          entregarMismaDireccion={entregarMismaDireccion}
+          setEntregarMismaDireccion={setEntregarMismaDireccion}
+          sucursales={sucursales}
+          setSucursales={setSucursales}
+          addSucursal={addSucursal}
+          removeSucursal={removeSucursal}
+          updateSucursal={updateSucursal}
+          correos={correos}
+          setCorreos={setCorreos}
+          newCorreoEmail={newCorreoEmail}
+          setNewCorreoEmail={setNewCorreoEmail}
+          newCorreoNombre={newCorreoNombre}
+          setNewCorreoNombre={setNewCorreoNombre}
+          handleAddCorreo={handleAddCorreo}
+          handleRemoveCorreo={handleRemoveCorreo}
+          handleSetPrincipal={handleSetPrincipal}
+        />
+      )}
+    </DialogContent>
+  );
+
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Clientes</h1>
-            <p className="text-muted-foreground">Gestión de clientes y créditos</p>
+        {/* Header - responsive para móvil */}
+        {isMobile ? (
+          <div className="space-y-3">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-xl font-bold">Clientes</h1>
+                <p className="text-xs text-muted-foreground">Gestión de clientes</p>
+              </div>
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" onClick={resetForm}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Nuevo
+                  </Button>
+                </DialogTrigger>
+                {renderDialogContent()}
+              </Dialog>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDetectarGruposDialogOpen(true)}
+              >
+                <Search className="h-4 w-4 mr-1" />
+                Detectar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAuditoriaSheetOpen(true)}
+              >
+                <ClipboardList className="h-4 w-4 mr-1" />
+                Auditoría
+                {sucursalesConRfcCount > 0 && (
+                  <Badge variant="destructive" className="ml-1 text-xs">
+                    {sucursalesConRfcCount}
+                  </Badge>
+                )}
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setDetectarGruposDialogOpen(true)}
-            >
-              <Search className="h-4 w-4 mr-2" />
-              Detectar Grupos
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setAgruparDialogOpen(true)}
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Agrupar
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setImportDialogOpen(true)}
-            >
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Importar ASPEL
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setImportSucursalesDialogOpen(true)}
-            >
-              <Building2 className="h-4 w-4 mr-2" />
-              Importar Sucursales
-            </Button>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        ) : (
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold">Clientes</h1>
+              <p className="text-muted-foreground">Gestión de clientes y créditos</p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setDetectarGruposDialogOpen(true)}
+              >
+                <Search className="h-4 w-4 mr-2" />
+                Detectar Grupos
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setAgruparDialogOpen(true)}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Agrupar
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setImportDialogOpen(true)}
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Importar ASPEL
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setImportSucursalesDialogOpen(true)}
+              >
+                <Building2 className="h-4 w-4 mr-2" />
+                Importar Sucursales
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => setAuditoriaSheetOpen(true)}
@@ -1005,198 +1234,18 @@ const Clientes = () => {
                   </Badge>
                 )}
               </Button>
-              <DialogTrigger asChild>
-                <Button onClick={resetForm}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nuevo Cliente
-                </Button>
-              </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingClient ? "Editar Cliente" : "Nuevo Cliente"}
-                </DialogTitle>
-                <DialogDescription>
-                  {editingClient 
-                    ? "Modifica la información del cliente" 
-                    : "Completa la información del cliente y sus sucursales de entrega"}
-                </DialogDescription>
-              </DialogHeader>
-              
-              {/* Vendedor assignment section */}
-              <div className="border rounded-lg p-4 mb-4 bg-muted/30">
-                <Label className="text-sm font-medium mb-2 block">Vendedor asignado</Label>
-                <Select
-                  value={formData.vendedor_asignado}
-                  onValueChange={(value) => setFormData({ ...formData, vendedor_asignado: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Casa (sin vendedor)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">
-                      <div className="flex items-center gap-2">
-                        <Home className="h-4 w-4" />
-                        Casa (sin comisión)
-                      </div>
-                    </SelectItem>
-                    {VENDEDORES.map((v) => (
-                      <SelectItem key={v.user_id} value={v.user_id}>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          {v.nombre}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {formData.vendedor_asignado && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Este cliente genera comisión del 1% para el vendedor
-                  </p>
-                )}
-              </div>
-              
-              {editingClient ? (
-              <Tabs defaultValue="datos" className="w-full">
-                  <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-6' : 'grid-cols-5'}`}>
-                    <TabsTrigger value="datos">Datos</TabsTrigger>
-                    <TabsTrigger value="productos" className="flex items-center gap-1">
-                      <Package className="h-4 w-4" />
-                      Productos
-                    </TabsTrigger>
-                    <TabsTrigger value="cortesias" className="flex items-center gap-1">
-                      <Gift className="h-4 w-4 text-amber-500" />
-                      Cortesías
-                    </TabsTrigger>
-                    <TabsTrigger value="creditos" className="flex items-center gap-1">
-                      <CreditCard className="h-4 w-4" />
-                      Plazos
-                    </TabsTrigger>
-                    <TabsTrigger value="programacion" className="flex items-center gap-1">
-                      <CalendarDays className="h-4 w-4 text-blue-500" />
-                      Días
-                    </TabsTrigger>
-                    {isAdmin && (
-                      <TabsTrigger value="usuario" className="flex items-center gap-1">
-                        <User className="h-4 w-4" />
-                        Portal
-                        {editingClient.user_id && (
-                          <Badge variant="default" className="ml-1 h-5 bg-green-500">✓</Badge>
-                        )}
-                      </TabsTrigger>
-                    )}
-                  </TabsList>
-                  <TabsContent value="productos" className="mt-4">
-                    <ClienteProductosTab clienteId={editingClient.id} />
-                  </TabsContent>
-                  <TabsContent value="cortesias" className="mt-4">
-                    <ClienteCortesiasTab 
-                      clienteId={editingClient.id}
-                      clienteNombre={editingClient.nombre}
-                    />
-                  </TabsContent>
-                  <TabsContent value="creditos" className="mt-4">
-                    <ClienteCreditosExcepcionesTab 
-                      clienteId={editingClient.id}
-                      clienteNombre={editingClient.nombre}
-                      terminoDefault={editingClient.termino_credito}
-                    />
-                  </TabsContent>
-                  <TabsContent value="programacion" className="mt-4">
-                    <ClienteProgramacionTab 
-                      clienteId={editingClient.id}
-                      clienteNombre={editingClient.nombre}
-                    />
-                  </TabsContent>
-                  {isAdmin && (
-                    <TabsContent value="usuario" className="mt-4">
-                      <ClienteUsuarioTab 
-                        cliente={{
-                          id: editingClient.id,
-                          nombre: editingClient.nombre,
-                          email: editingClient.email,
-                          user_id: editingClient.user_id,
-                        }}
-                        onUserCreated={() => {
-                          loadClientes();
-                          supabase
-                            .from("clientes")
-                            .select("*")
-                            .eq("id", editingClient.id)
-                            .single()
-                            .then(({ data }) => {
-                              if (data) setEditingClient(data);
-                            });
-                        }}
-                      />
-                    </TabsContent>
-                  )}
-                  <TabsContent value="datos" className="mt-4">
-                    <ClienteFormContent 
-                      formData={formData}
-                      setFormData={setFormData}
-                      zonas={zonas}
-                      handleSave={handleSave}
-                      editingClient={editingClient}
-                      setDialogOpen={setDialogOpen}
-                      csfFile={csfFile}
-                      setCsfFile={setCsfFile}
-                      parsingCsf={parsingCsf}
-                      handleParseCsf={handleParseCsf}
-                      entregarMismaDireccion={entregarMismaDireccion}
-                      setEntregarMismaDireccion={setEntregarMismaDireccion}
-                      sucursales={sucursales}
-                      setSucursales={setSucursales}
-                      addSucursal={addSucursal}
-                      removeSucursal={removeSucursal}
-                      updateSucursal={updateSucursal}
-                      correos={correos}
-                      setCorreos={setCorreos}
-                      newCorreoEmail={newCorreoEmail}
-                      setNewCorreoEmail={setNewCorreoEmail}
-                      newCorreoNombre={newCorreoNombre}
-                      setNewCorreoNombre={setNewCorreoNombre}
-                      handleAddCorreo={handleAddCorreo}
-                      handleRemoveCorreo={handleRemoveCorreo}
-                      handleSetPrincipal={handleSetPrincipal}
-                    />
-                  </TabsContent>
-                </Tabs>
-              ) : (
-                <ClienteFormContent 
-                  formData={formData}
-                  setFormData={setFormData}
-                  zonas={zonas}
-                  handleSave={handleSave}
-                  editingClient={editingClient}
-                  setDialogOpen={setDialogOpen}
-                  csfFile={csfFile}
-                  setCsfFile={setCsfFile}
-                  parsingCsf={parsingCsf}
-                  handleParseCsf={handleParseCsf}
-                  entregarMismaDireccion={entregarMismaDireccion}
-                  setEntregarMismaDireccion={setEntregarMismaDireccion}
-                  sucursales={sucursales}
-                  setSucursales={setSucursales}
-                  addSucursal={addSucursal}
-                  removeSucursal={removeSucursal}
-                  updateSucursal={updateSucursal}
-                  correos={correos}
-                  setCorreos={setCorreos}
-                  newCorreoEmail={newCorreoEmail}
-                  setNewCorreoEmail={setNewCorreoEmail}
-                  newCorreoNombre={newCorreoNombre}
-                  setNewCorreoNombre={setNewCorreoNombre}
-                  handleAddCorreo={handleAddCorreo}
-                  handleRemoveCorreo={handleRemoveCorreo}
-                  handleSetPrincipal={handleSetPrincipal}
-                />
-              )}
-            </DialogContent>
-          </Dialog>
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={resetForm}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nuevo Cliente
+                  </Button>
+                </DialogTrigger>
+                {renderDialogContent()}
+              </Dialog>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex gap-4">
           <div className="relative flex-1">
@@ -1212,29 +1261,57 @@ const Clientes = () => {
 
         {/* Vendedor Tabs */}
         <Tabs value={activeVendedorTab} onValueChange={setActiveVendedorTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="casa" className="flex items-center gap-2">
-              <Home className="h-4 w-4" />
-              Casa
-              <Badge variant="secondary" className="ml-1">{getClientCount("casa")}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="carlos" className="flex items-center gap-2">
-              Carlos
-              <Badge variant="secondary" className="ml-1">{getClientCount("carlos")}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="venancio" className="flex items-center gap-2">
-              Venancio
-              <Badge variant="secondary" className="ml-1">{getClientCount("venancio")}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="salvador" className="flex items-center gap-2">
-              Salvador
-              <Badge variant="secondary" className="ml-1">{getClientCount("salvador")}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="martin" className="flex items-center gap-2">
-              Martin
-              <Badge variant="secondary" className="ml-1">{getClientCount("martin")}</Badge>
-            </TabsTrigger>
-          </TabsList>
+          {isMobile ? (
+            <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
+              <TabsList className="inline-flex w-max gap-1">
+                <TabsTrigger value="casa" className="flex items-center gap-1.5 px-3">
+                  <Home className="h-3.5 w-3.5" />
+                  Casa
+                  <Badge variant="secondary" className="text-xs px-1.5">{getClientCount("casa")}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="carlos" className="flex items-center gap-1.5 px-3">
+                  Carlos
+                  <Badge variant="secondary" className="text-xs px-1.5">{getClientCount("carlos")}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="venancio" className="flex items-center gap-1.5 px-3">
+                  Venancio
+                  <Badge variant="secondary" className="text-xs px-1.5">{getClientCount("venancio")}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="salvador" className="flex items-center gap-1.5 px-3">
+                  Salvador
+                  <Badge variant="secondary" className="text-xs px-1.5">{getClientCount("salvador")}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="martin" className="flex items-center gap-1.5 px-3">
+                  Martin
+                  <Badge variant="secondary" className="text-xs px-1.5">{getClientCount("martin")}</Badge>
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          ) : (
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="casa" className="flex items-center gap-2">
+                <Home className="h-4 w-4" />
+                Casa
+                <Badge variant="secondary" className="ml-1">{getClientCount("casa")}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="carlos" className="flex items-center gap-2">
+                Carlos
+                <Badge variant="secondary" className="ml-1">{getClientCount("carlos")}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="venancio" className="flex items-center gap-2">
+                Venancio
+                <Badge variant="secondary" className="ml-1">{getClientCount("venancio")}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="salvador" className="flex items-center gap-2">
+                Salvador
+                <Badge variant="secondary" className="ml-1">{getClientCount("salvador")}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="martin" className="flex items-center gap-2">
+                Martin
+                <Badge variant="secondary" className="ml-1">{getClientCount("martin")}</Badge>
+              </TabsTrigger>
+            </TabsList>
+          )}
 
           <TabsContent value="casa" className="mt-4">
             {renderClienteTable()}
