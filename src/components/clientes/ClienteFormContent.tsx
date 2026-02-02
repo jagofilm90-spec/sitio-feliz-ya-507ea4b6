@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
 import { Plus, X, Mail, MapPin, Truck, Loader2, Sparkles, Clock } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Zona {
   id: string;
@@ -120,12 +121,14 @@ export function ClienteFormContent({
   handleRemoveCorreo,
   handleSetPrincipal,
 }: ClienteFormContentProps) {
+  const isMobile = useIsMobile();
+
   return (
     <form onSubmit={handleSave} className="space-y-6">
       {/* Datos de Identificación */}
       <div className="space-y-4">
         <h4 className="font-medium text-lg border-b pb-2">Datos de Identificación</h4>
-        <div className="grid grid-cols-2 gap-4">
+        <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
           <div className="space-y-2">
             <Label htmlFor="codigo">Código *</Label>
             <Input
@@ -165,7 +168,7 @@ export function ClienteFormContent({
       {/* Datos Fiscales */}
       <div className="space-y-4">
         <h4 className="font-medium text-lg border-b pb-2">Datos Fiscales</h4>
-        <div className="grid grid-cols-2 gap-4">
+        <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
           <div className="space-y-2">
             <Label htmlFor="rfc">RFC</Label>
             <Input
@@ -227,7 +230,7 @@ export function ClienteFormContent({
             placeholder="Buscar dirección fiscal..."
           />
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-3'} gap-4`}>
           <div className="space-y-2">
             <Label htmlFor="codigo_postal">C.P.</Label>
             <Input
@@ -309,7 +312,7 @@ export function ClienteFormContent({
         {/* CSF Upload */}
         <div className="space-y-2">
           <Label>Constancia de Situación Fiscal (CSF)</Label>
-          <div className="flex items-center gap-2">
+          <div className={`flex ${isMobile ? 'flex-col' : 'items-center'} gap-2`}>
             <Input
               type="file"
               accept=".pdf"
@@ -320,14 +323,15 @@ export function ClienteFormContent({
               className="flex-1"
             />
             {csfFile && (
-              <>
-                <Badge variant="secondary">{csfFile.name}</Badge>
+              <div className={`flex ${isMobile ? 'flex-wrap' : ''} items-center gap-2`}>
+                <Badge variant="secondary" className="truncate max-w-[150px]">{csfFile.name}</Badge>
                 <Button
                   type="button"
                   variant="secondary"
                   size="sm"
                   onClick={() => handleParseCsf(csfFile)}
                   disabled={parsingCsf}
+                  className={isMobile ? 'w-full' : ''}
                 >
                   {parsingCsf ? (
                     <>
@@ -341,7 +345,7 @@ export function ClienteFormContent({
                     </>
                   )}
                 </Button>
-              </>
+              </div>
             )}
           </div>
           <p className="text-xs text-muted-foreground">
@@ -353,7 +357,7 @@ export function ClienteFormContent({
       {/* Datos Comerciales */}
       <div className="space-y-4">
         <h4 className="font-medium text-lg border-b pb-2">Datos Comerciales</h4>
-        <div className="grid grid-cols-2 gap-4">
+        <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
           <div className="space-y-2">
             <Label htmlFor="telefono">Teléfono</Label>
             <Input
@@ -393,7 +397,7 @@ export function ClienteFormContent({
             Asigna este cliente a un vendedor o déjalo como "Casa" para clientes sin vendedor
           </p>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
           <div className="space-y-2">
             <Label htmlFor="termino_credito">Término de Crédito *</Label>
             <Select
@@ -449,7 +453,7 @@ export function ClienteFormContent({
           <Clock className="h-5 w-5" />
           Configuración de Entregas
         </h4>
-        <div className="grid grid-cols-2 gap-4">
+        <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
           <div className="space-y-2">
             <Label htmlFor="prioridad_entrega_default">Prioridad de Entrega</Label>
             <Select
@@ -498,7 +502,7 @@ export function ClienteFormContent({
         </h4>
         
         <div className="space-y-3">
-          <div className="grid grid-cols-3 gap-2">
+          <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-3'} gap-2`}>
             <div className="space-y-1">
               <Label className="text-xs">Email *</Label>
               <Input
@@ -509,7 +513,7 @@ export function ClienteFormContent({
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddCorreo())}
               />
             </div>
-            <div className="space-y-1">
+            <div className={`space-y-1 ${isMobile ? '' : 'col-span-2'}`}>
               <Label className="text-xs">Nombre contacto (opcional)</Label>
               <div className="flex gap-2">
                 <Input
@@ -534,7 +538,7 @@ export function ClienteFormContent({
                 >
                   <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium truncate">{correo.email}</span>
                       {correo.es_principal && (
                         <Badge variant="default" className="text-xs shrink-0">Principal</Badge>
@@ -544,7 +548,7 @@ export function ClienteFormContent({
                       <span className="text-xs text-muted-foreground">{correo.nombre_contacto}</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className={`flex ${isMobile ? 'flex-col' : 'items-center'} gap-1 shrink-0`}>
                     {!correo.es_principal && (
                       <Button
                         type="button"
@@ -553,7 +557,7 @@ export function ClienteFormContent({
                         className="text-xs h-7"
                         onClick={() => handleSetPrincipal(correo.id)}
                       >
-                        Hacer principal
+                        {isMobile ? 'Principal' : 'Hacer principal'}
                       </Button>
                     )}
                     <Button
@@ -618,7 +622,7 @@ export function ClienteFormContent({
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
                     <div className="space-y-2">
                       <Label>Nombre de Sucursal *</Label>
                       <Input
@@ -654,7 +658,7 @@ export function ClienteFormContent({
                       placeholder="Buscar dirección de entrega..."
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
                     <div className="space-y-2">
                       <Label>Contacto</Label>
                       <Input
@@ -675,7 +679,7 @@ export function ClienteFormContent({
                 </div>
               ))}
               
-              <Button type="button" variant="outline" onClick={addSucursal}>
+              <Button type="button" variant="outline" onClick={addSucursal} className={isMobile ? 'w-full' : ''}>
                 <Plus className="h-4 w-4 mr-2" />
                 Agregar Otra Sucursal
               </Button>
@@ -684,13 +688,26 @@ export function ClienteFormContent({
         </div>
       )}
 
-      <div className="flex justify-end gap-2 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-          Cancelar
-        </Button>
-        <Button type="submit">
-          {editingClient ? "Actualizar" : "Crear Cliente"}
-        </Button>
+      <div className={`flex ${isMobile ? 'flex-col' : 'justify-end'} gap-2 pt-4 border-t`}>
+        {isMobile ? (
+          <>
+            <Button type="submit" className="w-full">
+              {editingClient ? "Actualizar" : "Crear Cliente"}
+            </Button>
+            <Button type="button" variant="outline" className="w-full" onClick={() => setDialogOpen(false)}>
+              Cancelar
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit">
+              {editingClient ? "Actualizar" : "Crear Cliente"}
+            </Button>
+          </>
+        )}
       </div>
     </form>
   );
