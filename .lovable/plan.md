@@ -1,205 +1,238 @@
 
-# Plan: Corrección Completa de Layouts Móviles
+# Plan: Adaptar Módulo de Inventario a Móvil
 
-## Problemas Detectados (3)
+## Estado Actual
 
-### Problema 1: Tabs "Editar Cliente" cortadas
-**Visible:** Tab "Pla..." (Plazos) cortada en la imagen
-**Causa:** Las tabs usan nombres largos + íconos en móvil, excediendo el ancho incluso con scroll-x
+El módulo de Inventario tiene **3 pestañas** con tablas de datos de escritorio que no se adaptan a móvil:
 
-### Problema 2: Texto checkbox "Es Grupo Padre" cortado
-**Visible:** "Marcar si este cliente agrupa múltiples sucursales con dife..." 
-**Causa:** El párrafo no tiene word-break y el contenedor no limita el ancho
+1. **Lotes (Entradas)** - Tabla con 9 columnas: Fecha, Producto, Cantidad, Bodega, Lote, Caducidad, OC, Recibido por, Acciones
+2. **Movimientos Manuales** - Tabla con 11 columnas: Fecha, Producto, Tipo, Cantidad, Stock Anterior/Nuevo, Lote, Caducidad, Usuario, Referencia, Acciones
+3. **Por Categoría** - Tabla expandible con 8 columnas por producto
 
-### Problema 3: Diálogo Sucursales - botones y textos cortados
-**Visible:** "Regulares" cortado, "Auto-detectar Z..." cortado
-**Causa:** Aunque hay scroll-x en filtros, los botones internos no se adaptan bien
-
----
-
-## Solución Detallada
-
-### Cambio 1: Tabs Móviles más Compactas (Clientes.tsx)
-
-Reducir texto de tabs en móvil para que quepan sin iconos o con nombres abreviados:
-
-```
-Antes (móvil):
-[Datos] [📦 Productos] [🎁 Cortesías] [💳 Plazos] [📅 Días] [👤 Portal]
-                                              ↑ CORTADO
-
-Después (móvil):
-[Datos] [📦 Prod.] [🎁 Cort.] [📅 Plazos] [📆 Días] [👤 Portal]
-                              ↑ TODO VISIBLE
-```
-
-**Archivo:** `src/pages/Clientes.tsx` (líneas 1008-1038)
-
-```tsx
-// Móvil: Usar nombres más cortos sin iconos o con iconos compactos
-<TabsList className="inline-flex w-max gap-1">
-  <TabsTrigger value="datos" className="px-2 text-sm">Datos</TabsTrigger>
-  <TabsTrigger value="productos" className="px-2 text-sm">Prod.</TabsTrigger>
-  <TabsTrigger value="cortesias" className="px-2 text-sm">🎁</TabsTrigger>
-  <TabsTrigger value="creditos" className="px-2 text-sm">Plazos</TabsTrigger>
-  <TabsTrigger value="programacion" className="px-2 text-sm">Días</TabsTrigger>
-  {isAdmin && (
-    <TabsTrigger value="usuario" className="px-2 text-sm">
-      Portal {editingClient.user_id && <Badge className="ml-1 h-4 bg-green-500 text-[10px]">✓</Badge>}
-    </TabsTrigger>
-  )}
-</TabsList>
-```
-
-### Cambio 2: Checkbox con Texto que Envuelve (ClienteFormContent.tsx)
-
-Forzar wrap del texto largo en móvil:
-
-**Archivo:** `src/components/clientes/ClienteFormContent.tsx` (líneas 151-165)
-
-```tsx
-// Antes
-<div className="flex items-center space-x-2 pt-2">
-  <Checkbox id="es_grupo" ... />
-  <div className="grid gap-1 leading-none">
-    <Label>Es Grupo Padre</Label>
-    <p className="text-xs text-muted-foreground">
-      Marcar si este cliente agrupa múltiples sucursales con diferentes razones sociales
-    </p>
-  </div>
-</div>
-
-// Después - Agregar clase para wrap en móvil
-<div className={`flex ${isMobile ? 'items-start' : 'items-center'} space-x-2 pt-2`}>
-  <Checkbox id="es_grupo" className="mt-1" ... />
-  <div className="grid gap-1 leading-none min-w-0">
-    <Label>Es Grupo Padre</Label>
-    <p className="text-xs text-muted-foreground break-words">
-      Marcar si este cliente agrupa múltiples sucursales con diferentes razones sociales
-    </p>
-  </div>
-</div>
-```
-
-Cambios clave:
-- `items-center` → `items-start` en móvil (checkbox arriba)
-- Agregar `min-w-0` al contenedor de texto (permite shrink)
-- Agregar `break-words` al párrafo (permite wrap)
-- `mt-1` al checkbox para alinear con primera línea
-
-### Cambio 3: Filtros Sucursales Compactos (ClienteSucursalesDialog.tsx)
-
-Reducir texto de botones de filtro en móvil:
-
-**Archivo:** `src/components/clientes/ClienteSucursalesDialog.tsx` (líneas 640-663)
-
-```tsx
-// Antes
-<Button size="sm" variant={...} onClick={...}>
-  Todas ({sucursales.length})
-</Button>
-<Button size="sm" variant={...} onClick={...}>
-  🍗 Rosticerías ({countRosticerias})
-</Button>
-<Button size="sm" variant={...} onClick={...}>
-  Regulares ({countRegulares})
-</Button>
-
-// Después - Texto más compacto en móvil
-<Button size="sm" variant={...} onClick={...}>
-  {isMobile ? `Todas (${sucursales.length})` : `Todas (${sucursales.length})`}
-</Button>
-<Button size="sm" variant={...} onClick={...} className="whitespace-nowrap">
-  🍗 {isMobile ? `(${countRosticerias})` : `Rosticerías (${countRosticerias})`}
-</Button>
-<Button size="sm" variant={...} onClick={...} className="whitespace-nowrap">
-  {isMobile ? `Reg. (${countRegulares})` : `Regulares (${countRegulares})`}
-</Button>
-```
-
-### Cambio 4: Alerta "Sin Zona" Compacta (ClienteSucursalesDialog.tsx)
-
-**Archivo:** `src/components/clientes/ClienteSucursalesDialog.tsx` (líneas 817-835)
-
-```tsx
-// Antes
-<div className="flex items-center gap-3 p-3 ...">
-  <AlertTriangle ... />
-  <span>194 sucursales sin zona asignada</span>
-  <Button className="ml-auto">Auto-detectar Zonas</Button>
-</div>
-
-// Después - Stack vertical en móvil
-<div className={`${isMobile ? 'flex flex-col gap-2' : 'flex items-center gap-3'} p-3 ...`}>
-  <div className="flex items-center gap-2">
-    <AlertTriangle ... />
-    <span className="text-sm">
-      {sucursales.filter(s => !s.zona_id).length} sin zona
-    </span>
-  </div>
-  <Button size="sm" variant="outline" onClick={...} className={isMobile ? 'w-full' : 'ml-auto'}>
-    <Wand2 className="h-4 w-4 mr-1" />
-    {isMobile ? 'Auto-detectar' : 'Auto-detectar Zonas'}
-  </Button>
-</div>
-```
+Además:
+- Filtros en layout horizontal (inputs de fecha + selects + botones) que desbordan
+- Diálogo de "Registrar Movimiento" con grids de 2 columnas
+- Sin uso de `useIsMobile()` para detectar dispositivo
 
 ---
 
-## Resumen de Archivos a Modificar
+## Solución
 
-| Archivo | Cambio Principal |
-|---------|-----------------|
-| `src/pages/Clientes.tsx` | Tabs móviles más compactas (sin iconos, nombres cortos) |
-| `src/components/clientes/ClienteFormContent.tsx` | Checkbox con texto que envuelve + min-w-0 |
-| `src/components/clientes/ClienteSucursalesDialog.tsx` | Filtros con texto abreviado, alerta compacta |
+### 1. Crear Componentes de Tarjetas Móviles
+
+#### LoteCardMobile (nuevo)
+Tarjeta compacta para lotes/entradas:
+```
+┌─────────────────────────────────────┐
+│ 📅 15 Ene 2025       OC-2025-001   │
+├─────────────────────────────────────┤
+│ POLVO123                            │
+│ Polvo para hornear                  │
+├─────────────────────────────────────┤
+│ 150 uds    📦 Bodega Central        │
+│ 🏷️ Lote: L20250115                  │
+│ ⏰ Vence: 30 días [Badge amarillo]  │
+│ 👤 Juan Pérez                       │
+└─────────────────────────────────────┘
+```
+
+#### MovimientoCardMobile (nuevo)
+Tarjeta para movimientos manuales:
+```
+┌─────────────────────────────────────┐
+│ 15 Ene 10:30    [Entrada] ← Badge  │
+├─────────────────────────────────────┤
+│ AZUCAR01 - Azúcar estándar         │
+├─────────────────────────────────────┤
+│ Cantidad: +50          Stock: 150  │
+│              (antes: 100) ↗ +50    │
+│ Lote: L2025   Ref: Compra #45      │
+│ 👤 María García                     │
+├─────────────────────────────────────┤
+│ [Editar]            [Eliminar]     │
+└─────────────────────────────────────┘
+```
+
+### 2. Adaptar Filtros a Móvil
+
+**Antes (desktop):**
+```
+[🔍 Buscar...            ] [Bodega ▼] [Desde: ___] [Hasta: ___] [Limpiar]
+```
+
+**Después (móvil):**
+```
+┌─────────────────────────────────────┐
+│ [🔍 Buscar...                    ]  │
+├─────────────────────────────────────┤
+│ [Bodega ▼      ] [Tipo ▼        ]  │
+├─────────────────────────────────────┤
+│ [Desde: ____   ] [Hasta: ____   ]  │
+├─────────────────────────────────────┤
+│ [Limpiar filtros                ]  │
+│ Mostrando 45 de 120 lotes          │
+└─────────────────────────────────────┘
+```
+
+- Búsqueda: ancho completo
+- Selects: 2 columnas en móvil
+- Fechas: 2 columnas, inputs más pequeños
+- Limpiar: botón ancho completo
+- Contador: texto centrado debajo
+
+### 3. Adaptar Diálogo "Registrar Movimiento"
+
+**Cambios:**
+- `DialogContent`: `w-[calc(100vw-2rem)] sm:max-w-2xl overflow-x-hidden`
+- Grids de 2 columnas → 1 columna en móvil
+- Botones Cancelar/Registrar → stack vertical en móvil
+
+### 4. Adaptar Pestaña "Por Categoría"
+
+#### Cabecera de categoría (móvil):
+```
+┌─────────────────────────────────────┐
+│ ▼ 📦 HARINAS                        │
+│    12 productos                     │
+│    Stock: 1,234 • $45,678.00       │
+└─────────────────────────────────────┘
+```
+
+#### Productos dentro (móvil):
+Reutilizar concepto de `InventarioItemMobile` existente pero extendido:
+```
+┌─────────────────────────────────────┐
+│ HARINA01                            │
+│ Harina de trigo integral            │
+│ Marca: La Fama                      │
+├─────────────────────────────────────┤
+│ Stock: 150 kg   Costo: $25.00      │
+│ Precio: $35.00  Valor: $3,750.00   │
+│ [Ver lotes]                         │
+└─────────────────────────────────────┘
+```
+
+### 5. Totales Globales (móvil)
+
+**Después:**
+```
+┌─────────────────────────────────────┐
+│ Stock Total Global: 12,345         │
+│ Valor Inventario: $567,890.00      │
+└─────────────────────────────────────┘
+```
+Stack vertical con texto centrado.
 
 ---
 
-## Resultado Visual Esperado
+## Archivos a Crear
 
-### Editar Cliente (Móvil)
-```
-┌─────────────────────────────────┐
-│ Editar Cliente               ✕ │
-├─────────────────────────────────┤
-│ [Datos][Prod.][🎁][Plazos][Días]│ ← Todas las tabs visibles
-├─────────────────────────────────┤
-│ Código *                        │
-│ [LECAROZ                     ]  │
-│                                 │
-│ Nombre Comercial *              │
-│ [Grupo Lecaroz               ]  │
-│                                 │
-│ ☐ Es Grupo Padre                │
-│   Marcar si este cliente        │
-│   agrupa múltiples sucursales   │
-│   con diferentes razones        │
-│   sociales                      │ ← Texto completo, envuelve
-│                                 │
-│ ─── Datos Fiscales ───          │
-│ RFC                             │
-│ [GLE001231AA1                ]  │
-└─────────────────────────────────┘
+| Archivo | Descripción |
+|---------|-------------|
+| `src/components/inventario/LoteCardMobile.tsx` | Tarjeta para lotes/entradas |
+| `src/components/inventario/MovimientoCardMobile.tsx` | Tarjeta para movimientos |
+| `src/components/inventario/CategoriaProductoMobile.tsx` | Producto expandido en categoría |
+
+## Archivos a Modificar
+
+| Archivo | Cambios |
+|---------|---------|
+| `src/pages/Inventario.tsx` | Agregar `useIsMobile`, condicionar tablas vs tarjetas, adaptar filtros y diálogo |
+| `src/components/inventario/InventarioPorCategoria.tsx` | Agregar `useIsMobile`, adaptar header categoría y usar tarjetas móviles |
+
+---
+
+## Código Clave
+
+### Inventario.tsx - Estructura Condicional
+```tsx
+import { useIsMobile } from "@/hooks/use-mobile";
+
+// En el componente
+const isMobile = useIsMobile();
+
+// En el render de lotes
+{isMobile ? (
+  <div className="space-y-3">
+    {filteredLotes.map(lote => (
+      <LoteCardMobile key={lote.id} lote={lote} onVerRecepcion={...} />
+    ))}
+  </div>
+) : (
+  <Table>...</Table>
+)}
 ```
 
-### Sucursales (Móvil)
+### Filtros Responsivos
+```tsx
+<div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-4`}>
+  {/* Búsqueda - siempre ancho completo en móvil */}
+  <div className="relative flex-1">
+    <Search className="absolute left-3 top-3 h-4 w-4" />
+    <Input placeholder="Buscar..." className="pl-10" />
+  </div>
+  
+  {/* Selects - 2 columnas en móvil */}
+  <div className={`grid ${isMobile ? 'grid-cols-2' : 'flex'} gap-2`}>
+    <Select>...</Select>
+  </div>
+  
+  {/* Fechas - 2 columnas */}
+  <div className="grid grid-cols-2 gap-2">
+    <Input type="date" />
+    <Input type="date" />
+  </div>
+  
+  {/* Limpiar - ancho completo en móvil */}
+  <Button className={isMobile ? 'w-full' : ''}>Limpiar</Button>
+</div>
 ```
-┌─────────────────────────────────┐
-│ Sucursales de Grupo Lecaroz  ✕ │
-├─────────────────────────────────┤
-│ [Todas(309)][🍗(190)][Reg.(119)]│ ← Botones completos
-├─────────────────────────────────┤
-│ [+ Nueva Sucursal            ]  │
-│ [🔍 Buscar por nombre...     ]  │
-│                                 │
-│ ⚠ 194 sin zona                  │
-│ [Auto-detectar              ]   │ ← Stack vertical
-│                                 │
-│ ┌─────────────────────────────┐ │
-│ │ 1. LAGO                     │ │
-│ │ [Factura propia]            │ │
-│ │ Yaquis N° 84, Col. Tlal...  │ │
-│ └─────────────────────────────┘ │
-└─────────────────────────────────┘
+
+### Diálogo Registrar Movimiento
+```tsx
+<DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl overflow-x-hidden">
+  {/* Grids adaptables */}
+  <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
+    {/* campos */}
+  </div>
+  
+  {/* Botones */}
+  <div className={`flex ${isMobile ? 'flex-col gap-2' : 'justify-end gap-2'}`}>
+    {isMobile ? (
+      <>
+        <Button type="submit" className="w-full">Registrar</Button>
+        <Button variant="outline" className="w-full">Cancelar</Button>
+      </>
+    ) : (
+      <>
+        <Button variant="outline">Cancelar</Button>
+        <Button type="submit">Registrar</Button>
+      </>
+    )}
+  </div>
+</DialogContent>
 ```
+
+---
+
+## Resultado Esperado
+
+### Móvil:
+- Lotes y movimientos como tarjetas verticales scrolleables
+- Filtros apilados sin overflow horizontal
+- Diálogo de movimiento con campos en columna única
+- Categorías con headers compactos y productos en tarjetas
+- Sin tablas, todo vertical y táctil
+
+### Desktop:
+- Sin cambios (mantiene tablas actuales)
+
+---
+
+## Lo que NO cambia
+
+- Lógica de carga de datos
+- Queries a Supabase
+- Filtros y búsqueda (solo layout, no funcionalidad)
+- Suscripciones realtime
+- Validaciones de formulario
