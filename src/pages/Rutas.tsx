@@ -313,55 +313,62 @@ const RutasContent = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Rutas y Entregas</h1>
-          <p className="text-muted-foreground">Control de rutas de entrega, vehículos y zonas</p>
+          <h1 className="text-xl sm:text-3xl font-bold">Rutas y Entregas</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Control de rutas de entrega, vehículos y zonas</p>
         </div>
 
         <Tabs defaultValue="planificar" className="space-y-4">
-          <div className="overflow-x-auto -mx-1 px-1 pb-1">
-            <TabsList className="inline-flex w-max min-w-full lg:w-auto">
-              <TabsTrigger value="planificar" className="flex items-center gap-2">
+          <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
+            <TabsList className="inline-flex w-max gap-1">
+              <TabsTrigger value="planificar" className="flex items-center gap-1.5 px-2 sm:px-3">
                 <Route className="h-4 w-4" />
-                Planificar
+                <span className="hidden sm:inline">Planificar</span>
+                <span className="sm:hidden">Plan</span>
               </TabsTrigger>
-              <TabsTrigger value="asignaciones" className="flex items-center gap-2">
+              <TabsTrigger value="asignaciones" className="flex items-center gap-1.5 px-2 sm:px-3">
                 <CalendarCheck className="h-4 w-4" />
-                Asignaciones
+                <span className="hidden sm:inline">Asignaciones</span>
+                <span className="sm:hidden">Asign</span>
               </TabsTrigger>
-              <TabsTrigger value="monitoreo" className="flex items-center gap-2">
+              <TabsTrigger value="monitoreo" className="flex items-center gap-1.5 px-2 sm:px-3">
                 <Activity className="h-4 w-4" />
-                Monitoreo
+                <span className="hidden sm:inline">Monitoreo</span>
+                <span className="sm:hidden">Mon</span>
                 {alertas.length > 0 && (
                   <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1">
                     {alertas.length}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="mapa" className="flex items-center gap-2">
+              <TabsTrigger value="mapa" className="flex items-center gap-1.5 px-2 sm:px-3">
                 <Globe className="h-4 w-4" />
-                Mapa Global
+                <span className="hidden sm:inline">Mapa Global</span>
+                <span className="sm:hidden">Mapa</span>
               </TabsTrigger>
-              <TabsTrigger value="rutas" className="flex items-center gap-2">
+              <TabsTrigger value="rutas" className="flex items-center gap-1.5 px-2 sm:px-3">
                 <Truck className="h-4 w-4" />
                 Rutas
               </TabsTrigger>
-              <TabsTrigger value="vehiculos" className="flex items-center gap-2">
+              <TabsTrigger value="vehiculos" className="flex items-center gap-1.5 px-2 sm:px-3">
                 <Truck className="h-4 w-4" />
-                Vehículos
+                <span className="hidden sm:inline">Vehículos</span>
+                <span className="sm:hidden">Veh</span>
               </TabsTrigger>
-              <TabsTrigger value="zonas" className="flex items-center gap-2">
+              <TabsTrigger value="zonas" className="flex items-center gap-1.5 px-2 sm:px-3">
                 <MapPin className="h-4 w-4" />
                 Zonas
               </TabsTrigger>
-              <TabsTrigger value="disponibilidad" className="flex items-center gap-2">
+              <TabsTrigger value="disponibilidad" className="flex items-center gap-1.5 px-2 sm:px-3">
                 <ClipboardList className="h-4 w-4" />
-                Disponibilidad
+                <span className="hidden sm:inline">Disponibilidad</span>
+                <span className="sm:hidden">Disp</span>
               </TabsTrigger>
-              <TabsTrigger value="externos" className="flex items-center gap-2">
+              <TabsTrigger value="externos" className="flex items-center gap-1.5 px-2 sm:px-3">
                 <UserPlus className="h-4 w-4" />
-                Externos
+                <span className="hidden sm:inline">Externos</span>
+                <span className="sm:hidden">Ext</span>
               </TabsTrigger>
             </TabsList>
           </div>

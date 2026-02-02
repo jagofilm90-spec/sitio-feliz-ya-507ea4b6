@@ -468,13 +468,13 @@ const InventarioContent = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <NotificacionesSistema />
         
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <div>
-            <h1 className="text-3xl font-bold">Inventario</h1>
-            <p className="text-muted-foreground">Control de movimientos de inventario</p>
+            <h1 className="text-xl sm:text-3xl font-bold">Inventario</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Control de movimientos de inventario</p>
           </div>
           {activeTab === "movimientos" && (
             <Dialog open={dialogOpen} onOpenChange={(open) => {
@@ -658,20 +658,25 @@ const InventarioContent = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="lotes" className="flex items-center gap-2">
-              <Boxes className="h-4 w-4" />
-              Lotes (Entradas)
-            </TabsTrigger>
-            <TabsTrigger value="movimientos" className="flex items-center gap-2">
-              <List className="h-4 w-4" />
-              Movimientos Manuales
-            </TabsTrigger>
-            <TabsTrigger value="categoria" className="flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              Por Categoría
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
+            <TabsList className="inline-flex w-max gap-1">
+              <TabsTrigger value="lotes" className="flex items-center gap-1.5 px-2 sm:px-3">
+                <Boxes className="h-4 w-4" />
+                <span className="hidden sm:inline">Lotes (Entradas)</span>
+                <span className="sm:hidden">Lotes</span>
+              </TabsTrigger>
+              <TabsTrigger value="movimientos" className="flex items-center gap-1.5 px-2 sm:px-3">
+                <List className="h-4 w-4" />
+                <span className="hidden sm:inline">Movimientos Manuales</span>
+                <span className="sm:hidden">Movim</span>
+              </TabsTrigger>
+              <TabsTrigger value="categoria" className="flex items-center gap-1.5 px-2 sm:px-3">
+                <Package className="h-4 w-4" />
+                <span className="hidden sm:inline">Por Categoría</span>
+                <span className="sm:hidden">Categ</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* PESTAÑA LOTES - Entradas desde recepciones de compras */}
           <TabsContent value="lotes" className="space-y-4">

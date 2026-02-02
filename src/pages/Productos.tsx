@@ -552,13 +552,13 @@ const Productos = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <NotificacionesSistema />
         
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <div>
-            <h1 className="text-3xl font-bold">Productos</h1>
-            <p className="text-muted-foreground">Gestión de catálogo de productos</p>
+            <h1 className="text-xl sm:text-3xl font-bold">Productos</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Gestión de catálogo de productos</p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
