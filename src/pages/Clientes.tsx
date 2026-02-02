@@ -1005,34 +1005,67 @@ const Clientes = () => {
       
       {editingClient ? (
         <Tabs defaultValue="datos" className="w-full">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-6' : 'grid-cols-5'}`}>
-            <TabsTrigger value="datos">Datos</TabsTrigger>
-            <TabsTrigger value="productos" className="flex items-center gap-1">
-              <Package className="h-4 w-4" />
-              Productos
-            </TabsTrigger>
-            <TabsTrigger value="cortesias" className="flex items-center gap-1">
-              <Gift className="h-4 w-4 text-amber-500" />
-              Cortesías
-            </TabsTrigger>
-            <TabsTrigger value="creditos" className="flex items-center gap-1">
-              <CreditCard className="h-4 w-4" />
-              Plazos
-            </TabsTrigger>
-            <TabsTrigger value="programacion" className="flex items-center gap-1">
-              <CalendarDays className="h-4 w-4 text-blue-500" />
-              Días
-            </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="usuario" className="flex items-center gap-1">
-                <User className="h-4 w-4" />
-                Portal
-                {editingClient.user_id && (
-                  <Badge variant="default" className="ml-1 h-5 bg-green-500">✓</Badge>
+          {isMobile ? (
+            <div className="overflow-x-auto -mx-2 px-2 pb-2 scrollbar-hide">
+              <TabsList className="inline-flex w-max gap-1">
+                <TabsTrigger value="datos" className="px-3">Datos</TabsTrigger>
+                <TabsTrigger value="productos" className="flex items-center gap-1 px-3">
+                  <Package className="h-4 w-4" />
+                  Productos
+                </TabsTrigger>
+                <TabsTrigger value="cortesias" className="flex items-center gap-1 px-3">
+                  <Gift className="h-4 w-4 text-amber-500" />
+                  Cortesías
+                </TabsTrigger>
+                <TabsTrigger value="creditos" className="flex items-center gap-1 px-3">
+                  <CreditCard className="h-4 w-4" />
+                  Plazos
+                </TabsTrigger>
+                <TabsTrigger value="programacion" className="flex items-center gap-1 px-3">
+                  <CalendarDays className="h-4 w-4 text-blue-500" />
+                  Días
+                </TabsTrigger>
+                {isAdmin && (
+                  <TabsTrigger value="usuario" className="flex items-center gap-1 px-3">
+                    <User className="h-4 w-4" />
+                    Portal
+                    {editingClient.user_id && (
+                      <Badge variant="default" className="ml-1 h-5 bg-green-500">✓</Badge>
+                    )}
+                  </TabsTrigger>
                 )}
+              </TabsList>
+            </div>
+          ) : (
+            <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-6' : 'grid-cols-5'}`}>
+              <TabsTrigger value="datos">Datos</TabsTrigger>
+              <TabsTrigger value="productos" className="flex items-center gap-1">
+                <Package className="h-4 w-4" />
+                Productos
               </TabsTrigger>
-            )}
-          </TabsList>
+              <TabsTrigger value="cortesias" className="flex items-center gap-1">
+                <Gift className="h-4 w-4 text-amber-500" />
+                Cortesías
+              </TabsTrigger>
+              <TabsTrigger value="creditos" className="flex items-center gap-1">
+                <CreditCard className="h-4 w-4" />
+                Plazos
+              </TabsTrigger>
+              <TabsTrigger value="programacion" className="flex items-center gap-1">
+                <CalendarDays className="h-4 w-4 text-blue-500" />
+                Días
+              </TabsTrigger>
+              {isAdmin && (
+                <TabsTrigger value="usuario" className="flex items-center gap-1">
+                  <User className="h-4 w-4" />
+                  Portal
+                  {editingClient.user_id && (
+                    <Badge variant="default" className="ml-1 h-5 bg-green-500">✓</Badge>
+                  )}
+                </TabsTrigger>
+              )}
+            </TabsList>
+          )}
           <TabsContent value="productos" className="mt-4">
             <ClienteProductosTab clienteId={editingClient.id} />
           </TabsContent>
