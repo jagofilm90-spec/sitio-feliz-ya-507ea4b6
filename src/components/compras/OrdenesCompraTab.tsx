@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -65,6 +66,7 @@ import { registrarCorreoEnviado } from "./HistorialCorreosOC";
 import { COMPANY_DATA } from "@/constants/companyData";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import { LiveIndicator } from "@/components/ui/live-indicator";
+import { OrdenCompraCardMobile } from "./OrdenCompraCardMobile";
 
 // Helper function to convert image to base64
 const getLogoBase64 = async (): Promise<string> => {
@@ -102,6 +104,7 @@ interface EntregaProgramada {
 }
 
 const OrdenesCompraTab = () => {
+  const isMobile = useIsMobile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isAdmin } = useUserRoles();
@@ -1665,6 +1668,44 @@ const OrdenesCompraTab = () => {
         </div>
       </div>
 
+      {/* Vista móvil: cards */}
+      {isMobile ? (
+        <div className="space-y-3">
+          {filteredOrdenes.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No hay órdenes de compra registradas</div>
+          ) : (
+            filteredOrdenes.map((orden) => (
+              <OrdenCompraCardMobile
+                key={orden.id}
+                orden={orden}
+                faltantesPendientes={(faltantesPorOC as Record<string, number>)[orden.id] || 0}
+                onOpenAcciones={(o) => {
+                  setOrdenSeleccionada(o);
+                  setAccionesDialogOpen(true);
+                }}
+                onOpenFacturas={(o) => {
+                  setOrdenParaFacturas({
+                    id: o.id,
+                    folio: o.folio,
+                    proveedor_nombre: o.proveedor_id ? o.proveedores?.nombre : o.proveedor_nombre_manual,
+                    total: o.total,
+                  });
+                  setFacturasDialogOpen(true);
+                }}
+                onReenviar={(o) => {
+                  setOrdenParaReenvio(o);
+                  setReenviarDialogOpen(true);
+                }}
+                onEliminar={(o) => {
+                  setOrdenParaEliminar(o);
+                  setConfirmarEliminacionOpen(true);
+                }}
+                onNavigatePago={(id) => navigate(`/compras?tab=adeudos&oc=${id}`)}
+              />
+            ))
+          )}
+        </div>
+      ) : (
       <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
@@ -1897,6 +1938,7 @@ const OrdenesCompraTab = () => {
           </TableBody>
         </Table>
       </div>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">

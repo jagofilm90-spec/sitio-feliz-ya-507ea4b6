@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,6 +50,8 @@ import { ImportarCatalogoAspelDialog } from "@/components/clientes/ImportarCatal
 import { AgruparClientesDialog } from "@/components/clientes/AgruparClientesDialog";
 import { DetectarGruposDialog } from "@/components/clientes/DetectarGruposDialog";
 import { ImportarSucursalesExcelDialog } from "@/components/clientes/ImportarSucursalesExcelDialog";
+import { ClienteCardMobile } from "@/components/clientes/ClienteCardMobile";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog as HistorialDialog,
   DialogContent as HistorialDialogContent,
@@ -94,6 +97,7 @@ const VENDEDORES: Vendedor[] = [
 ];
 
 const Clientes = () => {
+  const isMobile = useIsMobile();
   const [clientes, setClientes] = useState<any[]>([]);
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [loading, setLoading] = useState(true);
@@ -770,21 +774,59 @@ const Clientes = () => {
     return vendedor?.nombre_corto || null;
   };
 
-  const renderClienteTable = () => (
-    <div className="border rounded-lg">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Código</TableHead>
-            <TableHead>Nombre</TableHead>
-            <TableHead>RFC</TableHead>
-            <TableHead>Crédito</TableHead>
-            <TableHead>Límite</TableHead>
-            <TableHead>Saldo</TableHead>
-            <TableHead>Estado</TableHead>
-            <TableHead className="text-right">Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
+  const renderClienteTable = () => {
+    // Vista móvil: cards
+    if (isMobile) {
+      return (
+        <div className="space-y-3">
+          {loading ? (
+            <div className="text-center py-8 text-muted-foreground">Cargando...</div>
+          ) : filteredClientes.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No se encontraron clientes</div>
+          ) : (
+            filteredClientes.map((cliente) => (
+              <ClienteCardMobile
+                key={cliente.id}
+                cliente={cliente}
+                onEdit={handleEdit}
+                onViewSucursales={(c) => {
+                  setSelectedClienteForSucursales(c);
+                  setSucursalesDialogOpen(true);
+                }}
+                onViewHistorial={(c) => {
+                  setSelectedClienteForHistorial(c);
+                  setHistorialDialogOpen(true);
+                }}
+                onViewProductos={(c) => {
+                  setSelectedClienteForProductos(c);
+                  setProductosDialogOpen(true);
+                }}
+                onDelete={handleDelete}
+                getVendedorNombre={getVendedorName}
+                getCreditLabel={getCreditLabel}
+              />
+            ))
+          )}
+        </div>
+      );
+    }
+    
+    // Vista desktop: tabla
+    return (
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Código</TableHead>
+              <TableHead>Nombre</TableHead>
+              <TableHead>RFC</TableHead>
+              <TableHead>Crédito</TableHead>
+              <TableHead>Límite</TableHead>
+              <TableHead>Saldo</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead className="text-right">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
         <TableBody>
           {loading ? (
             <TableRow>
@@ -910,7 +952,8 @@ const Clientes = () => {
         </TableBody>
       </Table>
     </div>
-  );
+    );
+  };
 
   return (
     <Layout>

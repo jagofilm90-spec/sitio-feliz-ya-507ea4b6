@@ -13,6 +13,7 @@
 
 import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -60,6 +61,7 @@ import GenerarFacturaDialog from "@/components/pedidos/GenerarFacturaDialog";
 import { formatCurrency } from "@/lib/utils";
 import { ordenarProductosAzucarPrimero } from "@/lib/calculos";
 import { getDisplayName } from "@/lib/productUtils";
+import { PedidoHistorialCardMobile } from "@/components/pedidos/PedidoHistorialCardMobile";
 
 interface PedidoConCotizacion {
   id: string;
@@ -78,6 +80,7 @@ interface PedidoConCotizacion {
 }
 
 const PedidosContent = () => {
+  const isMobile = useIsMobile();
   const [pedidos, setPedidos] = useState<PedidoConCotizacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -704,6 +707,36 @@ const PedidosContent = () => {
               </Button>
             </div>
 
+            {/* Vista móvil: cards */}
+            {isMobile ? (
+              <div className="space-y-3">
+                {loading ? (
+                  <div className="text-center py-8 text-muted-foreground">Cargando...</div>
+                ) : filteredPedidos.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">No hay pedidos registrados</div>
+                ) : (
+                  filteredPedidos.map((pedido) => (
+                    <PedidoHistorialCardMobile
+                      key={pedido.id}
+                      pedido={pedido}
+                      isSelected={selectedPedidos.has(pedido.id)}
+                      onSelect={handleSelectPedido}
+                      onViewDetalle={(id) => {
+                        setSelectedPedidoId(id);
+                        setPedidoDetalleOpen(true);
+                      }}
+                      onPrintRemision={handlePrintRemision}
+                      onGenerarFactura={(p) => {
+                        setSelectedPedidoForFactura(p);
+                        setFacturaDialogOpen(true);
+                      }}
+                      onFacturarEnviar={handleFacturarYEnviar}
+                      onViewCotizacion={setSelectedCotizacionId}
+                    />
+                  ))
+                )}
+              </div>
+            ) : (
             <div className="border rounded-lg">
               <Table>
                 <TableHeader>
@@ -876,6 +909,7 @@ const PedidosContent = () => {
                 </TableBody>
               </Table>
             </div>
+            )}
           </TabsContent>
 
           <TabsContent value="por-autorizar" className="mt-6">
