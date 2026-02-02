@@ -13,6 +13,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { LotesDesglose } from "@/components/productos/LotesDesglose";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { CategoriaProductoMobile } from "@/components/inventario/CategoriaProductoMobile";
 
 interface Producto {
   id: string;
@@ -34,6 +36,7 @@ interface CategoriaAgrupada {
 }
 
 export const InventarioPorCategoria = () => {
+  const isMobile = useIsMobile();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -113,27 +116,28 @@ export const InventarioPorCategoria = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-4 flex-wrap items-center">
-        <div className="relative flex-1 min-w-[250px]">
+      <div className={`flex ${isMobile ? 'flex-col' : 'flex-row flex-wrap'} gap-4 items-start`}>
+        <div className="relative flex-1 min-w-0 w-full">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por producto, código, marca o categoría..."
+            placeholder={isMobile ? "Buscar..." : "Buscar por producto, código, marca o categoría..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
           />
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={expandAll}>
-            Expandir todo
+        <div className={`flex gap-2 ${isMobile ? 'w-full' : ''}`}>
+          <Button variant="outline" size="sm" onClick={expandAll} className={isMobile ? 'flex-1' : ''}>
+            {isMobile ? 'Expandir' : 'Expandir todo'}
           </Button>
-          <Button variant="outline" size="sm" onClick={collapseAll}>
-            Colapsar todo
+          <Button variant="outline" size="sm" onClick={collapseAll} className={isMobile ? 'flex-1' : ''}>
+            {isMobile ? 'Colapsar' : 'Colapsar todo'}
           </Button>
         </div>
-        <div className="text-sm text-muted-foreground">
-          {categoriasAgrupadas.length} categorías • {productos.length} productos
-        </div>
+      </div>
+      
+      <div className="text-sm text-muted-foreground text-center">
+        {categoriasAgrupadas.length} categorías • {productos.length} productos
       </div>
 
       <div className="space-y-3">
@@ -146,78 +150,95 @@ export const InventarioPorCategoria = () => {
             <div key={categoria.categoria} className="border rounded-lg overflow-hidden">
               <button
                 onClick={() => toggleCategory(categoria.categoria)}
-                className="w-full flex items-center justify-between p-4 bg-muted/50 hover:bg-muted transition-colors"
+                className="w-full flex items-center justify-between p-3 sm:p-4 bg-muted/50 hover:bg-muted transition-colors"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                   {expandedCategories.has(categoria.categoria) ? (
-                    <ChevronUp className="h-5 w-5" />
+                    <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                   ) : (
-                    <ChevronDown className="h-5 w-5" />
+                    <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                   )}
-                  <Package className="h-5 w-5 text-primary" />
-                  <span className="font-semibold text-lg">{categoria.categoria}</span>
-                  <Badge variant="secondary">{categoria.productos.length} productos</Badge>
+                  <Package className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                  <span className="font-semibold text-sm sm:text-lg truncate">{categoria.categoria}</span>
+                  <Badge variant="secondary" className="flex-shrink-0 text-xs">{categoria.productos.length}</Badge>
                 </div>
-                <div className="flex items-center gap-6 text-right">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Stock Total</p>
-                    <p className="font-bold text-lg">{categoria.stockTotal.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Valor Inventario</p>
-                    <p className="font-bold text-lg text-primary">
-                      ${categoria.valorTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                {isMobile ? (
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-xs text-muted-foreground">Valor</p>
+                    <p className="font-bold text-sm text-primary">
+                      ${categoria.valorTotal.toLocaleString('es-MX', { minimumFractionDigits: 0 })}
                     </p>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex items-center gap-6 text-right">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Stock Total</p>
+                      <p className="font-bold text-lg">{categoria.stockTotal.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Valor Inventario</p>
+                      <p className="font-bold text-lg text-primary">
+                        ${categoria.valorTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </button>
 
               {expandedCategories.has(categoria.categoria) && (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Código</TableHead>
-                      <TableHead>Producto</TableHead>
-                      <TableHead>Marca</TableHead>
-                      <TableHead className="text-right">Stock</TableHead>
-                      <TableHead className="text-right">Costo</TableHead>
-                      <TableHead className="text-right">Precio Venta</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
-                      <TableHead>Lotes</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                isMobile ? (
+                  <div className="p-3 space-y-2 bg-background">
                     {categoria.productos.map((producto) => (
-                      <TableRow key={producto.id}>
-                        <TableCell className="font-mono">{producto.codigo}</TableCell>
-                        <TableCell className="font-medium">{producto.nombre}</TableCell>
-                        <TableCell>{producto.marca || "—"}</TableCell>
-                        <TableCell className="text-right">
-                          <span className={producto.stock_actual === 0 ? "text-destructive" : ""}>
-                            {producto.stock_actual}
-                          </span>
-                          <span className="text-xs text-muted-foreground ml-1">{producto.unidad}</span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          ${producto.precio_compra.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          ${producto.precio_venta.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          ${(producto.stock_actual * producto.precio_compra).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                        </TableCell>
-                        <TableCell>
-                          <LotesDesglose
-                            productoId={producto.id}
-                            productoNombre={producto.nombre}
-                            stockTotal={producto.stock_actual}
-                          />
-                        </TableCell>
-                      </TableRow>
+                      <CategoriaProductoMobile key={producto.id} producto={producto} />
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Código</TableHead>
+                        <TableHead>Producto</TableHead>
+                        <TableHead>Marca</TableHead>
+                        <TableHead className="text-right">Stock</TableHead>
+                        <TableHead className="text-right">Costo</TableHead>
+                        <TableHead className="text-right">Precio Venta</TableHead>
+                        <TableHead className="text-right">Valor</TableHead>
+                        <TableHead>Lotes</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {categoria.productos.map((producto) => (
+                        <TableRow key={producto.id}>
+                          <TableCell className="font-mono">{producto.codigo}</TableCell>
+                          <TableCell className="font-medium">{producto.nombre}</TableCell>
+                          <TableCell>{producto.marca || "—"}</TableCell>
+                          <TableCell className="text-right">
+                            <span className={producto.stock_actual === 0 ? "text-destructive" : ""}>
+                              {producto.stock_actual}
+                            </span>
+                            <span className="text-xs text-muted-foreground ml-1">{producto.unidad}</span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            ${producto.precio_compra.toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            ${producto.precio_venta.toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            ${(producto.stock_actual * producto.precio_compra).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell>
+                            <LotesDesglose
+                              productoId={producto.id}
+                              productoNombre={producto.nombre}
+                              stockTotal={producto.stock_actual}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )
               )}
             </div>
           ))
@@ -227,16 +248,16 @@ export const InventarioPorCategoria = () => {
       {/* Totales globales */}
       {categoriasAgrupadas.length > 0 && (
         <div className="border-t pt-4 mt-6">
-          <div className="flex justify-end gap-8">
-            <div className="text-right">
+          <div className={`flex ${isMobile ? 'flex-col items-center gap-4' : 'justify-end gap-8'}`}>
+            <div className={isMobile ? 'text-center' : 'text-right'}>
               <p className="text-sm text-muted-foreground">Stock Total Global</p>
-              <p className="font-bold text-2xl">
+              <p className={`font-bold ${isMobile ? 'text-xl' : 'text-2xl'}`}>
                 {categoriasAgrupadas.reduce((sum, c) => sum + c.stockTotal, 0).toLocaleString()}
               </p>
             </div>
-            <div className="text-right">
+            <div className={isMobile ? 'text-center' : 'text-right'}>
               <p className="text-sm text-muted-foreground">Valor Total Inventario</p>
-              <p className="font-bold text-2xl text-primary">
+              <p className={`font-bold ${isMobile ? 'text-xl' : 'text-2xl'} text-primary`}>
                 ${categoriasAgrupadas.reduce((sum, c) => sum + c.valorTotal, 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </p>
             </div>

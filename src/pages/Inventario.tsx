@@ -25,6 +25,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { LoteCardMobile } from "@/components/inventario/LoteCardMobile";
+import { MovimientoCardMobile } from "@/components/inventario/MovimientoCardMobile";
 import {
   Dialog,
   DialogContent,
@@ -51,6 +54,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { RecepcionDetalleDialog } from "@/components/compras/RecepcionDetalleDialog";
 
 const InventarioContent = () => {
+  const isMobile = useIsMobile();
   const [lotes, setLotes] = useState<any[]>([]);
   const [movimientos, setMovimientos] = useState<any[]>([]);
   const [productos, setProductos] = useState<any[]>([]);
@@ -487,7 +491,7 @@ const InventarioContent = () => {
                   {isEditing ? "Editar movimiento" : "Registrar Movimiento"}
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className={`${isMobile ? 'w-[calc(100vw-2rem)]' : 'max-w-2xl'} overflow-x-hidden`}>
                 <DialogHeader>
                   <DialogTitle>
                     {isEditing ? "Editar Movimiento de Inventario" : "Registrar Movimiento de Inventario"}
@@ -529,7 +533,7 @@ const InventarioContent = () => {
                       </AlertDescription>
                     </Alert>
                   )}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
                     <div className="space-y-2">
                       <Label htmlFor="producto_id">Producto *</Label>
                       <Select
@@ -570,7 +574,7 @@ const InventarioContent = () => {
                       </Select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
                     <div className="space-y-2">
                       <Label htmlFor="cantidad">Cantidad *</Label>
                       <Input
@@ -612,7 +616,7 @@ const InventarioContent = () => {
                       </p>
                     </div>
                   )}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
                     <div className="space-y-2">
                       <Label htmlFor="lote">Lote</Label>
                       <Input
@@ -638,18 +642,37 @@ const InventarioContent = () => {
                       onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
                     />
                   </div>
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setDialogOpen(false);
-                        resetForm();
-                      }}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button type="submit">{isEditing ? "Guardar cambios" : "Registrar"}</Button>
+                  <div className={`flex ${isMobile ? 'flex-col' : 'justify-end'} gap-2`}>
+                    {isMobile ? (
+                      <>
+                        <Button type="submit" className="w-full">{isEditing ? "Guardar cambios" : "Registrar"}</Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => {
+                            setDialogOpen(false);
+                            resetForm();
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setDialogOpen(false);
+                            resetForm();
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button type="submit">{isEditing ? "Guardar cambios" : "Registrar"}</Button>
+                      </>
+                    )}
                   </div>
                 </form>
               </DialogContent>
@@ -678,101 +701,163 @@ const InventarioContent = () => {
             </TabsList>
           </div>
 
-          {/* PESTAÑA LOTES - Entradas desde recepciones de compras */}
           <TabsContent value="lotes" className="space-y-4">
-            <div className="flex gap-4 flex-wrap">
-              <div className="relative flex-1 min-w-[250px]">
+            {/* Filtros responsivos */}
+            <div className={`flex ${isMobile ? 'flex-col' : 'flex-row flex-wrap'} gap-4`}>
+              <div className="relative flex-1 min-w-0">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por producto, código o referencia de lote..."
+                  placeholder={isMobile ? "Buscar..." : "Buscar por producto, código o referencia de lote..."}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
-              <Select value={filterBodega} onValueChange={setFilterBodega}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filtrar por bodega" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas las bodegas</SelectItem>
-                  {bodegas.map((bodega) => (
-                    <SelectItem key={bodega.id} value={bodega.id}>
-                      {bodega.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isMobile ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <Select value={filterBodega} onValueChange={setFilterBodega}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Bodega" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todas">Todas</SelectItem>
+                      {bodegas.map((bodega) => (
+                        <SelectItem key={bodega.id} value={bodega.id}>
+                          {bodega.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="date"
+                    value={filterFechaInicio}
+                    onChange={(e) => setFilterFechaInicio(e.target.value)}
+                    placeholder="Desde"
+                  />
+                  <Input
+                    type="date"
+                    value={filterFechaFin}
+                    onChange={(e) => setFilterFechaFin(e.target.value)}
+                    placeholder="Hasta"
+                  />
+                  {(filterBodega !== "todas" || filterFechaInicio || filterFechaFin) && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setFilterBodega("todas");
+                        setFilterFechaInicio("");
+                        setFilterFechaFin("");
+                      }}
+                    >
+                      Limpiar
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <Select value={filterBodega} onValueChange={setFilterBodega}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filtrar por bodega" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas las bodegas</SelectItem>
+                    {bodegas.map((bodega) => (
+                      <SelectItem key={bodega.id} value={bodega.id}>
+                        {bodega.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             
-            <div className="flex gap-4 flex-wrap items-end">
-              <div className="space-y-2">
-                <Label htmlFor="fecha_inicio_lotes">Desde</Label>
-                <Input
-                  id="fecha_inicio_lotes"
-                  type="date"
-                  value={filterFechaInicio}
-                  onChange={(e) => setFilterFechaInicio(e.target.value)}
-                  className="w-[180px]"
-                />
+            {!isMobile && (
+              <div className="flex gap-4 flex-wrap items-end">
+                <div className="space-y-2">
+                  <Label htmlFor="fecha_inicio_lotes">Desde</Label>
+                  <Input
+                    id="fecha_inicio_lotes"
+                    type="date"
+                    value={filterFechaInicio}
+                    onChange={(e) => setFilterFechaInicio(e.target.value)}
+                    className="w-[180px]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fecha_fin_lotes">Hasta</Label>
+                  <Input
+                    id="fecha_fin_lotes"
+                    type="date"
+                    value={filterFechaFin}
+                    onChange={(e) => setFilterFechaFin(e.target.value)}
+                    className="w-[180px]"
+                  />
+                </div>
+                {(filterBodega !== "todas" || filterFechaInicio || filterFechaFin) && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setFilterBodega("todas");
+                      setFilterFechaInicio("");
+                      setFilterFechaFin("");
+                    }}
+                  >
+                    Limpiar filtros
+                  </Button>
+                )}
+                <div className="ml-auto text-sm text-muted-foreground">
+                  Mostrando {filteredLotes.length} de {lotes.length} lotes
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="fecha_fin_lotes">Hasta</Label>
-                <Input
-                  id="fecha_fin_lotes"
-                  type="date"
-                  value={filterFechaFin}
-                  onChange={(e) => setFilterFechaFin(e.target.value)}
-                  className="w-[180px]"
-                />
-              </div>
-              {(filterBodega !== "todas" || filterFechaInicio || filterFechaFin) && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setFilterBodega("todas");
-                    setFilterFechaInicio("");
-                    setFilterFechaFin("");
-                  }}
-                >
-                  Limpiar filtros
-                </Button>
-              )}
-              <div className="ml-auto text-sm text-muted-foreground">
+            )}
+
+            {isMobile && (
+              <div className="text-center text-sm text-muted-foreground">
                 Mostrando {filteredLotes.length} de {lotes.length} lotes
               </div>
-            </div>
+            )}
 
-            <div className="border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha Entrada</TableHead>
-                    <TableHead>Producto</TableHead>
-                    <TableHead>Cantidad Disponible</TableHead>
-                    <TableHead>Bodega</TableHead>
-                    <TableHead>Referencia Lote</TableHead>
-                    <TableHead>Caducidad</TableHead>
-                    <TableHead>Orden Compra</TableHead>
-                    <TableHead>Recibido por</TableHead>
-                    <TableHead className="w-[80px]">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
+            {/* Contenido: Tarjetas móviles o Tabla desktop */}
+            {loading ? (
+              <div className="text-center py-8">Cargando...</div>
+            ) : filteredLotes.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No hay lotes registrados. Las entradas se crean desde Recepción en el módulo de Almacén.
+              </div>
+            ) : isMobile ? (
+              <div className="space-y-3">
+                {filteredLotes.map((lote) => {
+                  const entregaId = lote.orden_compra_id ? entregasPorOrden[lote.orden_compra_id] : null;
+                  return (
+                    <LoteCardMobile
+                      key={lote.id}
+                      lote={lote}
+                      entregaId={entregaId}
+                      onVerRecepcion={(id) => {
+                        setSelectedEntregaId(id);
+                        setRecepcionDialogOpen(true);
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center">
-                        Cargando...
-                      </TableCell>
+                      <TableHead>Fecha Entrada</TableHead>
+                      <TableHead>Producto</TableHead>
+                      <TableHead>Cantidad Disponible</TableHead>
+                      <TableHead>Bodega</TableHead>
+                      <TableHead>Referencia Lote</TableHead>
+                      <TableHead>Caducidad</TableHead>
+                      <TableHead>Orden Compra</TableHead>
+                      <TableHead>Recibido por</TableHead>
+                      <TableHead className="w-[80px]">Acciones</TableHead>
                     </TableRow>
-                  ) : filteredLotes.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center">
-                        No hay lotes registrados. Las entradas se crean desde Recepción en el módulo de Almacén.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredLotes.map((lote) => {
+                  </TableHeader>
+                  <TableBody>
+                    {filteredLotes.map((lote) => {
                       const entregaId = lote.orden_compra_id ? entregasPorOrden[lote.orden_compra_id] : null;
                       return (
                         <TableRow key={lote.id} className={lote.cantidad_disponible === 0 ? "opacity-50" : ""}>
@@ -848,11 +933,11 @@ const InventarioContent = () => {
                           </TableCell>
                         </TableRow>
                       );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
 
             {/* Diálogo de detalle de recepción */}
             <RecepcionDetalleDialog
@@ -864,102 +949,158 @@ const InventarioContent = () => {
 
           {/* PESTAÑA MOVIMIENTOS MANUALES */}
           <TabsContent value="movimientos" className="space-y-4">
-            <div className="flex gap-4 flex-wrap">
-              <div className="relative flex-1 min-w-[250px]">
+            {/* Filtros responsivos */}
+            <div className={`flex ${isMobile ? 'flex-col' : 'flex-row flex-wrap'} gap-4`}>
+              <div className="relative flex-1 min-w-0">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por producto, código o lote..."
+                  placeholder={isMobile ? "Buscar..." : "Buscar por producto, código o lote..."}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
-              <Select value={filterTipo} onValueChange={setFilterTipo}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Tipo de movimiento" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos los tipos</SelectItem>
-                  <SelectItem value="entrada">Entradas</SelectItem>
-                  <SelectItem value="salida">Salidas</SelectItem>
-                  <SelectItem value="ajuste">Ajustes</SelectItem>
-                  <SelectItem value="consumo_interno">Consumo interno</SelectItem>
-                  <SelectItem value="merma">Merma</SelectItem>
-                  <SelectItem value="transferencia">Transferencia</SelectItem>
-                </SelectContent>
-              </Select>
+              {isMobile ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <Select value={filterTipo} onValueChange={setFilterTipo}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="entrada">Entradas</SelectItem>
+                      <SelectItem value="salida">Salidas</SelectItem>
+                      <SelectItem value="ajuste">Ajustes</SelectItem>
+                      <SelectItem value="merma">Merma</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="date"
+                    value={filterFechaInicio}
+                    onChange={(e) => setFilterFechaInicio(e.target.value)}
+                    placeholder="Desde"
+                  />
+                  <Input
+                    type="date"
+                    value={filterFechaFin}
+                    onChange={(e) => setFilterFechaFin(e.target.value)}
+                    placeholder="Hasta"
+                  />
+                  {(filterTipo !== "todos" || filterFechaInicio || filterFechaFin) && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setFilterTipo("todos");
+                        setFilterFechaInicio("");
+                        setFilterFechaFin("");
+                      }}
+                    >
+                      Limpiar
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <Select value={filterTipo} onValueChange={setFilterTipo}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Tipo de movimiento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos los tipos</SelectItem>
+                    <SelectItem value="entrada">Entradas</SelectItem>
+                    <SelectItem value="salida">Salidas</SelectItem>
+                    <SelectItem value="ajuste">Ajustes</SelectItem>
+                    <SelectItem value="consumo_interno">Consumo interno</SelectItem>
+                    <SelectItem value="merma">Merma</SelectItem>
+                    <SelectItem value="transferencia">Transferencia</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             
-            <div className="flex gap-4 flex-wrap items-end">
-              <div className="space-y-2">
-                <Label htmlFor="fecha_inicio">Desde</Label>
-                <Input
-                  id="fecha_inicio"
-                  type="date"
-                  value={filterFechaInicio}
-                  onChange={(e) => setFilterFechaInicio(e.target.value)}
-                  className="w-[180px]"
-                />
+            {!isMobile && (
+              <div className="flex gap-4 flex-wrap items-end">
+                <div className="space-y-2">
+                  <Label htmlFor="fecha_inicio">Desde</Label>
+                  <Input
+                    id="fecha_inicio"
+                    type="date"
+                    value={filterFechaInicio}
+                    onChange={(e) => setFilterFechaInicio(e.target.value)}
+                    className="w-[180px]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fecha_fin">Hasta</Label>
+                  <Input
+                    id="fecha_fin"
+                    type="date"
+                    value={filterFechaFin}
+                    onChange={(e) => setFilterFechaFin(e.target.value)}
+                    className="w-[180px]"
+                  />
+                </div>
+                {(filterTipo !== "todos" || filterFechaInicio || filterFechaFin) && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setFilterTipo("todos");
+                      setFilterFechaInicio("");
+                      setFilterFechaFin("");
+                    }}
+                  >
+                    Limpiar filtros
+                  </Button>
+                )}
+                <div className="ml-auto text-sm text-muted-foreground">
+                  Mostrando {filteredMovimientos.length} de {movimientos.length} movimientos
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="fecha_fin">Hasta</Label>
-                <Input
-                  id="fecha_fin"
-                  type="date"
-                  value={filterFechaFin}
-                  onChange={(e) => setFilterFechaFin(e.target.value)}
-                  className="w-[180px]"
-                />
-              </div>
-              {(filterTipo !== "todos" || filterFechaInicio || filterFechaFin) && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setFilterTipo("todos");
-                    setFilterFechaInicio("");
-                    setFilterFechaFin("");
-                  }}
-                >
-                  Limpiar filtros
-                </Button>
-              )}
-              <div className="ml-auto text-sm text-muted-foreground">
+            )}
+
+            {isMobile && (
+              <div className="text-center text-sm text-muted-foreground">
                 Mostrando {filteredMovimientos.length} de {movimientos.length} movimientos
               </div>
-            </div>
+            )}
 
-            <div className="border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Producto</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Cantidad</TableHead>
-                    <TableHead>Stock Anterior</TableHead>
-                    <TableHead>Stock Nuevo</TableHead>
-                    <TableHead>Lote</TableHead>
-                    <TableHead>Caducidad</TableHead>
-                    <TableHead>Usuario</TableHead>
-                    <TableHead>Referencia</TableHead>
-                    <TableHead className="w-[140px] text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
+            {/* Contenido: Tarjetas móviles o Tabla desktop */}
+            {loading ? (
+              <div className="text-center py-8">Cargando...</div>
+            ) : filteredMovimientos.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No hay movimientos registrados
+              </div>
+            ) : isMobile ? (
+              <div className="space-y-3">
+                {filteredMovimientos.map((movimiento) => (
+                  <MovimientoCardMobile
+                    key={movimiento.id}
+                    movimiento={movimiento}
+                    onEdit={handleEditMovimiento}
+                    onDelete={handleDeleteMovimiento}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center">
-                        Cargando...
-                      </TableCell>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Producto</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Cantidad</TableHead>
+                      <TableHead>Stock Anterior</TableHead>
+                      <TableHead>Stock Nuevo</TableHead>
+                      <TableHead>Lote</TableHead>
+                      <TableHead>Caducidad</TableHead>
+                      <TableHead>Usuario</TableHead>
+                      <TableHead>Referencia</TableHead>
+                      <TableHead className="w-[140px] text-right">Acciones</TableHead>
                     </TableRow>
-                  ) : filteredMovimientos.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={11} className="text-center">
-                        No hay movimientos registrados
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredMovimientos.map((movimiento) => (
+                  </TableHeader>
+                  <TableBody>
+                    {filteredMovimientos.map((movimiento) => (
                       <TableRow key={movimiento.id}>
                         <TableCell className="font-mono text-xs">
                           <div>{new Date(movimiento.created_at).toLocaleDateString('es-MX')}</div>
@@ -1003,11 +1144,11 @@ const InventarioContent = () => {
                           </Button>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="categoria">
