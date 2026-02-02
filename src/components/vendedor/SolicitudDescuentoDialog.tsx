@@ -122,7 +122,7 @@ export function SolicitudDescuentoDialog({
 
   return (
     <Dialog open={open} onOpenChange={esperandoRespuesta ? undefined : onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" />

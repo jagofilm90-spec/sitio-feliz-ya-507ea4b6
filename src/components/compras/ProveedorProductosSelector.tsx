@@ -541,7 +541,7 @@ const CrearProductoDialog = ({ open, onOpenChange, proveedorId, proveedorNombre,
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) resetForm(); onOpenChange(o); }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>Crear producto nuevo</DialogTitle>
         </DialogHeader>

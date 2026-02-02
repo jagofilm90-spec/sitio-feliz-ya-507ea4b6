@@ -139,7 +139,7 @@ export function EliminarPedidoDialog({ open, onOpenChange, pedido, onPedidoElimi
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md">
+      <AlertDialogContent className="w-[calc(100vw-2rem)] sm:max-w-md overflow-x-hidden">
         <AlertDialogHeader>
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">

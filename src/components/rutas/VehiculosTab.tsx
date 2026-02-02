@@ -763,7 +763,7 @@ const VehiculosTab = () => {
                 Nuevo Vehículo
               </Button>
             </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
             <DialogHeader>
               <DialogTitle>
                 {editingVehiculo ? "Editar Vehículo" : "Nuevo Vehículo"}

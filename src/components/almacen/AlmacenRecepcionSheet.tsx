@@ -2599,7 +2599,7 @@ export const AlmacenRecepcionSheet = ({
 
       {/* Diálogo para ver fotos de llegada */}
       <Dialog open={showFotosLlegadaDialog} onOpenChange={setShowFotosLlegadaDialog}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg overflow-x-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Camera className="w-5 h-5" />

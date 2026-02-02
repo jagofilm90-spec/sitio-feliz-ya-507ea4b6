@@ -860,7 +860,7 @@ export const DiagramaDanosVehiculo = ({
 
       {/* Photo preview dialog */}
       <Dialog open={!!previewUrl} onOpenChange={() => setPreviewUrl(null)}>
-        <DialogContent className="max-w-2xl p-1">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl p-1 overflow-x-hidden">
           {previewUrl && (
             <img 
               src={previewUrl} 

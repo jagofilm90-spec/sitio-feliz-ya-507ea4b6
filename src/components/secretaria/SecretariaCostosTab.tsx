@@ -806,7 +806,7 @@ export const SecretariaCostosTab = () => {
       {/* Dialog: Simulador de Precio - Solo Admin */}
       {isAdmin && (
         <Dialog open={simuladorDialog} onOpenChange={setSimuladorDialog}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md overflow-x-hidden">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Calculator className="h-5 w-5 text-blue-600" />

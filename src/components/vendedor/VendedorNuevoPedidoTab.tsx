@@ -1562,7 +1562,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
 
         {/* Dialog de Confirmación de Pedido Creado */}
         <Dialog open={!!pedidoCreado} onOpenChange={() => setPedidoCreado(null)}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md overflow-x-hidden">
             <div className="flex flex-col items-center gap-4 py-4 text-center">
               <div className="rounded-full bg-green-100 dark:bg-green-900/30 p-4">
                 <CheckCircle2 className="h-12 w-12 text-green-600 dark:text-green-400" />

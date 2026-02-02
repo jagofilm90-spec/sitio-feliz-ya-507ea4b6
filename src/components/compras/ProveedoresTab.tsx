@@ -928,7 +928,7 @@ const ProveedoresTab = () => {
               Nuevo Proveedor
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
             <DialogHeader>
               <DialogTitle>Registrar Nuevo Proveedor</DialogTitle>
             </DialogHeader>
@@ -1229,7 +1229,7 @@ const ProveedoresTab = () => {
       )}
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>Editar Proveedor</DialogTitle>
           </DialogHeader>
@@ -1405,7 +1405,7 @@ const ProveedoresTab = () => {
       </Dialog>
 
       <Dialog open={isProductosDialogOpen} onOpenChange={setIsProductosDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>
               Productos de {productosProveedor?.nombre}
