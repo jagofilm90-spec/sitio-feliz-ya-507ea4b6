@@ -12,6 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { UserPlus, Pencil, Trash2, Eye, EyeOff, KeyRound } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { UsuarioCardMobile } from "./UsuarioCardMobile";
 
 interface Profile {
   id: string;
@@ -46,6 +48,7 @@ const ROLES = [
 ];
 
 export function UsuariosContent() {
+  const isMobile = useIsMobile();
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [loading, setLoading] = useState(true);
@@ -679,100 +682,164 @@ export function UsuariosContent() {
       </div>
 
       <Tabs defaultValue="todos" className="w-full">
-        <TabsList>
-          <TabsTrigger value="todos">Todos ({filteredUsers.length})</TabsTrigger>
-          <TabsTrigger value="admin">Admins ({getUsersByRole('admin').length})</TabsTrigger>
-          <TabsTrigger value="gerente_almacen">Gerente Almacén ({getUsersByRole('gerente_almacen').length})</TabsTrigger>
-          <TabsTrigger value="secretaria">Secretarias ({getUsersByRole('secretaria').length})</TabsTrigger>
-          <TabsTrigger value="vendedor">Vendedores ({getUsersByRole('vendedor').length})</TabsTrigger>
-          <TabsTrigger value="almacen">Almacén ({getUsersByRole('almacen').length})</TabsTrigger>
-          <TabsTrigger value="chofer">Choferes ({getUsersByRole('chofer').length})</TabsTrigger>
-          <TabsTrigger value="contadora">Contadores ({getUsersByRole('contadora').length})</TabsTrigger>
-        </TabsList>
+        <div className={isMobile ? "overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide" : ""}>
+          <TabsList className={isMobile ? "inline-flex w-max gap-1" : ""}>
+            <TabsTrigger value="todos">Todos ({filteredUsers.length})</TabsTrigger>
+            <TabsTrigger value="admin">Admins ({getUsersByRole('admin').length})</TabsTrigger>
+            <TabsTrigger value="gerente_almacen">G. Almacén ({getUsersByRole('gerente_almacen').length})</TabsTrigger>
+            <TabsTrigger value="secretaria">Secretarias ({getUsersByRole('secretaria').length})</TabsTrigger>
+            <TabsTrigger value="vendedor">Vendedores ({getUsersByRole('vendedor').length})</TabsTrigger>
+            <TabsTrigger value="almacen">Almacén ({getUsersByRole('almacen').length})</TabsTrigger>
+            <TabsTrigger value="chofer">Choferes ({getUsersByRole('chofer').length})</TabsTrigger>
+            <TabsTrigger value="contadora">Contadores ({getUsersByRole('contadora').length})</TabsTrigger>
+          </TabsList>
+        </div>
 
         {["todos", "admin", "gerente_almacen", "secretaria", "vendedor", "almacen", "chofer", "contadora"].map((roleFilter) => {
           const displayUsers = roleFilter === "todos" ? filteredUsers : getUsersByRole(roleFilter);
           
           return (
             <TabsContent key={roleFilter} value={roleFilter}>
-              <div className="border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nombre</TableHead>
-                      <TableHead>Correo</TableHead>
-                      <TableHead>Teléfono</TableHead>
-                      <TableHead>Roles</TableHead>
-                      <TableHead className="w-[100px]">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {loading ? (
+              {isMobile ? (
+                /* Vista Mobile - Cards */
+                <div className="space-y-3">
+                  {loading ? (
+                    <p className="text-center py-8 text-muted-foreground">Cargando usuarios...</p>
+                  ) : displayUsers.length === 0 ? (
+                    <p className="text-center py-8 text-muted-foreground">No se encontraron usuarios</p>
+                  ) : (
+                    displayUsers.map((user) => (
+                      <UsuarioCardMobile
+                        key={user.id}
+                        user={{
+                          id: user.id,
+                          email: user.email,
+                          full_name: user.full_name,
+                          telefono: user.phone || null,
+                          roles: user.roles,
+                        }}
+                        onEdit={(u) => {
+                          const nombrePartes = u.full_name?.trim().split(/\s+/) || [];
+                          const nombre = nombrePartes[0] || "";
+                          const primerApellido = nombrePartes[1] || "";
+                          const segundoApellido = nombrePartes.slice(2).join(" ") || "";
+                          
+                          setEditingUser({
+                            id: u.id,
+                            email: u.email,
+                            full_name: u.full_name || "",
+                            phone: u.telefono || undefined,
+                            roles: u.roles,
+                          });
+                          setEditUserFields({
+                            nombre,
+                            primer_apellido: primerApellido,
+                            segundo_apellido: segundoApellido,
+                          });
+                          setIsEditDialogOpen(true);
+                        }}
+                        onResetPassword={(u) => {
+                          setResetPasswordUser({
+                            id: u.id,
+                            email: u.email,
+                            full_name: u.full_name || "",
+                            roles: u.roles,
+                          });
+                        }}
+                        onDelete={(u) => {
+                          setUserToDelete({
+                            id: u.id,
+                            email: u.email,
+                            full_name: u.full_name || "",
+                            roles: u.roles,
+                          });
+                        }}
+                        getRoleBadge={getRoleBadge}
+                      />
+                    ))
+                  )}
+                </div>
+              ) : (
+                /* Vista Desktop - Tabla */
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8">
-                          Cargando usuarios...
-                        </TableCell>
+                        <TableHead>Nombre</TableHead>
+                        <TableHead>Correo</TableHead>
+                        <TableHead>Teléfono</TableHead>
+                        <TableHead>Roles</TableHead>
+                        <TableHead className="w-[100px]">Acciones</TableHead>
                       </TableRow>
-                    ) : displayUsers.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8">
-                          No se encontraron usuarios
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      displayUsers.map((user) => (
-                        <TableRow key={user.id}>
-                          <TableCell className="font-medium">{user.full_name}</TableCell>
-                          <TableCell>{user.email}</TableCell>
-                          <TableCell>{user.phone || "-"}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-1 flex-wrap">
-                              {user.roles.length > 0 ? (
-                                user.roles.map((role) => (
-                                  <span key={role}>{getRoleBadge(role)}</span>
-                                ))
-                              ) : (
-                                <Badge variant="outline">Sin rol</Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  const nombrePartes = user.full_name.trim().split(/\s+/);
-                                  const nombre = nombrePartes[0] || "";
-                                  const primerApellido = nombrePartes[1] || "";
-                                  const segundoApellido = nombrePartes.slice(2).join(" ") || "";
-                                  
-                                  setEditingUser(user);
-                                  setEditUserFields({
-                                    nombre,
-                                    primer_apellido: primerApellido,
-                                    segundo_apellido: segundoApellido,
-                                  });
-                                  setIsEditDialogOpen(true);
-                                }}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setUserToDelete(user)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
+                    </TableHeader>
+                    <TableBody>
+                      {loading ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8">
+                            Cargando usuarios...
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                      ) : displayUsers.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8">
+                            No se encontraron usuarios
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        displayUsers.map((user) => (
+                          <TableRow key={user.id}>
+                            <TableCell className="font-medium">{user.full_name}</TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>{user.phone || "-"}</TableCell>
+                            <TableCell>
+                              <div className="flex gap-1 flex-wrap">
+                                {user.roles.length > 0 ? (
+                                  user.roles.map((role) => (
+                                    <span key={role}>{getRoleBadge(role)}</span>
+                                  ))
+                                ) : (
+                                  <Badge variant="outline">Sin rol</Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const nombrePartes = user.full_name.trim().split(/\s+/);
+                                    const nombre = nombrePartes[0] || "";
+                                    const primerApellido = nombrePartes[1] || "";
+                                    const segundoApellido = nombrePartes.slice(2).join(" ") || "";
+                                    
+                                    setEditingUser(user);
+                                    setEditUserFields({
+                                      nombre,
+                                      primer_apellido: primerApellido,
+                                      segundo_apellido: segundoApellido,
+                                    });
+                                    setIsEditDialogOpen(true);
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setUserToDelete(user)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </TabsContent>
           );
         })}

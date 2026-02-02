@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { format, addMonths, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Loader2, Pencil, Check, X } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { FumigacionCardMobile } from "@/components/fumigaciones/FumigacionCardMobile";
 
 interface ProductoFumigacion {
   id: string;
@@ -34,6 +36,7 @@ interface ProductoFumigacion {
 
 const Fumigaciones = () => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [productos, setProductos] = useState<ProductoFumigacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroEstado, setFiltroEstado] = useState<"todos" | "vencida" | "proxima" | "vigente">("todos");
@@ -175,39 +178,41 @@ const Fumigaciones = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto p-6 space-y-6">
+      <div className={`container mx-auto ${isMobile ? 'p-4' : 'p-6'} space-y-6`}>
         <div>
-          <h1 className="text-3xl font-bold mb-2">Reporte de Fumigaciones</h1>
-          <p className="text-muted-foreground">
+          <h1 className={`font-bold mb-2 ${isMobile ? 'text-xl' : 'text-3xl'}`}>Reporte de Fumigaciones</h1>
+          <p className="text-muted-foreground text-sm">
             Control de fechas de fumigación programadas para productos
           </p>
         </div>
 
         <Tabs value={filtroEstado} onValueChange={(value) => setFiltroEstado(value as any)}>
-          <TabsList>
-            <TabsTrigger value="todos">
-              Todos ({productos.length})
-            </TabsTrigger>
-            <TabsTrigger value="vencida">
-              Vencidas ({contadores.vencida})
-            </TabsTrigger>
-            <TabsTrigger value="proxima">
-              Próximas ({contadores.proxima})
-            </TabsTrigger>
-            <TabsTrigger value="vigente">
-              Vigentes ({contadores.vigente})
-            </TabsTrigger>
-          </TabsList>
+          <div className={isMobile ? "overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide" : ""}>
+            <TabsList className={isMobile ? "inline-flex w-max gap-1" : ""}>
+              <TabsTrigger value="todos">
+                Todos ({productos.length})
+              </TabsTrigger>
+              <TabsTrigger value="vencida">
+                Vencidas ({contadores.vencida})
+              </TabsTrigger>
+              <TabsTrigger value="proxima">
+                Próximas ({contadores.proxima})
+              </TabsTrigger>
+              <TabsTrigger value="vigente">
+                Vigentes ({contadores.vigente})
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value={filtroEstado} className="space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Productos que requieren fumigación</CardTitle>
-                <CardDescription>
-                  Se notifica automáticamente 2 semanas antes de cumplir 6 meses desde la última fumigación. Haz clic en el lápiz para editar la fecha.
+              <CardHeader className={isMobile ? 'p-4' : ''}>
+                <CardTitle className={isMobile ? 'text-base' : ''}>Productos que requieren fumigación</CardTitle>
+                <CardDescription className="text-xs">
+                  Se notifica 2 semanas antes de cumplir 6 meses desde la última fumigación.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className={isMobile ? 'p-4 pt-0' : ''}>
                 {loading ? (
                   <div className="flex justify-center items-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -216,7 +221,41 @@ const Fumigaciones = () => {
                   <p className="text-center text-muted-foreground py-8">
                     No hay productos en esta categoría
                   </p>
+                ) : isMobile ? (
+                  /* Vista Mobile - Cards */
+                  <div className="space-y-3">
+                    {productosFiltrados.map((producto) => (
+                      <FumigacionCardMobile
+                        key={producto.id}
+                        producto={{
+                          id: producto.id,
+                          codigo: producto.codigo,
+                          nombre: producto.nombre,
+                          marca: producto.marca,
+                          presentacion: producto.peso_kg ? `${producto.peso_kg} kg` : null,
+                          stock_actual: producto.stock_actual,
+                          ultima_fumigacion: producto.fecha_ultima_fumigacion,
+                          proxima_fumigacion: producto.proximaFumigacion ? format(producto.proximaFumigacion, "yyyy-MM-dd") : null,
+                        }}
+                        onUpdateFecha={async (id, fecha) => {
+                          try {
+                            const { error } = await supabase
+                              .from("productos")
+                              .update({ fecha_ultima_fumigacion: fecha })
+                              .eq("id", id);
+                            
+                            if (error) throw error;
+                            toast({ title: "Fecha actualizada" });
+                            cargarProductos();
+                          } catch (error) {
+                            toast({ title: "Error", description: "No se pudo actualizar", variant: "destructive" });
+                          }
+                        }}
+                      />
+                    ))}
+                  </div>
                 ) : (
+                  /* Vista Desktop - Tabla */
                   <div className="rounded-md border">
                     <Table>
                       <TableHeader>

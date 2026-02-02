@@ -3,7 +3,6 @@ import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -21,7 +20,9 @@ import {
 } from "@/components/ui/select";
 import { Search, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { RentabilidadCardMobile } from "@/components/rentabilidad/RentabilidadCardMobile";
 
 interface ProductoRentabilidad {
   id: string;
@@ -42,6 +43,7 @@ const Rentabilidad = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [ordenamiento, setOrdenamiento] = useState("margen_desc");
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     loadProductos();
@@ -161,12 +163,12 @@ const Rentabilidad = () => {
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Análisis de Rentabilidad</h1>
-          <p className="text-muted-foreground">Comparación de precios de compra vs venta por producto</p>
+          <h1 className={`font-bold ${isMobile ? 'text-xl' : 'text-3xl'}`}>Análisis de Rentabilidad</h1>
+          <p className="text-muted-foreground text-sm">Comparación de precios de compra vs venta por producto</p>
         </div>
 
         {/* Resumen Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'md:grid-cols-4'}`}>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Productos Analizados</CardTitle>
@@ -243,8 +245,8 @@ const Rentabilidad = () => {
             <CardTitle>Detalle por Producto</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-4 mb-4 flex-wrap">
-              <div className="relative flex-1 min-w-[250px]">
+            <div className={`flex gap-4 mb-4 ${isMobile ? 'flex-col' : 'flex-wrap'}`}>
+              <div className={`relative ${isMobile ? 'w-full' : 'flex-1 min-w-[250px]'}`}>
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar producto..."
@@ -253,7 +255,7 @@ const Rentabilidad = () => {
                   className="pl-10"
                 />
               </div>
-              <div className="w-[200px]">
+              <div className={isMobile ? 'w-full' : 'w-[200px]'}>
                 <Select value={ordenamiento} onValueChange={setOrdenamiento}>
                   <SelectTrigger>
                     <SelectValue />
@@ -268,7 +270,21 @@ const Rentabilidad = () => {
               </div>
             </div>
 
-            {/* Tabla */}
+            {/* Vista Mobile o Tabla */}
+            {isMobile ? (
+              <div className="space-y-3">
+                {loading ? (
+                  <p className="text-center py-8 text-muted-foreground">Cargando...</p>
+                ) : filteredProductos.length === 0 ? (
+                  <p className="text-center py-8 text-muted-foreground">No hay productos con precios definidos</p>
+                ) : (
+                  filteredProductos.map((producto) => (
+                    <RentabilidadCardMobile key={producto.id} producto={producto} />
+                  ))
+                )}
+              </div>
+            ) : (
+            /* Tabla Desktop */
             <div className="border rounded-lg">
               <Table>
                 <TableHeader>
@@ -323,6 +339,7 @@ const Rentabilidad = () => {
                 </TableBody>
               </Table>
             </div>
+            )}
           </CardContent>
         </Card>
       </div>

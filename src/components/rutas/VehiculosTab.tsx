@@ -32,6 +32,8 @@ import { Plus, Edit, Trash2, Truck, FileText, AlertCircle, Sparkles, Loader2, Pa
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { format, differenceInDays, parseISO } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { VehiculoCardMobile } from "./VehiculoCardMobile";
 
 interface Empleado {
   id: string;
@@ -86,6 +88,7 @@ interface Vehiculo {
 }
 
 const VehiculosTab = () => {
+  const isMobile = useIsMobile();
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
   const [choferes, setChoferes] = useState<Empleado[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1488,84 +1491,123 @@ const VehiculosTab = () => {
         </div>
       </div>
 
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Placa</TableHead>
-              <TableHead>Chofer Asignado</TableHead>
-              <TableHead>Marca/Modelo</TableHead>
-              <TableHead>Local (kg)</TableHead>
-              <TableHead>Foránea (kg)</TableHead>
-              <TableHead>Tarjeta Circ.</TableHead>
-              <TableHead>Póliza Seguro</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
+      {/* Lista de vehículos */}
+      {isMobile ? (
+        /* Vista Mobile - Cards */
+        <div className="space-y-3">
+          {loading ? (
+            <p className="text-center py-8 text-muted-foreground">Cargando...</p>
+          ) : vehiculos.length === 0 ? (
+            <div className="py-8 flex flex-col items-center gap-2">
+              <Truck className="h-8 w-8 text-muted-foreground" />
+              <p>No hay vehículos registrados</p>
+            </div>
+          ) : (
+            vehiculos.map((vehiculo) => (
+              <VehiculoCardMobile
+                key={vehiculo.id}
+                vehiculo={{
+                  id: vehiculo.id,
+                  nombre: vehiculo.nombre,
+                  placa: vehiculo.placa || "",
+                  marca: vehiculo.marca,
+                  modelo: vehiculo.modelo,
+                  anio: vehiculo.anio,
+                  capacidad_kg_local: vehiculo.peso_maximo_local_kg,
+                  capacidad_kg_foranea: vehiculo.peso_maximo_foraneo_kg,
+                  chofer_asignado: vehiculo.chofer_asignado_id,
+                  tarjeta_circulacion_vencimiento: vehiculo.tarjeta_circulacion_vencimiento,
+                  poliza_seguro_vencimiento: vehiculo.poliza_seguro_vencimiento,
+                  status: vehiculo.status,
+                }}
+                choferName={getChoferName(vehiculo.chofer_asignado_id)}
+                onEdit={() => handleEdit(vehiculo)}
+                onDelete={() => handleDelete(vehiculo.id)}
+              />
+            ))
+          )}
+        </div>
+      ) : (
+        /* Vista Desktop - Tabla */
+        <div className="border rounded-lg">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={11} className="text-center">
-                  Cargando...
-                </TableCell>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Placa</TableHead>
+                <TableHead>Chofer Asignado</TableHead>
+                <TableHead>Marca/Modelo</TableHead>
+                <TableHead>Local (kg)</TableHead>
+                <TableHead>Foránea (kg)</TableHead>
+                <TableHead>Tarjeta Circ.</TableHead>
+                <TableHead>Póliza Seguro</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Acciones</TableHead>
               </TableRow>
-            ) : vehiculos.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={11} className="text-center">
-                  <div className="py-8 flex flex-col items-center gap-2">
-                    <Truck className="h-8 w-8 text-muted-foreground" />
-                    <p>No hay vehículos registrados</p>
-                    <p className="text-sm text-muted-foreground">
-                      Agrega tu primer vehículo para empezar a planificar rutas
-                    </p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              vehiculos.map((vehiculo) => (
-                <TableRow key={vehiculo.id}>
-                  <TableCell className="font-medium">{vehiculo.nombre}</TableCell>
-                  <TableCell className="capitalize">{vehiculo.tipo}</TableCell>
-                  <TableCell>{vehiculo.placa || "—"}</TableCell>
-                  <TableCell>
-                    {getChoferName(vehiculo.chofer_asignado_id) ? (
-                      <div className="flex items-center gap-1.5">
-                        <User className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{getChoferName(vehiculo.chofer_asignado_id)}</span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">Sin asignar</span>
-                    )}
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={11} className="text-center">
+                    Cargando...
                   </TableCell>
-                  <TableCell>
-                    {vehiculo.marca || vehiculo.modelo ? (
-                      <span>{[vehiculo.marca, vehiculo.modelo].filter(Boolean).join(" ")}</span>
-                    ) : "—"}
-                  </TableCell>
-                  <TableCell>{vehiculo.peso_maximo_local_kg.toLocaleString()}</TableCell>
-                  <TableCell>{vehiculo.peso_maximo_foraneo_kg.toLocaleString()}</TableCell>
-                  <TableCell>{getExpirationBadge(vehiculo.tarjeta_circulacion_vencimiento, "tarjeta", vehiculo.tipo_tarjeta_circulacion)}</TableCell>
-                  <TableCell>{getExpirationBadge(vehiculo.poliza_seguro_vencimiento, "póliza")}</TableCell>
-                  <TableCell>{getStatusBadge(vehiculo.status)}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(vehiculo)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(vehiculo.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                </TableRow>
+              ) : vehiculos.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={11} className="text-center">
+                    <div className="py-8 flex flex-col items-center gap-2">
+                      <Truck className="h-8 w-8 text-muted-foreground" />
+                      <p>No hay vehículos registrados</p>
+                      <p className="text-sm text-muted-foreground">
+                        Agrega tu primer vehículo para empezar a planificar rutas
+                      </p>
                     </div>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ) : (
+                vehiculos.map((vehiculo) => (
+                  <TableRow key={vehiculo.id}>
+                    <TableCell className="font-medium">{vehiculo.nombre}</TableCell>
+                    <TableCell className="capitalize">{vehiculo.tipo}</TableCell>
+                    <TableCell>{vehiculo.placa || "—"}</TableCell>
+                    <TableCell>
+                      {getChoferName(vehiculo.chofer_asignado_id) ? (
+                        <div className="flex items-center gap-1.5">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span>{getChoferName(vehiculo.chofer_asignado_id)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">Sin asignar</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {vehiculo.marca || vehiculo.modelo ? (
+                        <span>{[vehiculo.marca, vehiculo.modelo].filter(Boolean).join(" ")}</span>
+                      ) : "—"}
+                    </TableCell>
+                    <TableCell>{vehiculo.peso_maximo_local_kg.toLocaleString()}</TableCell>
+                    <TableCell>{vehiculo.peso_maximo_foraneo_kg.toLocaleString()}</TableCell>
+                    <TableCell>{getExpirationBadge(vehiculo.tarjeta_circulacion_vencimiento, "tarjeta", vehiculo.tipo_tarjeta_circulacion)}</TableCell>
+                    <TableCell>{getExpirationBadge(vehiculo.poliza_seguro_vencimiento, "póliza")}</TableCell>
+                    <TableCell>{getStatusBadge(vehiculo.status)}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(vehiculo)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(vehiculo.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 };
