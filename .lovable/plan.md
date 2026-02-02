@@ -1,120 +1,125 @@
 
 
-# Plan: Corregir Overflow Horizontal y Scroll en Móvil
+# Plan: Adaptar Formulario de Clientes y Sucursales a Móvil
 
-## Problemas Identificados (3)
+## Problemas Identificados
 
-### Problema 1: Diálogo "Editar Cliente" con Scroll Horizontal
-**Imagen:** El diálogo muestra contenido cortado a la derecha (título "Editar Cliente", campo "Vendedor asignado", tabs)
+### 1. Formulario "Editar Cliente" (ClienteFormContent.tsx)
+El formulario usa layouts de múltiples columnas fijas que no se adaptan a móvil:
+- `grid-cols-2` para Código/Nombre, RFC/Razón Social, Teléfono/Email, etc.
+- `grid-cols-3` para C.P./Colonia/Municipio
+- Sin uso de `useIsMobile()` para adaptar
 
-**Causa:** El `DialogContent` usa `max-w-3xl` (768px) sin ajuste responsive. En móvil, esto fuerza scroll horizontal porque el contenido excede el ancho de pantalla.
+**Resultado:** Los campos se comprimen, el texto se corta, contenido inaccesible.
 
-### Problema 2: Diálogo "Sucursales" con Scroll Horizontal
-**Imagen:** El diálogo de sucursales tiene scroll horizontal visible (filtros y tarjetas se cortan)
-
-**Causa:** Similar al problema 1 - `DialogContent` con `max-w-3xl` sin responsive.
-
-### Problema 3: Página de Login con Scroll Vertical
-**Imagen:** La pantalla de login permite scroll arriba/abajo cuando debería estar fija
-
-**Causa:** El container usa `min-h-screen` pero sin restricción de overflow. En dispositivos móviles con barras dinámicas del navegador, esto causa scroll.
+### 2. Diálogo Sucursales (ClienteSucursalesDialog.tsx)
+Aunque ya tiene adaptaciones móviles, algunos elementos aún desbordan porque el contenedor tiene ancho fijo.
 
 ---
 
 ## Solución
 
-### Fix 1: DialogContent Responsive para Móvil
+### Cambio 1: ClienteFormContent.tsx - Layout Responsive
 
-Modificar el componente `DialogContent` base para que en móvil ocupe todo el ancho disponible sin overflow.
+Agregar `useIsMobile()` y cambiar los grids a columna única en móvil:
 
-**Archivo:** `src/components/ui/dialog.tsx`
+```
+Antes (móvil):
+┌───────────────────────────────────────┐
+│ [Código][Nombre Comerc│               │ <- Cortado
+│ [RFC   ][Razón Socia│                 │ <- Cortado
+│ [C.P.][Colonia][Munic│                │ <- Cortado
+└───────────────────────────────────────┘
 
-```tsx
-// Antes
-className={cn(
-  "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg ...",
-  className,
-)}
-
-// Después - Full width en móvil
-className={cn(
-  "fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-4 sm:p-6 shadow-lg ...",
-  className,
-)}
+Después (móvil):
+┌───────────────────────────────────────┐
+│ Código *                              │
+│ [LECAROZ                          ]   │
+│                                       │
+│ Nombre Comercial *                    │
+│ [Grupo Lecaroz                    ]   │
+│                                       │
+│ RFC                                   │
+│ [GLE001231AA1                     ]   │
+│                                       │
+│ ... (campos apilados verticalmente)   │
+└───────────────────────────────────────┘
 ```
 
-Cambios clave:
-- `w-full` → `w-[calc(100%-2rem)]`: Deja 1rem de margen a cada lado
-- `p-6` → `p-4 sm:p-6`: Menos padding en móvil
+**Código técnico:**
+```tsx
+// Agregar import
+import { useIsMobile } from "@/hooks/use-mobile";
 
-### Fix 2: Clientes.tsx - DialogContent Específico
+// Dentro del componente
+const isMobile = useIsMobile();
 
-El diálogo de editar cliente usa `max-w-3xl` que es demasiado ancho. Necesita ajuste responsive.
+// Cambiar grids
+<div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
+<div className={`grid ${isMobile ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-3'} gap-4`}>
+```
 
-**Archivo:** `src/pages/Clientes.tsx` (línea ~960)
+### Cambio 2: Secciones Específicas a Adaptar
+
+| Sección | Línea | Grid Actual | Grid Móvil |
+|---------|-------|-------------|------------|
+| Datos de Identificación | 128 | `grid-cols-2` | `grid-cols-1` |
+| Datos Fiscales (RFC/Razón) | 168 | `grid-cols-2` | `grid-cols-1` |
+| Dirección (C.P./Colonia/Municipio) | 230 | `grid-cols-3` | `grid-cols-1` |
+| Datos Comerciales (Tel/Email) | 356 | `grid-cols-2` | `grid-cols-1` |
+| Crédito (Término/Límite) | 396 | `grid-cols-2` | `grid-cols-1` |
+| CSF Upload (flex) | 312 | `flex items-center` | `flex-col` |
+
+### Cambio 3: Botones del Formulario
+
+Adaptar el área de botones (Cancelar/Guardar) para ocupar ancho completo en móvil:
 
 ```tsx
 // Antes
-<DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+<div className="flex justify-end gap-4">
+  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+  <Button type="submit">Guardar</Button>
+</div>
 
 // Después
-<DialogContent className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
+<div className={`flex ${isMobile ? 'flex-col gap-2' : 'justify-end gap-4'}`}>
+  {isMobile ? (
+    <>
+      <Button type="submit" className="w-full">Guardar</Button>
+      <Button type="button" variant="outline" className="w-full" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+    </>
+  ) : (
+    <>
+      <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+      <Button type="submit">Guardar</Button>
+    </>
+  )}
+</div>
 ```
-
-Además, el formulario interno necesita `overflow-x-hidden` para prevenir desbordamiento del contenido de las tabs.
-
-### Fix 3: ClienteSucursalesDialog.tsx - Responsive
-
-**Archivo:** `src/components/clientes/ClienteSucursalesDialog.tsx` (línea ~623)
-
-```tsx
-// Antes
-<DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-
-// Después
-<DialogContent className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
-```
-
-### Fix 4: Auth.tsx - Login Fijo Sin Scroll
-
-**Archivo:** `src/pages/Auth.tsx`
-
-```tsx
-// Antes
-<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
-
-// Después - Fijo en viewport sin scroll
-<div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4 overflow-hidden">
-```
-
-Cambios:
-- `min-h-screen` → `fixed inset-0`: Ocupa exactamente el viewport, sin scroll
-- Agregado `overflow-hidden`: Previene cualquier scroll accidental
 
 ---
 
-## Resumen de Cambios
+## Archivos a Modificar
 
-| Archivo | Línea | Cambio |
-|---------|-------|--------|
-| `src/pages/Clientes.tsx` | ~960 | Agregar `w-[calc(100vw-2rem)]` y `overflow-x-hidden` |
-| `src/components/clientes/ClienteSucursalesDialog.tsx` | ~623 | Agregar `w-[calc(100vw-2rem)]` y `overflow-x-hidden` |
-| `src/pages/Auth.tsx` | ~175 | Cambiar a `fixed inset-0 overflow-hidden` |
+| Archivo | Cambios |
+|---------|---------|
+| `src/components/clientes/ClienteFormContent.tsx` | Agregar `useIsMobile`, adaptar todos los grids y layouts |
 
 ---
 
 ## Resultado Esperado
 
-1. **Editar Cliente:** Diálogo ocupa ancho completo en móvil, sin scroll horizontal
-2. **Sucursales:** Diálogo responsive, todo visible sin cortes
-3. **Login:** Pantalla fija, sin scroll vertical/horizontal
+Después de la implementación:
+
+1. **Móvil:** Todos los campos visibles en columna única, sin scroll horizontal, formulario completo accesible
+2. **Tablet:** Layout de 2 columnas donde quepa
+3. **Desktop:** Sin cambios (mantiene 2-3 columnas)
 
 ---
 
 ## Lo que NO cambia
 
-- Funcionalidad de los formularios
-- Vista de escritorio (mantiene max-w-3xl)
-- Lógica de negocio
-- Estilos del componente Dialog base (solo ajustes en uso)
-
+- Lógica de validación del formulario
+- Campos requeridos
+- Conexión con base de datos
+- Vista de escritorio (solo se agregan breakpoints responsivos)
