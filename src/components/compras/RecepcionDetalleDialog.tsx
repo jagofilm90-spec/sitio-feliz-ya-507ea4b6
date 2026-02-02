@@ -569,7 +569,7 @@ export const RecepcionDetalleDialog = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[90vh] overflow-x-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="w-5 h-5" />
@@ -587,7 +587,7 @@ export const RecepcionDetalleDialog = ({
             <ScrollArea className="max-h-[70vh] pr-4">
               <div className="space-y-6">
                 {/* Header info */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <FileText className="w-4 h-4" />
@@ -642,7 +642,7 @@ export const RecepcionDetalleDialog = ({
                       Resumen de la Orden de Compra
                     </h3>
                     
-                    <div className="grid grid-cols-3 gap-4 mb-4">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 text-xs sm:text-base">
                       {/* Productos Completados */}
                       <div className="text-center p-3 bg-white/50 dark:bg-white/5 rounded-lg">
                         <div className="text-2xl font-bold text-green-600 dark:text-green-400">
