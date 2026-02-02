@@ -26,7 +26,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   Loader2, Search, TrendingUp, TrendingDown, DollarSign, 
   AlertTriangle, CheckCircle2, XCircle, Calculator, Pencil,
@@ -35,6 +37,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { analizarMargen, simularPrecioPropuesto, calcularPrecioSugerido, redondear } from "@/lib/calculos";
+import { ProductoPrecioCardMobile } from "./ProductoPrecioCardMobile";
 
 interface Producto {
   id: string;
@@ -126,6 +129,9 @@ export const AdminListaPreciosTab = () => {
   const [estadoFilter, setEstadoFilter] = useState<string>("all");
   const [sortField, setSortField] = useState<SortField>('nombre');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  
+  // Mobile detection
+  const isMobile = useIsMobile();
   
   // Simulador
   const [simuladorOpen, setSimuladorOpen] = useState(false);
@@ -267,14 +273,14 @@ export const AdminListaPreciosTab = () => {
   };
 
   // Open simulator
-  const openSimulador = (producto: typeof filteredProductos[0]) => {
+  const openSimulador = (producto: ProductoConAnalisis) => {
     setSimuladorProduct(producto);
     setPrecioPropuesto(producto.precio_venta.toString());
     setSimuladorOpen(true);
   };
 
   // Open editor
-  const openEditor = (producto: Producto) => {
+  const openEditor = (producto: ProductoConAnalisis) => {
     setEditingProduct(producto);
     setPrecioVenta(producto.precio_venta.toString());
     setDescuentoMaximo(producto.descuento_maximo?.toString() || "");
@@ -319,6 +325,93 @@ export const AdminListaPreciosTab = () => {
     );
   }
 
+  // MOBILE VIEW
+  if (isMobile) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-8rem)]">
+        {/* Header móvil */}
+        <div className="pb-3 space-y-3 sticky top-0 bg-background z-20">
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-primary" />
+            <h2 className="text-base font-semibold">Análisis de Precios</h2>
+          </div>
+          
+          {/* Stats badges - scroll horizontal */}
+          <ScrollArea className="w-full whitespace-nowrap">
+            <div className="flex gap-2 pb-2">
+              <Badge 
+                variant="outline" 
+                className={cn("text-xs cursor-pointer shrink-0", estadoFilter === 'perdida' && "bg-red-100 dark:bg-red-900/30")}
+                onClick={() => setEstadoFilter(estadoFilter === 'perdida' ? 'all' : 'perdida')}
+              >
+                <XCircle className="h-3 w-3 mr-1 text-red-500" />
+                Pérdida: {stats.perdida}
+              </Badge>
+              <Badge 
+                variant="outline" 
+                className={cn("text-xs cursor-pointer shrink-0", estadoFilter === 'critico' && "bg-orange-100 dark:bg-orange-900/30")}
+                onClick={() => setEstadoFilter(estadoFilter === 'critico' ? 'all' : 'critico')}
+              >
+                <AlertTriangle className="h-3 w-3 mr-1 text-orange-500" />
+                Crítico: {stats.critico}
+              </Badge>
+              <Badge 
+                variant="outline" 
+                className={cn("text-xs cursor-pointer shrink-0", estadoFilter === 'bajo' && "bg-amber-100 dark:bg-amber-900/30")}
+                onClick={() => setEstadoFilter(estadoFilter === 'bajo' ? 'all' : 'bajo')}
+              >
+                <TrendingDown className="h-3 w-3 mr-1 text-amber-500" />
+                Bajo: {stats.bajo}
+              </Badge>
+              <Badge 
+                variant="outline" 
+                className={cn("text-xs cursor-pointer shrink-0", estadoFilter === 'saludable' && "bg-green-100 dark:bg-green-900/30")}
+                onClick={() => setEstadoFilter(estadoFilter === 'saludable' ? 'all' : 'saludable')}
+              >
+                <CheckCircle2 className="h-3 w-3 mr-1 text-green-500" />
+                OK: {stats.saludable}
+              </Badge>
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+          
+          {/* Búsqueda */}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8 h-9"
+            />
+          </div>
+        </div>
+
+        {/* Lista de cards */}
+        <div className="flex-1 overflow-auto space-y-3 py-2">
+          {filteredProductos.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No se encontraron productos
+            </div>
+          ) : (
+            filteredProductos.map((producto) => (
+              <ProductoPrecioCardMobile
+                key={producto.id}
+                producto={producto}
+                onSimular={openSimulador}
+                onEditar={openEditor}
+              />
+            ))
+          )}
+        </div>
+
+        {/* Dialogs - se mantienen igual */}
+        {renderDialogs()}
+      </div>
+    );
+  }
+
+  // DESKTOP VIEW
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
       {/* Header */}
@@ -575,173 +668,183 @@ export const AdminListaPreciosTab = () => {
         </Table>
       </div>
 
-      {/* Simulador Dialog */}
-      <Dialog open={simuladorOpen} onOpenChange={setSimuladorOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5" />
-              Simulador de Precio
-            </DialogTitle>
-            <DialogDescription>
-              {simuladorProduct && getDisplayName(simuladorProduct)}
-            </DialogDescription>
-          </DialogHeader>
-          
-          {simuladorProduct && (
-            <div className="space-y-4">
-              {/* Info actual */}
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="p-3 bg-muted rounded-lg">
-                  <div className="text-muted-foreground text-xs">Costo Ref.</div>
-                  <div className="font-semibold">{formatCurrency(simuladorProduct.analisis.costo_referencia)}</div>
+      {/* Dialogs */}
+      {renderDialogs()}
+    </div>
+  );
+
+  // Helper function to render dialogs (shared between mobile and desktop)
+  function renderDialogs() {
+    return (
+      <>
+        {/* Simulador Dialog */}
+        <Dialog open={simuladorOpen} onOpenChange={setSimuladorOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Calculator className="h-5 w-5" />
+                Simulador de Precio
+              </DialogTitle>
+              <DialogDescription>
+                {simuladorProduct && getDisplayName(simuladorProduct)}
+              </DialogDescription>
+            </DialogHeader>
+            
+            {simuladorProduct && (
+              <div className="space-y-4">
+                {/* Info actual */}
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="p-3 bg-muted rounded-lg">
+                    <div className="text-muted-foreground text-xs">Costo Ref.</div>
+                    <div className="font-semibold">{formatCurrency(simuladorProduct.analisis.costo_referencia)}</div>
+                  </div>
+                  <div className="p-3 bg-muted rounded-lg">
+                    <div className="text-muted-foreground text-xs">Precio Lista</div>
+                    <div className="font-semibold">{formatCurrency(simuladorProduct.precio_venta)}</div>
+                  </div>
                 </div>
-                <div className="p-3 bg-muted rounded-lg">
-                  <div className="text-muted-foreground text-xs">Precio Lista</div>
-                  <div className="font-semibold">{formatCurrency(simuladorProduct.precio_venta)}</div>
+                
+                {/* Input precio propuesto */}
+                <div className="space-y-2">
+                  <Label>Precio propuesto</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      value={precioPropuesto}
+                      onChange={(e) => setPrecioPropuesto(e.target.value)}
+                      className="pl-7"
+                      step="0.01"
+                    />
+                  </div>
                 </div>
-              </div>
-              
-              {/* Input precio propuesto */}
-              <div className="space-y-2">
-                <Label>Precio propuesto</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input
-                    type="number"
-                    value={precioPropuesto}
-                    onChange={(e) => setPrecioPropuesto(e.target.value)}
-                    className="pl-7"
-                    step="0.01"
-                  />
-                </div>
-              </div>
-              
-              {/* Resultado simulación */}
-              {simulacionResult && (
-                <div className={cn(
-                  "p-4 rounded-lg border-2",
-                  simulacionResult.es_perdida && "border-red-500 bg-red-50 dark:bg-red-950/20",
-                  !simulacionResult.es_perdida && simulacionResult.margen_porcentaje < 5 && "border-orange-500 bg-orange-50 dark:bg-orange-950/20",
-                  simulacionResult.margen_porcentaje >= 5 && "border-green-500 bg-green-50 dark:bg-green-950/20"
-                )}>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <div className="text-muted-foreground text-xs">Margen $</div>
-                      <div className={cn("font-bold", simulacionResult.es_perdida ? "text-red-600" : "text-green-600")}>
-                        {formatCurrency(simulacionResult.margen_pesos)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground text-xs">Margen %</div>
-                      <div className={cn("font-bold", simulacionResult.es_perdida ? "text-red-600" : "text-green-600")}>
-                        {simulacionResult.margen_porcentaje}%
-                      </div>
-                    </div>
-                    {simulacionResult.diferencia_vs_lista > 0 && (
-                      <div className="col-span-2">
-                        <div className="text-muted-foreground text-xs">Descuento vs lista</div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{formatCurrency(simulacionResult.diferencia_vs_lista)}</span>
-                          {simulacionResult.requiere_autorizacion && (
-                            <Badge variant="destructive" className="text-[10px]">
-                              Requiere autorización
-                            </Badge>
-                          )}
+                
+                {/* Resultado simulación */}
+                {simulacionResult && (
+                  <div className={cn(
+                    "p-4 rounded-lg border-2",
+                    simulacionResult.es_perdida && "border-red-500 bg-red-50 dark:bg-red-950/20",
+                    !simulacionResult.es_perdida && simulacionResult.margen_porcentaje < 5 && "border-orange-500 bg-orange-50 dark:bg-orange-950/20",
+                    simulacionResult.margen_porcentaje >= 5 && "border-green-500 bg-green-50 dark:bg-green-950/20"
+                  )}>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <div className="text-muted-foreground text-xs">Margen $</div>
+                        <div className={cn("font-bold", simulacionResult.es_perdida ? "text-red-600" : "text-green-600")}>
+                          {formatCurrency(simulacionResult.margen_pesos)}
                         </div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground text-xs">Margen %</div>
+                        <div className={cn("font-bold", simulacionResult.es_perdida ? "text-red-600" : "text-green-600")}>
+                          {simulacionResult.margen_porcentaje}%
+                        </div>
+                      </div>
+                      {simulacionResult.diferencia_vs_lista > 0 && (
+                        <div className="col-span-2">
+                          <div className="text-muted-foreground text-xs">Descuento vs lista</div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{formatCurrency(simulacionResult.diferencia_vs_lista)}</span>
+                            {simulacionResult.requiere_autorizacion && (
+                              <Badge variant="destructive" className="text-[10px]">
+                                Requiere autorización
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {simulacionResult.es_perdida && (
+                      <div className="mt-3 p-2 bg-red-100 dark:bg-red-900/30 rounded text-xs text-red-700 dark:text-red-300 flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        ¡Este precio genera pérdida! No recomendado.
                       </div>
                     )}
                   </div>
-                  
-                  {simulacionResult.es_perdida && (
-                    <div className="mt-3 p-2 bg-red-100 dark:bg-red-900/30 rounded text-xs text-red-700 dark:text-red-300 flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4" />
-                      ¡Este precio genera pérdida! No recomendado.
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {/* Sugerencias rápidas */}
-              <div className="text-xs text-muted-foreground">
-                <div className="font-medium mb-1">Precios sugeridos:</div>
-                <div className="flex flex-wrap gap-2">
-                  {[5, 10, 15, 20].map(margen => {
-                    const sugerido = calcularPrecioSugerido(simuladorProduct.analisis.costo_referencia, margen, 0);
-                    return (
-                      <Button
-                        key={margen}
-                        variant="outline"
-                        size="sm"
-                        className="text-xs h-7"
-                        onClick={() => setPrecioPropuesto(sugerido.toString())}
-                      >
-                        {margen}% → {formatCurrency(sugerido)}
-                      </Button>
-                    );
-                  })}
+                )}
+                
+                {/* Sugerencias rápidas */}
+                <div className="text-xs text-muted-foreground">
+                  <div className="font-medium mb-1">Precios sugeridos:</div>
+                  <div className="flex flex-wrap gap-2">
+                    {[5, 10, 15, 20].map(margen => {
+                      const sugerido = calcularPrecioSugerido(simuladorProduct.analisis.costo_referencia, margen, 0);
+                      return (
+                        <Button
+                          key={margen}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-7"
+                          onClick={() => setPrecioPropuesto(sugerido.toString())}
+                        >
+                          {margen}% → {formatCurrency(sugerido)}
+                        </Button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            )}
+          </DialogContent>
+        </Dialog>
 
-      {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Editar Precio</DialogTitle>
-            <DialogDescription>
-              {editingProduct && getDisplayName(editingProduct)}
-            </DialogDescription>
-          </DialogHeader>
-          
-          {editingProduct && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Precio de venta</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input
-                    type="number"
-                    value={precioVenta}
-                    onChange={(e) => setPrecioVenta(e.target.value)}
-                    className="pl-7"
-                    step="0.01"
-                  />
+        {/* Edit Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Editar Precio</DialogTitle>
+              <DialogDescription>
+                {editingProduct && getDisplayName(editingProduct)}
+              </DialogDescription>
+            </DialogHeader>
+            
+            {editingProduct && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Precio de venta</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      value={precioVenta}
+                      onChange={(e) => setPrecioVenta(e.target.value)}
+                      className="pl-7"
+                      step="0.01"
+                    />
+                  </div>
                 </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Descuento máximo</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input
-                    type="number"
-                    value={descuentoMaximo}
-                    onChange={(e) => setDescuentoMaximo(e.target.value)}
-                    className="pl-7"
-                    step="0.01"
-                    placeholder="0.00"
-                  />
+                
+                <div className="space-y-2">
+                  <Label>Descuento máximo</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      value={descuentoMaximo}
+                      onChange={(e) => setDescuentoMaximo(e.target.value)}
+                      className="pl-7"
+                      step="0.01"
+                      placeholder="0.00"
+                    />
+                  </div>
                 </div>
+                
+                <Button 
+                  onClick={handleSaveEdit} 
+                  className="w-full"
+                  disabled={updatePriceMutation.isPending}
+                >
+                  {updatePriceMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
+                  Guardar
+                </Button>
               </div>
-              
-              <Button 
-                onClick={handleSaveEdit} 
-                className="w-full"
-                disabled={updatePriceMutation.isPending}
-              >
-                {updatePriceMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : null}
-                Guardar
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+            )}
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
 };
