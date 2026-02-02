@@ -29,6 +29,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, MapPin, Search, ChevronLeft, ChevronRight, CheckSquare, Wand2, AlertTriangle, FileText, Loader2, Navigation } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Card, CardContent } from "@/components/ui/card";
 
 
 interface ClienteSucursalesDialogProps {
@@ -90,6 +92,7 @@ const ClienteSucursalesDialog = ({
   const [autoDetectando, setAutoDetectando] = useState(false);
   const [geocodificandoTodas, setGeocodificandoTodas] = useState(false);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   // Helper para abrir URLs externas (compatible con Chrome COOP)
   const openExternalUrl = (url: string) => {
@@ -630,30 +633,34 @@ const ClienteSucursalesDialog = ({
 
         <div className="space-y-4">
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant={filtroTipo === 'todas' ? 'default' : 'outline'}
-                  onClick={() => setFiltroTipo('todas')}
-                >
-                  Todas ({sucursales.length})
-                </Button>
-                <Button
-                  size="sm"
-                  variant={filtroTipo === 'rosticeria' ? 'default' : 'outline'}
-                  onClick={() => setFiltroTipo('rosticeria')}
-                  className={filtroTipo === 'rosticeria' ? 'bg-amber-500 hover:bg-amber-600' : ''}
-                >
-                  🍗 Rosticerías ({countRosticerias})
-                </Button>
-                <Button
-                  size="sm"
-                  variant={filtroTipo === 'regular' ? 'default' : 'outline'}
-                  onClick={() => setFiltroTipo('regular')}
-                >
-                  Regulares ({countRegulares})
-                </Button>
+            {/* Header con botón Nueva Sucursal */}
+            <div className={`flex ${isMobile ? 'flex-col gap-3' : 'items-center justify-between gap-4'}`}>
+              {/* Filtros scrollables en móvil */}
+              <div className={`${isMobile ? 'overflow-x-auto -mx-2 px-2 pb-2 scrollbar-hide' : ''}`}>
+                <div className={`flex items-center gap-2 ${isMobile ? 'w-max' : ''}`}>
+                  <Button
+                    size="sm"
+                    variant={filtroTipo === 'todas' ? 'default' : 'outline'}
+                    onClick={() => setFiltroTipo('todas')}
+                  >
+                    Todas ({sucursales.length})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={filtroTipo === 'rosticeria' ? 'default' : 'outline'}
+                    onClick={() => setFiltroTipo('rosticeria')}
+                    className={filtroTipo === 'rosticeria' ? 'bg-amber-500 hover:bg-amber-600' : ''}
+                  >
+                    🍗 Rosticerías ({countRosticerias})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={filtroTipo === 'regular' ? 'default' : 'outline'}
+                    onClick={() => setFiltroTipo('regular')}
+                  >
+                    Regulares ({countRegulares})
+                  </Button>
+                </div>
               </div>
               <Button
                 size="sm"
@@ -661,6 +668,7 @@ const ClienteSucursalesDialog = ({
                   resetForm();
                   setFormOpen(true);
                 }}
+                className={isMobile ? 'w-full' : ''}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Nueva Sucursal
@@ -677,7 +685,7 @@ const ClienteSucursalesDialog = ({
             </div>
             {/* Indicador de estado de geocodificación */}
             {sucursales.length > 0 && (
-              <div className="flex items-center gap-2 text-xs">
+              <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-2'} text-xs`}>
                 <Badge variant={countSinCoordenadas === 0 ? "default" : "outline"} className={countSinCoordenadas === 0 ? "bg-green-500" : "bg-amber-100 text-amber-700 border-amber-300"}>
                   <MapPin className="h-3 w-3 mr-1" />
                   {countConCoordenadas}/{sucursales.length} geocodificadas
@@ -715,49 +723,67 @@ const ClienteSucursalesDialog = ({
 
           {/* Barra de acciones masivas */}
           {selectedIds.size > 0 ? (
-            <div className="flex items-center gap-3 p-3 bg-primary/10 border border-primary/20 rounded-lg flex-wrap">
-              <CheckSquare className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">{selectedIds.size} seleccionadas</span>
-              <div className="flex items-center gap-2 ml-auto flex-wrap">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleAutoDetectarZonas}
-                  disabled={autoDetectando}
-                >
-                  <Wand2 className="h-4 w-4 mr-1" />
-                  Auto-detectar Zona
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={geocodificarTodas}
-                  disabled={geocodificandoTodas}
-                >
-                  {geocodificandoTodas ? (
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  ) : (
-                    <Navigation className="h-4 w-4 mr-1" />
-                  )}
-                  Geocodificar
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleBulkSetRosticeria(true)}
-                >
-                  🍗 Marcar Rosticería
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleBulkSetRosticeria(false)}
-                >
-                  Quitar Rosticería
-                </Button>
-                <div className="flex items-center gap-1">
+            <div className={`p-3 bg-primary/10 border border-primary/20 rounded-lg ${isMobile ? 'space-y-3' : 'flex items-center gap-3 flex-wrap'}`}>
+              <div className="flex items-center gap-2">
+                <CheckSquare className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">{selectedIds.size} seleccionadas</span>
+                {isMobile && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setSelectedIds(new Set())}
+                    className="ml-auto"
+                  >
+                    Cancelar
+                  </Button>
+                )}
+              </div>
+              <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-2 ml-auto flex-wrap'}`}>
+                <div className={`flex ${isMobile ? 'flex-wrap gap-2' : 'gap-2'}`}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleAutoDetectarZonas}
+                    disabled={autoDetectando}
+                    className={isMobile ? 'flex-1 min-w-[45%]' : ''}
+                  >
+                    <Wand2 className="h-4 w-4 mr-1" />
+                    {isMobile ? 'Auto-zona' : 'Auto-detectar Zona'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={geocodificarTodas}
+                    disabled={geocodificandoTodas}
+                    className={isMobile ? 'flex-1 min-w-[45%]' : ''}
+                  >
+                    {geocodificandoTodas ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <Navigation className="h-4 w-4 mr-1" />
+                    )}
+                    Geocodificar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleBulkSetRosticeria(true)}
+                    className={isMobile ? 'flex-1 min-w-[45%]' : ''}
+                  >
+                    🍗 {isMobile ? 'Rosticería' : 'Marcar Rosticería'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleBulkSetRosticeria(false)}
+                    className={isMobile ? 'flex-1 min-w-[45%]' : ''}
+                  >
+                    {isMobile ? 'No rost.' : 'Quitar Rosticería'}
+                  </Button>
+                </div>
+                <div className={`flex items-center gap-1 ${isMobile ? 'w-full' : ''}`}>
                   <Select value={bulkZonaId} onValueChange={setBulkZonaId}>
-                    <SelectTrigger className="w-[150px] h-8">
+                    <SelectTrigger className={`h-8 ${isMobile ? 'flex-1' : 'w-[150px]'}`}>
                       <SelectValue placeholder="Asignar zona" />
                     </SelectTrigger>
                     <SelectContent>
@@ -776,13 +802,15 @@ const ClienteSucursalesDialog = ({
                     Aplicar
                   </Button>
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setSelectedIds(new Set())}
-                >
-                  Cancelar
-                </Button>
+                {!isMobile && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setSelectedIds(new Set())}
+                  >
+                    Cancelar
+                  </Button>
+                )}
               </div>
             </div>
           ) : (
@@ -807,101 +835,94 @@ const ClienteSucursalesDialog = ({
             )
           )}
 
-          <div className="border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[40px]">
-                    <Checkbox
-                      checked={allFilteredSelected}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead>Sucursal</TableHead>
-                  <TableHead>Dirección</TableHead>
-                  <TableHead>Zona</TableHead>
-                  <TableHead>Contacto</TableHead>
-                  <TableHead className="w-[100px]">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center">
-                      Cargando...
-                    </TableCell>
-                  </TableRow>
-                ) : sucursalesFiltradas.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      {sucursales.length === 0 
-                        ? "No hay sucursales registradas"
-                        : `No hay sucursales ${filtroTipo === 'rosticeria' ? 'rosticerías' : 'regulares'}`
-                      }
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  sucursalesPaginadas.map((sucursal) => (
-                    <TableRow key={sucursal.id} className={selectedIds.has(sucursal.id) ? "bg-primary/5" : ""}>
-                      <TableCell>
+          {/* Vista móvil: Tarjetas */}
+          {isMobile ? (
+            <div className="space-y-3">
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">Cargando...</div>
+              ) : sucursalesFiltradas.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  {sucursales.length === 0 
+                    ? "No hay sucursales registradas"
+                    : `No hay sucursales ${filtroTipo === 'rosticeria' ? 'rosticerías' : 'regulares'}`
+                  }
+                </div>
+              ) : (
+                sucursalesPaginadas.map((sucursal) => (
+                  <Card 
+                    key={sucursal.id} 
+                    className={`${selectedIds.has(sucursal.id) ? "ring-2 ring-primary" : ""}`}
+                  >
+                    <CardContent className="p-3">
+                      <div className="flex items-start gap-3">
                         <Checkbox
                           checked={selectedIds.has(sucursal.id)}
                           onCheckedChange={() => toggleSelect(sucursal.id)}
+                          className="mt-1"
                         />
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2">
+                        <div className="flex-1 min-w-0 space-y-2">
+                          {/* Nombre y badges */}
+                          <div className="flex items-center gap-2 flex-wrap">
                             {sucursal.codigo_sucursal && (
                               <Badge variant="secondary" className="text-xs font-mono">
                                 {sucursal.codigo_sucursal}
                               </Badge>
                             )}
-                            {sucursal.nombre}
+                            <span className="font-medium">{sucursal.nombre}</span>
                             {sucursal.es_rosticeria && (
                               <Badge className="text-xs bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30">
                                 🍗
                               </Badge>
                             )}
                           </div>
+                          
+                          {/* RFC Badge */}
                           {sucursal.rfc && (
-                            <Badge variant="outline" className="text-xs w-fit">
+                            <Badge variant="outline" className="text-xs">
                               <FileText className="h-3 w-3 mr-1" />
                               Factura propia
                             </Badge>
                           )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate">
-                        {sucursal.direccion}
-                      </TableCell>
-                      <TableCell>
-                        {sucursal.zona ? (
-                          <div className="flex items-center gap-1 flex-wrap">
-                            <Badge variant="outline">{sucursal.zona.nombre}</Badge>
-                            {sucursal.zona.es_foranea && (
-                              <Badge className="text-xs bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30">
-                                🚛 Foránea
+
+                          {/* Dirección */}
+                          {sucursal.direccion && (
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {sucursal.direccion}
+                            </p>
+                          )}
+
+                          {/* Zona y otros badges */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {sucursal.zona ? (
+                              <>
+                                <Badge variant="outline">{sucursal.zona.nombre}</Badge>
+                                {sucursal.zona.es_foranea && (
+                                  <Badge className="text-xs bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30">
+                                    🚛 Foránea
+                                  </Badge>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Sin zona</span>
+                            )}
+                            {sucursal.no_combinar_pedidos && (
+                              <Badge variant="secondary" className="text-xs">
+                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                No combinar
                               </Badge>
                             )}
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          {sucursal.contacto || sucursal.telefono || "—"}
-                          {sucursal.no_combinar_pedidos && (
-                            <Badge variant="secondary" className="text-xs w-fit">
-                              <AlertTriangle className="h-3 w-3 mr-1" />
-                              No combinar
-                            </Badge>
+
+                          {/* Contacto */}
+                          {(sucursal.contacto || sucursal.telefono) && (
+                            <p className="text-xs text-muted-foreground">
+                              {sucursal.contacto} {sucursal.telefono && `• ${sucursal.telefono}`}
+                            </p>
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
+
+                        {/* Acciones */}
+                        <div className="flex flex-col gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -926,13 +947,141 @@ const ClienteSucursalesDialog = ({
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          ) : (
+            /* Vista desktop: Tabla */
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[40px]">
+                      <Checkbox
+                        checked={allFilteredSelected}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </TableHead>
+                    <TableHead>Sucursal</TableHead>
+                    <TableHead>Dirección</TableHead>
+                    <TableHead>Zona</TableHead>
+                    <TableHead>Contacto</TableHead>
+                    <TableHead className="w-[100px]">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center">
+                        Cargando...
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ) : sucursalesFiltradas.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                        {sucursales.length === 0 
+                          ? "No hay sucursales registradas"
+                          : `No hay sucursales ${filtroTipo === 'rosticeria' ? 'rosticerías' : 'regulares'}`
+                        }
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    sucursalesPaginadas.map((sucursal) => (
+                      <TableRow key={sucursal.id} className={selectedIds.has(sucursal.id) ? "bg-primary/5" : ""}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedIds.has(sucursal.id)}
+                            onCheckedChange={() => toggleSelect(sucursal.id)}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              {sucursal.codigo_sucursal && (
+                                <Badge variant="secondary" className="text-xs font-mono">
+                                  {sucursal.codigo_sucursal}
+                                </Badge>
+                              )}
+                              {sucursal.nombre}
+                              {sucursal.es_rosticeria && (
+                                <Badge className="text-xs bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30">
+                                  🍗
+                                </Badge>
+                              )}
+                            </div>
+                            {sucursal.rfc && (
+                              <Badge variant="outline" className="text-xs w-fit">
+                                <FileText className="h-3 w-3 mr-1" />
+                                Factura propia
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate">
+                          {sucursal.direccion}
+                        </TableCell>
+                        <TableCell>
+                          {sucursal.zona ? (
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <Badge variant="outline">{sucursal.zona.nombre}</Badge>
+                              {sucursal.zona.es_foranea && (
+                                <Badge className="text-xs bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30">
+                                  🚛 Foránea
+                                </Badge>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            {sucursal.contacto || sucursal.telefono || "—"}
+                            {sucursal.no_combinar_pedidos && (
+                              <Badge variant="secondary" className="text-xs w-fit">
+                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                No combinar
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openGoogleMaps(sucursal)}
+                              title={sucursal.latitud ? "Ver ubicación exacta" : "Buscar en Google Maps"}
+                              className={sucursal.latitud ? "text-green-600" : "text-amber-500"}
+                            >
+                              <MapPin className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(sucursal)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(sucursal.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
 
           {/* Paginación */}
           {totalPaginas > 1 && (
