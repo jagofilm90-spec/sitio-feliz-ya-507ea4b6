@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { EmpleadoCardMobile } from "@/components/empleados/EmpleadoCardMobile";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -143,6 +145,7 @@ interface Notificacion {
 }
 
 const Empleados = () => {
+  const isMobile = useIsMobile();
   const [searchParams] = useSearchParams();
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [usuarios, setUsuarios] = useState<UserProfile[]>([]);
@@ -1811,6 +1814,34 @@ const Empleados = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                
+                {/* Vista móvil con cards */}
+                {isMobile ? (
+                  <div className="space-y-3">
+                    {filteredEmpleados.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-8">No se encontraron empleados</p>
+                    ) : (
+                      filteredEmpleados.map((empleado) => (
+                        <EmpleadoCardMobile
+                          key={empleado.id}
+                          empleado={empleado}
+                          documentos={documentos[empleado.id] || []}
+                          documentosPendientes={documentosPendientes[empleado.id] || []}
+                          onEdit={handleEdit}
+                          onViewDocs={(empId) => {
+                            setSelectedEmpleado(empId);
+                            setIsDocDialogOpen(true);
+                          }}
+                          onAnalyzeExpediente={(emp) => {
+                            // El análisis de expediente se accede desde el dialog de documentos
+                            setSelectedEmpleado(emp.id);
+                            setIsDocDialogOpen(true);
+                          }}
+                        />
+                      ))
+                    )}
+                  </div>
+                ) : (
                 <div className="rounded-md border">
                   <Table>
                     <TableHeader>
@@ -1926,6 +1957,7 @@ const Empleados = () => {
                     </TableBody>
                   </Table>
                 </div>
+                )}
               </TabsContent>
             ))}
 

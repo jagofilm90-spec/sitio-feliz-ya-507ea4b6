@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ProveedorCardMobile } from "./ProveedorCardMobile";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -354,6 +356,7 @@ const ContactosList = ({
 // =====================================================================
 
 const ProveedoresTab = () => {
+  const isMobile = useIsMobile();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isProductosDialogOpen, setIsProductosDialogOpen] = useState(false);
@@ -1119,6 +1122,31 @@ const ProveedoresTab = () => {
           {searchTerm
             ? "No se encontraron proveedores con ese criterio"
             : "No hay proveedores registrados"}
+        </div>
+      ) : isMobile ? (
+        // Vista móvil con cards
+        <div className="space-y-3">
+          {filteredProveedores.map((proveedor) => (
+            <ProveedorCardMobile
+              key={proveedor.id}
+              proveedor={proveedor}
+              productosCount={0} // TODO: cargar cuenta de productos
+              contactoPrincipal={null} // Usa datos legacy del proveedor
+              onEdit={async (p) => {
+                setEditingProveedor(p);
+                await loadContactosProveedor(p.id);
+                setIsEditDialogOpen(true);
+              }}
+              onViewProductos={(p) => {
+                setProductosProveedor(p);
+                setIsProductosDialogOpen(true);
+              }}
+              onDelete={(p) => {
+                setDeletingProveedor(p);
+                setIsDeleteDialogOpen(true);
+              }}
+            />
+          ))}
         </div>
       ) : (
         <div className="rounded-md border">

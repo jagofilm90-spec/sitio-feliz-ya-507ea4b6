@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { CotizacionCardMobile } from "./CotizacionCardMobile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -79,6 +81,7 @@ interface Cotizacion {
 }
 
 const CotizacionesTab = () => {
+  const isMobile = useIsMobile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isAdmin, isLoading: rolesLoading } = useUserRoles();
@@ -340,6 +343,41 @@ const CotizacionesTab = () => {
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : isMobile ? (
+              // Vista móvil con cards
+              <div className="space-y-3">
+                {filteredCotizaciones?.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">No hay cotizaciones registradas</p>
+                  </div>
+                ) : (
+                  filteredCotizaciones?.map((c) => (
+                    <CotizacionCardMobile
+                      key={c.id}
+                      cotizacion={c}
+                      isAdmin={!rolesLoading && isAdmin}
+                      isSelected={selectedIds.includes(c.id)}
+                      sendingToAuth={sendingToAuth}
+                      onSelect={(id, selected) => {
+                        if (selected) {
+                          setSelectedIds(prev => [...prev, id]);
+                        } else {
+                          setSelectedIds(prev => prev.filter(i => i !== id));
+                        }
+                      }}
+                      onView={(id) => setSelectedCotizacion(id)}
+                      onEnviar={(cot) => setEnviarCotizacion(cot)}
+                      onAutorizar={(cot) => setAutorizarCotizacion(cot)}
+                      onAutorizarDirecto={handleAutorizarDirecto}
+                      onEnviarAAutorizacion={handleEnviarAAutorizacion}
+                      onImprimir={(id) => setImprimirCotizacionId(id)}
+                      onEditar={(id) => setEditCotizacionId(id)}
+                      onEliminar={handleDeleteClick}
+                    />
+                  ))
+                )}
               </div>
             ) : (
               <Table>
