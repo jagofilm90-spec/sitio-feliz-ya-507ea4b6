@@ -703,7 +703,7 @@ const NotificarCambiosOCDialog = ({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-lg">
+      <AlertDialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg overflow-x-hidden">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5 text-primary" />

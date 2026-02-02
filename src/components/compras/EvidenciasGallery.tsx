@@ -97,7 +97,7 @@ export function EvidenciasGallery({ ordenCompraId, open, onOpenChange }: Evidenc
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[80vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Camera className="h-5 w-5" />
@@ -158,7 +158,7 @@ export function EvidenciasGallery({ ordenCompraId, open, onOpenChange }: Evidenc
 
       {/* Full-screen image viewer */}
       <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-4xl p-0 overflow-hidden">
           <div className="relative">
             <button
               onClick={() => setSelectedImage(null)}

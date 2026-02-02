@@ -195,7 +195,7 @@ const AutorizacionCotizacionDialog = ({ open, onOpenChange, cotizacion }: Autori
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh]">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Autorización de Cotización</span>

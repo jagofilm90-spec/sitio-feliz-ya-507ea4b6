@@ -138,7 +138,7 @@ export const MapaRutaEnVivo = ({ ruta, open, onOpenChange }: MapaRutaEnVivoProps
   if (loadError) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-4xl overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>Error de Mapa</DialogTitle>
           </DialogHeader>
@@ -153,7 +153,7 @@ export const MapaRutaEnVivo = ({ ruta, open, onOpenChange }: MapaRutaEnVivoProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[90vh] overflow-hidden overflow-x-hidden">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">

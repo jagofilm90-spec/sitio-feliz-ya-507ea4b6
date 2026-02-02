@@ -1040,7 +1040,7 @@ export const RecepcionDetalleDialog = ({
 
       {/* Expanded image dialog */}
       <Dialog open={!!imagenExpandida} onOpenChange={() => setImagenExpandida(null)}>
-        <DialogContent className="max-w-4xl p-0">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-4xl p-0 overflow-x-hidden">
           <Button
             variant="ghost"
             size="icon"
@@ -1068,7 +1068,7 @@ export const RecepcionDetalleDialog = ({
         setPreviewDialogOpen(open);
         if (!open) setIframeLoading(true);
       }}>
-        <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-4">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-5xl h-[90vh] flex flex-col p-4 overflow-x-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5" />

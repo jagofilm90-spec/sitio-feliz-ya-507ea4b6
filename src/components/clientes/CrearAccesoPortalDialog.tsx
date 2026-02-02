@@ -124,7 +124,7 @@ export function CrearAccesoPortalDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>Crear acceso al portal</DialogTitle>
           <DialogDescription>

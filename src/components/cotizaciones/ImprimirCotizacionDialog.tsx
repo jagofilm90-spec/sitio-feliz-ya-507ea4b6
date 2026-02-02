@@ -236,7 +236,7 @@ const ImprimirCotizacionDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-5xl max-h-[95vh] overflow-hidden flex flex-col overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Vista previa - Cotización {cotizacion?.folio}</span>

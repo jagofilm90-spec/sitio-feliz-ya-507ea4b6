@@ -282,7 +282,7 @@ export function VendedorBienvenidaDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh]">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="text-xl flex items-center gap-2">
             {getTitulo()}

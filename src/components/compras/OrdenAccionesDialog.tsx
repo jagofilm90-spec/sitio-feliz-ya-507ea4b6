@@ -555,7 +555,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   if (!ordenId) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>Error</DialogTitle>
           </DialogHeader>
@@ -1622,7 +1622,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 flex-wrap">
             Gestionar Orden {orden?.folio}

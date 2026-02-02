@@ -278,7 +278,7 @@ export const SecretariaBienvenidaDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-hidden overflow-x-hidden">
         <DialogHeader className="pb-2">
           <DialogTitle className="flex items-center gap-2 text-xl">
             <GreetingIcon className="h-6 w-6 text-pink-500" />

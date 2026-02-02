@@ -518,7 +518,7 @@ export function PedidosPorAutorizarTab() {
 
       {/* Dialog de revisión de precios */}
       <Dialog open={!!selectedPedido} onOpenChange={(open) => !open && setSelectedPedido(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span>Autorizar Pedido {selectedPedido?.folio}</span>

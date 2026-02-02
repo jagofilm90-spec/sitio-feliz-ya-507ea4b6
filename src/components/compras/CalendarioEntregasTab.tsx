@@ -827,7 +827,7 @@ const CalendarioEntregasTab = () => {
 
       {/* Dialog for day details */}
       <Dialog open={dialogDiaOpen} onOpenChange={setDialogDiaOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl overflow-x-hidden">
           <DialogHeader>
             <DialogTitle className="capitalize">
               {diaSeleccionado && format(diaSeleccionado, "EEEE d 'de' MMMM yyyy", { locale: es })}

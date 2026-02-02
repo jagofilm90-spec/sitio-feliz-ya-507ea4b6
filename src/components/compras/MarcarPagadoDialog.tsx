@@ -565,7 +565,7 @@ export function MarcarPagadoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>Registrar Pago</DialogTitle>
         </DialogHeader>

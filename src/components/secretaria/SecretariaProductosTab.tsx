@@ -479,7 +479,7 @@ export const SecretariaProductosTab = () => {
         setDialogOpen(open); 
         if (!open) resetForm(); 
       }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
           {/* Navigation between products */}
           {editingProduct && filteredProductos && filteredProductos.length > 1 && (
             <div className="flex items-center justify-between border-b pb-3 -mt-2 mb-2">

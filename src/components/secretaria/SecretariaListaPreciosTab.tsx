@@ -632,7 +632,7 @@ export const SecretariaListaPreciosTab = () => {
         if (!open) setCurrentIndex(-1);
         setEditDialogOpen(open);
       }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md overflow-x-hidden">
           {/* Navigation between products */}
           {editingProduct && filteredProductos && filteredProductos.length > 1 && (
             <div className="flex items-center justify-between border-b pb-3 -mt-2 mb-2">
@@ -960,7 +960,7 @@ export const SecretariaListaPreciosTab = () => {
 
       {/* Price History Dialog */}
       <Dialog open={historialDialogOpen} onOpenChange={setHistorialDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg overflow-x-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <History className="h-5 w-5" />

@@ -478,7 +478,7 @@ const CreditosPendientesPanel = () => {
 
       {/* Dialog de confirmación */}
       <AlertDialog open={resolucionDialogOpen} onOpenChange={setResolucionDialogOpen}>
-        <AlertDialogContent className="max-w-lg">
+        <AlertDialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg overflow-x-hidden">
           <AlertDialogHeader>
             <AlertDialogTitle>
               {tipoResolucion === "reembolso_efectivo" && "Solicitar Reembolso / Depósito"}

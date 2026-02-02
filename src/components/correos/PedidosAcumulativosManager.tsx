@@ -1040,7 +1040,7 @@ export function PedidosAcumulativosManager() {
 
       {/* Dialog para editar pedido */}
       <Dialog open={!!selectedPedido} onOpenChange={() => { setSelectedPedido(null); setEditingDetalle(null); }}>
-        <DialogContent className="max-w-4xl max-h-[85vh]">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[85vh] overflow-x-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               Editar Pedido Acumulativo

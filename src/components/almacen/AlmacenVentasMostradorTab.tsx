@@ -520,7 +520,7 @@ export const AlmacenVentasMostradorTab = ({ empleadoId, onStatsUpdate }: Almacen
 
       {/* Print Dialog */}
       <Dialog open={printDialogOpen} onOpenChange={setPrintDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>Nota de Venta</DialogTitle>
           </DialogHeader>
