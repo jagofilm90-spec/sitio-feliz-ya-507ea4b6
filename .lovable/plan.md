@@ -1,133 +1,254 @@
 
-# Plan: Optimización Móvil Completa para Administrador
+# Plan: Optimización Móvil Completa del ERP ALMASA
 
-## Contexto
-Ya optimizamos las vistas de Secretaria (Pedidos, Inventario) pero como administrador eres quien más usará la app. Necesitamos optimizar:
+## Análisis de Estado Actual
 
-1. **Dashboard Ejecutivo** - Muchos paneles que no caben bien en móvil
-2. **Lista de Precios Admin** - Tabla de 11 columnas con scroll horizontal
-3. **Módulo de Pedidos** - Ya tiene `PedidosPorAutorizarTab` pero hay más tabs
+### Módulos YA Optimizados ✅
+| Módulo | Componentes Mobile |
+|--------|-------------------|
+| Correos | `EmailListView`, `EmailRowMobile`, `EmailAvatarMobile` |
+| Pedidos (Por Autorizar) | `PedidoCardMobile`, `AutorizacionRapidaSheet` |
+| Secretaria Pedidos | `PedidoCardMobileSecretaria` |
+| Secretaria Inventario | `InventarioItemMobile` |
+| Dashboard | `EstadoOperacionesMobile` |
+| Lista Precios Admin | `ProductoPrecioCardMobile` |
+| Panel Chofer | Ya diseñado móvil-first |
+| Configuración | Tabs horizontales scrollables |
 
-## Componentes a Optimizar
+### Módulos que REQUIEREN Optimización 🔴
 
-### 1. Dashboard Ejecutivo (`Dashboard.tsx`)
+#### 1. Clientes (`Clientes.tsx`) - 1297 líneas
+**Problema**: Tabla con 10+ columnas (Código, Nombre, RFC, Zona, Crédito, Límite, Vendedor, Sucursales, Acciones)
 
-**Problema actual:**
-- Grid de 8 KPIs en 4 columnas → requiere scroll en móvil
-- 4 paneles de "Estado de Operaciones" en row → no caben
-- Gráfico de ventas + Cobranza crítica lado a lado
+#### 2. Productos (`Productos.tsx`) - 1100 líneas
+**Problema**: Tabla con 9 columnas (Código, Nombre, Marca, Categoría, Unidad, Stock, Precio, Estado, Acciones)
 
-**Solución móvil:**
-- KPIs en 2x4 grid (ya funciona)
-- Estado de Operaciones en carrusel horizontal deslizable
-- Cobranza Crítica y Ventas en stack vertical
-- Ocultar paneles menos críticos (Usuarios Conectados, Mapa) en móvil
+#### 3. Inventario (`Inventario.tsx`) - 1024 líneas
+**Problema**: Dos tablas grandes (Lotes + Movimientos) con 8-9 columnas cada una
 
-### 2. Lista de Precios Admin (`AdminListaPreciosTab.tsx`)
+#### 4. Compras - Órdenes (`OrdenesCompraTab.tsx`) - 2901 líneas
+**Problema**: Tabla con 12 columnas (Folio, Proveedor, Productos, Bultos, Peso, Total, Entregas, Status Pago, Estado, Fechas, Acciones)
 
-**Problema actual:**
-```
-| Código | Producto | Marca | Costo | Precio | Dto | Margen | Piso | Espacio | Estado | Acciones |
-```
-11 columnas = scroll horizontal obligatorio
+#### 5. Compras - Proveedores (`ProveedoresTab.tsx`) - 1421 líneas
+**Problema**: Tabla con 8 columnas (Nombre, Contacto, Email, Teléfono, RFC, País, Productos, Acciones)
 
-**Solución móvil:**
-Cards con información crítica visible:
-```
-┌─────────────────────────────────────┐
-│ [Crítico] AZUCAR ESTANDAR 50kg      │
-│ Marca: Zucarmex                     │
-│ ──────────────────────────────────  │
-│ Costo: $450    Precio: $520         │
-│ Margen: 13.4%  Piso: $480           │
-│                                     │
-│ [Simular]  [Editar]                 │
-└─────────────────────────────────────┘
-```
+#### 6. Rutas (`Rutas.tsx`) - 661 líneas
+**Problema**: Tabla de historial con 10 columnas (Folio, Fecha, Tipo, Vehículo, Chofer, Peso, Km, Estado, Acciones)
 
-### 3. Pedidos (resto de tabs)
+#### 7. Facturas (`Facturas.tsx`) - 505 líneas
+**Problema**: Tabla con 9 columnas (Folio, Cliente, RFC, Pedido, Fecha, Total, CFDI, Pago, Acciones)
 
-Las tabs principales que faltan:
-- Historial de pedidos → Cards como las de Secretaria
-- Calendario → Ya es responsive (usa date-picker)
+#### 8. Pedidos - Historial (`Pedidos.tsx`) - 1006 líneas
+**Problema**: Tabla principal de pedidos con 10+ columnas
 
 ---
 
-## Archivos a Crear
+## Estrategia de Implementación
 
-| Archivo | Descripción |
-|---------|-------------|
-| `src/components/admin/ProductoPrecioCardMobile.tsx` | Card de producto con margen y acciones |
-| `src/components/dashboard/KPICardsMobile.tsx` | Grid optimizado de KPIs |
-| `src/components/dashboard/EstadoOperacionesMobile.tsx` | Carrusel horizontal de operaciones |
+### Patrón a Aplicar (Consistente)
+```tsx
+const isMobile = useIsMobile();
+
+if (isMobile) {
+  return <VistaCards datos={datos} />;
+}
+return <TablaDesktop datos={datos} />;
+```
+
+### Prioridad de Implementación
+1. **Alta**: Clientes, Pedidos Historial, Compras OC (uso frecuente)
+2. **Media**: Productos, Inventario, Facturas
+3. **Baja**: Proveedores, Rutas historial
+
+---
+
+## Componentes Nuevos a Crear
+
+### Fase 1: Alta Prioridad
+
+| Componente | Descripción |
+|------------|-------------|
+| `ClienteCardMobile.tsx` | Card con nombre, RFC, vendedor, crédito disponible |
+| `PedidoHistorialCardMobile.tsx` | Card del historial general de pedidos |
+| `OrdenCompraCardMobile.tsx` | Card de OC con proveedor, total, status entregas |
+
+### Fase 2: Media Prioridad
+
+| Componente | Descripción |
+|------------|-------------|
+| `ProductoCardMobile.tsx` | Card con código, nombre, stock, precio |
+| `LoteInventarioCardMobile.tsx` | Card de lote con producto, cantidad, caducidad |
+| `MovimientoInventarioCardMobile.tsx` | Card de movimiento con tipo, cantidad, fecha |
+| `FacturaCardMobile.tsx` | Card con folio, cliente, total, status CFDI |
+
+### Fase 3: Baja Prioridad
+
+| Componente | Descripción |
+|------------|-------------|
+| `ProveedorCardMobile.tsx` | Card con nombre, contacto, productos asociados |
+| `RutaHistorialCardMobile.tsx` | Card con folio, fecha, chofer, status |
+
+---
+
+## Detalle Técnico por Módulo
+
+### 1. ClienteCardMobile.tsx
+```
+┌─────────────────────────────────────┐
+│ [👤] LECAROZ                        │
+│ RFC: LEC850101AAA                   │
+│ ──────────────────────────────────  │
+│ 📍 Zona Norte  •  Carlos Giron      │
+│ 💳 15 días  •  $50,000 límite       │
+│ 🏪 5 sucursales                     │
+│                                     │
+│ [Historial] [Sucursales] [Editar]   │
+└─────────────────────────────────────┘
+```
+
+### 2. OrdenCompraCardMobile.tsx
+```
+┌─────────────────────────────────────┐
+│ 🟢 OC-2024-0156  [Enviada]          │
+│ Proveedor: Zucarmex                 │
+│ ──────────────────────────────────  │
+│ 📦 120 bultos  •  6,000 kg          │
+│ 💰 $98,500.00                       │
+│ ──────────────────────────────────  │
+│ Entregas: 2/3 recibidas             │
+│ Pago: Pendiente                     │
+│                                     │
+│ [Detalle] [Recordar] [Acciones ▾]   │
+└─────────────────────────────────────┘
+```
+
+### 3. ProductoCardMobile.tsx
+```
+┌─────────────────────────────────────┐
+│ AZ-001                              │
+│ AZÚCAR ESTÁNDAR 50kg                │
+│ Zucarmex • Bulto                    │
+│ ──────────────────────────────────  │
+│ Stock: 245 ✅  (mín: 50)            │
+│ Precio compra: $480.00              │
+│                                     │
+│ [Ver Lotes]  [Editar]               │
+└─────────────────────────────────────┘
+```
+
+---
 
 ## Archivos a Modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/pages/Dashboard.tsx` | Agregar `useIsMobile()` y layout condicional |
-| `src/components/admin/AdminListaPreciosTab.tsx` | Renderizar cards en móvil |
-| `src/components/dashboard/KPICards.tsx` | Ajustar grid para móvil |
-| `src/components/dashboard/EstadoOperacionesPanel.tsx` | Carrusel en móvil |
+| `src/pages/Clientes.tsx` | Agregar `useIsMobile()` + renderizado condicional |
+| `src/pages/Productos.tsx` | Agregar `useIsMobile()` + cards en móvil |
+| `src/pages/Inventario.tsx` | Cards para lotes y movimientos en móvil |
+| `src/pages/Pedidos.tsx` | Cards para historial de pedidos |
+| `src/pages/Facturas.tsx` | Cards para lista de facturas |
+| `src/components/compras/OrdenesCompraTab.tsx` | Cards para OCs |
+| `src/components/compras/ProveedoresTab.tsx` | Cards para proveedores |
+| `src/pages/Rutas.tsx` | Cards para tab "Rutas" (historial) |
 
 ---
 
-## Detalle Técnico
+## Flujo de Implementación
 
-### Dashboard Móvil
+### Por cada módulo:
+
+1. **Crear componente card móvil** con información esencial
+2. **Agregar `useIsMobile()`** al componente padre
+3. **Renderizar condicionalmente** cards vs tabla
+4. **Mantener acciones** (editar, ver detalle, eliminar) como botones o menú contextual
+5. **Agregar filtros scrollables horizontalmente** cuando aplique
+
+### Ejemplo de modificación:
 ```tsx
-const isMobile = useIsMobile();
+// src/pages/Clientes.tsx
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ClienteCardMobile } from "@/components/clientes/ClienteCardMobile";
 
-// En móvil: ocultar paneles secundarios
-{!isMobile && <MapaRutasWidget />}
-{!isMobile && isAdmin && <UsuariosConectadosPanel />}
+const Clientes = () => {
+  const isMobile = useIsMobile();
+  // ... existing logic ...
 
-// Operaciones en carrusel deslizable
-{isMobile ? (
-  <EstadoOperacionesMobile />
-) : (
-  <EstadoOperacionesPanel />
-)}
-```
+  if (isMobile) {
+    return (
+      <Layout>
+        <div className="p-4 space-y-4">
+          {/* Header simplificado */}
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold">Clientes</h1>
+            <Button size="icon" onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {/* Búsqueda */}
+          <Input placeholder="Buscar cliente..." />
+          
+          {/* Cards */}
+          <div className="space-y-3">
+            {filteredClientes.map(cliente => (
+              <ClienteCardMobile 
+                key={cliente.id}
+                cliente={cliente}
+                onEdit={handleEdit}
+                onViewSucursales={openSucursales}
+                onViewHistorial={openHistorial}
+              />
+            ))}
+          </div>
+        </div>
+        {/* Dialogs siguen igual */}
+      </Layout>
+    );
+  }
 
-### Lista de Precios Móvil
-```tsx
-if (isMobile) {
+  // Desktop view unchanged
   return (
-    <div className="space-y-3 p-4">
-      {/* Filtros */}
-      <Input placeholder="Buscar..." />
-      <ScrollArea horizontal>
-        <Badge onClick={filterByEstado}>Pérdida: 5</Badge>
-        <Badge onClick={filterByEstado}>Crítico: 12</Badge>
-        ...
-      </ScrollArea>
-      
-      {/* Cards de productos */}
-      {productos.map(p => (
-        <ProductoPrecioCardMobile 
-          producto={p}
-          onSimular={openSimulador}
-          onEditar={openEditor}
-        />
-      ))}
-    </div>
+    <Layout>
+      {/* ... existing table code ... */}
+    </Layout>
   );
-}
+};
 ```
 
 ---
 
 ## Beneficios
 
-1. **Sin scroll horizontal** - Todo visible en pantalla
-2. **Información priorizada** - Lo crítico arriba
-3. **Acciones rápidas** - Editar/Simular precios desde el celular
-4. **Consistencia** - Mismo patrón que las otras vistas móviles
+- **Sin scroll horizontal** en ningún módulo
+- **Información priorizada** según rol (admin ve más detalles)
+- **Acciones rápidas** accesibles desde cada card
+- **Consistencia visual** con patrón ya implementado en Correos y Pedidos
+- **Desktop sin cambios** - experiencia preservada
 
-## Lo Que NO Cambia
+## Lo que NO cambia
 
-- Vistas desktop/iPad permanecen exactamente igual
-- Toda la lógica de negocio (simulador de precios, etc.)
-- Diálogos y sheets funcionan igual
-- Los módulos ya optimizados (Correos, Lista Precios Vendedor)
+- Toda la lógica de negocio existente
+- Formularios y diálogos (se abren igual)
+- Queries y mutaciones de datos
+- Sistema de permisos
+- Vistas de tablet/desktop
+
+## Estimación
+
+| Fase | Componentes | Tiempo estimado |
+|------|-------------|-----------------|
+| Fase 1 | 3 cards + 3 modificaciones | Actual mensaje |
+| Fase 2 | 4 cards + 4 modificaciones | Siguiente iteración |
+| Fase 3 | 2 cards + 2 modificaciones | Iteración final |
+
+---
+
+## Propuesta
+
+Implementaré **Fase 1** (alta prioridad) en este mensaje:
+1. `ClienteCardMobile.tsx`
+2. `PedidoHistorialCardMobile.tsx` 
+3. `OrdenCompraCardMobile.tsx`
+4. Modificar `Clientes.tsx`, `Pedidos.tsx`, `OrdenesCompraTab.tsx`
+
+¿Apruebas este plan para comenzar con la Fase 1?
