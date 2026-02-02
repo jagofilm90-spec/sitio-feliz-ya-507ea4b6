@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Loader2 } from "lucide-react";
@@ -7,8 +7,10 @@ import { SolicitudesDescuentoPanel } from "@/components/admin/SolicitudesDescuen
 import { UsuariosConectadosPanel } from "@/components/admin/UsuariosConectadosPanel";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useSystemPresence } from "@/hooks/useSystemPresence";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { KPICards } from "@/components/dashboard/KPICards";
 import { EstadoOperacionesPanel } from "@/components/dashboard/EstadoOperacionesPanel";
+import { EstadoOperacionesMobile } from "@/components/dashboard/EstadoOperacionesMobile";
 import { MapaRutasWidget } from "@/components/dashboard/MapaRutasWidget";
 import { VentasMensualesChart } from "@/components/dashboard/VentasMensualesChart";
 import { CobranzaCriticaPanel } from "@/components/dashboard/CobranzaCriticaPanel";
@@ -20,6 +22,7 @@ import { InventarioResumen } from "@/components/dashboard/InventarioResumen";
 const Dashboard = () => {
   const navigate = useNavigate();
   const { roles, isLoading: rolesLoading, isAdmin } = useUserRoles();
+  const isMobile = useIsMobile();
   
   // Track presence in dashboard
   useSystemPresence('dashboard');
@@ -63,10 +66,10 @@ const Dashboard = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard Ejecutivo</h1>
-          <p className="text-muted-foreground">Control total del negocio</p>
+          <h1 className={`font-bold ${isMobile ? 'text-xl' : 'text-3xl'}`}>Dashboard Ejecutivo</h1>
+          <p className="text-muted-foreground text-sm">Control total del negocio</p>
         </div>
 
         <NotificacionesSistema />
@@ -75,23 +78,23 @@ const Dashboard = () => {
         {/* KPIs Principales */}
         <KPICards />
 
-        {/* Estado de Operaciones en Tiempo Real */}
-        <EstadoOperacionesPanel />
+        {/* Estado de Operaciones - Carrusel en móvil, Panel en desktop */}
+        {isMobile ? <EstadoOperacionesMobile /> : <EstadoOperacionesPanel />}
 
-        {/* Mapa de Rutas Activas en Vivo */}
-        <MapaRutasWidget />
+        {/* Mapa de Rutas Activas - Solo en desktop/tablet */}
+        {!isMobile && <MapaRutasWidget />}
 
-        {/* Panel de Usuarios Conectados (solo admin) */}
-        {isAdmin && <UsuariosConectadosPanel />}
+        {/* Panel de Usuarios Conectados - Solo en desktop y admin */}
+        {!isMobile && isAdmin && <UsuariosConectadosPanel />}
 
-        {/* Gráfico de Ventas y Cobranza Crítica */}
-        <div className="grid gap-4 lg:grid-cols-2">
+        {/* Gráfico de Ventas y Cobranza Crítica - Stack vertical en móvil */}
+        <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'lg:grid-cols-2'}`}>
           <VentasMensualesChart />
           <CobranzaCriticaPanel />
         </div>
 
-        {/* Crédito Excedido, Vendedores, Entregas e Inventario */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Crédito Excedido, Vendedores, Entregas e Inventario - 2 cols en móvil */}
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           <CreditoExcedidoAlert />
           <VendedoresResumen />
           <EntregasHoyPanel />
