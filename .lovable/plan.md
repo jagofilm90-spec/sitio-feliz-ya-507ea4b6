@@ -1,248 +1,163 @@
 
-# Plan: Adaptación Móvil Completa de TODOS los Diálogos
+# Plan: Optimizar Diálogo de Recepción para Móvil
 
-## Resumen del Problema
+## Problema Identificado
 
-Del análisis exhaustivo de todo el código, encontré:
-- **96 archivos** con componentes `DialogContent`
-- **Solo 3 archivos** tienen las clases móviles correctas (`w-[calc(100vw-2rem)]`)
-- **93 archivos** necesitan corrección
+El diálogo `RecepcionDetalleDialog` ya tiene la clase `w-[calc(100vw-2rem)]` en el contenedor, pero el **contenido interno** tiene múltiples elementos que causan scroll horizontal en móvil:
 
-Esto significa que cada vez que un usuario toca un botón en móvil que abre un diálogo, hay alta probabilidad de que el contenido se desborde o sea invisible.
-
----
-
-## Lista Completa de Archivos a Corregir
-
-### Módulo PEDIDOS (5 archivos)
-| Archivo | Clase Actual | Problema |
-|---------|-------------|----------|
-| `PedidoDetalleDialog.tsx` | `max-w-4xl` | Muy ancho para móvil |
-| `PedidosPorAutorizarTab.tsx` | `max-w-4xl` | Muy ancho para móvil |
-| `EditarEmailClienteDialog.tsx` | `sm:max-w-md` | Falta clase móvil |
-| `NuevoPedidoDialog.tsx` | `max-w-4xl` | Muy ancho para móvil |
-| `GenerarFacturaDialog.tsx` | `sm:max-w-md` | Falta clase móvil |
-
-### Módulo COTIZACIONES (8 archivos)
-| Archivo | Clase Actual |
-|---------|-------------|
-| `CotizacionesAnalyticsTab.tsx` | `max-w-5xl` |
-| `EnviarCotizacionDialog.tsx` | `max-w-lg` |
-| `ImprimirCotizacionDialog.tsx` | `max-w-5xl` |
-| `EnviarCotizacionesMultiplesDialog.tsx` | `max-w-lg` |
-| `CotizacionDetalleDialog.tsx` | `max-w-3xl` |
-| `AutorizacionCotizacionDialog.tsx` | `max-w-2xl` |
-| `CrearCotizacionDialog.tsx` | `max-w-4xl` |
-| `EnviarCotizacionesAgrupadasDialog.tsx` | `max-w-2xl` |
-
-### Módulo RUTAS (9 archivos)
-| Archivo | Clase Actual |
-|---------|-------------|
-| `PlanificadorRutas.tsx` | `max-w-5xl` |
-| `RutaKilometrajeDialog.tsx` | `sm:max-w-md` |
-| `MapaRutaEnVivo.tsx` (2 diálogos) | `max-w-4xl` |
-| `VehiculosTab.tsx` | `max-w-3xl` |
-| `SugerirRutasAIDialog.tsx` | `max-w-4xl` |
-| `ReasignarPersonalDialog.tsx` | `sm:max-w-lg` |
-| `PosponerRutaDialog.tsx` | `sm:max-w-md` |
-| `EnviarMensajeChoferDialog.tsx` | `sm:max-w-md` |
-| `EditarRutaDialog.tsx` | `sm:max-w-lg` |
-
-### Módulo VENDEDOR (7 archivos)
-| Archivo | Clase Actual |
-|---------|-------------|
-| `VendedorNuevoPedidoTab.tsx` | `sm:max-w-md` |
-| `EliminarPedidoDialog.tsx` (AlertDialog) | `max-w-md` |
-| `PedidoDetalleVendedorDialog.tsx` | `sm:max-w-lg` |
-| `SolicitudDescuentoDialog.tsx` | `sm:max-w-md` |
-| `VendedorBienvenidaDialog.tsx` | `sm:max-w-lg` |
-| `CancelarPedidoDialog.tsx` | `sm:max-w-md` |
-| `RegistrarPagoDialog.tsx` | `max-w-2xl` |
-
-### Módulo COMPRAS (24 archivos)
-| Archivo | Clase Actual |
-|---------|-------------|
-| `OrdenesCompraTab.tsx` | `max-w-4xl` |
-| `RegistrarRecepcionDialog.tsx` | `max-w-3xl` |
-| `DevolucionesEvidenciasGallery.tsx` (2) | `max-w-3xl`, `max-w-4xl` |
-| `AjustarCostosOCDialog.tsx` | `max-w-2xl` |
-| `ConciliacionRapidaDialog.tsx` | `max-w-2xl` |
-| `CreditosPendientesPanel.tsx` | `max-w-lg` |
-| `EnviarEvidenciasProveedorDialog.tsx` | `max-w-2xl` |
-| `CalendarioEntregasTab.tsx` | `max-w-2xl` |
-| `DividirEntregaDialog.tsx` | `max-w-2xl` |
-| `MarcarPagadoDialog.tsx` | `sm:max-w-md` |
-| `ProveedorProductosSelector.tsx` | `max-w-md` |
-| `ConvertirEntregasMultiplesDialog.tsx` | `max-w-2xl` |
-| `ConciliarFacturaDialog.tsx` | `max-w-4xl` |
-| `EvidenciasGallery.tsx` (2) | `max-w-3xl`, `max-w-4xl` |
-| `ModificarProductosOCDialog.tsx` | - |
-| `CrearOrdenCompraWizard.tsx` (2) | `max-w-3xl`, `max-w-md` |
-| `ProcesarPagoOCDialog.tsx` | `max-w-4xl` |
-| `ProveedoresTab.tsx` | - |
-| `NotificarCambiosOCDialog.tsx` (Alert) | `max-w-lg` |
-| `ProveedorFacturasDialog.tsx` | - |
-| `ReenviarOCDialog.tsx` | - |
-| `AutorizacionOCDialog.tsx` | - |
-| `HistorialCorreosOC.tsx` | - |
-
-### Módulo ALMACEN (9 archivos)
-| Archivo | Clase Actual |
-|---------|-------------|
-| `CargaEvidenciasSection.tsx` | `max-w-2xl` |
-| `SellosSection.tsx` | `max-w-2xl` |
-| `CancelarDescargaDialog.tsx` (Alert) | `max-w-md` |
-| `AlmacenRecepcionSheet.tsx` | `sm:max-w-lg` |
-| `AlmacenVentasMostradorTab.tsx` | `max-w-2xl` |
-| `ConfiguracionFlotillaDialog.tsx` | `max-w-lg` |
-| `VehiculoCheckupDialog.tsx` | `max-w-3xl` |
-| `DiagramaDanosVehiculo.tsx` | `max-w-2xl` |
-| `DevolucionProveedorDialog.tsx` | `max-w-lg` |
-
-### Módulo CLIENTES (8 archivos - 1 ya corregido)
-| Archivo | Clase Actual | Estado |
-|---------|-------------|--------|
-| `ImportarSucursalesExcelDialog.tsx` | `max-w-4xl` | FALTA |
-| `ClienteCorreosManager.tsx` | `max-w-lg` | FALTA |
-| `ClienteSucursalesDialog.tsx` | ✅ Ya corregido | OK |
-| `ClienteSucursalesMapDialog.tsx` (2) | `max-w-4xl`, `max-w-5xl` | FALTA |
-| `ImportarCatalogoAspelDialog.tsx` | `max-w-5xl` | FALTA |
-| `ClienteProductosDialog.tsx` | `max-w-4xl` | FALTA |
-| `DetectarGruposDialog.tsx` | `max-w-4xl` | FALTA |
-| `AgruparClientesDialog.tsx` | `max-w-3xl` | FALTA |
-| `CrearAccesoPortalDialog.tsx` | `sm:max-w-md` | FALTA |
-
-### Módulo SECRETARIA (6 archivos)
-| Archivo | Clase Actual |
-|---------|-------------|
-| `MigracionLoteDialog.tsx` | `max-w-5xl` |
-| `SecretariaBienvenidaDialog.tsx` | `max-w-lg` |
-| `SecretariaProductosTab.tsx` | `max-w-2xl` |
-| `SecretariaListaPreciosTab.tsx` (2) | `max-w-md`, `max-w-lg` |
-| `SecretariaCostosTab.tsx` | `sm:max-w-md` |
-| `MigracionProductosDialog.tsx` | `max-w-3xl` |
-
-### Módulo EMPLEADOS (1 archivo)
-| Archivo | Clase Actual |
-|---------|-------------|
-| `ExpedienteAnalysisDialog.tsx` | `max-w-2xl` |
-
-### Módulo FACTURAS (2 archivos)
-| Archivo | Clase Actual |
-|---------|-------------|
-| `NuevaFacturaDirectaDialog.tsx` | `max-w-4xl` |
-| `ProcesarSolicitudDialog.tsx` | `max-w-3xl` |
-
-### Módulo CORREOS (4 archivos)
-| Archivo | Clase Actual |
-|---------|-------------|
-| `ComposeEmailDialog.tsx` | `sm:max-w-2xl` |
-| `ProcesarPedidoDialog.tsx` | `max-w-4xl` |
-| `VincularFacturaDialog.tsx` | `max-w-2xl` |
-| `PedidosAcumulativosManager.tsx` | `max-w-4xl` |
-
-### Módulo PAGES (5 archivos - 2 ya corregidos)
-| Archivo | Clase Actual | Estado |
-|---------|-------------|--------|
-| `Inventario.tsx` | ✅ Ya condicional | OK |
-| `CorreosCorporativos.tsx` | `sm:max-w-md` | FALTA |
-| `Productos.tsx` | `max-w-2xl` | FALTA |
-| `Empleados.tsx` (2) | `max-w-2xl`, `max-w-3xl` | FALTA |
-| `Clientes.tsx` | ✅ Ya corregido | OK |
-| `Chat.tsx` | `max-w-2xl` | FALTA |
+- Tablas con columnas fijas que no se adaptan
+- Grids de 2-3 columnas sin breakpoints móviles
+- Botones de acción en línea que se desbordan
 
 ---
 
-## Solución Técnica
+## Cambios Necesarios
 
-### Patrón de Corrección
-
-Para CADA archivo, aplicar este cambio:
-
+### 1. Grid de Información de Recepción (línea 730)
 ```tsx
-// ANTES
-<DialogContent className="max-w-4xl max-h-[90vh]">
+// Antes
+<div className="grid grid-cols-2 gap-4">
 
-// DESPUÉS
-<DialogContent className="w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[90vh] overflow-x-hidden">
+// Después  
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 ```
 
-También para AlertDialog:
+### 2. Grid de Datos de Llegada (línea 753)
 ```tsx
-// ANTES  
-<AlertDialogContent className="max-w-md">
+// Antes
+<div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
 
-// DESPUÉS
-<AlertDialogContent className="w-[calc(100vw-2rem)] sm:max-w-md overflow-x-hidden">
+// Después
+<div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 text-sm">
 ```
 
-### Reglas de Mapeo de Clases
+### 3. Tabla de Productos Esta Entrega (líneas 823-843)
+Convertir a tarjetas en móvil o usar tabla responsive con scroll controlado:
+```tsx
+// Antes: Tabla con 3 columnas fijas
+<table className="w-full text-sm">
+  <thead>...</thead>
 
-| Clase Actual | Clase Nueva |
-|--------------|-------------|
-| `max-w-md` | `w-[calc(100vw-2rem)] sm:max-w-md` |
-| `max-w-lg` | `w-[calc(100vw-2rem)] sm:max-w-lg` |
-| `max-w-xl` | `w-[calc(100vw-2rem)] sm:max-w-xl` |
-| `max-w-2xl` | `w-[calc(100vw-2rem)] sm:max-w-2xl` |
-| `max-w-3xl` | `w-[calc(100vw-2rem)] sm:max-w-3xl` |
-| `max-w-4xl` | `w-[calc(100vw-2rem)] sm:max-w-4xl` |
-| `max-w-5xl` | `w-[calc(100vw-2rem)] sm:max-w-5xl` |
-| `sm:max-w-X` | `w-[calc(100vw-2rem)] sm:max-w-X` |
+// Después: Contenedor scrollable o tarjetas móviles
+<div className="overflow-x-auto">
+  <table className="w-full text-sm min-w-[400px] sm:min-w-0">
+    ...
+  </table>
+</div>
+```
 
-Y SIEMPRE agregar `overflow-x-hidden` si no existe.
+### 4. Tabla Resumen OC Colapsible (líneas 862-905)
+Similar - 5 columnas son demasiadas para móvil:
+```tsx
+// Agregar scroll horizontal controlado
+<div className="overflow-x-auto">
+  <table className="w-full text-sm min-w-[500px] sm:min-w-0">
+```
+
+### 5. Grid de Firmas (línea 962)
+```tsx
+// Antes
+<div className="grid grid-cols-2 gap-4">
+
+// Después
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+```
+
+### 6. Botones de Acción (líneas 989-1029)
+Convertir a stack vertical en móvil:
+```tsx
+// Antes
+<div className="flex justify-end gap-2 pt-4 border-t">
+  <Button>Vista Previa</Button>
+  <Button>Descargar PDF</Button>
+  <Button>Reenviar a Proveedor</Button>
+</div>
+
+// Después
+<div className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4 border-t">
+  <Button className="w-full sm:w-auto">Reenviar a Proveedor</Button>
+  <Button className="w-full sm:w-auto">Descargar PDF</Button>
+  <Button className="w-full sm:w-auto">Vista Previa</Button>
+</div>
+```
 
 ---
 
-## Plan de Ejecución
+## Archivo a Modificar
 
-Dado el volumen (93+ archivos), organizaré la corrección en lotes por módulo:
-
-### Lote 1: Módulos de uso frecuente
-1. Pedidos (5 archivos)
-2. Vendedor (7 archivos)
-3. Cotizaciones (8 archivos)
-
-### Lote 2: Módulos de operaciones
-1. Compras (24 archivos)
-2. Almacén (9 archivos)
-
-### Lote 3: Módulos secundarios
-1. Rutas (9 archivos)
-2. Clientes (7 archivos)
-3. Secretaria (6 archivos)
-
-### Lote 4: Módulos restantes
-1. Correos (4 archivos)
-2. Facturas (2 archivos)
-3. Empleados (1 archivo)
-4. Pages restantes (3 archivos)
+| Archivo | Líneas | Cambio |
+|---------|--------|--------|
+| `RecepcionDetalleDialog.tsx` | 730 | Grid 1 col móvil |
+| | 753 | Grid 1 col móvil |
+| | 822 | Tabla con overflow-x-auto |
+| | 858 | Tabla colapsible con overflow-x-auto |
+| | 962 | Grid firmas 1 col móvil |
+| | 989-1029 | Botones stack vertical |
 
 ---
 
 ## Resultado Esperado
 
-Después de aplicar todos los cambios:
-- **100% de diálogos** se ajustarán correctamente al viewport móvil
-- **Sin overflow horizontal** en ningún diálogo
-- **Desktop sin cambios** (las clases `sm:max-w-X` mantienen el comportamiento actual)
-- El usuario podrá usar CUALQUIER funcionalidad desde móvil sin problemas de visualización
+### Móvil (después):
+```
+┌─────────────────────────────────┐
+│ 📦 Detalle de Recepción      ✕ │
+├─────────────────────────────────┤
+│ OC-2025-001                     │
+│ Entrega #1  [recibida]          │
+│                                 │
+│ Proveedor XYZ                   │
+│ 15 Enero 2025                   │
+├─────────────────────────────────┤
+│ 📊 Resumen de la OC             │
+│ ┌─────┐ ┌─────┐ ┌─────┐        │
+│ │ 5/6 │ │  1  │ │ 83% │        │
+│ │Comp.│ │Pend.│ │Avanc│        │
+│ └─────┘ └─────┘ └─────┘        │
+├─────────────────────────────────┤
+│ Recibido por:                   │
+│ Juan Pérez                      │
+│                                 │
+│ Bultos recibidos:               │
+│ 45 bultos                       │
+├─────────────────────────────────┤
+│ 📦 Productos Esta Entrega       │
+│ ← scroll horizontal →           │
+│ ┌─────────────────────────────┐ │
+│ │Código │Producto│  Cantidad  │ │
+│ │AZUC01 │Azúcar  │    100     │ │
+│ └─────────────────────────────┘ │
+├─────────────────────────────────┤
+│ 📷 Evidencias (4)               │
+│ [img] [img]                     │
+│ [img] [img]                     │
+├─────────────────────────────────┤
+│ ✍️ Firmas                       │
+│ ┌─────────────────────────────┐ │
+│ │ [Firma Almacenista]         │ │
+│ └─────────────────────────────┘ │
+│ ┌─────────────────────────────┐ │
+│ │ [Firma Chofer]              │ │
+│ └─────────────────────────────┘ │
+├─────────────────────────────────┤
+│ [Reenviar a Proveedor      ]   │
+│ [Descargar PDF             ]   │
+│ [Vista Previa              ]   │
+└─────────────────────────────────┘
+```
+
+### Beneficios:
+- Sin scroll horizontal
+- Información apilada verticalmente
+- Botones táctiles de ancho completo
+- Tablas con scroll controlado solo cuando necesario
+- Firmas una debajo de otra para mejor visibilidad
 
 ---
 
-## Archivos Totales a Modificar
+## Lo que NO cambia
 
-**93 archivos** distribuidos en:
-- `/src/components/pedidos/` → 5 archivos
-- `/src/components/cotizaciones/` → 8 archivos
-- `/src/components/rutas/` → 9 archivos
-- `/src/components/vendedor/` → 7 archivos
-- `/src/components/compras/` → 24 archivos
-- `/src/components/almacen/` → 9 archivos
-- `/src/components/clientes/` → 7 archivos
-- `/src/components/secretaria/` → 6 archivos
-- `/src/components/empleados/` → 1 archivo
-- `/src/components/facturas/` → 2 archivo
-- `/src/components/correos/` → 4 archivos
-- `/src/pages/` → 3 archivos
-- Otros componentes dispersos → ~8 archivos
-
+- Funcionalidad de carga de datos
+- Lógica de generación de PDF
+- Envío de correo al proveedor
+- Estructura general del diálogo
