@@ -172,7 +172,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
+    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4 overflow-hidden">
       <div className="w-full max-w-md space-y-4">
         <div className="text-center mb-8">
           <img src={logoAlmasa} alt="ALMASA" className="h-16 mx-auto mb-4" />
