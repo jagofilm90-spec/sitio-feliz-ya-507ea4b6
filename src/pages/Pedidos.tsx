@@ -647,41 +647,47 @@ const PedidosContent = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Pedidos y Cotizaciones</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-3xl font-bold">Pedidos y Cotizaciones</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Gestión de pedidos de clientes y cotizaciones
           </p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="por-autorizar" className="gap-2">
-              <AlertCircle className="h-4 w-4" />
-              Por Autorizar
-            </TabsTrigger>
-            <TabsTrigger value="pedidos" className="gap-2">
-              <ShoppingCart className="h-4 w-4" />
-              Pedidos
-            </TabsTrigger>
-            <TabsTrigger value="cotizaciones" className="gap-2">
-              <FileText className="h-4 w-4" />
-              Cotizaciones
-            </TabsTrigger>
-            <TabsTrigger value="analisis" className="gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Análisis
-            </TabsTrigger>
-            <TabsTrigger value="calendario" className="gap-2">
-              <CalendarDays className="h-4 w-4" />
-              Calendario
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
+            <TabsList className="inline-flex w-max gap-1">
+              <TabsTrigger value="por-autorizar" className="gap-1.5 px-2 sm:px-3">
+                <AlertCircle className="h-4 w-4" />
+                <span className="hidden sm:inline">Por Autorizar</span>
+                <span className="sm:hidden">Autoriz</span>
+              </TabsTrigger>
+              <TabsTrigger value="pedidos" className="gap-1.5 px-2 sm:px-3">
+                <ShoppingCart className="h-4 w-4" />
+                Pedidos
+              </TabsTrigger>
+              <TabsTrigger value="cotizaciones" className="gap-1.5 px-2 sm:px-3">
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">Cotizaciones</span>
+                <span className="sm:hidden">Cotiz</span>
+              </TabsTrigger>
+              <TabsTrigger value="analisis" className="gap-1.5 px-2 sm:px-3">
+                <BarChart3 className="h-4 w-4" />
+                <span className="hidden sm:inline">Análisis</span>
+                <span className="sm:hidden">Anál</span>
+              </TabsTrigger>
+              <TabsTrigger value="calendario" className="gap-1.5 px-2 sm:px-3">
+                <CalendarDays className="h-4 w-4" />
+                <span className="hidden sm:inline">Calendario</span>
+                <span className="sm:hidden">Cal</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-          <TabsContent value="pedidos" className="mt-6 space-y-4">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-4 flex-1">
+          <TabsContent value="pedidos" className="mt-4 sm:mt-6 space-y-4">
+            <div className={`flex gap-2 ${isMobile ? 'flex-col' : 'justify-between items-center'}`}>
+              <div className={`flex items-center gap-2 ${isMobile ? 'w-full' : 'flex-1'}`}>
                 <div className="relative flex-1 max-w-md">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -694,14 +700,15 @@ const PedidosContent = () => {
                 {selectedPedidos.size > 0 && (
                   <Button 
                     variant="destructive" 
+                    size={isMobile ? "icon" : "default"}
                     onClick={() => setDeleteDialogOpen(true)}
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Eliminar ({selectedPedidos.size})
+                    <Trash2 className="h-4 w-4" />
+                    {!isMobile && <span className="ml-2">Eliminar ({selectedPedidos.size})</span>}
                   </Button>
                 )}
               </div>
-              <Button onClick={() => setNuevoPedidoDialogOpen(true)}>
+              <Button onClick={() => setNuevoPedidoDialogOpen(true)} className={isMobile ? "w-full" : ""}>
                 <Plus className="h-4 w-4 mr-2" />
                 Nuevo Pedido
               </Button>

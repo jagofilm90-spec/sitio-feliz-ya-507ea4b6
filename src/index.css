@@ -277,3 +277,12 @@
   --primary: 352 100% 60%;
   --primary-foreground: 0 0% 0%;
 }
+
+/* Hide scrollbar for horizontal tabs */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

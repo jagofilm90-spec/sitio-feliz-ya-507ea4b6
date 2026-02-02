@@ -254,11 +254,11 @@ const FacturasContent = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <div>
-            <h1 className="text-3xl font-bold">Facturación CFDI 4.0</h1>
-            <p className="text-muted-foreground">Timbrado, descarga y cancelación de facturas</p>
+            <h1 className="text-xl sm:text-3xl font-bold">Facturación CFDI 4.0</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Timbrado, descarga y cancelación de facturas</p>
           </div>
           <Button onClick={() => setNuevaFacturaOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -268,23 +268,26 @@ const FacturasContent = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="facturas">
-              <FileText className="h-4 w-4 mr-2" />
-              Facturas
-            </TabsTrigger>
-            <TabsTrigger value="solicitudes" className="relative">
-              <Package className="h-4 w-4 mr-2" />
-              Solicitudes Almacén
-              {pendingCount > 0 && (
-                <Badge 
-                  className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center p-0 text-xs bg-yellow-500"
-                >
-                  {pendingCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
+            <TabsList className="inline-flex w-max gap-1">
+              <TabsTrigger value="facturas" className="flex items-center gap-1.5 px-2 sm:px-3">
+                <FileText className="h-4 w-4" />
+                Facturas
+              </TabsTrigger>
+              <TabsTrigger value="solicitudes" className="relative flex items-center gap-1.5 px-2 sm:px-3">
+                <Package className="h-4 w-4" />
+                <span className="hidden sm:inline">Solicitudes Almacén</span>
+                <span className="sm:hidden">Solic</span>
+                {pendingCount > 0 && (
+                  <Badge 
+                    className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center p-0 text-xs bg-yellow-500"
+                  >
+                    {pendingCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="facturas" className="space-y-4 mt-4">
             <div className="flex gap-4">

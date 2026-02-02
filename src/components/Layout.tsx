@@ -396,23 +396,23 @@ const Layout = ({ children }: LayoutProps) => {
               </span>
             </Link>
           </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
+          <div className="flex items-center gap-1 sm:gap-2">
+            <ThemeToggle className="hidden sm:flex" />
             <UserPreferencesPopover />
             <CentroNotificaciones />
-            <Link to="/tarjeta">
-              <Button variant="ghost" size="sm" className="hidden sm:flex">
+            <Link to="/tarjeta" className="hidden sm:block">
+              <Button variant="ghost" size="sm">
                 <CreditCard className="h-4 w-4 mr-2" />
                 Mi Tarjeta
               </Button>
-              <Button variant="ghost" size="icon" className="sm:hidden">
-                <CreditCard className="h-4 w-4" />
-              </Button>
             </Link>
-            <span className="text-sm text-muted-foreground hidden md:inline">
+            <span className="text-sm text-muted-foreground hidden lg:inline max-w-[150px] truncate">
               {user?.email}
             </span>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
+            <Button variant="outline" size="icon" className="sm:hidden" onClick={handleLogout}>
+              <LogOut className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" className="hidden sm:flex" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" />
               Salir
             </Button>

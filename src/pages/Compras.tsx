@@ -125,74 +125,77 @@ const Compras = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Compras</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-3xl font-bold">Compras</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Gestión de proveedores, órdenes de compra y calendario de entregas
           </p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="flex w-full overflow-x-auto">
-            <TabsTrigger value="proveedores" className="flex items-center gap-2 flex-shrink-0">
-              <Package className="h-4 w-4" />
-              <span className="hidden sm:inline">Proveedores</span>
-              <span className="sm:hidden">Prov.</span>
-            </TabsTrigger>
-            <TabsTrigger value="ordenes" className="flex items-center gap-2 flex-shrink-0">
-              <Truck className="h-4 w-4" />
-              <span className="hidden sm:inline">Órdenes de Compra</span>
-              <span className="sm:hidden">OC</span>
-              {pendingCount > 0 && (
-                <Badge 
-                  variant="destructive" 
-                  className="ml-1 h-5 min-w-5 px-1.5 text-xs font-bold animate-pulse"
-                >
-                  {pendingCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="calendario" className="flex items-center gap-2 flex-shrink-0">
-              <Calendar className="h-4 w-4" />
-              <span className="hidden sm:inline">Calendario</span>
-              <span className="sm:hidden">Cal.</span>
-            </TabsTrigger>
-            <TabsTrigger value="devoluciones-faltantes" className="flex items-center gap-2 flex-shrink-0">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="hidden sm:inline">Devoluciones / Faltantes</span>
-              <span className="sm:hidden">Dev/Falt</span>
-              {devFaltCombinedCount > 0 && (
-                <Badge 
-                  variant="destructive" 
-                  className="ml-1 h-5 min-w-5 px-1.5 text-xs font-bold"
-                >
-                  {devFaltCombinedCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="historial" className="flex items-center gap-2 flex-shrink-0">
-              <History className="h-4 w-4" />
-              <span className="hidden sm:inline">Historial</span>
-              <span className="sm:hidden">Hist.</span>
-            </TabsTrigger>
-            <TabsTrigger value="adeudos" className="flex items-center gap-2 flex-shrink-0">
-              <CreditCard className="h-4 w-4" />
-              Adeudos
-              {adeudosCount > 0 && (
-                <Badge 
-                  variant="secondary" 
-                  className="ml-1 h-5 min-w-5 px-1.5 text-xs font-bold bg-amber-500 text-white"
-                >
-                  {adeudosCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center gap-2 flex-shrink-0">
-              <BarChart3 className="h-4 w-4" />
-              Analytics
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
+            <TabsList className="inline-flex w-max gap-1">
+              <TabsTrigger value="proveedores" className="flex items-center gap-1.5 px-2 sm:px-3 flex-shrink-0">
+                <Package className="h-4 w-4" />
+                <span className="hidden sm:inline">Proveedores</span>
+                <span className="sm:hidden">Prov</span>
+              </TabsTrigger>
+              <TabsTrigger value="ordenes" className="flex items-center gap-1.5 px-2 sm:px-3 flex-shrink-0">
+                <Truck className="h-4 w-4" />
+                <span className="hidden sm:inline">Órdenes de Compra</span>
+                <span className="sm:hidden">OC</span>
+                {pendingCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="ml-1 h-5 min-w-5 px-1.5 text-xs font-bold animate-pulse"
+                  >
+                    {pendingCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="calendario" className="flex items-center gap-1.5 px-2 sm:px-3 flex-shrink-0">
+                <Calendar className="h-4 w-4" />
+                <span className="hidden sm:inline">Calendario</span>
+                <span className="sm:hidden">Cal</span>
+              </TabsTrigger>
+              <TabsTrigger value="devoluciones-faltantes" className="flex items-center gap-1.5 px-2 sm:px-3 flex-shrink-0">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="hidden sm:inline">Devoluciones / Faltantes</span>
+                <span className="sm:hidden">Dev/Falt</span>
+                {devFaltCombinedCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="ml-1 h-5 min-w-5 px-1.5 text-xs font-bold"
+                  >
+                    {devFaltCombinedCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="historial" className="flex items-center gap-1.5 px-2 sm:px-3 flex-shrink-0">
+                <History className="h-4 w-4" />
+                <span className="hidden sm:inline">Historial</span>
+                <span className="sm:hidden">Hist</span>
+              </TabsTrigger>
+              <TabsTrigger value="adeudos" className="flex items-center gap-1.5 px-2 sm:px-3 flex-shrink-0">
+                <CreditCard className="h-4 w-4" />
+                Adeudos
+                {adeudosCount > 0 && (
+                  <Badge 
+                    variant="secondary" 
+                    className="ml-1 h-5 min-w-5 px-1.5 text-xs font-bold bg-amber-500 text-white"
+                  >
+                    {adeudosCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="flex items-center gap-1.5 px-2 sm:px-3 flex-shrink-0">
+                <BarChart3 className="h-4 w-4" />
+                <span className="hidden sm:inline">Analytics</span>
+                <span className="sm:hidden">Anal</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="proveedores">
             <ProveedoresTab />
