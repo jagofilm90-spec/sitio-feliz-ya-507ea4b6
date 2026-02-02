@@ -12,12 +12,14 @@ import ComprasAnalyticsTab from "@/components/compras/ComprasAnalyticsTab";
 import HistorialComprasProductoTab from "@/components/compras/HistorialComprasProductoTab";
 import DevolucionesFaltantesTab from "@/components/compras/DevolucionesFaltantesTab";
 import AdeudosProveedoresTab from "@/components/compras/AdeudosProveedoresTab";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 
 const Compras = () => {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("proveedores");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   // Get current user
   useEffect(() => {
@@ -134,68 +136,101 @@ const Compras = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
-            <TabsList className="inline-flex w-max gap-1">
-              <TabsTrigger value="proveedores" className="flex items-center gap-1.5 px-2 sm:px-3 flex-shrink-0">
+          {isMobile ? (
+            <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
+              <TabsList className="inline-flex w-max gap-1">
+                <TabsTrigger value="proveedores" className="flex items-center gap-1.5 px-3">
+                  <Package className="h-3.5 w-3.5" />
+                  Prov
+                </TabsTrigger>
+                <TabsTrigger value="ordenes" className="flex items-center gap-1.5 px-3">
+                  <Truck className="h-3.5 w-3.5" />
+                  OC
+                  {pendingCount > 0 && (
+                    <Badge variant="destructive" className="ml-1 h-4 min-w-4 px-1 text-[10px] font-bold animate-pulse">
+                      {pendingCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="calendario" className="flex items-center gap-1.5 px-3">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Cal
+                </TabsTrigger>
+                <TabsTrigger value="devoluciones-faltantes" className="flex items-center gap-1.5 px-3">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Dev/Falt
+                  {devFaltCombinedCount > 0 && (
+                    <Badge variant="destructive" className="ml-1 h-4 min-w-4 px-1 text-[10px] font-bold">
+                      {devFaltCombinedCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="historial" className="flex items-center gap-1.5 px-3">
+                  <History className="h-3.5 w-3.5" />
+                  Hist
+                </TabsTrigger>
+                <TabsTrigger value="adeudos" className="flex items-center gap-1.5 px-3">
+                  <CreditCard className="h-3.5 w-3.5" />
+                  Adeudos
+                  {adeudosCount > 0 && (
+                    <Badge className="ml-1 h-4 min-w-4 px-1 text-[10px] font-bold bg-amber-500 text-white">
+                      {adeudosCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="flex items-center gap-1.5 px-3">
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  Anal
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          ) : (
+            <TabsList className="w-full grid grid-cols-7">
+              <TabsTrigger value="proveedores" className="flex items-center gap-1.5">
                 <Package className="h-4 w-4" />
-                <span className="hidden sm:inline">Proveedores</span>
-                <span className="sm:hidden">Prov</span>
+                Proveedores
               </TabsTrigger>
-              <TabsTrigger value="ordenes" className="flex items-center gap-1.5 px-2 sm:px-3 flex-shrink-0">
+              <TabsTrigger value="ordenes" className="flex items-center gap-1.5">
                 <Truck className="h-4 w-4" />
-                <span className="hidden sm:inline">Órdenes de Compra</span>
-                <span className="sm:hidden">OC</span>
+                Órdenes
                 {pendingCount > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="ml-1 h-5 min-w-5 px-1.5 text-xs font-bold animate-pulse"
-                  >
+                  <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1.5 text-xs font-bold animate-pulse">
                     {pendingCount}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="calendario" className="flex items-center gap-1.5 px-2 sm:px-3 flex-shrink-0">
+              <TabsTrigger value="calendario" className="flex items-center gap-1.5">
                 <Calendar className="h-4 w-4" />
-                <span className="hidden sm:inline">Calendario</span>
-                <span className="sm:hidden">Cal</span>
+                Calendario
               </TabsTrigger>
-              <TabsTrigger value="devoluciones-faltantes" className="flex items-center gap-1.5 px-2 sm:px-3 flex-shrink-0">
+              <TabsTrigger value="devoluciones-faltantes" className="flex items-center gap-1.5">
                 <AlertTriangle className="h-4 w-4" />
-                <span className="hidden sm:inline">Devoluciones / Faltantes</span>
-                <span className="sm:hidden">Dev/Falt</span>
+                Dev/Falt
                 {devFaltCombinedCount > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="ml-1 h-5 min-w-5 px-1.5 text-xs font-bold"
-                  >
+                  <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1.5 text-xs font-bold">
                     {devFaltCombinedCount}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="historial" className="flex items-center gap-1.5 px-2 sm:px-3 flex-shrink-0">
+              <TabsTrigger value="historial" className="flex items-center gap-1.5">
                 <History className="h-4 w-4" />
-                <span className="hidden sm:inline">Historial</span>
-                <span className="sm:hidden">Hist</span>
+                Historial
               </TabsTrigger>
-              <TabsTrigger value="adeudos" className="flex items-center gap-1.5 px-2 sm:px-3 flex-shrink-0">
+              <TabsTrigger value="adeudos" className="flex items-center gap-1.5">
                 <CreditCard className="h-4 w-4" />
                 Adeudos
                 {adeudosCount > 0 && (
-                  <Badge 
-                    variant="secondary" 
-                    className="ml-1 h-5 min-w-5 px-1.5 text-xs font-bold bg-amber-500 text-white"
-                  >
+                  <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-xs font-bold bg-amber-500 text-white">
                     {adeudosCount}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="analytics" className="flex items-center gap-1.5 px-2 sm:px-3 flex-shrink-0">
+              <TabsTrigger value="analytics" className="flex items-center gap-1.5">
                 <BarChart3 className="h-4 w-4" />
-                <span className="hidden sm:inline">Analytics</span>
-                <span className="sm:hidden">Anal</span>
+                Analytics
               </TabsTrigger>
             </TabsList>
-          </div>
+          )}
 
           <TabsContent value="proveedores">
             <ProveedoresTab />
