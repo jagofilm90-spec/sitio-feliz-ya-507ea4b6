@@ -727,7 +727,7 @@ export const RecepcionDetalleDialog = ({
                 <Separator />
 
                 {/* Reception info */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Recibido por</p>
                     <p className="font-medium flex items-center gap-2">
@@ -750,7 +750,7 @@ export const RecepcionDetalleDialog = ({
                       <Clock className="w-4 h-4" />
                       Datos de Llegada y Descarga
                     </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                    <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 text-sm">
                       {recepcion.llegada_registrada_en && (
                         <div>
                           <p className="text-muted-foreground">Hora llegada</p>
@@ -819,13 +819,13 @@ export const RecepcionDetalleDialog = ({
                       </p>
                     </div>
                   ) : (
-                    <div className="border rounded-lg overflow-hidden">
-                      <table className="w-full text-sm">
+                    <div className="border rounded-lg overflow-x-auto">
+                      <table className="w-full text-sm min-w-[400px] sm:min-w-0">
                         <thead className="bg-primary/10">
                           <tr>
                             <th className="text-left p-2">Código</th>
                             <th className="text-left p-2">Producto</th>
-                            <th className="text-right p-2">Cantidad Recibida</th>
+                            <th className="text-right p-2">Cantidad</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -855,18 +855,18 @@ export const RecepcionDetalleDialog = ({
                     Ver resumen total de la OC
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <div className="mt-2 border rounded-lg overflow-hidden">
+                    <div className="mt-2 border rounded-lg overflow-x-auto">
                       <div className="bg-muted/50 px-3 py-2 text-xs text-muted-foreground border-b">
                         Cantidades acumuladas de toda la Orden de Compra
                       </div>
-                      <table className="w-full text-sm">
+                      <table className="w-full text-sm min-w-[500px] sm:min-w-0">
                         <thead className="bg-muted">
                           <tr>
                             <th className="text-left p-2">Código</th>
                             <th className="text-left p-2">Producto</th>
-                            <th className="text-right p-2">Ordenado</th>
-                            <th className="text-right p-2">Recibido</th>
-                            <th className="text-left p-2">Diferencia</th>
+                            <th className="text-right p-2">Ord.</th>
+                            <th className="text-right p-2">Rec.</th>
+                            <th className="text-left p-2">Dif.</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -959,7 +959,7 @@ export const RecepcionDetalleDialog = ({
                         <PenTool className="w-4 h-4" />
                         Firmas de Conformidad
                       </h3>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {recepcion.firma_almacenista && (
                           <div className="border rounded-lg p-3 text-center bg-muted/30">
                             <img 
@@ -986,9 +986,10 @@ export const RecepcionDetalleDialog = ({
                 )}
 
                 {/* Actions */}
-                <div className="flex justify-end gap-2 pt-4 border-t">
+                <div className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4 border-t">
                   <Button
                     variant="outline"
+                    className="w-full sm:w-auto"
                     onClick={handlePreviewPDF}
                     disabled={previsualizandoPdf || generandoPdf}
                   >
@@ -1001,6 +1002,7 @@ export const RecepcionDetalleDialog = ({
                   </Button>
                   <Button
                     variant="outline"
+                    className="w-full sm:w-auto"
                     onClick={handleGenerarPDF}
                     disabled={generandoPdf || previsualizandoPdf}
                   >
@@ -1012,6 +1014,7 @@ export const RecepcionDetalleDialog = ({
                     Descargar PDF
                   </Button>
                   <Button
+                    className="w-full sm:w-auto"
                     onClick={handleReenviarCorreo}
                     disabled={reenviandoCorreo}
                   >
@@ -1023,7 +1026,7 @@ export const RecepcionDetalleDialog = ({
                     ) : (
                       <>
                         <Mail className="w-4 h-4 mr-2" />
-                        Reenviar a Proveedor
+                        Reenviar
                       </>
                     )}
                   </Button>
