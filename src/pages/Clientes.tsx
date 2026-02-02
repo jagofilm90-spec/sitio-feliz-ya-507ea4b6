@@ -1008,29 +1008,21 @@ const Clientes = () => {
           {isMobile ? (
             <div className="overflow-x-auto -mx-2 px-2 pb-2 scrollbar-hide">
               <TabsList className="inline-flex w-max gap-1">
-                <TabsTrigger value="datos" className="px-3">Datos</TabsTrigger>
-                <TabsTrigger value="productos" className="flex items-center gap-1 px-3">
-                  <Package className="h-4 w-4" />
-                  Productos
+                <TabsTrigger value="datos" className="px-2 text-xs">Datos</TabsTrigger>
+                <TabsTrigger value="productos" className="px-2 text-xs">
+                  <Package className="h-3 w-3 mr-1" />
+                  Prod.
                 </TabsTrigger>
-                <TabsTrigger value="cortesias" className="flex items-center gap-1 px-3">
-                  <Gift className="h-4 w-4 text-amber-500" />
-                  Cortesías
+                <TabsTrigger value="cortesias" className="px-2 text-xs">
+                  <Gift className="h-3 w-3 text-amber-500" />
                 </TabsTrigger>
-                <TabsTrigger value="creditos" className="flex items-center gap-1 px-3">
-                  <CreditCard className="h-4 w-4" />
-                  Plazos
-                </TabsTrigger>
-                <TabsTrigger value="programacion" className="flex items-center gap-1 px-3">
-                  <CalendarDays className="h-4 w-4 text-blue-500" />
-                  Días
-                </TabsTrigger>
+                <TabsTrigger value="creditos" className="px-2 text-xs">Plazos</TabsTrigger>
+                <TabsTrigger value="programacion" className="px-2 text-xs">Días</TabsTrigger>
                 {isAdmin && (
-                  <TabsTrigger value="usuario" className="flex items-center gap-1 px-3">
-                    <User className="h-4 w-4" />
+                  <TabsTrigger value="usuario" className="px-2 text-xs">
                     Portal
                     {editingClient.user_id && (
-                      <Badge variant="default" className="ml-1 h-5 bg-green-500">✓</Badge>
+                      <Badge variant="default" className="ml-1 h-4 text-[10px] bg-green-500">✓</Badge>
                     )}
                   </TabsTrigger>
                 )}

@@ -148,17 +148,18 @@ export function ClienteFormContent({
             />
           </div>
         </div>
-        <div className="flex items-center space-x-2 pt-2">
+        <div className={`flex ${isMobile ? 'items-start' : 'items-center'} space-x-2 pt-2`}>
           <Checkbox
             id="es_grupo"
             checked={formData.es_grupo}
             onCheckedChange={(checked) => setFormData({ ...formData, es_grupo: checked === true })}
+            className={isMobile ? 'mt-0.5' : ''}
           />
-          <div className="grid gap-1 leading-none">
+          <div className="grid gap-1 leading-none min-w-0">
             <Label htmlFor="es_grupo" className="text-sm font-medium cursor-pointer">
               Es Grupo Padre
             </Label>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground break-words">
               Marcar si este cliente agrupa múltiples sucursales con diferentes razones sociales
             </p>
           </div>

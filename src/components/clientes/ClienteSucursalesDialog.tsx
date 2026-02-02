@@ -642,23 +642,25 @@ const ClienteSucursalesDialog = ({
                     size="sm"
                     variant={filtroTipo === 'todas' ? 'default' : 'outline'}
                     onClick={() => setFiltroTipo('todas')}
+                    className="whitespace-nowrap"
                   >
-                    Todas ({sucursales.length})
+                    {isMobile ? `(${sucursales.length})` : `Todas (${sucursales.length})`}
                   </Button>
                   <Button
                     size="sm"
                     variant={filtroTipo === 'rosticeria' ? 'default' : 'outline'}
                     onClick={() => setFiltroTipo('rosticeria')}
-                    className={filtroTipo === 'rosticeria' ? 'bg-amber-500 hover:bg-amber-600' : ''}
+                    className={`whitespace-nowrap ${filtroTipo === 'rosticeria' ? 'bg-amber-500 hover:bg-amber-600' : ''}`}
                   >
-                    🍗 Rosticerías ({countRosticerias})
+                    🍗 {isMobile ? `(${countRosticerias})` : `Rosticerías (${countRosticerias})`}
                   </Button>
                   <Button
                     size="sm"
                     variant={filtroTipo === 'regular' ? 'default' : 'outline'}
                     onClick={() => setFiltroTipo('regular')}
+                    className="whitespace-nowrap"
                   >
-                    Regulares ({countRegulares})
+                    {isMobile ? `Reg. (${countRegulares})` : `Regulares (${countRegulares})`}
                   </Button>
                 </div>
               </div>
@@ -816,20 +818,22 @@ const ClienteSucursalesDialog = ({
           ) : (
             // Botón para auto-detectar todas las sucursales sin zona
             sucursales.filter(s => !s.zona_id).length > 0 && (
-              <div className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                <span className="text-sm">
-                  {sucursales.filter(s => !s.zona_id).length} sucursales sin zona asignada
-                </span>
+              <div className={`${isMobile ? 'flex flex-col gap-2' : 'flex items-center gap-3'} p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg`}>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                  <span className="text-sm">
+                    {sucursales.filter(s => !s.zona_id).length} {isMobile ? 'sin zona' : 'sucursales sin zona asignada'}
+                  </span>
+                </div>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={handleAutoDetectarZonas}
                   disabled={autoDetectando}
-                  className="ml-auto"
+                  className={isMobile ? 'w-full' : 'ml-auto'}
                 >
                   <Wand2 className="h-4 w-4 mr-1" />
-                  {autoDetectando ? "Detectando..." : "Auto-detectar Zonas"}
+                  {autoDetectando ? "Detectando..." : (isMobile ? "Auto-detectar" : "Auto-detectar Zonas")}
                 </Button>
               </div>
             )
