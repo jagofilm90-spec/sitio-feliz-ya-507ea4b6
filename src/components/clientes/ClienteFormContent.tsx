@@ -375,14 +375,14 @@ export function ClienteFormContent({
         <div className="space-y-2">
           <Label>Vendedor Asignado</Label>
           <Select
-            value={formData.vendedor_asignado || ""}
-            onValueChange={(value) => setFormData({ ...formData, vendedor_asignado: value || null })}
+            value={formData.vendedor_asignado || "__none__"}
+            onValueChange={(value) => setFormData({ ...formData, vendedor_asignado: value === "__none__" ? null : value })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Casa (sin vendedor asignado)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Casa (sin vendedor)</SelectItem>
+              <SelectItem value="__none__">Casa (sin vendedor)</SelectItem>
               <SelectItem value="1e19d492-2dff-4798-942d-a2fe99ff1389">Carlos Giron</SelectItem>
               <SelectItem value="b8eef389-1ea1-4e84-81af-5d2d805e198f">Venancio Gregorio</SelectItem>
               <SelectItem value="07400eb2-f9a3-42dc-9a49-5d1126530f23">Salvador Rojas</SelectItem>
