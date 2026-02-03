@@ -1624,30 +1624,29 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 flex-wrap">
-            Gestionar Orden {orden?.folio}
-            {getStatusBadge()}
-            {!proveedorTieneEmail && (
-              <Badge variant="outline" className="text-muted-foreground">
-                Sin correo
-              </Badge>
-            )}
-            {orden?.status === "enviada" && orden?.email_enviado_en && (
-              <div className="flex items-center gap-2 ml-auto">
-                {orden?.email_leido_en && (
-                  <Badge variant="outline" className="text-blue-600 border-blue-300">
-                    <Mail className="h-3 w-3 mr-1" />
-                    Leído
-                  </Badge>
-                )}
-                {/* REMOVED: confirmacionProveedor - confirmation system deprecated */}
-              </div>
-            )}
-            {orden?.status === "enviada" && !orden?.email_enviado_en && (
-              <Badge variant="outline" className="text-muted-foreground ml-auto">
-                Control interno
-              </Badge>
-            )}
+          <DialogTitle className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 pr-8">
+            <span className="flex items-center gap-2 flex-wrap">
+              Gestionar Orden {orden?.folio}
+              {getStatusBadge()}
+            </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              {!proveedorTieneEmail && (
+                <Badge variant="outline" className="text-muted-foreground text-[10px]">
+                  Sin correo
+                </Badge>
+              )}
+              {orden?.status === "enviada" && orden?.email_enviado_en && orden?.email_leido_en && (
+                <Badge variant="outline" className="text-blue-600 border-blue-300 text-[10px]">
+                  <Mail className="h-3 w-3 mr-1" />
+                  Leído
+                </Badge>
+              )}
+              {orden?.status === "enviada" && !orden?.email_enviado_en && (
+                <Badge variant="outline" className="text-muted-foreground text-[10px]">
+                  Control interno
+                </Badge>
+              )}
+            </div>
           </DialogTitle>
           <DialogDescription>
             {orden?.status === "rechazada" && orden?.motivo_rechazo && (
@@ -1744,30 +1743,32 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
           
           {/* Tabla de productos - scrollable si hay muchos */}
           {orden?.ordenes_compra_detalles && orden.ordenes_compra_detalles.length > 0 && (
-            <ScrollArea className="max-h-[180px]">
-              <Table>
-                <TableHeader>
-                  <TableRow className="text-xs">
-                    <TableHead className="py-2">Producto</TableHead>
-                    <TableHead className="text-center w-16 py-2">Cant</TableHead>
-                    <TableHead className="text-right w-24 py-2">P.Unit</TableHead>
-                    <TableHead className="text-right w-24 py-2">Subtotal</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {orden.ordenes_compra_detalles.map((d: any) => (
-                    <TableRow key={d.id} className="text-xs">
-                      <TableCell className="truncate max-w-[200px] py-1.5">
-                        {d.productos?.nombre || d.producto_nombre_manual || "Producto"}
-                      </TableCell>
-                      <TableCell className="text-center py-1.5">{d.cantidad_ordenada}</TableCell>
-                      <TableCell className="text-right py-1.5">{formatCurrency(d.precio_unitario_compra)}</TableCell>
-                      <TableCell className="text-right py-1.5">{formatCurrency(d.subtotal)}</TableCell>
+            <div className="overflow-x-auto -mx-4 px-4">
+              <ScrollArea className="max-h-[180px]">
+                <Table className="min-w-[320px]">
+                  <TableHeader>
+                    <TableRow className="text-xs">
+                      <TableHead className="py-2 min-w-[100px]">Producto</TableHead>
+                      <TableHead className="text-center w-12 py-2">Cant</TableHead>
+                      <TableHead className="text-right w-16 py-2">P.Unit</TableHead>
+                      <TableHead className="text-right w-16 py-2">Subtotal</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
+                  </TableHeader>
+                  <TableBody>
+                    {orden.ordenes_compra_detalles.map((d: any) => (
+                      <TableRow key={d.id} className="text-xs">
+                        <TableCell className="truncate max-w-[120px] py-1.5">
+                          {d.productos?.nombre || d.producto_nombre_manual || "Producto"}
+                        </TableCell>
+                        <TableCell className="text-center py-1.5">{d.cantidad_ordenada}</TableCell>
+                        <TableCell className="text-right py-1.5 whitespace-nowrap">{formatCurrency(d.precio_unitario_compra)}</TableCell>
+                        <TableCell className="text-right py-1.5 whitespace-nowrap">{formatCurrency(d.subtotal)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </div>
           )}
           
           {/* Totales */}
