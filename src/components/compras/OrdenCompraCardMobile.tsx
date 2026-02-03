@@ -5,6 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
 import { 
+  CalendarCheck,
+  CalendarX,
+  CheckCircle,
   MoreVertical,
   PackageX,
   Receipt, 
@@ -31,9 +34,26 @@ interface OrdenCompra {
   monto_pagado?: number;
 }
 
+interface EntregaOC {
+  id: string;
+  numero_entrega: number;
+  cantidad_bultos: number;
+  fecha_programada: string | null;
+  status: string;
+  recepcion_finalizada_en: string | null;
+}
+
+interface EntregasStatus {
+  total: number;
+  programadas: number;
+  recibidas: number;
+}
+
 interface OrdenCompraCardMobileProps {
   orden: OrdenCompra;
   faltantesPendientes: number;
+  entregas?: EntregaOC[];
+  entregasStatus?: EntregasStatus;
   onOpenAcciones: (orden: OrdenCompra) => void;
   onOpenFacturas: (orden: OrdenCompra) => void;
   onReenviar: (orden: OrdenCompra) => void;
@@ -75,9 +95,20 @@ const getProgressColor = (porcentaje: number): string => {
   return "bg-green-500";
 };
 
+// Helper to parse dates without timezone shift
+const parseDateLocal = (dateStr: string): Date => {
+  if (dateStr.includes('T')) {
+    return new Date(dateStr);
+  }
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 export const OrdenCompraCardMobile = ({ 
   orden, 
   faltantesPendientes,
+  entregas,
+  entregasStatus,
   onOpenAcciones,
   onOpenFacturas,
   onReenviar,
@@ -187,6 +218,59 @@ export const OrdenCompraCardMobile = ({
             </Badge>
           )}
         </div>
+
+        {/* Sección de Entregas */}
+        {entregas && entregas.length > 0 && (
+          <div className="pt-2 border-t space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-xs flex items-center gap-1">
+                <Truck className="h-3 w-3" />
+                Entregas:
+              </span>
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                {entregasStatus?.recibidas || 0}/{entregasStatus?.total || entregas.length}
+              </Badge>
+            </div>
+            
+            {/* Lista compacta de entregas */}
+            <div className="space-y-1 max-h-32 overflow-y-auto">
+              {entregas.map((entrega) => (
+                <div 
+                  key={entrega.id}
+                  className="flex items-center justify-between text-xs p-1.5 rounded bg-muted/50"
+                >
+                  <div className="flex items-center gap-2">
+                    {/* Icono de status */}
+                    {entrega.status === "recibida" || entrega.recepcion_finalizada_en ? (
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                    ) : entrega.fecha_programada ? (
+                      <CalendarCheck className="h-3 w-3 text-amber-500" />
+                    ) : (
+                      <CalendarX className="h-3 w-3 text-muted-foreground" />
+                    )}
+                    <span>#{entrega.numero_entrega}</span>
+                    <span className="text-muted-foreground">
+                      {entrega.cantidad_bultos} bultos
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {entrega.fecha_programada ? (
+                      <span className={cn(
+                        "font-medium",
+                        (entrega.status === "recibida" || entrega.recepcion_finalizada_en) && "text-green-600",
+                        entrega.status !== "recibida" && !entrega.recepcion_finalizada_en && "text-amber-600"
+                      )}>
+                        {format(parseDateLocal(entrega.fecha_programada), "dd/MM")}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground italic">Sin fecha</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Acciones */}
         <div className="flex gap-2 pt-1">
