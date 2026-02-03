@@ -4,14 +4,62 @@ import { corsHeaders } from '../_shared/cors.ts'
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-// Get next business day (skip Sunday only - company works Mon-Sat)
-function getNextBusinessDay(date: Date): Date {
+// Calculate Mexican official holidays for a given year
+function getMexicanHolidays(year: number): string[] {
+  const holidays: string[] = []
+  
+  // Fixed holidays
+  holidays.push(`${year}-01-01`) // Año Nuevo
+  holidays.push(`${year}-05-01`) // Día del Trabajo
+  holidays.push(`${year}-09-16`) // Día de la Independencia
+  holidays.push(`${year}-12-25`) // Navidad
+  
+  // First Monday of February (Día de la Constitución)
+  const feb1 = new Date(year, 1, 1)
+  const dayOfWeekFeb = feb1.getDay()
+  const daysUntilMondayFeb = dayOfWeekFeb === 0 ? 1 : (dayOfWeekFeb === 1 ? 0 : 8 - dayOfWeekFeb)
+  const firstMondayFeb = new Date(year, 1, 1 + daysUntilMondayFeb)
+  holidays.push(firstMondayFeb.toISOString().split('T')[0])
+  
+  // Third Monday of March (Natalicio de Benito Juárez)
+  const mar1 = new Date(year, 2, 1)
+  const dayOfWeekMar = mar1.getDay()
+  const daysUntilMondayMar = dayOfWeekMar === 0 ? 1 : (dayOfWeekMar === 1 ? 0 : 8 - dayOfWeekMar)
+  const firstMondayMar = new Date(year, 2, 1 + daysUntilMondayMar)
+  const thirdMondayMar = new Date(firstMondayMar)
+  thirdMondayMar.setDate(firstMondayMar.getDate() + 14)
+  holidays.push(thirdMondayMar.toISOString().split('T')[0])
+  
+  // Third Monday of November (Día de la Revolución)
+  const nov1 = new Date(year, 10, 1)
+  const dayOfWeekNov = nov1.getDay()
+  const daysUntilMondayNov = dayOfWeekNov === 0 ? 1 : (dayOfWeekNov === 1 ? 0 : 8 - dayOfWeekNov)
+  const firstMondayNov = new Date(year, 10, 1 + daysUntilMondayNov)
+  const thirdMondayNov = new Date(firstMondayNov)
+  thirdMondayNov.setDate(firstMondayNov.getDate() + 14)
+  holidays.push(thirdMondayNov.toISOString().split('T')[0])
+  
+  return holidays
+}
+
+// Get next business day (skip Sunday and Mexican holidays)
+// Saturday (day 6) IS a working day for this company
+function getNextBusinessDay(date: Date, holidays: string[]): Date {
   const next = new Date(date)
   next.setDate(next.getDate() + 1)
   
-  // Only skip Sunday (day 0), Saturday (day 6) is a working day
-  if (next.getDay() === 0) {
-    next.setDate(next.getDate() + 1) // Move to Monday
+  // Loop until we find a valid business day
+  while (true) {
+    const dayOfWeek = next.getDay()
+    const dateStr = next.toISOString().split('T')[0]
+    
+    // Skip Sunday (0) and Mexican holidays
+    if (dayOfWeek === 0 || holidays.includes(dateStr)) {
+      next.setDate(next.getDate() + 1)
+      continue
+    }
+    
+    break
   }
   
   return next
@@ -30,11 +78,19 @@ Deno.serve(async (req) => {
     today.setHours(0, 0, 0, 0)
     const todayStr = today.toISOString().split('T')[0]
     
-    // Calculate next business day
-    const nextBusinessDay = getNextBusinessDay(today)
+    // Get Mexican holidays for current year (and next year if we're in December)
+    const currentYear = today.getFullYear()
+    const holidays = getMexicanHolidays(currentYear)
+    if (today.getMonth() === 11) {
+      holidays.push(...getMexicanHolidays(currentYear + 1))
+    }
+    
+    // Calculate next business day considering holidays
+    const nextBusinessDay = getNextBusinessDay(today, holidays)
     const nextBusinessDayStr = nextBusinessDay.toISOString().split('T')[0]
 
     console.log(`Running auto-reschedule check for ${todayStr}`)
+    console.log(`Mexican holidays for ${currentYear}: ${holidays.join(', ')}`)
     console.log(`Next business day: ${nextBusinessDayStr}`)
 
     // 1. Find all SCHEDULED deliveries (ordenes_compra_entregas) where fecha_programada < today
@@ -117,14 +173,14 @@ Deno.serve(async (req) => {
 
     // 4. Reschedule overdue single-delivery orders
     for (const order of (pendingOrders || [])) {
-      // PRIMERO: Verificar si la orden tiene entregas pendientes (programadas o en_transito)
+      // Check if order has pending deliveries (programadas or en_transito)
       const { count: countPendientes } = await supabase
         .from('ordenes_compra_entregas')
         .select('id', { count: 'exact', head: true })
         .eq('orden_compra_id', order.id)
         .in('status', ['programada', 'en_transito'])
 
-      // Verificar si tiene entregas recibidas
+      // Check if order has received deliveries
       const { data: entregaRecibida } = await supabase
         .from('ordenes_compra_entregas')
         .select('id')
@@ -133,21 +189,19 @@ Deno.serve(async (req) => {
         .limit(1)
         .maybeSingle()
 
-      // Si hay entregas pendientes Y recibidas, mantener como 'parcial' y NO marcar como completada
+      // If there are pending AND received deliveries, ensure status is 'parcial'
       if (countPendientes && countPendientes > 0) {
         if (entregaRecibida) {
-          // Asegurar que el status sea 'parcial' si hay entregas recibidas Y pendientes
           console.log(`Order ${order.folio} has pending deliveries, ensuring status is 'parcial'`)
           await supabase
             .from('ordenes_compra')
             .update({ status: 'parcial' })
             .eq('id', order.id)
         }
-        // No reprogramar esta orden aquí - las entregas individuales se manejan arriba
         continue
       }
 
-      // Solo si NO hay entregas pendientes y SI hay recibidas, marcar como completada
+      // Only mark as completed if NO pending deliveries and HAS received deliveries
       if (entregaRecibida && (!countPendientes || countPendientes === 0)) {
         console.log(`Order ${order.folio} has all deliveries received, marking as completed`)
         await supabase
@@ -157,7 +211,7 @@ Deno.serve(async (req) => {
         continue
       }
 
-      // Si llegamos aquí, es una orden sin entregas múltiples que necesita reprogramación
+      // If we reach here, it's an order without multiple deliveries that needs rescheduling
       const currentNotas = (order as any).notas || ''
       const proveedorData = (order as any).proveedores as any
       
@@ -231,6 +285,8 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         message: `Processed ${rescheduledItems.length} overdue deliveries`,
+        holidays: holidays,
+        nextBusinessDay: nextBusinessDayStr,
         rescheduled: rescheduledItems
       }),
       {
