@@ -1,193 +1,125 @@
 
-# Auditoría de Problemas Móviles en Diálogos y Pantallas
+# Plan: Optimizar Estilo Visual de Pestañas Móviles en Compras
 
-## Resumen del Análisis
+## Problema Identificado
 
-Revisé **91 archivos** con `grid-cols-2`, **45 archivos** con `grid-cols-3`, **28 archivos** con `grid-cols-4`, **89 diálogos** con `DialogContent`, y **20 archivos** con botones de acción `flex justify-end gap`.
+Las pestañas de la página `/compras` **ya están usando el código móvil** (muestran las abreviaciones "Prov", "OC", "Cal", etc.), pero **el estilo visual es demasiado grande/pesado** para móvil:
 
----
+- El `TabsList` usa altura de `h-10` (default de 40px)
+- Los `TabsTrigger` usan texto de tamaño `text-sm` (14px)
+- El resultado visual es que las pestañas parecen de desktop aunque tengan scroll
 
-## Problemas Identificados
+## Comparación con Otros Módulos
 
-### 🔴 CRÍTICOS (Afectan usabilidad móvil)
+| Componente | TabsList | TabsTrigger |
+|-----------|----------|-------------|
+| **Compras (actual)** | `inline-flex w-max gap-1` | `gap-1.5 px-3` |
+| BandejaEntrada | `h-9` | `text-xs px-3` |
+| VendedorVentasChart | `grid w-full` | `text-xs gap-1` |
+| AlmacenFumigaciones | `grid grid-cols-4` | `text-xs px-1` |
 
-| # | Componente | Problema | Línea |
-|---|-----------|----------|-------|
-| 1 | `AutorizacionOCDialog.tsx` | Grid 2 cols sin breakpoint móvil + tabla sin overflow | 208, 248 |
-| 2 | `AutorizacionCotizacionDialog.tsx` | Grid 2 cols sin breakpoint móvil + tabla sin overflow | 210, 255 |
-| 3 | `RegistrarRecepcionDialog.tsx` | Grid 2 cols, grid 4 cols sin breakpoints | 565, 634, 690 |
-| 4 | `SucursalFormSheet.tsx` | Grid 3 cols sin breakpoint móvil | 255 |
-| 5 | `MigracionProductosDialog.tsx` | Grid 3 cols en información muy densa | 314, 332, 473, 493 |
-| 6 | `NuevoPedidoDialog.tsx` | Botones acción en línea sin stack móvil | 801 |
-| 7 | `DisponibilidadPersonalTab.tsx` | Grid 4 cols sin breakpoint móvil | 312 |
-| 8 | `SugerirRutasAIDialog.tsx` | Grid 4 cols stats sin breakpoint | 452 |
+## Solución Propuesta
 
-### 🟡 MODERADOS (Funcionan pero podrían mejorar)
+Actualizar las pestañas móviles en `Compras.tsx` para que sean más compactas:
 
-| # | Componente | Problema | Línea |
-|---|-----------|----------|-------|
-| 9 | `VehiculosTab.tsx` | Grid 4 cols en dimensiones + grid 3 cols | 937, 1003, 1083 |
-| 10 | `AlmacenFumigacionesTab.tsx` | TabsList grid 4 cols muy apretado | 308 |
-| 11 | `OrdenAccionesDialog.tsx` | Dashboard grid 4 cols contador | 1710 |
+### Cambios en `src/pages/Compras.tsx` (líneas 140-185)
 
----
-
-## Detalle de Cambios por Archivo
-
-### 1. `AutorizacionOCDialog.tsx`
+**Antes:**
 ```tsx
-// Línea 208 - Grid de información
-<div className="grid grid-cols-2 gap-4 mb-4">
-// Cambiar a:
-<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-
-// Línea 247-248 - Tabla de productos
-<div className="border rounded-lg overflow-hidden">
-  <table className="w-full text-sm">
-// Cambiar a:
-<div className="border rounded-lg overflow-x-auto">
-  <table className="w-full text-sm min-w-[400px] sm:min-w-0">
+<div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
+  <TabsList className="inline-flex w-max gap-1">
+    <TabsTrigger value="proveedores" className="flex items-center gap-1.5 px-3">
 ```
 
-### 2. `AutorizacionCotizacionDialog.tsx`
+**Después:**
 ```tsx
-// Línea 210 - Grid de información
-<div className="grid grid-cols-2 gap-4 mb-4">
-// Cambiar a:
-<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-
-// Línea 254-255 - Tabla de productos
-<div className="border rounded-lg overflow-hidden">
-  <table className="w-full text-sm">
-// Cambiar a:
-<div className="border rounded-lg overflow-x-auto">
-  <table className="w-full text-sm min-w-[400px] sm:min-w-0">
+<div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
+  <TabsList className="inline-flex w-max gap-1 h-9">
+    <TabsTrigger value="proveedores" className="flex items-center gap-1 px-2.5 text-xs">
 ```
 
-### 3. `RegistrarRecepcionDialog.tsx`
+### Cambios Específicos:
+
+1. **TabsList**: Agregar `h-9` para reducir altura de 40px a 36px
+2. **Cada TabsTrigger**:
+   - Cambiar `gap-1.5` a `gap-1` (reducir espacio entre icono y texto)
+   - Cambiar `px-3` a `px-2.5` (reducir padding horizontal)
+   - Agregar `text-xs` (reducir tamaño de fuente de 14px a 12px)
+
+### Código Final de Pestañas Móviles:
+
 ```tsx
-// Línea 565 - Grid control recepción
-<div className="grid grid-cols-2 gap-4">
-// Cambiar a:
-<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-// Línea 634 - Grid proveedor/estado
-<div className="grid grid-cols-2 gap-4 mb-4">
-// Cambiar a:
-<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-
-// Línea 690 - Grid cantidades producto
-<div className="grid grid-cols-4 gap-2 text-sm mt-3">
-// Cambiar a:
-<div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm mt-3">
+{isMobile ? (
+  <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
+    <TabsList className="inline-flex w-max gap-1 h-9">
+      <TabsTrigger value="proveedores" className="flex items-center gap-1 px-2.5 text-xs">
+        <Package className="h-3.5 w-3.5" />
+        Prov
+      </TabsTrigger>
+      <TabsTrigger value="ordenes" className="flex items-center gap-1 px-2.5 text-xs">
+        <Truck className="h-3.5 w-3.5" />
+        OC
+        {pendingCount > 0 && (
+          <Badge variant="destructive" className="ml-0.5 h-4 min-w-4 px-1 text-[10px] font-bold animate-pulse">
+            {pendingCount}
+          </Badge>
+        )}
+      </TabsTrigger>
+      <TabsTrigger value="calendario" className="flex items-center gap-1 px-2.5 text-xs">
+        <Calendar className="h-3.5 w-3.5" />
+        Cal
+      </TabsTrigger>
+      <TabsTrigger value="devoluciones-faltantes" className="flex items-center gap-1 px-2.5 text-xs">
+        <AlertTriangle className="h-3.5 w-3.5" />
+        Dev/Falt
+        {devFaltCombinedCount > 0 && (
+          <Badge variant="destructive" className="ml-0.5 h-4 min-w-4 px-1 text-[10px] font-bold">
+            {devFaltCombinedCount}
+          </Badge>
+        )}
+      </TabsTrigger>
+      <TabsTrigger value="historial" className="flex items-center gap-1 px-2.5 text-xs">
+        <History className="h-3.5 w-3.5" />
+        Hist
+      </TabsTrigger>
+      <TabsTrigger value="adeudos" className="flex items-center gap-1 px-2.5 text-xs">
+        <CreditCard className="h-3.5 w-3.5" />
+        Adeudos
+        {adeudosCount > 0 && (
+          <Badge className="ml-0.5 h-4 min-w-4 px-1 text-[10px] font-bold bg-amber-500 text-white">
+            {adeudosCount}
+          </Badge>
+        )}
+      </TabsTrigger>
+      <TabsTrigger value="analytics" className="flex items-center gap-1 px-2.5 text-xs">
+        <BarChart3 className="h-3.5 w-3.5" />
+        Anal
+      </TabsTrigger>
+    </TabsList>
+  </div>
+) : (...)}
 ```
 
-### 4. `SucursalFormSheet.tsx`
-```tsx
-// Línea 255 - Grid código/nombre/CL
-<div className="grid grid-cols-3 gap-3">
-// Cambiar a:
-<div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-```
+## Resumen de Cambios
 
-### 5. `MigracionProductosDialog.tsx`
-```tsx
-// Líneas 314, 332, 473, 493 - Grids de datos
-<div className="grid grid-cols-3 gap-2">
-// Cambiar a:
-<div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-```
-
-### 6. `NuevoPedidoDialog.tsx`
-```tsx
-// Línea 801 - Botones acción
-<div className="flex justify-end gap-3">
-// Cambiar a:
-<div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-  <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
-    Cancelar
-  </Button>
-  <Button onClick={handleCrearPedido} disabled={loading} className="w-full sm:w-auto">
-    {loading ? "Creando..." : "Crear Pedido"}
-  </Button>
-</div>
-```
-
-### 7. `DisponibilidadPersonalTab.tsx`
-```tsx
-// Línea 312 - Grid stats
-<div className="grid grid-cols-4 gap-4">
-// Cambiar a:
-<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-```
-
-### 8. `SugerirRutasAIDialog.tsx`
-```tsx
-// Línea 452 - Grid summary stats
-<div className="grid grid-cols-4 gap-3 flex-shrink-0">
-// Cambiar a:
-<div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-shrink-0">
-```
-
-### 9. `VehiculosTab.tsx`
-```tsx
-// Líneas 937, 1003 - Grid 3 cols
-<div className="grid grid-cols-3 gap-4">
-// Cambiar a:
-<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-
-// Línea 1083 - Grid 4 cols dimensiones
-<div className="grid grid-cols-4 gap-4">
-// Cambiar a:
-<div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-```
-
----
-
-## Archivos a Modificar (Resumen)
-
-| Archivo | Cambios |
-|---------|---------|
-| `src/components/compras/AutorizacionOCDialog.tsx` | 2 grids + 2 tablas |
-| `src/components/cotizaciones/AutorizacionCotizacionDialog.tsx` | 2 grids + 1 tabla |
-| `src/components/compras/RegistrarRecepcionDialog.tsx` | 3 grids |
-| `src/components/clientes/SucursalFormSheet.tsx` | 1 grid |
-| `src/components/secretaria/MigracionProductosDialog.tsx` | 4 grids |
-| `src/components/pedidos/NuevoPedidoDialog.tsx` | 1 flex buttons |
-| `src/components/rutas/DisponibilidadPersonalTab.tsx` | 1 grid |
-| `src/components/rutas/SugerirRutasAIDialog.tsx` | 1 grid |
-| `src/components/rutas/VehiculosTab.tsx` | 3 grids |
-
-**Total: 9 archivos, ~20 cambios**
-
----
-
-## Patrones Correctos ya Existentes (Referencia)
-
-Estos archivos **ya están optimizados** y sirven como referencia:
-
-✅ `RecepcionDetalleDialog.tsx` - Grids con `grid-cols-1 sm:grid-cols-2`
-✅ `MonitoreoRutasTab.tsx` - Stats con `grid-cols-2 md:grid-cols-4`
-✅ `AsignacionesDelDiaTab.tsx` - Stats con `grid-cols-2 md:grid-cols-4`
-✅ `VendedorMisVentasTab.tsx` - KPIs con `grid-cols-2 lg:grid-cols-4`
-
----
-
-## Prioridad de Implementación
-
-1. **Alta**: Diálogos de autorización (OC y Cotización) - Se usan frecuentemente desde móvil
-2. **Alta**: RegistrarRecepcionDialog - Almacenistas usan tablets/móvil
-3. **Media**: SucursalFormSheet - Formulario de uso común
-4. **Media**: NuevoPedidoDialog - Botones críticos
-5. **Baja**: Tabs de rutas y vehículos - Menos uso móvil
-
----
+| Propiedad | Antes | Después |
+|-----------|-------|---------|
+| TabsList height | `h-10` (default) | `h-9` |
+| Trigger gap | `gap-1.5` | `gap-1` |
+| Trigger padding | `px-3` | `px-2.5` |
+| Trigger text | `text-sm` (default) | `text-xs` |
+| Badge margin | `ml-1` | `ml-0.5` |
 
 ## Resultado Esperado
 
-Después de aplicar estos cambios:
+Después de los cambios:
+- Pestañas más compactas verticalmente (36px vs 40px)
+- Texto más pequeño y ligero (12px vs 14px)
+- Mejor apariencia en iPhones y dispositivos móviles
+- Mismo comportamiento de scroll horizontal
 
-- **0 scroll horizontal** en diálogos móviles
-- **Información legible** en pantallas pequeñas
-- **Botones táctiles** de ancho completo
-- **Consistencia** con el patrón establecido en otros módulos
+## Archivo a Modificar
+
+| Archivo | Líneas | Cambios |
+|---------|--------|---------|
+| `src/pages/Compras.tsx` | 140-185 | Agregar `h-9` al TabsList, `text-xs`, `gap-1`, `px-2.5` a cada TabsTrigger |
