@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, List, MoreVertical, Truck, ChevronLeft, ChevronRight, RotateCcw, Eye, Banknote, CheckCircle2, PackageX, AlertTriangle } from "lucide-react";
+import { Calendar as CalendarIcon, List, MoreVertical, Truck, ChevronLeft, ChevronRight, RotateCcw, Eye, Banknote, CheckCircle2, PackageX, AlertTriangle, Flag } from "lucide-react";
 import OrdenAccionesDialog from "./OrdenAccionesDialog";
 import { RecepcionDetalleDialog } from "./RecepcionDetalleDialog";
 import { useState, useMemo, useEffect, useCallback } from "react";
@@ -21,6 +21,8 @@ import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { LiveIndicator } from "@/components/ui/live-indicator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { isHoliday, getMexicanHolidays, MexicanHoliday } from "@/lib/mexicanHolidays";
 
 // Type for per-delivery products from inventario_lotes
 interface ProductoEntrega {
@@ -597,70 +599,104 @@ const CalendarioEntregasTab = () => {
               const esHoy = isSameDay(dia, new Date());
               const esDelMes = isSameMonth(dia, mesActual);
               const tieneEntregas = entregas.length > 0;
+              const dateKey = format(dia, "yyyy-MM-dd");
+              const holiday = isHoliday(dateKey);
+              const esDomingo = dia.getDay() === 0;
 
               return (
-                <div
-                  key={i}
-                  onClick={() => handleDiaClick(dia)}
-                  className={cn(
-                    "min-h-[72px] p-2 text-center rounded-lg transition-colors relative",
-                    esDelMes ? "bg-background" : "bg-muted/30 text-muted-foreground",
-                    tieneEntregas && "cursor-pointer hover:bg-accent",
-                    esHoy && "ring-2 ring-primary ring-offset-2"
-                  )}
-                >
-                  <span className={cn(
-                    "inline-flex items-center justify-center w-8 h-8 rounded-full text-sm",
-                    esHoy && "bg-primary text-primary-foreground"
-                  )}>
-                    {format(dia, "d")}
-                  </span>
-                  
-                  {/* Dots indicator - checkmark for completed, colored dots for pending */}
-                  {tieneEntregas && (
-                    <div className="flex flex-col items-center gap-1 mt-1">
-                      <div className="flex justify-center gap-1">
-                        {entregas.slice(0, 3).map((entrega, idx) => (
-                          entrega.esCompletada ? (
-                            <span
-                              key={idx}
-                              className="w-4 h-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center"
-                            >
-                              <CheckCircle2 className="w-3 h-3 text-green-600 dark:text-green-400" />
+                <TooltipProvider key={i}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div
+                        onClick={() => handleDiaClick(dia)}
+                        className={cn(
+                          "min-h-[72px] p-2 text-center rounded-lg transition-colors relative",
+                          esDelMes ? "bg-background" : "bg-muted/30 text-muted-foreground",
+                          tieneEntregas && "cursor-pointer hover:bg-accent",
+                          esHoy && "ring-2 ring-primary ring-offset-2",
+                          // Holiday and Sunday styling
+                          holiday && "bg-red-50 dark:bg-red-950/20",
+                          esDomingo && !holiday && "bg-muted/50"
+                        )}
+                      >
+                        <span className={cn(
+                          "inline-flex items-center justify-center w-8 h-8 rounded-full text-sm",
+                          esHoy && "bg-primary text-primary-foreground",
+                          holiday && !esHoy && "text-red-600 dark:text-red-400 font-medium"
+                        )}>
+                          {format(dia, "d")}
+                        </span>
+                        
+                        {/* Holiday indicator */}
+                        {holiday && (
+                          <div className="absolute top-1 right-1">
+                            <Flag className="w-3 h-3 text-red-500 dark:text-red-400" />
+                          </div>
+                        )}
+                        
+                        {/* Holiday name badge */}
+                        {holiday && (
+                          <div className="mt-0.5">
+                            <span className="text-[9px] text-red-600 dark:text-red-400 truncate block leading-tight">
+                              {holiday.shortName}
                             </span>
-                          ) : entrega.esFaltante ? (
-                            <span
-                              key={idx}
-                              className="w-4 h-4 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center"
-                            >
-                              <PackageX className="w-3 h-3 text-orange-600 dark:text-orange-400" />
-                            </span>
-                          ) : entrega.reprogramada ? (
-                            <span
-                              key={idx}
-                              className="w-4 h-4 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center"
-                            >
-                              <RotateCcw className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />
-                            </span>
-                          ) : (
-                            <span
-                              key={idx}
-                              className={cn(
-                                "w-2 h-2 rounded-full",
-                                entrega.estadoPago === 'anticipado_pagado' && "bg-green-500",
-                                entrega.estadoPago === 'anticipado_pendiente' && "bg-yellow-500",
-                                entrega.estadoPago === 'contra_entrega' && "bg-rose-500"
+                          </div>
+                        )}
+                        
+                        {/* Dots indicator - checkmark for completed, colored dots for pending */}
+                        {tieneEntregas && (
+                          <div className="flex flex-col items-center gap-1 mt-1">
+                            <div className="flex justify-center gap-1">
+                              {entregas.slice(0, 3).map((entrega, idx) => (
+                                entrega.esCompletada ? (
+                                  <span
+                                    key={idx}
+                                    className="w-4 h-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center"
+                                  >
+                                    <CheckCircle2 className="w-3 h-3 text-green-600 dark:text-green-400" />
+                                  </span>
+                                ) : entrega.esFaltante ? (
+                                  <span
+                                    key={idx}
+                                    className="w-4 h-4 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center"
+                                  >
+                                    <PackageX className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+                                  </span>
+                                ) : entrega.reprogramada ? (
+                                  <span
+                                    key={idx}
+                                    className="w-4 h-4 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center"
+                                  >
+                                    <RotateCcw className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />
+                                  </span>
+                                ) : (
+                                  <span
+                                    key={idx}
+                                    className={cn(
+                                      "w-2 h-2 rounded-full",
+                                      entrega.estadoPago === 'anticipado_pagado' && "bg-green-500",
+                                      entrega.estadoPago === 'anticipado_pendiente' && "bg-yellow-500",
+                                      entrega.estadoPago === 'contra_entrega' && "bg-rose-500"
+                                    )}
+                                  />
+                                )
+                              ))}
+                              {entregas.length > 3 && (
+                                <span className="text-xs text-muted-foreground">+{entregas.length - 3}</span>
                               )}
-                            />
-                          )
-                        ))}
-                        {entregas.length > 3 && (
-                          <span className="text-xs text-muted-foreground">+{entregas.length - 3}</span>
+                            </div>
+                          </div>
                         )}
                       </div>
-                    </div>
-                  )}
-                </div>
+                    </TooltipTrigger>
+                    {holiday && (
+                      <TooltipContent>
+                        <p className="font-medium">{holiday.name}</p>
+                        <p className="text-xs text-muted-foreground">Día festivo oficial</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
               );
             })}
           </div>
@@ -696,6 +732,12 @@ const CalendarioEntregasTab = () => {
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-rose-500" />
               <span>Contra entrega</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-4 h-4 rounded bg-red-50 dark:bg-red-950/20 flex items-center justify-center border border-red-200 dark:border-red-800">
+                <Flag className="w-2.5 h-2.5 text-red-500 dark:text-red-400" />
+              </span>
+              <span>Día festivo</span>
             </div>
           </div>
         </div>

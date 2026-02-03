@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,9 +15,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, Truck, Send, Loader2 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Calendar, Truck, Send, Loader2, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { registrarCorreoEnviado } from "./HistorialCorreosOC";
+import { isHoliday, MexicanHoliday } from "@/lib/mexicanHolidays";
 
 // Helper para parsear fechas evitando problemas de zona horaria
 const parseDateLocal = (dateStr: string) => {
@@ -56,6 +58,22 @@ const ProgramarEntregasDialog = ({ open, onOpenChange, orden }: ProgramarEntrega
 
   const entregasPendientes = entregas.filter((e: any) => !e.fecha_programada || e.status === "pendiente_fecha");
   const entregasProgramadas = entregas.filter((e: any) => e.fecha_programada && e.status !== "pendiente_fecha");
+
+  // Check for holiday warnings on selected dates
+  const advertenciasFestivos = useMemo(() => {
+    const advertencias: Record<string, MexicanHoliday> = {};
+    Object.entries(fechasActualizadas).forEach(([entregaId, fecha]) => {
+      if (fecha) {
+        const holiday = isHoliday(fecha);
+        if (holiday) {
+          advertencias[entregaId] = holiday;
+        }
+      }
+    });
+    return advertencias;
+  }, [fechasActualizadas]);
+
+  const hayAdvertenciasFestivos = Object.keys(advertenciasFestivos).length > 0;
 
   const handleFechaChange = (entregaId: string, fecha: string) => {
     setFechasActualizadas(prev => ({
@@ -304,11 +322,38 @@ const ProgramarEntregasDialog = ({ open, onOpenChange, orden }: ProgramarEntrega
                             type="date"
                             value={fechasActualizadas[entrega.id] || ""}
                             onChange={(e) => handleFechaChange(entrega.id, e.target.value)}
-                            className="w-full"
+                            className={`w-full ${advertenciasFestivos[entrega.id] ? 'border-amber-500 ring-1 ring-amber-500' : ''}`}
                           />
                         </div>
                       </div>
                     ))}
+                    
+                    {/* Holiday warning alert */}
+                    {hayAdvertenciasFestivos && (
+                      <Alert className="mt-3 bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800">
+                        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        <AlertTitle className="text-amber-800 dark:text-amber-300">
+                          Advertencia: Día festivo seleccionado
+                        </AlertTitle>
+                        <AlertDescription className="text-amber-700 dark:text-amber-400">
+                          <ul className="mt-1 space-y-1">
+                            {Object.entries(advertenciasFestivos).map(([entregaId, holiday]) => {
+                              const entrega = entregasPendientes.find((e: any) => e.id === entregaId);
+                              const [year, month, day] = fechasActualizadas[entregaId].split('-').map(Number);
+                              const fechaLocal = new Date(year, month - 1, day);
+                              return (
+                                <li key={entregaId}>
+                                  <strong>Tráiler {entrega?.numero_entrega}:</strong> {fechaLocal.toLocaleDateString("es-MX", { weekday: 'long', day: 'numeric', month: 'long' })} es <strong>{holiday.name}</strong>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                          <p className="mt-2 text-sm italic">
+                            ¿Está seguro que desea programar en esta fecha? Los proveedores podrían no realizar entregas en días festivos.
+                          </p>
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
                 </div>
               )}

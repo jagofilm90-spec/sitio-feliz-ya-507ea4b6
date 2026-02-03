@@ -4,42 +4,89 @@ import { corsHeaders } from '../_shared/cors.ts'
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-// Calculate Mexican official holidays for a given year
+/**
+ * Computus algorithm to calculate Easter Sunday for any year
+ * Based on the Anonymous Gregorian algorithm
+ */
+function calculateEaster(year: number): Date {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month - 1, day);
+}
+
+/**
+ * Get the Nth Monday of a given month
+ */
+function getNthMonday(year: number, month: number, n: number): Date {
+  const firstDay = new Date(year, month, 1);
+  const dayOfWeek = firstDay.getDay();
+  const daysUntilMonday = dayOfWeek === 0 ? 1 : (dayOfWeek === 1 ? 0 : 8 - dayOfWeek);
+  const firstMonday = new Date(year, month, 1 + daysUntilMonday);
+  firstMonday.setDate(firstMonday.getDate() + (n - 1) * 7);
+  return firstMonday;
+}
+
+/**
+ * Format a Date to "YYYY-MM-DD" string
+ */
+function formatDateISO(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Calculate all Mexican official holidays for a given year
+ * Includes: Fixed holidays, movable holidays, and Semana Santa (Easter-based)
+ */
 function getMexicanHolidays(year: number): string[] {
-  const holidays: string[] = []
+  const holidays: string[] = [];
   
   // Fixed holidays
-  holidays.push(`${year}-01-01`) // Año Nuevo
-  holidays.push(`${year}-05-01`) // Día del Trabajo
-  holidays.push(`${year}-09-16`) // Día de la Independencia
-  holidays.push(`${year}-12-25`) // Navidad
+  holidays.push(`${year}-01-01`); // Año Nuevo
+  holidays.push(`${year}-05-01`); // Día del Trabajo
+  holidays.push(`${year}-09-16`); // Día de la Independencia
+  holidays.push(`${year}-12-25`); // Navidad
   
   // First Monday of February (Día de la Constitución)
-  const feb1 = new Date(year, 1, 1)
-  const dayOfWeekFeb = feb1.getDay()
-  const daysUntilMondayFeb = dayOfWeekFeb === 0 ? 1 : (dayOfWeekFeb === 1 ? 0 : 8 - dayOfWeekFeb)
-  const firstMondayFeb = new Date(year, 1, 1 + daysUntilMondayFeb)
-  holidays.push(firstMondayFeb.toISOString().split('T')[0])
+  const constitutionDay = getNthMonday(year, 1, 1);
+  holidays.push(formatDateISO(constitutionDay));
   
   // Third Monday of March (Natalicio de Benito Juárez)
-  const mar1 = new Date(year, 2, 1)
-  const dayOfWeekMar = mar1.getDay()
-  const daysUntilMondayMar = dayOfWeekMar === 0 ? 1 : (dayOfWeekMar === 1 ? 0 : 8 - dayOfWeekMar)
-  const firstMondayMar = new Date(year, 2, 1 + daysUntilMondayMar)
-  const thirdMondayMar = new Date(firstMondayMar)
-  thirdMondayMar.setDate(firstMondayMar.getDate() + 14)
-  holidays.push(thirdMondayMar.toISOString().split('T')[0])
+  const juarezDay = getNthMonday(year, 2, 3);
+  holidays.push(formatDateISO(juarezDay));
   
   // Third Monday of November (Día de la Revolución)
-  const nov1 = new Date(year, 10, 1)
-  const dayOfWeekNov = nov1.getDay()
-  const daysUntilMondayNov = dayOfWeekNov === 0 ? 1 : (dayOfWeekNov === 1 ? 0 : 8 - dayOfWeekNov)
-  const firstMondayNov = new Date(year, 10, 1 + daysUntilMondayNov)
-  const thirdMondayNov = new Date(firstMondayNov)
-  thirdMondayNov.setDate(firstMondayNov.getDate() + 14)
-  holidays.push(thirdMondayNov.toISOString().split('T')[0])
+  const revolutionDay = getNthMonday(year, 10, 3);
+  holidays.push(formatDateISO(revolutionDay));
   
-  return holidays
+  // Semana Santa (Easter-based holidays)
+  const easter = calculateEaster(year);
+  
+  // Jueves Santo (Holy Thursday - 3 days before Easter)
+  const holyThursday = new Date(easter);
+  holyThursday.setDate(easter.getDate() - 3);
+  holidays.push(formatDateISO(holyThursday));
+  
+  // Viernes Santo (Good Friday - 2 days before Easter)
+  const goodFriday = new Date(easter);
+  goodFriday.setDate(easter.getDate() - 2);
+  holidays.push(formatDateISO(goodFriday));
+  
+  return holidays;
 }
 
 // Get next business day INCLUSIVE (includes today if it's a business day)
