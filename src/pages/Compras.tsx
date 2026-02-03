@@ -138,47 +138,47 @@ const Compras = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           {isMobile ? (
             <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
-              <TabsList className="inline-flex w-max gap-1">
-                <TabsTrigger value="proveedores" className="flex items-center gap-1.5 px-3">
+              <TabsList className="inline-flex w-max gap-1 h-9">
+                <TabsTrigger value="proveedores" className="flex items-center gap-1 px-2.5 text-xs">
                   <Package className="h-3.5 w-3.5" />
                   Prov
                 </TabsTrigger>
-                <TabsTrigger value="ordenes" className="flex items-center gap-1.5 px-3">
+                <TabsTrigger value="ordenes" className="flex items-center gap-1 px-2.5 text-xs">
                   <Truck className="h-3.5 w-3.5" />
                   OC
                   {pendingCount > 0 && (
-                    <Badge variant="destructive" className="ml-1 h-4 min-w-4 px-1 text-[10px] font-bold animate-pulse">
+                    <Badge variant="destructive" className="ml-0.5 h-4 min-w-4 px-1 text-[10px] font-bold animate-pulse">
                       {pendingCount}
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="calendario" className="flex items-center gap-1.5 px-3">
+                <TabsTrigger value="calendario" className="flex items-center gap-1 px-2.5 text-xs">
                   <Calendar className="h-3.5 w-3.5" />
                   Cal
                 </TabsTrigger>
-                <TabsTrigger value="devoluciones-faltantes" className="flex items-center gap-1.5 px-3">
+                <TabsTrigger value="devoluciones-faltantes" className="flex items-center gap-1 px-2.5 text-xs">
                   <AlertTriangle className="h-3.5 w-3.5" />
                   Dev/Falt
                   {devFaltCombinedCount > 0 && (
-                    <Badge variant="destructive" className="ml-1 h-4 min-w-4 px-1 text-[10px] font-bold">
+                    <Badge variant="destructive" className="ml-0.5 h-4 min-w-4 px-1 text-[10px] font-bold">
                       {devFaltCombinedCount}
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="historial" className="flex items-center gap-1.5 px-3">
+                <TabsTrigger value="historial" className="flex items-center gap-1 px-2.5 text-xs">
                   <History className="h-3.5 w-3.5" />
                   Hist
                 </TabsTrigger>
-                <TabsTrigger value="adeudos" className="flex items-center gap-1.5 px-3">
+                <TabsTrigger value="adeudos" className="flex items-center gap-1 px-2.5 text-xs">
                   <CreditCard className="h-3.5 w-3.5" />
                   Adeudos
                   {adeudosCount > 0 && (
-                    <Badge className="ml-1 h-4 min-w-4 px-1 text-[10px] font-bold bg-amber-500 text-white">
+                    <Badge className="ml-0.5 h-4 min-w-4 px-1 text-[10px] font-bold bg-amber-500 text-white">
                       {adeudosCount}
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="analytics" className="flex items-center gap-1.5 px-3">
+                <TabsTrigger value="analytics" className="flex items-center gap-1 px-2.5 text-xs">
                   <BarChart3 className="h-3.5 w-3.5" />
                   Anal
                 </TabsTrigger>
