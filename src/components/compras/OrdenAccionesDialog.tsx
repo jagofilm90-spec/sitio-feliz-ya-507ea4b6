@@ -1622,7 +1622,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg overflow-x-hidden">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 flex-wrap">
             Gestionar Orden {orden?.folio}
@@ -1707,7 +1707,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                 </div>
                 
                 {/* Dashboard visual con contadores */}
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-center">
                     <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{entregasResumen.pendientes}</p>
                     <p className="text-[10px] text-amber-700 dark:text-amber-300 font-medium">Sin Fecha</p>
