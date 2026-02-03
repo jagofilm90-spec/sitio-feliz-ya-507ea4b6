@@ -310,8 +310,8 @@ export const MigracionProductosDialog = ({
                 {/* Datos actuales */}
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-muted-foreground">DATOS ACTUALES</h4>
-                  <div className="grid gap-2 text-sm bg-muted/50 p-3 rounded-md">
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid gap-2 text-sm bg-muted/50 p-3 rounded-md">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <div>
                         <span className="text-muted-foreground text-xs">Nombre:</span>
                         <p className="font-medium">{currentProduct.nombre}</p>
@@ -329,7 +329,7 @@ export const MigracionProductosDialog = ({
                         </p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <div>
                         <span className="text-muted-foreground text-xs">Contenido:</span>
                         <p>{currentProduct.contenido_empaque || currentProduct.peso_kg ? `${currentProduct.peso_kg} kg` : "(vacío)"}</p>
@@ -470,7 +470,7 @@ export const MigracionProductosDialog = ({
                       </div>
                     ) : (
                       <div className="grid gap-2 text-sm bg-pink-50 dark:bg-pink-950/20 p-3 rounded-md border border-pink-200">
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <div>
                             <span className="text-muted-foreground text-xs">Nombre:</span>
                             <p className="font-medium text-pink-700 dark:text-pink-400">
@@ -490,7 +490,7 @@ export const MigracionProductosDialog = ({
                             </p>
                           </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <div>
                             <span className="text-muted-foreground text-xs">Contenido:</span>
                             <p className="font-medium text-pink-700 dark:text-pink-400">

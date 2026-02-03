@@ -207,7 +207,7 @@ const AutorizacionCotizacionDialog = ({ open, onOpenChange, cotizacion }: Autori
 
         <ScrollArea className="max-h-[60vh] pr-4">
           {/* Info Cards */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
               <Building2 className="h-5 w-5 text-muted-foreground" />
               <div>
@@ -251,8 +251,8 @@ const AutorizacionCotizacionDialog = ({ open, onOpenChange, cotizacion }: Autori
               <Package className="h-4 w-4" />
               Productos ({detalles.length})
             </h4>
-            <div className="border rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="border rounded-lg overflow-x-auto">
+              <table className="w-full text-sm min-w-[400px] sm:min-w-0">
                 <thead className="bg-muted">
                   <tr>
                     <th className="text-left p-2">Producto</th>

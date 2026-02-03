@@ -934,7 +934,7 @@ const VehiculosTab = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="numero_motor">Número de Motor</Label>
                   <Input
@@ -1002,7 +1002,7 @@ const VehiculosTab = () => {
                     Datos de Tarjeta Federal (SICT)
                   </h3>
                   
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="clase_federal">Clase Federal</Label>
                       <Input
@@ -1080,7 +1080,7 @@ const VehiculosTab = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="dimensiones_largo">Largo (m)</Label>
                       <Input
