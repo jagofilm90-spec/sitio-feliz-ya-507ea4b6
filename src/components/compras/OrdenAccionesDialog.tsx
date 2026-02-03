@@ -163,29 +163,43 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   const { data: entregasResumen } = useQuery({
     queryKey: ["entregas-resumen-oc", orden?.id],
     queryFn: async () => {
-      if (!orden?.id) return { total: 0, pendientes: 0, enProceso: 0, completadas: 0, rechazadas: 0 };
+      if (!orden?.id) return { total: 0, sinFecha: 0, programadas: 0, enProceso: 0, completadas: 0 };
       const { data, error } = await supabase
         .from("ordenes_compra_entregas")
-        .select("id, status, llegada_registrada_en, recepcion_finalizada_en")
+        .select("id, status, fecha_programada, llegada_registrada_en, recepcion_finalizada_en")
         .eq("orden_compra_id", orden.id);
       
       if (error) {
         console.error("Error fetching entregas resumen:", error);
-        return { total: 0, pendientes: 0, enProceso: 0, completadas: 0, rechazadas: 0 };
+        return { total: 0, sinFecha: 0, programadas: 0, enProceso: 0, completadas: 0 };
       }
       
       const entregas = data || [];
-      const pendientes = entregas.filter(e => 
-        e.status === "programada" || e.status === "pendiente_fecha"
-      ).length;
-      const enProceso = entregas.filter(e => 
-        e.llegada_registrada_en && !e.recepcion_finalizada_en && 
-        e.status !== "rechazada" && e.status !== "recibida"
-      ).length;
-      const completadas = entregas.filter(e => e.status === "recibida").length;
-      const rechazadas = entregas.filter(e => e.status === "rechazada").length;
       
-      return { total: entregas.length, pendientes, enProceso, completadas, rechazadas };
+      // SIN FECHA: No tienen fecha_programada asignada o status pendiente_fecha
+      const sinFecha = entregas.filter(e => 
+        !e.fecha_programada || e.status === "pendiente_fecha"
+      ).length;
+      
+      // PROGRAMADAS: Tienen fecha y están listas para recepción
+      const programadas = entregas.filter(e => 
+        e.fecha_programada && 
+        e.status === "programada" &&
+        !e.llegada_registrada_en
+      ).length;
+      
+      // EN DESCARGA: Llegaron pero no han finalizado recepción
+      const enProceso = entregas.filter(e => 
+        e.llegada_registrada_en && 
+        !e.recepcion_finalizada_en && 
+        e.status !== "rechazada" && 
+        e.status !== "recibida"
+      ).length;
+      
+      // RECIBIDAS: Completamente procesadas
+      const completadas = entregas.filter(e => e.status === "recibida").length;
+      
+      return { total: entregas.length, sinFecha, programadas, enProceso, completadas };
     },
     enabled: !!orden?.id,
   });
@@ -1708,11 +1722,11 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                 {/* Dashboard visual con contadores */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-center">
-                    <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{entregasResumen.pendientes}</p>
+                    <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{entregasResumen.sinFecha}</p>
                     <p className="text-[10px] text-amber-700 dark:text-amber-300 font-medium">Sin Fecha</p>
                   </div>
                   <div className="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-center">
-                    <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{entregasResumen.total - entregasResumen.pendientes - entregasResumen.enProceso - entregasResumen.completadas}</p>
+                    <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{entregasResumen.programadas}</p>
                     <p className="text-[10px] text-blue-700 dark:text-blue-300 font-medium">Programadas</p>
                   </div>
                   <div className="p-2.5 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-center">
