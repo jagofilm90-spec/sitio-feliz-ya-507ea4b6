@@ -1,168 +1,170 @@
 
-# Plan: Optimizar Headers y Contenido de Pestañas de Compras para Móvil
+# Plan: Agregar Información de Entregas a la Card Móvil de OC
 
-## Problemas Identificados
+## Problema Identificado
 
-Revisé los 3 componentes principales dentro de las pestañas de Compras y encontré estos issues:
+El componente `OrdenCompraCardMobile.tsx` **no muestra las fechas de entrega** ni el estado de las entregas programadas. En desktop, la tabla usa `EntregasPopover` para mostrar esta información, pero en móvil esta columna **no existe**.
 
-| Componente | Problema | Línea |
-|------------|----------|-------|
-| `OrdenesCompraTab.tsx` | Header con botón "Nueva Orden de Compra" se sale de pantalla móvil | 1616-1629 |
-| `CalendarioEntregasTab.tsx` | Header "Calendario de Entregas" + botones no apilan en móvil | 536-565 |
-| `OrdenesCompraTab.tsx` | Barra de búsqueda + switch no apilan en móvil | 1643-1669 |
-| `ProveedoresTab.tsx` | Form grid 2 cols sin breakpoint móvil | 978 |
+Para una OC como la de "Sanudo" con múltiples entregas, el usuario no puede ver:
+- Cuántas entregas están programadas
+- Las fechas de cada entrega
+- El status de cada entrega (pendiente, recibida, etc.)
 
 ---
 
-## Cambios Propuestos
+## Solución Propuesta
 
-### 1. `OrdenesCompraTab.tsx` - Header Principal (línea 1616-1629)
+### Opción A: Agregar sección de entregas inline en la card (Recomendada)
 
-**Antes:**
+Agregar una sección compacta dentro de `OrdenCompraCardMobile` que muestre:
+- Resumen de entregas (ej: "2/3 programadas", "1/2 recibidas")
+- Lista de fechas de entrega con status visual
+- Badge indicador para cada entrega
+
+### Cambios en `OrdenCompraCardMobile.tsx`
+
+**1. Actualizar interface para recibir datos de entregas:**
+
 ```tsx
-<div className="flex justify-between items-center mb-6">
-  <div>
-    <h2 className="text-2xl font-bold">Órdenes de Compra</h2>
-    ...
-  </div>
-  <Button onClick={handleNewOrder}>
-    <Plus /> Nueva Orden de Compra
-  </Button>
-</div>
+interface OrdenCompraCardMobileProps {
+  orden: OrdenCompra;
+  faltantesPendientes: number;
+  entregas?: Array<{
+    id: string;
+    numero_entrega: number;
+    cantidad_bultos: number;
+    fecha_programada: string | null;
+    status: string;
+    recepcion_finalizada_en: string | null;
+  }>;
+  entregasStatus?: {
+    total: number;
+    programadas: number;
+    recibidas: number;
+  };
+  onOpenAcciones: (orden: OrdenCompra) => void;
+  onOpenFacturas: (orden: OrdenCompra) => void;
+  onReenviar: (orden: OrdenCompra) => void;
+  onEliminar: (orden: OrdenCompra) => void;
+  onNavigatePago?: (ordenId: string) => void;
+}
 ```
 
-**Después:**
+**2. Agregar sección de entregas entre "Estado de pago" y "Acciones":**
+
 ```tsx
-<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-  <div>
-    <div className="flex items-center gap-2 sm:gap-3 mb-1">
-      <h2 className="text-xl sm:text-2xl font-bold">Órdenes de Compra</h2>
-      <LiveIndicator />
+{/* Sección de Entregas */}
+{entregas && entregas.length > 0 && (
+  <div className="pt-2 border-t space-y-2">
+    <div className="flex items-center justify-between">
+      <span className="text-muted-foreground text-xs flex items-center gap-1">
+        <Truck className="h-3 w-3" />
+        Entregas:
+      </span>
+      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+        {entregasStatus?.recibidas || 0}/{entregasStatus?.total || entregas.length}
+      </Badge>
     </div>
-    <p className="text-muted-foreground text-sm">
-      Gestiona tus órdenes de compra y recepciones
-    </p>
+    
+    {/* Lista compacta de entregas */}
+    <div className="space-y-1 max-h-32 overflow-y-auto">
+      {entregas.map((entrega) => (
+        <div 
+          key={entrega.id}
+          className="flex items-center justify-between text-xs p-1.5 rounded bg-muted/50"
+        >
+          <div className="flex items-center gap-2">
+            {/* Icono de status */}
+            {entrega.status === "recibida" || entrega.recepcion_finalizada_en ? (
+              <CheckCircle className="h-3 w-3 text-green-600" />
+            ) : entrega.fecha_programada ? (
+              <CalendarCheck className="h-3 w-3 text-amber-500" />
+            ) : (
+              <CalendarX className="h-3 w-3 text-muted-foreground" />
+            )}
+            <span>#{entrega.numero_entrega}</span>
+            <span className="text-muted-foreground">
+              {entrega.cantidad_bultos} bultos
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            {entrega.fecha_programada ? (
+              <span className={cn(
+                "font-medium",
+                entrega.status === "recibida" && "text-green-600",
+                entrega.status !== "recibida" && "text-amber-600"
+              )}>
+                {format(parseDateLocal(entrega.fecha_programada), "dd/MM")}
+              </span>
+            ) : (
+              <span className="text-muted-foreground italic">Sin fecha</span>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
   </div>
-  <Button onClick={handleNewOrder} className="w-full sm:w-auto">
-    <Plus className="mr-2 h-4 w-4" />
-    <span className="hidden sm:inline">Nueva Orden de Compra</span>
-    <span className="sm:hidden">Nueva OC</span>
-  </Button>
-</div>
+)}
 ```
 
-### 2. `OrdenesCompraTab.tsx` - Barra de Búsqueda (línea 1643-1669)
+### Cambios en `OrdenesCompraTab.tsx`
 
-**Antes:**
+**3. Pasar los datos de entregas a la card móvil (línea ~1682):**
+
 ```tsx
-<div className="flex items-center gap-4 mb-4">
-  <div className="relative flex-1">
-    <Input ... />
-  </div>
-  <div className="flex items-center gap-2">
-    <Switch ... />
-    <Label ... className="whitespace-nowrap">Mostrar archivadas</Label>
-  </div>
-</div>
-```
-
-**Después:**
-```tsx
-<div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-4">
-  <div className="relative w-full sm:flex-1">
-    <Input ... />
-  </div>
-  <div className="flex items-center gap-2 w-full sm:w-auto">
-    <Switch ... />
-    <Label ... className="text-sm whitespace-nowrap cursor-pointer">
-      <span className="hidden sm:inline">Mostrar archivadas</span>
-      <span className="sm:hidden">Archivadas</span>
-    </Label>
-    ...
-  </div>
-</div>
-```
-
-### 3. `CalendarioEntregasTab.tsx` - Header (línea 536-565)
-
-**Antes:**
-```tsx
-<div className="flex items-center justify-between mb-2">
-  <div className="flex items-center gap-3">
-    <CalendarIcon className="h-6 w-6" />
-    <h2 className="text-2xl font-bold">Calendario de Entregas</h2>
-    <LiveIndicator />
-  </div>
-  <div className="flex gap-2">
-    <Button>Calendario</Button>
-    <Button>Lista</Button>
-  </div>
-</div>
-```
-
-**Después:**
-```tsx
-<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-2">
-  <div className="flex items-center gap-2 sm:gap-3">
-    <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-    <h2 className="text-xl sm:text-2xl font-bold">Calendario de Entregas</h2>
-    <LiveIndicator />
-  </div>
-  <div className="flex gap-2 w-full sm:w-auto">
-    <Button className="flex-1 sm:flex-initial" size="sm">
-      <CalendarIcon className="h-4 w-4 mr-1" />
-      <span className="hidden sm:inline">Calendario</span>
-      <span className="sm:hidden">Cal</span>
-    </Button>
-    <Button className="flex-1 sm:flex-initial" size="sm">
-      <List className="h-4 w-4 mr-1" />
-      <span className="hidden sm:inline">Lista</span>
-      <span className="sm:hidden">Lista</span>
-    </Button>
-  </div>
-</div>
-```
-
-### 4. `ProveedoresTab.tsx` - Form Grid (línea 978)
-
-**Antes:**
-```tsx
-<div className="grid grid-cols-2 gap-4">
-```
-
-**Después:**
-```tsx
-<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<OrdenCompraCardMobile
+  key={orden.id}
+  orden={orden}
+  faltantesPendientes={(faltantesPorOC as Record<string, number>)[orden.id] || 0}
+  entregas={todasEntregas.filter(e => e.orden_compra_id === orden.id)}
+  entregasStatus={entregasStatusPorOrden[orden.id]}
+  onOpenAcciones={(o) => {
+    setOrdenSeleccionada(o);
+    setAccionesDialogOpen(true);
+  }}
+  // ... rest of props
+/>
 ```
 
 ---
 
 ## Archivos a Modificar
 
-| Archivo | Líneas | Cambios |
-|---------|--------|---------|
-| `src/components/compras/OrdenesCompraTab.tsx` | 1616-1629 | Header con stack móvil, botón con texto corto |
-| `src/components/compras/OrdenesCompraTab.tsx` | 1643-1669 | Barra búsqueda con stack móvil |
-| `src/components/compras/CalendarioEntregasTab.tsx` | 536-565 | Header con stack móvil, botones responsive |
-| `src/components/compras/ProveedoresTab.tsx` | 978 | Grid form 1 col en móvil |
+| Archivo | Cambios |
+|---------|---------|
+| `src/components/compras/OrdenCompraCardMobile.tsx` | Agregar props `entregas` y `entregasStatus`, nueva sección visual de entregas con fechas y status |
+| `src/components/compras/OrdenesCompraTab.tsx` | Pasar `entregas` y `entregasStatus` a cada card móvil |
 
 ---
 
-## Resultado Esperado
+## Resultado Visual Esperado
 
-### Móvil (después):
 ```
-┌─────────────────────────────┐
-│ Órdenes de Compra     🔴    │
-│ Gestiona tus órdenes...     │
-│ [    Nueva OC          ]    │
-│ [🔍 Buscar...          ]    │
-│ 🔘 Archivadas (3)           │
-└─────────────────────────────┘
+┌─────────────────────────────────┐
+│ OC-2025-0047          Enviada   │
+│ Cárnico Sañudo                  │
+│──────────────────────────────────│
+│ Fecha: 03/02/2025  Total: $45K  │
+│ Recepción: ████████░░ 80%       │
+│──────────────────────────────────│
+│ Pago: 🚚 Contra Entrega         │
+│──────────────────────────────────│
+│ 🚚 Entregas:              2/3   │
+│ ┌─────────────────────────────┐ │
+│ │ ✓ #1  10 bultos     03/02   │ │
+│ │ ⏳ #2  8 bultos      05/02   │ │
+│ │ ○ #3  12 bultos   Sin fecha │ │
+│ └─────────────────────────────┘ │
+│──────────────────────────────────│
+│ [  Acciones  ] 📄 ✉️ 🗑️        │
+└─────────────────────────────────┘
 ```
 
-- Títulos más pequeños (`text-xl` vs `text-2xl`)
-- Botones ancho completo en móvil
-- Textos abreviados en móvil ("Nueva OC" vs "Nueva Orden de Compra")
-- Elementos apilados verticalmente
-- Sin scroll horizontal
+---
+
+## Beneficios
+
+- **Visibilidad completa**: Usuario puede ver todas las fechas de entrega en móvil
+- **Status visual**: Iconos claros para entregas recibidas, programadas o sin fecha
+- **Consistencia**: Misma información que en desktop, adaptada a móvil
+- **No requiere popover**: Información visible directamente en la card
