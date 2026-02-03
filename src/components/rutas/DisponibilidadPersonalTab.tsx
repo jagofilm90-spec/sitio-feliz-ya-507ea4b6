@@ -309,7 +309,7 @@ const DisponibilidadPersonalTab = () => {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="bg-green-500/10 border-green-500/20">
           <CardContent className="p-4 text-center">
             <UserCheck className="h-6 w-6 mx-auto mb-2 text-green-600" />

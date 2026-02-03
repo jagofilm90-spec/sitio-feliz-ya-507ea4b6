@@ -562,7 +562,7 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
               <Lock className="h-4 w-4" />
               Datos de Control de Recepción
             </h4>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-sm">
                   Nombre de quien entrega *
@@ -631,7 +631,7 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
           </div>
 
           {/* Order Info */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div className="p-3 bg-muted/50 rounded-lg">
               <p className="text-xs text-muted-foreground">Proveedor</p>
               <p className="font-medium">{orden.proveedores?.nombre}</p>
@@ -687,7 +687,7 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
                     )}
                   </div>
 
-                  <div className="grid grid-cols-4 gap-2 text-sm mt-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm mt-3">
                     <div>
                       <p className="text-xs text-muted-foreground">Ordenado</p>
                       <p className="font-medium">{producto.cantidad_ordenada.toLocaleString()}</p>

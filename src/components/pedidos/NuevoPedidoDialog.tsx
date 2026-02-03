@@ -798,11 +798,11 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
           )}
 
           {/* Actions */}
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button onClick={handleCrearPedido} disabled={loading}>
+            <Button onClick={handleCrearPedido} disabled={loading} className="w-full sm:w-auto">
               {loading ? "Creando..." : "Crear Pedido"}
             </Button>
           </div>

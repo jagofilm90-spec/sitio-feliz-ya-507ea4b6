@@ -449,7 +449,7 @@ export const SugerirRutasAIDialog = ({
           {rutasSugeridas.length > 0 && (
             <>
               {/* Summary Stats */}
-              <div className="grid grid-cols-4 gap-3 flex-shrink-0">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-shrink-0">
                 <Card className="bg-green-500/10 border-green-500/20">
                   <CardContent className="p-3 text-center">
                     <p className="text-2xl font-bold text-green-600">{pedidosHoyTotal}</p>
