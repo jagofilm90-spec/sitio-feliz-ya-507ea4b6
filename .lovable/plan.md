@@ -1,133 +1,152 @@
 
-# Plan: Corregir Sincronización del Dashboard de Entregas en OrdenAccionesDialog
+
+# Plan: Corregir Lógica de Reprogramación Automática con Días Festivos de México
 
 ## Problema Identificado
 
-El dashboard "Progreso de Entregas" muestra **"3 Sin Fecha"** cuando en realidad las 3 entregas YA tienen fecha programada en la base de datos:
+La función `auto-reschedule-deliveries` tiene dos deficiencias críticas:
 
-| Entrega | fecha_programada | status |
-|---------|-----------------|--------|
-| 1 | 2026-02-04 | programada |
-| 2 | 2026-02-06 | programada |
-| 3 | 2026-02-10 | programada |
+1. **Bug en el cálculo de días hábiles**: La nota de la OC-202601-0004 muestra que se reprogramó del 30/01 directamente al 02/02 (domingo), saltándose incorrectamente el sábado 31/01 que es día laboral.
 
-### Causa Raíz
-
-**Líneas 167-180 en `OrdenAccionesDialog.tsx`:**
-
-```javascript
-// El query NO incluye fecha_programada
-.select("id, status, llegada_registrada_en, recepcion_finalizada_en")
-
-// La lógica asume incorrectamente que "programada" = "sin fecha"
-const pendientes = entregas.filter(e => 
-  e.status === "programada" || e.status === "pendiente_fecha"
-).length;
-```
-
-El problema es que:
-1. El query no trae el campo `fecha_programada`
-2. El filtro usa `status === "programada"` para contar "Sin Fecha", pero las entregas con `status: programada` SÍ tienen fecha
+2. **No considera días festivos oficiales de México**: El lunes 03/02/2026 es "Día de la Constitución" (festivo nacional), pero la función no lo considera.
 
 ## Solución Propuesta
 
-### Cambio 1: Agregar `fecha_programada` al SELECT (línea 169)
+### Cambio 1: Agregar calendario de días festivos de México 2026
 
-```javascript
-.select("id, status, fecha_programada, llegada_registrada_en, recepcion_finalizada_en")
+Crear una función que calcule los días festivos oficiales de México, incluyendo:
+- **1 de enero**: Año Nuevo
+- **Primer lunes de febrero**: Día de la Constitución
+- **Tercer lunes de marzo**: Natalicio de Benito Juárez
+- **1 de mayo**: Día del Trabajo
+- **16 de septiembre**: Día de la Independencia
+- **Tercer lunes de noviembre**: Revolución Mexicana
+- **25 de diciembre**: Navidad
+
+```typescript
+function getMexicanHolidays(year: number): string[] {
+  const holidays: string[] = [];
+  
+  // Fijos
+  holidays.push(`${year}-01-01`); // Año Nuevo
+  holidays.push(`${year}-05-01`); // Día del Trabajo
+  holidays.push(`${year}-09-16`); // Independencia
+  holidays.push(`${year}-12-25`); // Navidad
+  
+  // Primer lunes de febrero (Constitución)
+  const feb1 = new Date(year, 1, 1);
+  const firstMondayFeb = new Date(year, 1, 1 + (8 - feb1.getDay()) % 7);
+  holidays.push(firstMondayFeb.toISOString().split('T')[0]);
+  
+  // Tercer lunes de marzo (Benito Juárez)
+  const mar1 = new Date(year, 2, 1);
+  const firstMondayMar = new Date(year, 2, 1 + (8 - mar1.getDay()) % 7);
+  const thirdMondayMar = new Date(firstMondayMar);
+  thirdMondayMar.setDate(firstMondayMar.getDate() + 14);
+  holidays.push(thirdMondayMar.toISOString().split('T')[0]);
+  
+  // Tercer lunes de noviembre (Revolución)
+  const nov1 = new Date(year, 10, 1);
+  const firstMondayNov = new Date(year, 10, 1 + (8 - nov1.getDay()) % 7);
+  const thirdMondayNov = new Date(firstMondayNov);
+  thirdMondayNov.setDate(firstMondayNov.getDate() + 14);
+  holidays.push(thirdMondayNov.toISOString().split('T')[0]);
+  
+  return holidays;
+}
 ```
 
-### Cambio 2: Corregir la lógica de categorización (líneas 178-186)
+### Cambio 2: Mejorar `getNextBusinessDay()` para considerar festivos
 
-```javascript
-const entregas = data || [];
-
-// SIN FECHA: No tienen fecha_programada asignada o status pendiente_fecha
-const sinFecha = entregas.filter(e => 
-  !e.fecha_programada || e.status === "pendiente_fecha"
-).length;
-
-// PROGRAMADAS: Tienen fecha y están listas para recepción
-const programadas = entregas.filter(e => 
-  e.fecha_programada && 
-  e.status === "programada" &&
-  !e.llegada_registrada_en
-).length;
-
-// EN DESCARGA: Llegaron pero no han finalizado recepción
-const enProceso = entregas.filter(e => 
-  e.llegada_registrada_en && 
-  !e.recepcion_finalizada_en && 
-  e.status !== "rechazada" && 
-  e.status !== "recibida"
-).length;
-
-// RECIBIDAS: Completamente procesadas
-const completadas = entregas.filter(e => e.status === "recibida").length;
-
-return { 
-  total: entregas.length, 
-  sinFecha,      // ← Renombrar "pendientes" a "sinFecha" para claridad
-  programadas,   // ← Nuevo campo explícito
-  enProceso, 
-  completadas 
-};
+```typescript
+function getNextBusinessDay(date: Date, holidays: string[]): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + 1);
+  
+  // Iterar hasta encontrar un día hábil
+  while (true) {
+    const dayOfWeek = next.getDay();
+    const dateStr = next.toISOString().split('T')[0];
+    
+    // Saltar domingos (0) y días festivos
+    if (dayOfWeek === 0 || holidays.includes(dateStr)) {
+      next.setDate(next.getDate() + 1);
+      continue;
+    }
+    
+    break;
+  }
+  
+  return next;
+}
 ```
 
-### Cambio 3: Actualizar el rendering del dashboard (líneas 1710-1716)
+### Cambio 3: Actualizar la invocación en el flujo principal
 
-```javascript
-// Sin Fecha
-<p className="text-xl font-bold...">{entregasResumen.sinFecha}</p>
+```typescript
+// En el handler principal
+const currentYear = today.getFullYear();
+const holidays = getMexicanHolidays(currentYear);
+// También agregar el siguiente año por si estamos en diciembre
+if (today.getMonth() === 11) {
+  holidays.push(...getMexicanHolidays(currentYear + 1));
+}
 
-// Programadas
-<p className="text-xl font-bold...">{entregasResumen.programadas}</p>
+const nextBusinessDay = getNextBusinessDay(today, holidays);
 ```
 
-## Resultado Esperado
+## Ejemplo con OC-202601-0004
 
-Después del fix, el dashboard mostrará:
+Con la lógica corregida, la secuencia correcta sería:
 
-| Contador | Valor Actual (Bug) | Valor Correcto |
-|----------|-------------------|----------------|
-| Sin Fecha | 3 | 0 |
-| Programadas | 0 | 3 |
-| En Descarga | 0 | 0 |
-| Recibidas | 0 | 0 |
+| Cron ejecutado | Fecha vencida | Siguiente día hábil calculado |
+|----------------|---------------|-------------------------------|
+| 31/01 (Viernes) | 30/01 | **31/01** (Sábado es laboral) |
+| 01/02 (Sábado) | 31/01 | **03/02** (Lunes, pero es festivo → **04/02**) |
+
+Pero como el cron corre a las 6am, si el sábado 01/02 corrió pero 03/02 era festivo, debería haber saltado al 04/02 directamente.
 
 ## Archivos a Modificar
 
-| Archivo | Líneas | Cambio |
-|---------|--------|--------|
-| `src/components/compras/OrdenAccionesDialog.tsx` | 169 | Agregar `fecha_programada` al SELECT |
-| `src/components/compras/OrdenAccionesDialog.tsx` | 178-188 | Corregir lógica de filtros con campos renombrados |
-| `src/components/compras/OrdenAccionesDialog.tsx` | 1711, 1715 | Usar nuevos campos `sinFecha` y `programadas` |
+| Archivo | Cambio |
+|---------|--------|
+| `supabase/functions/auto-reschedule-deliveries/index.ts` | Agregar función de días festivos y mejorar `getNextBusinessDay()` |
 
-## Diagrama de Flujo de Estados
+## Consideraciones Adicionales
+
+1. **Días festivos opcionales**: ¿Quieren incluir también días como Jueves y Viernes Santo, 2 de noviembre, 12 de diciembre? Estos son opcionales pero muchas empresas no operan.
+
+2. **Configuración dinámica**: Opcionalmente, los días festivos podrían almacenarse en una tabla `dias_festivos` para poder agregar días de cierre extraordinario (inventarios, etc.)
+
+## Diagrama del Flujo Mejorado
 
 ```text
-Entrega Creada
-     │
-     ▼
-┌─────────────────┐
-│ pendiente_fecha │  ←── "Sin Fecha"
-│  (sin fecha)    │
-└────────┬────────┘
-         │ Asignar fecha
-         ▼
-┌─────────────────┐
-│   programada    │  ←── "Programadas"  
-│  (con fecha)    │
-└────────┬────────┘
-         │ Registrar llegada
-         ▼
-┌─────────────────┐
-│ llegada_regist. │  ←── "En Descarga"
-│   (en proceso)  │
-└────────┬────────┘
-         │ Finalizar recepción
-         ▼
-┌─────────────────┐
-│    recibida     │  ←── "Recibidas"
-└─────────────────┘
+Cron ejecuta a las 6am
+        │
+        ▼
+┌───────────────────┐
+│ Obtener día festivos│
+│  del año actual    │
+└─────────┬─────────┘
+          │
+          ▼
+┌───────────────────┐
+│ Buscar entregas   │
+│ con fecha < hoy   │
+│ status=programada │
+└─────────┬─────────┘
+          │
+          ▼
+┌───────────────────────────┐
+│ Calcular siguiente día   │
+│ hábil (skip dom + festivos)│
+└─────────┬─────────────────┘
+          │
+          ▼
+┌───────────────────┐
+│ Actualizar fecha  │
+│ + crear notif.    │
+│ + enviar email    │
+└───────────────────┘
 ```
+
