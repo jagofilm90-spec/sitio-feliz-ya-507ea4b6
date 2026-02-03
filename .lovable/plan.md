@@ -1,53 +1,133 @@
 
-# Plan: Corregir Overflow Horizontal en Dialog de Gestión de OC
+# Plan: Corregir Sincronización del Dashboard de Entregas en OrdenAccionesDialog
 
 ## Problema Identificado
 
-Veo que los cambios ya están en el código, pero el diálogo sigue mostrando contenido cortado porque:
+El dashboard "Progreso de Entregas" muestra **"3 Sin Fecha"** cuando en realidad las 3 entregas YA tienen fecha programada en la base de datos:
 
-1. **`overflow-x-hidden` en DialogContent** - Esta clase bloquea cualquier scroll horizontal, anulando el `overflow-x-auto` de la tabla interna
-2. **Columnas de tabla aún anchas** - Las columnas "P.Unit" y "Subtotal" se salen del viewport
+| Entrega | fecha_programada | status |
+|---------|-----------------|--------|
+| 1 | 2026-02-04 | programada |
+| 2 | 2026-02-06 | programada |
+| 3 | 2026-02-10 | programada |
+
+### Causa Raíz
+
+**Líneas 167-180 en `OrdenAccionesDialog.tsx`:**
+
+```javascript
+// El query NO incluye fecha_programada
+.select("id, status, llegada_registrada_en, recepcion_finalizada_en")
+
+// La lógica asume incorrectamente que "programada" = "sin fecha"
+const pendientes = entregas.filter(e => 
+  e.status === "programada" || e.status === "pendiente_fecha"
+).length;
+```
+
+El problema es que:
+1. El query no trae el campo `fecha_programada`
+2. El filtro usa `status === "programada"` para contar "Sin Fecha", pero las entregas con `status: programada` SÍ tienen fecha
 
 ## Solución Propuesta
 
-### Cambio 1: Quitar `overflow-x-hidden` del DialogContent (línea 1625)
+### Cambio 1: Agregar `fecha_programada` al SELECT (línea 169)
 
-Actualmente:
-```tsx
-<DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto overflow-x-hidden">
+```javascript
+.select("id, status, fecha_programada, llegada_registrada_en, recepcion_finalizada_en")
 ```
 
-Cambiar a:
-```tsx
-<DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
+### Cambio 2: Corregir la lógica de categorización (líneas 178-186)
+
+```javascript
+const entregas = data || [];
+
+// SIN FECHA: No tienen fecha_programada asignada o status pendiente_fecha
+const sinFecha = entregas.filter(e => 
+  !e.fecha_programada || e.status === "pendiente_fecha"
+).length;
+
+// PROGRAMADAS: Tienen fecha y están listas para recepción
+const programadas = entregas.filter(e => 
+  e.fecha_programada && 
+  e.status === "programada" &&
+  !e.llegada_registrada_en
+).length;
+
+// EN DESCARGA: Llegaron pero no han finalizado recepción
+const enProceso = entregas.filter(e => 
+  e.llegada_registrada_en && 
+  !e.recepcion_finalizada_en && 
+  e.status !== "rechazada" && 
+  e.status !== "recibida"
+).length;
+
+// RECIBIDAS: Completamente procesadas
+const completadas = entregas.filter(e => e.status === "recibida").length;
+
+return { 
+  total: entregas.length, 
+  sinFecha,      // ← Renombrar "pendientes" a "sinFecha" para claridad
+  programadas,   // ← Nuevo campo explícito
+  enProceso, 
+  completadas 
+};
 ```
 
-Esto permite que el contenedor de la tabla (`overflow-x-auto`) funcione correctamente.
+### Cambio 3: Actualizar el rendering del dashboard (líneas 1710-1716)
 
-### Cambio 2: Reducir ancho de columnas de tabla (líneas 1750-1755)
+```javascript
+// Sin Fecha
+<p className="text-xl font-bold...">{entregasResumen.sinFecha}</p>
 
-Cambiar los anchos fijos a valores más compactos:
-
-| Columna | Antes | Después |
-|---------|-------|---------|
-| Producto | `min-w-[100px]` | `min-w-[80px]` |
-| Cant | `w-12` | `w-10` |
-| P.Unit | `w-16` | `w-14` |
-| Subtotal | `w-16` | `w-14` |
-
-Y agregar `text-[11px]` para texto más compacto.
-
-### Cambio 3: Formato de moneda más corto
-
-En las celdas de precio, podemos usar un formato más compacto que redondee miles (ej: "$403,200" en vez de "$403,200.00").
-
-## Archivos a Modificar
-
-| Archivo | Línea | Cambio |
-|---------|-------|--------|
-| `src/components/compras/OrdenAccionesDialog.tsx` | 1625 | Quitar `overflow-x-hidden` |
-| `src/components/compras/OrdenAccionesDialog.tsx` | 1750-1766 | Reducir anchos de columnas y tamaño de texto |
+// Programadas
+<p className="text-xl font-bold...">{entregasResumen.programadas}</p>
+```
 
 ## Resultado Esperado
 
-La tabla de productos será más compacta y cabrá en el viewport móvil. Si aún no cabe, el usuario podrá hacer scroll horizontal dentro de la tabla.
+Después del fix, el dashboard mostrará:
+
+| Contador | Valor Actual (Bug) | Valor Correcto |
+|----------|-------------------|----------------|
+| Sin Fecha | 3 | 0 |
+| Programadas | 0 | 3 |
+| En Descarga | 0 | 0 |
+| Recibidas | 0 | 0 |
+
+## Archivos a Modificar
+
+| Archivo | Líneas | Cambio |
+|---------|--------|--------|
+| `src/components/compras/OrdenAccionesDialog.tsx` | 169 | Agregar `fecha_programada` al SELECT |
+| `src/components/compras/OrdenAccionesDialog.tsx` | 178-188 | Corregir lógica de filtros con campos renombrados |
+| `src/components/compras/OrdenAccionesDialog.tsx` | 1711, 1715 | Usar nuevos campos `sinFecha` y `programadas` |
+
+## Diagrama de Flujo de Estados
+
+```text
+Entrega Creada
+     │
+     ▼
+┌─────────────────┐
+│ pendiente_fecha │  ←── "Sin Fecha"
+│  (sin fecha)    │
+└────────┬────────┘
+         │ Asignar fecha
+         ▼
+┌─────────────────┐
+│   programada    │  ←── "Programadas"  
+│  (con fecha)    │
+└────────┬────────┘
+         │ Registrar llegada
+         ▼
+┌─────────────────┐
+│ llegada_regist. │  ←── "En Descarga"
+│   (en proceso)  │
+└────────┬────────┘
+         │ Finalizar recepción
+         ▼
+┌─────────────────┐
+│    recibida     │  ←── "Recibidas"
+└─────────────────┘
+```
