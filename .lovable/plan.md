@@ -1,94 +1,53 @@
 
 # Plan: Corregir Overflow Horizontal en Dialog de Gestión de OC
 
-## Problemas Identificados en el Screenshot
+## Problema Identificado
 
-1. **Header cortado**: El título con badges ("Enviada", botón "Cont...") se desborda hacia la derecha
-2. **Tabla de productos cortada**: Las columnas "P.Unit" y "Subtotal" se salen del viewport
-3. **ScrollArea solo vertical**: La tabla necesita scroll horizontal en móvil
+Veo que los cambios ya están en el código, pero el diálogo sigue mostrando contenido cortado porque:
+
+1. **`overflow-x-hidden` en DialogContent** - Esta clase bloquea cualquier scroll horizontal, anulando el `overflow-x-auto` de la tabla interna
+2. **Columnas de tabla aún anchas** - Las columnas "P.Unit" y "Subtotal" se salen del viewport
 
 ## Solución Propuesta
 
-### Cambios en `OrdenAccionesDialog.tsx`
+### Cambio 1: Quitar `overflow-x-hidden` del DialogContent (línea 1625)
 
-**1. Reestructurar el DialogHeader para móvil (líneas 1627-1651)**
-
-Cambiar el layout del título para que los badges se apilen debajo del folio en pantallas pequeñas:
-
+Actualmente:
 ```tsx
-<DialogTitle className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 pr-8">
-  <span className="flex items-center gap-2 flex-wrap">
-    Gestionar Orden {orden?.folio}
-    {getStatusBadge()}
-  </span>
-  <div className="flex items-center gap-2 flex-wrap">
-    {!proveedorTieneEmail && (
-      <Badge variant="outline" className="text-muted-foreground text-[10px]">
-        Sin correo
-      </Badge>
-    )}
-    {/* ... badges de "Leído", "Control interno", etc. */}
-  </div>
-</DialogTitle>
+<DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto overflow-x-hidden">
 ```
 
-El `pr-8` deja espacio para el botón X de cerrar.
-
-**2. Envolver la tabla en contenedor con scroll horizontal (líneas 1746-1771)**
-
+Cambiar a:
 ```tsx
-{/* Tabla de productos - scrollable en ambos ejes */}
-{orden?.ordenes_compra_detalles && orden.ordenes_compra_detalles.length > 0 && (
-  <div className="overflow-x-auto">
-    <ScrollArea className="max-h-[180px]">
-      <Table className="min-w-[350px]">
-        <TableHeader>
-          <TableRow className="text-xs">
-            <TableHead className="py-2 min-w-[120px]">Producto</TableHead>
-            <TableHead className="text-center w-14 py-2">Cant</TableHead>
-            <TableHead className="text-right w-20 py-2">P.Unit</TableHead>
-            <TableHead className="text-right w-20 py-2">Subtotal</TableHead>
-          </TableRow>
-        </TableHeader>
-        ...
-      </Table>
-    </ScrollArea>
-  </div>
-)}
+<DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
 ```
 
-- `overflow-x-auto` permite scroll horizontal cuando la tabla no cabe
-- `min-w-[350px]` en la tabla evita que se comprima demasiado
-- Columnas más angostas (`w-14`, `w-20`) en vez de `w-16`, `w-24`
+Esto permite que el contenedor de la tabla (`overflow-x-auto`) funcione correctamente.
+
+### Cambio 2: Reducir ancho de columnas de tabla (líneas 1750-1755)
+
+Cambiar los anchos fijos a valores más compactos:
+
+| Columna | Antes | Después |
+|---------|-------|---------|
+| Producto | `min-w-[100px]` | `min-w-[80px]` |
+| Cant | `w-12` | `w-10` |
+| P.Unit | `w-16` | `w-14` |
+| Subtotal | `w-16` | `w-14` |
+
+Y agregar `text-[11px]` para texto más compacto.
+
+### Cambio 3: Formato de moneda más corto
+
+En las celdas de precio, podemos usar un formato más compacto que redondee miles (ej: "$403,200" en vez de "$403,200.00").
 
 ## Archivos a Modificar
 
-| Archivo | Cambios |
-|---------|---------|
-| `src/components/compras/OrdenAccionesDialog.tsx` | Reestructurar header con stacking en móvil, agregar scroll horizontal a tabla de productos |
+| Archivo | Línea | Cambio |
+|---------|-------|--------|
+| `src/components/compras/OrdenAccionesDialog.tsx` | 1625 | Quitar `overflow-x-hidden` |
+| `src/components/compras/OrdenAccionesDialog.tsx` | 1750-1766 | Reducir anchos de columnas y tamaño de texto |
 
-## Resultado Visual Esperado
+## Resultado Esperado
 
-```
-┌────────────────────────────────┐
-│ Gestionar Orden OC-202601-0005 │ ×
-│ [Enviada] [Sin correo]         │
-│ [Control interno]              │
-├────────────────────────────────┤
-│ 📦 Resumen de la Orden         │
-│ Proveedor: SAÑUDO...           │
-│ Fecha: Por confirmar           │
-├────────────────────────────────┤
-│ 🚚 Progreso de Entregas        │
-│ ┌────────┬────────┐            │
-│ │ 3      │ 0      │            │
-│ │Sin Fech│Program │            │
-│ ├────────┼────────┤            │
-│ │ 0      │ 0      │            │
-│ │En Desc │Recibid │            │
-│ └────────┴────────┘            │
-├────────────────────────────────┤
-│ Producto  │ Cant │P.Unit│Subt │ ← scroll horizontal
-│ Sal Refin │ 1200 │$336  │$403K│
-└────────────────────────────────┘
-```
+La tabla de productos será más compacta y cabrá en el viewport móvil. Si aún no cabe, el usuario podrá hacer scroll horizontal dentro de la tabla.
