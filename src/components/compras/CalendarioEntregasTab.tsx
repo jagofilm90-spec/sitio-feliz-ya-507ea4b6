@@ -534,32 +534,35 @@ const CalendarioEntregasTab = () => {
   return (
     <Card className="p-6">
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <CalendarIcon className="h-6 w-6" />
-            <h2 className="text-2xl font-bold">Calendario de Entregas</h2>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-2">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+            <h2 className="text-xl sm:text-2xl font-bold">Calendario de Entregas</h2>
             <LiveIndicator />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             <Button
               variant={vistaCalendario ? "default" : "outline"}
               size="sm"
               onClick={() => setVistaCalendario(true)}
+              className="flex-1 sm:flex-initial"
             >
               <CalendarIcon className="h-4 w-4 mr-1" />
-              Calendario
+              <span className="hidden sm:inline">Calendario</span>
+              <span className="sm:hidden">Cal</span>
             </Button>
             <Button
               variant={!vistaCalendario ? "default" : "outline"}
               size="sm"
               onClick={() => setVistaCalendario(false)}
+              className="flex-1 sm:flex-initial"
             >
               <List className="h-4 w-4 mr-1" />
               Lista
             </Button>
           </div>
         </div>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Visualiza y gestiona las entregas programadas de tus proveedores
         </p>
       </div>

@@ -1613,19 +1613,20 @@ const OrdenesCompraTab = () => {
 
   return (
     <Card className="p-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h2 className="text-2xl font-bold">Órdenes de Compra</h2>
+          <div className="flex items-center gap-2 sm:gap-3 mb-1">
+            <h2 className="text-xl sm:text-2xl font-bold">Órdenes de Compra</h2>
             <LiveIndicator />
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Gestiona tus órdenes de compra y recepciones
           </p>
         </div>
-        <Button onClick={handleNewOrder}>
+        <Button onClick={handleNewOrder} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
-          Nueva Orden de Compra
+          <span className="hidden sm:inline">Nueva Orden de Compra</span>
+          <span className="sm:hidden">Nueva OC</span>
         </Button>
       </div>
 
@@ -1640,8 +1641,8 @@ const OrdenesCompraTab = () => {
         }}
       />
 
-      <div className="flex items-center gap-4 mb-4">
-        <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-4">
+        <div className="relative w-full sm:flex-1">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por folio o proveedor..."
@@ -1651,15 +1652,18 @@ const OrdenesCompraTab = () => {
           />
         </div>
         
-        <div className="flex items-center gap-2">
-          <Switch
-            id="mostrar-archivadas"
-            checked={mostrarArchivadas}
-            onCheckedChange={setMostrarArchivadas}
-          />
-          <Label htmlFor="mostrar-archivadas" className="text-sm whitespace-nowrap cursor-pointer">
-            Mostrar archivadas
-          </Label>
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="mostrar-archivadas"
+              checked={mostrarArchivadas}
+              onCheckedChange={setMostrarArchivadas}
+            />
+            <Label htmlFor="mostrar-archivadas" className="text-sm whitespace-nowrap cursor-pointer">
+              <span className="hidden sm:inline">Mostrar archivadas</span>
+              <span className="sm:hidden">Archivadas</span>
+            </Label>
+          </div>
           {ordenesArchivadas > 0 && !mostrarArchivadas && (
             <span className="text-xs text-muted-foreground">
               ({ordenesArchivadas})
