@@ -1,125 +1,168 @@
 
-# Plan: Optimizar Estilo Visual de Pestañas Móviles en Compras
+# Plan: Optimizar Headers y Contenido de Pestañas de Compras para Móvil
 
-## Problema Identificado
+## Problemas Identificados
 
-Las pestañas de la página `/compras` **ya están usando el código móvil** (muestran las abreviaciones "Prov", "OC", "Cal", etc.), pero **el estilo visual es demasiado grande/pesado** para móvil:
+Revisé los 3 componentes principales dentro de las pestañas de Compras y encontré estos issues:
 
-- El `TabsList` usa altura de `h-10` (default de 40px)
-- Los `TabsTrigger` usan texto de tamaño `text-sm` (14px)
-- El resultado visual es que las pestañas parecen de desktop aunque tengan scroll
+| Componente | Problema | Línea |
+|------------|----------|-------|
+| `OrdenesCompraTab.tsx` | Header con botón "Nueva Orden de Compra" se sale de pantalla móvil | 1616-1629 |
+| `CalendarioEntregasTab.tsx` | Header "Calendario de Entregas" + botones no apilan en móvil | 536-565 |
+| `OrdenesCompraTab.tsx` | Barra de búsqueda + switch no apilan en móvil | 1643-1669 |
+| `ProveedoresTab.tsx` | Form grid 2 cols sin breakpoint móvil | 978 |
 
-## Comparación con Otros Módulos
+---
 
-| Componente | TabsList | TabsTrigger |
-|-----------|----------|-------------|
-| **Compras (actual)** | `inline-flex w-max gap-1` | `gap-1.5 px-3` |
-| BandejaEntrada | `h-9` | `text-xs px-3` |
-| VendedorVentasChart | `grid w-full` | `text-xs gap-1` |
-| AlmacenFumigaciones | `grid grid-cols-4` | `text-xs px-1` |
+## Cambios Propuestos
 
-## Solución Propuesta
-
-Actualizar las pestañas móviles en `Compras.tsx` para que sean más compactas:
-
-### Cambios en `src/pages/Compras.tsx` (líneas 140-185)
+### 1. `OrdenesCompraTab.tsx` - Header Principal (línea 1616-1629)
 
 **Antes:**
 ```tsx
-<div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
-  <TabsList className="inline-flex w-max gap-1">
-    <TabsTrigger value="proveedores" className="flex items-center gap-1.5 px-3">
+<div className="flex justify-between items-center mb-6">
+  <div>
+    <h2 className="text-2xl font-bold">Órdenes de Compra</h2>
+    ...
+  </div>
+  <Button onClick={handleNewOrder}>
+    <Plus /> Nueva Orden de Compra
+  </Button>
+</div>
 ```
 
 **Después:**
 ```tsx
-<div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
-  <TabsList className="inline-flex w-max gap-1 h-9">
-    <TabsTrigger value="proveedores" className="flex items-center gap-1 px-2.5 text-xs">
-```
-
-### Cambios Específicos:
-
-1. **TabsList**: Agregar `h-9` para reducir altura de 40px a 36px
-2. **Cada TabsTrigger**:
-   - Cambiar `gap-1.5` a `gap-1` (reducir espacio entre icono y texto)
-   - Cambiar `px-3` a `px-2.5` (reducir padding horizontal)
-   - Agregar `text-xs` (reducir tamaño de fuente de 14px a 12px)
-
-### Código Final de Pestañas Móviles:
-
-```tsx
-{isMobile ? (
-  <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
-    <TabsList className="inline-flex w-max gap-1 h-9">
-      <TabsTrigger value="proveedores" className="flex items-center gap-1 px-2.5 text-xs">
-        <Package className="h-3.5 w-3.5" />
-        Prov
-      </TabsTrigger>
-      <TabsTrigger value="ordenes" className="flex items-center gap-1 px-2.5 text-xs">
-        <Truck className="h-3.5 w-3.5" />
-        OC
-        {pendingCount > 0 && (
-          <Badge variant="destructive" className="ml-0.5 h-4 min-w-4 px-1 text-[10px] font-bold animate-pulse">
-            {pendingCount}
-          </Badge>
-        )}
-      </TabsTrigger>
-      <TabsTrigger value="calendario" className="flex items-center gap-1 px-2.5 text-xs">
-        <Calendar className="h-3.5 w-3.5" />
-        Cal
-      </TabsTrigger>
-      <TabsTrigger value="devoluciones-faltantes" className="flex items-center gap-1 px-2.5 text-xs">
-        <AlertTriangle className="h-3.5 w-3.5" />
-        Dev/Falt
-        {devFaltCombinedCount > 0 && (
-          <Badge variant="destructive" className="ml-0.5 h-4 min-w-4 px-1 text-[10px] font-bold">
-            {devFaltCombinedCount}
-          </Badge>
-        )}
-      </TabsTrigger>
-      <TabsTrigger value="historial" className="flex items-center gap-1 px-2.5 text-xs">
-        <History className="h-3.5 w-3.5" />
-        Hist
-      </TabsTrigger>
-      <TabsTrigger value="adeudos" className="flex items-center gap-1 px-2.5 text-xs">
-        <CreditCard className="h-3.5 w-3.5" />
-        Adeudos
-        {adeudosCount > 0 && (
-          <Badge className="ml-0.5 h-4 min-w-4 px-1 text-[10px] font-bold bg-amber-500 text-white">
-            {adeudosCount}
-          </Badge>
-        )}
-      </TabsTrigger>
-      <TabsTrigger value="analytics" className="flex items-center gap-1 px-2.5 text-xs">
-        <BarChart3 className="h-3.5 w-3.5" />
-        Anal
-      </TabsTrigger>
-    </TabsList>
+<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+  <div>
+    <div className="flex items-center gap-2 sm:gap-3 mb-1">
+      <h2 className="text-xl sm:text-2xl font-bold">Órdenes de Compra</h2>
+      <LiveIndicator />
+    </div>
+    <p className="text-muted-foreground text-sm">
+      Gestiona tus órdenes de compra y recepciones
+    </p>
   </div>
-) : (...)}
+  <Button onClick={handleNewOrder} className="w-full sm:w-auto">
+    <Plus className="mr-2 h-4 w-4" />
+    <span className="hidden sm:inline">Nueva Orden de Compra</span>
+    <span className="sm:hidden">Nueva OC</span>
+  </Button>
+</div>
 ```
 
-## Resumen de Cambios
+### 2. `OrdenesCompraTab.tsx` - Barra de Búsqueda (línea 1643-1669)
 
-| Propiedad | Antes | Después |
-|-----------|-------|---------|
-| TabsList height | `h-10` (default) | `h-9` |
-| Trigger gap | `gap-1.5` | `gap-1` |
-| Trigger padding | `px-3` | `px-2.5` |
-| Trigger text | `text-sm` (default) | `text-xs` |
-| Badge margin | `ml-1` | `ml-0.5` |
+**Antes:**
+```tsx
+<div className="flex items-center gap-4 mb-4">
+  <div className="relative flex-1">
+    <Input ... />
+  </div>
+  <div className="flex items-center gap-2">
+    <Switch ... />
+    <Label ... className="whitespace-nowrap">Mostrar archivadas</Label>
+  </div>
+</div>
+```
 
-## Resultado Esperado
+**Después:**
+```tsx
+<div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-4">
+  <div className="relative w-full sm:flex-1">
+    <Input ... />
+  </div>
+  <div className="flex items-center gap-2 w-full sm:w-auto">
+    <Switch ... />
+    <Label ... className="text-sm whitespace-nowrap cursor-pointer">
+      <span className="hidden sm:inline">Mostrar archivadas</span>
+      <span className="sm:hidden">Archivadas</span>
+    </Label>
+    ...
+  </div>
+</div>
+```
 
-Después de los cambios:
-- Pestañas más compactas verticalmente (36px vs 40px)
-- Texto más pequeño y ligero (12px vs 14px)
-- Mejor apariencia en iPhones y dispositivos móviles
-- Mismo comportamiento de scroll horizontal
+### 3. `CalendarioEntregasTab.tsx` - Header (línea 536-565)
 
-## Archivo a Modificar
+**Antes:**
+```tsx
+<div className="flex items-center justify-between mb-2">
+  <div className="flex items-center gap-3">
+    <CalendarIcon className="h-6 w-6" />
+    <h2 className="text-2xl font-bold">Calendario de Entregas</h2>
+    <LiveIndicator />
+  </div>
+  <div className="flex gap-2">
+    <Button>Calendario</Button>
+    <Button>Lista</Button>
+  </div>
+</div>
+```
+
+**Después:**
+```tsx
+<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-2">
+  <div className="flex items-center gap-2 sm:gap-3">
+    <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+    <h2 className="text-xl sm:text-2xl font-bold">Calendario de Entregas</h2>
+    <LiveIndicator />
+  </div>
+  <div className="flex gap-2 w-full sm:w-auto">
+    <Button className="flex-1 sm:flex-initial" size="sm">
+      <CalendarIcon className="h-4 w-4 mr-1" />
+      <span className="hidden sm:inline">Calendario</span>
+      <span className="sm:hidden">Cal</span>
+    </Button>
+    <Button className="flex-1 sm:flex-initial" size="sm">
+      <List className="h-4 w-4 mr-1" />
+      <span className="hidden sm:inline">Lista</span>
+      <span className="sm:hidden">Lista</span>
+    </Button>
+  </div>
+</div>
+```
+
+### 4. `ProveedoresTab.tsx` - Form Grid (línea 978)
+
+**Antes:**
+```tsx
+<div className="grid grid-cols-2 gap-4">
+```
+
+**Después:**
+```tsx
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+```
+
+---
+
+## Archivos a Modificar
 
 | Archivo | Líneas | Cambios |
 |---------|--------|---------|
-| `src/pages/Compras.tsx` | 140-185 | Agregar `h-9` al TabsList, `text-xs`, `gap-1`, `px-2.5` a cada TabsTrigger |
+| `src/components/compras/OrdenesCompraTab.tsx` | 1616-1629 | Header con stack móvil, botón con texto corto |
+| `src/components/compras/OrdenesCompraTab.tsx` | 1643-1669 | Barra búsqueda con stack móvil |
+| `src/components/compras/CalendarioEntregasTab.tsx` | 536-565 | Header con stack móvil, botones responsive |
+| `src/components/compras/ProveedoresTab.tsx` | 978 | Grid form 1 col en móvil |
+
+---
+
+## Resultado Esperado
+
+### Móvil (después):
+```
+┌─────────────────────────────┐
+│ Órdenes de Compra     🔴    │
+│ Gestiona tus órdenes...     │
+│ [    Nueva OC          ]    │
+│ [🔍 Buscar...          ]    │
+│ 🔘 Archivadas (3)           │
+└─────────────────────────────┘
+```
+
+- Títulos más pequeños (`text-xl` vs `text-2xl`)
+- Botones ancho completo en móvil
+- Textos abreviados en móvil ("Nueva OC" vs "Nueva Orden de Compra")
+- Elementos apilados verticalmente
+- Sin scroll horizontal
