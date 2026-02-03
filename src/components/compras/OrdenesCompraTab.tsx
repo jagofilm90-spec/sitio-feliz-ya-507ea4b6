@@ -1683,6 +1683,8 @@ const OrdenesCompraTab = () => {
                 key={orden.id}
                 orden={orden}
                 faltantesPendientes={(faltantesPorOC as Record<string, number>)[orden.id] || 0}
+                entregas={todasEntregas.filter(e => e.orden_compra_id === orden.id)}
+                entregasStatus={entregasStatusPorOrden[orden.id]}
                 onOpenAcciones={(o) => {
                   setOrdenSeleccionada(o);
                   setAccionesDialogOpen(true);
