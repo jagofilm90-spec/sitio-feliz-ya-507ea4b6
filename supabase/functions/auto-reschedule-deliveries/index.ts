@@ -42,27 +42,24 @@ function getMexicanHolidays(year: number): string[] {
   return holidays
 }
 
-// Get next business day (skip Sunday and Mexican holidays)
+// Get next business day INCLUSIVE (includes today if it's a business day)
 // Saturday (day 6) IS a working day for this company
-function getNextBusinessDay(date: Date, holidays: string[]): Date {
-  const next = new Date(date)
-  next.setDate(next.getDate() + 1)
+function getNextBusinessDayInclusive(date: Date, holidays: string[]): Date {
+  const current = new Date(date)
   
-  // Loop until we find a valid business day
+  // Loop until we find a valid business day (starting from today)
   while (true) {
-    const dayOfWeek = next.getDay()
-    const dateStr = next.toISOString().split('T')[0]
+    const dayOfWeek = current.getDay()
+    const dateStr = current.toISOString().split('T')[0]
     
-    // Skip Sunday (0) and Mexican holidays
-    if (dayOfWeek === 0 || holidays.includes(dateStr)) {
-      next.setDate(next.getDate() + 1)
-      continue
+    // If it's a business day (not Sunday, not holiday), return it
+    if (dayOfWeek !== 0 && !holidays.includes(dateStr)) {
+      return current
     }
     
-    break
+    // Otherwise, try the next day
+    current.setDate(current.getDate() + 1)
   }
-  
-  return next
 }
 
 Deno.serve(async (req) => {
@@ -86,7 +83,7 @@ Deno.serve(async (req) => {
     }
     
     // Calculate next business day considering holidays
-    const nextBusinessDay = getNextBusinessDay(today, holidays)
+    const nextBusinessDay = getNextBusinessDayInclusive(today, holidays)
     const nextBusinessDayStr = nextBusinessDay.toISOString().split('T')[0]
 
     console.log(`Running auto-reschedule check for ${todayStr}`)
