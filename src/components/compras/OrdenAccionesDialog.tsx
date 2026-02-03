@@ -1622,7 +1622,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto overflow-x-hidden">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 pr-8">
             <span className="flex items-center gap-2 flex-wrap">
@@ -1747,22 +1747,26 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
               <ScrollArea className="max-h-[180px]">
                 <Table className="min-w-[320px]">
                   <TableHeader>
-                    <TableRow className="text-xs">
-                      <TableHead className="py-2 min-w-[100px]">Producto</TableHead>
-                      <TableHead className="text-center w-12 py-2">Cant</TableHead>
-                      <TableHead className="text-right w-16 py-2">P.Unit</TableHead>
-                      <TableHead className="text-right w-16 py-2">Subtotal</TableHead>
+                    <TableRow className="text-[11px]">
+                      <TableHead className="py-2 min-w-[80px]">Producto</TableHead>
+                      <TableHead className="text-center w-10 py-2">Cant</TableHead>
+                      <TableHead className="text-right w-14 py-2">P.Unit</TableHead>
+                      <TableHead className="text-right w-14 py-2">Subtotal</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {orden.ordenes_compra_detalles.map((d: any) => (
-                      <TableRow key={d.id} className="text-xs">
-                        <TableCell className="truncate max-w-[120px] py-1.5">
+                      <TableRow key={d.id} className="text-[11px]">
+                        <TableCell className="truncate max-w-[100px] py-1.5">
                           {d.productos?.nombre || d.producto_nombre_manual || "Producto"}
                         </TableCell>
                         <TableCell className="text-center py-1.5">{d.cantidad_ordenada}</TableCell>
-                        <TableCell className="text-right py-1.5 whitespace-nowrap">{formatCurrency(d.precio_unitario_compra)}</TableCell>
-                        <TableCell className="text-right py-1.5 whitespace-nowrap">{formatCurrency(d.subtotal)}</TableCell>
+                        <TableCell className="text-right py-1.5 whitespace-nowrap">
+                          ${Math.round(d.precio_unitario_compra).toLocaleString('es-MX')}
+                        </TableCell>
+                        <TableCell className="text-right py-1.5 whitespace-nowrap">
+                          ${Math.round(d.subtotal).toLocaleString('es-MX')}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
