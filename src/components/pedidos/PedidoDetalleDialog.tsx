@@ -19,6 +19,8 @@ import { formatCurrency } from "@/lib/utils";
 import { esProductoBolsas5kg, redondearABolsasCompletas, calcularNumeroBolsas, KG_POR_BOLSA, ordenarProductosAzucarPrimero } from "@/lib/calculos";
 import { Loader2 } from "lucide-react";
 import { getDisplayName } from "@/lib/productUtils";
+import { CreditoStatusBadge } from "./CreditoStatusBadge";
+import { CREDITO_LABELS } from "@/lib/creditoUtils";
 
 interface PedidoDetalleDialogProps {
   pedidoId: string | null;
@@ -39,6 +41,9 @@ interface PedidoDetalle {
   total: number;
   status: string;
   notas: string | null;
+  termino_credito: string;
+  fecha_entrega_real: string | null;
+  pagado: boolean;
   clientes: { nombre: string; codigo: string } | null;
   profiles: { full_name: string } | null;
   cliente_sucursales: { nombre: string } | null;
@@ -113,6 +118,9 @@ export default function PedidoDetalleDialog({
           total,
           status,
           notas,
+          termino_credito,
+          fecha_entrega_real,
+          pagado,
           clientes (nombre, codigo),
           profiles:vendedor_id (full_name),
           cliente_sucursales:sucursal_id (nombre),
@@ -200,6 +208,21 @@ export default function PedidoDetalleDialog({
                 <p className="text-sm text-muted-foreground">Estado</p>
                 {getStatusBadge(pedido.status)}
               </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Plazo de Crédito</p>
+                <p className="font-medium">{CREDITO_LABELS[pedido.termino_credito] || pedido.termino_credito}</p>
+              </div>
+              {pedido.status !== 'cancelado' && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Estado de Pago</p>
+                  <CreditoStatusBadge
+                    terminoCredito={pedido.termino_credito || 'contado'}
+                    fechaCreacion={pedido.fecha_pedido}
+                    fechaEntregaReal={pedido.fecha_entrega_real}
+                    pagado={pedido.pagado || false}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Notas */}

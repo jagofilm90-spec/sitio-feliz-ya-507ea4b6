@@ -3424,6 +3424,7 @@ export type Database = {
           factura_solicitada_por_cliente: boolean
           facturado: boolean
           fecha_entrega_estimada: string | null
+          fecha_entrega_real: string | null
           fecha_factura_enviada: string | null
           fecha_pedido: string
           folio: string
@@ -3453,6 +3454,7 @@ export type Database = {
           factura_solicitada_por_cliente?: boolean
           facturado?: boolean
           fecha_entrega_estimada?: string | null
+          fecha_entrega_real?: string | null
           fecha_factura_enviada?: string | null
           fecha_pedido?: string
           folio: string
@@ -3482,6 +3484,7 @@ export type Database = {
           factura_solicitada_por_cliente?: boolean
           facturado?: boolean
           fecha_entrega_estimada?: string | null
+          fecha_entrega_real?: string | null
           fecha_factura_enviada?: string | null
           fecha_pedido?: string
           folio?: string
@@ -5932,7 +5935,7 @@ export type Database = {
         | "grupo_personalizado"
         | "grupo_puesto"
         | "broadcast"
-      credit_term: "contado" | "8_dias" | "15_dias" | "30_dias"
+      credit_term: "contado" | "8_dias" | "15_dias" | "30_dias" | "60_dias"
       delivery_priority:
         | "vip_mismo_dia"
         | "deadline"
@@ -6116,7 +6119,7 @@ export const Constants = {
         "grupo_puesto",
         "broadcast",
       ],
-      credit_term: ["contado", "8_dias", "15_dias", "30_dias"],
+      credit_term: ["contado", "8_dias", "15_dias", "30_dias", "60_dias"],
       delivery_priority: [
         "vip_mismo_dia",
         "deadline",
