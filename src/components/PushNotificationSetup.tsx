@@ -34,10 +34,22 @@ export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps
         return;
       }
 
+      // IMPORTANTE: No mostrar diálogo si estamos en la página de login
+      const currentPath = window.location.pathname;
+      if (currentPath === '/auth' || currentPath === '/login' || currentPath === '/') {
+        // Verificar si hay sesión real antes de continuar
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user?.id) {
+          console.log('PushNotificationSetup: No hay sesión activa, saltando diálogo');
+          return;
+        }
+      }
+
       // Verificar que hay usuario autenticado antes de mostrar diálogo
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        // No mostrar diálogo si no hay sesión activa
+      if (!session?.user?.id) {
+        // No mostrar diálogo si no hay sesión activa con usuario válido
+        console.log('PushNotificationSetup: No hay usuario autenticado');
         return;
       }
 
@@ -48,24 +60,32 @@ export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps
       if (!permitted) {
         const hasSeenPrompt = localStorage.getItem('push_notification_prompt_seen');
         if (!hasSeenPrompt) {
+          console.log('PushNotificationSetup: Mostrando diálogo post-auth');
           setTimeout(() => setShowDialog(true), 2000);
         }
       }
     };
 
-    checkPermissions();
+    // Delay inicial para permitir que auth se estabilice
+    const initialTimeout = setTimeout(() => {
+      checkPermissions();
+    }, 1000);
 
     // Escuchar cambios de autenticación para mostrar diálogo post-login
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
+        if (event === 'SIGNED_IN' && session?.user?.id) {
           // Re-verificar permisos cuando el usuario inicia sesión
-          setTimeout(() => checkPermissions(), 500);
+          console.log('PushNotificationSetup: Usuario inició sesión, verificando permisos');
+          setTimeout(() => checkPermissions(), 2000);
         }
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(initialTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleEnableNotifications = async () => {
