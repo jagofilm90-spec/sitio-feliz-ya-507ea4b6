@@ -1404,22 +1404,47 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
           </CardContent>
         </Card>
 
-        {/* Credit Term Selector */}
+        {/* Credit Term Selector - Plazo de crédito flexible */}
         <div className="space-y-2">
           <Label className="text-base flex items-center gap-2">
             <CreditCard className="h-4 w-4" />
-            Término de crédito
+            Plazo de crédito
           </Label>
           <Select value={terminoCredito} onValueChange={setTerminoCredito}>
             <SelectTrigger className="h-14 text-lg">
-              <SelectValue placeholder="Seleccionar término" />
+              <SelectValue placeholder="Seleccionar plazo" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="contado" className="text-base py-3">Contado</SelectItem>
-              <SelectItem value="8_dias" className="text-base py-3">8 días</SelectItem>
-              <SelectItem value="15_dias" className="text-base py-3">15 días</SelectItem>
-              <SelectItem value="30_dias" className="text-base py-3">30 días</SelectItem>
-              <SelectItem value="60_dias" className="text-base py-3">60 días</SelectItem>
+              <SelectItem value="contado" className="text-base py-3">
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">Contado</span>
+                  <span className="text-xs text-muted-foreground">Pago al momento de la entrega</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="8_dias" className="text-base py-3">
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">8 días</span>
+                  <span className="text-xs text-muted-foreground">Vence 8 días después de entrega</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="15_dias" className="text-base py-3">
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">15 días</span>
+                  <span className="text-xs text-muted-foreground">Vence 15 días después de entrega</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="30_dias" className="text-base py-3">
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">30 días</span>
+                  <span className="text-xs text-muted-foreground">Vence 30 días después de entrega</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="60_dias" className="text-base py-3">
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">60 días</span>
+                  <span className="text-xs text-muted-foreground">Vence 60 días después de entrega</span>
+                </div>
+              </SelectItem>
             </SelectContent>
           </Select>
           {selectedCliente && selectedCliente.termino_credito !== terminoCredito && (
@@ -1428,6 +1453,9 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
               Default del cliente: {selectedCliente.termino_credito === 'contado' ? 'Contado' : selectedCliente.termino_credito.replace('_', ' ')}
             </p>
           )}
+          <p className="text-xs text-muted-foreground">
+            El plazo comenzará a contar a partir de la fecha de entrega del pedido
+          </p>
         </div>
 
         {/* Notes - Larger */}

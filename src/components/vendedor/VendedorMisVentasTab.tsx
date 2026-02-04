@@ -13,6 +13,7 @@ import { es } from "date-fns/locale";
 import { CancelarPedidoDialog } from "./CancelarPedidoDialog";
 import { PedidoDetalleVendedorDialog } from "./PedidoDetalleVendedorDialog";
 import { EliminarPedidoDialog } from "./EliminarPedidoDialog";
+import { CreditoStatusBadge } from "@/components/pedidos/CreditoStatusBadge";
 import {
   Select,
   SelectContent,
@@ -34,6 +35,9 @@ interface Pedido {
   fecha_pedido: string;
   total: number;
   status: string;
+  termino_credito: string;
+  fecha_entrega_real: string | null;
+  pagado: boolean;
   cliente: {
     nombre: string;
   };
@@ -158,7 +162,7 @@ export function VendedorMisVentasTab() {
       const { data, error } = await supabase
         .from("pedidos")
         .select(`
-          id, folio, fecha_pedido, total, status,
+          id, folio, fecha_pedido, total, status, termino_credito, fecha_entrega_real, pagado,
           cliente:clientes(nombre)
         `)
         .eq("vendedor_id", user.id)
@@ -170,7 +174,10 @@ export function VendedorMisVentasTab() {
 
       const pedidosData = (data || []).map((p: any) => ({
         ...p,
-        cliente: p.cliente || { nombre: "Sin cliente" }
+        cliente: p.cliente || { nombre: "Sin cliente" },
+        termino_credito: p.termino_credito || 'contado',
+        fecha_entrega_real: p.fecha_entrega_real || null,
+        pagado: p.pagado || false
       }));
 
       setPedidos(pedidosData);
@@ -346,7 +353,7 @@ export function VendedorMisVentasTab() {
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <span className="font-semibold text-lg">{pedido.folio}</span>
                           <Badge 
                             variant={statusLabels[pedido.status]?.variant || "secondary"}
@@ -354,6 +361,14 @@ export function VendedorMisVentasTab() {
                           >
                             {statusLabels[pedido.status]?.label || pedido.status}
                           </Badge>
+                          {pedido.status !== 'cancelado' && (
+                            <CreditoStatusBadge
+                              terminoCredito={pedido.termino_credito}
+                              fechaCreacion={pedido.fecha_pedido}
+                              fechaEntregaReal={pedido.fecha_entrega_real}
+                              pagado={pedido.pagado}
+                            />
+                          )}
                         </div>
                         <p className="text-base text-muted-foreground truncate mb-1">
                           {pedido.cliente.nombre}
