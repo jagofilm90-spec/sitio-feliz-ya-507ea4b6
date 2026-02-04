@@ -1,82 +1,27 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { 
-  Search, Plus, Minus, ShoppingCart, Trash2, Loader2, Package, Store, 
-  AlertTriangle, Percent, Lock, Send, Clock, CreditCard, Star, AlertCircle, FileEdit,
-  Truck, Tag, CheckCircle2
-} from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { calcularDesgloseImpuestos, redondear, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
 import { captureDeviceInfo, getPublicIP } from "@/lib/auditoria-pedidos";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { getDisplayName } from "@/lib/productUtils";
+import { CheckCircle2, ExternalLink, FileEdit } from "lucide-react";
+
+// Wizard components
+import { StepIndicator } from "./pedido-wizard/StepIndicator";
+import { PasoCliente } from "./pedido-wizard/PasoCliente";
+import { PasoProductos } from "./pedido-wizard/PasoProductos";
+import { PasoCredito } from "./pedido-wizard/PasoCredito";
+import { PasoConfirmar } from "./pedido-wizard/PasoConfirmar";
+import { SolicitudDescuentoDialog } from "./SolicitudDescuentoDialog";
+import type { Cliente, Sucursal, Producto, LineaPedido, CartDraft, TotalesCalculados } from "./pedido-wizard/types";
 
 // Storage key for persistent cart
 const CART_STORAGE_KEY = 'vendedor_cart_draft';
-
-// Interface for persisted cart state
-interface CartDraft {
-  clienteId: string;
-  sucursalId: string;
-  lineas: Array<{
-    productoId: string;
-    cantidad: number;
-    precioLista: number;
-    precioUnitario: number;
-    descuento: number;
-    requiereAutorizacion: boolean;
-    autorizacionStatus?: 'pendiente' | 'aprobado' | 'rechazado' | null;
-  }>;
-  terminoCredito: string;
-  notas: string;
-  savedAt: string;
-}
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { SolicitudDescuentoDialog } from "./SolicitudDescuentoDialog";
-
-// Regions that belong to Valle de México (metropolitan area)
-const VALLE_MEXICO_REGIONS = [
-  'cdmx_norte', 'cdmx_centro', 'cdmx_sur', 
-  'cdmx_oriente', 'cdmx_poniente',
-  'edomex_norte', 'edomex_oriente'
-];
-
-// Foráneas region labels for grouping
-const REGION_LABELS: Record<string, string> = {
-  'valle_mexico': 'Valle de México',
-  'toluca': 'Toluca',
-  'morelos': 'Morelos',
-  'puebla': 'Puebla',
-  'hidalgo': 'Hidalgo',
-  'queretaro': 'Querétaro',
-  'tlaxcala': 'Tlaxcala',
-  'sin_zona': 'Sin zona asignada',
-};
 
 interface Props {
   onPedidoCreado: () => void;
@@ -89,94 +34,26 @@ interface PedidoCreadoInfo {
   cliente: string;
 }
 
-interface Cliente {
-  id: string;
-  codigo: string;
-  nombre: string;
-  termino_credito: string;
-  zona?: {
-    nombre: string;
-    region: string | null;
-  } | null;
-}
-
-interface Sucursal {
-  id: string;
-  nombre: string;
-  direccion: string | null;
-}
-
-interface Producto {
-  id: string;
-  codigo: string;
-  nombre: string;
-  especificaciones: string | null;
-  marca: string | null;
-  contenido_empaque: string | null;
-  unidad: string;
-  precio_venta: number;
-  stock_actual: number;
-  stock_minimo: number | null;
-  aplica_iva: boolean;
-  aplica_ieps: boolean;
-  precio_por_kilo: boolean;
-  peso_kg: number | null;
-  descuento_maximo: number;
-}
-
-interface LineaPedido {
-  producto: Producto;
-  cantidad: number;
-  precioLista: number;
-  precioUnitario: number;
-  descuento: number;
-  subtotal: number;
-  requiereAutorizacion: boolean;
-  autorizacionStatus?: 'pendiente' | 'aprobado' | 'rechazado' | null;
-  solicitudId?: string;
-}
-
-// Stock badge component
-const StockBadge = ({ producto }: { producto: Producto }) => {
-  const stockMinimo = producto.stock_minimo || 10;
-  
-  if (producto.stock_actual <= 0) {
-    return (
-      <Badge variant="destructive" className="text-xs gap-1">
-        <AlertCircle className="h-3 w-3" />
-        Sin stock
-      </Badge>
-    );
-  }
-  
-  if (producto.stock_actual <= stockMinimo) {
-    return (
-      <Badge variant="outline" className="text-xs text-amber-600 border-amber-400 bg-amber-50 dark:bg-amber-950/30">
-        Stock bajo ({producto.stock_actual})
-      </Badge>
-    );
-  }
-  
-  return (
-    <Badge variant="outline" className="text-xs text-green-600 border-green-400 bg-green-50 dark:bg-green-950/30">
-      {producto.stock_actual} disp.
-    </Badge>
-  );
-};
-
 export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: Props) {
+  // Data state
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [productosFrecuentes, setProductosFrecuentes] = useState<Producto[]>([]);
+  
+  // Loading states
   const [loading, setLoading] = useState(true);
+  const [loadingSucursales, setLoadingSucursales] = useState(false);
   const [loadingFrecuentes, setLoadingFrecuentes] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Wizard state
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   
   // Form state
   const [selectedClienteId, setSelectedClienteId] = useState("");
   const [selectedSucursalId, setSelectedSucursalId] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
   const [lineas, setLineas] = useState<LineaPedido[]>([]);
   const [terminoCredito, setTerminoCredito] = useState("contado");
   const [notas, setNotas] = useState("");
@@ -203,7 +80,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
   // ==================== Cart Persistence Functions ====================
   
   const saveCartDraft = useCallback(() => {
-    // Don't save if we're restoring or if cart is empty and no client selected
     if (isRestoringDraft || (lineas.length === 0 && !selectedClienteId)) {
       return;
     }
@@ -254,7 +130,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
     if (selectedClienteId) {
       fetchSucursales(selectedClienteId);
       fetchProductosFrecuentes(selectedClienteId);
-      // Pre-fill credit term from client (only if not restoring draft)
       if (!isRestoringDraft) {
         const cliente = clientes.find(c => c.id === selectedClienteId);
         if (cliente) {
@@ -276,14 +151,13 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
     }
   }, [saveCartDraft, loading]);
 
-  // Restore cart on component mount (after products are loaded)
+  // Restore cart on component mount
   useEffect(() => {
     if (loading || productos.length === 0) return;
     
     const draft = loadCartDraft();
     if (!draft || (draft.lineas.length === 0 && !draft.clienteId)) return;
     
-    // Check if draft is less than 4 hours old
     const savedTime = new Date(draft.savedAt).getTime();
     const now = Date.now();
     const fourHoursMs = 4 * 60 * 60 * 1000;
@@ -293,7 +167,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       return;
     }
     
-    // Restore cart items by matching product IDs
     const restoredLineas: LineaPedido[] = [];
     draft.lineas.forEach(saved => {
       const producto = productos.find(p => p.id === saved.productoId);
@@ -314,7 +187,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
     if (restoredLineas.length > 0 || draft.clienteId) {
       setIsRestoringDraft(true);
       
-      // Show recovery toast
       toast.info("Borrador de pedido recuperado", {
         description: `${restoredLineas.length} producto(s) - guardado ${formatDistanceToNow(new Date(draft.savedAt), { locale: es, addSuffix: true })}`,
         action: {
@@ -327,12 +199,13 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
             setTerminoCredito("contado");
             setNotas("");
             setHasDraft(false);
+            setStep(1);
+            setCompletedSteps([]);
           }
         },
         duration: 8000,
       });
       
-      // Restore state
       setSelectedClienteId(draft.clienteId);
       setSelectedSucursalId(draft.sucursalId);
       setLineas(restoredLineas);
@@ -340,10 +213,17 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       setNotas(draft.notas);
       setHasDraft(true);
       
-      // Reset restoring flag after a short delay
+      // If draft has client, start at step 2
+      if (draft.clienteId && restoredLineas.length > 0) {
+        setStep(2);
+        setCompletedSteps([1]);
+      }
+      
       setTimeout(() => setIsRestoringDraft(false), 500);
     }
   }, [loading, productos]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ==================== Data Fetching ====================
 
   const fetchData = async () => {
     try {
@@ -351,7 +231,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch my clients with zone info
       const { data: clientesData } = await supabase
         .from("clientes")
         .select("id, codigo, nombre, termino_credito, zona:zonas(nombre, region)")
@@ -361,7 +240,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
 
       setClientes(clientesData || []);
 
-      // Fetch ALL active products (removed stock filter)
       const { data: productosData } = await supabase
         .from("productos")
         .select("id, codigo, nombre, especificaciones, marca, contenido_empaque, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
@@ -378,6 +256,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
   };
 
   const fetchSucursales = async (clienteId: string) => {
+    setLoadingSucursales(true);
     const { data } = await supabase
       .from("cliente_sucursales")
       .select("id, nombre, direccion")
@@ -389,13 +268,13 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
     if (data && data.length === 1) {
       setSelectedSucursalId(data[0].id);
     }
+    setLoadingSucursales(false);
   };
 
   const fetchProductosFrecuentes = async (clienteId: string) => {
     try {
       setLoadingFrecuentes(true);
       
-      // Get product IDs from previous orders for this client
       const { data: pedidosData } = await supabase
         .from("pedidos")
         .select("id")
@@ -410,7 +289,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
 
       const pedidoIds = pedidosData.map(p => p.id);
 
-      // Get product frequency from order details
       const { data: detallesData } = await supabase
         .from("pedidos_detalles")
         .select("producto_id")
@@ -421,26 +299,22 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
         return;
       }
 
-      // Count frequency
       const frecuencia: Record<string, number> = {};
       detallesData.forEach(d => {
         frecuencia[d.producto_id] = (frecuencia[d.producto_id] || 0) + 1;
       });
 
-      // Get top 8 most frequent product IDs
       const topProductoIds = Object.entries(frecuencia)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 8)
         .map(([id]) => id);
 
-      // Fetch product details for frequent products
       const { data: productosFrec } = await supabase
         .from("productos")
         .select("id, codigo, nombre, especificaciones, marca, contenido_empaque, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
         .in("id", topProductoIds)
         .eq("activo", true);
 
-      // Sort by original frequency order
       const sortedProductos = topProductoIds
         .map(id => productosFrec?.find(p => p.id === id))
         .filter(Boolean) as Producto[];
@@ -454,16 +328,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
     }
   };
 
-  // Filter products excluding frequent ones to avoid duplicates
-  const productosFiltrados = productos
-    .filter(p => {
-      const term = searchTerm.toLowerCase();
-      return p.nombre.toLowerCase().includes(term) ||
-        p.codigo.toLowerCase().includes(term) ||
-        (p.especificaciones?.toLowerCase() || "").includes(term) ||
-        (p.marca?.toLowerCase() || "").includes(term);
-    })
-    .filter(p => !productosFrecuentes.some(f => f.id === p.id));
+  // ==================== Product Actions ====================
 
   const agregarProducto = (producto: Producto) => {
     const existe = lineas.find(l => l.producto.id === producto.id);
@@ -472,7 +337,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       return;
     }
 
-    // Warning for out of stock products
     if (producto.stock_actual <= 0) {
       toast.warning("Producto sin stock disponible", {
         description: "Se agregó al pedido. Se surtirá cuando haya disponibilidad.",
@@ -495,7 +359,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       subtotal: precio,
       requiereAutorizacion: false,
     }]);
-    setSearchTerm("");
   };
 
   const actualizarCantidad = (productoId: string, cantidad: number) => {
@@ -525,7 +388,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
         precioUnitario: nuevoPrecio,
         subtotal: nuevoPrecio * l.cantidad,
         requiereAutorizacion,
-        // Clear authorization if descuento is now within limits
         autorizacionStatus: requiereAutorizacion ? l.autorizacionStatus : null,
         solicitudId: requiereAutorizacion ? l.solicitudId : undefined,
       };
@@ -572,7 +434,9 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
     });
   };
 
-  const calcularTotales = () => {
+  // ==================== Calculations ====================
+
+  const calcularTotales = (): TotalesCalculados => {
     let subtotalNeto = 0;
     let totalIva = 0;
     let totalIeps = 0;
@@ -591,14 +455,10 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       totalIva += resultado.iva;
       totalIeps += resultado.ieps;
       
-      // Calcular peso según tipo de producto
       const pesoUnitario = l.producto.peso_kg || 0;
       pesoTotalKg += l.cantidad * pesoUnitario;
-      
-      // Contar unidades
       totalUnidades += l.cantidad;
       
-      // Calcular ahorro por descuentos
       if (l.descuento > 0) {
         ahorroDescuentos += l.descuento * l.cantidad;
       }
@@ -618,8 +478,9 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
     };
   };
 
+  // ==================== Submit ====================
+
   const handleSubmit = async () => {
-    // Prevent double submit
     if (submitting) return;
     
     if (!selectedClienteId) {
@@ -637,7 +498,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       return;
     }
 
-    // Check for unauthorized discounts
     const productosConDescuentoNoAutorizado = lineas.filter(
       l => l.requiereAutorizacion && l.autorizacionStatus !== 'aprobado' && l.autorizacionStatus !== 'pendiente'
     );
@@ -670,7 +530,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
           subtotal: totales.subtotal,
           impuestos: totales.impuestos,
           total: totales.total,
-          // Intelligent status: if no pending discounts, go straight to pendiente
           status: lineas.some(l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente') 
             ? "por_autorizar" 
             : "pendiente",
@@ -688,7 +547,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
         cantidad: l.cantidad,
         precio_unitario: l.precioUnitario,
         subtotal: l.subtotal,
-        // Store discount info for admin review
         notas_ajuste: l.descuento > 0 
           ? `Descuento: ${formatCurrency(l.descuento)} (máx: ${formatCurrency(l.producto.descuento_maximo || 0)})${l.autorizacionStatus === 'pendiente' ? ' [PENDIENTE REVISIÓN]' : l.autorizacionStatus === 'aprobado' ? ' [APROBADO]' : ''}`
           : null
@@ -700,7 +558,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
 
       if (detallesError) throw detallesError;
 
-      // Get vendedor name
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name")
@@ -710,7 +567,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       const vendedorNombre = profile?.full_name || "Vendedor";
       const clienteNombre = selectedCliente?.nombre || "Cliente";
 
-      // Create internal notification for secretaries
+      // Notifications (fire and forget)
       try {
         await supabase.from("notificaciones").insert({
           tipo: "nuevo_pedido_vendedor",
@@ -723,31 +580,25 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
         console.error("Error creating notification:", notifError);
       }
 
-      // Send push notification to secretaries
       try {
         await supabase.functions.invoke('send-push-notification', {
           body: {
             roles: ['Secretaria'],
             title: '📦 Nuevo Pedido',
             body: `${vendedorNombre} → ${clienteNombre} - ${formatCurrency(totales.total)}`,
-            data: {
-              type: 'nuevo_pedido',
-              pedido_id: pedido.id,
-              folio: folio,
-            }
+            data: { type: 'nuevo_pedido', pedido_id: pedido.id, folio }
           }
         });
       } catch (pushError) {
-        console.error("Error sending push to secretarias:", pushError);
+        console.error("Error sending push:", pushError);
       }
 
-      // Send email notification to secretaries
       try {
         await supabase.functions.invoke('send-secretary-notification', {
           body: {
             tipo: 'nuevo_pedido',
             pedidoId: pedido.id,
-            folio: folio,
+            folio,
             vendedor: vendedorNombre,
             cliente: clienteNombre,
             total: totales.total,
@@ -755,72 +606,25 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
           }
         });
       } catch (emailError) {
-        console.error("Error sending email to secretarias:", emailError);
+        console.error("Error sending email:", emailError);
       }
 
-      // Send email notification to client about their new order
       try {
         await supabase.functions.invoke('send-client-notification', {
           body: {
             clienteId: selectedClienteId,
             tipo: 'pedido_confirmado',
-            data: {
-              pedidoFolio: folio,
-              total: totales.total
-            }
+            data: { pedidoFolio: folio, total: totales.total }
           }
         });
-        console.log("Client notification sent for order:", folio);
       } catch (clientEmailError) {
-        console.error("Error sending email to client:", clientEmailError);
-        // No mostrar error al usuario - es notificación secundaria
+        console.error("Error sending client email:", clientEmailError);
       }
 
-      // Audit log for order creation
+      // Audit log
       try {
         const deviceInfo = captureDeviceInfo();
         const ipAddress = await getPublicIP();
-        
-        const auditDetails = {
-          folio: folio,
-          cliente_id: selectedClienteId,
-          cliente_nombre: clienteNombre,
-          sucursal_id: selectedSucursalId || null,
-          total: totales.total,
-          subtotal: totales.subtotal,
-          impuestos: totales.impuestos,
-          peso_total_kg: totales.pesoTotalKg,
-          num_productos: lineas.length,
-          productos: lineas.map(l => ({
-            producto_id: l.producto.id,
-            codigo: l.producto.codigo,
-            nombre: l.producto.nombre,
-            cantidad: l.cantidad,
-            precio_unitario: l.precioUnitario,
-            descuento: l.descuento,
-            subtotal: l.subtotal,
-            requiere_autorizacion: l.requiereAutorizacion,
-            autorizacion_status: l.autorizacionStatus || null
-          })),
-          termino_credito: terminoCredito,
-          status_inicial: pedido.status,
-          tiene_descuentos_pendientes: lineas.some(
-            l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente'
-          ),
-          notas: notas || null,
-          device: {
-            userAgent: deviceInfo.userAgent,
-            platform: deviceInfo.platform,
-            language: deviceInfo.language,
-            screenResolution: deviceInfo.screenResolution,
-            timezone: deviceInfo.timezone,
-            isMobile: deviceInfo.isMobile,
-            vendor: deviceInfo.vendor,
-            cookiesEnabled: deviceInfo.cookiesEnabled,
-            onLine: deviceInfo.onLine,
-          },
-          session_draft_restored: hasDraft
-        };
         
         await supabase.from("security_audit_log").insert([{
           user_id: user.id,
@@ -828,25 +632,32 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
           table_name: "pedidos",
           record_id: pedido.id,
           ip_address: ipAddress,
-          details: auditDetails
+          details: {
+            folio,
+            cliente_id: selectedClienteId,
+            cliente_nombre: clienteNombre,
+            total: totales.total,
+            num_productos: lineas.length,
+            termino_credito: terminoCredito,
+            status_inicial: pedido.status,
+            device: JSON.parse(JSON.stringify(deviceInfo)),
+            session_draft_restored: hasDraft
+          }
         }]);
-        console.log("Audit log created for order:", folio);
       } catch (auditError) {
         console.error("Error creating audit log:", auditError);
-        // No bloquear creación de pedido si falla auditoría
       }
 
-      // Clear draft after successful submission
+      // Clear draft and reset
       clearCartDraft();
-
-      // Reset form
       setSelectedClienteId("");
       setSelectedSucursalId("");
       setLineas([]);
       setTerminoCredito("contado");
       setNotas("");
+      setStep(1);
+      setCompletedSteps([]);
 
-      // Show success dialog
       setPedidoCreado({
         folio,
         total: totales.total,
@@ -862,9 +673,32 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
     }
   };
 
+  // ==================== Navigation ====================
+
+  const handleNextStep = () => {
+    if (step < 4) {
+      setCompletedSteps(prev => [...new Set([...prev, step])]);
+      setStep((step + 1) as 1 | 2 | 3 | 4);
+    }
+  };
+
+  const handlePrevStep = () => {
+    if (step > 1) {
+      setStep((step - 1) as 1 | 2 | 3 | 4);
+    }
+  };
+
+  const handleStepClick = (targetStep: 1 | 2 | 3 | 4) => {
+    if (completedSteps.includes(targetStep) || targetStep < step) {
+      setStep(targetStep);
+    }
+  };
+
+  // ==================== Render ====================
+
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 p-4">
         <Skeleton className="h-14 w-full" />
         <Skeleton className="h-14 w-full" />
         <Skeleton className="h-40 w-full" />
@@ -874,764 +708,121 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
 
   const totales = calcularTotales();
   const selectedCliente = clientes.find(c => c.id === selectedClienteId);
-  const tieneDescuentosPendientes = lineas.some(
-    l => l.requiereAutorizacion && l.autorizacionStatus !== 'aprobado'
-  );
+  const selectedSucursal = sucursales.find(s => s.id === selectedSucursalId);
 
   return (
-    <TooltipProvider>
-      <div className="space-y-6">
-        {/* Client Selection - Larger */}
-        <div className="space-y-2">
-          <Label className="text-base flex items-center gap-2">
-            <Store className="h-4 w-4" />
-            Cliente *
-          </Label>
-          <Select value={selectedClienteId} onValueChange={setSelectedClienteId}>
-            <SelectTrigger className="h-14 text-lg">
-              <SelectValue placeholder="Seleccionar cliente" />
-            </SelectTrigger>
-            <SelectContent className="max-h-[400px]">
-              {clientes.length === 0 ? (
-                <div className="p-4 text-center text-muted-foreground">
-                  No tienes clientes asignados
-                </div>
-              ) : (
-                (() => {
-                  // Group clients by region
-                  const clientesPorRegion: Record<string, Cliente[]> = {};
-                  
-                  clientes.forEach(cliente => {
-                    const region = cliente.zona?.region;
-                    let groupKey: string;
-                    
-                    if (!region) {
-                      groupKey = 'sin_zona';
-                    } else if (VALLE_MEXICO_REGIONS.includes(region)) {
-                      groupKey = 'valle_mexico';
-                    } else {
-                      groupKey = region;
-                    }
-                    
-                    if (!clientesPorRegion[groupKey]) {
-                      clientesPorRegion[groupKey] = [];
-                    }
-                    clientesPorRegion[groupKey].push(cliente);
-                  });
-                  
-                  // Define order for regions
-                  const regionOrder = ['valle_mexico', 'toluca', 'morelos', 'puebla', 'hidalgo', 'queretaro', 'tlaxcala', 'sin_zona'];
-                  const sortedRegions = Object.keys(clientesPorRegion).sort((a, b) => {
-                    const indexA = regionOrder.indexOf(a);
-                    const indexB = regionOrder.indexOf(b);
-                    return (indexA === -1 ? 100 : indexA) - (indexB === -1 ? 100 : indexB);
-                  });
-                  
-                  return sortedRegions.map(regionKey => (
-                    <SelectGroup key={regionKey}>
-                      <SelectLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-2 bg-muted/50">
-                        {REGION_LABELS[regionKey] || regionKey}
-                      </SelectLabel>
-                      {clientesPorRegion[regionKey].map((cliente) => (
-                        <SelectItem key={cliente.id} value={cliente.id} className="text-base py-3">
-                          <div className="flex items-center justify-between w-full gap-4">
-                            <span>{cliente.nombre}</span>
-                            <Badge variant="outline" className="text-xs">
-                              {cliente.termino_credito === 'contado' ? 'Contado' : cliente.termino_credito.replace('_', ' ')}
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  ));
-                })()
-              )}
-            </SelectContent>
-          </Select>
-          {selectedCliente && (
-            <p className="text-sm text-muted-foreground">
-              Crédito: {selectedCliente.termino_credito === 'contado' ? 'Contado' : selectedCliente.termino_credito.replace('_', ' ')}
-            </p>
-          )}
+    <div className="max-w-4xl mx-auto p-4 space-y-4">
+      {/* Draft indicator */}
+      {hasDraft && (
+        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg py-2">
+          <FileEdit className="h-4 w-4" />
+          <span>Borrador guardado automáticamente</span>
         </div>
+      )}
 
-        {/* Branch Selection - Larger */}
-        {sucursales.length > 0 && (
-          <div className="space-y-2">
-            <Label className="text-base">Sucursal de entrega *</Label>
-            <Select value={selectedSucursalId} onValueChange={setSelectedSucursalId}>
-              <SelectTrigger className="h-14 text-lg">
-                <SelectValue placeholder="Seleccionar sucursal" />
-              </SelectTrigger>
-              <SelectContent>
-                {sucursales.map((sucursal) => (
-                  <SelectItem key={sucursal.id} value={sucursal.id} className="text-base py-3">
-                    <div>
-                      <span className="font-medium">{sucursal.nombre}</span>
-                      {sucursal.direccion && (
-                        <span className="text-muted-foreground"> - {sucursal.direccion}</span>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+      {/* Step Indicator */}
+      <StepIndicator
+        currentStep={step}
+        completedSteps={completedSteps}
+        onStepClick={handleStepClick}
+      />
 
-        {/* Frequent Products Section */}
-        {selectedClienteId && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Star className="h-5 w-5 text-amber-500" />
-                Productos Frecuentes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loadingFrecuentes ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {[1, 2, 3, 4].map(i => (
-                    <Skeleton key={i} className="h-24" />
-                  ))}
-                </div>
-              ) : productosFrecuentes.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Sin historial de pedidos para este cliente
-                </p>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {productosFrecuentes.map((producto) => {
-                    const yaEnCarrito = lineas.some(l => l.producto.id === producto.id);
-                    return (
-                      <div
-                        key={producto.id}
-                        className={`p-3 rounded-lg border transition-all cursor-pointer ${
-                          yaEnCarrito 
-                            ? 'bg-primary/10 border-primary' 
-                            : 'hover:bg-muted hover:border-primary/50'
-                        } ${producto.stock_actual <= 0 ? 'opacity-75' : ''}`}
-                        onClick={() => !yaEnCarrito && agregarProducto(producto)}
-                      >
-                        <p className="font-medium text-sm truncate mb-1">
-                          {getDisplayName(producto)}
-                        </p>
-                        <p className="text-lg font-bold text-primary mb-2">
-                          {formatCurrency(producto.precio_venta)}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <StockBadge producto={producto} />
-                          {yaEnCarrito && (
-                            <Badge variant="default" className="text-xs">
-                              ✓
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Product Search - All Products - Always Visible Table */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Todos los Productos
-              <Badge variant="outline" className="ml-2 text-xs">
-                {productosFiltrados.length} productos
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="Filtrar productos por nombre o código..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 h-12"
-              />
-            </div>
-
-            {/* Always Visible Product Table with Direct Quantity Input */}
-            <ScrollArea className="h-[500px] border rounded-lg">
-              <div className="p-2 space-y-1">
-                {productosFiltrados.map((producto) => {
-                  const lineaEnCarrito = lineas.find(l => l.producto.id === producto.id);
-                  const cantidadEnCarrito = lineaEnCarrito?.cantidad || 0;
-                  
-                  return (
-                    <div
-                      key={producto.id}
-                      className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
-                        cantidadEnCarrito > 0 
-                          ? 'bg-primary/10 border border-primary' 
-                          : 'hover:bg-muted border border-transparent'
-                      } ${producto.stock_actual <= 0 ? 'opacity-75' : ''}`}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">
-                          {getDisplayName(producto)}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <p className="text-xs text-muted-foreground">{producto.codigo}</p>
-                          <StockBadge producto={producto} />
-                        </div>
-                      </div>
-
-                      {/* Columna: Unidad (tipo de empaque) */}
-                      <div className="w-16 text-center hidden sm:block">
-                        <p className="text-xs text-muted-foreground capitalize">
-                          {producto.unidad || '-'}
-                        </p>
-                      </div>
-
-                      {/* Columna: Presentación (peso) */}
-                      <div className="w-16 text-center hidden sm:block">
-                        <p className="text-xs text-muted-foreground">
-                          {producto.peso_kg ? `${producto.peso_kg} kg` : '-'}
-                        </p>
-                      </div>
-                      
-                      <div className="flex items-center gap-3 ml-2">
-                        <div className="text-right">
-                          <p className="font-bold text-sm">{formatCurrency(producto.precio_venta)}</p>
-                          {(producto.descuento_maximo || 0) > 0 && (
-                            <p className="text-xs text-muted-foreground">
-                              -{formatCurrency(producto.descuento_maximo)} máx
-                            </p>
-                          )}
-                        </div>
-                        
-                        {/* Direct Quantity Input */}
-                        <div className="flex items-center gap-1">
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            className="h-8 w-8"
-                            onClick={() => {
-                              if (cantidadEnCarrito > 0) {
-                                actualizarCantidad(producto.id, cantidadEnCarrito - 1);
-                              }
-                            }}
-                            disabled={cantidadEnCarrito <= 0}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <Input
-                            type="number"
-                            min="0"
-                            className="h-8 w-16 text-center text-sm font-medium"
-                            value={cantidadEnCarrito || ""}
-                            placeholder="0"
-                            onChange={(e) => {
-                              const val = parseInt(e.target.value) || 0;
-                              if (val > 0 && cantidadEnCarrito === 0) {
-                                // Add new product to cart
-                                agregarProducto(producto);
-                                if (val > 1) {
-                                  setTimeout(() => actualizarCantidad(producto.id, val), 0);
-                                }
-                              } else if (val === 0 && cantidadEnCarrito > 0) {
-                                actualizarCantidad(producto.id, 0);
-                              } else if (val > 0) {
-                                actualizarCantidad(producto.id, val);
-                              }
-                            }}
-                          />
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            className="h-8 w-8"
-                            onClick={() => {
-                              if (cantidadEnCarrito === 0) {
-                                agregarProducto(producto);
-                              } else {
-                                actualizarCantidad(producto.id, cantidadEnCarrito + 1);
-                              }
-                            }}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                {productosFiltrados.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">No se encontraron productos</p>
-                )}
-                {productosFiltrados.length > 50 && (
-                  <p className="text-center text-muted-foreground py-2 text-sm border-t mt-2 pt-2">
-                    Mostrando 50 de {productosFiltrados.length} productos. Usa el filtro para encontrar más.
-                  </p>
-                )}
-              </div>
-            </ScrollArea>
-
-            {/* Cart with Discount Control */}
-            {lineas.length > 0 && (
-              <div className="space-y-3 pt-4 border-t">
-                <h4 className="font-medium text-base flex items-center gap-2">
-                  <ShoppingCart className="h-4 w-4" />
-                  Productos en el pedido ({lineas.length})
-                  {hasDraft && (
-                    <Badge variant="secondary" className="text-xs gap-1 ml-2">
-                      <FileEdit className="h-3 w-3" />
-                      Borrador
-                    </Badge>
-                  )}
-                </h4>
-                {lineas.map((linea) => {
-                  const descuentoMaximo = linea.producto.descuento_maximo || 0;
-                  const excedeLimite = linea.descuento > descuentoMaximo;
-                  const tieneDescuento = linea.descuento > 0;
-                  
-                  // Bultos/Kg calculations for precio_por_kilo products
-                  const esPorKilo = linea.producto.precio_por_kilo;
-                  const presentacionKg = linea.producto.peso_kg || 0;
-                  const kilosTotales = esPorKilo && presentacionKg > 0 ? linea.cantidad * presentacionKg : 0;
-                  
-                  return (
-                    <div 
-                      key={linea.producto.id} 
-                      className={`p-4 rounded-lg border ${
-                        excedeLimite && linea.autorizacionStatus !== 'aprobado' 
-                          ? 'border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700' 
-                          : 'bg-muted/50'
-                      }`}
-                    >
-                      {/* Product header */}
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">
-                            {linea.producto.nombre}
-                            {linea.producto.especificaciones && (
-                              <span className="text-muted-foreground font-normal ml-1">
-                                {linea.producto.especificaciones}
-                              </span>
-                            )}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <p className="text-xs text-muted-foreground">{linea.producto.codigo}</p>
-                            {linea.producto.marca && (
-                              <span className="text-xs text-muted-foreground">({linea.producto.marca})</span>
-                            )}
-                            <StockBadge producto={linea.producto} />
-                          </div>
-                        </div>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
-                          onClick={() => actualizarCantidad(linea.producto.id, 0)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      {/* Price and discount row */}
-                      <div className="grid grid-cols-2 gap-4 mb-3">
-                        {/* Discount control */}
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Percent className="h-3 w-3" />
-                            Descuento (máx: {formatCurrency(descuentoMaximo)})
-                          </Label>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              className="h-8 w-8"
-                              onClick={() => actualizarDescuento(linea.producto.id, Math.max(0, linea.descuento - 5))}
-                              disabled={linea.descuento <= 0}
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <Input
-                              type="number"
-                              className="h-8 w-20 text-center text-sm"
-                              value={linea.descuento}
-                              onChange={(e) => {
-                                const val = parseFloat(e.target.value) || 0;
-                                actualizarDescuento(linea.producto.id, Math.max(0, val));
-                              }}
-                            />
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              className="h-8 w-8"
-                              onClick={() => actualizarDescuento(linea.producto.id, linea.descuento + 5)}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Price display with unit label */}
-                        <div className="space-y-1 text-right">
-                          <Label className="text-xs text-muted-foreground">
-                            {esPorKilo ? "Precio/kg" : "Precio/pza"}
-                          </Label>
-                          <div>
-                            {tieneDescuento && (
-                              <span className="text-xs line-through text-muted-foreground mr-2">
-                                {formatCurrency(linea.precioLista)}
-                              </span>
-                            )}
-                            <span className={`font-bold ${tieneDescuento ? 'text-green-600' : ''}`}>
-                              {formatCurrency(linea.precioUnitario)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Quantity row with bultos label for precio_por_kilo */}
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">
-                            {esPorKilo ? `Bultos (${linea.producto.unidad || 'unidades'})` : "Cantidad"}
-                          </Label>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              className="h-8 w-8"
-                              onClick={() => actualizarCantidad(linea.producto.id, linea.cantidad - 1)}
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <Input
-                              className="w-14 h-8 text-center text-sm font-medium"
-                              value={linea.cantidad}
-                              onChange={(e) => {
-                                const val = parseInt(e.target.value) || 0;
-                                actualizarCantidad(linea.producto.id, val);
-                              }}
-                            />
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              className="h-8 w-8"
-                              onClick={() => actualizarCantidad(linea.producto.id, linea.cantidad + 1)}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                        <p className="font-bold text-lg">
-                          {formatCurrency(linea.subtotal)}
-                        </p>
-                      </div>
-
-                      {/* Kilos breakdown for precio_por_kilo products */}
-                      {esPorKilo && presentacionKg > 0 && (
-                        <div className="flex items-center justify-between text-sm bg-blue-50 dark:bg-blue-950/30 rounded-lg p-2 mt-3 border border-blue-200 dark:border-blue-800">
-                          <div className="flex items-center gap-2">
-                            <Package className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                            <span className="text-muted-foreground">
-                              {linea.cantidad} {linea.producto.unidad || 'bultos'} × {presentacionKg} kg
-                            </span>
-                          </div>
-                          <span className="font-semibold text-blue-700 dark:text-blue-400">
-                            = {kilosTotales.toLocaleString()} kg
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Authorization warning */}
-                      {excedeLimite && linea.autorizacionStatus !== 'aprobado' && (
-                        <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-700">
-                          <div className="flex items-start gap-2 mb-2">
-                            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                            <div className="text-sm">
-                              <p className="font-medium text-amber-700 dark:text-amber-400">
-                                Descuento excede el límite
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                Excedente: {formatCurrency(linea.descuento - descuentoMaximo)}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          {linea.autorizacionStatus === 'pendiente' ? (
-                            <Badge variant="outline" className="w-full justify-center py-1">
-                              <Clock className="h-3 w-3 mr-1" />
-                              Pendiente revisión de admin
-                            </Badge>
-                          ) : (
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="default"
-                                className="flex-1"
-                                onClick={() => handleSolicitarAutorizacion(linea)}
-                              >
-                                <Send className="h-3 w-3 mr-1" />
-                                Solicitar ahora
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="flex-1"
-                                onClick={() => marcarParaRevision(linea.producto.id)}
-                              >
-                                <Clock className="h-3 w-3 mr-1" />
-                                Dejar pendiente
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Approved badge */}
-                      {linea.autorizacionStatus === 'aprobado' && (
-                        <Badge variant="default" className="mt-2 w-full justify-center bg-green-600">
-                          <Lock className="h-3 w-3 mr-1" />
-                          Descuento autorizado
-                        </Badge>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Credit Term Selector - Plazo de crédito flexible */}
-        <div className="space-y-2">
-          <Label className="text-base flex items-center gap-2">
-            <CreditCard className="h-4 w-4" />
-            Plazo de crédito
-          </Label>
-          <Select value={terminoCredito} onValueChange={setTerminoCredito}>
-            <SelectTrigger className="h-14 text-lg">
-              <SelectValue placeholder="Seleccionar plazo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="contado" className="text-base py-3">
-                <div className="flex flex-col items-start">
-                  <span className="font-medium">Contado</span>
-                  <span className="text-xs text-muted-foreground">Pago al momento de la entrega</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="8_dias" className="text-base py-3">
-                <div className="flex flex-col items-start">
-                  <span className="font-medium">8 días</span>
-                  <span className="text-xs text-muted-foreground">Vence 8 días después de entrega</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="15_dias" className="text-base py-3">
-                <div className="flex flex-col items-start">
-                  <span className="font-medium">15 días</span>
-                  <span className="text-xs text-muted-foreground">Vence 15 días después de entrega</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="30_dias" className="text-base py-3">
-                <div className="flex flex-col items-start">
-                  <span className="font-medium">30 días</span>
-                  <span className="text-xs text-muted-foreground">Vence 30 días después de entrega</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="60_dias" className="text-base py-3">
-                <div className="flex flex-col items-start">
-                  <span className="font-medium">60 días</span>
-                  <span className="text-xs text-muted-foreground">Vence 60 días después de entrega</span>
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-          {selectedCliente && selectedCliente.termino_credito !== terminoCredito && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <span className="inline-block w-2 h-2 rounded-full bg-amber-500"></span>
-              Default del cliente: {selectedCliente.termino_credito === 'contado' ? 'Contado' : selectedCliente.termino_credito.replace('_', ' ')}
-            </p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            El plazo comenzará a contar a partir de la fecha de entrega del pedido
-          </p>
-        </div>
-
-        {/* Notes - Larger */}
-        <div className="space-y-2">
-          <Label className="text-base">Notas del pedido</Label>
-          <Textarea
-            placeholder="Instrucciones especiales de entrega, horarios, etc."
-            value={notas}
-            onChange={(e) => setNotas(e.target.value)}
-            rows={3}
-            className="text-base resize-none"
-          />
-        </div>
-
-        {/* Totals and Submit - Enhanced */}
-        {lineas.length > 0 && (
-          <Card className="bg-primary/5 border-primary/20">
-            <CardContent className="p-6">
-              {/* Resumen rápido */}
-              <div className="flex items-center justify-center gap-2 mb-4 text-sm text-muted-foreground bg-background/50 rounded-lg py-2">
-                <Package className="h-4 w-4" />
-                <span className="font-medium">{lineas.length} productos</span>
-                <span className="text-muted-foreground/50">·</span>
-                <span>{totales.totalUnidades} unidades</span>
-                <span className="text-muted-foreground/50">·</span>
-                <span className="font-semibold text-foreground">{totales.pesoTotalKg.toLocaleString()} kg</span>
-              </div>
-
-              {/* Desglose detallado */}
-              <div className="space-y-2 text-sm border-t pt-4">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subtotal (base):</span>
-                  <span className="font-medium">{formatCurrency(totales.subtotal)}</span>
-                </div>
-                
-                {totales.iva > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      IVA (16%) <span className="text-xs opacity-70">({totales.productosConIva} prod.)</span>
-                    </span>
-                    <span className="font-medium">{formatCurrency(totales.iva)}</span>
-                  </div>
-                )}
-                
-                {totales.ieps > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      IEPS (8%) <span className="text-xs opacity-70">({totales.productosConIeps} prod.)</span>
-                    </span>
-                    <span className="font-medium">{formatCurrency(totales.ieps)}</span>
-                  </div>
-                )}
-                
-                <div className="flex justify-between text-muted-foreground pt-1 border-t border-dashed">
-                  <span>Total impuestos:</span>
-                  <span>{formatCurrency(totales.impuestos)}</span>
-                </div>
-              </div>
-
-              {/* Ahorro por descuentos */}
-              {totales.ahorroDescuentos > 0 && (
-                <div className="flex items-center justify-between mt-4 p-2 bg-green-100 dark:bg-green-900/30 rounded-lg text-sm text-green-700 dark:text-green-400">
-                  <div className="flex items-center gap-2">
-                    <Tag className="h-4 w-4" />
-                    <span>Ahorro por descuentos:</span>
-                  </div>
-                  <span className="font-bold">-{formatCurrency(totales.ahorroDescuentos)}</span>
-                </div>
-              )}
-
-              {/* Total destacado */}
-              <div className="flex justify-between text-xl font-bold pt-4 mt-4 border-t-2">
-                <span>TOTAL:</span>
-                <span className="text-primary">{formatCurrency(totales.total)}</span>
-              </div>
-
-              {/* Alerta de peso */}
-              {totales.pesoTotalKg > 15500 && (
-                <div className="mt-4 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
-                  <Truck className="h-4 w-4 shrink-0 mt-0.5" />
-                  <span>
-                    Peso total ({totales.pesoTotalKg.toLocaleString()} kg) excede capacidad estándar. 
-                    Requiere vehículo especial o división de entrega.
-                  </span>
-                </div>
-              )}
-
-              {/* Advertencia de descuentos pendientes */}
-              {tieneDescuentosPendientes && (
-                <div className="mt-4 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                  <span>
-                    Hay productos con descuentos pendientes de autorización. Serán revisados por el administrador.
-                  </span>
-                </div>
-              )}
-
-              <Button 
-                onClick={handleSubmit} 
-                disabled={submitting} 
-                className="w-full h-14 text-lg font-semibold mt-6"
-                size="lg"
-              >
-                {submitting && <Loader2 className="h-5 w-5 mr-2 animate-spin" />}
-                Crear Pedido
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Solicitud Dialog */}
-        <SolicitudDescuentoDialog
-          open={solicitudDialogOpen}
-          onOpenChange={setSolicitudDialogOpen}
-          producto={productoParaSolicitud}
-          clienteId={selectedClienteId}
-          clienteNombre={selectedCliente?.nombre || ""}
-          sucursalId={selectedSucursalId || null}
-          onAprobado={handleAutorizacionAprobada}
-          onCancelar={() => setProductoParaSolicitud(null)}
-          carritoSnapshot={lineas.map(l => ({
-            productoId: l.producto.id,
-            productoNombre: l.producto.nombre,
-            productoCodigo: l.producto.codigo,
-            cantidad: l.cantidad,
-            precioUnitario: l.precioUnitario,
-            subtotal: l.subtotal,
-            tieneDescuentoPendiente: l.requiereAutorizacion,
-          }))}
-          totalPedidoEstimado={totales.total}
+      {/* Step Content */}
+      {step === 1 && (
+        <PasoCliente
+          clientes={clientes}
+          sucursales={sucursales}
+          selectedClienteId={selectedClienteId}
+          selectedSucursalId={selectedSucursalId}
+          loading={loadingSucursales}
+          onClienteChange={setSelectedClienteId}
+          onSucursalChange={setSelectedSucursalId}
+          onNext={handleNextStep}
         />
+      )}
 
-        {/* Dialog de Confirmación de Pedido Creado */}
-        <Dialog open={!!pedidoCreado} onOpenChange={() => setPedidoCreado(null)}>
-          <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md overflow-x-hidden">
-            <div className="flex flex-col items-center gap-4 py-4 text-center">
-              <div className="rounded-full bg-green-100 dark:bg-green-900/30 p-4">
-                <CheckCircle2 className="h-12 w-12 text-green-600 dark:text-green-400" />
-              </div>
-              
-              <DialogTitle className="text-2xl">¡Pedido Creado!</DialogTitle>
-              
-              <div className="space-y-2">
-                <p className="text-3xl font-bold text-primary">
-                  {pedidoCreado?.folio}
-                </p>
-                <p className="text-muted-foreground">
-                  {pedidoCreado?.cliente}
-                </p>
-                <p className="text-xl font-semibold">
-                  {formatCurrency(pedidoCreado?.total || 0)}
-                </p>
-              </div>
+      {step === 2 && (
+        <PasoProductos
+          productos={productos}
+          productosFrecuentes={productosFrecuentes}
+          lineas={lineas}
+          loadingFrecuentes={loadingFrecuentes}
+          onAgregarProducto={agregarProducto}
+          onActualizarCantidad={actualizarCantidad}
+          onActualizarDescuento={actualizarDescuento}
+          onSolicitarAutorizacion={handleSolicitarAutorizacion}
+          onMarcarParaRevision={marcarParaRevision}
+          totales={totales}
+          onNext={handleNextStep}
+          onBack={handlePrevStep}
+        />
+      )}
+
+      {step === 3 && (
+        <PasoCredito
+          terminoCredito={terminoCredito}
+          notas={notas}
+          clienteDefaultCredito={selectedCliente?.termino_credito || "contado"}
+          totales={totales}
+          onTerminoCreditoChange={setTerminoCredito}
+          onNotasChange={setNotas}
+          onNext={handleNextStep}
+          onBack={handlePrevStep}
+        />
+      )}
+
+      {step === 4 && (
+        <PasoConfirmar
+          cliente={selectedCliente}
+          sucursal={selectedSucursal}
+          lineas={lineas}
+          terminoCredito={terminoCredito}
+          notas={notas}
+          totales={totales}
+          submitting={submitting}
+          onSubmit={handleSubmit}
+          onBack={handlePrevStep}
+        />
+      )}
+
+      {/* Discount Authorization Dialog */}
+      <SolicitudDescuentoDialog
+        open={solicitudDialogOpen}
+        onOpenChange={setSolicitudDialogOpen}
+        producto={productoParaSolicitud}
+        clienteId={selectedClienteId}
+        clienteNombre={selectedCliente?.nombre || ""}
+        onAprobado={(productoId, precioAprobado) => {
+          handleAutorizacionAprobada(productoId, precioAprobado);
+          setSolicitudDialogOpen(false);
+        }}
+      />
+
+      {/* Success Dialog */}
+      <Dialog open={!!pedidoCreado} onOpenChange={() => setPedidoCreado(null)}>
+        <DialogContent className="text-center">
+          <div className="flex flex-col items-center gap-4 py-4">
+            <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+              <CheckCircle2 className="h-10 w-10 text-green-600" />
             </div>
-            
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button 
-                variant="outline" 
-                className="w-full sm:w-auto"
-                onClick={() => setPedidoCreado(null)}
-              >
-                Crear Otro Pedido
-              </Button>
-              <Button 
-                className="w-full sm:w-auto"
-                onClick={() => {
-                  setPedidoCreado(null);
-                  onNavigateToVentas?.();
-                }}
-              >
-                Ver Mis Ventas
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </TooltipProvider>
+            <DialogTitle className="text-2xl">¡Pedido Creado!</DialogTitle>
+            <div className="space-y-1">
+              <p className="text-lg font-semibold">{pedidoCreado?.folio}</p>
+              <p className="text-muted-foreground">{pedidoCreado?.cliente}</p>
+              <p className="text-2xl font-bold text-primary">{formatCurrency(pedidoCreado?.total || 0)}</p>
+            </div>
+          </div>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button onClick={() => { setPedidoCreado(null); onNavigateToVentas?.(); }} className="w-full">
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Ver mis pedidos
+            </Button>
+            <Button variant="outline" onClick={() => setPedidoCreado(null)} className="w-full">
+              Crear otro pedido
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
