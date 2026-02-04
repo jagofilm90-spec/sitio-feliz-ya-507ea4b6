@@ -1,113 +1,107 @@
 
-# Plan: Corrección de Sistema de Autorizaciones y Push Notifications
 
-## Problemas Identificados
+# Plan: Corregir Flujo de Registro de Push Notifications
 
-### 1. Navegación Incorrecta desde Dashboard
-La tarjeta de "Autorizaciones" en el Dashboard navega a `/pedidos` pero no activa la pestaña correcta ni incluye las solicitudes de descuento.
+## Problema Identificado
 
-### 2. Tab "Por Autorizar" Incompleto
-La pestaña muestra solo pedidos con status `por_autorizar`, pero las solicitudes de descuento (que son las 3 que ves) están en una tabla diferente y solo se muestran en el Dashboard, no en la página de Pedidos.
+El diálogo de "Activar Notificaciones" aparece en la pantalla de login (ANTES de autenticarse). Cuando el usuario da clic en "Activar", el token FCM no se puede guardar porque no hay usuario autenticado.
 
-### 3. Push Notifications
-El fix de `roles: ['admin']` ya fue aplicado. La última solicitud (01:30:52) se envió correctamente. Las 2 anteriores fallaron por el bug de mayúsculas.
+```
+Estado Actual (Incorrecto):
++------------------+     +----------------------+     +------------------+
+| Pantalla Login   | --> | Diálogo Activar      | --> | saveDeviceToken  |
+| (sin sesión)     |     | Notificaciones       |     | FALLA: !user     |
++------------------+     +----------------------+     +------------------+
+                                                            |
+                                                            v
+                                                      Token perdido
+```
 
 ---
 
-## Solución Técnica
+## Solución
 
-### Cambio 1: Integrar SolicitudesDescuentoPanel en la Página de Pedidos
+### Cambio 1: Verificar Sesión Antes de Mostrar Diálogo
 
-Agregar el `SolicitudesDescuentoPanel` dentro de la pestaña "Por Autorizar" para que muestre AMBOS: pedidos por autorizar Y solicitudes de descuento.
+Modificar `PushNotificationSetup.tsx` para que solo muestre el diálogo si hay usuario autenticado.
 
-**Archivo**: `src/pages/Pedidos.tsx`
-
-```typescript
-// Agregar import
-import { SolicitudesDescuentoPanel } from "@/components/admin/SolicitudesDescuentoPanel";
-
-// En TabsContent "por-autorizar", combinar ambos paneles:
-<TabsContent value="por-autorizar" className="mt-6 space-y-6">
-  <SolicitudesDescuentoPanel />
-  <PedidosPorAutorizarTab />
-</TabsContent>
-```
-
-### Cambio 2: Corregir Navegación del Dashboard
-
-Modificar el `onClick` de Autorizaciones para navegar correctamente con el parámetro de tab.
-
-**Archivo**: `src/components/dashboard/EstadoOperacionesMobile.tsx` (línea 60)
+**Archivo**: `src/components/PushNotificationSetup.tsx`
 
 ```typescript
-// Cambiar de:
-onClick: () => navigate("/pedidos"),
+// AGREGAR: import de supabase
+import { supabase } from '@/integrations/supabase/client';
 
-// A:
-onClick: () => navigate("/pedidos?tab=por-autorizar"),
-```
-
-**Archivo**: `src/components/dashboard/EstadoOperacionesPanel.tsx`
-
-```typescript
-// Aplicar el mismo cambio en el panel de desktop
-```
-
-### Cambio 3: Leer Parámetro de Tab en URL
-
-Modificar la página de Pedidos para leer el tab desde la URL.
-
-**Archivo**: `src/pages/Pedidos.tsx`
-
-```typescript
-import { useSearchParams } from "react-router-dom";
-
-// Dentro del componente:
-const [searchParams] = useSearchParams();
-const tabFromUrl = searchParams.get("tab");
-
-// Cambiar estado inicial:
-const [activeTab, setActiveTab] = useState(tabFromUrl || "pedidos");
-
-// Actualizar cuando cambie la URL:
+// MODIFICAR: useEffect para verificar sesión
 useEffect(() => {
-  if (tabFromUrl) {
-    setActiveTab(tabFromUrl);
-  }
-}, [tabFromUrl]);
+  const checkPermissions = async () => {
+    if (!isNativePlatform()) {
+      setHasPermission(null);
+      return;
+    }
+
+    // NUEVO: Verificar que hay usuario autenticado
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      // No mostrar diálogo si no hay sesión
+      return;
+    }
+
+    const permitted = await checkNotificationPermissions();
+    setHasPermission(permitted);
+
+    if (!permitted) {
+      const hasSeenPrompt = localStorage.getItem('push_notification_prompt_seen');
+      if (!hasSeenPrompt) {
+        setTimeout(() => setShowDialog(true), 2000);
+      }
+    }
+  };
+
+  checkPermissions();
+  
+  // NUEVO: Escuchar cambios de autenticación
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        // Re-verificar permisos cuando el usuario inicia sesión
+        checkPermissions();
+      }
+    }
+  );
+
+  return () => subscription.unsubscribe();
+}, []);
 ```
 
-### Cambio 4: Verificar Token del Dispositivo (Diagnóstico)
+### Cambio 2: Limpiar Flag al Cerrar Sesión (Opcional)
 
-Para las push notifications, verificar si tu dispositivo tiene token registrado.
+Para que el diálogo vuelva a aparecer en la próxima sesión si el usuario no activó antes.
 
-```sql
--- Verificar tokens de admin en la base de datos
-SELECT dt.user_id, dt.platform, dt.created_at, p.full_name, ur.role
-FROM device_tokens dt
-JOIN profiles p ON dt.user_id = p.id
-JOIN user_roles ur ON dt.user_id = ur.user_id
-WHERE ur.role = 'admin'
-ORDER BY dt.created_at DESC;
+**Archivo**: `src/services/pushNotifications.ts` en función `removeDeviceToken`
+
+```typescript
+export const removeDeviceToken = async (): Promise<void> => {
+  // ... código existente ...
+  
+  // AGREGAR: Limpiar flag para que se pregunte de nuevo
+  localStorage.removeItem('push_notification_prompt_seen');
+};
 ```
 
 ---
 
 ## Flujo Corregido
 
-```text
-Dashboard                    Pagina Pedidos
-+------------------+         +---------------------------+
-| Autorizaciones   |         | Tab: Por Autorizar        |
-| - Descuentos: 3  | ------> | +-----------------------+ |
-| - Cotiz: 0       |         | | SolicitudesDescuento  | |
-| - OC: 0          |         | | Panel (3 pendientes)  | |
-|                  |         | +-----------------------+ |
-| [Ver más]        |         | +-----------------------+ |
-+------------------+         | | PedidosPorAutorizarTab| |
-                             | | (pedidos por_autorizar)| |
-                             | +-----------------------+ |
-                             +---------------------------+
+```
+Flujo Corregido:
++------------------+     +------------------+     +----------------------+     +------------------+
+| Pantalla Login   | --> | Usuario Inicia   | --> | Diálogo Activar      | --> | saveDeviceToken  |
+|                  |     | Sesión           |     | Notificaciones       |     | EXITO: user.id   |
++------------------+     +------------------+     +----------------------+     +------------------+
+                                                                                      |
+                                                                                      v
+                                                                               Token guardado
+                                                                               en device_tokens
 ```
 
 ---
@@ -116,29 +110,23 @@ Dashboard                    Pagina Pedidos
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/pages/Pedidos.tsx` | Integrar SolicitudesDescuentoPanel + leer tab desde URL |
-| `src/components/dashboard/EstadoOperacionesMobile.tsx` | Corregir navegación a `/pedidos?tab=por-autorizar` |
-| `src/components/dashboard/EstadoOperacionesPanel.tsx` | Mismo cambio de navegación |
+| `src/components/PushNotificationSetup.tsx` | Verificar sesión antes de mostrar diálogo + escuchar auth changes |
+| `src/services/pushNotifications.ts` | Limpiar flag al cerrar sesión (opcional) |
 
 ---
 
-## Notas sobre Push Notifications
+## Prueba Después de la Corrección
 
-El fix de `roles: ['admin']` ya fue aplicado. Para la próxima solicitud que hagas, debería enviarse correctamente. 
-
-Si aún no recibes notificaciones push con el teléfono bloqueado, puede ser por:
-1. El token del dispositivo no está registrado en la base de datos
-2. Configuración de notificaciones de la app en el dispositivo (revisar permisos)
-3. Modo "No molestar" activado
-4. La app no tiene configurado Firebase correctamente (requiere `FIREBASE_SERVICE_ACCOUNT` secret)
-
-Puedo verificar el estado del registro de tu dispositivo si me lo indicas.
+1. Cerrar la app completamente
+2. Abrir la app (estarás en pantalla de login - NO debería aparecer el diálogo)
+3. Iniciar sesión con tu cuenta admin
+4. El diálogo debería aparecer 2 segundos después del login
+5. Dar clic en "Activar Notificaciones"
+6. Verificar en la base de datos que el token se guardó
 
 ---
 
-## Resultado Esperado
+## Beneficio Adicional
 
-1. Al dar clic en "Ver más" en Autorizaciones del Dashboard -> Te lleva directamente a la pestaña "Por Autorizar" en Pedidos
-2. En esa pestaña verás las 3 solicitudes de descuento pendientes + cualquier pedido que requiera autorización de precio
-3. Podrás aprobar/rechazar desde ahí
-4. Las notificaciones push llegarán correctamente (con el fix ya aplicado)
+Una vez que esto funcione, las próximas solicitudes de descuento que hagan los vendedores llegarán como push notification a tu dispositivo, incluso con la pantalla bloqueada.
+
