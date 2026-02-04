@@ -166,6 +166,9 @@ export const removeDeviceToken = async (): Promise<void> => {
       .eq('user_id', user.id)
       .eq('platform', platform);
 
+    // Limpiar flag para que se pregunte de nuevo en próximo login
+    localStorage.removeItem('push_notification_prompt_seen');
+
     console.log('Token eliminado');
   } catch (error) {
     console.error('Error eliminando token:', error);
