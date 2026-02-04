@@ -249,7 +249,7 @@ export function useSolicitudesDescuento(options: UseSolicitudesDescuentoOptions 
     try {
       await supabase.functions.invoke('send-push-notification', {
         body: {
-          roles: ['Admin'],
+          roles: ['admin'],
           title: '🔔 Autoriza precio',
           body: `${vendedor_nombre || 'Vendedor'} solicita descuento para ${producto_nombre || 'producto'}`,
           data: {
