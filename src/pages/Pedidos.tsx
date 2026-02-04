@@ -11,7 +11,7 @@
  * ==========================================================
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Layout from "@/components/Layout";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
@@ -47,10 +47,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Eye, ShoppingCart, FileText, Link2, Printer, Receipt, Send, CheckCircle2, Clock, BarChart3, Trash2, AlertCircle, FileCheck, CalendarDays } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import CotizacionesTab from "@/components/cotizaciones/CotizacionesTab";
 import CotizacionesAnalyticsTab from "@/components/cotizaciones/CotizacionesAnalyticsTab";
 import { PedidosPorAutorizarTab } from "@/components/pedidos/PedidosPorAutorizarTab";
+import { SolicitudesDescuentoPanel } from "@/components/admin/SolicitudesDescuentoPanel";
 import { CalendarioPedidosTab } from "@/components/pedidos/CalendarioPedidosTab";
 import CotizacionDetalleDialog from "@/components/cotizaciones/CotizacionDetalleDialog";
 import { ImprimirRemisionDialog } from "@/components/remisiones/ImprimirRemisionDialog";
@@ -81,10 +82,13 @@ interface PedidoConCotizacion {
 
 const PedidosContent = () => {
   const isMobile = useIsMobile();
+  const [searchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  
   const [pedidos, setPedidos] = useState<PedidoConCotizacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("pedidos");
+  const [activeTab, setActiveTab] = useState(tabFromUrl || "pedidos");
   const [selectedCotizacionId, setSelectedCotizacionId] = useState<string | null>(null);
   const [remisionDialogOpen, setRemisionDialogOpen] = useState(false);
   const [selectedPedidoData, setSelectedPedidoData] = useState<any>(null);
@@ -100,6 +104,13 @@ const PedidosContent = () => {
   const [selectedPedidoForFactura, setSelectedPedidoForFactura] = useState<PedidoConCotizacion | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Sync tab state with URL parameter
+  useEffect(() => {
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
 
   useEffect(() => {
     loadPedidos();
@@ -919,7 +930,8 @@ const PedidosContent = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="por-autorizar" className="mt-6">
+          <TabsContent value="por-autorizar" className="mt-6 space-y-6">
+            <SolicitudesDescuentoPanel />
             <PedidosPorAutorizarTab />
           </TabsContent>
 
