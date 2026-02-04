@@ -57,7 +57,7 @@ export const EstadoOperacionesMobile = () => {
       color: 'amber',
       badge: autorizaciones.total > 0 ? autorizaciones.total : null,
       badgePulse: true,
-      onClick: () => navigate("/pedidos"),
+      onClick: () => navigate("/pedidos?tab=por-autorizar"),
       content: (
         <div className="space-y-1.5 text-xs">
           {autorizaciones.descuentos > 0 && (

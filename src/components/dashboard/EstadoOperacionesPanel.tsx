@@ -120,7 +120,7 @@ export const EstadoOperacionesPanel = () => {
                   variant="ghost" 
                   size="sm" 
                   className="w-full mt-3 text-amber-600 hover:text-amber-700"
-                  onClick={() => navigate("/pedidos")}
+                  onClick={() => navigate("/pedidos?tab=por-autorizar")}
                 >
                   Ver pendientes <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
