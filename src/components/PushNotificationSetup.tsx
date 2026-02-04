@@ -15,6 +15,7 @@ import {
   isNativePlatform, 
   checkNotificationPermissions 
 } from '@/services/pushNotifications';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PushNotificationSetupProps {
   onComplete?: () => void;
@@ -33,6 +34,13 @@ export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps
         return;
       }
 
+      // Verificar que hay usuario autenticado antes de mostrar diálogo
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        // No mostrar diálogo si no hay sesión activa
+        return;
+      }
+
       const permitted = await checkNotificationPermissions();
       setHasPermission(permitted);
 
@@ -46,6 +54,18 @@ export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps
     };
 
     checkPermissions();
+
+    // Escuchar cambios de autenticación para mostrar diálogo post-login
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          // Re-verificar permisos cuando el usuario inicia sesión
+          setTimeout(() => checkPermissions(), 500);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleEnableNotifications = async () => {
