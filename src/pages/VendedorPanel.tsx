@@ -19,7 +19,7 @@ import { VendedorListaPreciosTab } from "@/components/vendedor/VendedorListaPrec
 import { VendedorNovedadesTab } from "@/components/vendedor/VendedorNovedadesTab";
 import { VendedorSidebar } from "@/components/vendedor/VendedorSidebar";
 import { VendedorBienvenidaDialog } from "@/components/vendedor/VendedorBienvenidaDialog";
-import PushNotificationSetup from "@/components/PushNotificationSetup";
+// PushNotificationSetup removed - now handled centrally by PushNotificationsGate in App.tsx
 import logoBlanco from "@/assets/logos/logo-blanco.png";
 
 export default function VendedorPanel() {
@@ -220,7 +220,7 @@ export default function VendedorPanel() {
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen bg-background flex flex-col lg:flex-row w-full">
-        <PushNotificationSetup />
+        {/* PushNotificationSetup removed - handled by PushNotificationsGate */}
         
         {/* Dialog de Bienvenida */}
         <VendedorBienvenidaDialog
