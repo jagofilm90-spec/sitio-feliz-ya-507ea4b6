@@ -16,7 +16,7 @@ import { Truck, MapPin, Package, User, LogOut, Navigation } from "lucide-react";
 import { EntregaCard } from "@/components/chofer/EntregaCard";
 import { ResumenRuta } from "@/components/chofer/ResumenRuta";
 import { GpsTrackingIndicator } from "@/components/rutas/GpsTrackingIndicator";
-import PushNotificationSetup from "@/components/PushNotificationSetup";
+// PushNotificationSetup removed - now handled centrally by PushNotificationsGate in App.tsx
 import { LiveIndicator } from "@/components/ui/live-indicator";
 import { AvatarEmpleadoPopover } from "@/components/almacen/AvatarEmpleadoPopover";
 import { LocationPermissionRequest } from "@/components/chofer/LocationPermissionRequest";
@@ -153,7 +153,7 @@ export default function ChoferPanel() {
 
   return (
     <div className="min-h-screen bg-background">
-      <PushNotificationSetup />
+      {/* PushNotificationSetup removed - handled by PushNotificationsGate */}
       <header className="sticky top-0 z-50 bg-primary text-primary-foreground p-4 shadow-lg">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <div className="flex items-center justify-between">

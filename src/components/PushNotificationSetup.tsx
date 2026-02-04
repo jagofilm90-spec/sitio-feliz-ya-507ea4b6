@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Bell, BellOff, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,70 +21,88 @@ interface PushNotificationSetupProps {
   onComplete?: () => void;
 }
 
+/**
+ * Dialog component for requesting push notification permissions.
+ * 
+ * IMPORTANT: This component should be controlled by PushNotificationsGate
+ * which handles all the route and auth checks. This component now only
+ * manages the dialog UI and permission request flow.
+ */
 export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps) => {
   const [showDialog, setShowDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const { toast } = useToast();
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    const checkPermissions = async () => {
+    mountedRef.current = true;
+    
+    const checkAndShowDialog = async () => {
+      // Skip if not native platform
       if (!isNativePlatform()) {
-        setHasPermission(null);
         return;
       }
 
-      // IMPORTANTE: No mostrar diálogo si estamos en la página de login
+      // STRICT CHECK: Block on auth routes using startsWith
       const currentPath = window.location.pathname;
-      if (currentPath === '/auth' || currentPath === '/login' || currentPath === '/') {
-        // Verificar si hay sesión real antes de continuar
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user?.id) {
-          console.log('PushNotificationSetup: No hay sesión activa, saltando diálogo');
-          return;
-        }
+      if (
+        currentPath === '/' ||
+        currentPath.startsWith('/auth') ||
+        currentPath.startsWith('/login')
+      ) {
+        console.log('[PushSetup] Blocked: on auth route', currentPath);
+        return;
       }
 
-      // Verificar que hay usuario autenticado antes de mostrar diálogo
+      // Verify session exists with valid user
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) {
-        // No mostrar diálogo si no hay sesión activa con usuario válido
-        console.log('PushNotificationSetup: No hay usuario autenticado');
+        console.log('[PushSetup] Blocked: no valid session');
         return;
       }
 
+      // Check if already has permissions
       const permitted = await checkNotificationPermissions();
+      if (!mountedRef.current) return;
+      
       setHasPermission(permitted);
 
-      // Si no tiene permisos, mostrar diálogo después de un breve delay
-      if (!permitted) {
-        const hasSeenPrompt = localStorage.getItem('push_notification_prompt_seen');
-        if (!hasSeenPrompt) {
-          console.log('PushNotificationSetup: Mostrando diálogo post-auth');
-          setTimeout(() => setShowDialog(true), 2000);
-        }
+      if (permitted) {
+        console.log('[PushSetup] Already has permission');
+        return;
       }
+
+      // Check if user already dismissed
+      const hasSeenPrompt = localStorage.getItem('push_notification_prompt_seen');
+      if (hasSeenPrompt) {
+        console.log('[PushSetup] User already dismissed prompt');
+        return;
+      }
+
+      // Show dialog after delay (only if still mounted)
+      console.log('[PushSetup] Scheduling dialog display');
+      timeoutRef.current = setTimeout(() => {
+        if (mountedRef.current) {
+          console.log('[PushSetup] Showing dialog');
+          setShowDialog(true);
+        }
+      }, 1500);
     };
 
-    // Delay inicial para permitir que auth se estabilice
-    const initialTimeout = setTimeout(() => {
-      checkPermissions();
-    }, 1000);
-
-    // Escuchar cambios de autenticación para mostrar diálogo post-login
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user?.id) {
-          // Re-verificar permisos cuando el usuario inicia sesión
-          console.log('PushNotificationSetup: Usuario inició sesión, verificando permisos');
-          setTimeout(() => checkPermissions(), 2000);
-        }
-      }
-    );
+    // Small initial delay for stability
+    const initialDelay = setTimeout(() => {
+      checkAndShowDialog();
+    }, 500);
 
     return () => {
-      clearTimeout(initialTimeout);
-      subscription.unsubscribe();
+      mountedRef.current = false;
+      clearTimeout(initialDelay);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
     };
   }, []);
 

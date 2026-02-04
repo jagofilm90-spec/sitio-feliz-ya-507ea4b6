@@ -41,10 +41,9 @@ import TestFirma from "./pages/TestFirma";
 import Precios from "./pages/Precios";
 import Configuracion from "./pages/Configuracion";
 
-import PushNotificationSetup from "./components/PushNotificationSetup";
+import PushNotificationsGate from "./components/PushNotificationsGate";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { initPushNotifications, isNativePlatform } from "./services/pushNotifications";
-import { supabase } from "./integrations/supabase/client";
+import { isNativePlatform } from "./services/pushNotifications";
 
 const queryClient = new QueryClient();
 
@@ -100,36 +99,8 @@ const AccessibilityPreferencesApplicator = () => {
   return null;
 };
 
-// Componente interno para manejar la inicialización de push notifications
-const PushNotificationInitializer = () => {
-  useEffect(() => {
-    const initPush = async () => {
-      // Solo inicializar si estamos en plataforma nativa
-      if (!isNativePlatform()) return;
-
-      // Esperar a que haya una sesión activa
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        await initPushNotifications();
-      }
-    };
-
-    initPush();
-
-    // Escuchar cambios de autenticación
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        await initPushNotifications();
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  return <PushNotificationSetup />;
-};
+// PushNotificationInitializer removed - logic moved to PushNotificationsGate
+// which is rendered inside BrowserRouter for proper route detection
 
 const App = () => (
   <ErrorBoundary>
@@ -139,8 +110,9 @@ const App = () => (
           <Toaster />
           <Sonner />
           <AccessibilityPreferencesApplicator />
-          <PushNotificationInitializer />
           <BrowserRouter>
+            {/* PushNotificationsGate must be inside BrowserRouter to use useLocation */}
+            <PushNotificationsGate />
             <Routes>
               <Route path="/" element={<Navigate to="/auth" replace />} />
               <Route path="/auth" element={<Auth />} />
