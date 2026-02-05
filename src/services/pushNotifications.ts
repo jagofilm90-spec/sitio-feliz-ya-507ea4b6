@@ -3,6 +3,48 @@ import { Capacitor } from '@capacitor/core';
 import { FCM } from '@capacitor-community/fcm';
 import { supabase } from '@/integrations/supabase/client';
 
+// Helper function for delays
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Validate if token is a raw APNs token (hexadecimal, 64 chars)
+// APNs tokens should NOT be saved - we need the FCM token
+const isApnsToken = (token: string): boolean => {
+  return /^[0-9A-Fa-f]{64}$/.test(token);
+};
+
+// Get FCM token with retries and validation
+const getFcmTokenWithRetry = async (maxRetries: number = 3): Promise<string | null> => {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      // Wait before attempting (exponential backoff)
+      const waitTime = 1000 * Math.pow(2, attempt); // 1s, 2s, 4s
+      console.log(`[Push] Attempt ${attempt + 1}/${maxRetries}: waiting ${waitTime}ms before getting FCM token`);
+      await delay(waitTime);
+      
+      const fcmToken = await FCM.getToken();
+      
+      if (!fcmToken.token) {
+        console.log(`[Push] Attempt ${attempt + 1}: FCM returned empty token`);
+        continue;
+      }
+      
+      // Validate it's not a raw APNs token
+      if (isApnsToken(fcmToken.token)) {
+        console.log(`[Push] Attempt ${attempt + 1}: Got APNs token instead of FCM, retrying...`);
+        continue;
+      }
+      
+      console.log(`[Push] Successfully got FCM token on attempt ${attempt + 1}`);
+      return fcmToken.token;
+    } catch (error) {
+      console.error(`[Push] Attempt ${attempt + 1} failed:`, error);
+    }
+  }
+  
+  console.error('[Push] Failed to get valid FCM token after all retries');
+  return null;
+};
+
 // Verificar si estamos en plataforma nativa
 export const isNativePlatform = () => Capacitor.isNativePlatform();
 
@@ -22,23 +64,31 @@ const setupPushListeners = () => {
   // Cuando se recibe el token de registro
   PushNotifications.addListener('registration', async (token: Token) => {
     console.log('[Push] Registration event received');
+    console.log('[Push] Raw registration token:', token.value?.substring(0, 30) + '...');
     
     // En iOS, necesitamos obtener el token FCM (no el APNs crudo)
     if (Capacitor.getPlatform() === 'ios') {
-      try {
-        const fcmToken = await FCM.getToken();
-        console.log('[Push] FCM Token (iOS):', fcmToken.token);
-        await saveDeviceToken(fcmToken.token);
-      } catch (e) {
-        console.error('[Push] Error getting FCM token on iOS:', e);
-        // Fallback: intentar guardar el token APNs de todas formas
-        console.log('[Push] Fallback: saving APNs token');
-        await saveDeviceToken(token.value);
+      console.log('[Push] iOS detected - will get FCM token with retries');
+      
+      const fcmToken = await getFcmTokenWithRetry(3);
+      
+      if (fcmToken) {
+        console.log('[Push] FCM Token (iOS):', fcmToken.substring(0, 30) + '...');
+        await saveDeviceToken(fcmToken);
+      } else {
+        console.error('[Push] Could not obtain valid FCM token for iOS');
+        // Do NOT save APNs token as fallback - it won't work with FCM
       }
     } else {
       // Android ya retorna FCM token directamente
-      console.log('[Push] FCM Token (Android):', token.value);
-      await saveDeviceToken(token.value);
+      console.log('[Push] FCM Token (Android):', token.value?.substring(0, 30) + '...');
+      
+      // Validate even Android tokens
+      if (token.value && !isApnsToken(token.value)) {
+        await saveDeviceToken(token.value);
+      } else {
+        console.error('[Push] Invalid token format on Android');
+      }
     }
   });
 
