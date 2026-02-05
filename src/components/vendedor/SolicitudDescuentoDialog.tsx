@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -60,6 +62,22 @@ export function SolicitudDescuentoDialog({
   const { crearSolicitud } = useSolicitudesDescuento({ enableRealtime: false });
   const { status, precioAprobado, loading: loadingStatus } = useSolicitudStatus(solicitudId);
 
+  // Get current vendor name for push notification
+  const { data: currentUserProfile } = useQuery({
+    queryKey: ["current-user-profile-for-solicitud"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+      return data;
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
   // Watch for status changes
   if (solicitudId && status && status !== "pendiente") {
     if (status === "aprobado" && precioAprobado && producto) {
@@ -97,6 +115,7 @@ export function SolicitudDescuentoDialog({
         cantidad_solicitada: producto.cantidad,
         motivo: motivo || undefined,
         producto_nombre: producto.nombre,
+        vendedor_nombre: currentUserProfile?.full_name || "Vendedor",
         // Include cart context for admin
         carrito_snapshot: carritoSnapshot,
         total_pedido_estimado: totalPedidoEstimado,

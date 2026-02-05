@@ -193,6 +193,9 @@ const handleNotificationTap = (action: ActionPerformed) => {
     case 'cotizacion_pendiente':
       window.location.href = '/pedidos?tab=cotizaciones';
       break;
+    case 'solicitud_descuento':
+      window.location.href = '/pedidos?tab=por-autorizar';
+      break;
     case 'carga_completa':
     case 'ruta_asignada':
     case 'ruta_modificada':
