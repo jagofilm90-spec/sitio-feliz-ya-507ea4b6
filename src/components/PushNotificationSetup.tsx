@@ -10,10 +10,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { initPushNotifications } from '@/services/pushNotifications';
+import { requestPushPermissionsAndRegister } from '@/services/pushNotifications';
 
 interface PushNotificationSetupProps {
-  onComplete?: () => void;
+  onComplete?: (result: { enabled: boolean }) => void;
 }
 
 /**
@@ -22,6 +22,8 @@ interface PushNotificationSetupProps {
  * IMPORTANT: This component is purely controlled by PushNotificationsGate.
  * It has NO internal logic for route/auth detection - the Gate handles all of that.
  * When this component mounts, the dialog opens immediately.
+ * 
+ * The iOS system prompt will ONLY appear when the user clicks "Activar Notificaciones".
  */
 export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -31,19 +33,24 @@ export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps
     setIsLoading(true);
     
     try {
-      const success = await initPushNotifications();
+      // This is the ONLY place where the iOS permission prompt is triggered
+      const success = await requestPushPermissionsAndRegister();
       
       if (success) {
         toast({
           title: 'Notificaciones activadas',
           description: 'Recibirás alertas de nuevos pedidos y actualizaciones importantes.',
         });
+        localStorage.setItem('push_notification_prompt_seen', 'true');
+        onComplete?.({ enabled: true });
       } else {
         toast({
           title: 'No se pudieron activar',
           description: 'Por favor habilita las notificaciones en la configuración de tu dispositivo.',
           variant: 'destructive',
         });
+        localStorage.setItem('push_notification_prompt_seen', 'true');
+        onComplete?.({ enabled: false });
       }
     } catch (error) {
       console.error('Error activando notificaciones:', error);
@@ -52,16 +59,16 @@ export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps
         description: 'Ocurrió un error al activar las notificaciones.',
         variant: 'destructive',
       });
+      localStorage.setItem('push_notification_prompt_seen', 'true');
+      onComplete?.({ enabled: false });
     } finally {
       setIsLoading(false);
-      localStorage.setItem('push_notification_prompt_seen', 'true');
-      onComplete?.();
     }
   };
 
   const handleSkip = () => {
     localStorage.setItem('push_notification_prompt_seen', 'true');
-    onComplete?.();
+    onComplete?.({ enabled: false });
   };
 
   const handleOpenChange = (open: boolean) => {

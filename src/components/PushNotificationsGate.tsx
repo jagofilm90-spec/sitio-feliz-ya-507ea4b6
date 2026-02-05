@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { isNativePlatform, checkNotificationPermissions, initPushNotifications } from '@/services/pushNotifications';
+import { isNativePlatform, checkNotificationPermissions, registerPushNotificationsSilently } from '@/services/pushNotifications';
 import PushNotificationSetup from './PushNotificationSetup';
 import type { Session } from '@supabase/supabase-js';
 
@@ -14,7 +14,7 @@ import type { Session } from '@supabase/supabase-js';
  * - Never shows on auth routes (/, /auth, /login)
  * - Waits for INITIAL_SESSION event before checking auth state
  * - Only shows when user is authenticated with valid, confirmed session
- * - If permissions already granted, initializes push silently
+ * - If permissions already granted, registers push silently (NO permission request)
  * - If permissions not granted, shows the setup dialog
  */
 export const PushNotificationsGate = () => {
@@ -23,12 +23,21 @@ export const PushNotificationsGate = () => {
   const [authReady, setAuthReady] = useState(false);
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const initRef = useRef(false);
+  const routeRef = useRef(location.pathname);
 
-  // Determine if current route is an auth route
-  const isAuthRoute = 
-    location.pathname === '/' || 
-    location.pathname.startsWith('/auth') || 
-    location.pathname.startsWith('/login');
+  // Keep routeRef in sync with current path
+  useEffect(() => {
+    routeRef.current = location.pathname;
+  }, [location.pathname]);
+
+  // Helper to check if a path is an auth route
+  const isAuthPath = useCallback((path: string) => {
+    return path === '/' || 
+           path.startsWith('/auth') || 
+           path.startsWith('/login');
+  }, []);
+
+  const isAuthRoute = isAuthPath(location.pathname);
 
   // Listen for auth state changes - wait for INITIAL_SESSION
   useEffect(() => {
@@ -83,15 +92,24 @@ export const PushNotificationsGate = () => {
 
     console.log('[PushGate] Valid session confirmed, checking permissions');
 
+    // Cancellation flag to prevent stale async updates
+    let cancelled = false;
+
     const checkAndSetup = async () => {
       try {
         const hasPermission = await checkNotificationPermissions();
 
+        // Guard: if user navigated to auth route during async check, abort
+        if (cancelled || isAuthPath(routeRef.current)) {
+          console.log('[PushGate] Cancelled or on auth route after async check, aborting');
+          return;
+        }
+
         if (hasPermission) {
-          console.log('[PushGate] Permissions already granted, initializing silently');
+          console.log('[PushGate] Permissions already granted, registering silently (no prompt)');
           if (!initRef.current) {
             initRef.current = true;
-            await initPushNotifications();
+            await registerPushNotificationsSilently();
           }
           setShouldShowSetup(false);
         } else {
@@ -100,6 +118,11 @@ export const PushNotificationsGate = () => {
             console.log('[PushGate] User already dismissed prompt');
             setShouldShowSetup(false);
           } else {
+            // Final guard before showing dialog
+            if (cancelled || isAuthPath(routeRef.current)) {
+              console.log('[PushGate] Cancelled before showing dialog, aborting');
+              return;
+            }
             console.log('[PushGate] Showing setup dialog');
             setShouldShowSetup(true);
           }
@@ -112,8 +135,11 @@ export const PushNotificationsGate = () => {
 
     // Small delay for UI stability
     const timeout = setTimeout(checkAndSetup, 500);
-    return () => clearTimeout(timeout);
-  }, [authReady, currentSession, isAuthRoute]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [authReady, currentSession, isAuthRoute, isAuthPath]);
 
   // Don't render anything on auth routes
   if (isAuthRoute) {
@@ -129,9 +155,12 @@ export const PushNotificationsGate = () => {
   if (shouldShowSetup) {
     return (
       <PushNotificationSetup 
-        onComplete={() => {
+        onComplete={({ enabled }) => {
           setShouldShowSetup(false);
-          initRef.current = true;
+          // Only mark as initialized if user actually enabled notifications
+          if (enabled) {
+            initRef.current = true;
+          }
         }} 
       />
     );
