@@ -24,6 +24,9 @@ export const PushNotificationsGate = () => {
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const initRef = useRef(false);
   const routeRef = useRef(location.pathname);
+  // Defensive: only allow showing the setup AFTER user has reached a non-auth route at least once.
+  // This prevents the dialog from ever appearing on the login screen due to startup redirects/cached sessions.
+  const hasEnteredNonAuthRef = useRef(false);
 
   // Keep routeRef in sync with current path
   useEffect(() => {
@@ -49,6 +52,16 @@ export const PushNotificationsGate = () => {
     // If EITHER indicates auth route, treat as auth route (defensive)
     return routerIsAuth || windowIsAuth;
   }, []);
+
+  // Track when the app has entered a non-auth route at least once.
+  useEffect(() => {
+    if (!isAuthPath(location.pathname)) {
+      if (!hasEnteredNonAuthRef.current) {
+        console.log('[PushGate] Entered non-auth route; push gate can activate now:', location.pathname);
+      }
+      hasEnteredNonAuthRef.current = true;
+    }
+  }, [location.pathname, isAuthPath]);
 
   // Check current route - use both sources
   const isAuthRoute = isAuthPath(location.pathname);
@@ -93,6 +106,13 @@ export const PushNotificationsGate = () => {
     // Skip if not native platform
     if (!isNativePlatform()) {
       console.log('[PushGate] Not native platform, skipping');
+      return;
+    }
+
+    // Never do anything until we've entered a non-auth route at least once
+    if (!hasEnteredNonAuthRef.current) {
+      console.log('[PushGate] Waiting to enter a non-auth route before activating');
+      setShouldShowSetup(false);
       return;
     }
 
@@ -188,7 +208,7 @@ export const PushNotificationsGate = () => {
   }
 
   // Render setup dialog only when appropriate
-  if (shouldShowSetup) {
+  if (shouldShowSetup && hasEnteredNonAuthRef.current) {
     return (
       <PushNotificationSetup 
         onComplete={({ enabled }) => {
