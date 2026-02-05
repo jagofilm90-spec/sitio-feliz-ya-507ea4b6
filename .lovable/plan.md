@@ -1,115 +1,210 @@
 
-Objetivo
-- Evitar que el cuadro “Activar Notificaciones” aparezca en la pantalla de login (/auth) en iOS, incluso tras reinstalar.
-- Dejar el flujo: el cuadro solo puede aparecer después de iniciar sesión y estar dentro del sistema.
-- Aclarar y corregir el logo/splash inicial en iOS (esto requiere recompilar la app nativa y subir una nueva build a TestFlight).
+# Guía Completa: Configurar Push Notifications para iOS
 
-Lo que encontré (causas probables)
-1) El componente de push se monta globalmente (App.tsx) antes del enrutador (BrowserRouter), por lo que está “ciego” a los cambios de ruta de React Router. Hoy se intenta inferir la ruta con window.location.pathname, pero en iOS/Capacitor esa sincronía puede fallar en el arranque (y además puede incluir variaciones como /auth/).
-2) Además, hay inicialización automática de push en App.tsx (initPushNotifications) en cuanto detecta sesión; eso puede disparar comportamiento inesperado si la sesión cambia o si hay reintentos.
-3) El splash/logo inicial no depende del código web: en iOS vive en el proyecto nativo (LaunchScreen/AppIcon). Por eso borrar/reinstalar no “arregla” el logo: hay que regenerar assets y recompilar.
+## Resumen del Problema
+Tu backend (Lovable) ya está listo: el código web guarda tokens y la Edge Function `send-push-notification` usa Firebase FCM V1. El problema es que **la app iOS no genera tokens** porque falta la configuración nativa de Firebase + APNs en Xcode.
 
-Cambios propuestos (código) – Push Notifications
+---
 
-A) Centralizar el control de push dentro del Router (con ruta real)
-- Mover la lógica de “si debo mostrar el prompt” a un componente que viva dentro de <BrowserRouter> para usar useLocation().
-- Regla estricta: si la ruta actual es /auth, /login o / (o empieza con /auth o /login), NO renderizar el prompt (ni siquiera montar el componente) y además cerrar cualquier diálogo pendiente.
+## Lo Que Ya Tienes ✅
 
-Implementación (alto nivel)
-1) Crear un componente “PushNotificationsGate/Manager” (puede ser nuevo archivo src/components/PushNotificationsGate.tsx o inline en App.tsx) que:
-   - useLocation() para leer pathname real.
-   - Determine isAuthRoute con algo robusto:
-     - pathname === '/' OR pathname.startsWith('/auth') OR pathname.startsWith('/login')
-   - Solo si:
-     - plataforma nativa (Capacitor)
-     - NO isAuthRoute
-     - y hay sesión válida (session?.user?.id)
-     entonces ejecutar checkNotificationPermissions() y decidir:
-     - Si permisos concedidos: inicializar listeners/registro (initPushNotifications) solo una vez.
-     - Si permisos NO concedidos: renderizar <PushNotificationSetup /> para mostrar el cuadro.
+| Componente | Estado |
+|------------|--------|
+| Edge Function `send-push-notification` | ✅ Funcionando |
+| Secret `FIREBASE_SERVICE_ACCOUNT` | ✅ Configurado |
+| Tabla `device_tokens` en BD | ✅ Existe (pero vacía) |
+| Código web para guardar tokens | ✅ Implementado |
+| Capability "Push Notifications" en Xcode | ✅ Activado |
+| `MOBILE_BUILD_GUIDE.md` con instrucciones | ✅ Existe |
 
-2) Evitar duplicidad de prompts
-- Actualmente PushNotificationSetup se renderiza en:
-  - src/App.tsx (PushNotificationInitializer)
-  - src/pages/VendedorPanel.tsx
-  - src/pages/ChoferPanel.tsx
-- Plan: dejar un solo lugar “global” (el Gate dentro del Router) y eliminar los renders adicionales en VendedorPanel y ChoferPanel para evitar múltiples timers/listeners.
+---
 
-3) Quitar/ajustar inicialización automática agresiva
-- En App.tsx hoy se hace initPushNotifications() al detectar SIGNED_IN (sin verificar si ya hay permiso).
-- Plan: cambiar a:
-  - NO pedir permisos automáticamente al iniciar sesión.
-  - Solo inicializar/register si checkNotificationPermissions() === granted.
-  - Si no está granted, no llamar initPushNotifications hasta que el usuario presione “Activar Notificaciones” en el diálogo.
-Esto evita que algo de push “se active” en momentos donde el usuario aún está en login o en transición.
+## Lo Que Falta ❌ (Configuración en Xcode/Apple/Firebase)
 
-B) Hardening del componente PushNotificationSetup (defensa extra)
-Aunque el Gate evitará montar el componente en /auth, igualmente lo haré más robusto:
-- Cambiar la comparación exacta de rutas a startsWith para tolerar /auth/ y variantes.
-- Cancelar timeouts internos si se desmonta el componente o si cambian condiciones (usar refs para guardar el id de setTimeout y limpiarlo).
-- Asegurar que si no hay session?.user?.id, el componente no pueda programar setTimeout(() => setShowDialog(true)).
+```text
+┌────────────────────────────────────────────────────────────────┐
+│                    PASOS PENDIENTES                            │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│   PASO 1: Apple Developer Portal                              │
+│   ├─ Crear APNs Authentication Key (.p8)                      │
+│   └─ Descargar el archivo (solo 1 vez)                        │
+│                                                                │
+│   PASO 2: Firebase Console                                    │
+│   ├─ Verificar/crear app iOS (Bundle: com.almasa.erp)         │
+│   ├─ Subir APNs Key (.p8) a Cloud Messaging                   │
+│   └─ Descargar GoogleService-Info.plist                       │
+│                                                                │
+│   PASO 3: Xcode                                               │
+│   ├─ Agregar GoogleService-Info.plist al proyecto             │
+│   ├─ Verificar Background Modes: Remote notifications         │
+│   └─ Recompilar y subir a TestFlight                          │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
+```
 
-Pruebas esperadas (push)
-1) iOS / TestFlight / app recién instalada
-   - Abrir app → estás en /auth → NO aparece el cuadro de “Activar Notificaciones”.
-2) Iniciar sesión
-   - La app redirige a dashboard/panel correspondiente.
-   - Después de entrar, si el permiso NO está concedido y no se ha marcado “Ahora no” antes, aparece el cuadro.
-3) Si el usuario presiona “Activar Notificaciones”
-   - Aparece el prompt del sistema iOS (si aplica), se registra el token y se guarda en backend.
-4) Verificación backend (opcional)
-   - Confirmar que aparece un registro en device_tokens para ese usuario.
+---
 
-Cambios propuestos (proceso) – Logo/Splash inicial en iOS
-Esto no se arregla con cambios web: requiere una nueva compilación y subida a TestFlight.
+## Instrucciones Detalladas
 
-1) Generar assets correctos
-- En la app ya existe una pantalla para generar splash/icon:
-  - /generate-assets (GenerateAssets.tsx)
-  - SplashGenerator produce un splash 2732x2732 con el logo actual (src/assets/logo-almasa.png).
-- Si el problema es que el logo se ve “cortado / mal escalado”, normalmente la solución es:
-  - usar un splash con suficiente padding (logo más pequeño),
-  - y/o actualizar el LaunchScreen en Xcode.
+### PASO 1: Crear APNs Key en Apple Developer
 
-2) Regenerar assets nativos y recompilar
-- En tu máquina (proyecto exportado a GitHub):
-  - git pull
-  - npm install
-  - npm run build
-  - npx cap sync
-  - Abrir iOS en Xcode (npx cap open ios)
-  - Actualizar:
-    - App Icon (Assets.xcassets)
-    - LaunchScreen / Splash (según configuración actual del proyecto iOS)
-  - Clean build + Archive + subir a TestFlight
+1. Ir a [Apple Developer - Keys](https://developer.apple.com/account/resources/authkeys/list)
+2. Click en el botón azul **"+"** para crear una nueva key
+3. Configurar:
+   - **Key Name**: `ALMASA Push Key`
+   - **Enable**: ✅ Apple Push Notifications service (APNs)
+4. Click **Continue** → **Register**
+5. **IMPORTANTE**: Descargar el archivo `.p8` (solo puedes descargarlo UNA vez)
+6. Anotar estos datos:
+   - **Key ID**: (10 caracteres, ej: `ABC123DEFG`)
+   - **Team ID**: (lo ves en la esquina superior derecha de Apple Developer)
 
-Nota importante
-- Esto es “nativo”. Aunque el sitio web se actualice, el splash/logo inicial no cambia hasta que se genere una nueva build de iOS y se instale.
+---
 
-Checklist de entrega
-- [ ] El prompt de “Activar Notificaciones” no aparece en /auth en iOS
-- [ ] El prompt aparece solo después de login (en dashboard/panel)
-- [ ] No hay múltiples instancias del prompt (se eliminan duplicados en panels)
-- [ ] Si permisos ya están concedidos, se inicializa push sin mostrar diálogo
-- [ ] Splash/logo iOS corregido mediante nueva build en TestFlight
+### PASO 2: Configurar Firebase
 
-Riesgos / consideraciones
-- Si la build iOS actual no está cargando el sitio más reciente (por ejemplo, usa archivos locales en vez de URL remota), entonces cualquier cambio web no se reflejará hasta recompilar. El Gate igual lo implemento, pero si ves que “no cambia nada”, eso indica que necesitamos una nueva build.
-- Mantendré logs de diagnóstico (solo console.log) para confirmar: ruta actual, si hay sesión, y estado de permisos, durante pruebas internas.
+#### 2A. Verificar/Crear App iOS en Firebase
 
-Qué haré en la implementación (archivos)
-- src/App.tsx
-  - Reubicar/reestructurar PushNotificationInitializer → PushNotificationsGate dentro del BrowserRouter.
-  - Ajustar initPushNotifications para que no solicite permisos automáticamente si no están concedidos.
-- src/components/PushNotificationSetup.tsx
-  - Robustecer guards (startsWith), limpiar timeouts, asegurar que no se programe showDialog sin sesión válida y fuera de rutas permitidas.
-- src/pages/VendedorPanel.tsx y src/pages/ChoferPanel.tsx
-  - Quitar <PushNotificationSetup /> para evitar duplicidad.
+1. Ir a [Firebase Console](https://console.firebase.google.com/)
+2. Seleccionar tu proyecto (el mismo del `FIREBASE_SERVICE_ACCOUNT`)
+3. Click en el ícono de engranaje ⚙️ → **Project Settings**
+4. En la sección **Your apps**, buscar la app iOS
+   - Si NO existe: Click **Add app** → iOS → Bundle ID: `com.almasa.erp`
+   - Si SÍ existe: Verificar que el Bundle ID sea `com.almasa.erp`
 
-Guía para ti (nativo iOS)
-- Después de cualquier cambio relacionado con iOS nativo (como splash/icon), recuerda:
-  1) hacer git pull del repo exportado
-  2) correr npm run build
-  3) correr npx cap sync
-  4) recompilar en Xcode y subir nueva build a TestFlight
-- También revisa la guía MOBILE_BUILD_GUIDE.md del proyecto y el blog-post recomendado de Capacitor sobre assets/splash para iOS (para evitar que se vea “cortado” en distintos modelos).
+#### 2B. Subir APNs Key a Firebase
+
+1. En Project Settings → **Cloud Messaging** (pestaña)
+2. Scroll a **Apple app configuration**
+3. En **APNs Authentication Key**, click **Upload**
+4. Subir:
+   - El archivo `.p8` que descargaste
+   - El **Key ID** (10 caracteres)
+   - Tu **Team ID**
+
+#### 2C. Descargar GoogleService-Info.plist
+
+1. En Project Settings → **General** (pestaña)
+2. En tu app iOS, click el botón **GoogleService-Info.plist**
+3. Descargar el archivo
+
+---
+
+### PASO 3: Configurar Xcode
+
+#### 3A. Agregar GoogleService-Info.plist
+
+1. Abrir el proyecto iOS:
+   ```bash
+   npx cap open ios
+   ```
+2. En Xcode, arrastrar `GoogleService-Info.plist` a la carpeta `App/App` (junto a Info.plist)
+3. En el diálogo que aparece:
+   - ✅ Copy items if needed
+   - ✅ Add to targets: App
+4. Click **Finish**
+
+#### 3B. Verificar Capabilities
+
+En Xcode → Target `App` → **Signing & Capabilities**:
+
+| Capability | Estado Requerido |
+|------------|------------------|
+| Push Notifications | ✅ Agregado |
+| Background Modes | ✅ Agregado |
+| → Remote notifications | ✅ Marcado |
+| → Location updates | ✅ Marcado (para GPS) |
+
+#### 3C. Verificar Info.plist
+
+Asegurarse de que `Info.plist` tenga:
+
+```xml
+<key>UIBackgroundModes</key>
+<array>
+  <string>location</string>
+  <string>remote-notification</string>
+</array>
+```
+
+---
+
+### PASO 4: Recompilar y Subir a TestFlight
+
+```bash
+# En tu Mac
+git pull
+npm install
+npm run build
+npx cap sync ios
+npx cap open ios
+```
+
+En Xcode:
+1. Incrementar Version y Build number
+2. Product → Archive
+3. Distribute App → App Store Connect
+4. Esperar procesamiento en TestFlight
+
+---
+
+## Verificación Final
+
+Una vez instalada la nueva build desde TestFlight:
+
+1. **En /auth (login)**: NO debe aparecer el cuadro "Activar Notificaciones"
+2. **Después de login**: Aparece el cuadro pidiendo activar
+3. **Al aceptar**: iOS pide permiso del sistema
+4. **Verificar token guardado**: Yo puedo revisar la tabla `device_tokens` para confirmar
+
+---
+
+## Resumen de Archivos Necesarios
+
+| Archivo | Origen | Destino |
+|---------|--------|---------|
+| APNs Key (.p8) | Apple Developer | Firebase Console |
+| GoogleService-Info.plist | Firebase Console | Xcode (App/App/) |
+
+---
+
+## Sección Técnica
+
+### Por qué no funcionan sin esto
+
+El flujo de push notifications en iOS es:
+
+```text
+App inicia → Capacitor PushNotifications.register()
+    ↓
+iOS verifica GoogleService-Info.plist
+    ↓
+iOS contacta APNs usando la Key (.p8) registrada en Firebase
+    ↓
+APNs devuelve un token único para este dispositivo
+    ↓
+Capacitor dispara evento 'registration' con el token
+    ↓
+Tu código guarda el token en device_tokens
+    ↓
+Edge Function usa FCM V1 + FIREBASE_SERVICE_ACCOUNT para enviar
+```
+
+**Sin GoogleService-Info.plist**: iOS no sabe con qué proyecto de Firebase comunicarse → no genera token.
+
+**Sin APNs Key en Firebase**: Firebase no puede autenticarse con APNs → los mensajes no llegan.
+
+---
+
+## Checklist Final
+
+- [ ] APNs Key (.p8) creada en Apple Developer
+- [ ] APNs Key (.p8) subida a Firebase Console
+- [ ] GoogleService-Info.plist descargado de Firebase
+- [ ] GoogleService-Info.plist agregado al proyecto Xcode
+- [ ] Push Notifications capability habilitada
+- [ ] Background Modes → Remote notifications habilitado
+- [ ] Build incrementado y subido a TestFlight
+- [ ] Nueva build instalada en iPhone/iPad
+- [ ] Token aparece en tabla device_tokens después de aceptar permisos
