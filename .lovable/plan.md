@@ -1,85 +1,111 @@
 
-# Plan: Subir App a TestFlight para Probar Push Notifications
+# Plan: Corregir Diálogo de Notificaciones Apareciendo en Login
 
-## Resumen
-Crearás un archivo (Archive) de la app en Xcode y lo subirás a App Store Connect para distribuirlo via TestFlight. Una vez instalada la nueva build en tu iPhone, podrás probar las push notifications.
+## Problema Identificado
 
----
+El diálogo de "Activar Notificaciones" está apareciendo encima de la pantalla de login en la app nativa. Esto sucede porque:
 
-## Pasos a Seguir en Xcode
+1. Hay **lógica duplicada** entre `PushNotificationsGate` y `PushNotificationSetup`
+2. `PushNotificationSetup` tiene su propio useEffect que ignora las decisiones del Gate
+3. Existe una **sesión guardada** en localStorage que hace que el sistema crea que hay un usuario autenticado aunque esté en la pantalla de login
 
-### Paso 1: Seleccionar Destino Correcto
-1. En la barra superior de Xcode, donde dice el dispositivo, selecciona **"Any iOS Device (arm64)"**
-   - Este es el destino correcto para crear un Archive
+## Solución
 
-### Paso 2: Incrementar Versión (Importante)
-1. En el navegador izquierdo, click en **App** (ícono azul del proyecto)
-2. Selecciona el target **App** en la lista
-3. Ve a la pestaña **General**
-4. En la sección **Identity**, incrementa:
-   - **Version**: Si está en 1.0, cámbialo a 1.1 (o el siguiente número)
-   - **Build**: Incrementa en 1 (ej: de 5 a 6)
+Simplificar la arquitectura para que `PushNotificationSetup` sea un componente **puramente controlado** - solo muestre el diálogo cuando el Gate se lo indique, sin lógica propia de detección.
 
-### Paso 3: Verificar Configuración de Firma
-1. Ve a **Signing & Capabilities**
-2. Confirma que:
-   - **Team**: Tu cuenta de desarrollador está seleccionada
-   - **Bundle Identifier**: `com.almasa.erp`
-   - **Push Notifications**: Capability está presente
-   - **Background Modes**: Remote notifications está marcado
+### Cambios en PushNotificationSetup.tsx
 
-### Paso 4: Crear Archive
-1. En el menú: **Product** > **Archive**
-2. Espera a que compile (puede tomar 2-5 minutos)
-3. Al terminar, se abre automáticamente el **Organizer**
+- Eliminar completamente el `useEffect` que tiene su propia lógica de detección de rutas
+- Hacer que el diálogo se muestre inmediatamente cuando el componente se monta (el Gate ya hizo todas las verificaciones)
+- Mantener solo la lógica del UI y los handlers de botones
+- Simplificar el estado a solo `isLoading`
 
-### Paso 5: Subir a App Store Connect
-1. En el Organizer, selecciona el archive recién creado
-2. Click en **Distribute App**
-3. Selecciona **App Store Connect**
-4. Click en **Next** > **Upload**
-5. Espera a que suba (depende de tu conexión)
+### Cambios en PushNotificationsGate.tsx
 
-### Paso 6: Esperar Procesamiento
-1. Ve a [App Store Connect](https://appstoreconnect.apple.com)
-2. Navega a tu app **ALMASA ERP**
-3. En la sección **TestFlight**, espera que aparezca la nueva build
-   - El procesamiento toma entre 10-30 minutos
+- Agregar una verificación adicional del estado de autenticación usando `onAuthStateChange`
+- Esperar el evento `INITIAL_SESSION` antes de decidir mostrar el diálogo
+- Agregar doble verificación: solo mostrar después de navegación explícita fuera de auth routes
 
-### Paso 7: Instalar y Probar
-1. Abre la app **TestFlight** en tu iPhone
-2. Instala la nueva versión de ALMASA ERP
-3. Abre la app e inicia sesión
-4. Cuando aparezca el diálogo de notificaciones, selecciona **Permitir**
+## Archivos a Modificar
+
+| Archivo | Cambios |
+|---------|---------|
+| src/components/PushNotificationSetup.tsx | Eliminar useEffect de detección, hacer diálogo controlado |
+| src/components/PushNotificationsGate.tsx | Agregar verificación de `INITIAL_SESSION`, lógica más robusta |
 
 ---
 
-## Verificación Final
+## Sección Tecnica
 
-Una vez que hayas permitido notificaciones en la app instalada desde TestFlight, yo verificaré que el token se registró correctamente en la base de datos y podremos enviar una notificación de prueba.
+### Flujo Corregido
 
----
+```text
+App Inicia
+    |
+    v
+PushNotificationsGate monta
+    |
+    v
+Espera onAuthStateChange(INITIAL_SESSION)
+    |
+    +-- NO hay sesion valida --> No renderiza nada
+    |
+    +-- SI hay sesion valida
+            |
+            v
+        ¿Ruta es /auth, /login, /? 
+            |
+            +-- SI --> No renderiza nada
+            |
+            +-- NO --> Verificar permisos
+                        |
+                        +-- Ya tiene permisos --> initPush silencioso
+                        |
+                        +-- No tiene permisos --> Renderizar PushNotificationSetup
+```
 
-## Sección Técnica
+### Codigo Simplificado de PushNotificationSetup
 
-### Checklist Pre-Archive
+El componente ya no tendra logica de verificacion propia:
 
-Antes de hacer Archive, asegúrate de que tu proyecto tenga:
+```typescript
+export const PushNotificationSetup = ({ onComplete }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Sin useEffect de verificacion - el Gate ya lo hizo
+  
+  const handleEnableNotifications = async () => {
+    // ... logica existente
+  };
+  
+  return (
+    <Dialog open={true} onOpenChange={() => onComplete?.()}>
+      {/* ... contenido del dialogo */}
+    </Dialog>
+  );
+};
+```
 
-| Archivo/Configuración | Ubicación | Estado |
-|----------------------|-----------|--------|
-| GoogleService-Info.plist | ios/App/App/ | Debe existir |
-| Push Notifications capability | Signing & Capabilities | Habilitado |
-| Background Modes > Remote notifications | Signing & Capabilities | Marcado |
-| NSCameraUsageDescription | Info.plist | Configurado |
-| NSPhotoLibraryUsageDescription | Info.plist | Configurado |
+### Logica Reforzada del Gate
 
-### Tiempo Estimado
+Agregar espera del evento `INITIAL_SESSION` para evitar usar sesiones viejas del localStorage:
 
-| Paso | Duración |
-|------|----------|
-| Archive | 2-5 minutos |
-| Upload | 5-15 minutos |
-| Procesamiento App Store | 10-30 minutos |
-| Instalación TestFlight | 2 minutos |
+```typescript
+// Solo proceder despues de que Supabase confirme el estado de autenticacion
+const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'INITIAL_SESSION') {
+    // Ahora SI podemos confiar en el estado de sesion
+    if (session?.user?.id && !isAuthRoute) {
+      // Proceder con verificacion de permisos
+    }
+  }
+});
+```
 
+## Resultado Esperado
+
+Despues de estos cambios:
+
+1. El dialogo NUNCA aparecera en la pantalla de login
+2. Solo aparecera cuando el usuario haya navegado exitosamente a una ruta protegida
+3. La sesion sera verificada con el evento `INITIAL_SESSION` de Supabase, no con datos potencialmente obsoletos del localStorage
