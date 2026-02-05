@@ -134,7 +134,7 @@ export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps
             disabled={isLoading}
             className="w-full"
           >
-            {isLoading ? 'Activando...' : 'Activar Notificaciones'}
+            {isLoading ? 'Configurando... (puede tomar unos segundos)' : 'Activar Notificaciones'}
           </Button>
           <Button 
             variant="ghost" 
