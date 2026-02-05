@@ -6,6 +6,37 @@ import { supabase } from '@/integrations/supabase/client';
 // Helper function for delays
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Token saved callback system for synchronous registration flow
+let tokenSavedResolver: ((success: boolean) => void) | null = null;
+let tokenSaveTimeout: ReturnType<typeof setTimeout> | null = null;
+
+// Creates a promise that resolves when the token is saved
+const waitForTokenSaved = (timeoutMs: number = 20000): Promise<boolean> => {
+  return new Promise((resolve) => {
+    tokenSavedResolver = resolve;
+    
+    // Safety timeout
+    tokenSaveTimeout = setTimeout(() => {
+      console.error('[Push] Token save timeout - no token saved within', timeoutMs, 'ms');
+      tokenSavedResolver = null;
+      resolve(false);
+    }, timeoutMs);
+  });
+};
+
+// Notify that the token was saved (or failed)
+const notifyTokenSaved = (success: boolean) => {
+  if (tokenSaveTimeout) {
+    clearTimeout(tokenSaveTimeout);
+    tokenSaveTimeout = null;
+  }
+  if (tokenSavedResolver) {
+    console.log('[Push] Notifying token save result:', success);
+    tokenSavedResolver(success);
+    tokenSavedResolver = null;
+  }
+};
+
 // Validate if token is a raw APNs token (hexadecimal, 64 chars)
 // APNs tokens should NOT be saved - we need the FCM token
 const isApnsToken = (token: string): boolean => {
@@ -77,7 +108,7 @@ const setupPushListeners = () => {
         await saveDeviceToken(fcmToken);
       } else {
         console.error('[Push] Could not obtain valid FCM token for iOS');
-        // Do NOT save APNs token as fallback - it won't work with FCM
+        notifyTokenSaved(false);
       }
     } else {
       // Android ya retorna FCM token directamente
@@ -88,6 +119,7 @@ const setupPushListeners = () => {
         await saveDeviceToken(token.value);
       } else {
         console.error('[Push] Invalid token format on Android');
+        notifyTokenSaved(false);
       }
     }
   });
@@ -153,8 +185,21 @@ export const requestPushPermissionsAndRegister = async (): Promise<boolean> => {
       return false;
     }
 
-    console.log('[Push] Permissions granted, proceeding with silent registration');
-    return await registerPushNotificationsSilently();
+    console.log('[Push] Permissions granted, setting up registration');
+    setupPushListeners();
+    
+    // Start waiting BEFORE calling register()
+    const tokenPromise = waitForTokenSaved(20000); // 20s timeout for iOS
+    
+    // Register the device
+    await PushNotifications.register();
+    console.log('[Push] Register called, waiting for token to be saved...');
+    
+    // Wait for the token to be saved
+    const success = await tokenPromise;
+    console.log('[Push] Token save result:', success);
+    
+    return success;
   } catch (error) {
     console.error('[Push] Interactive registration error:', error);
     return false;
@@ -171,13 +216,14 @@ export const initPushNotifications = async (): Promise<boolean> => {
 };
 
 // Guardar token del dispositivo en la base de datos usando SQL directo
-const saveDeviceToken = async (token: string): Promise<void> => {
+const saveDeviceToken = async (token: string): Promise<boolean> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
       console.log('No hay usuario autenticado para guardar token');
-      return;
+      notifyTokenSaved(false);
+      return false;
     }
 
     const platform = Capacitor.getPlatform();
@@ -200,11 +246,17 @@ const saveDeviceToken = async (token: string): Promise<void> => {
 
     if (error) {
       console.error('Error guardando token:', error);
+      notifyTokenSaved(false);
+      return false;
     } else {
       console.log('Token guardado exitosamente');
+      notifyTokenSaved(true);
+      return true;
     }
   } catch (error) {
     console.error('Error en saveDeviceToken:', error);
+    notifyTokenSaved(false);
+    return false;
   }
 };
 
