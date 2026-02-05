@@ -1,111 +1,108 @@
 
-# Plan: Corregir Diálogo de Notificaciones Apareciendo en Login
+Objetivo: que el aviso del iPhone (“ALMASA ERP quiere enviarte notificaciones”) NO aparezca automáticamente al iniciar sesión. Ese aviso solo debe salir cuando el usuario toque explícitamente “Activar Notificaciones” dentro del modal de la app.
 
-## Problema Identificado
+## Qué está pasando (según tu captura y tus respuestas)
+- Estás en /auth y al iniciar sesión te aparece:
+  1) El modal interno “Activar Notificaciones” (tú presionas “Ahora no”)
+  2) Aun así, aparece el aviso del iPhone (No permitir / Permitir)
+- Ese aviso del iPhone solo puede aparecer si en algún momento se ejecuta `PushNotifications.requestPermissions()`.
 
-El diálogo de "Activar Notificaciones" está apareciendo encima de la pantalla de login en la app nativa. Esto sucede porque:
+En el código actual, `requestPermissions()` vive dentro de `initPushNotifications()`. Aunque “en teoría” solo debería llamarse cuando el usuario toca “Activar Notificaciones”, hoy `initPushNotifications()` también se usa para “inicializar silenciosamente” cuando el sistema cree que ya hay permisos. En iOS esto puede terminar mostrando el prompt en momentos indeseados por diferencias/quirks de estados de permisos (por ejemplo, estados “provisional/prompt” o lecturas inconsistentes).
 
-1. Hay **lógica duplicada** entre `PushNotificationsGate` y `PushNotificationSetup`
-2. `PushNotificationSetup` tiene su propio useEffect que ignora las decisiones del Gate
-3. Existe una **sesión guardada** en localStorage que hace que el sistema crea que hay un usuario autenticado aunque esté en la pantalla de login
+## Solución (cambio de arquitectura mínimo, pero definitivo)
+Separar “registrar y escuchar pushes” de “pedir permiso”.
+- Nunca pedir permiso “en automático”.
+- Pedir permiso únicamente por acción directa del usuario (botón).
 
-## Solución
+### 1) Refactor del servicio `src/services/pushNotifications.ts`
+Crear 2 caminos explícitos:
 
-Simplificar la arquitectura para que `PushNotificationSetup` sea un componente **puramente controlado** - solo muestre el diálogo cuando el Gate se lo indique, sin lógica propia de detección.
+A) “Silencioso” (NO pide permisos)
+- `registerPushNotificationsSilently()`:
+  - Solo hace:
+    - setup listeners (idempotente, una sola vez)
+    - `PushNotifications.register()`
+  - Importante: NO llama a `requestPermissions()`
+  - Solo se usa cuando el sistema detecta que ya hay permiso otorgado.
 
-### Cambios en PushNotificationSetup.tsx
+B) “Interactivo” (pide permisos y luego registra)
+- `requestPushPermissionsAndRegister()`:
+  - Llama `PushNotifications.requestPermissions()`
+  - Si granted:
+    - llama a `registerPushNotificationsSilently()`
+  - Si no granted:
+    - devuelve `false`
 
-- Eliminar completamente el `useEffect` que tiene su propia lógica de detección de rutas
-- Hacer que el diálogo se muestre inmediatamente cuando el componente se monta (el Gate ya hizo todas las verificaciones)
-- Mantener solo la lógica del UI y los handlers de botones
-- Simplificar el estado a solo `isLoading`
+Además:
+- Hacer `setupPushListeners()` idempotente con una bandera de módulo (ej. `let listenersReady = false`) para evitar listeners duplicados.
 
-### Cambios en PushNotificationsGate.tsx
+Resultado: aunque el Gate se ejecute en un momento “raro”, jamás disparará el prompt del iPhone por accidente.
 
-- Agregar una verificación adicional del estado de autenticación usando `onAuthStateChange`
-- Esperar el evento `INITIAL_SESSION` antes de decidir mostrar el diálogo
-- Agregar doble verificación: solo mostrar después de navegación explícita fuera de auth routes
+### 2) Ajuste del Gate `src/components/PushNotificationsGate.tsx`
+Cambios:
+- Sustituir `initPushNotifications()` en el branch “Permissions already granted” por `registerPushNotificationsSilently()`.
+- Mantener el modal cuando no hay permisos y el usuario no ha visto el prompt interno.
+- Agregar una “guardia anti-race” extra:
+  - Un `cancelled` flag + un `routeRef` para evitar que un async tardío haga cambios si el usuario ya está en una ruta de auth.
+  - Esto evita que un check iniciado “antes” afecte cuando ya estás en /auth.
 
-## Archivos a Modificar
+También corregir la semántica de `initRef`:
+- Ya no marcar `initRef.current = true` cuando el usuario presiona “Ahora no”.
+- Solo marcar `initRef.current = true` cuando realmente se haya registrado push (para no bloquear registro futuro si el usuario luego decide habilitar).
 
-| Archivo | Cambios |
-|---------|---------|
-| src/components/PushNotificationSetup.tsx | Eliminar useEffect de detección, hacer diálogo controlado |
-| src/components/PushNotificationsGate.tsx | Agregar verificación de `INITIAL_SESSION`, lógica más robusta |
+### 3) Ajuste del modal `src/components/PushNotificationSetup.tsx`
+Cambios:
+- Cambiar el botón “Activar Notificaciones” para que llame a `requestPushPermissionsAndRegister()` (no a `initPushNotifications()`).
+- Mejorar el callback `onComplete` para informar si se habilitó o se omitió, por ejemplo:
+  - `onComplete?.({ enabled: boolean })`
+- En “Ahora no”:
+  - Mantener `localStorage.setItem('push_notification_prompt_seen', 'true')` (para no insistir)
+  - Reportar `enabled: false`
 
----
+### 4) Verificación de backend (solo lectura / sanity check)
+Ya revisé que:
+- La tabla `device_tokens` tiene RLS habilitado.
+- Existe política: “Users can manage own device tokens” con `auth.uid() = user_id`.
+Esto significa: cuando el token se reciba (evento `registration`), el upsert debería poder guardarse correctamente si la configuración nativa está bien y el listener se está disparando.
 
-## Sección Tecnica
+## Cómo vamos a probar (pasos exactos en iPhone)
+Caso A: Usuario elige “Ahora no” (no debe salir prompt del iPhone)
+1) Instala la nueva build.
+2) Inicia sesión.
+3) Debe salir el modal interno.
+4) Presiona “Ahora no”.
+5) Confirmación esperada:
+   - No aparece el prompt del iPhone.
+   - No se guarda token en `device_tokens`.
 
-### Flujo Corregido
+Caso B: Usuario habilita (sí debe salir prompt del iPhone, solo al tocar el botón)
+1) Borra el flag para pruebas (o reinstala) para volver a ver el modal.
+2) Inicia sesión.
+3) En el modal presiona “Activar Notificaciones”.
+4) Ahora sí debe salir el prompt del iPhone.
+5) Presiona “Permitir”.
+6) Confirmación esperada:
+   - Se dispara el evento `registration`.
+   - Se guarda un registro en `device_tokens`.
 
-```text
-App Inicia
-    |
-    v
-PushNotificationsGate monta
-    |
-    v
-Espera onAuthStateChange(INITIAL_SESSION)
-    |
-    +-- NO hay sesion valida --> No renderiza nada
-    |
-    +-- SI hay sesion valida
-            |
-            v
-        ¿Ruta es /auth, /login, /? 
-            |
-            +-- SI --> No renderiza nada
-            |
-            +-- NO --> Verificar permisos
-                        |
-                        +-- Ya tiene permisos --> initPush silencioso
-                        |
-                        +-- No tiene permisos --> Renderizar PushNotificationSetup
-```
+## Archivos a modificar
+- `src/services/pushNotifications.ts`
+  - Separar funciones (silencioso vs interactivo)
+  - Listeners idempotentes
+- `src/components/PushNotificationsGate.tsx`
+  - Usar inicialización silenciosa sin pedir permisos
+  - Guardias anti-race en async
+  - Corregir `initRef` para no marcar “init” en skip
+- `src/components/PushNotificationSetup.tsx`
+  - Usar función interactiva (request + register)
+  - `onComplete` con resultado enabled/false
 
-### Codigo Simplificado de PushNotificationSetup
+## Riesgos / Consideraciones
+- Si iOS sigue mostrando el prompt aun sin `requestPermissions()`, entonces hay otra fuente que lo dispara (a nivel nativo). Pero con el code search actual, la única llamada está en `pushNotifications.ts`. Esta refactorización elimina por completo cualquier llamada “accidental” desde el Gate.
+- Si después de permitir no se guarda token:
+  - Siguiente paso será validar el “handshake” nativo (APNs/FCM, capacidades en Xcode) y revisar logs del registro en dispositivo, porque ahí sí ya sería un tema de configuración nativa, no del gating.
 
-El componente ya no tendra logica de verificacion propia:
-
-```typescript
-export const PushNotificationSetup = ({ onComplete }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // Sin useEffect de verificacion - el Gate ya lo hizo
-  
-  const handleEnableNotifications = async () => {
-    // ... logica existente
-  };
-  
-  return (
-    <Dialog open={true} onOpenChange={() => onComplete?.()}>
-      {/* ... contenido del dialogo */}
-    </Dialog>
-  );
-};
-```
-
-### Logica Reforzada del Gate
-
-Agregar espera del evento `INITIAL_SESSION` para evitar usar sesiones viejas del localStorage:
-
-```typescript
-// Solo proceder despues de que Supabase confirme el estado de autenticacion
-const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-  if (event === 'INITIAL_SESSION') {
-    // Ahora SI podemos confiar en el estado de sesion
-    if (session?.user?.id && !isAuthRoute) {
-      // Proceder con verificacion de permisos
-    }
-  }
-});
-```
-
-## Resultado Esperado
-
-Despues de estos cambios:
-
-1. El dialogo NUNCA aparecera en la pantalla de login
-2. Solo aparecera cuando el usuario haya navegado exitosamente a una ruta protegida
-3. La sesion sera verificada con el evento `INITIAL_SESSION` de Supabase, no con datos potencialmente obsoletos del localStorage
+## Entregable
+- El prompt del iPhone no se mostrará al iniciar sesión si el usuario presiona “Ahora no”.
+- El prompt del iPhone solo aparecerá cuando el usuario toque “Activar Notificaciones”.
+- La inicialización “silenciosa” no pedirá permisos; solo registrará si ya existen permisos otorgados.
