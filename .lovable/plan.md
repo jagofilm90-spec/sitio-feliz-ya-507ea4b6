@@ -1,108 +1,93 @@
 
-# Plan: Push Notification para Solicitudes de Descuento con Deep Link a "Pedidos Por Autorizar"
+## Plan: Corregir el flujo de obtención del token FCM en iOS
 
-## Situación Actual
+### Problema Identificado
+El token que se está guardando en la base de datos es el **token APNs nativo** (formato hexadecimal de 64 caracteres), pero Firebase Cloud Messaging requiere un **token FCM** (formato largo con caracteres alfanuméricos).
 
-Ya existe la lógica para enviar push notifications cuando un vendedor solicita un descuento:
+**Token actual guardado:**
+```
+14CF17D9462E8A2C222FF3CB1EE183B76978D4A5E2353A385FBDC1D2A245947E
+```
 
-```typescript
-// En useSolicitudesDescuento.ts (línea 248-264)
-await supabase.functions.invoke('send-push-notification', {
-  body: {
-    roles: ['admin'],
-    title: '🔔 Autoriza precio',
-    body: `${vendedor_nombre || 'Vendedor'} solicita descuento para ${producto_nombre || 'producto'}`,
-    data: {
-      type: 'solicitud_descuento',
-      solicitud_id: data.id,
+**Token FCM esperado (ejemplo):**
+```
+dQw4w9WgXcQ:APA91bGpzYfR2F8j...
+```
+
+### Causa Raíz
+Cuando el código llama a `FCM.getToken()` inmediatamente después del registro, Firebase aún no ha completado el mapeo del token APNs al token FCM. Por eso falla y el código cae al fallback que guarda el token APNs incorrecto.
+
+### Solución Propuesta
+
+#### 1. Agregar un delay y reintentos para obtener el token FCM
+
+Modificar la lógica en `src/services/pushNotifications.ts` para:
+- Esperar un momento antes de intentar obtener el token FCM
+- Implementar reintentos con backoff exponencial
+- Solo guardar el token si tiene el formato FCM correcto (no hexadecimal)
+
+```text
+// Pseudo-código del cambio
+PushNotifications.addListener('registration', async (token: Token) => {
+  if (Capacitor.getPlatform() === 'ios') {
+    // Esperar a que Firebase procese el token APNs
+    await delay(1000);
+    
+    // Intentar obtener FCM token con reintentos
+    for (let i = 0; i < 3; i++) {
+      try {
+        const fcmToken = await FCM.getToken();
+        // Validar que no sea un token APNs (hex)
+        if (!isHexToken(fcmToken.token)) {
+          await saveDeviceToken(fcmToken.token);
+          return;
+        }
+      } catch (e) {
+        await delay(1000 * (i + 1)); // Backoff
+      }
     }
+    console.error('No se pudo obtener token FCM válido');
   }
 });
 ```
 
-**Problema**: El tipo `solicitud_descuento` **NO está manejado** en el `handleNotificationTap`, entonces cuando tocas la notificación, no navega a ningún lado.
+#### 2. Agregar validación de formato de token
 
----
-
-## Cambios Requeridos
-
-### 1. Agregar Deep Link para `solicitud_descuento`
-
-Modificar `src/services/pushNotifications.ts` para manejar el tap en notificaciones de solicitud de descuento:
-
-```typescript
-// En handleNotificationTap (línea ~177)
-case 'solicitud_descuento':
-  window.location.href = '/pedidos?tab=por-autorizar';
-  break;
-```
-
-Esto hará que al tocar la notificación, el admin sea llevado directamente a la pestaña "Por Autorizar" del módulo de Pedidos.
-
-### 2. Pasar Nombre del Vendedor Correctamente
-
-El componente `SolicitudDescuentoDialog.tsx` ya recibe la data necesaria, pero necesitamos asegurar que el nombre del vendedor se pase correctamente desde donde se invoca el dialog.
-
-Verificar que al llamar `crearSolicitud()` se incluya:
-- `vendedor_nombre`: Nombre completo del vendedor actual
-- `producto_nombre`: Nombre del producto
-
----
-
-## Flujo Completo
+Crear una función helper para validar que el token tenga formato FCM y no APNs:
 
 ```text
-┌──────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Vendedor   │    │  Edge Function   │    │     Admin       │
-│  en /vendedor│    │send-push-notif.  │    │   dispositivo   │
-└──────┬───────┘    └────────┬─────────┘    └────────┬────────┘
-       │                     │                       │
-       │ 1. Click "Solicitar"│                       │
-       │ (precio > máximo)   │                       │
-       │                     │                       │
-       │ 2. crearSolicitud() │                       │
-       ├────────────────────>│                       │
-       │                     │                       │
-       │                     │ 3. FCM Push via      │
-       │                     │    Firebase V1 API   │
-       │                     ├──────────────────────>│
-       │                     │                       │
-       │                     │                       │ 4. Notificación
-       │                     │                       │    "🔔 Juan solicita
-       │                     │                       │     descuento para X"
-       │                     │                       │
-       │                     │                       │ 5. Admin toca notif.
-       │                     │                       │
-       │                     │                       │ 6. App abre en
-       │                     │                       │    /pedidos?tab=por-autorizar
-       │                     │                       │
+// Tokens APNs son hexadecimales de 64 caracteres
+const isApnsToken = (token: string): boolean => {
+  return /^[0-9A-Fa-f]{64}$/.test(token);
+};
 ```
 
----
+#### 3. Limpiar tokens inválidos existentes
 
-## Archivos a Modificar
-
-| Archivo | Cambio |
-|---------|--------|
-| `src/services/pushNotifications.ts` | Agregar case `solicitud_descuento` en `handleNotificationTap` para navegar a `/pedidos?tab=por-autorizar` |
-| `src/components/vendedor/SolicitudDescuentoDialog.tsx` | Asegurar que pase `vendedor_nombre` al llamar `crearSolicitud()` |
+Eliminar el token APNs incorrecto de la base de datos para que se registre uno nuevo con el formato correcto.
 
 ---
 
-## Verificación
+### Pasos de Implementación
 
-Una vez implementado:
-
-1. Vendedor abre app y hace pedido con precio que excede descuento máximo
-2. Click en "Solicitar Autorización" 
-3. Admin recibe push notification: **"🔔 [Nombre Vendedor] solicita descuento para [Producto]"**
-4. Admin toca la notificación
-5. App abre directamente en `/pedidos?tab=por-autorizar` mostrando las solicitudes pendientes
+| Paso | Descripción |
+|------|-------------|
+| 1 | Modificar `pushNotifications.ts` para agregar delay y reintentos |
+| 2 | Agregar validación de formato de token |
+| 3 | Eliminar el token APNs inválido de la base de datos |
+| 4 | Publicar cambios y sincronizar con la app nativa |
+| 5 | Reinstalar la app y activar notificaciones nuevamente |
+| 6 | Verificar que el token FCM correcto se guarde |
 
 ---
 
-## Notas Técnicas
+### Sección Técnica
 
-- El tipo de dato `solicitud_descuento` ya se envía correctamente en el payload
-- La pestaña "Por Autorizar" ya integra el componente `SolicitudesDescuentoPanel` que muestra las solicitudes pendientes
-- Los roles se envían en minúsculas (`admin`) como requiere el edge function
+**Cambios en archivo:**
+- `src/services/pushNotifications.ts`: Modificar el listener de registro para iOS
+
+**Dependencias:**
+- No se requieren nuevas dependencias
+
+**Prueba de verificación:**
+- Después de la implementación, el token guardado debería tener un formato tipo `xxx:APA91b...` en lugar del formato hexadecimal actual
