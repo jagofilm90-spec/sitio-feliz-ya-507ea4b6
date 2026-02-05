@@ -30,14 +30,40 @@ export const PushNotificationsGate = () => {
     routeRef.current = location.pathname;
   }, [location.pathname]);
 
-  // Helper to check if a path is an auth route
-  const isAuthPath = useCallback((path: string) => {
-    return path === '/' || 
-           path.startsWith('/auth') || 
-           path.startsWith('/login');
+  // Helper to check if a path is an auth route - checks both react-router and window.location
+  const isAuthPath = useCallback((path?: string) => {
+    // Check react-router path
+    const routerPath = path || '';
+    const routerIsAuth = routerPath === '/' || 
+                         routerPath === '' ||
+                         routerPath.startsWith('/auth') || 
+                         routerPath.startsWith('/login');
+    
+    // Also check window.location as fallback for Capacitor quirks
+    const windowPath = typeof window !== 'undefined' ? window.location.pathname : '';
+    const windowIsAuth = windowPath === '/' || 
+                         windowPath === '' ||
+                         windowPath.startsWith('/auth') || 
+                         windowPath.startsWith('/login');
+    
+    // If EITHER indicates auth route, treat as auth route (defensive)
+    return routerIsAuth || windowIsAuth;
   }, []);
 
+  // Check current route - use both sources
   const isAuthRoute = isAuthPath(location.pathname);
+
+  // CRITICAL: Log for debugging on native
+  useEffect(() => {
+    if (isNativePlatform()) {
+      console.log('[PushGate] Route check:', {
+        routerPath: location.pathname,
+        windowPath: window.location.pathname,
+        isAuthRoute,
+        shouldShowSetup
+      });
+    }
+  }, [location.pathname, isAuthRoute, shouldShowSetup]);
 
   // Listen for auth state changes - wait for INITIAL_SESSION
   useEffect(() => {
@@ -141,9 +167,19 @@ export const PushNotificationsGate = () => {
     };
   }, [authReady, currentSession, isAuthRoute, isAuthPath]);
 
-  // Don't render anything on auth routes
+  // CRITICAL: Don't render anything on auth routes - double check with window.location
   if (isAuthRoute) {
+    console.log('[PushGate] Blocking render - on auth route');
     return null;
+  }
+
+  // Extra safety: also check window.location directly
+  if (typeof window !== 'undefined') {
+    const windowPath = window.location.pathname;
+    if (windowPath === '/' || windowPath === '' || windowPath.startsWith('/auth') || windowPath.startsWith('/login')) {
+      console.log('[PushGate] Blocking render - window.location on auth route:', windowPath);
+      return null;
+    }
   }
 
   // Don't render anything on non-native platforms
