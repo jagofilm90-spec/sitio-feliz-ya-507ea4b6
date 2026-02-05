@@ -5,60 +5,101 @@ import { supabase } from '@/integrations/supabase/client';
 // Verificar si estamos en plataforma nativa
 export const isNativePlatform = () => Capacitor.isNativePlatform();
 
-// Inicializar sistema de notificaciones push
-export const initPushNotifications = async (): Promise<boolean> => {
-  if (!isNativePlatform()) {
-    console.log('Push notifications solo disponibles en plataforma nativa');
-    return false;
-  }
+// Module-level flag to ensure listeners are set up only once
+let listenersReady = false;
 
-  try {
-    // Solicitar permisos
-    const permissionStatus = await PushNotifications.requestPermissions();
-    
-    if (permissionStatus.receive !== 'granted') {
-      console.log('Permisos de notificaciones no otorgados');
-      return false;
-    }
-
-    // Registrar para recibir notificaciones
-    await PushNotifications.register();
-
-    // Configurar listeners
-    setupPushListeners();
-
-    console.log('Sistema de notificaciones push inicializado');
-    return true;
-  } catch (error) {
-    console.error('Error inicializando push notifications:', error);
-    return false;
-  }
-};
-
-// Configurar listeners para eventos de push
+// Configurar listeners para eventos de push (idempotente)
 const setupPushListeners = () => {
+  if (listenersReady) {
+    console.log('[Push] Listeners already configured, skipping');
+    return;
+  }
+  
+  listenersReady = true;
+  console.log('[Push] Setting up push listeners');
+
   // Cuando se recibe el token de registro
   PushNotifications.addListener('registration', async (token: Token) => {
-    console.log('Token de push recibido:', token.value);
+    console.log('[Push] Token received:', token.value);
     await saveDeviceToken(token.value);
   });
 
   // Error en registro
   PushNotifications.addListener('registrationError', (error) => {
-    console.error('Error en registro de push:', error);
+    console.error('[Push] Registration error:', error);
   });
 
   // Notificación recibida con app en primer plano
   PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
-    console.log('Notificación recibida:', notification);
+    console.log('[Push] Notification received:', notification);
     handleForegroundNotification(notification);
   });
 
   // Usuario tocó la notificación
   PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
-    console.log('Acción de notificación:', action);
+    console.log('[Push] Notification action:', action);
     handleNotificationTap(action);
   });
+};
+
+/**
+ * SILENT registration - Does NOT request permissions.
+ * Only sets up listeners and calls register().
+ * Use when permissions are already granted.
+ */
+export const registerPushNotificationsSilently = async (): Promise<boolean> => {
+  if (!isNativePlatform()) {
+    console.log('[Push] Silent registration: not native platform');
+    return false;
+  }
+
+  try {
+    console.log('[Push] Silent registration: setting up listeners and registering');
+    setupPushListeners();
+    await PushNotifications.register();
+    console.log('[Push] Silent registration complete');
+    return true;
+  } catch (error) {
+    console.error('[Push] Silent registration error:', error);
+    return false;
+  }
+};
+
+/**
+ * INTERACTIVE registration - Requests permissions first.
+ * Only call this from a direct user action (button tap).
+ * This is the ONLY function that triggers the iOS system prompt.
+ */
+export const requestPushPermissionsAndRegister = async (): Promise<boolean> => {
+  if (!isNativePlatform()) {
+    console.log('[Push] Interactive registration: not native platform');
+    return false;
+  }
+
+  try {
+    console.log('[Push] Interactive registration: requesting permissions');
+    const permissionStatus = await PushNotifications.requestPermissions();
+    
+    if (permissionStatus.receive !== 'granted') {
+      console.log('[Push] Permissions not granted');
+      return false;
+    }
+
+    console.log('[Push] Permissions granted, proceeding with silent registration');
+    return await registerPushNotificationsSilently();
+  } catch (error) {
+    console.error('[Push] Interactive registration error:', error);
+    return false;
+  }
+};
+
+/**
+ * @deprecated Use registerPushNotificationsSilently or requestPushPermissionsAndRegister instead.
+ * Kept for backward compatibility but should not be used.
+ */
+export const initPushNotifications = async (): Promise<boolean> => {
+  console.warn('[Push] initPushNotifications is deprecated, use requestPushPermissionsAndRegister instead');
+  return requestPushPermissionsAndRegister();
 };
 
 // Guardar token del dispositivo en la base de datos usando SQL directo
