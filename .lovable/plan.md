@@ -1,121 +1,76 @@
 
-# Plan: Corregir Fallo de Registro FCM y Permitir Reintentos
+# Plan: Habilitar Notificaciones Push en Background para iOS
 
 ## Diagnóstico
 
-El error "No se pudieron activar" indica que el flujo falló en algún punto después de otorgar el permiso iOS:
+Las notificaciones llegan cuando la app está **abierta** (foreground) porque el código web (`handleForegroundNotification`) las muestra como toast. 
 
-```text
-Usuario toca "Activar" → iOS prompt → Permitir ✅
-        ↓
-register() llamado ✅
-        ↓
-waitForTokenSaved(20s) iniciado
-        ↓
-?? El evento 'registration' nunca disparó notifyTokenSaved() ??
-        ↓
-Timeout de 20s expiró → retorna false
-        ↓
-Toast: "No se pudieron activar" ❌
-        ↓
-localStorage.setItem('push_notification_prompt_seen', 'true') ← PROBLEMA
-```
+Pero cuando la app está **cerrada o en background**, iOS requiere un payload específico de APNs para mostrar las notificaciones en la pantalla de bloqueo. Actualmente falta el campo `content-available` y `mutable-content`.
 
-**Causas probables:**
-1. El evento `'registration'` de Capacitor no se disparó (problema de configuración nativa)
-2. `FCM.getToken()` falló en los 3 reintentos (Firebase SDK no inicializado correctamente)
-3. `saveDeviceToken()` falló al escribir en Supabase (problema de red/auth)
+## Cambio Requerido
 
-**Problema adicional:** El código marca `'push_notification_prompt_seen'` como `'true'` incluso cuando falla, impidiendo reintentos.
+**Archivo:** `supabase/functions/send-push-notification/index.ts`
 
----
-
-## Cambios a Implementar
-
-### 1. Permitir Reintentos cuando Falla
-
-**Archivo:** `src/components/PushNotificationSetup.tsx`
-
-Solo marcar como "visto" cuando:
-- El usuario **rechaza** explícitamente (botón "Ahora no")
-- O el registro es **exitoso**
-
-NO marcar como visto cuando falla técnicamente.
+Modificar la configuración de APNs (líneas 217-226) para incluir los campos que iOS necesita para notificaciones en background:
 
 ```typescript
-// ANTES (líneas 46-53):
-} else {
-  toast({ ... });
-  localStorage.setItem('push_notification_prompt_seen', 'true'); // ← QUITAR
-  onComplete?.({ enabled: false });
+// ANTES:
+} else if (device.platform === 'ios') {
+  message.message.apns = {
+    payload: {
+      aps: {
+        sound: 'default',
+        badge: 1,
+      }
+    }
+  };
 }
 
 // DESPUÉS:
-} else {
-  toast({ ... });
-  // NO marcar como visto - permitir reintento en próximo login
-  onComplete?.({ enabled: false });
+} else if (device.platform === 'ios') {
+  message.message.apns = {
+    headers: {
+      'apns-priority': '10',        // Alta prioridad - entrega inmediata
+      'apns-push-type': 'alert',    // Tipo de push visible
+    },
+    payload: {
+      aps: {
+        alert: {
+          title: title,
+          body: body,
+        },
+        sound: 'default',
+        badge: 1,
+        'content-available': 1,     // Permite entrega en background
+        'mutable-content': 1,       // Permite modificar la notificación
+      }
+    }
+  };
 }
 ```
 
-Mismo cambio en el bloque `catch` (línea 62).
+## Explicación Técnica
 
-### 2. Agregar Más Logging para Diagnóstico
+| Campo | Propósito |
+|-------|-----------|
+| `apns-priority: 10` | Prioridad alta - iOS entrega inmediatamente incluso si el dispositivo está en modo ahorro de energía |
+| `apns-push-type: alert` | Indica a iOS que es una notificación visible (no silenciosa) |
+| `alert.title/body` | Duplica el contenido dentro del payload APNs para iOS nativo |
+| `content-available: 1` | Permite que iOS entregue la notificación aunque la app esté cerrada |
+| `mutable-content: 1` | Permite que iOS modifique/procese la notificación antes de mostrarla |
 
-**Archivo:** `src/services/pushNotifications.ts`
+## Verificación Nativa en Xcode
 
-Agregar logs detallados para identificar dónde falla exactamente en iOS:
+Además del cambio en el código, verifica en Xcode que tengas habilitado:
 
-```typescript
-// En requestPushPermissionsAndRegister():
-console.log('[Push] About to call PushNotifications.register()');
-await PushNotifications.register();
-console.log('[Push] register() completed, now waiting for registration event...');
-```
+1. **Signing & Capabilities** → **Background Modes** → ✅ Remote notifications
+2. **Signing & Capabilities** → **Push Notifications** → ✅ Habilitado
 
-### 3. Aumentar el Timeout a 30 segundos
+Si estos no están habilitados, la app no puede recibir notificaciones en background aunque el payload sea correcto.
 
-El handshake Firebase-APNs puede tomar más tiempo en redes lentas o primera ejecución.
+## Próximos Pasos
 
-```typescript
-// En requestPushPermissionsAndRegister():
-const tokenPromise = waitForTokenSaved(30000); // Aumentar a 30s
-```
-
-### 4. Agregar Listener de Error de Registro
-
-Capturar errores del evento `'registrationError'` y notificar al resolver:
-
-```typescript
-// En setupPushListeners():
-PushNotifications.addListener('registrationError', (error) => {
-  console.error('[Push] Registration error:', error);
-  notifyTokenSaved(false); // ← AGREGAR: notificar fallo inmediatamente
-});
-```
-
----
-
-## Resumen de Cambios
-
-| Archivo | Cambio |
-|---------|--------|
-| `PushNotificationSetup.tsx` | Quitar `localStorage.setItem` en caso de fallo técnico (solo en skip/éxito) |
-| `pushNotifications.ts` | Aumentar timeout a 30s |
-| `pushNotifications.ts` | Agregar `notifyTokenSaved(false)` en listener de `'registrationError'` |
-| `pushNotifications.ts` | Agregar más logs diagnósticos |
-
----
-
-## Próximos Pasos de Diagnóstico
-
-Después de implementar estos cambios y crear un nuevo build de TestFlight:
-
-1. **Revisar los logs de Safari Web Inspector** conectado al iPhone
-2. Buscar mensajes como:
-   - `[Push] Registration event received` → El evento sí se disparó
-   - `[Push] Attempt X: FCM returned empty token` → Firebase no respondió
-   - `[Push] Token save timeout` → Ningún evento resolvió la promesa
-   - `[Push] Registration error:` → Error explícito del sistema
-
-3. Si el evento `'registration'` nunca aparece, el problema está en la configuración nativa (Xcode/Firebase) y no en el código web.
+1. Implementar el cambio en el edge function (automático)
+2. En Xcode: verificar que "Remote notifications" esté habilitado en Background Modes
+3. Hacer nuevo build de TestFlight con esa configuración
+4. Probar enviando una notificación con el celular bloqueado
