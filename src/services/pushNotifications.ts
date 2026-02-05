@@ -45,34 +45,49 @@ const isApnsToken = (token: string): boolean => {
 
 // Get FCM token with retries and validation
 const getFcmTokenWithRetry = async (maxRetries: number = 3): Promise<string | null> => {
+  console.log('[Push] === Starting FCM Token Retrieval ===');
+  console.log('[Push] Platform:', Capacitor.getPlatform());
+  console.log('[Push] Is native:', Capacitor.isNativePlatform());
+  
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      // Wait before attempting (exponential backoff)
-      const waitTime = 1000 * Math.pow(2, attempt); // 1s, 2s, 4s
+      // Wait before attempting (longer initial delay for iOS handshake)
+      const waitTime = attempt === 0 ? 2000 : 1000 * Math.pow(2, attempt); // 2s, 2s, 4s
       console.log(`[Push] Attempt ${attempt + 1}/${maxRetries}: waiting ${waitTime}ms before getting FCM token`);
       await delay(waitTime);
       
+      console.log(`[Push] Attempt ${attempt + 1}: Calling FCM.getToken()...`);
       const fcmToken = await FCM.getToken();
+      console.log(`[Push] Attempt ${attempt + 1}: FCM.getToken() returned`);
       
       if (!fcmToken.token) {
-        console.log(`[Push] Attempt ${attempt + 1}: FCM returned empty token`);
+        console.log(`[Push] Attempt ${attempt + 1}: FCM returned empty/null token object:`, JSON.stringify(fcmToken));
         continue;
       }
+      
+      console.log(`[Push] Attempt ${attempt + 1}: Token received, length=${fcmToken.token.length}, first30=${fcmToken.token.substring(0, 30)}...`);
       
       // Validate it's not a raw APNs token
       if (isApnsToken(fcmToken.token)) {
-        console.log(`[Push] Attempt ${attempt + 1}: Got APNs token instead of FCM, retrying...`);
+        console.log(`[Push] Attempt ${attempt + 1}: Token is raw APNs (64 hex chars) - Firebase bridge not ready, retrying...`);
         continue;
       }
       
-      console.log(`[Push] Successfully got FCM token on attempt ${attempt + 1}`);
+      console.log(`[Push] ✅ Successfully got valid FCM token on attempt ${attempt + 1}`);
       return fcmToken.token;
-    } catch (error) {
-      console.error(`[Push] Attempt ${attempt + 1} failed:`, error);
+    } catch (error: any) {
+      console.error(`[Push] ❌ Attempt ${attempt + 1} EXCEPTION:`, {
+        message: error?.message || 'No message',
+        code: error?.code || 'No code',
+        name: error?.name || 'No name',
+        stack: error?.stack?.substring(0, 200) || 'No stack',
+        fullError: JSON.stringify(error)
+      });
     }
   }
   
-  console.error('[Push] Failed to get valid FCM token after all retries');
+  console.error('[Push] ❌ FAILED: Could not get valid FCM token after', maxRetries, 'attempts');
+  console.error('[Push] Possible causes: 1) GoogleService-Info.plist missing, 2) Firebase SDK not initialized, 3) APNs key not configured in Firebase Console');
   return null;
 };
 
@@ -94,31 +109,35 @@ const setupPushListeners = () => {
 
   // Cuando se recibe el token de registro
   PushNotifications.addListener('registration', async (token: Token) => {
-    console.log('[Push] Registration event received');
-    console.log('[Push] Raw registration token:', token.value?.substring(0, 30) + '...');
+    console.log('[Push] === Registration Event Received ===');
+    console.log('[Push] Raw token value:', token.value ? `${token.value.substring(0, 40)}... (length: ${token.value.length})` : 'NULL/EMPTY');
+    console.log('[Push] Token type check - isApnsToken:', token.value ? isApnsToken(token.value) : 'N/A');
     
     // En iOS, necesitamos obtener el token FCM (no el APNs crudo)
     if (Capacitor.getPlatform() === 'ios') {
-      console.log('[Push] iOS detected - will get FCM token with retries');
+      console.log('[Push] iOS platform detected - initiating FCM token retrieval with retries');
       
       const fcmToken = await getFcmTokenWithRetry(3);
       
       if (fcmToken) {
-        console.log('[Push] FCM Token (iOS):', fcmToken.substring(0, 30) + '...');
+        console.log('[Push] ✅ iOS FCM Token obtained successfully');
+        console.log('[Push] Token preview:', fcmToken.substring(0, 40) + '...');
         await saveDeviceToken(fcmToken);
       } else {
-        console.error('[Push] Could not obtain valid FCM token for iOS');
+        console.error('[Push] ❌ iOS: Could NOT obtain valid FCM token');
+        console.error('[Push] Check Xcode console for native errors');
         notifyTokenSaved(false);
       }
     } else {
       // Android ya retorna FCM token directamente
-      console.log('[Push] FCM Token (Android):', token.value?.substring(0, 30) + '...');
+      console.log('[Push] Android platform - using direct token');
+      console.log('[Push] Token preview:', token.value?.substring(0, 40) + '...');
       
       // Validate even Android tokens
       if (token.value && !isApnsToken(token.value)) {
         await saveDeviceToken(token.value);
       } else {
-        console.error('[Push] Invalid token format on Android');
+        console.error('[Push] ❌ Android: Invalid token format received');
         notifyTokenSaved(false);
       }
     }
@@ -126,7 +145,12 @@ const setupPushListeners = () => {
 
   // Error en registro
   PushNotifications.addListener('registrationError', (error) => {
-    console.error('[Push] Registration error:', error);
+    console.error('[Push] ❌ Registration ERROR event:', {
+      message: (error as any)?.message || 'No message',
+      code: (error as any)?.code || 'No code',
+      fullError: JSON.stringify(error)
+    });
+    console.error('[Push] This usually means: APNs certificate issue, or app not properly signed for push');
     notifyTokenSaved(false); // Notificar fallo inmediatamente
   });
 
