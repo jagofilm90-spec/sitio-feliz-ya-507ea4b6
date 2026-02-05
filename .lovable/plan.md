@@ -1,93 +1,55 @@
 
-## Plan: Corregir el flujo de obtención del token FCM en iOS
 
-### Problema Identificado
-El token que se está guardando en la base de datos es el **token APNs nativo** (formato hexadecimal de 64 caracteres), pero Firebase Cloud Messaging requiere un **token FCM** (formato largo con caracteres alfanuméricos).
+## Plan: Publicar cambios para activar el fix de FCM en iOS
 
-**Token actual guardado:**
-```
-14CF17D9462E8A2C222FF3CB1EE183B76978D4A5E2353A385FBDC1D2A245947E
-```
+### Diagnóstico Confirmado
 
-**Token FCM esperado (ejemplo):**
-```
-dQw4w9WgXcQ:APA91bGpzYfR2F8j...
-```
+| Elemento | Estado |
+|----------|--------|
+| AppDelegate.swift | ✅ Correcto - Firebase configurado con mapeo de token APNs |
+| pushNotifications.ts (Lovable) | ✅ Actualizado con retry logic y validación |
+| App iOS apunta a | `erp.almasa.com.mx` (producción) |
+| Código en producción | ❌ Versión anterior sin el fix de FCM |
 
-### Causa Raíz
-Cuando el código llama a `FCM.getToken()` inmediatamente después del registro, Firebase aún no ha completado el mapeo del token APNs al token FCM. Por eso falla y el código cae al fallback que guarda el token APNs incorrecto.
+### Problema
+La app iOS carga el JavaScript desde **producción** (`erp.almasa.com.mx`), pero el fix que agregamos al código `pushNotifications.ts` solo está en el **preview de Lovable**. Por eso el código nuevo no se ejecuta en tu iPhone.
 
-### Solución Propuesta
-
-#### 1. Agregar un delay y reintentos para obtener el token FCM
-
-Modificar la lógica en `src/services/pushNotifications.ts` para:
-- Esperar un momento antes de intentar obtener el token FCM
-- Implementar reintentos con backoff exponencial
-- Solo guardar el token si tiene el formato FCM correcto (no hexadecimal)
+### Solución
 
 ```text
-// Pseudo-código del cambio
-PushNotifications.addListener('registration', async (token: Token) => {
-  if (Capacitor.getPlatform() === 'ios') {
-    // Esperar a que Firebase procese el token APNs
-    await delay(1000);
-    
-    // Intentar obtener FCM token con reintentos
-    for (let i = 0; i < 3; i++) {
-      try {
-        const fcmToken = await FCM.getToken();
-        // Validar que no sea un token APNs (hex)
-        if (!isHexToken(fcmToken.token)) {
-          await saveDeviceToken(fcmToken.token);
-          return;
-        }
-      } catch (e) {
-        await delay(1000 * (i + 1)); // Backoff
-      }
-    }
-    console.error('No se pudo obtener token FCM válido');
-  }
-});
+┌─────────────────┐    Publicar    ┌─────────────────┐
+│ Preview Lovable │  ──────────►   │ erp.almasa.com.mx │
+│ (código nuevo)  │                │ (producción)      │
+└─────────────────┘                └─────────────────┘
+                                          │
+                                          ▼
+                                   ┌──────────────┐
+                                   │ App iOS      │
+                                   │ carga código │
+                                   │ actualizado  │
+                                   └──────────────┘
 ```
 
-#### 2. Agregar validación de formato de token
+### Pasos
 
-Crear una función helper para validar que el token tenga formato FCM y no APNs:
+1. **Publicar desde Lovable**
+   - Haz clic en el botón **"Publish"** (arriba a la derecha en la interfaz de Lovable)
+   - Esto despliega el código actualizado a `erp.almasa.com.mx`
 
-```text
-// Tokens APNs son hexadecimales de 64 caracteres
-const isApnsToken = (token: string): boolean => {
-  return /^[0-9A-Fa-f]{64}$/.test(token);
-};
-```
+2. **Forzar recarga en iOS**
+   - Cierra completamente la app en tu iPhone (desliza hacia arriba para cerrarla)
+   - Vuelve a abrir la app
+   - Esto cargará el código JavaScript nuevo desde producción
 
-#### 3. Limpiar tokens inválidos existentes
+3. **Re-activar notificaciones**
+   - Cuando la app abra, debería activar el nuevo flujo de push
+   - El código con retry logic intentará obtener el token FCM correctamente
 
-Eliminar el token APNs incorrecto de la base de datos para que se registre uno nuevo con el formato correcto.
+4. **Verificación**
+   - Una vez que hagas esto, avísame para verificar si el token FCM se guardó en la base de datos
 
 ---
 
-### Pasos de Implementación
+### Nota Importante
+No necesitas hacer un nuevo build de TestFlight para esto. El código JavaScript se carga dinámicamente desde el servidor cada vez que abres la app. Solo necesitas publicar y reabrir la app.
 
-| Paso | Descripción |
-|------|-------------|
-| 1 | Modificar `pushNotifications.ts` para agregar delay y reintentos |
-| 2 | Agregar validación de formato de token |
-| 3 | Eliminar el token APNs inválido de la base de datos |
-| 4 | Publicar cambios y sincronizar con la app nativa |
-| 5 | Reinstalar la app y activar notificaciones nuevamente |
-| 6 | Verificar que el token FCM correcto se guarde |
-
----
-
-### Sección Técnica
-
-**Cambios en archivo:**
-- `src/services/pushNotifications.ts`: Modificar el listener de registro para iOS
-
-**Dependencias:**
-- No se requieren nuevas dependencias
-
-**Prueba de verificación:**
-- Después de la implementación, el token guardado debería tener un formato tipo `xxx:APA91b...` en lugar del formato hexadecimal actual
