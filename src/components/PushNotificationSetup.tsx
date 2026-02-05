@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Bell, BellOff, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,101 +10,22 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  initPushNotifications, 
-  isNativePlatform, 
-  checkNotificationPermissions 
-} from '@/services/pushNotifications';
-import { supabase } from '@/integrations/supabase/client';
+import { initPushNotifications } from '@/services/pushNotifications';
 
 interface PushNotificationSetupProps {
   onComplete?: () => void;
 }
 
 /**
- * Dialog component for requesting push notification permissions.
+ * Controlled dialog component for requesting push notification permissions.
  * 
- * IMPORTANT: This component should be controlled by PushNotificationsGate
- * which handles all the route and auth checks. This component now only
- * manages the dialog UI and permission request flow.
+ * IMPORTANT: This component is purely controlled by PushNotificationsGate.
+ * It has NO internal logic for route/auth detection - the Gate handles all of that.
+ * When this component mounts, the dialog opens immediately.
  */
 export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps) => {
-  const [showDialog, setShowDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const { toast } = useToast();
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    
-    const checkAndShowDialog = async () => {
-      // Skip if not native platform
-      if (!isNativePlatform()) {
-        return;
-      }
-
-      // STRICT CHECK: Block on auth routes using startsWith
-      const currentPath = window.location.pathname;
-      if (
-        currentPath === '/' ||
-        currentPath.startsWith('/auth') ||
-        currentPath.startsWith('/login')
-      ) {
-        console.log('[PushSetup] Blocked: on auth route', currentPath);
-        return;
-      }
-
-      // Verify session exists with valid user
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) {
-        console.log('[PushSetup] Blocked: no valid session');
-        return;
-      }
-
-      // Check if already has permissions
-      const permitted = await checkNotificationPermissions();
-      if (!mountedRef.current) return;
-      
-      setHasPermission(permitted);
-
-      if (permitted) {
-        console.log('[PushSetup] Already has permission');
-        return;
-      }
-
-      // Check if user already dismissed
-      const hasSeenPrompt = localStorage.getItem('push_notification_prompt_seen');
-      if (hasSeenPrompt) {
-        console.log('[PushSetup] User already dismissed prompt');
-        return;
-      }
-
-      // Show dialog after delay (only if still mounted)
-      console.log('[PushSetup] Scheduling dialog display');
-      timeoutRef.current = setTimeout(() => {
-        if (mountedRef.current) {
-          console.log('[PushSetup] Showing dialog');
-          setShowDialog(true);
-        }
-      }, 1500);
-    };
-
-    // Small initial delay for stability
-    const initialDelay = setTimeout(() => {
-      checkAndShowDialog();
-    }, 500);
-
-    return () => {
-      mountedRef.current = false;
-      clearTimeout(initialDelay);
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-    };
-  }, []);
 
   const handleEnableNotifications = async () => {
     setIsLoading(true);
@@ -113,7 +34,6 @@ export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps
       const success = await initPushNotifications();
       
       if (success) {
-        setHasPermission(true);
         toast({
           title: 'Notificaciones activadas',
           description: 'Recibirás alertas de nuevos pedidos y actualizaciones importantes.',
@@ -134,25 +54,24 @@ export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps
       });
     } finally {
       setIsLoading(false);
-      setShowDialog(false);
       localStorage.setItem('push_notification_prompt_seen', 'true');
       onComplete?.();
     }
   };
 
   const handleSkip = () => {
-    setShowDialog(false);
     localStorage.setItem('push_notification_prompt_seen', 'true');
     onComplete?.();
   };
 
-  // No mostrar nada si no es plataforma nativa
-  if (!isNativePlatform()) {
-    return null;
-  }
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      handleSkip();
+    }
+  };
 
   return (
-    <Dialog open={showDialog} onOpenChange={setShowDialog}>
+    <Dialog open={true} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
