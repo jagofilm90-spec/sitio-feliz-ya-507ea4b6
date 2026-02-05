@@ -1,108 +1,119 @@
 
-Objetivo: que el aviso del iPhone (“ALMASA ERP quiere enviarte notificaciones”) NO aparezca automáticamente al iniciar sesión. Ese aviso solo debe salir cuando el usuario toque explícitamente “Activar Notificaciones” dentro del modal de la app.
+# Plan: Corregir Generación de Token FCM en iOS
 
-## Qué está pasando (según tu captura y tus respuestas)
-- Estás en /auth y al iniciar sesión te aparece:
-  1) El modal interno “Activar Notificaciones” (tú presionas “Ahora no”)
-  2) Aun así, aparece el aviso del iPhone (No permitir / Permitir)
-- Ese aviso del iPhone solo puede aparecer si en algún momento se ejecuta `PushNotifications.requestPermissions()`.
+## Problema Identificado
 
-En el código actual, `requestPermissions()` vive dentro de `initPushNotifications()`. Aunque “en teoría” solo debería llamarse cuando el usuario toca “Activar Notificaciones”, hoy `initPushNotifications()` también se usa para “inicializar silenciosamente” cuando el sistema cree que ya hay permisos. En iOS esto puede terminar mostrando el prompt en momentos indeseados por diferencias/quirks de estados de permisos (por ejemplo, estados “provisional/prompt” o lecturas inconsistentes).
+El token que se genera actualmente en iOS es un **token APNs nativo**, pero el edge function `send-push-notification` usa la API de **Firebase Cloud Messaging (FCM)** que requiere un **token FCM**.
 
-## Solución (cambio de arquitectura mínimo, pero definitivo)
-Separar “registrar y escuchar pushes” de “pedir permiso”.
-- Nunca pedir permiso “en automático”.
-- Pedir permiso únicamente por acción directa del usuario (botón).
+### Flujo Actual (Roto)
+```text
+iOS Device → APNs Token (crudo) → Se guarda en device_tokens → Edge Function intenta enviar con FCM → ❌ Falla
+```
 
-### 1) Refactor del servicio `src/services/pushNotifications.ts`
-Crear 2 caminos explícitos:
+### Flujo Correcto
+```text
+iOS Device → APNs Token → Firebase SDK convierte a FCM Token → Se guarda en device_tokens → Edge Function envía con FCM → ✅ Funciona
+```
 
-A) “Silencioso” (NO pide permisos)
-- `registerPushNotificationsSilently()`:
-  - Solo hace:
-    - setup listeners (idempotente, una sola vez)
-    - `PushNotifications.register()`
-  - Importante: NO llama a `requestPermissions()`
-  - Solo se usa cuando el sistema detecta que ya hay permiso otorgado.
+---
 
-B) “Interactivo” (pide permisos y luego registra)
-- `requestPushPermissionsAndRegister()`:
-  - Llama `PushNotifications.requestPermissions()`
-  - Si granted:
-    - llama a `registerPushNotificationsSilently()`
-  - Si no granted:
-    - devuelve `false`
+## Solución Recomendada: Integrar Firebase SDK en iOS
 
-Además:
-- Hacer `setupPushListeners()` idempotente con una bandera de módulo (ej. `let listenersReady = false`) para evitar listeners duplicados.
+### Pasos Requeridos (100% en el proyecto nativo de Xcode)
 
-Resultado: aunque el Gate se ejecute en un momento “raro”, jamás disparará el prompt del iPhone por accidente.
+#### 1. Instalar el plugin `@capacitor-community/fcm`
+Este plugin convierte automáticamente el token APNs a FCM.
 
-### 2) Ajuste del Gate `src/components/PushNotificationsGate.tsx`
-Cambios:
-- Sustituir `initPushNotifications()` en el branch “Permissions already granted” por `registerPushNotificationsSilently()`.
-- Mantener el modal cuando no hay permisos y el usuario no ha visto el prompt interno.
-- Agregar una “guardia anti-race” extra:
-  - Un `cancelled` flag + un `routeRef` para evitar que un async tardío haga cambios si el usuario ya está en una ruta de auth.
-  - Esto evita que un check iniciado “antes” afecte cuando ya estás en /auth.
+```bash
+npm install @capacitor-community/fcm
+npx cap sync ios
+```
 
-También corregir la semántica de `initRef`:
-- Ya no marcar `initRef.current = true` cuando el usuario presiona “Ahora no”.
-- Solo marcar `initRef.current = true` cuando realmente se haya registrado push (para no bloquear registro futuro si el usuario luego decide habilitar).
+#### 2. Agregar Firebase SDK a tu proyecto iOS
+En Xcode, agregar el Swift Package de Firebase:
+- File → Add Packages
+- URL: `https://github.com/firebase/firebase-ios-sdk`
+- Seleccionar: `FirebaseMessaging`
 
-### 3) Ajuste del modal `src/components/PushNotificationSetup.tsx`
-Cambios:
-- Cambiar el botón “Activar Notificaciones” para que llame a `requestPushPermissionsAndRegister()` (no a `initPushNotifications()`).
-- Mejorar el callback `onComplete` para informar si se habilitó o se omitió, por ejemplo:
-  - `onComplete?.({ enabled: boolean })`
-- En “Ahora no”:
-  - Mantener `localStorage.setItem('push_notification_prompt_seen', 'true')` (para no insistir)
-  - Reportar `enabled: false`
+#### 3. Modificar `AppDelegate.swift` en Xcode
+```swift
+import UIKit
+import Capacitor
+import FirebaseCore
+import FirebaseMessaging
 
-### 4) Verificación de backend (solo lectura / sanity check)
-Ya revisé que:
-- La tabla `device_tokens` tiene RLS habilitado.
-- Existe política: “Users can manage own device tokens” con `auth.uid() = user_id`.
-Esto significa: cuando el token se reciba (evento `registration`), el upsert debería poder guardarse correctamente si la configuración nativa está bien y el listener se está disparando.
+@UIApplicationMain
+class AppDelegate: UIResponder, UIApplicationDelegate {
 
-## Cómo vamos a probar (pasos exactos en iPhone)
-Caso A: Usuario elige “Ahora no” (no debe salir prompt del iPhone)
-1) Instala la nueva build.
-2) Inicia sesión.
-3) Debe salir el modal interno.
-4) Presiona “Ahora no”.
-5) Confirmación esperada:
-   - No aparece el prompt del iPhone.
-   - No se guarda token en `device_tokens`.
+    var window: UIWindow?
 
-Caso B: Usuario habilita (sí debe salir prompt del iPhone, solo al tocar el botón)
-1) Borra el flag para pruebas (o reinstala) para volver a ver el modal.
-2) Inicia sesión.
-3) En el modal presiona “Activar Notificaciones”.
-4) Ahora sí debe salir el prompt del iPhone.
-5) Presiona “Permitir”.
-6) Confirmación esperada:
-   - Se dispara el evento `registration`.
-   - Se guarda un registro en `device_tokens`.
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Configurar Firebase
+        FirebaseApp.configure()
+        
+        return true
+    }
 
-## Archivos a modificar
-- `src/services/pushNotifications.ts`
-  - Separar funciones (silencioso vs interactivo)
-  - Listeners idempotentes
-- `src/components/PushNotificationsGate.tsx`
-  - Usar inicialización silenciosa sin pedir permisos
-  - Guardias anti-race en async
-  - Corregir `initRef` para no marcar “init” en skip
-- `src/components/PushNotificationSetup.tsx`
-  - Usar función interactiva (request + register)
-  - `onComplete` con resultado enabled/false
+    // Convertir token APNs a FCM
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        Messaging.messaging().apnsToken = deviceToken
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+    }
 
-## Riesgos / Consideraciones
-- Si iOS sigue mostrando el prompt aun sin `requestPermissions()`, entonces hay otra fuente que lo dispara (a nivel nativo). Pero con el code search actual, la única llamada está en `pushNotifications.ts`. Esta refactorización elimina por completo cualquier llamada “accidental” desde el Gate.
-- Si después de permitir no se guarda token:
-  - Siguiente paso será validar el “handshake” nativo (APNs/FCM, capacidades en Xcode) y revisar logs del registro en dispositivo, porque ahí sí ya sería un tema de configuración nativa, no del gating.
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+    }
+}
+```
 
-## Entregable
-- El prompt del iPhone no se mostrará al iniciar sesión si el usuario presiona “Ahora no”.
-- El prompt del iPhone solo aparecerá cuando el usuario toque “Activar Notificaciones”.
-- La inicialización “silenciosa” no pedirá permisos; solo registrará si ya existen permisos otorgados.
+#### 4. Actualizar el código TypeScript para usar FCM
+Modificar `src/services/pushNotifications.ts` para obtener el token FCM en lugar del APNs:
+
+```typescript
+import { FCM } from '@capacitor-community/fcm';
+
+// En el listener de registration:
+PushNotifications.addListener('registration', async (token: Token) => {
+  // En iOS, convertir a FCM token
+  if (Capacitor.getPlatform() === 'ios') {
+    try {
+      const fcmToken = await FCM.getToken();
+      console.log('[Push] FCM Token (iOS):', fcmToken.token);
+      await saveDeviceToken(fcmToken.token);
+    } catch (e) {
+      console.error('[Push] Error getting FCM token:', e);
+    }
+  } else {
+    // Android ya retorna FCM token directamente
+    await saveDeviceToken(token.value);
+  }
+});
+```
+
+#### 5. Subir nuevo build a TestFlight
+Después de los cambios nativos:
+```bash
+npx cap sync ios
+```
+Luego en Xcode: incrementar version/build, Archive, y subir a TestFlight.
+
+---
+
+## Resumen de Cambios
+
+| Área | Cambio |
+|------|--------|
+| **package.json** | Agregar `@capacitor-community/fcm` |
+| **pushNotifications.ts** | Importar FCM y obtener token FCM en iOS |
+| **AppDelegate.swift** (Xcode) | Configurar Firebase y pasar token a Messaging |
+| **Xcode Package** | Agregar Firebase iOS SDK |
+| **TestFlight** | Nuevo build con cambios nativos |
+
+---
+
+## Notas Técnicas
+
+- El plugin `@capacitor/push-notifications` en iOS solo retorna el token APNs crudo
+- Firebase Cloud Messaging API V1 (que usa tu edge function) requiere tokens FCM
+- El plugin `@capacitor-community/fcm` hace el "swap" de APNs → FCM automáticamente
+- En Android esto no es problema porque el plugin ya retorna FCM tokens directamente
