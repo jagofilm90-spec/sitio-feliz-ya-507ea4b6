@@ -1,119 +1,108 @@
 
-# Plan: Corregir Generación de Token FCM en iOS
+# Plan: Push Notification para Solicitudes de Descuento con Deep Link a "Pedidos Por Autorizar"
 
-## Problema Identificado
+## Situación Actual
 
-El token que se genera actualmente en iOS es un **token APNs nativo**, pero el edge function `send-push-notification` usa la API de **Firebase Cloud Messaging (FCM)** que requiere un **token FCM**.
-
-### Flujo Actual (Roto)
-```text
-iOS Device → APNs Token (crudo) → Se guarda en device_tokens → Edge Function intenta enviar con FCM → ❌ Falla
-```
-
-### Flujo Correcto
-```text
-iOS Device → APNs Token → Firebase SDK convierte a FCM Token → Se guarda en device_tokens → Edge Function envía con FCM → ✅ Funciona
-```
-
----
-
-## Solución Recomendada: Integrar Firebase SDK en iOS
-
-### Pasos Requeridos (100% en el proyecto nativo de Xcode)
-
-#### 1. Instalar el plugin `@capacitor-community/fcm`
-Este plugin convierte automáticamente el token APNs a FCM.
-
-```bash
-npm install @capacitor-community/fcm
-npx cap sync ios
-```
-
-#### 2. Agregar Firebase SDK a tu proyecto iOS
-En Xcode, agregar el Swift Package de Firebase:
-- File → Add Packages
-- URL: `https://github.com/firebase/firebase-ios-sdk`
-- Seleccionar: `FirebaseMessaging`
-
-#### 3. Modificar `AppDelegate.swift` en Xcode
-```swift
-import UIKit
-import Capacitor
-import FirebaseCore
-import FirebaseMessaging
-
-@UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
-
-    var window: UIWindow?
-
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Configurar Firebase
-        FirebaseApp.configure()
-        
-        return true
-    }
-
-    // Convertir token APNs a FCM
-    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        Messaging.messaging().apnsToken = deviceToken
-        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
-    }
-
-    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
-    }
-}
-```
-
-#### 4. Actualizar el código TypeScript para usar FCM
-Modificar `src/services/pushNotifications.ts` para obtener el token FCM en lugar del APNs:
+Ya existe la lógica para enviar push notifications cuando un vendedor solicita un descuento:
 
 ```typescript
-import { FCM } from '@capacitor-community/fcm';
-
-// En el listener de registration:
-PushNotifications.addListener('registration', async (token: Token) => {
-  // En iOS, convertir a FCM token
-  if (Capacitor.getPlatform() === 'ios') {
-    try {
-      const fcmToken = await FCM.getToken();
-      console.log('[Push] FCM Token (iOS):', fcmToken.token);
-      await saveDeviceToken(fcmToken.token);
-    } catch (e) {
-      console.error('[Push] Error getting FCM token:', e);
+// En useSolicitudesDescuento.ts (línea 248-264)
+await supabase.functions.invoke('send-push-notification', {
+  body: {
+    roles: ['admin'],
+    title: '🔔 Autoriza precio',
+    body: `${vendedor_nombre || 'Vendedor'} solicita descuento para ${producto_nombre || 'producto'}`,
+    data: {
+      type: 'solicitud_descuento',
+      solicitud_id: data.id,
     }
-  } else {
-    // Android ya retorna FCM token directamente
-    await saveDeviceToken(token.value);
   }
 });
 ```
 
-#### 5. Subir nuevo build a TestFlight
-Después de los cambios nativos:
-```bash
-npx cap sync ios
-```
-Luego en Xcode: incrementar version/build, Archive, y subir a TestFlight.
+**Problema**: El tipo `solicitud_descuento` **NO está manejado** en el `handleNotificationTap`, entonces cuando tocas la notificación, no navega a ningún lado.
 
 ---
 
-## Resumen de Cambios
+## Cambios Requeridos
 
-| Área | Cambio |
-|------|--------|
-| **package.json** | Agregar `@capacitor-community/fcm` |
-| **pushNotifications.ts** | Importar FCM y obtener token FCM en iOS |
-| **AppDelegate.swift** (Xcode) | Configurar Firebase y pasar token a Messaging |
-| **Xcode Package** | Agregar Firebase iOS SDK |
-| **TestFlight** | Nuevo build con cambios nativos |
+### 1. Agregar Deep Link para `solicitud_descuento`
+
+Modificar `src/services/pushNotifications.ts` para manejar el tap en notificaciones de solicitud de descuento:
+
+```typescript
+// En handleNotificationTap (línea ~177)
+case 'solicitud_descuento':
+  window.location.href = '/pedidos?tab=por-autorizar';
+  break;
+```
+
+Esto hará que al tocar la notificación, el admin sea llevado directamente a la pestaña "Por Autorizar" del módulo de Pedidos.
+
+### 2. Pasar Nombre del Vendedor Correctamente
+
+El componente `SolicitudDescuentoDialog.tsx` ya recibe la data necesaria, pero necesitamos asegurar que el nombre del vendedor se pase correctamente desde donde se invoca el dialog.
+
+Verificar que al llamar `crearSolicitud()` se incluya:
+- `vendedor_nombre`: Nombre completo del vendedor actual
+- `producto_nombre`: Nombre del producto
+
+---
+
+## Flujo Completo
+
+```text
+┌──────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Vendedor   │    │  Edge Function   │    │     Admin       │
+│  en /vendedor│    │send-push-notif.  │    │   dispositivo   │
+└──────┬───────┘    └────────┬─────────┘    └────────┬────────┘
+       │                     │                       │
+       │ 1. Click "Solicitar"│                       │
+       │ (precio > máximo)   │                       │
+       │                     │                       │
+       │ 2. crearSolicitud() │                       │
+       ├────────────────────>│                       │
+       │                     │                       │
+       │                     │ 3. FCM Push via      │
+       │                     │    Firebase V1 API   │
+       │                     ├──────────────────────>│
+       │                     │                       │
+       │                     │                       │ 4. Notificación
+       │                     │                       │    "🔔 Juan solicita
+       │                     │                       │     descuento para X"
+       │                     │                       │
+       │                     │                       │ 5. Admin toca notif.
+       │                     │                       │
+       │                     │                       │ 6. App abre en
+       │                     │                       │    /pedidos?tab=por-autorizar
+       │                     │                       │
+```
+
+---
+
+## Archivos a Modificar
+
+| Archivo | Cambio |
+|---------|--------|
+| `src/services/pushNotifications.ts` | Agregar case `solicitud_descuento` en `handleNotificationTap` para navegar a `/pedidos?tab=por-autorizar` |
+| `src/components/vendedor/SolicitudDescuentoDialog.tsx` | Asegurar que pase `vendedor_nombre` al llamar `crearSolicitud()` |
+
+---
+
+## Verificación
+
+Una vez implementado:
+
+1. Vendedor abre app y hace pedido con precio que excede descuento máximo
+2. Click en "Solicitar Autorización" 
+3. Admin recibe push notification: **"🔔 [Nombre Vendedor] solicita descuento para [Producto]"**
+4. Admin toca la notificación
+5. App abre directamente en `/pedidos?tab=por-autorizar` mostrando las solicitudes pendientes
 
 ---
 
 ## Notas Técnicas
 
-- El plugin `@capacitor/push-notifications` en iOS solo retorna el token APNs crudo
-- Firebase Cloud Messaging API V1 (que usa tu edge function) requiere tokens FCM
-- El plugin `@capacitor-community/fcm` hace el "swap" de APNs → FCM automáticamente
-- En Android esto no es problema porque el plugin ya retorna FCM tokens directamente
+- El tipo de dato `solicitud_descuento` ya se envía correctamente en el payload
+- La pestaña "Por Autorizar" ya integra el componente `SolicitudesDescuentoPanel` que muestra las solicitudes pendientes
+- Los roles se envían en minúsculas (`admin`) como requiere el edge function
