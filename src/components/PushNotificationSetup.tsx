@@ -49,7 +49,7 @@ export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps
           description: 'Por favor habilita las notificaciones en la configuración de tu dispositivo.',
           variant: 'destructive',
         });
-        localStorage.setItem('push_notification_prompt_seen', 'true');
+        // NO marcar como visto en fallo técnico - permitir reintento en próximo login
         onComplete?.({ enabled: false });
       }
     } catch (error) {
@@ -59,7 +59,7 @@ export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps
         description: 'Ocurrió un error al activar las notificaciones.',
         variant: 'destructive',
       });
-      localStorage.setItem('push_notification_prompt_seen', 'true');
+      // NO marcar como visto en error - permitir reintento en próximo login
       onComplete?.({ enabled: false });
     } finally {
       setIsLoading(false);

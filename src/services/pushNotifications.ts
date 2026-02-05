@@ -11,7 +11,7 @@ let tokenSavedResolver: ((success: boolean) => void) | null = null;
 let tokenSaveTimeout: ReturnType<typeof setTimeout> | null = null;
 
 // Creates a promise that resolves when the token is saved
-const waitForTokenSaved = (timeoutMs: number = 20000): Promise<boolean> => {
+const waitForTokenSaved = (timeoutMs: number = 30000): Promise<boolean> => {
   return new Promise((resolve) => {
     tokenSavedResolver = resolve;
     
@@ -127,6 +127,7 @@ const setupPushListeners = () => {
   // Error en registro
   PushNotifications.addListener('registrationError', (error) => {
     console.error('[Push] Registration error:', error);
+    notifyTokenSaved(false); // Notificar fallo inmediatamente
   });
 
   // Notificación recibida con app en primer plano
@@ -189,11 +190,12 @@ export const requestPushPermissionsAndRegister = async (): Promise<boolean> => {
     setupPushListeners();
     
     // Start waiting BEFORE calling register()
-    const tokenPromise = waitForTokenSaved(20000); // 20s timeout for iOS
+    const tokenPromise = waitForTokenSaved(30000); // 30s timeout for iOS
     
     // Register the device
+    console.log('[Push] About to call PushNotifications.register()');
     await PushNotifications.register();
-    console.log('[Push] Register called, waiting for token to be saved...');
+    console.log('[Push] register() completed, now waiting for registration event...');
     
     // Wait for the token to be saved
     const success = await tokenPromise;
