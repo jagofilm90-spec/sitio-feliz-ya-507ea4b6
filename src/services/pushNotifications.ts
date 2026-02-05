@@ -1,5 +1,6 @@
 import { PushNotifications, Token, PushNotificationSchema, ActionPerformed } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
+import { FCM } from '@capacitor-community/fcm';
 import { supabase } from '@/integrations/supabase/client';
 
 // Verificar si estamos en plataforma nativa
@@ -20,8 +21,25 @@ const setupPushListeners = () => {
 
   // Cuando se recibe el token de registro
   PushNotifications.addListener('registration', async (token: Token) => {
-    console.log('[Push] Token received:', token.value);
-    await saveDeviceToken(token.value);
+    console.log('[Push] Registration event received');
+    
+    // En iOS, necesitamos obtener el token FCM (no el APNs crudo)
+    if (Capacitor.getPlatform() === 'ios') {
+      try {
+        const fcmToken = await FCM.getToken();
+        console.log('[Push] FCM Token (iOS):', fcmToken.token);
+        await saveDeviceToken(fcmToken.token);
+      } catch (e) {
+        console.error('[Push] Error getting FCM token on iOS:', e);
+        // Fallback: intentar guardar el token APNs de todas formas
+        console.log('[Push] Fallback: saving APNs token');
+        await saveDeviceToken(token.value);
+      }
+    } else {
+      // Android ya retorna FCM token directamente
+      console.log('[Push] FCM Token (Android):', token.value);
+      await saveDeviceToken(token.value);
+    }
   });
 
   // Error en registro
