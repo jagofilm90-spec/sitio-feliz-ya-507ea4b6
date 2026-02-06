@@ -1,68 +1,115 @@
 
-# Plan: Optimizar Panel Admin para Movil y Quitar Pedidos Autorizados del Dashboard
+# Plan: Mostrar Detalle Completo de Precios en Autorizacion
 
-## Problemas Identificados
+## Problema
 
-### 1. SolicitudesDescuentoPanel aparece en el Dashboard
-En `Dashboard.tsx` linea 76, se muestra `<SolicitudesDescuentoPanel />` directamente en el Dashboard. El usuario no quiere que aparezca ahi -- este panel ya existe en la pestana "Por Autorizar" de Pedidos (linea 937-938 de `Pedidos.tsx`).
+Actualmente cuando abres un pedido por autorizar (tanto en movil como en desktop), solo ves:
+- Nombre del producto
+- Cantidad
+- Precio solicitado
+- Precio lista
+- Subtotal
 
-### 2. Dialogo de autorizacion desktop se rompe en movil
-Aunque el `PedidosPorAutorizarTab` tiene un flujo mobile separado usando `AutorizacionRapidaSheet`, el dialogo desktop de revision de precios (lineas 520-727) tiene problemas graves si se accede desde tablet o pantallas intermedias:
-- Grid `grid-cols-3` para info del cliente (linea 548) -- se comprime en pantallas medianas
-- Tabla de 7 columnas para productos -- se desborda
-- Card de total con `w-64` fijo -- no se adapta
-- Botones de accion `flex justify-end` -- dificil de tocar
+Falta informacion critica para tomar la decision de autorizar:
+- **Precio minimo** (precio lista - descuento maximo permitido)
+- **Diferencia** entre precio solicitado y precio minimo
+- **% de ganancia** basado en el costo real del producto
 
-### 3. SolicitudesDescuentoPanel tiene problemas moviles
-El panel de solicitudes de descuento (que se muestra en la pestana "Por Autorizar") tiene:
-- Botones de aprobacion rapida en `flex flex-wrap` que se comprimen
-- Grid `grid-cols-2` en el detalle de precio que se comprime
-- Informacion del vendedor y producto en una sola linea que se trunca
+## Lo que veras despues del cambio
+
+Para cada producto en la vista de autorizacion:
+
+```text
+Fecula de Maiz Ingredion -- Bulto 25.00 kg
+Cantidad: 100 bultos
+
+Precio lista:     $430.00
+Precio minimo:    $400.00  (descuento max: $30)
+Precio solicitado: $390.00
+Diferencia:       -$10.00  (por debajo del minimo)
+
+Costo:            $320.00
+Ganancia:         $70.00 (21.9%)
+```
+
+Si el precio solicitado esta por debajo del minimo, se resalta en rojo.
+Si la ganancia es baja (menos de 10%), se muestra una alerta.
 
 ---
 
-## Cambios Propuestos
+## Cambios Tecnicos
 
-### Paso 1: Quitar SolicitudesDescuentoPanel del Dashboard
-**Archivo:** `src/pages/Dashboard.tsx`
-- Eliminar la importacion de `SolicitudesDescuentoPanel`
-- Eliminar la linea `<SolicitudesDescuentoPanel />` (linea 76)
-- El panel seguira visible en la pestana "Por Autorizar" de Pedidos donde corresponde
+### 1. Ampliar la consulta de datos
 
-### Paso 2: Optimizar dialogo de revision de precios para movil
 **Archivo:** `src/components/pedidos/PedidosPorAutorizarTab.tsx`
 
-En el dialogo desktop (lineas 520-727):
-- Cambiar `grid-cols-3` a `grid-cols-1 sm:grid-cols-3` para info del cliente
-- Reemplazar la tabla de 7 columnas con cards apiladas cuando `isMobile` es true (mismo patron que `PedidoDetalleProductCards`)
-- Cambiar el total de `w-64` a `w-full sm:w-64`
-- Hacer botones de accion full-width apilados en movil: `flex-col sm:flex-row`
-- Ajustar el header del dialogo para que los botones "Editar precios" / "Cancelar" no se compriman
+En la query de la linea 132, agregar los campos faltantes de productos:
+- `descuento_maximo` - para calcular precio minimo
+- `ultimo_costo_compra` - para calcular ganancia
+- `costo_promedio_ponderado` - como respaldo si no hay ultimo costo
 
-### Paso 3: Optimizar SolicitudesDescuentoPanel para movil
-**Archivo:** `src/components/admin/SolicitudesDescuentoPanel.tsx`
+Actualizar la interface `PedidoPorAutorizar` para incluir estos campos en el tipo de `productos`.
 
-- Cambiar `grid-cols-2` del detalle de descuento a `grid-cols-1` en movil
-- Hacer botones de aprobacion rapida `flex-col` con full-width en movil
-- Asegurar que la informacion del vendedor/cliente se muestre en multiples lineas en movil
+### 2. Redisenar las cards moviles de autorizacion
 
-### Paso 4: Mejorar AutorizacionRapidaSheet (ajustes menores)
 **Archivo:** `src/components/pedidos/AutorizacionRapidaSheet.tsx`
-- Quitar `truncate` de los nombres de productos (linea 284) y usar `line-clamp-2` para que se lean completos
-- Esto ya es el flujo movil principal y funciona bien, solo necesita este ajuste menor
+
+Actualizar la interface `PedidoDetalle` para incluir los nuevos campos.
+
+Para cada producto, cambiar de:
+```text
+[Nombre]
+[Cantidad x Precio] ... [Subtotal]
+```
+
+A un layout con desglose completo:
+```text
+[Nombre completo del producto]
+[Cantidad] [Unidad]
+----
+P. Lista:      $430.00
+P. Minimo:     $400.00
+P. Solicitado: $390.00  (badge rojo si < minimo)
+Diferencia:    -$10.00
+----
+Costo: $320 | Ganancia: 21.9%
+----
+Subtotal: $39,000.00
+```
+
+Se usa una tabla de 2 columnas (label + valor) dentro de cada card para alinear los numeros.
+
+### 3. Redisenar las cards moviles en el dialogo desktop
+
+**Archivo:** `src/components/pedidos/PedidosPorAutorizarTab.tsx`
+
+En la seccion `sm:hidden` (lineas 564-647), agregar los mismos campos de precio minimo, diferencia y ganancia que en el AutorizacionRapidaSheet.
+
+### 4. Agregar columnas a la tabla desktop
+
+**Archivo:** `src/components/pedidos/PedidosPorAutorizarTab.tsx`
+
+En la tabla desktop (lineas 650-753), agregar columnas:
+- **P. Minimo** - precio lista menos descuento maximo
+- **Diferencia** - precio solicitado vs precio minimo (con color rojo/verde)
+- **Margen %** - porcentaje de ganancia basado en costo
+
+### 5. Indicadores visuales de alerta
+
+Se agregaran badges de color para facilitar la decision:
+- **Rojo**: Precio solicitado por debajo del minimo permitido
+- **Amarillo**: Ganancia menor al 10%
+- **Verde**: Precio dentro de rango con buena ganancia
 
 ---
 
-## Detalle Tecnico
+## Archivos a modificar
 
-### Archivos a modificar:
-1. `src/pages/Dashboard.tsx` -- Quitar SolicitudesDescuentoPanel
-2. `src/components/pedidos/PedidosPorAutorizarTab.tsx` -- Dialogo responsivo
-3. `src/components/admin/SolicitudesDescuentoPanel.tsx` -- Botones y grids responsivos
-4. `src/components/pedidos/AutorizacionRapidaSheet.tsx` -- Quitar truncate de nombres
+1. `src/components/pedidos/PedidosPorAutorizarTab.tsx` - Query ampliada + interfaces + tabla desktop + cards moviles del dialogo
+2. `src/components/pedidos/AutorizacionRapidaSheet.tsx` - Interface actualizada + cards con desglose completo de precios
 
-### Patron de responsividad:
-- Se usara `useIsMobile()` ya importado en los archivos
-- Desktop: Sin cambios visibles, todo se mantiene igual
-- Movil: Cards en vez de tablas, grids de una columna, botones apilados
-- Se sigue el patron existente de `PedidoDetalleProductCards` para las tablas de productos
+## Compatibilidad
+
+- **Desktop**: Se agregan columnas a la tabla existente
+- **Movil**: Se amplian las cards con el desglose de precios en formato vertical
+- **Sin cambios en la logica de autorizacion**: Solo es visual, la mecanica de autorizar/rechazar/editar precios no cambia
