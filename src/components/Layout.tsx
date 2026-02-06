@@ -367,7 +367,7 @@ const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pt-[env(safe-area-inset-top)]">
         <div className="container flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2">
             {/* Botón regresar - solo móvil y no en dashboard */}
@@ -438,7 +438,7 @@ const Layout = ({ children }: LayoutProps) => {
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden">
-            <aside className="fixed left-0 top-16 bottom-0 w-64 border-r bg-card overflow-y-auto">
+            <aside className="fixed left-0 top-[calc(4rem+env(safe-area-inset-top))] bottom-0 w-64 border-r bg-card overflow-y-auto">
               <nav className="flex flex-col p-4 pb-24">
                 {renderMenuItems(true)}
                 {canViewEmails && (
