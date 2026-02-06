@@ -197,37 +197,31 @@ export function SolicitudesDescuentoPanel() {
 
   return (
     <>
-      <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Bell className="h-5 w-5 text-amber-600 animate-pulse" />
-            Por Autorizar
-            <Badge variant="destructive" className="ml-2 animate-pulse">
-              {pendingCount}
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-3 sm:px-6">
-          <ScrollArea className="max-h-[calc(80vh-120px)]">
-            <div className="space-y-2">
-              {solicitudes.map((solicitud) => (
-                <SolicitudCardFlat
-                  key={solicitud.id}
-                  solicitud={solicitud}
-                  onAprobar={handleAprobar}
-                  onRechazar={(s) => setRechazarDialog(s)}
-                  onContraoferta={(s) => {
-                    setContraofertaDialog(s);
-                    setContraoferta(s.precio_lista.toString());
-                  }}
-                  onVerMas={(s) => setDetalleDialog(s)}
-                  respondiendo={respondiendo === solicitud.id}
-                />
-              ))}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Bell className="h-5 w-5 text-amber-600 animate-pulse" />
+          <h2 className="text-lg font-semibold">Por Autorizar</h2>
+          <Badge variant="destructive" className="animate-pulse">
+            {pendingCount}
+          </Badge>
+        </div>
+        <div className="space-y-2">
+          {solicitudes.map((solicitud) => (
+            <SolicitudCardFlat
+              key={solicitud.id}
+              solicitud={solicitud}
+              onAprobar={handleAprobar}
+              onRechazar={(s) => setRechazarDialog(s)}
+              onContraoferta={(s) => {
+                setContraofertaDialog(s);
+                setContraoferta(s.precio_lista.toString());
+              }}
+              onVerMas={(s) => setDetalleDialog(s)}
+              respondiendo={respondiendo === solicitud.id}
+            />
+          ))}
+        </div>
+      </div>
 
       {/* Contraoferta Dialog */}
       <Dialog open={!!contraofertaDialog} onOpenChange={(open) => !open && setContraofertaDialog(null)}>
