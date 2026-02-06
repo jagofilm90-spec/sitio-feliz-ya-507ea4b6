@@ -327,18 +327,27 @@ export function AutorizacionRapidaSheet({
                     )}
                   </div>
 
-                  {/* Costo y ganancia */}
-                  {costo > 0 && (
-                    <div className="border-t pt-2 flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Costo: <span className="font-mono">${formatCurrency(costo)}</span></span>
-                      <Badge
-                        variant={margenPct < 0 ? "destructive" : "secondary"}
-                        className={`text-[10px] ${margenPct >= 10 ? "bg-green-100 text-green-800 border-green-200" : margenPct >= 0 ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}`}
-                      >
-                        {margenPct >= 0 ? "+" : ""}{margenPct.toFixed(1)}% margen
-                      </Badge>
-                    </div>
-                  )}
+          {/* Costo y ganancia */}
+                  <div className="border-t pt-2 flex items-center justify-between text-xs">
+                    {costo > 0 ? (
+                      <>
+                        <span className="text-muted-foreground">Costo: <span className="font-mono">${formatCurrency(costo)}</span></span>
+                        <Badge
+                          variant={margenPct < 0 ? "destructive" : "secondary"}
+                          className={`text-[10px] ${margenPct >= 10 ? "bg-green-100 text-green-800 border-green-200" : margenPct >= 0 ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}`}
+                        >
+                          {margenPct >= 0 ? "+" : ""}{margenPct.toFixed(1)}% margen
+                        </Badge>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-muted-foreground">Costo: <span className="font-mono">Sin registro</span></span>
+                        <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                          -- margen
+                        </Badge>
+                      </>
+                    )}
+                  </div>
 
                   {/* Subtotal */}
                   <div className="border-t pt-2 flex justify-between items-center">
@@ -363,15 +372,20 @@ export function AutorizacionRapidaSheet({
             })}
           </div>
 
-          {/* Form de rechazo */}
-          {showRejectForm && (
-            <div className="py-4 space-y-3 border-t">
+        </ScrollArea>
+
+        {/* Footer con total y acciones */}
+        <div className="border-t p-4 space-y-3 bg-background">
+          {showRejectForm ? (
+            /* Footer en modo rechazo */
+            <div className="space-y-3">
               <p className="font-medium text-sm">Motivo de rechazo:</p>
               <Textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 placeholder="Escribe el motivo..."
                 className="min-h-[80px]"
+                autoFocus
               />
               <div className="flex gap-2">
                 <Button
@@ -395,89 +409,87 @@ export function AutorizacionRapidaSheet({
                 </Button>
               </div>
             </div>
-          )}
-        </ScrollArea>
+          ) : (
+            /* Footer normal */
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Total:</span>
+                <span className="text-2xl font-bold font-mono">
+                  ${formatCurrency(isEditing ? calculateNewTotal() : pedido.total)}
+                </span>
+              </div>
 
-        {/* Footer con total y acciones */}
-        <div className="border-t p-4 space-y-3 bg-background">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Total:</span>
-            <span className="text-2xl font-bold font-mono">
-              ${formatCurrency(isEditing ? calculateNewTotal() : pedido.total)}
-            </span>
-          </div>
+              <div className="grid grid-cols-2 gap-2">
+                {!isEditing ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={handleStartEditing}
+                      className="gap-2"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                      Ajustar precios
+                    </Button>
+                    <Button
+                      onClick={() => authorizeMutation.mutate()}
+                      disabled={authorizeMutation.isPending}
+                      className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      {authorizeMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4" />
+                          Autorizar
+                        </>
+                      )}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="outline" onClick={() => setIsEditing(false)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={() => authorizeMutation.mutate()}
+                      disabled={authorizeMutation.isPending}
+                      className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      {authorizeMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4" />
+                          Guardar y autorizar
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
+              </div>
 
-          {!showRejectForm && (
-            <div className="grid grid-cols-2 gap-2">
-              {!isEditing ? (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={handleStartEditing}
-                    className="gap-2"
-                  >
-                    <Edit2 className="h-4 w-4" />
-                    Ajustar precios
-                  </Button>
-                  <Button
-                    onClick={() => authorizeMutation.mutate()}
-                    disabled={authorizeMutation.isPending}
-                    className="gap-2 bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    {authorizeMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4" />
-                        Autorizar
-                      </>
-                    )}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="outline" onClick={() => setIsEditing(false)}>
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={() => authorizeMutation.mutate()}
-                    disabled={authorizeMutation.isPending}
-                    className="gap-2 bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    {authorizeMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4" />
-                        Guardar y autorizar
-                      </>
-                    )}
-                  </Button>
-                </>
+              {!isEditing && (
+                <Button
+                  variant="ghost"
+                  className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => setShowRejectForm(true)}
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Rechazar pedido
+                </Button>
               )}
-            </div>
-          )}
 
-          {!showRejectForm && !isEditing && (
-            <Button
-              variant="ghost"
-              className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={() => setShowRejectForm(true)}
-            >
-              <XCircle className="h-4 w-4 mr-2" />
-              Rechazar pedido
-            </Button>
-          )}
-
-          {hasNext && !showRejectForm && (
-            <Button
-              variant="ghost"
-              className="w-full text-muted-foreground"
-              onClick={onNext}
-            >
-              Saltar al siguiente
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
+              {hasNext && (
+                <Button
+                  variant="ghost"
+                  className="w-full text-muted-foreground"
+                  onClick={onNext}
+                >
+                  Saltar al siguiente
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              )}
+            </>
           )}
         </div>
       </SheetContent>
