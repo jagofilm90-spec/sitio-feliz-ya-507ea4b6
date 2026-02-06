@@ -215,7 +215,7 @@ export function useSolicitudesDescuento(options: UseSolicitudesDescuentoOptions 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [enableRealtime]);
+  }, [enableRealtime, onlyPending]);
 
   const crearSolicitud = async (solicitud: {
     producto_id: string;
@@ -297,6 +297,11 @@ export function useSolicitudesDescuento(options: UseSolicitudesDescuentoOptions 
     if (error) throw error;
   };
 
+  const removeSolicitud = useCallback((id: string) => {
+    setSolicitudes(prev => prev.filter(s => s.id !== id));
+    setPendingCount(prev => Math.max(0, prev - 1));
+  }, []);
+
   return {
     solicitudes,
     loading,
@@ -304,6 +309,7 @@ export function useSolicitudesDescuento(options: UseSolicitudesDescuentoOptions 
     refetch: fetchSolicitudes,
     crearSolicitud,
     responderSolicitud,
+    removeSolicitud,
   };
 }
 
