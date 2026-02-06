@@ -196,6 +196,25 @@ export function SolicitudesDescuentoPanel() {
         `Contraoferta: ${formatCurrency(precio)}`
       );
       toast.success("Contraoferta enviada");
+      
+      // Send push notification to vendedor
+      try {
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            user_ids: [contraofertaDialog.vendedor_id],
+            title: '💰 Contraoferta de Precio',
+            body: `Se aprobó un precio diferente para ${contraofertaDialog.producto?.nombre || 'producto'}: ${formatCurrency(precio)}`,
+            data: {
+              type: 'descuento_contraoferta',
+              solicitud_id: contraofertaDialog.id,
+              precio_aprobado: String(precio),
+            }
+          }
+        });
+      } catch (pushError) {
+        console.error("Error sending push:", pushError);
+      }
+      
       setContraofertaDialog(null);
       setContraoferta("");
     } catch (error: any) {
