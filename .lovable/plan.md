@@ -1,56 +1,66 @@
 
-# Plan: Agregar Ruta de Diagnóstico Push Incondicional
 
-## Problema Identificado
-La tarjeta "Notificaciones Push" en Configuración → Sistema **solo aparece si `Capacitor.isNativePlatform()` retorna `true`**. En iOS desde Xcode, esta verificación parece estar fallando, lo que oculta la herramienta de diagnóstico.
+# Plan: Agregar Acceso Directo al Diagnóstico desde Login
+
+## Problema
+La app nativa de iOS no tiene barra de direcciones visible. El usuario no puede navegar manualmente a `/push-diagnostics` porque el WebView de Capacitor no expone la URL.
 
 ## Solución
-Crear una **ruta de acceso directo** (`/push-diagnostics`) que muestre la herramienta de diagnóstico **sin la verificación condicional de plataforma**. Esto permitirá acceder a los diagnósticos desde cualquier contexto y ver exactamente qué está reportando Capacitor.
+Agregar un **botón de diagnóstico** visible en la pantalla de autenticación (`/auth`) que permita acceder a la herramienta de diagnóstico sin necesidad de iniciar sesión.
 
 ---
 
 ## Cambios a Realizar
 
-### 1. Crear página de diagnóstico independiente
-**Archivo nuevo:** `src/pages/PushDiagnosticsPage.tsx`
+### 1. Modificar la página de Auth
+**Archivo:** `src/pages/Auth.tsx`
 
-Una página simple que:
-- Importa y muestra el componente `PushNotificationDiagnostics`
-- No tiene verificación `isNative` para renderizar
-- Muestra información adicional sobre lo que Capacitor está detectando
-- Protegida solo para admin
+Agregar en la parte inferior de la pantalla de login:
+- Un enlace pequeño/discreto que diga "Diagnóstico Push (Admin)"
+- Al tocarlo, navegará a `/push-diagnostics`
 
-### 2. Agregar ruta en App.tsx
+### 2. Permitir acceso sin autenticación (temporal para debug)
 **Archivo:** `src/App.tsx`
 
-Agregar:
+Modificar la ruta `/push-diagnostics` para que NO requiera `ProtectedRoute` temporalmente. Esto es solo para poder diagnosticar el problema de detección de plataforma.
+
 ```tsx
+// Cambiar de:
 <Route path="/push-diagnostics" element={
   <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
     <PushDiagnosticsPage />
   </ProtectedRoute>
 } />
+
+// A (temporal):
+<Route path="/push-diagnostics" element={<PushDiagnosticsPage />} />
 ```
 
-### 3. Mejorar el componente de diagnóstico
-**Archivo:** `src/components/configuracion/PushNotificationDiagnostics.tsx`
+---
 
-Modificar para que siempre muestre los controles, incluso cuando `isNative` sea false, pero con advertencias claras. Esto permite ver qué está reportando Capacitor.
+## Flujo de Uso
+
+1. Abrir la app desde Xcode en el iPhone
+2. En la pantalla de login, tocar el enlace "Diagnóstico Push"
+3. Ver qué valores reporta Capacitor
+4. Ejecutar el diagnóstico completo
+5. Compartir los resultados
 
 ---
 
-## Uso
-1. Desde iOS/Xcode, navegar manualmente a: `/push-diagnostics`
-2. La página mostrará el diagnóstico completo
-3. Podrás ver exactamente qué valores retorna `Capacitor.getPlatform()` y `Capacitor.isNativePlatform()`
-4. Si el problema es que Capacitor no detecta la plataforma, lo verás inmediatamente
+## Sección Técnica
+
+El diagnóstico mostrará:
+- `Capacitor.getPlatform()` → debería decir `"ios"`
+- `Capacitor.isNativePlatform()` → debería ser `true`
+
+Si ambos muestran `"web"` y `false`, significa que hay un problema con:
+- La sincronización de Capacitor (`npx cap sync`)
+- La configuración del bridge nativo
+- El build de iOS no incluye correctamente los plugins
 
 ---
 
-## Resultado Esperado
-Al navegar a `/push-diagnostics` desde el iPhone conectado a Xcode:
-- Verás si Capacitor está detectando `ios` o `web`
-- Podrás ejecutar el diagnóstico completo independientemente de lo que diga `isNativePlatform()`
-- Tendrás logs detallados del proceso
+## Nota de Seguridad
+Una vez que terminemos de diagnosticar, volveremos a proteger la ruta con `ProtectedRoute`.
 
-Esto nos dará la información exacta de dónde está el fallo.
