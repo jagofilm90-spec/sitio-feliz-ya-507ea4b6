@@ -520,8 +520,8 @@ export function PedidosPorAutorizarTab() {
       <Dialog open={!!selectedPedido} onOpenChange={(open) => !open && setSelectedPedido(null)}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>Autorizar Pedido {selectedPedido?.folio}</span>
+            <DialogTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span className="text-base sm:text-lg">Autorizar Pedido {selectedPedido?.folio}</span>
               <div className="flex gap-2">
                 {!isEditing ? (
                   <Button variant="outline" size="sm" onClick={handleStartEditing}>
@@ -529,12 +529,10 @@ export function PedidosPorAutorizarTab() {
                     Editar precios
                   </Button>
                 ) : (
-                  <>
-                    <Button variant="ghost" size="sm" onClick={handleCancelEditing}>
-                      <X className="h-4 w-4 mr-1" />
-                      Cancelar
-                    </Button>
-                  </>
+                  <Button variant="ghost" size="sm" onClick={handleCancelEditing}>
+                    <X className="h-4 w-4 mr-1" />
+                    Cancelar
+                  </Button>
                 )}
               </div>
             </DialogTitle>
@@ -545,7 +543,7 @@ export function PedidosPorAutorizarTab() {
               {/* Info del cliente */}
               <Card>
                 <CardContent className="pt-4">
-                  <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">Cliente:</span>
                       <p className="font-medium">{selectedPedido.clientes?.nombre}</p>
@@ -562,8 +560,95 @@ export function PedidosPorAutorizarTab() {
                 </CardContent>
               </Card>
 
-              {/* Tabla de productos con precios */}
-              <div className="border rounded-lg">
+              {/* Productos - Cards en móvil, Tabla en desktop */}
+              <div className="sm:hidden space-y-2">
+                {ordenarProductosAzucarPrimero(selectedPedido.pedidos_detalles, (d) => d.productos?.nombre || '').map((detalle) => {
+                  const comparison = getPriceComparison(detalle);
+                  const ComparisonIcon = comparison.icon;
+                  const currentPrice = editingPrices[detalle.id] ?? detalle.precio_unitario;
+                  const subtotal = detalle.cantidad * currentPrice;
+                  const listPrice = detalle.productos?.precio_venta || 0;
+
+                  return (
+                    <div key={detalle.id} className="border rounded-lg p-3 space-y-2">
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm line-clamp-2">{detalle.productos?.nombre}</p>
+                          <p className="text-xs text-muted-foreground">{detalle.productos?.codigo}</p>
+                        </div>
+                        <div className={`flex items-center gap-1 shrink-0 ${comparison.color}`}>
+                          <ComparisonIcon className="h-4 w-4" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-muted-foreground text-xs">Cantidad</span>
+                          <p className="font-mono">{detalle.cantidad} {detalle.productos?.unidad}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-muted-foreground text-xs">P. Lista</span>
+                          <p className="font-mono text-muted-foreground">${formatCurrency(listPrice)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1">
+                          {isEditing ? (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={currentPrice}
+                              onChange={(e) => handlePriceChange(detalle.id, e.target.value)}
+                              className="h-9 text-right font-mono"
+                            />
+                          ) : (
+                            <div>
+                              <span className="text-xs text-muted-foreground">P. Solicitado: </span>
+                              <span className="font-mono font-medium">${formatCurrency(currentPrice)}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs text-muted-foreground">Subtotal</span>
+                          <p className="font-mono font-semibold">${formatCurrency(subtotal)}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs"
+                        onClick={() => setExpandedHistorial(
+                          expandedHistorial === detalle.productos?.id ? null : detalle.productos?.id || null
+                        )}
+                      >
+                        <History className="h-3 w-3 mr-1" />
+                        Ver historial
+                      </Button>
+                      {expandedHistorial === detalle.productos?.id && historialData && (
+                        <div className="bg-muted/50 rounded p-2">
+                          <p className="text-xs font-medium mb-1">Historial de precios:</p>
+                          {historialData.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">Primera compra</p>
+                          ) : (
+                            <div className="space-y-1">
+                              {historialData.map((h, idx) => (
+                                <div key={idx} className="flex justify-between text-xs">
+                                  <Badge variant={h.fuente === "pedido" ? "default" : "secondary"} className="text-[10px] h-5">
+                                    {h.fuente === "pedido" ? "Pedido" : "Cotización"}
+                                  </Badge>
+                                  <span className="font-mono">${formatCurrency(h.precio)} ({format(new Date(h.fecha), "dd/MM/yy")})</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop table */}
+              <div className="border rounded-lg hidden sm:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -634,7 +719,6 @@ export function PedidosPorAutorizarTab() {
                             </TableCell>
                           </TableRow>
                           
-                          {/* Historial expandido */}
                           {expandedHistorial === detalle.productos?.id && historialData && (
                             <TableRow>
                               <TableCell colSpan={7} className="bg-muted/50">
@@ -669,8 +753,8 @@ export function PedidosPorAutorizarTab() {
               </div>
 
               {/* Total */}
-              <div className="flex justify-end">
-                <Card className="w-64">
+              <div className="flex sm:justify-end">
+                <Card className="w-full sm:w-64">
                   <CardContent className="pt-4">
                     <div className="flex justify-between items-center">
                       <span className="text-muted-foreground">Total:</span>
@@ -700,11 +784,12 @@ export function PedidosPorAutorizarTab() {
               )}
 
               {/* Acciones */}
-              <div className="flex justify-end gap-2 pt-4 border-t">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t">
                 <Button
                   variant="destructive"
                   onClick={() => setRejectDialogOpen(true)}
                   disabled={authorizeMutation.isPending}
+                  className="w-full sm:w-auto"
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   Rechazar
@@ -712,6 +797,7 @@ export function PedidosPorAutorizarTab() {
                 <Button
                   onClick={() => authorizeMutation.mutate(selectedPedido.id)}
                   disabled={authorizeMutation.isPending}
+                  className="w-full sm:w-auto"
                 >
                   {authorizeMutation.isPending ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
