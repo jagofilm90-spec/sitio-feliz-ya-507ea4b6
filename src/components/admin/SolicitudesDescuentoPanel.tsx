@@ -84,7 +84,7 @@ function parseCarritoSnapshot(snapshot: unknown): CarritoItem[] {
 }
 
 export function SolicitudesDescuentoPanel() {
-  const { solicitudes, loading, pendingCount, responderSolicitud } = useSolicitudesDescuento({
+  const { solicitudes, loading, pendingCount, responderSolicitud, removeSolicitud } = useSolicitudesDescuento({
     onlyPending: true,
     enableRealtime: true,
   });
@@ -120,6 +120,7 @@ export function SolicitudesDescuentoPanel() {
     setRespondiendo(solicitud.id);
     try {
       await responderSolicitud(solicitud.id, true, precio);
+      removeSolicitud(solicitud.id);
       toast.success("Descuento aprobado");
       
       // Send push notification to vendedor
@@ -151,6 +152,7 @@ export function SolicitudesDescuentoPanel() {
     setRespondiendo(rechazarDialog.id);
     try {
       await responderSolicitud(rechazarDialog.id, false, undefined, notasRechazo);
+      removeSolicitud(rechazarDialog.id);
       toast.success("Solicitud rechazada");
       
       // Send push notification to vendedor
@@ -195,6 +197,7 @@ export function SolicitudesDescuentoPanel() {
         precio,
         `Contraoferta: ${formatCurrency(precio)}`
       );
+      removeSolicitud(contraofertaDialog.id);
       toast.success("Contraoferta enviada");
       
       // Send push notification to vendedor
