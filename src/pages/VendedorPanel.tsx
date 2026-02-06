@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { toast } from "sonner";
-import { Users, ShoppingCart, CreditCard, LogOut, TrendingUp, Calendar, IdCard } from "lucide-react";
+import { Users, ShoppingCart, CreditCard, LogOut, TrendingUp, Calendar, IdCard, Sparkles, List, Wallet, Percent } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
 import { VendedorMisClientesTab } from "@/components/vendedor/VendedorMisClientesTab";
 import { VendedorNuevoPedidoTab } from "@/components/vendedor/VendedorNuevoPedidoTab";
@@ -211,10 +211,10 @@ export default function VendedorPanel() {
     { id: "clientes", label: "Clientes", icon: Users },
     { id: "nuevo", label: "Nuevo Pedido", icon: ShoppingCart },
     { id: "ventas", label: "Mis Ventas", icon: CreditCard },
-    { id: "novedades", label: "Novedades", badge: novedadesCount },
-    { id: "precios", label: "Precios" },
-    { id: "saldos", label: "Saldos" },
-    { id: "comisiones", label: "Comisiones" },
+    { id: "novedades", label: "Novedades", icon: Sparkles, badge: novedadesCount },
+    { id: "precios", label: "Precios", icon: List },
+    { id: "saldos", label: "Saldos", icon: Wallet },
+    { id: "comisiones", label: "Comisiones", icon: Percent },
   ];
 
   return (
@@ -386,42 +386,45 @@ export default function VendedorPanel() {
           </div>
         </main>
 
-        {/* Mobile Bottom Navigation - Scrollable */}
+        {/* Mobile Bottom Navigation - Scrollable with fade indicators */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50 pb-[env(safe-area-inset-bottom)]">
-          <div className="flex overflow-x-auto scrollbar-hide">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={cn(
-                  "flex flex-col items-center justify-center py-2 px-3 transition-colors min-h-[56px] min-w-[60px] relative flex-shrink-0",
-                  activeTab === item.id
-                    ? "text-primary bg-primary/10"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                )}
-              >
-                <div className="relative">
-                  {item.icon && <item.icon className={cn("h-5 w-5 mb-0.5", activeTab === item.id && "text-primary")} />}
-                  {!item.icon && <div className="h-5 w-5 mb-0.5" />}
-                  {item.badge && item.badge > 0 && (
-                    <span className="absolute -top-1 -right-1.5 h-3.5 w-3.5 flex items-center justify-center bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full">
-                      {item.badge > 9 ? "+" : item.badge}
-                    </span>
+          <div className="relative">
+            {/* Fade gradient on the right to indicate scrollability */}
+            <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+            <div className="flex overflow-x-auto scrollbar-hide">
+              {navItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={cn(
+                    "flex flex-col items-center justify-center py-2 px-3 transition-colors min-h-[56px] min-w-[60px] relative flex-shrink-0",
+                    activeTab === item.id
+                      ? "text-primary bg-primary/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
-                </div>
-                <span className="text-[10px] font-medium whitespace-nowrap">
-                  {item.id === "novedades" ? "Nuevo" : item.label.split(" ")[0]}
-                </span>
+                >
+                  <div className="relative">
+                    <item.icon className={cn("h-5 w-5 mb-0.5", activeTab === item.id && "text-primary")} />
+                    {item.badge && item.badge > 0 && (
+                      <span className="absolute -top-1 -right-1.5 h-3.5 w-3.5 flex items-center justify-center bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full">
+                        {item.badge > 9 ? "+" : item.badge}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] font-medium whitespace-nowrap">
+                    {item.id === "novedades" ? "Nuevo" : item.label.split(" ")[0]}
+                  </span>
+                </button>
+              ))}
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="flex flex-col items-center justify-center py-2 px-3 transition-colors min-h-[56px] min-w-[60px] text-destructive hover:bg-destructive/10 flex-shrink-0"
+              >
+                <LogOut className="h-5 w-5 mb-0.5" />
+                <span className="text-[10px] font-medium">Salir</span>
               </button>
-            ))}
-            {/* Logout Button */}
-            <button
-              onClick={handleLogout}
-              className="flex flex-col items-center justify-center py-2 px-3 transition-colors min-h-[56px] min-w-[60px] text-destructive hover:bg-destructive/10 flex-shrink-0"
-            >
-              <LogOut className="h-5 w-5 mb-0.5" />
-              <span className="text-[10px] font-medium">Salir</span>
-            </button>
+            </div>
           </div>
         </nav>
       </div>

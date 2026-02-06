@@ -26,6 +26,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, Search, ShoppingCart, Building2, AlertTriangle, Gift } from "lucide-react";
@@ -33,6 +34,7 @@ import { formatCurrency } from "@/lib/utils";
 import { calcularSubtotal, calcularDesgloseImpuestos, validarAntesDeGuardar, redondear, LineaPedido, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getDisplayName } from "@/lib/productUtils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface NuevoPedidoDialogProps {
   open: boolean;
@@ -90,6 +92,7 @@ interface CortesiaDefault {
 }
 
 const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoDialogProps) => {
+  const isMobile = useIsMobile();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -470,7 +473,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
 
         <div className="space-y-6">
           {/* Cliente y Sucursal */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Cliente *</Label>
               <Select value={selectedClienteId} onValueChange={setSelectedClienteId}>
@@ -574,98 +577,154 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
             )}
 
             {detalles.length > 0 && (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Producto</TableHead>
-                    <TableHead className="w-24">Cantidad</TableHead>
-                    <TableHead className="w-20">Kilos</TableHead>
-                    <TableHead className="w-32">Precio</TableHead>
-                    <TableHead className="w-32 text-right">Subtotal</TableHead>
-                    <TableHead className="w-12"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              isMobile ? (
+                <div className="space-y-3">
                   {detalles.map((d, idx) => {
                     const esPorKilo = d.producto.precio_por_kilo && d.producto.peso_kg;
                     const kgPorUnidad = esPorKilo ? d.producto.peso_kg! : null;
-                    
                     return (
-                      <TableRow key={idx}>
-                        <TableCell>
-                          <div>
-                            <span className="font-mono text-xs mr-2">{d.producto.codigo}</span>
-                            {getDisplayName(d.producto)}
-                          </div>
-                          <div className="text-xs text-muted-foreground space-x-1">
-                            {esPorKilo && (
-                              <Badge variant="secondary" className="text-xs">
-                                {kgPorUnidad} kg/{d.producto.unidad}
-                              </Badge>
-                            )}
-                            {d.producto.aplica_iva && <Badge variant="outline" className="text-xs">IVA</Badge>}
-                            {d.producto.aplica_ieps && <Badge variant="outline" className="text-xs">IEPS</Badge>}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Input
-                              type="number"
-                              min={1}
-                              value={d.cantidad}
-                              onChange={(e) => updateDetalle(idx, "cantidad", Number(e.target.value))}
-                              className="w-16"
-                            />
-                            <span className="text-xs text-muted-foreground">{d.producto.unidad}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {esPorKilo && d.kilos_totales !== null ? (
-                            <span className="font-medium text-blue-600">
-                              {d.kilos_totales.toLocaleString('es-MX')} kg
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <span className="text-muted-foreground">$</span>
-                            <Input
-                              type="number"
-                              min={0}
-                              step={0.01}
-                              value={d.precio_unitario}
-                              onChange={(e) => updateDetalle(idx, "precio_unitario", Number(e.target.value))}
-                              className="w-20"
-                            />
-                            <span className="text-xs text-muted-foreground">
-                              {esPorKilo ? '/kg' : `/${d.producto.unidad}`}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right font-mono font-medium">
-                          ${formatCurrency(d.subtotal)}
-                          {esPorKilo && (
-                            <div className="text-xs text-muted-foreground font-normal">
-                              {d.kilos_totales?.toLocaleString('es-MX')} × ${d.precio_unitario.toFixed(2)}
+                      <Card key={idx} className="border">
+                        <CardContent className="p-3 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm leading-tight">{getDisplayName(d.producto)}</p>
+                              <p className="font-mono text-xs text-muted-foreground">{d.producto.codigo}</p>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {esPorKilo && (
+                                  <Badge variant="secondary" className="text-xs">{kgPorUnidad} kg/{d.producto.unidad}</Badge>
+                                )}
+                                {d.producto.aplica_iva && <Badge variant="outline" className="text-xs">IVA</Badge>}
+                                {d.producto.aplica_ieps && <Badge variant="outline" className="text-xs">IEPS</Badge>}
+                              </div>
                             </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeDetalle(idx)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => removeDetalle(idx)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Cantidad</Label>
+                              <div className="flex items-center gap-1">
+                                <Input type="number" min={1} value={d.cantidad} onChange={(e) => updateDetalle(idx, "cantidad", Number(e.target.value))} className="h-8" />
+                                <span className="text-xs text-muted-foreground shrink-0">{d.producto.unidad}</span>
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Precio</Label>
+                              <div className="flex items-center gap-1">
+                                <span className="text-muted-foreground text-sm">$</span>
+                                <Input type="number" min={0} step={0.01} value={d.precio_unitario} onChange={(e) => updateDetalle(idx, "precio_unitario", Number(e.target.value))} className="h-8" />
+                                <span className="text-xs text-muted-foreground shrink-0">{esPorKilo ? '/kg' : `/${d.producto.unidad}`}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between pt-1 border-t">
+                            {esPorKilo && d.kilos_totales !== null ? (
+                              <span className="text-sm font-medium text-blue-600">{d.kilos_totales.toLocaleString('es-MX')} kg</span>
+                            ) : (
+                              <span />
+                            )}
+                            <span className="font-mono font-bold text-primary">${formatCurrency(d.subtotal)}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
                     );
                   })}
-                </TableBody>
-              </Table>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Producto</TableHead>
+                      <TableHead className="w-24">Cantidad</TableHead>
+                      <TableHead className="w-20">Kilos</TableHead>
+                      <TableHead className="w-32">Precio</TableHead>
+                      <TableHead className="w-32 text-right">Subtotal</TableHead>
+                      <TableHead className="w-12"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {detalles.map((d, idx) => {
+                      const esPorKilo = d.producto.precio_por_kilo && d.producto.peso_kg;
+                      const kgPorUnidad = esPorKilo ? d.producto.peso_kg! : null;
+                      
+                      return (
+                        <TableRow key={idx}>
+                          <TableCell>
+                            <div>
+                              <span className="font-mono text-xs mr-2">{d.producto.codigo}</span>
+                              {getDisplayName(d.producto)}
+                            </div>
+                            <div className="text-xs text-muted-foreground space-x-1">
+                              {esPorKilo && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {kgPorUnidad} kg/{d.producto.unidad}
+                                </Badge>
+                              )}
+                              {d.producto.aplica_iva && <Badge variant="outline" className="text-xs">IVA</Badge>}
+                              {d.producto.aplica_ieps && <Badge variant="outline" className="text-xs">IEPS</Badge>}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Input
+                                type="number"
+                                min={1}
+                                value={d.cantidad}
+                                onChange={(e) => updateDetalle(idx, "cantidad", Number(e.target.value))}
+                                className="w-16"
+                              />
+                              <span className="text-xs text-muted-foreground">{d.producto.unidad}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {esPorKilo && d.kilos_totales !== null ? (
+                              <span className="font-medium text-blue-600">
+                                {d.kilos_totales.toLocaleString('es-MX')} kg
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <span className="text-muted-foreground">$</span>
+                              <Input
+                                type="number"
+                                min={0}
+                                step={0.01}
+                                value={d.precio_unitario}
+                                onChange={(e) => updateDetalle(idx, "precio_unitario", Number(e.target.value))}
+                                className="w-20"
+                              />
+                              <span className="text-xs text-muted-foreground">
+                                {esPorKilo ? '/kg' : `/${d.producto.unidad}`}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-mono font-medium">
+                            ${formatCurrency(d.subtotal)}
+                            {esPorKilo && (
+                              <div className="text-xs text-muted-foreground font-normal">
+                                {d.kilos_totales?.toLocaleString('es-MX')} × ${d.precio_unitario.toFixed(2)}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeDetalle(idx)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )
             )}
           </div>
 
@@ -723,9 +782,9 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
             {cortesias.length > 0 && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
                 {cortesias.map((c, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-3 bg-white p-2 rounded border border-amber-100">
+                  <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 bg-white p-2 rounded border border-amber-100">
                     <div className="flex items-center gap-2 flex-1 flex-wrap">
-                      <Gift className="h-4 w-4 text-amber-500" />
+                      <Gift className="h-4 w-4 text-amber-500 shrink-0" />
                       <span className="font-mono text-xs">{c.producto.codigo}</span>
                       <span className="text-sm">
                         {c.producto.nombre}
@@ -735,7 +794,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
                       </span>
                       <Badge className="bg-amber-500 text-white text-xs">CORTESÍA</Badge>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 self-end sm:self-auto">
                       <Input
                         type="number"
                         min={1}
