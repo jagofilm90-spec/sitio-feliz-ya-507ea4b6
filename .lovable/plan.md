@@ -1,115 +1,79 @@
 
-# Plan: Mostrar Detalle Completo de Precios en Autorizacion
+# Plan: Corregir 3 Problemas de Autorizacion en Movil
 
-## Problema
+## Problema 1: No deja rechazar pedidos
 
-Actualmente cuando abres un pedido por autorizar (tanto en movil como en desktop), solo ves:
-- Nombre del producto
-- Cantidad
-- Precio solicitado
-- Precio lista
-- Subtotal
+**Causa raiz**: Cuando tocas "Rechazar pedido" en el footer, el formulario de rechazo (textarea + boton confirmar) aparece DENTRO del area de scroll de productos. Necesitas hacer scroll hasta el final de todos los productos para encontrarlo -- es practicamente invisible.
 
-Falta informacion critica para tomar la decision de autorizar:
-- **Precio minimo** (precio lista - descuento maximo permitido)
-- **Diferencia** entre precio solicitado y precio minimo
-- **% de ganancia** basado en el costo real del producto
-
-## Lo que veras despues del cambio
-
-Para cada producto en la vista de autorizacion:
+**Solucion**: Mover el formulario de rechazo al footer (la zona fija de abajo). Cuando se toque "Rechazar", el footer cambiara para mostrar el textarea + botones de confirmar/cancelar directamente en la parte inferior de la pantalla, siempre visible sin necesidad de scroll.
 
 ```text
-Fecula de Maiz Ingredion -- Bulto 25.00 kg
-Cantidad: 100 bultos
+Antes:
+[Header]
+[Scroll con productos...]
+  [...muchos productos...]
+  [Formulario rechazo escondido aqui abajo]
+[Footer: botones desaparecen]
 
-Precio lista:     $430.00
-Precio minimo:    $400.00  (descuento max: $30)
-Precio solicitado: $390.00
-Diferencia:       -$10.00  (por debajo del minimo)
-
-Costo:            $320.00
-Ganancia:         $70.00 (21.9%)
+Despues:
+[Header]
+[Scroll con productos...]
+[Footer: Textarea motivo + Confirmar/Cancelar]
 ```
-
-Si el precio solicitado esta por debajo del minimo, se resalta en rojo.
-Si la ganancia es baja (menos de 10%), se muestra una alerta.
 
 ---
 
-## Cambios Tecnicos
+## Problema 2: No aparece el % de ganancia
 
-### 1. Ampliar la consulta de datos
+**Causa raiz**: Todos los productos en la base de datos tienen `ultimo_costo_compra = 0` y `costo_promedio_ponderado = 0`. El codigo actual verifica `costo > 0` antes de mostrar el margen, y como todos son cero, la seccion nunca se renderiza.
 
-**Archivo:** `src/components/pedidos/PedidosPorAutorizarTab.tsx`
+**Solucion**: Mostrar la seccion de costo/margen SIEMPRE, pero con un mensaje claro cuando no hay costo registrado:
 
-En la query de la linea 132, agregar los campos faltantes de productos:
-- `descuento_maximo` - para calcular precio minimo
-- `ultimo_costo_compra` - para calcular ganancia
-- `costo_promedio_ponderado` - como respaldo si no hay ultimo costo
+- Si hay costo > 0: Mostrar el costo + % de margen con badge de color (verde/amarillo/rojo)
+- Si costo = 0: Mostrar "Sin costo registrado" en gris para indicar que falta el dato
 
-Actualizar la interface `PedidoPorAutorizar` para incluir estos campos en el tipo de `productos`.
-
-### 2. Redisenar las cards moviles de autorizacion
-
-**Archivo:** `src/components/pedidos/AutorizacionRapidaSheet.tsx`
-
-Actualizar la interface `PedidoDetalle` para incluir los nuevos campos.
-
-Para cada producto, cambiar de:
-```text
-[Nombre]
-[Cantidad x Precio] ... [Subtotal]
-```
-
-A un layout con desglose completo:
-```text
-[Nombre completo del producto]
-[Cantidad] [Unidad]
-----
-P. Lista:      $430.00
-P. Minimo:     $400.00
-P. Solicitado: $390.00  (badge rojo si < minimo)
-Diferencia:    -$10.00
-----
-Costo: $320 | Ganancia: 21.9%
-----
-Subtotal: $39,000.00
-```
-
-Se usa una tabla de 2 columnas (label + valor) dentro de cada card para alinear los numeros.
-
-### 3. Redisenar las cards moviles en el dialogo desktop
-
-**Archivo:** `src/components/pedidos/PedidosPorAutorizarTab.tsx`
-
-En la seccion `sm:hidden` (lineas 564-647), agregar los mismos campos de precio minimo, diferencia y ganancia que en el AutorizacionRapidaSheet.
-
-### 4. Agregar columnas a la tabla desktop
-
-**Archivo:** `src/components/pedidos/PedidosPorAutorizarTab.tsx`
-
-En la tabla desktop (lineas 650-753), agregar columnas:
-- **P. Minimo** - precio lista menos descuento maximo
-- **Diferencia** - precio solicitado vs precio minimo (con color rojo/verde)
-- **Margen %** - porcentaje de ganancia basado en costo
-
-### 5. Indicadores visuales de alerta
-
-Se agregaran badges de color para facilitar la decision:
-- **Rojo**: Precio solicitado por debajo del minimo permitido
-- **Amarillo**: Ganancia menor al 10%
-- **Verde**: Precio dentro de rango con buena ganancia
+Esto aplica en ambos archivos:
+- `AutorizacionRapidaSheet.tsx` (vista movil principal)
+- `PedidosPorAutorizarTab.tsx` (cards moviles del dialogo y tabla desktop)
 
 ---
 
-## Archivos a modificar
+## Problema 3: "Sin pedidos pendientes" se ve mal abajo
 
-1. `src/components/pedidos/PedidosPorAutorizarTab.tsx` - Query ampliada + interfaces + tabla desktop + cards moviles del dialogo
-2. `src/components/pedidos/AutorizacionRapidaSheet.tsx` - Interface actualizada + cards con desglose completo de precios
+**Causa raiz**: En la pestana "Por Autorizar", se muestra primero el `SolicitudesDescuentoPanel` (que puede ocupar mucho espacio) y despues el `PedidosPorAutorizarTab`. Cuando no hay pedidos por autorizar, aparece una tarjeta grande con icono y padding de 48px en la parte inferior, lo cual se ve mal especialmente en movil.
 
-## Compatibilidad
+**Solucion**: Cambiar el estado vacio a un mensaje compacto inline en vez de una tarjeta gigante. En movil sera un texto simple con icono pequeno, sin la tarjeta Card envolvente con padding excesivo.
 
-- **Desktop**: Se agregan columnas a la tabla existente
-- **Movil**: Se amplian las cards con el desglose de precios en formato vertical
-- **Sin cambios en la logica de autorizacion**: Solo es visual, la mecanica de autorizar/rechazar/editar precios no cambia
+---
+
+## Detalle Tecnico
+
+### Archivos a modificar:
+
+1. **`src/components/pedidos/AutorizacionRapidaSheet.tsx`**
+   - Mover el bloque de formulario de rechazo (lineas 366-398) de dentro del `ScrollArea` al area del footer (despues de linea 401)
+   - Cuando `showRejectForm` sea true, el footer mostrara: textarea + botones confirmar/cancelar
+   - Cuando sea false, se mantiene el layout actual de botones autorizar/editar/rechazar
+   - Cambiar la condicion `costo > 0` (linea 331) para mostrar siempre la seccion de margen
+   - Si costo es 0, mostrar texto "Sin costo" en vez del badge de margen
+
+2. **`src/components/pedidos/PedidosPorAutorizarTab.tsx`**
+   - En las cards moviles del dialogo (lineas 614-624): misma logica -- mostrar seccion de margen siempre
+   - En la tabla desktop (lineas 737-745): mostrar "Sin costo" cuando no hay dato
+   - Cambiar el estado vacio (lineas 382-392): reducir de Card grande a un mensaje inline compacto
+   - En movil: solo un texto con icono, sin la Card con `py-12`
+
+### Patron de la seccion de costo/margen:
+
+```text
+Si costo > 0:
+  Costo: $320.00  |  +21.9% margen (badge verde/amarillo/rojo)
+
+Si costo = 0:
+  Costo: Sin registro  |  -- margen (badge gris)
+```
+
+### Compatibilidad:
+- Desktop: Se agregan las etiquetas "Sin costo" donde antes no aparecia nada
+- Movil: Formulario de rechazo visible en el footer, margen siempre visible, estado vacio compacto
+- La logica de autorizacion/rechazo no cambia, solo se mueve de posicion
