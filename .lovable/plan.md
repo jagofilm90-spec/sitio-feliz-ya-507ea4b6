@@ -1,75 +1,69 @@
 
 
-# Plan: Auto-eliminar solicitudes resueltas y notificar al vendedor
+# Plan: Remocion instantanea de solicitudes al aprobar/rechazar
 
-## Que se va a corregir
+## El problema
 
-### 1. Las solicitudes no desaparecen al aprobar/rechazar
-Cuando apruebas o rechazas, la tarjeta se queda visible en la lista. Solo desaparece si recargas la pagina.
+Cuando rechazas o apruebas una solicitud, la tarjeta NO desaparece de la lista. El contador sigue en 10. Esto pasa porque:
 
-**Causa raiz**: El realtime handler en `useSolicitudesDescuento.ts` hace `prev.map(...)` (actualiza en sitio) pero nunca `prev.filter(...)` (eliminar). Como el panel solo muestra "pendientes", al cambiar a "aprobado"/"rechazado" la tarjeta deberia desaparecer.
+1. La remocion depende del evento realtime que regresa del servidor, pero el closure del useEffect no incluye `onlyPending` en sus dependencias
+2. No hay remocion local inmediata -- el panel espera a que el servidor notifique el cambio via realtime
 
-**Solucion**: Cambiar el realtime handler para que cuando `onlyPending = true` y el nuevo status NO sea "pendiente", **elimine** el item del array en vez de actualizarlo.
+## La solucion: Remocion optimista + fix de dependencias
 
-### 2. La contraoferta no envia push al vendedor
-Cuando usas "Otro precio" y envias una contraoferta, el vendedor NO recibe push notification en su celular. Solo recibe la notificacion web via realtime.
+En lugar de esperar al realtime, quitamos la tarjeta DE INMEDIATO cuando el admin da click en aprobar/rechazar/contraoferta.
 
-**Solucion**: Agregar la llamada a `send-push-notification` en `handleContraoferta`, igual que ya existe en `handleAprobar` y `handleRechazar`.
+### Cambio 1: `src/hooks/useSolicitudesDescuento.ts`
 
----
-
-## Detalle Tecnico
-
-### Archivo 1: `src/hooks/useSolicitudesDescuento.ts`
-
-Lineas 169-176 -- Cambiar el handler de UPDATE en realtime:
-
-```text
-Antes:
-  setSolicitudes(prev =>
-    prev.map(s => s.id === payload.new.id ? { ...s, ...payload.new } : s)
-  );
-
-Despues:
-  setSolicitudes(prev => {
-    // Si solo mostramos pendientes y ya no es pendiente, eliminar
-    if (onlyPending && payload.new.status !== "pendiente") {
-      return prev.filter(s => s.id !== payload.new.id);
-    }
-    // Si no, actualizar en sitio
-    return prev.map(s => s.id === payload.new.id ? { ...s, ...payload.new } : s);
-  });
-```
-
-Esto hace que la tarjeta desaparezca **instantaneamente** cuando el admin la aprueba/rechaza, sin necesidad de recargar.
-
-### Archivo 2: `src/components/admin/SolicitudesDescuentoPanel.tsx`
-
-Lineas 182-206 -- Agregar push notification a `handleContraoferta`:
-
-Despues de la linea `toast.success("Contraoferta enviada")`, agregar:
+**a)** Agregar `onlyPending` al array de dependencias del useEffect de realtime (linea 218):
 
 ```typescript
-try {
-  await supabase.functions.invoke('send-push-notification', {
-    body: {
-      user_ids: [contraofertaDialog.vendedor_id],
-      title: '💰 Contraoferta de Precio',
-      body: `Se aprobo un precio diferente para ${contraofertaDialog.producto?.nombre || 'producto'}: ${formatCurrency(precio)}`,
-      data: {
-        type: 'descuento_contraoferta',
-        solicitud_id: contraofertaDialog.id,
-        precio_aprobado: String(precio),
-      }
-    }
-  });
-} catch (pushError) {
-  console.error("Error sending push:", pushError);
-}
+// Antes:
+}, [enableRealtime]);
+
+// Despues:
+}, [enableRealtime, onlyPending]);
 ```
 
-### Sin cambios en:
-- Edge function `send-push-notification` (ya soporta `user_ids`)
-- Deep linking (el vendedor ya recibe la notificacion web via realtime)
-- Vista desktop vs movil (el `SolicitudesDescuentoPanel` es el mismo componente para ambos)
+**b)** Agregar una funcion `removeSolicitud` que elimine localmente un item por ID:
+
+```typescript
+const removeSolicitud = useCallback((id: string) => {
+  setSolicitudes(prev => prev.filter(s => s.id !== id));
+  setPendingCount(prev => Math.max(0, prev - 1));
+}, []);
+```
+
+**c)** Exponer `removeSolicitud` en el return del hook.
+
+### Cambio 2: `src/components/admin/SolicitudesDescuentoPanel.tsx`
+
+Usar `removeSolicitud` despues de cada accion exitosa para quitar la tarjeta al instante:
+
+**En handleAprobar** (despues de `responderSolicitud` exitoso):
+```typescript
+removeSolicitud(solicitud.id); // Quitar de la lista inmediatamente
+```
+
+**En handleRechazar** (despues de `responderSolicitud` exitoso):
+```typescript
+removeSolicitud(rechazarDialog.id); // Quitar de la lista inmediatamente
+```
+
+**En handleContraoferta** (despues de `responderSolicitud` exitoso):
+```typescript
+removeSolicitud(contraofertaDialog.id); // Quitar de la lista inmediatamente
+```
+
+### Resultado esperado
+
+- Al dar "Rechazar" y confirmar: la tarjeta desaparece AL INSTANTE y el contador baja
+- Al dar "Aprobar": la tarjeta desaparece AL INSTANTE y el contador baja
+- Al dar "Otro precio" y confirmar: la tarjeta desaparece AL INSTANTE
+- El realtime sigue funcionando como respaldo (si alguien mas aprueba/rechaza desde otro dispositivo)
+- Aplica igual en mobile y desktop (mismo hook, mismo componente)
+
+### Archivos a modificar
+- `src/hooks/useSolicitudesDescuento.ts` -- agregar `removeSolicitud` y fix de dependencias
+- `src/components/admin/SolicitudesDescuentoPanel.tsx` -- llamar `removeSolicitud` despues de cada accion
 
