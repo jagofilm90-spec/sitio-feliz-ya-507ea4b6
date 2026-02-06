@@ -247,7 +247,7 @@ export function PushNotificationDiagnostics() {
           <div className="flex flex-wrap gap-2">
             <Button 
               onClick={handleRunDiagnostics}
-              disabled={isRunning || !platformInfo.isNative}
+              disabled={isRunning}
             >
               {isRunning ? (
                 <>
@@ -284,8 +284,9 @@ export function PushNotificationDiagnostics() {
           {!platformInfo.isNative && (
             <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md text-sm text-yellow-800 dark:text-yellow-200">
               <AlertTriangle className="h-4 w-4 inline mr-2" />
-              El diagnóstico solo funciona en plataformas nativas (iOS/Android).
-              Abre esta página desde la app instalada en tu dispositivo.
+              <strong>Modo Web detectado.</strong> El diagnóstico intentará ejecutarse, pero las notificaciones push 
+              solo funcionarán completamente en plataformas nativas (iOS/Android). 
+              Si estás en un dispositivo físico y ves este mensaje, hay un problema con la detección de Capacitor.
             </div>
           )}
         </CardContent>
