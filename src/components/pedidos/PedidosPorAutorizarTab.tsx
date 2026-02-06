@@ -380,12 +380,7 @@ export function PedidosPorAutorizarTab() {
   }
 
   if (!pedidos || pedidos.length === 0) {
-    return (
-      <div className="flex items-center gap-2 py-3 px-4 text-sm text-muted-foreground bg-muted/30 rounded-md">
-        <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-        <span>Sin pedidos pendientes de autorización</span>
-      </div>
-    );
+    return null;
   }
 
   // Mobile handlers
