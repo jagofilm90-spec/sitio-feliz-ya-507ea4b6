@@ -1,144 +1,102 @@
 
-# Plan de Diagnóstico y Corrección: Registro de Tokens Push en iOS
 
-## Resumen del Problema
+# Plan de Corrección: Error "No such module 'Capacitor'" en Xcode
 
-El usuario intenta activar notificaciones push pero recibe el error "No se pudieron activar". A pesar de que iOS tiene los permisos correctamente habilitados, el token del dispositivo **no se está guardando en la base de datos**.
+## Diagnóstico del Problema
 
-## Análisis Técnico
+El error **"No such module 'Capacitor'"** en la línea 2 del `AppDelegate.swift` indica que:
 
-### Lo que está funcionando
-| Componente | Estado | Verificación |
-|------------|--------|--------------|
-| Permisos iOS | ✅ Correcto | Captura de pantalla muestra todos los switches activos |
-| Tabla `device_tokens` | ✅ Existe | Esquema verificado con columnas correctas |
-| RLS Policies | ✅ Correctas | `auth.uid() = user_id` para usuarios propios |
-| Edge Function | ✅ Desplegada | `send-push-notification` con FCM V1 |
-| Firebase Secret | ✅ Configurado | `FIREBASE_SERVICE_ACCOUNT` existe |
-
-### Lo que está fallando
-| Componente | Estado | Evidencia |
-|------------|--------|-----------|
-| Tabla `device_tokens` | ❌ Vacía | Query retorna 0 registros |
-| Token FCM | ❌ No obtenido | El flujo falla antes de guardar |
-
-### Punto de falla probable
-
-El código en `pushNotifications.ts` líneas 101-112 intenta:
-1. Detectar iOS → Llamar `FCM.getToken()` con reintentos
-2. Si falla después de 3 intentos → Llama `notifyTokenSaved(false)` → UI muestra error
-
-El problema está en **la configuración nativa del proyecto Xcode** que no está correctamente sincronizada para el bridge APNs → FCM.
+1. **CocoaPods no se instaló correctamente**, o
+2. **Se está abriendo el archivo incorrecto** (.xcodeproj en lugar de .xcworkspace)
 
 ---
 
-## Correcciones Requeridas
+## Solución Paso a Paso
 
-### Parte 1: Verificación del Proyecto Nativo (Xcode - Manual)
+Ejecuta estos comandos **exactamente en este orden** desde la carpeta raíz del proyecto en Terminal:
 
-El usuario debe verificar en su máquina local que el proyecto iOS tenga:
+### Paso 1: Cerrar Xcode completamente
+Antes de hacer cualquier cosa, cierra Xcode por completo (Cmd + Q).
 
-1. **GoogleService-Info.plist**
-   - Ubicación: Raíz del proyecto iOS en Xcode
-   - Origen: Firebase Console → Project Settings → iOS app → Descargar
+### Paso 2: Limpiar y reinstalar dependencias nativas
 
-2. **Firebase SDK instalado**
-   - Xcode → File → Add Package Dependencies
-   - URL: `https://github.com/firebase/firebase-ios-sdk`
-   - Paquetes requeridos: `FirebaseCore`, `FirebaseMessaging`
+```bash
+# Ir a la carpeta del proyecto iOS
+cd ios/App
 
-3. **AppDelegate.swift modificado**
-   ```swift
-   import UIKit
-   import Capacitor
-   import FirebaseCore
-   import FirebaseMessaging
+# Limpiar caché de CocoaPods
+pod deintegrate
+pod cache clean --all
 
-   @UIApplicationMain
-   class AppDelegate: UIResponder, UIApplicationDelegate {
-       
-       func application(_ application: UIApplication, 
-                        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-           FirebaseApp.configure()
-           return true
-       }
-       
-       // CRÍTICO: Mapear token APNs a FCM
-       func application(_ application: UIApplication, 
-                        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-           Messaging.messaging().apnsToken = deviceToken
-       }
-   }
-   ```
+# Reinstalar Pods
+pod install --repo-update
 
-4. **Capabilities en Xcode**
-   - Signing & Capabilities → Push Notifications ✅
-   - Signing & Capabilities → Background Modes → Remote notifications ✅
+# Volver a la raíz
+cd ../..
+```
+
+### Paso 3: Sincronizar Capacitor nuevamente
+
+```bash
+npx cap sync ios
+```
+
+### Paso 4: Abrir el proyecto CORRECTO
+
+```bash
+npx cap open ios
+```
+
+**CRÍTICO**: Este comando abre el archivo `.xcworkspace` (no `.xcodeproj`). 
+
+En la barra de título de Xcode debe decir: **"App.xcworkspace"** (NO "App.xcodeproj")
+
+### Paso 5: En Xcode - Limpiar y construir
+
+1. **Product → Clean Build Folder** (Shift + Cmd + K)
+2. Esperar 10 segundos
+3. **Product → Build** (Cmd + B)
 
 ---
 
-### Parte 2: Mejora del Código (Lovable)
+## Si CocoaPods no está instalado
 
-Agregar **logging más detallado** para identificar exactamente dónde falla el flujo en dispositivos reales.
+Si recibes error al ejecutar `pod install`, primero instala CocoaPods:
 
-#### Archivo: `src/services/pushNotifications.ts`
-
-Cambios propuestos:
-
-1. **Mejorar logs en `getFcmTokenWithRetry`** para mostrar errores específicos de iOS
-2. **Agregar timeout más largo** para el primer intento (iOS a veces tarda más en el handshake inicial)
-3. **Agregar fallback de diagnóstico** que muestre en consola qué paso exacto falló
-
-```text
-// Cambios específicos:
-// Línea 51-52: Aumentar delay inicial a 2s para primer intento
-// Línea 55-70: Agregar try-catch más específico con mensaje del error nativo
-// Línea 97-112: Agregar logging del token crudo recibido para diagnóstico
+```bash
+sudo gem install cocoapods
+pod setup
 ```
 
 ---
 
-### Parte 3: Checklist de Diagnóstico
+## Verificación Visual
 
-Después de aplicar los cambios, el usuario debe:
-
-1. **Reconstruir la app nativa**
-   ```bash
-   npm run build
-   npx cap sync ios
-   npx cap open ios
-   ```
-
-2. **Incrementar versión** en Xcode (General → Version y Build)
-
-3. **Archivar y subir** a TestFlight
-
-4. **Probar en dispositivo físico** (simulador no soporta push)
-
-5. **Revisar logs** en Xcode Console durante la activación
+Cuando abras Xcode correctamente, en el panel izquierdo deberías ver:
+- 📁 **App** (tu proyecto)
+- 📁 **Pods** (dependencias de CocoaPods) ← **Si esto NO aparece, los Pods no están instalados**
 
 ---
 
-## Resumen de Acciones
+## Resumen de Comandos
 
-| # | Acción | Responsable | Tipo |
-|---|--------|-------------|------|
-| 1 | Verificar GoogleService-Info.plist en Xcode | Usuario | Manual |
-| 2 | Verificar Firebase SDK instalado | Usuario | Manual |
-| 3 | Verificar AppDelegate.swift con Firebase init | Usuario | Manual |
-| 4 | Mejorar logging en pushNotifications.ts | Lovable | Código |
-| 5 | Reconstruir y subir nueva versión a TestFlight | Usuario | Manual |
-| 6 | Probar activación y revisar logs de Xcode | Usuario | Manual |
+```bash
+# Ejecutar en orden:
+cd ios/App
+pod deintegrate
+pod cache clean --all
+pod install --repo-update
+cd ../..
+npx cap sync ios
+npx cap open ios
+```
 
 ---
 
-## Pregunta Crítica
+## Próximos Pasos
 
-**Antes de proceder con cambios de código**, necesito confirmar:
+Una vez que compile sin errores:
+1. Incrementar Version/Build en Xcode
+2. Product → Archive → Distribute App
+3. Probar en TestFlight y revisar logs de `[Push]`
 
-¿El proyecto de Xcode tiene estos elementos configurados?
-- [ ] GoogleService-Info.plist importado
-- [ ] Firebase SDK agregado via Swift Package Manager
-- [ ] AppDelegate.swift con `FirebaseApp.configure()` y `Messaging.messaging().apnsToken = deviceToken`
-
-Si alguno falta, ese es el origen del problema y debe corregirse en el proyecto nativo primero.
