@@ -381,13 +381,10 @@ export function PedidosPorAutorizarTab() {
 
   if (!pedidos || pedidos.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center">
-          <CheckCircle2 className="h-12 w-12 mx-auto text-green-500 mb-4" />
-          <h3 className="text-lg font-semibold">Sin pedidos pendientes</h3>
-          <p className="text-muted-foreground">No hay pedidos esperando autorización de precios</p>
-        </CardContent>
-      </Card>
+      <div className="flex items-center gap-2 py-3 px-4 text-sm text-muted-foreground bg-muted/30 rounded-md">
+        <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+        <span>Sin pedidos pendientes de autorización</span>
+      </div>
     );
   }
 
@@ -611,17 +608,26 @@ export function PedidosPorAutorizarTab() {
                       </div>
 
                       {/* Costo y margen */}
-                      {costo > 0 && (
-                        <div className="border-t pt-2 flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">Costo: <span className="font-mono">${formatCurrency(costo)}</span></span>
-                          <Badge
-                            variant={margenPct < 0 ? "destructive" : "secondary"}
-                            className={`text-[10px] ${margenPct >= 10 ? "bg-green-100 text-green-800 border-green-200" : margenPct >= 0 ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}`}
-                          >
-                            {margenPct >= 0 ? "+" : ""}{margenPct.toFixed(1)}%
-                          </Badge>
-                        </div>
-                      )}
+                      <div className="border-t pt-2 flex items-center justify-between text-xs">
+                        {costo > 0 ? (
+                          <>
+                            <span className="text-muted-foreground">Costo: <span className="font-mono">${formatCurrency(costo)}</span></span>
+                            <Badge
+                              variant={margenPct < 0 ? "destructive" : "secondary"}
+                              className={`text-[10px] ${margenPct >= 10 ? "bg-green-100 text-green-800 border-green-200" : margenPct >= 0 ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}`}
+                            >
+                              {margenPct >= 0 ? "+" : ""}{margenPct.toFixed(1)}%
+                            </Badge>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-muted-foreground">Costo: <span className="font-mono">Sin registro</span></span>
+                            <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                              --
+                            </Badge>
+                          </>
+                        )}
+                      </div>
 
                       {/* Subtotal */}
                       <div className="border-t pt-2 flex justify-between items-center">
@@ -742,7 +748,11 @@ export function PedidosPorAutorizarTab() {
                                 >
                                   {margenPct >= 0 ? "+" : ""}{margenPct.toFixed(1)}%
                                 </Badge>
-                              ) : "—"}
+                              ) : (
+                                <Badge variant="outline" className="text-xs text-muted-foreground">
+                                  Sin costo
+                                </Badge>
+                              )}
                             </TableCell>
                             <TableCell className="text-right font-mono font-medium">
                               ${formatCurrency(subtotal)}
