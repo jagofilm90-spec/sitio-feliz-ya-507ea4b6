@@ -40,6 +40,7 @@ import AppMobileGuide from "./pages/AppMobileGuide";
 import TestFirma from "./pages/TestFirma";
 import Precios from "./pages/Precios";
 import Configuracion from "./pages/Configuracion";
+import PushDiagnosticsPage from "./pages/PushDiagnosticsPage";
 
 import PushNotificationsGate from "./components/PushNotificationsGate";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -160,6 +161,11 @@ const App = () => (
               <Route path="/configuracion" element={
                 <ProtectedRoute allowedRoles={['admin', 'contadora', 'gerente_almacen']} redirectTo="/auth">
                   <Configuracion />
+                </ProtectedRoute>
+              } />
+              <Route path="/push-diagnostics" element={
+                <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
+                  <PushDiagnosticsPage />
                 </ProtectedRoute>
               } />
               
