@@ -10,6 +10,7 @@ import { formatCurrency } from "@/lib/utils";
 import { getDisplayName } from "@/lib/productUtils";
 import { Producto, LineaPedido } from "./types";
 import { CarritoPanel } from "./CarritoPanel";
+import { ProductoItemMobile } from "./ProductoItemMobile";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PasoProductosProps {
@@ -89,16 +90,18 @@ export function PasoProductos({
 
   return (
     <div className="space-y-4">
-      {/* Step Header */}
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold flex items-center justify-center gap-2">
-          <Package className="h-6 w-6 text-primary" />
-          ¿Qué productos necesita?
-        </h2>
-        <p className="text-muted-foreground">
-          Selecciona los productos y las cantidades
-        </p>
-      </div>
+      {/* Step Header - compact on mobile */}
+      {!isMobile && (
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-bold flex items-center justify-center gap-2">
+            <Package className="h-6 w-6 text-primary" />
+            ¿Qué productos necesita?
+          </h2>
+          <p className="text-muted-foreground">
+            Selecciona los productos y las cantidades
+          </p>
+        </div>
+      )}
 
       <div className={isMobile ? "space-y-4" : "flex gap-4"}>
         {/* Product Selection Area */}
@@ -118,10 +121,19 @@ export function PasoProductos({
                     <Loader2 className="h-5 w-5 animate-spin" />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  <div className={`grid gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4'}`}>
                     {productosFrecuentes.map((producto) => {
                       const yaEnCarrito = lineas.some(l => l.producto.id === producto.id);
-                      return (
+                      const cantEnCarrito = lineas.find(l => l.producto.id === producto.id)?.cantidad || 0;
+                      return isMobile ? (
+                        <ProductoItemMobile
+                          key={producto.id}
+                          producto={producto}
+                          cantidadEnCarrito={cantEnCarrito}
+                          onAgregarProducto={onAgregarProducto}
+                          onActualizarCantidad={onActualizarCantidad}
+                        />
+                      ) : (
                         <div
                           key={producto.id}
                           className={`p-2 rounded-lg border transition-all cursor-pointer ${
@@ -168,11 +180,23 @@ export function PasoProductos({
                 />
               </div>
 
-              <ScrollArea className="h-[300px] sm:h-[400px]">
-                <div className="space-y-1 pr-2">
+              <ScrollArea className={isMobile ? "h-[calc(100vh-320px)]" : "h-[300px] sm:h-[400px]"}>
+                <div className={`${isMobile ? 'space-y-2' : 'space-y-1'} pr-2`}>
                   {productosFiltrados.map((producto) => {
                     const lineaEnCarrito = lineas.find(l => l.producto.id === producto.id);
                     const cantidadEnCarrito = lineaEnCarrito?.cantidad || 0;
+
+                    if (isMobile) {
+                      return (
+                        <ProductoItemMobile
+                          key={producto.id}
+                          producto={producto}
+                          cantidadEnCarrito={cantidadEnCarrito}
+                          onAgregarProducto={onAgregarProducto}
+                          onActualizarCantidad={onActualizarCantidad}
+                        />
+                      );
+                    }
                     
                     return (
                       <div
