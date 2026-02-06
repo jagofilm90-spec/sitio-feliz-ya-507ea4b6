@@ -1,87 +1,66 @@
 
 
-# Rediseno: Panel de Solicitudes de Descuento -- Vista Plana y Rapida
+# Liberar el panel "Por Autorizar" -- quitar el recuadro y usar toda la ventana
 
-## El problema
+## El problema actual
 
-El panel actual usa un patron de "expandir/colapsar" (accordion). Cada tarjeta colapsada mide ~80px, pero al expandir una, crece a ~500px con: detalle de precios, botones de accion, carrito completo e historial. Como el contenedor tiene un maximo de 600px, al expandir la primera tarjeta ya no hay espacio para ver las demas. Por eso dice "7 pendientes" pero solo se ven 2.
+El panel esta encerrado dentro de un componente `Card` (recuadro con borde, padding, header). Esto crea una "caja dentro de una caja" que desperdicia espacio vertical. Ademas, el `ScrollArea` interno tiene un limite de altura que, combinado con el padding del Card, impide que se vean todas las tarjetas y que el scroll funcione correctamente.
 
-Ademas, si se intenta expandir la ultima tarjeta visible, el contenido queda cortado porque no hay espacio.
+Resultado: dice "7 pendientes" pero solo se ven 2-3, y no puedes hacer scroll para ver las demas.
 
-## La solucion: Tarjetas planas con todo visible
+## La solucion: Eliminar el recuadro, usar lista directa
 
-Eliminar el patron de expand/collapse. Cada tarjeta mostrara TODA la informacion esencial y los botones de accion directamente, sin necesidad de hacer click para ver mas. La informacion secundaria (carrito completo, historial de precios) estara disponible mediante un boton "Ver mas" que abre un dialog.
-
-### Diseno de cada tarjeta compacta (~160px):
+Quitar el envoltorio `Card` y mostrar las tarjetas directamente en la pagina, aprovechando toda la ventana disponible. El titulo "Por Autorizar" se mantiene como un header simple (sin caja).
 
 ```text
-+------------------------------------------------------+
-| Vendedor: Juan Lopez          hace 5 min    URGENTE  |
-| Cliente: Materiales del Norte - Suc. Centro          |
-|------------------------------------------------------|
-| Azucar Estandar 50kg                    x 20 uds     |
-| $580 --> $520  (-$60)   Costo: $450  [+15.6% margen] |
-|------------------------------------------------------|
-| [Aprobar $520] [$550] [$551] [Rechazar] [Otro] [+]   |
-+------------------------------------------------------+
+Antes (con Card):
++------ Card border + padding ------+
+| [icon] Por Autorizar     [7]      |
+| +-- ScrollArea (limitada) ------+ |
+| | Tarjeta 1                     | |
+| | Tarjeta 2                     | |
+| | (no se ven mas, sin scroll)   | |
+| +-------------------------------+ |
++-----------------------------------+
+
+Despues (sin Card):
+[icon] Por Autorizar  [7]
+  Tarjeta 1
+  Tarjeta 2
+  Tarjeta 3
+  Tarjeta 4
+  Tarjeta 5
+  Tarjeta 6
+  Tarjeta 7
+  (scroll natural de la pagina)
 ```
 
-### Que cambia:
+## Que cambia
 
-| Antes | Despues |
-|-------|---------|
-| Header colapsado (80px) + contenido expandido (500px) | Tarjeta plana con todo visible (~160px) |
-| Solo 2 tarjetas visibles de 7 | Las 7 tarjetas visibles con scroll |
-| Click para ver precios y botones | Precios y botones siempre visibles |
-| Informacion del carrito inline | Carrito en dialog bajo "Ver mas" |
-| Historial de precios inline | Historial en dialog bajo "Ver mas" |
-| ScrollArea de 600px | ScrollArea adaptativa (hasta 80vh) |
-
-### Informacion que se mueve a un dialog "Ver mas":
-- Carrito completo del pedido (productos, cantidades, subtotales)
-- Historial de precios con este cliente
-- Saldo pendiente del cliente (solo se muestra como icono de alerta si hay saldo)
-
-### Informacion que permanece en la tarjeta:
-- Vendedor + tiempo transcurrido + indicador urgente
-- Cliente + sucursal
-- Producto + cantidad
-- Precio lista, precio solicitado, descuento, costo, margen
-- Botones: Aprobar (precio solicitado), Precio medio, -5%, Rechazar, Otro precio
+| Aspecto | Antes | Despues |
+|---------|-------|---------|
+| Envoltorio | Card con borde y padding | Div simple, sin borde |
+| Scroll | ScrollArea interno limitado | Scroll natural de la pagina completa |
+| Espacio usado | ~60% de la ventana | 100% de la ventana disponible |
+| Visibilidad | 2-3 tarjetas | Todas las tarjetas con scroll completo |
 
 ## Detalle tecnico
 
-### Archivo a modificar: `src/components/admin/SolicitudesDescuentoPanel.tsx`
+### Archivo: `src/components/admin/SolicitudesDescuentoPanel.tsx`
 
-**Eliminar:**
-- Estado `expandedItems` y funcion `toggleExpanded`
-- useEffect de auto-expand
-- La logica de `isExpanded` en SolicitudCard
-- Props `isExpanded` y `onToggleExpand`
+1. Reemplazar el wrapper `Card > CardHeader > CardContent > ScrollArea` por una estructura plana:
+   - Un `div` contenedor con el titulo "Por Autorizar" + badge como header simple
+   - Las tarjetas directamente debajo, sin `ScrollArea` -- se scrollean con la pagina
+   - Se mantiene un separador sutil entre el header y las tarjetas
 
-**Redisenar SolicitudCard:**
-- Layout compacto en 3 filas:
-  1. Fila superior: vendedor, tiempo, urgencia
-  2. Fila media: producto, precios, costo/margen
-  3. Fila inferior: botones de accion (todos visibles)
-- Nuevo boton "Ver mas" que abre un Dialog con carrito + historial (carga bajo demanda como antes)
+2. El titulo conserva el icono de campana, el texto y el badge con el contador
 
-**Ajustar ScrollArea:**
-- Cambiar `max-h-[600px]` a `max-h-[calc(80vh-120px)]` para aprovechar mas pantalla
+3. Las tarjetas (`SolicitudCardFlat`) no cambian en absoluto -- solo cambia su contenedor
 
-**Consistencia mobile/desktop:**
-- El componente `SolicitudesDescuentoPanel` ya es el mismo para ambas vistas (no tiene componente mobile separado)
-- Las tarjetas compactas usaran `flex-wrap` para adaptarse automaticamente a pantallas pequenas
-- Los botones de accion se apilaran verticalmente en mobile y horizontalmente en desktop
+4. Los dialogs (Contraoferta, Rechazo, Ver Mas) no cambian
 
-### Archivos que NO cambian:
-- `useSolicitudesDescuento.ts` -- el hook ya tiene toda la logica correcta
-- Dialogs de Rechazo y Contraoferta -- se mantienen identicos
-- Push notifications -- ya implementados correctamente
-- `removeSolicitud` -- ya funciona correctamente
-
-### Resultado esperado:
-- Las 7 solicitudes son visibles en la lista sin necesidad de expandir nada
-- Cada tarjeta muestra todo lo necesario para tomar una decision rapida
-- Los botones de accion estan siempre accesibles
-- Informacion secundaria disponible bajo "Ver mas" sin saturar la vista principal
+### Resultado esperado
+- Las 7 solicitudes se ven todas haciendo scroll en la pagina
+- No hay recuadro ni "caja" que limite el espacio
+- El scroll es el natural de la ventana, sin limites artificiales
+- En mobile funciona igual -- scroll completo sin restricciones
