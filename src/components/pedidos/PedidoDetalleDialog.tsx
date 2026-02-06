@@ -21,6 +21,8 @@ import { Loader2 } from "lucide-react";
 import { getDisplayName } from "@/lib/productUtils";
 import { CreditoStatusBadge } from "./CreditoStatusBadge";
 import { CREDITO_LABELS } from "@/lib/creditoUtils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { PedidoDetalleProductCards } from "./PedidoDetalleProductCards";
 
 interface PedidoDetalleDialogProps {
   pedidoId: string | null;
@@ -78,6 +80,7 @@ export default function PedidoDetalleDialog({
 }: PedidoDetalleDialogProps) {
   const [pedido, setPedido] = useState<PedidoDetalle | null>(null);
   const [loading, setLoading] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (pedidoId && open) {
@@ -85,10 +88,9 @@ export default function PedidoDetalleDialog({
     }
   }, [pedidoId, open]);
 
-  // Navegación con teclado: Flecha derecha = siguiente, Flecha izquierda = anterior
+  // Navegación con teclado
   useEffect(() => {
     if (!open) return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight" && canNavigateNext && onNavigateNext) {
         e.preventDefault();
@@ -98,7 +100,6 @@ export default function PedidoDetalleDialog({
         onNavigatePrevious();
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, canNavigateNext, canNavigatePrevious, onNavigateNext, onNavigatePrevious]);
@@ -110,42 +111,18 @@ export default function PedidoDetalleDialog({
       const { data, error } = await supabase
         .from("pedidos")
         .select(`
-          id,
-          folio,
-          fecha_pedido,
-          subtotal,
-          impuestos,
-          total,
-          status,
-          notas,
-          termino_credito,
-          fecha_entrega_real,
-          pagado,
+          id, folio, fecha_pedido, subtotal, impuestos, total, status, notas,
+          termino_credito, fecha_entrega_real, pagado,
           clientes (nombre, codigo),
           profiles:vendedor_id (full_name),
           cliente_sucursales:sucursal_id (nombre),
           pedidos_detalles (
-            id,
-            cantidad,
-            precio_unitario,
-            subtotal,
-            kilos_totales,
-            unidades_manual,
-            productos (
-              codigo,
-              nombre,
-              marca,
-              especificaciones,
-              contenido_empaque,
-              unidad,
-              precio_por_kilo,
-              peso_kg
-            )
+            id, cantidad, precio_unitario, subtotal, kilos_totales, unidades_manual,
+            productos (codigo, nombre, marca, especificaciones, contenido_empaque, unidad, precio_por_kilo, peso_kg)
           )
         `)
         .eq("id", pedidoId)
         .single();
-
       if (error) throw error;
       setPedido(data as any);
     } catch (error) {
@@ -157,19 +134,15 @@ export default function PedidoDetalleDialog({
 
   const getStatusBadge = (status: string) => {
     const labels: Record<string, string> = {
-      pendiente: "Pendiente",
-      en_ruta: "En Ruta",
-      entregado: "Entregado",
-      cancelado: "Cancelado",
+      pendiente: "Pendiente", en_ruta: "En Ruta", entregado: "Entregado", cancelado: "Cancelado",
     };
     const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      pendiente: "secondary",
-      en_ruta: "default",
-      entregado: "default",
-      cancelado: "destructive",
+      pendiente: "secondary", en_ruta: "default", entregado: "default", cancelado: "destructive",
     };
     return <Badge variant={variants[status] || "default"}>{labels[status] || status}</Badge>;
   };
+
+  const sortedDetalles = pedido ? ordenarProductosAzucarPrimero(pedido.pedidos_detalles, (d) => d.productos.nombre) : [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -187,7 +160,7 @@ export default function PedidoDetalleDialog({
         ) : pedido ? (
           <div className="space-y-6">
             {/* Información general */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Cliente</p>
                 <p className="font-medium">{pedido.clientes?.nombre || "—"}</p>
@@ -233,95 +206,88 @@ export default function PedidoDetalleDialog({
               </div>
             )}
 
-            {/* Productos */}
-            <div className="border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Producto</TableHead>
-                    <TableHead className="text-right">Cantidad</TableHead>
-                    <TableHead className="text-center">Presentación</TableHead>
-                    <TableHead className="text-right">P. Unitario</TableHead>
-                    <TableHead className="text-right">Subtotal</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {ordenarProductosAzucarPrimero(pedido.pedidos_detalles, (d) => d.productos.nombre).map((detalle) => {
-                    const producto = detalle.productos;
-                    const nombreLower = producto.nombre.toLowerCase();
-                    let unidadComercial = producto.unidad || "pza";
-                    
-                    // Detectar si es cliente Lecaroz para reglas especiales
-                    const esLecaroz = pedido.clientes?.nombre?.toLowerCase().includes('lecaroz');
-                    
-                    // Regla especial para Lecaroz: Anís y Canela Molida siempre se muestran como "bolsa"
-                    if (esLecaroz && (nombreLower.includes('anís') || nombreLower.includes('anis') || nombreLower.includes('canela molida'))) {
-                      unidadComercial = 'bolsa';
-                    }
-                    
-                    // Calcular presentación para bodegueros - SIEMPRE en unidades comerciales, nunca solo kg
-                    let presentacionDisplay = "";
-                    
-                    // *** REGLA ESPECIAL ANÍS / CANELA MOLIDA: Bolsas de 5kg ***
-                    if (esProductoBolsas5kg(producto.nombre)) {
-                      const numBolsas = calcularNumeroBolsas(detalle.cantidad, KG_POR_BOLSA);
-                      presentacionDisplay = `${numBolsas} bolsa${numBolsas !== 1 ? 's' : ''}`;
-                    } else if (detalle.kilos_totales && producto.peso_kg) {
-                      // CASO PRINCIPAL: Tenemos kilos_totales y peso_kg guardados
-                      const plural = detalle.cantidad !== 1 ? 's' : '';
-                      presentacionDisplay = `${detalle.cantidad.toLocaleString()} ${unidadComercial}${plural} de ${producto.peso_kg} kg`;
-                    } else if (detalle.kilos_totales) {
-                      // Solo tenemos kilos_totales (sin peso_kg del producto)
-                      presentacionDisplay = `${detalle.kilos_totales.toLocaleString()} kg total`;
-                    } else if (producto.peso_kg) {
-                      // Tenemos peso_kg pero no kilos_totales guardados - mostrar presentación del producto
-                      const plural = detalle.cantidad !== 1 ? 's' : '';
-                      presentacionDisplay = `${detalle.cantidad.toLocaleString()} ${unidadComercial}${plural} de ${producto.peso_kg} kg`;
-                    } else {
-                      // Producto sin conversión a kilos - mostrar guion
-                      presentacionDisplay = "-";
-                    }
-                    
-                    return (
-                      <TableRow key={detalle.id}>
-                        <TableCell className="font-mono text-sm">{producto.codigo}</TableCell>
-                        <TableCell>
-                          {getDisplayName(producto)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {/* Si tiene peso_kg, la cantidad son unidades comerciales */}
-                          {producto.peso_kg && producto.precio_por_kilo
-                            ? `${detalle.cantidad} ${unidadComercial}${detalle.cantidad !== 1 ? 's' : ''}`
-                            : producto.precio_por_kilo
-                              ? `${detalle.cantidad} kg`
-                              : `${detalle.cantidad} ${unidadComercial}${detalle.cantidad !== 1 ? 's' : ''}`
-                          }
-                          {/* Mostrar kilos totales entre paréntesis si están disponibles */}
-                          {detalle.kilos_totales && (
-                            <span className="text-muted-foreground text-xs ml-1">
-                              ({detalle.kilos_totales.toLocaleString()} kg)
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center font-semibold text-primary">
-                          {presentacionDisplay}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          ${formatCurrency(detalle.precio_unitario)}
-                          {producto.precio_por_kilo && <span className="text-xs text-muted-foreground">/kg</span>}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">${formatCurrency(detalle.subtotal)}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+            {/* Productos - Mobile: Cards, Desktop: Table */}
+            {isMobile ? (
+              <PedidoDetalleProductCards
+                detalles={sortedDetalles}
+                clienteNombre={pedido.clientes?.nombre || undefined}
+              />
+            ) : (
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Código</TableHead>
+                      <TableHead>Producto</TableHead>
+                      <TableHead className="text-right">Cantidad</TableHead>
+                      <TableHead className="text-center">Presentación</TableHead>
+                      <TableHead className="text-right">P. Unitario</TableHead>
+                      <TableHead className="text-right">Subtotal</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedDetalles.map((detalle) => {
+                      const producto = detalle.productos;
+                      const nombreLower = producto.nombre.toLowerCase();
+                      let unidadComercial = producto.unidad || "pza";
+                      const esLecaroz = pedido.clientes?.nombre?.toLowerCase().includes('lecaroz');
+                      
+                      if (esLecaroz && (nombreLower.includes('anís') || nombreLower.includes('anis') || nombreLower.includes('canela molida'))) {
+                        unidadComercial = 'bolsa';
+                      }
+                      
+                      let presentacionDisplay = "";
+                      if (esProductoBolsas5kg(producto.nombre)) {
+                        const numBolsas = calcularNumeroBolsas(detalle.cantidad, KG_POR_BOLSA);
+                        presentacionDisplay = `${numBolsas} bolsa${numBolsas !== 1 ? 's' : ''}`;
+                      } else if (detalle.kilos_totales && producto.peso_kg) {
+                        const plural = detalle.cantidad !== 1 ? 's' : '';
+                        presentacionDisplay = `${detalle.cantidad.toLocaleString()} ${unidadComercial}${plural} de ${producto.peso_kg} kg`;
+                      } else if (detalle.kilos_totales) {
+                        presentacionDisplay = `${detalle.kilos_totales.toLocaleString()} kg total`;
+                      } else if (producto.peso_kg) {
+                        const plural = detalle.cantidad !== 1 ? 's' : '';
+                        presentacionDisplay = `${detalle.cantidad.toLocaleString()} ${unidadComercial}${plural} de ${producto.peso_kg} kg`;
+                      } else {
+                        presentacionDisplay = "-";
+                      }
+                      
+                      return (
+                        <TableRow key={detalle.id}>
+                          <TableCell className="font-mono text-sm">{producto.codigo}</TableCell>
+                          <TableCell>{getDisplayName(producto)}</TableCell>
+                          <TableCell className="text-right">
+                            {producto.peso_kg && producto.precio_por_kilo
+                              ? `${detalle.cantidad} ${unidadComercial}${detalle.cantidad !== 1 ? 's' : ''}`
+                              : producto.precio_por_kilo
+                                ? `${detalle.cantidad} kg`
+                                : `${detalle.cantidad} ${unidadComercial}${detalle.cantidad !== 1 ? 's' : ''}`
+                            }
+                            {detalle.kilos_totales && (
+                              <span className="text-muted-foreground text-xs ml-1">
+                                ({detalle.kilos_totales.toLocaleString()} kg)
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center font-semibold text-primary">
+                            {presentacionDisplay}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            ${formatCurrency(detalle.precio_unitario)}
+                            {producto.precio_por_kilo && <span className="text-xs text-muted-foreground">/kg</span>}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">${formatCurrency(detalle.subtotal)}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
 
             {/* Totales */}
-            <div className="flex justify-end">
-              <div className="w-64 space-y-2">
+            <div className={isMobile ? "" : "flex justify-end"}>
+              <div className={`${isMobile ? "w-full" : "w-64"} space-y-2`}>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal:</span>
                   <span className="font-mono">${formatCurrency(pedido.subtotal || 0)}</span>

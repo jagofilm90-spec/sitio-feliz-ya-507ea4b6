@@ -667,33 +667,36 @@ const PedidosContent = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
-            <TabsList className="inline-flex w-max gap-1">
-              <TabsTrigger value="por-autorizar" className="gap-1.5 px-2 sm:px-3">
-                <AlertCircle className="h-4 w-4" />
-                <span className="hidden sm:inline">Por Autorizar</span>
-                <span className="sm:hidden">Autoriz</span>
-              </TabsTrigger>
-              <TabsTrigger value="pedidos" className="gap-1.5 px-2 sm:px-3">
-                <ShoppingCart className="h-4 w-4" />
-                Pedidos
-              </TabsTrigger>
-              <TabsTrigger value="cotizaciones" className="gap-1.5 px-2 sm:px-3">
-                <FileText className="h-4 w-4" />
-                <span className="hidden sm:inline">Cotizaciones</span>
-                <span className="sm:hidden">Cotiz</span>
-              </TabsTrigger>
-              <TabsTrigger value="analisis" className="gap-1.5 px-2 sm:px-3">
-                <BarChart3 className="h-4 w-4" />
-                <span className="hidden sm:inline">Análisis</span>
-                <span className="sm:hidden">Anál</span>
-              </TabsTrigger>
-              <TabsTrigger value="calendario" className="gap-1.5 px-2 sm:px-3">
-                <CalendarDays className="h-4 w-4" />
-                <span className="hidden sm:inline">Calendario</span>
-                <span className="sm:hidden">Cal</span>
-              </TabsTrigger>
-            </TabsList>
+          <div className="relative">
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none sm:hidden" />
+            <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
+              <TabsList className="inline-flex w-max gap-1">
+                <TabsTrigger value="por-autorizar" className="gap-1.5 px-2 sm:px-3">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="hidden sm:inline">Por Autorizar</span>
+                  <span className="sm:hidden">Autoriz</span>
+                </TabsTrigger>
+                <TabsTrigger value="pedidos" className="gap-1.5 px-2 sm:px-3">
+                  <ShoppingCart className="h-4 w-4" />
+                  Pedidos
+                </TabsTrigger>
+                <TabsTrigger value="cotizaciones" className="gap-1.5 px-2 sm:px-3">
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden sm:inline">Cotizaciones</span>
+                  <span className="sm:hidden">Cotiz</span>
+                </TabsTrigger>
+                <TabsTrigger value="analisis" className="gap-1.5 px-2 sm:px-3">
+                  <BarChart3 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Análisis</span>
+                  <span className="sm:hidden">Anál</span>
+                </TabsTrigger>
+                <TabsTrigger value="calendario" className="gap-1.5 px-2 sm:px-3">
+                  <CalendarDays className="h-4 w-4" />
+                  <span className="hidden sm:inline">Calendario</span>
+                  <span className="sm:hidden">Cal</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
           </div>
 
           <TabsContent value="pedidos" className="mt-4 sm:mt-6 space-y-4">
