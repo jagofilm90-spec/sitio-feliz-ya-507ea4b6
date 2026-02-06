@@ -38,6 +38,9 @@ interface PedidoDetalle {
     precio_venta: number;
     unidad: string;
     peso_kg: number | null;
+    descuento_maximo: number | null;
+    ultimo_costo_compra: number | null;
+    costo_promedio_ponderado: number | null;
   } | null;
 }
 
@@ -272,35 +275,80 @@ export function AutorizacionRapidaSheet({
             {pedido.pedidos_detalles.map((detalle) => {
               const currentPrice = editingPrices[detalle.id] ?? detalle.precio_unitario;
               const listPrice = detalle.productos?.precio_venta || 0;
-              const isDifferent = currentPrice !== listPrice;
+              const descuentoMax = detalle.productos?.descuento_maximo ?? 0;
+              const precioMinimo = listPrice - descuentoMax;
+              const diferencia = currentPrice - precioMinimo;
+              const costo = detalle.productos?.ultimo_costo_compra || detalle.productos?.costo_promedio_ponderado || 0;
+              const ganancia = costo > 0 ? currentPrice - costo : 0;
+              const margenPct = costo > 0 ? ((currentPrice - costo) / costo) * 100 : 0;
+              const porDebajoMinimo = currentPrice < precioMinimo;
+              const gananciasBajas = costo > 0 && margenPct < 10;
 
               return (
                 <div
                   key={detalle.id}
-                  className="p-3 bg-muted/50 rounded-lg space-y-2"
+                  className={`p-3 rounded-lg space-y-2 ${porDebajoMinimo ? "bg-destructive/10 border border-destructive/30" : "bg-muted/50"}`}
                 >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm line-clamp-2">
-                        {detalle.productos?.nombre}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {detalle.cantidad} {detalle.productos?.unidad} × $
-                        {formatCurrency(currentPrice)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-mono font-semibold">
-                        ${formatCurrency(detalle.cantidad * currentPrice)}
-                      </p>
-                      {isDifferent && (
-                        <p className="text-xs text-muted-foreground">
-                          Lista: ${formatCurrency(listPrice)}
-                        </p>
-                      )}
-                    </div>
+                  {/* Nombre y cantidad */}
+                  <div>
+                    <p className="font-medium text-sm line-clamp-2">
+                      {detalle.productos?.nombre}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {detalle.cantidad} {detalle.productos?.unidad}
+                    </p>
                   </div>
 
+                  {/* Desglose de precios */}
+                  <div className="border-t pt-2 space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">P. Lista</span>
+                      <span className="font-mono">${formatCurrency(listPrice)}</span>
+                    </div>
+                    {descuentoMax > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">P. Mínimo</span>
+                        <span className="font-mono">${formatCurrency(precioMinimo)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">P. Solicitado</span>
+                      <span className={`font-mono font-semibold ${porDebajoMinimo ? "text-destructive" : ""}`}>
+                        ${formatCurrency(currentPrice)}
+                      </span>
+                    </div>
+                    {descuentoMax > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Diferencia</span>
+                        <span className={`font-mono font-semibold ${diferencia < 0 ? "text-destructive" : "text-green-600"}`}>
+                          {diferencia >= 0 ? "+" : ""}${formatCurrency(diferencia)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Costo y ganancia */}
+                  {costo > 0 && (
+                    <div className="border-t pt-2 flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Costo: <span className="font-mono">${formatCurrency(costo)}</span></span>
+                      <Badge
+                        variant={margenPct < 0 ? "destructive" : "secondary"}
+                        className={`text-[10px] ${margenPct >= 10 ? "bg-green-100 text-green-800 border-green-200" : margenPct >= 0 ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}`}
+                      >
+                        {margenPct >= 0 ? "+" : ""}{margenPct.toFixed(1)}% margen
+                      </Badge>
+                    </div>
+                  )}
+
+                  {/* Subtotal */}
+                  <div className="border-t pt-2 flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Subtotal</span>
+                    <span className="font-mono font-semibold">
+                      ${formatCurrency(detalle.cantidad * currentPrice)}
+                    </span>
+                  </div>
+
+                  {/* Editor de precio */}
                   {isEditing && (
                     <Input
                       type="number"
