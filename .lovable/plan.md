@@ -1,175 +1,51 @@
 
-# Plan: Resolver Timeout de Registro Push en iOS
+# Plan: Fix Discount Requests Display and Push Notification Issues
 
-## Diagnóstico del Problema
+## Problems Identified
 
-Los logs muestran claramente el flujo:
-```text
-22:09:12.545 Llamando PushNotifications.register()...
-22:09:12.549 register() completado, esperando evento...
-22:09:27.559 ⚠️ Timeout esperando evento de registro (15s)
-```
+1. **"Por Autorizar" tab shows empty** -- The query in `useSolicitudesDescuento.ts` joins `vendedor:profiles!vendedor_id(...)` but no foreign key exists between `solicitudes_descuento.vendedor_id` and `profiles.id`. This causes PostgREST to reject the query silently, so the panel renders nothing even though the dashboard correctly shows 12 pending requests (using a simpler count query without joins).
 
-**El problema**: `PushNotifications.register()` se ejecuta pero el evento `registration` nunca llega al JavaScript. Esto ocurre porque **el bridge nativo no está configurado correctamente** para pasar el token de APNs a Capacitor/Firebase.
+2. **Push notifications never arrive** -- Three sub-issues:
+   - The `device_tokens` table is empty (no device has registered a token -- the native Firebase CocoaPods setup on iOS isn't complete yet, which is a separate native-side task).
+   - Two files send push with `roles: ['Secretaria']` (uppercase) but the database enum is `'secretaria'` (lowercase), so no users would match.
+   - One file sends `userIds` instead of `user_ids`, so the edge function ignores the parameter.
 
 ---
 
-## Causa Raíz
+## Step 1: Database Migration -- Add Missing Foreign Key
 
-En iOS, el flujo de tokens es:
+Add a foreign key from `solicitudes_descuento.vendedor_id` to `profiles.id`. This allows the PostgREST join to resolve correctly.
 
-```text
-APNs → AppDelegate.swift → Firebase SDK → Capacitor Plugin → JavaScript
-```
-
-Si el evento `registration` no llega, significa que **AppDelegate.swift** no está pasando el token correctamente al Firebase SDK.
-
----
-
-## Solución: Configurar AppDelegate.swift
-
-Debes abrir el archivo `ios/App/App/AppDelegate.swift` en Xcode y verificar/agregar las siguientes líneas:
-
-### 1. Imports Requeridos (al inicio del archivo)
-
-```swift
-import UIKit
-import Capacitor
-import FirebaseCore
-import FirebaseMessaging
-```
-
-### 2. En `application(_:didFinishLaunchingWithOptions:)`
-
-Asegúrate de que Firebase se inicialice:
-
-```swift
-func application(_ application: UIApplication,
-                 didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-    // Inicializar Firebase ANTES de todo
-    FirebaseApp.configure()
-    
-    return true
-}
-```
-
-### 3. Agregar el método crítico para el token
-
-Este es el método que probablemente falta - es **OBLIGATORIO** para que el token llegue a Firebase:
-
-```swift
-func application(_ application: UIApplication,
-                 didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-    // Pasar el token a Firebase Messaging
-    Messaging.messaging().apnsToken = deviceToken
-    
-    // También notificar a Capacitor
-    NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, 
-                                    object: deviceToken)
-}
-```
-
-### 4. Agregar manejo de errores
-
-```swift
-func application(_ application: UIApplication,
-                 didFailToRegisterForRemoteNotificationsWithError error: Error) {
-    print("Failed to register for remote notifications: \(error)")
-    NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, 
-                                    object: error)
-}
+```sql
+ALTER TABLE public.solicitudes_descuento
+  ADD CONSTRAINT solicitudes_descuento_vendedor_id_fkey
+  FOREIGN KEY (vendedor_id) REFERENCES public.profiles(id);
 ```
 
 ---
 
-## AppDelegate.swift Completo (Referencia)
+## Step 2: Fix Role Casing in Push Notification Calls
 
-```swift
-import UIKit
-import Capacitor
-import FirebaseCore
-import FirebaseMessaging
+### File: `src/components/vendedor/VendedorNuevoPedidoTab.tsx`
+- Change `roles: ['Secretaria']` to `roles: ['secretaria']`
 
-@main
-class AppDelegate: UIResponder, UIApplicationDelegate {
-
-    func application(_ application: UIApplication,
-                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Inicializar Firebase
-        FirebaseApp.configure()
-        return true
-    }
-
-    func application(_ application: UIApplication, 
-                     configurationForConnecting connectingSceneSession: UISceneSession,
-                     options: UIScene.ConnectionOptions) -> UISceneConfiguration {
-        return UISceneConfiguration(name: "Default Configuration", 
-                                    sessionRole: connectingSceneSession.role)
-    }
-
-    func application(_ application: UIApplication, 
-                     didDiscardSceneSessions sceneSessions: Set<UISceneSession>) {
-    }
-
-    // CRÍTICO: Pasar token APNs a Firebase
-    func application(_ application: UIApplication,
-                     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        Messaging.messaging().apnsToken = deviceToken
-        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, 
-                                        object: deviceToken)
-    }
-
-    // Manejo de errores de registro
-    func application(_ application: UIApplication,
-                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        print("Failed to register: \(error)")
-        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, 
-                                        object: error)
-    }
-}
-```
+### File: `src/components/vendedor/CancelarPedidoDialog.tsx`
+- Change `roles: ['Secretaria']` to `roles: ['secretaria']`
 
 ---
 
-## Pasos para Aplicar
+## Step 3: Fix Parameter Name in Push Call
 
-1. **Abrir Xcode**:
-   ```bash
-   npx cap open ios
-   ```
-
-2. **Navegar a AppDelegate.swift**:
-   - En el navegador izquierdo: `App → App → AppDelegate.swift`
-
-3. **Verificar/agregar los imports** de Firebase
-
-4. **Agregar el método `didRegisterForRemoteNotificationsWithDeviceToken`** si no existe
-
-5. **Compilar y ejecutar**:
-   - Product → Clean Build Folder (⇧⌘K)
-   - Product → Run (⌘R)
-
-6. **Ejecutar diagnóstico nuevamente** en la app
+### File: `src/components/compras/CrearOrdenCompraWizard.tsx`
+- Change `userIds: [admin.user_id]` to `user_ids: [admin.user_id]`
 
 ---
 
-## Verificación
+## What This Fixes
 
-Después de aplicar los cambios, el diagnóstico debería mostrar:
+- The 12 pending discount requests will appear correctly in the "Por Autorizar" tab (both the `SolicitudesDescuentoPanel` and the counts will be synchronized).
+- Push notifications to secretaries and admins will target the correct users once device tokens are registered.
 
-```text
-📱 Evento "registration" recibido
-Token raw recibido (length=...)
-iOS detectado - intentando obtener token FCM...
-✅ Token FCM válido obtenido
-✅ Token guardado exitosamente en BD
-```
+## What Still Requires Native-Side Work
 
----
-
-## Checklist Adicional
-
-- [ ] **GoogleService-Info.plist** está en el target App
-- [ ] **Capability "Push Notifications"** está habilitada
-- [ ] **Capability "Background Modes" → Remote notifications** está marcada
-- [ ] El archivo **.p8 (APNs Key)** está configurado en Firebase Console
+Push notifications will only start arriving once the iOS app has Firebase properly configured (CocoaPods installed with `Firebase/Core` and `Firebase/Messaging`). This is the step you were working on in Xcode -- once the pods are installed and the app is rebuilt, device tokens will be saved to the database and notifications will flow.
