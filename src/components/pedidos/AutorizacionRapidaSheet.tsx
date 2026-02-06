@@ -281,7 +281,7 @@ export function AutorizacionRapidaSheet({
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">
+                      <p className="font-medium text-sm line-clamp-2">
                         {detalle.productos?.nombre}
                       </p>
                       <p className="text-xs text-muted-foreground">

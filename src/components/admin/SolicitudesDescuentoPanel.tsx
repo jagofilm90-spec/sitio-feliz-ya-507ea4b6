@@ -453,12 +453,12 @@ function SolicitudCard({
         </div>
 
         {/* Quick summary */}
-        <div className="mt-3 flex items-center gap-4 text-sm">
-          <div className="flex items-center gap-1">
-            <Package className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{solicitud.producto?.nombre}</span>
+        <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm">
+          <div className="flex items-center gap-1 min-w-0">
+            <Package className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="font-medium line-clamp-2 sm:line-clamp-1">{solicitud.producto?.nombre}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-muted-foreground line-through">{formatCurrency(solicitud.precio_lista)}</span>
             <span className="text-primary font-bold">→ {formatCurrency(solicitud.precio_solicitado)}</span>
             <Badge variant="destructive" className="text-xs">
@@ -491,7 +491,7 @@ function SolicitudCard({
               <TrendingDown className="h-4 w-4 text-red-500" />
               Detalle del Descuento
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Precio lista:</span>
                 <span className="font-medium">{formatCurrency(solicitud.precio_lista)}</span>
@@ -584,7 +584,7 @@ function SolicitudCard({
           {/* Quick approval buttons */}
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground font-medium">Aprobación rápida:</p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 size="sm"
                 onClick={() => onAprobar(solicitud)}
@@ -606,6 +606,7 @@ function SolicitudCard({
                   variant="outline"
                   onClick={() => onAprobar(solicitud, precioMedio)}
                   disabled={respondiendo}
+                  className="flex-1 sm:flex-initial"
                 >
                   {formatCurrency(precioMedio)}
                 </Button>
@@ -616,12 +617,13 @@ function SolicitudCard({
                   variant="outline"
                   onClick={() => onAprobar(solicitud, precio5PorcientoMenos)}
                   disabled={respondiendo}
+                  className="flex-1 sm:flex-initial"
                 >
                   {formatCurrency(precio5PorcientoMenos)}
                 </Button>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 size="sm"
                 variant="destructive"
@@ -637,6 +639,7 @@ function SolicitudCard({
                 variant="secondary"
                 onClick={() => onContraoferta(solicitud)}
                 disabled={respondiendo}
+                className="flex-1 sm:flex-initial"
               >
                 <MessageSquare className="h-4 w-4 mr-1" />
                 Otro precio

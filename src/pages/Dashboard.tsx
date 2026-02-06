@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Loader2 } from "lucide-react";
 import { NotificacionesSistema } from "@/components/NotificacionesSistema";
-import { SolicitudesDescuentoPanel } from "@/components/admin/SolicitudesDescuentoPanel";
+
 import { UsuariosConectadosPanel } from "@/components/admin/UsuariosConectadosPanel";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useSystemPresence } from "@/hooks/useSystemPresence";
@@ -73,7 +73,7 @@ const Dashboard = () => {
         </div>
 
         <NotificacionesSistema />
-        <SolicitudesDescuentoPanel />
+        
 
         {/* KPIs Principales */}
         <KPICards />
