@@ -1,59 +1,67 @@
 
+# Plan: Reestructurar Panel de Autorizacion en Movil
 
-# Plan: Corregir 3 Problemas de Autorizacion en Movil
+## El Problema Real
 
-Los 3 cambios son puntuales y se aplican en 2 archivos.
+En la pestana "Por Autorizar", hay DOS paneles separados:
+1. **Solicitudes de Descuento** (panel individual por producto) - ocupa TODA la pantalla
+2. **Pedidos por Autorizar** (pedidos completos) - aparece abajo con "Sin pedidos pendientes"
 
----
+Tu estas viendo las solicitudes de descuento, pero:
+- No ves el pedido completo (los 10 productos, solo el 1 que pide descuento)
+- No hay boton de rechazar visible (esta en el otro panel)
+- No aparece el % de margen/ganancia
+- El "Sin pedidos pendientes" confunde porque SI hay cosas que autorizar
 
-## Problema 1: No deja rechazar pedidos
+## Solucion
 
-El formulario de rechazo (textarea + botones) esta escondido DENTRO del scroll de productos. Hay que moverlo al footer fijo.
+### Cambio 1: Mostrar el pedido completo dentro de cada solicitud de descuento
+**Archivo:** `src/components/admin/SolicitudesDescuentoPanel.tsx`
 
-**Archivo:** `src/components/pedidos/AutorizacionRapidaSheet.tsx`
-
-- Eliminar el bloque de rechazo de dentro del ScrollArea (lineas 366-398)
-- Cuando `showRejectForm` sea true, el footer mostrara: textarea + botones confirmar/cancelar
-- Cuando sea false, se mantiene el layout actual (autorizar/editar/rechazar)
+Actualmente los "Otros productos en el carrito" estan escondidos en un collapsible. Se van a mostrar SIEMPRE visibles, con el producto que pide descuento resaltado en rojo/amarillo y los demas en gris:
 
 ```text
-Antes:
-[Header]
-[ScrollArea con productos...]
-  [...muchos productos...]
-  [Formulario rechazo aqui -- invisible]
-[Footer: botones desaparecen]
+SOLICITUD DE DESCUENTO
+Vendedor: Carlos Giron | Cliente: Alimentos La Central
 
-Despues:
-[Header]
-[ScrollArea con productos...]
-[Footer: Textarea + Confirmar/Cancelar]
+--- Productos del pedido (3 total) ---
+
+[RESALTADO] Fecula de Maiz     100 uds
+  Lista: $430  |  Solicitado: $376  |  Dif: -$54
+  Costo: $320  |  Margen: +17.5%
+
+  Harina de Trigo               50 uds    $12,500
+  Azucar Estandar               20 uds    $8,400
+
+--- Total estimado: $58,500 ---
+
+[Aprobar $376]  [$403]  [Rechazar]  [Otro precio]
 ```
 
----
+### Cambio 2: Agregar costo y % de margen al detalle de descuento
+**Archivo:** `src/components/admin/SolicitudesDescuentoPanel.tsx`
 
-## Problema 2: % de ganancia no aparece
+Necesito traer `ultimo_costo_compra` y `costo_promedio_ponderado` del producto en la query. Actualmente solo trae `id, codigo, nombre`.
 
-Todos los productos tienen `ultimo_costo_compra = 0` y `costo_promedio_ponderado = 0`. El codigo dice `{costo > 0 && (...)}` asi que nunca muestra nada.
+Se agrega una linea nueva al "Detalle del Descuento":
+```text
+Precio lista:       $430.00
+Precio solicitado:  $376.00
+Max. autorizado:    -$30.00
+Excedente:          -$24.00
+Costo:              $320.00
+Margen estimado:    +17.5%   (badge verde/amarillo/rojo)
+```
 
-**Solucion:** Mostrar la seccion SIEMPRE:
-- Si costo > 0: Badge de color con el % de margen (verde/amarillo/rojo)
-- Si costo = 0: Texto "Sin costo registrado" en gris
+### Cambio 3: Quitar "Sin pedidos pendientes" cuando hay solicitudes de descuento
+**Archivo:** `src/components/pedidos/PedidosPorAutorizarTab.tsx`
 
-**Archivos:**
-- `AutorizacionRapidaSheet.tsx` linea 331: quitar condicion `costo > 0`
-- `PedidosPorAutorizarTab.tsx` linea 614 (cards movil) y linea 737 (tabla desktop): misma correccion
+Si no hay pedidos con status "por_autorizar", el componente no renderiza nada (return null) en vez del mensaje "Sin pedidos pendientes". Esto evita que ocupe espacio al final de la pantalla cuando las solicitudes de descuento son lo que importa.
 
----
+### Cambio 4: Hacer botones de accion siempre accesibles
+**Archivo:** `src/components/admin/SolicitudesDescuentoPanel.tsx`
 
-## Problema 3: "Sin pedidos pendientes" muy grande
-
-La tarjeta ocupa demasiado espacio con icono grande y `py-12`.
-
-**Archivo:** `src/components/pedidos/PedidosPorAutorizarTab.tsx` (lineas 382-392)
-
-- Cambiar de Card grande a un mensaje inline compacto
-- Solo un icono pequeno + texto en una linea, sin la Card envolvente
+Los botones de Aprobar/Rechazar/Otro precio se muestran SIEMPRE que la solicitud este expandida, sin necesidad de hacer scroll hasta el fondo. Se colocan como un sticky footer dentro de cada tarjeta expandida, o se reducen a botones compactos visibles al inicio.
 
 ---
 
@@ -61,28 +69,37 @@ La tarjeta ocupa demasiado espacio con icono grande y `py-12`.
 
 ### Archivos a modificar:
 
-1. **`src/components/pedidos/AutorizacionRapidaSheet.tsx`**
-   - Mover formulario de rechazo (lineas 366-398) de ScrollArea al footer (despues de linea 401)
-   - El footer tendra dos estados: normal (botones autorizar/editar/rechazar) y rechazo (textarea + confirmar/cancelar)
-   - Quitar `{costo > 0 &&` de linea 331, reemplazar con render incondicional que muestre "Sin costo" cuando costo es 0
+1. **`src/components/admin/SolicitudesDescuentoPanel.tsx`**
+   - Ampliar la query de productos: agregar `ultimo_costo_compra, costo_promedio_ponderado` al select de `producto:productos(...)`
+   - En `SolicitudCard`, mostrar los items del carrito (`carritoItems`) directamente visibles (no en collapsible), con el producto solicitado resaltado
+   - Agregar fila de Costo y Margen % al bloque "Detalle del Descuento" (lineas 488-516)
+   - Usar badges de color: verde (margen >= 10%), amarillo (0-10%), rojo (negativo)
+   - Reorganizar los botones de aprobacion rapida para que esten mas arriba, directamente debajo del detalle de precios
 
 2. **`src/components/pedidos/PedidosPorAutorizarTab.tsx`**
-   - Linea 614: quitar `{costo > 0 &&`, mostrar "Sin costo" si costo es 0
-   - Linea 737: quitar `{costo > 0 ?`, mostrar "Sin costo" si costo es 0
-   - Lineas 382-392: cambiar Card grande a mensaje inline compacto
+   - Lineas 382-388: Cambiar de mostrar mensaje "Sin pedidos pendientes" a `return null`
+   - Esto hace que solo aparezca `SolicitudesDescuentoPanel` sin ruido visual debajo
 
-### Patron del margen cuando no hay costo:
+3. **`src/hooks/useSolicitudesDescuento.ts`**
+   - Ampliar la query del producto para incluir campos de costo: `producto:productos(id, codigo, nombre, ultimo_costo_compra, costo_promedio_ponderado, precio_venta)`
+   - Actualizar la interface `SolicitudDescuento.producto` para incluir los nuevos campos
 
-```text
-Si costo > 0:
-  Costo: $320.00  |  +21.9% margen (badge verde/amarillo/rojo)
-
-Si costo = 0:
-  Costo: Sin registro  |  -- (badge gris)
+### Calculo del margen:
+```typescript
+const costo = solicitud.producto?.ultimo_costo_compra 
+  || solicitud.producto?.costo_promedio_ponderado || 0;
+const margenPct = costo > 0 
+  ? ((solicitud.precio_solicitado - costo) / costo) * 100 
+  : 0;
 ```
 
-### Sin cambios en:
-- Logica de autorizacion/rechazo (mutations)
-- Vista desktop del listado principal
-- Query de datos (ya trae los campos necesarios)
+### Layout del carrito (productos del pedido):
+- Producto con descuento: fondo amarillo/rojo, muestra desglose completo de precios
+- Otros productos: fondo neutral, solo nombre + cantidad + subtotal en una linea
+- Total estimado del pedido al final
 
+### Compatibilidad:
+- Desktop: mismos cambios, se ve mejor con mas espacio
+- Movil: todo apilado verticalmente, botones full-width
+- No hay cambios en la logica de aprobar/rechazar/contraoferta
+- El `AutorizacionRapidaSheet` y la tabla de `PedidosPorAutorizarTab` se mantienen para cuando SI haya pedidos con status "por_autorizar"
