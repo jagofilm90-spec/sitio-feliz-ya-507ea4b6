@@ -75,7 +75,7 @@ export function CancelarPedidoDialog({ open, onOpenChange, pedido, onPedidoCance
       try {
         await supabase.functions.invoke('send-push-notification', {
           body: {
-            roles: ['Secretaria'],
+            roles: ['secretaria'],
             title: '❌ Pedido Cancelado',
             body: `${vendedorNombre} canceló ${pedido.folio} - ${pedido.cliente.nombre}`,
             data: {

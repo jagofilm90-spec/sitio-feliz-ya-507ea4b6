@@ -583,7 +583,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       try {
         await supabase.functions.invoke('send-push-notification', {
           body: {
-            roles: ['Secretaria'],
+            roles: ['secretaria'],
             title: '📦 Nuevo Pedido',
             body: `${vendedorNombre} → ${clienteNombre} - ${formatCurrency(totales.total)}`,
             data: { type: 'nuevo_pedido', pedido_id: pedido.id, folio }

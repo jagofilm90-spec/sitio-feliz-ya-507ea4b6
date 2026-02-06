@@ -1539,7 +1539,7 @@ const CrearOrdenCompraWizard = ({
                 for (const admin of adminRoles) {
                   await supabase.functions.invoke('send-push-notification', {
                     body: {
-                      userIds: [admin.user_id],
+                      user_ids: [admin.user_id],
                       title: "Nueva OC Enviada",
                       body: `${orden.folio} - ${provNombre} - $${orden.total?.toLocaleString('es-MX')}`,
                       data: { type: 'orden_compra', url: `/compras?ver=${orden.id}` }

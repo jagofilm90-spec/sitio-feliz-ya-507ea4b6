@@ -5078,6 +5078,20 @@ export type Database = {
             referencedRelation: "cliente_sucursales"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "solicitudes_descuento_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitudes_descuento_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
         ]
       }
       solicitudes_venta_mostrador: {
