@@ -1,61 +1,75 @@
 
 
-# Regla de Proyecto: Sincronizacion Automatica Mobile/Desktop
+# Plan: Auto-eliminar solicitudes resueltas y notificar al vendedor
 
-## Contexto del problema
+## Que se va a corregir
 
-El proyecto tiene **29 archivos** que usan `useIsMobile()` con rendering condicional (`isMobile ? <Mobile /> : <Desktop />`), y **20+ componentes dedicados `*CardMobile.tsx`** que son versiones separadas para movil. Esto significa que cualquier cambio en la vista desktop NO se refleja automaticamente en movil, y viceversa.
+### 1. Las solicitudes no desaparecen al aprobar/rechazar
+Cuando apruebas o rechazas, la tarjeta se queda visible en la lista. Solo desaparece si recargas la pagina.
 
-### Archivos con rendering condicional (los que requieren doble actualizacion):
+**Causa raiz**: El realtime handler en `useSolicitudesDescuento.ts` hace `prev.map(...)` (actualiza en sitio) pero nunca `prev.filter(...)` (eliminar). Como el panel solo muestra "pendientes", al cambiar a "aprobado"/"rechazado" la tarjeta deberia desaparecer.
 
-| Modulo | Archivo padre | Componente Mobile separado |
-|--------|--------------|---------------------------|
-| Pedidos | `Pedidos.tsx` | `PedidoHistorialCardMobile.tsx` |
-| Por Autorizar | `PedidosPorAutorizarTab.tsx` | `PedidoCardMobile.tsx` + `AutorizacionRapidaSheet.tsx` |
-| Descuentos | `SolicitudesDescuentoPanel.tsx` | (inline mobile/desktop) |
-| Ordenes Compra | `OrdenesCompraTab.tsx` | `OrdenCompraCardMobile.tsx` |
-| Cotizaciones | `CotizacionesTab.tsx` | `CotizacionCardMobile.tsx` |
-| Clientes | `Clientes.tsx` | `ClienteCardMobile.tsx` |
-| Empleados | `Empleados.tsx` | `EmpleadoCardMobile.tsx` |
-| Inventario | `InventarioPorCategoria.tsx` | `CategoriaProductoMobile.tsx` |
-| Movimientos | `MovimientosTab.tsx` | `MovimientoCardMobile.tsx` |
-| Vehiculos | `VehiculosTab.tsx` | `VehiculoCardMobile.tsx` |
-| Fumigaciones | `Fumigaciones.tsx` | `FumigacionCardMobile.tsx` |
-| Rentabilidad | `Rentabilidad.tsx` | `RentabilidadCardMobile.tsx` |
-| Usuarios | `UsuariosContent.tsx` | `UsuarioCardMobile.tsx` |
-| Correos | `EmailListView.tsx` | `EmailRowMobile.tsx` |
-| Secretaria | `SecretariaInventarioTab.tsx` | `InventarioItemMobile.tsx` |
-| Precios | `ProductosPreciosTab.tsx` | `ProductoPrecioCardMobile.tsx` |
-| Lotes | `LotesTab.tsx` | `LoteCardMobile.tsx` |
-| Productos (wizard) | `PasoProductos.tsx` | `ProductoItemMobile.tsx` |
-| Dashboard | `Dashboard.tsx` | `EstadoOperacionesMobile.tsx` |
+**Solucion**: Cambiar el realtime handler para que cuando `onlyPending = true` y el nuevo status NO sea "pendiente", **elimine** el item del array en vez de actualizarlo.
 
-## La regla que se implementa
+### 2. La contraoferta no envia push al vendedor
+Cuando usas "Otro precio" y envias una contraoferta, el vendedor NO recibe push notification en su celular. Solo recibe la notificacion web via realtime.
 
-A partir de ahora, **cada cambio que se haga en cualquier vista (desktop o movil) se aplicara automaticamente a la otra vista**. Esto incluye:
+**Solucion**: Agregar la llamada a `send-push-notification` en `handleContraoferta`, igual que ya existe en `handleAprobar` y `handleRechazar`.
 
-1. **Datos nuevos**: Si se agrega un campo (ej: % margen), aparece en la tabla desktop Y en la card mobile
-2. **Acciones nuevas**: Si se agrega un boton (ej: rechazar), aparece en ambas vistas
-3. **Logica de negocio**: Si se cambia un calculo o condicion, se actualiza en ambos paths de rendering
-4. **Estilos y estados**: Si se cambia un badge o estado visual, se refleja en ambos
+---
 
-## Como se implementa (sin cambios de codigo ahora)
+## Detalle Tecnico
 
-Esta regla se aplica como **metodologia de trabajo**, no como un cambio de codigo:
+### Archivo 1: `src/hooks/useSolicitudesDescuento.ts`
 
-- Cuando reciba instrucciones de cambiar algo en una vista, identificare TODOS los archivos que renderizan esa informacion (desktop + mobile)
-- Aplicare el cambio en todos los archivos afectados en la misma sesion
-- Verificare que los props, datos y acciones sean consistentes entre las versiones mobile y desktop del mismo componente
+Lineas 169-176 -- Cambiar el handler de UPDATE en realtime:
 
-No se requiere refactorizar los 29 archivos existentes ahora -- la arquitectura de componentes separados es valida y permite optimizar cada vista para su dispositivo. Lo que se corrige es el proceso: **nunca mas se hara un cambio en uno sin actualizar el otro**.
+```text
+Antes:
+  setSolicitudes(prev =>
+    prev.map(s => s.id === payload.new.id ? { ...s, ...payload.new } : s)
+  );
 
-## Accion inmediata pendiente
+Despues:
+  setSolicitudes(prev => {
+    // Si solo mostramos pendientes y ya no es pendiente, eliminar
+    if (onlyPending && payload.new.status !== "pendiente") {
+      return prev.filter(s => s.id !== payload.new.id);
+    }
+    // Si no, actualizar en sitio
+    return prev.map(s => s.id === payload.new.id ? { ...s, ...payload.new } : s);
+  });
+```
 
-Los cambios del plan anterior (rechazo, margen, estado vacio) necesitan verificarse en AMBAS vistas:
-- `SolicitudesDescuentoPanel.tsx` -- ya tiene los cambios de margen y carrito
-- `PedidosPorAutorizarTab.tsx` -- ya tiene el estado vacio compacto
-- `AutorizacionRapidaSheet.tsx` -- ya tiene el rechazo en footer
-- `PedidoCardMobile.tsx` -- verificar que tenga margen tambien
+Esto hace que la tarjeta desaparezca **instantaneamente** cuando el admin la aprueba/rechaza, sin necesidad de recargar.
 
-Si hay inconsistencias actuales, se corregiran en la siguiente iteracion.
+### Archivo 2: `src/components/admin/SolicitudesDescuentoPanel.tsx`
+
+Lineas 182-206 -- Agregar push notification a `handleContraoferta`:
+
+Despues de la linea `toast.success("Contraoferta enviada")`, agregar:
+
+```typescript
+try {
+  await supabase.functions.invoke('send-push-notification', {
+    body: {
+      user_ids: [contraofertaDialog.vendedor_id],
+      title: '💰 Contraoferta de Precio',
+      body: `Se aprobo un precio diferente para ${contraofertaDialog.producto?.nombre || 'producto'}: ${formatCurrency(precio)}`,
+      data: {
+        type: 'descuento_contraoferta',
+        solicitud_id: contraofertaDialog.id,
+        precio_aprobado: String(precio),
+      }
+    }
+  });
+} catch (pushError) {
+  console.error("Error sending push:", pushError);
+}
+```
+
+### Sin cambios en:
+- Edge function `send-push-notification` (ya soporta `user_ids`)
+- Deep linking (el vendedor ya recibe la notificacion web via realtime)
+- Vista desktop vs movil (el `SolicitudesDescuentoPanel` es el mismo componente para ambos)
 
