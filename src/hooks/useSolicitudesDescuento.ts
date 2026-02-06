@@ -43,6 +43,9 @@ export interface SolicitudDescuento {
     id: string;
     codigo: string;
     nombre: string;
+    ultimo_costo_compra: number | null;
+    costo_promedio_ponderado: number | null;
+    precio_venta: number | null;
   };
   vendedor?: {
     id: string;
@@ -78,7 +81,7 @@ export function useSolicitudesDescuento(options: UseSolicitudesDescuentoOptions 
         .from("solicitudes_descuento")
         .select(`
           *,
-          producto:productos(id, codigo, nombre),
+          producto:productos(id, codigo, nombre, ultimo_costo_compra, costo_promedio_ponderado, precio_venta),
           vendedor:profiles!vendedor_id(id, full_name),
           cliente:clientes(id, codigo, nombre, saldo_pendiente),
           sucursal:cliente_sucursales(id, nombre)
@@ -133,7 +136,7 @@ export function useSolicitudesDescuento(options: UseSolicitudesDescuentoOptions 
               .from("solicitudes_descuento")
               .select(`
                 *,
-                producto:productos(id, codigo, nombre),
+                producto:productos(id, codigo, nombre, ultimo_costo_compra, costo_promedio_ponderado, precio_venta),
                 vendedor:profiles!vendedor_id(id, full_name),
                 cliente:clientes(id, codigo, nombre),
                 sucursal:cliente_sucursales(id, nombre)

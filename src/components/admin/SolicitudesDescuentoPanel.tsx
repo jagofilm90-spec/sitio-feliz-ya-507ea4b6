@@ -16,11 +16,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
   Bell,
   Check,
   X,
@@ -485,7 +480,7 @@ function SolicitudCard({
             )}
           </div>
 
-          {/* Price breakdown */}
+          {/* Price breakdown with cost & margin */}
           <div className="bg-background rounded-lg p-3 space-y-2 text-sm border">
             <div className="font-medium flex items-center gap-2 mb-2">
               <TrendingDown className="h-4 w-4 text-red-500" />
@@ -509,81 +504,30 @@ function SolicitudCard({
                 <span>-{formatCurrency(solicitud.descuento_solicitado - solicitud.descuento_maximo)}</span>
               </div>
             </div>
+            {/* Cost & Margin */}
+            {(() => {
+              const costo = solicitud.producto?.ultimo_costo_compra || solicitud.producto?.costo_promedio_ponderado || 0;
+              const margenPct = costo > 0 ? ((solicitud.precio_solicitado - costo) / costo) * 100 : 0;
+              const margenColor = costo === 0 ? 'bg-muted text-muted-foreground' : margenPct >= 10 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : margenPct >= 0 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+              return (
+                <div className="pt-2 border-t flex justify-between items-center">
+                  <span className="text-muted-foreground">
+                    Costo: {costo > 0 ? formatCurrency(costo) : 'Sin registro'}
+                  </span>
+                  <Badge className={margenColor}>
+                    {costo > 0 ? `${margenPct >= 0 ? '+' : ''}${margenPct.toFixed(1)}% margen` : '--'}
+                  </Badge>
+                </div>
+              );
+            })()}
             <div className="pt-2 border-t flex justify-between">
               <span className="text-muted-foreground">Cantidad:</span>
               <Badge variant="secondary">{solicitud.cantidad_solicitada} uds</Badge>
             </div>
           </div>
 
-          {/* Motivo */}
-          {solicitud.motivo && (
-            <div className="text-sm bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-              <span className="text-muted-foreground font-medium">Motivo: </span>
-              {solicitud.motivo}
-            </div>
-          )}
-
-          {/* Other cart items */}
-          {otrosProductos.length > 0 && (
-            <Collapsible>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="w-full justify-between">
-                  <span className="flex items-center gap-2">
-                    <ShoppingCart className="h-4 w-4" />
-                    Otros productos en el carrito ({otrosProductos.length})
-                    {tieneOtrosDescuentos && (
-                      <Badge variant="outline" className="text-amber-600 text-xs">
-                        Más descuentos pendientes
-                      </Badge>
-                    )}
-                  </span>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2">
-                <div className="bg-background rounded-lg p-3 border text-sm space-y-2">
-                  {otrosProductos.map((item, idx) => (
-                    <div key={idx} className="flex justify-between items-center">
-                      <span className={item.tieneDescuentoPendiente ? 'text-amber-600' : ''}>
-                        {item.productoNombre} × {item.cantidad}
-                        {item.tieneDescuentoPendiente && ' ⚠️'}
-                      </span>
-                      <span className="font-medium">{formatCurrency(item.subtotal)}</span>
-                    </div>
-                  ))}
-                  <Separator className="my-2" />
-                  <div className="flex justify-between font-bold">
-                    <span>Total estimado:</span>
-                    <span className="text-primary">{formatCurrency(solicitud.total_pedido_estimado || 0)}</span>
-                  </div>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
-
-          {/* Price history */}
-          {historialPrecios && historialPrecios.length > 0 && (
-            <div className="text-sm">
-              <div className="flex items-center gap-2 mb-2 font-medium">
-                <History className="h-4 w-4 text-muted-foreground" />
-                Historial de precios (este cliente)
-              </div>
-              <div className="bg-background rounded-lg p-3 border space-y-1">
-                {historialPrecios.map((h: any, idx: number) => (
-                  <div key={idx} className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">
-                      {format(new Date(h.created_at), 'dd MMM yyyy', { locale: es })}
-                    </span>
-                    <span className="font-medium">{formatCurrency(h.precio_unitario)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Quick approval buttons */}
+          {/* Quick approval buttons - immediately after price detail */}
           <div className="space-y-2">
-            <p className="text-xs text-muted-foreground font-medium">Aprobación rápida:</p>
             <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 size="sm"
@@ -646,6 +590,81 @@ function SolicitudCard({
               </Button>
             </div>
           </div>
+
+          {/* Motivo */}
+          {solicitud.motivo && (
+            <div className="text-sm bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+              <span className="text-muted-foreground font-medium">Motivo: </span>
+              {solicitud.motivo}
+            </div>
+          )}
+
+          {/* Cart items - always visible */}
+          {carritoItems.length > 0 && (
+            <div className="bg-background rounded-lg p-3 border text-sm space-y-2">
+              <div className="flex items-center gap-2 font-medium mb-2">
+                <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                Productos del pedido ({carritoItems.length} total)
+                {tieneOtrosDescuentos && (
+                  <Badge variant="outline" className="text-amber-600 text-xs">
+                    Más descuentos pendientes
+                  </Badge>
+                )}
+              </div>
+              {carritoItems.map((item, idx) => {
+                const esProductoSolicitado = item.productoId === solicitud.producto_id;
+                return (
+                  <div
+                    key={idx}
+                    className={`flex justify-between items-center py-1 px-2 rounded ${
+                      esProductoSolicitado
+                        ? 'bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 font-medium'
+                        : ''
+                    }`}
+                  >
+                    <span className={esProductoSolicitado ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}>
+                      {item.productoNombre} × {item.cantidad}
+                      {item.tieneDescuentoPendiente && !esProductoSolicitado && ' ⚠️'}
+                      {esProductoSolicitado && ' ← este'}
+                    </span>
+                    <span className={esProductoSolicitado ? 'text-amber-700 dark:text-amber-400' : 'font-medium'}>
+                      {formatCurrency(item.subtotal)}
+                    </span>
+                  </div>
+                );
+              })}
+              {solicitud.total_pedido_estimado && solicitud.total_pedido_estimado > 0 && (
+                <>
+                  <Separator className="my-2" />
+                  <div className="flex justify-between font-bold">
+                    <span>Total estimado:</span>
+                    <span className="text-primary">{formatCurrency(solicitud.total_pedido_estimado)}</span>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Price history */}
+          {historialPrecios && historialPrecios.length > 0 && (
+            <div className="text-sm">
+              <div className="flex items-center gap-2 mb-2 font-medium">
+                <History className="h-4 w-4 text-muted-foreground" />
+                Historial de precios (este cliente)
+              </div>
+              <div className="bg-background rounded-lg p-3 border space-y-1">
+                {historialPrecios.map((h: any, idx: number) => (
+                  <div key={idx} className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">
+                      {format(new Date(h.created_at), 'dd MMM yyyy', { locale: es })}
+                    </span>
+                    <span className="font-medium">{formatCurrency(h.precio_unitario)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
       )}
     </div>
