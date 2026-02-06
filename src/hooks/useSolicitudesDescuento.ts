@@ -167,13 +167,18 @@ export function useSolicitudesDescuento(options: UseSolicitudesDescuentoOptions 
               }
             }
           } else if (payload.eventType === "UPDATE") {
-            setSolicitudes(prev =>
-              prev.map(s =>
+            setSolicitudes(prev => {
+              // Si solo mostramos pendientes y ya no es pendiente, eliminar de la lista
+              if (onlyPending && payload.new.status !== "pendiente") {
+                return prev.filter(s => s.id !== payload.new.id);
+              }
+              // Si no, actualizar en sitio
+              return prev.map(s =>
                 s.id === payload.new.id
                   ? { ...s, ...payload.new }
                   : s
-              )
-            );
+              );
+            });
             
             // Update pending count
             if (payload.old.status === "pendiente" && payload.new.status !== "pendiente") {
