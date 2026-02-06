@@ -1,48 +1,59 @@
 
+
 # Plan: Corregir 3 Problemas de Autorizacion en Movil
+
+Los 3 cambios son puntuales y se aplican en 2 archivos.
+
+---
 
 ## Problema 1: No deja rechazar pedidos
 
-**Causa raiz**: Cuando tocas "Rechazar pedido" en el footer, el formulario de rechazo (textarea + boton confirmar) aparece DENTRO del area de scroll de productos. Necesitas hacer scroll hasta el final de todos los productos para encontrarlo -- es practicamente invisible.
+El formulario de rechazo (textarea + botones) esta escondido DENTRO del scroll de productos. Hay que moverlo al footer fijo.
 
-**Solucion**: Mover el formulario de rechazo al footer (la zona fija de abajo). Cuando se toque "Rechazar", el footer cambiara para mostrar el textarea + botones de confirmar/cancelar directamente en la parte inferior de la pantalla, siempre visible sin necesidad de scroll.
+**Archivo:** `src/components/pedidos/AutorizacionRapidaSheet.tsx`
+
+- Eliminar el bloque de rechazo de dentro del ScrollArea (lineas 366-398)
+- Cuando `showRejectForm` sea true, el footer mostrara: textarea + botones confirmar/cancelar
+- Cuando sea false, se mantiene el layout actual (autorizar/editar/rechazar)
 
 ```text
 Antes:
 [Header]
-[Scroll con productos...]
+[ScrollArea con productos...]
   [...muchos productos...]
-  [Formulario rechazo escondido aqui abajo]
+  [Formulario rechazo aqui -- invisible]
 [Footer: botones desaparecen]
 
 Despues:
 [Header]
-[Scroll con productos...]
-[Footer: Textarea motivo + Confirmar/Cancelar]
+[ScrollArea con productos...]
+[Footer: Textarea + Confirmar/Cancelar]
 ```
 
 ---
 
-## Problema 2: No aparece el % de ganancia
+## Problema 2: % de ganancia no aparece
 
-**Causa raiz**: Todos los productos en la base de datos tienen `ultimo_costo_compra = 0` y `costo_promedio_ponderado = 0`. El codigo actual verifica `costo > 0` antes de mostrar el margen, y como todos son cero, la seccion nunca se renderiza.
+Todos los productos tienen `ultimo_costo_compra = 0` y `costo_promedio_ponderado = 0`. El codigo dice `{costo > 0 && (...)}` asi que nunca muestra nada.
 
-**Solucion**: Mostrar la seccion de costo/margen SIEMPRE, pero con un mensaje claro cuando no hay costo registrado:
+**Solucion:** Mostrar la seccion SIEMPRE:
+- Si costo > 0: Badge de color con el % de margen (verde/amarillo/rojo)
+- Si costo = 0: Texto "Sin costo registrado" en gris
 
-- Si hay costo > 0: Mostrar el costo + % de margen con badge de color (verde/amarillo/rojo)
-- Si costo = 0: Mostrar "Sin costo registrado" en gris para indicar que falta el dato
-
-Esto aplica en ambos archivos:
-- `AutorizacionRapidaSheet.tsx` (vista movil principal)
-- `PedidosPorAutorizarTab.tsx` (cards moviles del dialogo y tabla desktop)
+**Archivos:**
+- `AutorizacionRapidaSheet.tsx` linea 331: quitar condicion `costo > 0`
+- `PedidosPorAutorizarTab.tsx` linea 614 (cards movil) y linea 737 (tabla desktop): misma correccion
 
 ---
 
-## Problema 3: "Sin pedidos pendientes" se ve mal abajo
+## Problema 3: "Sin pedidos pendientes" muy grande
 
-**Causa raiz**: En la pestana "Por Autorizar", se muestra primero el `SolicitudesDescuentoPanel` (que puede ocupar mucho espacio) y despues el `PedidosPorAutorizarTab`. Cuando no hay pedidos por autorizar, aparece una tarjeta grande con icono y padding de 48px en la parte inferior, lo cual se ve mal especialmente en movil.
+La tarjeta ocupa demasiado espacio con icono grande y `py-12`.
 
-**Solucion**: Cambiar el estado vacio a un mensaje compacto inline en vez de una tarjeta gigante. En movil sera un texto simple con icono pequeno, sin la tarjeta Card envolvente con padding excesivo.
+**Archivo:** `src/components/pedidos/PedidosPorAutorizarTab.tsx` (lineas 382-392)
+
+- Cambiar de Card grande a un mensaje inline compacto
+- Solo un icono pequeno + texto en una linea, sin la Card envolvente
 
 ---
 
@@ -51,29 +62,27 @@ Esto aplica en ambos archivos:
 ### Archivos a modificar:
 
 1. **`src/components/pedidos/AutorizacionRapidaSheet.tsx`**
-   - Mover el bloque de formulario de rechazo (lineas 366-398) de dentro del `ScrollArea` al area del footer (despues de linea 401)
-   - Cuando `showRejectForm` sea true, el footer mostrara: textarea + botones confirmar/cancelar
-   - Cuando sea false, se mantiene el layout actual de botones autorizar/editar/rechazar
-   - Cambiar la condicion `costo > 0` (linea 331) para mostrar siempre la seccion de margen
-   - Si costo es 0, mostrar texto "Sin costo" en vez del badge de margen
+   - Mover formulario de rechazo (lineas 366-398) de ScrollArea al footer (despues de linea 401)
+   - El footer tendra dos estados: normal (botones autorizar/editar/rechazar) y rechazo (textarea + confirmar/cancelar)
+   - Quitar `{costo > 0 &&` de linea 331, reemplazar con render incondicional que muestre "Sin costo" cuando costo es 0
 
 2. **`src/components/pedidos/PedidosPorAutorizarTab.tsx`**
-   - En las cards moviles del dialogo (lineas 614-624): misma logica -- mostrar seccion de margen siempre
-   - En la tabla desktop (lineas 737-745): mostrar "Sin costo" cuando no hay dato
-   - Cambiar el estado vacio (lineas 382-392): reducir de Card grande a un mensaje inline compacto
-   - En movil: solo un texto con icono, sin la Card con `py-12`
+   - Linea 614: quitar `{costo > 0 &&`, mostrar "Sin costo" si costo es 0
+   - Linea 737: quitar `{costo > 0 ?`, mostrar "Sin costo" si costo es 0
+   - Lineas 382-392: cambiar Card grande a mensaje inline compacto
 
-### Patron de la seccion de costo/margen:
+### Patron del margen cuando no hay costo:
 
 ```text
 Si costo > 0:
   Costo: $320.00  |  +21.9% margen (badge verde/amarillo/rojo)
 
 Si costo = 0:
-  Costo: Sin registro  |  -- margen (badge gris)
+  Costo: Sin registro  |  -- (badge gris)
 ```
 
-### Compatibilidad:
-- Desktop: Se agregan las etiquetas "Sin costo" donde antes no aparecia nada
-- Movil: Formulario de rechazo visible en el footer, margen siempre visible, estado vacio compacto
-- La logica de autorizacion/rechazo no cambia, solo se mueve de posicion
+### Sin cambios en:
+- Logica de autorizacion/rechazo (mutations)
+- Vista desktop del listado principal
+- Query de datos (ya trae los campos necesarios)
+
