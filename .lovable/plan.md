@@ -1,66 +1,185 @@
 
+# Plan: Arreglar el Plugin FCM en el Proyecto iOS Nativo
 
-# Plan: Agregar Acceso Directo al Diagnóstico desde Login
+## Problema Identificado
 
-## Problema
-La app nativa de iOS no tiene barra de direcciones visible. El usuario no puede navegar manualmente a `/push-diagnostics` porque el WebView de Capacitor no expone la URL.
+El plugin `@capacitor-community/fcm` fue agregado al `package.json` DESPUÉS de que creaste el proyecto iOS. Por eso, aunque existe en npm, nunca se sincronizó al proyecto nativo de Xcode. El `pod install` no puede instalarlo porque Capacitor nunca registró el plugin en el proyecto iOS.
 
 ## Solución
-Agregar un **botón de diagnóstico** visible en la pantalla de autenticación (`/auth`) que permita acceder a la herramienta de diagnóstico sin necesidad de iniciar sesión.
+
+Hay dos opciones, ordenadas por recomendación:
 
 ---
 
-## Cambios a Realizar
+## Opción A: Regenerar el proyecto iOS (Recomendada)
 
-### 1. Modificar la página de Auth
-**Archivo:** `src/pages/Auth.tsx`
+Esta es la forma más limpia de asegurar que TODOS los plugins estén correctamente enlazados.
 
-Agregar en la parte inferior de la pantalla de login:
-- Un enlace pequeño/discreto que diga "Diagnóstico Push (Admin)"
-- Al tocarlo, navegará a `/push-diagnostics`
+### Pasos en tu Mac:
 
-### 2. Permitir acceso sin autenticación (temporal para debug)
-**Archivo:** `src/App.tsx`
+```text
+Paso 1: Navegar a la raíz del proyecto
+----------------------------------------
+cd /ruta/a/sitio-feliz-ya
 
-Modificar la ruta `/push-diagnostics` para que NO requiera `ProtectedRoute` temporalmente. Esto es solo para poder diagnosticar el problema de detección de plataforma.
 
-```tsx
-// Cambiar de:
-<Route path="/push-diagnostics" element={
-  <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
-    <PushDiagnosticsPage />
-  </ProtectedRoute>
-} />
+Paso 2: Eliminar la carpeta iOS actual
+----------------------------------------
+rm -rf ios
 
-// A (temporal):
-<Route path="/push-diagnostics" element={<PushDiagnosticsPage />} />
+
+Paso 3: Asegurar que todo está actualizado
+----------------------------------------
+git pull
+npm install
+
+
+Paso 4: Compilar el proyecto web
+----------------------------------------
+npm run build
+
+
+Paso 5: Re-agregar la plataforma iOS
+----------------------------------------
+npx cap add ios
+
+
+Paso 6: Sincronizar plugins
+----------------------------------------
+npx cap sync ios
+
+
+Paso 7: Verificar que FCM está instalado
+----------------------------------------
+Deberías ver en la salida:
+"Installing CapacitorCommunityFcm"
+```
+
+### Después de regenerar:
+
+1. Abrir Xcode con `npx cap open ios`
+2. Volver a configurar:
+   - Team de firma (Signing & Capabilities)
+   - Bundle ID: `com.almasa.erp`
+   - Agregar `GoogleService-Info.plist` al proyecto
+   - Habilitar capability "Push Notifications"
+   - Habilitar capability "Background Modes" (Remote notifications)
+3. Los permisos de Info.plist (cámara, ubicación) se pierden y deben reconfigurarse
+
+---
+
+## Opción B: Agregar FCM manualmente al proyecto existente
+
+Si prefieres mantener tu proyecto iOS actual para no perder configuraciones:
+
+### Pasos:
+
+```text
+Paso 1: Desde la raíz del proyecto
+----------------------------------------
+npm install @capacitor-community/fcm
+npx cap sync ios
+
+
+Paso 2: Verificar el Podfile
+----------------------------------------
+Abrir ios/App/Podfile y verificar que contenga:
+pod 'CapacitorCommunityFcm', :path => '../../node_modules/@capacitor-community/fcm'
+
+
+Paso 3: Si no aparece, agregarlo manualmente
+----------------------------------------
+Editar ios/App/Podfile y agregar antes del "end":
+pod 'CapacitorCommunityFcm', :path => '../../node_modules/@capacitor-community/fcm'
+
+
+Paso 4: Reinstalar pods
+----------------------------------------
+cd ios/App
+pod deintegrate
+pod install --repo-update
+
+
+Paso 5: Limpiar y rebuild en Xcode
+----------------------------------------
+- Cmd+Shift+K (Clean Build Folder)
+- Correr la app
 ```
 
 ---
 
-## Flujo de Uso
+## Configuración Adicional Requerida (Ambas Opciones)
 
-1. Abrir la app desde Xcode en el iPhone
-2. En la pantalla de login, tocar el enlace "Diagnóstico Push"
-3. Ver qué valores reporta Capacitor
-4. Ejecutar el diagnóstico completo
-5. Compartir los resultados
+Una vez que FCM esté instalado correctamente, necesitas configurar el AppDelegate para que Firebase pueda convertir tokens APNs a FCM:
+
+### Archivo: ios/App/App/AppDelegate.swift
+
+Debe incluir la inicialización de Firebase:
+
+```swift
+import UIKit
+import Capacitor
+import FirebaseCore
+import FirebaseMessaging
+
+@UIApplicationMain
+class AppDelegate: UIResponder, UIApplicationDelegate {
+
+    var window: UIWindow?
+
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Inicializar Firebase
+        FirebaseApp.configure()
+        
+        return true
+    }
+    
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        // Pasar el token APNs a Firebase para conversión a FCM
+        Messaging.messaging().apnsToken = deviceToken
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+    }
+    
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+    }
+    
+    // ... resto de métodos existentes
+}
+```
 
 ---
 
-## Sección Técnica
+## Verificación de GoogleService-Info.plist
 
-El diagnóstico mostrará:
-- `Capacitor.getPlatform()` → debería decir `"ios"`
-- `Capacitor.isNativePlatform()` → debería ser `true`
-
-Si ambos muestran `"web"` y `false`, significa que hay un problema con:
-- La sincronización de Capacitor (`npx cap sync`)
-- La configuración del bridge nativo
-- El build de iOS no incluye correctamente los plugins
+Asegúrate de que el archivo `GoogleService-Info.plist` de Firebase:
+1. Esté agregado al proyecto en Xcode (no solo en la carpeta)
+2. Esté incluido en el target "App"
+3. Contenga el Bundle ID correcto: `com.almasa.erp`
 
 ---
 
-## Nota de Seguridad
-Una vez que terminemos de diagnosticar, volveremos a proteger la ruta con `ProtectedRoute`.
+## Después de Implementar
 
+1. **Compilar y ejecutar** en un dispositivo físico (simulador no soporta push)
+2. **Ir a la pantalla de diagnóstico** (`/push-diagnostics`)
+3. **Correr el diagnóstico** - ahora debería mostrar:
+   - "Token FCM válido obtenido"
+   - "Token guardado exitosamente en BD"
+
+---
+
+## Tiempo Estimado
+
+| Tarea | Tiempo |
+|-------|--------|
+| Opción A (regenerar iOS) | 15-20 min |
+| Opción B (agregar manual) | 10-15 min |
+| Reconfigurar Xcode | 10-15 min |
+| Probar en dispositivo | 5 min |
+
+---
+
+## Recomendación
+
+**Usa la Opción A** (regenerar proyecto iOS). Es más limpia y garantiza que todos los plugins estén correctamente enlazados. Perderás las configuraciones de Xcode pero son fáciles de restaurar siguiendo la guía `MOBILE_BUILD_GUIDE.md`.
