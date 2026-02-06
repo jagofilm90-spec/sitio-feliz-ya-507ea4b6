@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -10,17 +10,47 @@ import {
   Server,
   Calendar,
   CheckCircle2,
-  Info
+  Info,
+  Bell,
+  AlertTriangle
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
+import { PushNotificationDiagnostics } from "./PushNotificationDiagnostics";
+import { checkPermissionStatus, getDeviceTokenFromDb } from "@/services/pushDiagnostics";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export function ConfigSistemaTab() {
   const navigate = useNavigate();
+  const [isNative, setIsNative] = useState(false);
+  const [pushStatus, setPushStatus] = useState<{ permission: string; hasToken: boolean } | null>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+
   const buildDate = new Date().toLocaleDateString("es-MX", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+
+  useEffect(() => {
+    setIsNative(Capacitor.isNativePlatform());
+    
+    const loadPushStatus = async () => {
+      const permission = await checkPermissionStatus();
+      const token = await getDeviceTokenFromDb();
+      setPushStatus({ permission, hasToken: token.found });
+    };
+    
+    if (Capacitor.isNativePlatform()) {
+      loadPushStatus();
+    }
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -35,6 +65,62 @@ export function ConfigSistemaTab() {
       </div>
 
       <Separator />
+
+      {/* Push Notifications - Only visible on native */}
+      {isNative && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              Notificaciones Push
+            </CardTitle>
+            <CardDescription>
+              Estado y diagnóstico de notificaciones push
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Estado</p>
+                {pushStatus ? (
+                  <div className="flex items-center gap-2">
+                    {pushStatus.hasToken ? (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-medium">Configuradas</span>
+                        <Badge variant="default">Token activo</Badge>
+                      </>
+                    ) : (
+                      <>
+                        <AlertTriangle className="h-4 w-4 text-destructive" />
+                        <span className="text-sm font-medium">Sin token</span>
+                        <Badge variant="secondary">Requiere configuración</Badge>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Cargando...</span>
+                )}
+              </div>
+            </div>
+            
+            <Dialog open={showDiagnostics} onOpenChange={setShowDiagnostics}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <ExternalLink className="h-4 w-4" />
+                  Abrir Diagnóstico
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Diagnóstico de Push Notifications</DialogTitle>
+                </DialogHeader>
+                <PushNotificationDiagnostics />
+              </DialogContent>
+            </Dialog>
+          </CardContent>
+        </Card>
+      )}
 
       {/* System Info */}
       <Card>
