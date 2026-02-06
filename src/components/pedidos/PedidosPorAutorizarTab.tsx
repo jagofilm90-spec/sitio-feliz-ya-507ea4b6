@@ -37,12 +37,8 @@ import {
   XCircle, 
   Clock, 
   Loader2, 
-  TrendingUp, 
-  TrendingDown, 
-  Minus,
   History,
   Edit2,
-  Save,
   X,
   AlertTriangle
 } from "lucide-react";
@@ -75,6 +71,9 @@ interface PedidoPorAutorizar {
       unidad: string;
       peso_kg: number | null;
       precio_por_kilo: boolean;
+      descuento_maximo: number | null;
+      ultimo_costo_compra: number | null;
+      costo_promedio_ponderado: number | null;
     } | null;
   }[];
 }
@@ -129,7 +128,7 @@ export function PedidosPorAutorizarTab() {
             cantidad,
             precio_unitario,
             subtotal,
-            productos (id, nombre, codigo, precio_venta, unidad, peso_kg, precio_por_kilo)
+            productos (id, nombre, codigo, precio_venta, unidad, peso_kg, precio_por_kilo, descuento_maximo, ultimo_costo_compra, costo_promedio_ponderado)
           )
         `)
         .eq("status", "por_autorizar")
@@ -370,14 +369,7 @@ export function PedidosPorAutorizarTab() {
     }, 0);
   };
 
-  const getPriceComparison = (detalle: PedidoPorAutorizar["pedidos_detalles"][0]) => {
-    const currentPrice = editingPrices[detalle.id] ?? detalle.precio_unitario;
-    const listPrice = detalle.productos?.precio_venta || 0;
-    
-    if (currentPrice > listPrice) return { icon: TrendingUp, color: "text-red-500", label: "Mayor al precio lista" };
-    if (currentPrice < listPrice) return { icon: TrendingDown, color: "text-green-500", label: "Menor al precio lista" };
-    return { icon: Minus, color: "text-muted-foreground", label: "Igual al precio lista" };
-  };
+  // getPriceComparison removed — replaced by P. Mínimo / Diferencia / Margen columns
 
   if (isLoading) {
     return (
@@ -563,55 +555,80 @@ export function PedidosPorAutorizarTab() {
               {/* Productos - Cards en móvil, Tabla en desktop */}
               <div className="sm:hidden space-y-2">
                 {ordenarProductosAzucarPrimero(selectedPedido.pedidos_detalles, (d) => d.productos?.nombre || '').map((detalle) => {
-                  const comparison = getPriceComparison(detalle);
-                  const ComparisonIcon = comparison.icon;
                   const currentPrice = editingPrices[detalle.id] ?? detalle.precio_unitario;
                   const subtotal = detalle.cantidad * currentPrice;
                   const listPrice = detalle.productos?.precio_venta || 0;
+                  const descuentoMax = detalle.productos?.descuento_maximo ?? 0;
+                  const precioMinimo = listPrice - descuentoMax;
+                  const diferencia = currentPrice - precioMinimo;
+                  const costo = detalle.productos?.ultimo_costo_compra || detalle.productos?.costo_promedio_ponderado || 0;
+                  const margenPct = costo > 0 ? ((currentPrice - costo) / costo) * 100 : 0;
+                  const porDebajoMinimo = currentPrice < precioMinimo;
 
                   return (
-                    <div key={detalle.id} className="border rounded-lg p-3 space-y-2">
-                      <div className="flex justify-between items-start gap-2">
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm line-clamp-2">{detalle.productos?.nombre}</p>
-                          <p className="text-xs text-muted-foreground">{detalle.productos?.codigo}</p>
-                        </div>
-                        <div className={`flex items-center gap-1 shrink-0 ${comparison.color}`}>
-                          <ComparisonIcon className="h-4 w-4" />
-                        </div>
+                    <div key={detalle.id} className={`border rounded-lg p-3 space-y-2 ${porDebajoMinimo ? "border-destructive/50 bg-destructive/5" : ""}`}>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm line-clamp-2">{detalle.productos?.nombre}</p>
+                        <p className="text-xs text-muted-foreground">{detalle.productos?.codigo} · {detalle.cantidad} {detalle.productos?.unidad}</p>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <span className="text-muted-foreground text-xs">Cantidad</span>
-                          <p className="font-mono">{detalle.cantidad} {detalle.productos?.unidad}</p>
+
+                      {/* Desglose de precios */}
+                      <div className="space-y-1 border-t pt-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">P. Lista</span>
+                          <span className="font-mono">${formatCurrency(listPrice)}</span>
                         </div>
-                        <div className="text-right">
-                          <span className="text-muted-foreground text-xs">P. Lista</span>
-                          <p className="font-mono text-muted-foreground">${formatCurrency(listPrice)}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex-1">
+                        {descuentoMax > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">P. Mínimo</span>
+                            <span className="font-mono">${formatCurrency(precioMinimo)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">P. Solicitado</span>
                           {isEditing ? (
                             <Input
                               type="number"
                               step="0.01"
                               value={currentPrice}
                               onChange={(e) => handlePriceChange(detalle.id, e.target.value)}
-                              className="h-9 text-right font-mono"
+                              className="h-7 w-28 text-right font-mono text-xs"
                             />
                           ) : (
-                            <div>
-                              <span className="text-xs text-muted-foreground">P. Solicitado: </span>
-                              <span className="font-mono font-medium">${formatCurrency(currentPrice)}</span>
-                            </div>
+                            <span className={`font-mono font-semibold ${porDebajoMinimo ? "text-destructive" : ""}`}>
+                              ${formatCurrency(currentPrice)}
+                            </span>
                           )}
                         </div>
-                        <div className="text-right">
-                          <span className="text-xs text-muted-foreground">Subtotal</span>
-                          <p className="font-mono font-semibold">${formatCurrency(subtotal)}</p>
-                        </div>
+                        {descuentoMax > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Diferencia</span>
+                            <span className={`font-mono font-semibold ${diferencia < 0 ? "text-destructive" : "text-green-600"}`}>
+                              {diferencia >= 0 ? "+" : ""}${formatCurrency(diferencia)}
+                            </span>
+                          </div>
+                        )}
                       </div>
+
+                      {/* Costo y margen */}
+                      {costo > 0 && (
+                        <div className="border-t pt-2 flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Costo: <span className="font-mono">${formatCurrency(costo)}</span></span>
+                          <Badge
+                            variant={margenPct < 0 ? "destructive" : "secondary"}
+                            className={`text-[10px] ${margenPct >= 10 ? "bg-green-100 text-green-800 border-green-200" : margenPct >= 0 ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}`}
+                          >
+                            {margenPct >= 0 ? "+" : ""}{margenPct.toFixed(1)}%
+                          </Badge>
+                        </div>
+                      )}
+
+                      {/* Subtotal */}
+                      <div className="border-t pt-2 flex justify-between items-center">
+                        <span className="text-xs text-muted-foreground">Subtotal</span>
+                        <span className="font-mono font-semibold">${formatCurrency(subtotal)}</span>
+                      </div>
+
                       <Button
                         variant="ghost"
                         size="sm"
@@ -648,29 +665,36 @@ export function PedidosPorAutorizarTab() {
               </div>
 
               {/* Desktop table */}
-              <div className="border rounded-lg hidden sm:block">
+              <div className="border rounded-lg hidden sm:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Producto</TableHead>
                       <TableHead className="text-right">Cantidad</TableHead>
-                      <TableHead className="text-right">Precio Lista</TableHead>
-                      <TableHead className="text-right">Precio Solicitado</TableHead>
-                      <TableHead className="text-center">Comparación</TableHead>
+                      <TableHead className="text-right">P. Lista</TableHead>
+                      <TableHead className="text-right">P. Mínimo</TableHead>
+                      <TableHead className="text-right">P. Solicitado</TableHead>
+                      <TableHead className="text-right">Diferencia</TableHead>
+                      <TableHead className="text-right">Margen %</TableHead>
                       <TableHead className="text-right">Subtotal</TableHead>
                       <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {ordenarProductosAzucarPrimero(selectedPedido.pedidos_detalles, (d) => d.productos?.nombre || '').map((detalle) => {
-                      const comparison = getPriceComparison(detalle);
-                      const ComparisonIcon = comparison.icon;
                       const currentPrice = editingPrices[detalle.id] ?? detalle.precio_unitario;
                       const subtotal = detalle.cantidad * currentPrice;
+                      const listPrice = detalle.productos?.precio_venta || 0;
+                      const descuentoMax = detalle.productos?.descuento_maximo ?? 0;
+                      const precioMinimo = listPrice - descuentoMax;
+                      const diferencia = currentPrice - precioMinimo;
+                      const costo = detalle.productos?.ultimo_costo_compra || detalle.productos?.costo_promedio_ponderado || 0;
+                      const margenPct = costo > 0 ? ((currentPrice - costo) / costo) * 100 : 0;
+                      const porDebajoMinimo = currentPrice < precioMinimo;
 
                       return (
                         <>
-                          <TableRow key={detalle.id}>
+                          <TableRow key={detalle.id} className={porDebajoMinimo ? "bg-destructive/5" : ""}>
                             <TableCell>
                               <div>
                                 <span className="font-medium">{detalle.productos?.nombre}</span>
@@ -683,7 +707,10 @@ export function PedidosPorAutorizarTab() {
                               {detalle.cantidad} {detalle.productos?.unidad}
                             </TableCell>
                             <TableCell className="text-right font-mono text-muted-foreground">
-                              ${formatCurrency(detalle.productos?.precio_venta || 0)}
+                              ${formatCurrency(listPrice)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-muted-foreground">
+                              {descuentoMax > 0 ? `$${formatCurrency(precioMinimo)}` : "—"}
                             </TableCell>
                             <TableCell className="text-right">
                               {isEditing ? (
@@ -695,13 +722,27 @@ export function PedidosPorAutorizarTab() {
                                   className="w-28 text-right font-mono"
                                 />
                               ) : (
-                                <span className="font-mono font-medium">${formatCurrency(currentPrice)}</span>
+                                <span className={`font-mono font-medium ${porDebajoMinimo ? "text-destructive" : ""}`}>
+                                  ${formatCurrency(currentPrice)}
+                                </span>
                               )}
                             </TableCell>
-                            <TableCell className="text-center">
-                              <div className={`flex items-center justify-center gap-1 ${comparison.color}`}>
-                                <ComparisonIcon className="h-4 w-4" />
-                              </div>
+                            <TableCell className="text-right">
+                              {descuentoMax > 0 ? (
+                                <span className={`font-mono text-sm font-semibold ${diferencia < 0 ? "text-destructive" : "text-green-600"}`}>
+                                  {diferencia >= 0 ? "+" : ""}${formatCurrency(diferencia)}
+                                </span>
+                              ) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {costo > 0 ? (
+                                <Badge
+                                  variant={margenPct < 0 ? "destructive" : "secondary"}
+                                  className={`text-xs ${margenPct >= 10 ? "bg-green-100 text-green-800 border-green-200" : margenPct >= 0 ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}`}
+                                >
+                                  {margenPct >= 0 ? "+" : ""}{margenPct.toFixed(1)}%
+                                </Badge>
+                              ) : "—"}
                             </TableCell>
                             <TableCell className="text-right font-mono font-medium">
                               ${formatCurrency(subtotal)}
@@ -721,7 +762,7 @@ export function PedidosPorAutorizarTab() {
                           
                           {expandedHistorial === detalle.productos?.id && historialData && (
                             <TableRow>
-                              <TableCell colSpan={7} className="bg-muted/50">
+                              <TableCell colSpan={9} className="bg-muted/50">
                                 <div className="py-2 px-4">
                                   <p className="text-sm font-medium mb-2">Historial de precios para este cliente:</p>
                                   {historialData.length === 0 ? (
