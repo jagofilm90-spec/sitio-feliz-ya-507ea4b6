@@ -1,51 +1,72 @@
 
-# Plan: Fix Discount Requests Display and Push Notification Issues
+# Plan: Reestructurar Menus, Pestanas y Ventanas de Pedidos para Movil
 
-## Problems Identified
+## Problemas Identificados
 
-1. **"Por Autorizar" tab shows empty** -- The query in `useSolicitudesDescuento.ts` joins `vendedor:profiles!vendedor_id(...)` but no foreign key exists between `solicitudes_descuento.vendedor_id` and `profiles.id`. This causes PostgREST to reject the query silently, so the panel renders nothing even though the dashboard correctly shows 12 pending requests (using a simpler count query without joins).
+Despues de revisar todo el codigo, encontre estos problemas concretos que causan una experiencia desestructurada en movil:
 
-2. **Push notifications never arrive** -- Three sub-issues:
-   - The `device_tokens` table is empty (no device has registered a token -- the native Firebase CocoaPods setup on iOS isn't complete yet, which is a separate native-side task).
-   - Two files send push with `roles: ['Secretaria']` (uppercase) but the database enum is `'secretaria'` (lowercase), so no users would match.
-   - One file sends `userIds` instead of `user_ids`, so the edge function ignores the parameter.
+### 1. NuevoPedidoDialog (admin) - Grids que no se adaptan
+- El grid de Cliente/Sucursal usa `grid-cols-2` fijo sin breakpoint movil, aplastando ambos selects en una pantalla pequena (linea 473)
+- La tabla de productos dentro del dialogo tiene 6 columnas que se desbordan sin wrap movil
+- La seccion de cortesias tiene elementos en fila que se comprimen en movil
 
----
+### 2. PedidoDetalleDialog - Tabla rígida sin vista movil
+- La tabla de productos tiene 6 columnas (Codigo, Producto, Cantidad, Presentacion, P.Unitario, Subtotal) sin version card para movil
+- Los totales usan `flex justify-end` con ancho fijo w-64 que no se adapta
+- La grid de informacion general usa `grid-cols-2 md:grid-cols-4` pero no se ve bien en pantallas muy pequenas
 
-## Step 1: Database Migration -- Add Missing Foreign Key
+### 3. VendedorPanel - Navegacion inferior se corta
+- La barra de navegacion inferior tiene 7 items en un scroll horizontal pero sin indicadores visuales de que hay mas contenido
+- Los items no tienen iconos en todos los casos (Novedades, Precios, Saldos, Comisiones solo muestran texto sin icono)
+- El padding inferior `pb-32` puede ser excesivo o insuficiente segun el dispositivo
 
-Add a foreign key from `solicitudes_descuento.vendedor_id` to `profiles.id`. This allows the PostgREST join to resolve correctly.
+### 4. Pedidos.tsx (admin) - Pestanas sin estructura clara
+- Las 5 pestanas (Por Autorizar, Pedidos, Cotizaciones, Analisis, Calendario) usan labels abreviados en movil pero sin iconos consistentes ni indicadores de scroll
 
-```sql
-ALTER TABLE public.solicitudes_descuento
-  ADD CONSTRAINT solicitudes_descuento_vendedor_id_fkey
-  FOREIGN KEY (vendedor_id) REFERENCES public.profiles(id);
-```
-
----
-
-## Step 2: Fix Role Casing in Push Notification Calls
-
-### File: `src/components/vendedor/VendedorNuevoPedidoTab.tsx`
-- Change `roles: ['Secretaria']` to `roles: ['secretaria']`
-
-### File: `src/components/vendedor/CancelarPedidoDialog.tsx`
-- Change `roles: ['Secretaria']` to `roles: ['secretaria']`
+### 5. PedidosPorAutorizarTab - Tabla de autorizacion sin vista card
+- El componente ya importa `PedidoCardMobile` pero necesita revision de como se muestran los detalles de autorizacion en movil
 
 ---
 
-## Step 3: Fix Parameter Name in Push Call
+## Cambios Propuestos
 
-### File: `src/components/compras/CrearOrdenCompraWizard.tsx`
-- Change `userIds: [admin.user_id]` to `user_ids: [admin.user_id]`
+### Paso 1: NuevoPedidoDialog - Grid responsivo y tabla card movil
+- Cambiar `grid-cols-2` a `grid-cols-1 sm:grid-cols-2` en el bloque Cliente/Sucursal
+- Reemplazar la tabla de productos con cards en movil (mostrar producto, cantidad, precio y subtotal en formato vertical con controles tactiles)
+- Hacer la seccion de cortesias con stack vertical en movil
+
+### Paso 2: PedidoDetalleDialog - Vista card para productos en movil
+- Agregar deteccion `useIsMobile()` al componente
+- En movil, reemplazar la tabla de 6 columnas con cards por producto que muestren: nombre, cantidad, presentacion, precio y subtotal
+- Mover los totales a ancho completo en movil
+- Cambiar la grid de info general a `grid-cols-1` en pantallas muy pequenas
+
+### Paso 3: VendedorPanel - Mejorar navegacion inferior
+- Agregar iconos faltantes a los items de navegacion (Novedades=Sparkles, Precios=List, Saldos=Wallet, Comisiones=Percent)
+- Agregar indicador visual de scroll (gradiente lateral)
+- Ajustar el padding inferior para ser consistente con safe-area
+
+### Paso 4: Pedidos.tsx - Refinar pestanas movil
+- Mejorar la estructura visual de las pestanas con spacing consistente
+- Agregar indicadores de scroll lateral (fade/gradiente) para que sea obvio que hay mas pestanas
 
 ---
 
-## What This Fixes
+## Detalle Tecnico
 
-- The 12 pending discount requests will appear correctly in the "Por Autorizar" tab (both the `SolicitudesDescuentoPanel` and the counts will be synchronized).
-- Push notifications to secretaries and admins will target the correct users once device tokens are registered.
+### Archivos a modificar:
+1. `src/components/pedidos/NuevoPedidoDialog.tsx` - Grid responsivo + cards moviles para tabla de productos
+2. `src/components/pedidos/PedidoDetalleDialog.tsx` - Cards moviles para detalle + totales responsivos
+3. `src/pages/VendedorPanel.tsx` - Iconos en todos los items de nav + indicador scroll
+4. `src/pages/Pedidos.tsx` - Indicadores de scroll en pestanas
 
-## What Still Requires Native-Side Work
+### Patron de cards moviles para tablas:
+Se usara el mismo patron que ya existe en `PedidoCardMobile.tsx` y `PedidoHistorialCardMobile.tsx`, donde en movil se muestra un Card con la informacion apilada verticalmente en vez de la tabla horizontal.
 
-Push notifications will only start arriving once the iOS app has Firebase properly configured (CocoaPods installed with `Firebase/Core` and `Firebase/Messaging`). This is the step you were working on in Xcode -- once the pods are installed and the app is rebuilt, device tokens will be saved to the database and notifications will flow.
+### Deteccion movil:
+Se usara el hook existente `useIsMobile()` que ya se importa en varios de estos archivos, con el breakpoint de 768px.
+
+### Compatibilidad:
+- Desktop: Sin cambios visibles, todo se mantiene igual
+- Tablet: Se beneficia de los grids responsivos
+- Movil: Cards en vez de tablas, grids de una columna, nav con iconos
