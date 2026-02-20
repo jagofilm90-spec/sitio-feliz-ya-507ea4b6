@@ -57,6 +57,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
   const [lineas, setLineas] = useState<LineaPedido[]>([]);
   const [terminoCredito, setTerminoCredito] = useState("contado");
   const [notas, setNotas] = useState("");
+  const [requiereFactura, setRequiereFactura] = useState(false);
 
   // Discount authorization dialog
   const [solicitudDialogOpen, setSolicitudDialogOpen] = useState(false);
@@ -233,7 +234,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
 
       const { data: clientesData } = await supabase
         .from("clientes")
-        .select("id, codigo, nombre, termino_credito, zona:zonas(nombre, region)")
+        .select("id, codigo, nombre, termino_credito, preferencia_facturacion, csf_archivo_url, zona:zonas(nombre, region)")
         .eq("vendedor_asignado", user.id)
         .eq("activo", true)
         .order("nombre");
@@ -534,7 +535,8 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
             ? "por_autorizar" 
             : "pendiente",
           notas: notas || null,
-          termino_credito: terminoCredito as any
+          termino_credito: terminoCredito as any,
+          requiere_factura: requiereFactura,
         })
         .select()
         .single();
@@ -655,6 +657,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       setLineas([]);
       setTerminoCredito("contado");
       setNotas("");
+      setRequiereFactura(false);
       setStep(1);
       setCompletedSteps([]);
 
@@ -780,6 +783,8 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
           notas={notas}
           totales={totales}
           submitting={submitting}
+          requiereFactura={requiereFactura}
+          onRequiereFacturaChange={setRequiereFactura}
           onSubmit={handleSubmit}
           onBack={handlePrevStep}
         />

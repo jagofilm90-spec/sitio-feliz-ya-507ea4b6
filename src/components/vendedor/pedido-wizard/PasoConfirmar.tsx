@@ -1,9 +1,11 @@
-import { FileCheck, ChevronLeft, Loader2, Store, MapPin, CreditCard, AlertTriangle, Clock, Package, Truck, CheckCircle2 } from "lucide-react";
+import { FileCheck, ChevronLeft, Loader2, Store, MapPin, CreditCard, AlertTriangle, Clock, Package, Truck, CheckCircle2, FileText, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/utils";
 import { getDisplayName } from "@/lib/productUtils";
 import { LineaPedido, Cliente, Sucursal, TotalesCalculados } from "./types";
@@ -59,6 +61,8 @@ interface PasoConfirmarProps {
   notas: string;
   totales: TotalesCalculados;
   submitting: boolean;
+  requiereFactura: boolean;
+  onRequiereFacturaChange: (value: boolean) => void;
   onSubmit: () => void;
   onBack: () => void;
 }
@@ -71,9 +75,13 @@ export function PasoConfirmar({
   notas,
   totales,
   submitting,
+  requiereFactura,
+  onRequiereFacturaChange,
   onSubmit,
   onBack,
 }: PasoConfirmarProps) {
+  const tieneCSF = !!(cliente?.csf_archivo_url || cliente?.preferencia_facturacion === 'siempre_factura');
+
   const productosConDescuentoPendiente = lineas.filter(
     l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente'
   );
@@ -152,6 +160,43 @@ export function PasoConfirmar({
             </div>
           )}
         </div>
+      )}
+
+      {/* Invoice Toggle — only show if client has CSF */}
+      {tieneCSF && (
+        <Card className={requiereFactura ? "border-primary/50 bg-primary/5" : ""}>
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                {requiereFactura ? (
+                  <FileText className="h-5 w-5 text-primary shrink-0" />
+                ) : (
+                  <Receipt className="h-5 w-5 text-muted-foreground shrink-0" />
+                )}
+                <div>
+                  <p className="font-semibold text-sm">
+                    {requiereFactura ? "Con Factura" : "Solo Remisión"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {requiereFactura
+                      ? "La secretaria generará CFDI al entregar"
+                      : "Se entregará únicamente remisión"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="factura-switch" className="text-xs text-muted-foreground">
+                  {requiereFactura ? "Factura" : "Remisión"}
+                </Label>
+                <Switch
+                  id="factura-switch"
+                  checked={requiereFactura}
+                  onCheckedChange={onRequiereFacturaChange}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Products List */}
