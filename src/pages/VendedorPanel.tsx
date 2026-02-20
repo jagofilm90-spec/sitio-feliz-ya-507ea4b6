@@ -282,6 +282,7 @@ export default function VendedorPanel() {
           <div className="p-4 lg:p-8 pb-32 md:pb-8">
             {/* Header con toggle en desktop */}
             <div className="hidden md:flex items-center gap-4 mb-6">
+              <SidebarTrigger className="h-8 w-8 shrink-0" />
               <div>
                 <h1 className="text-xl font-semibold">Panel de Ventas</h1>
                 <p className="text-sm text-muted-foreground">Bienvenido, {vendedorNombre}</p>
