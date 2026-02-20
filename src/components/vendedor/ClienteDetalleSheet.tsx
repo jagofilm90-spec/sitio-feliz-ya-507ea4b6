@@ -26,14 +26,15 @@ import {
   ShoppingCart,
   FileText,
   DollarSign,
-  Calendar,
   AlertTriangle,
   CheckCircle,
   Clock,
   MessageCircle,
-  ExternalLink,
   Send,
-  XCircle
+  XCircle,
+  BarChart3,
+  Package,
+  History
 } from "lucide-react";
 import { RegistrarPagoDialog } from "./RegistrarPagoDialog";
 
@@ -99,6 +100,93 @@ interface NotificacionEnviada {
   error: string | null;
 }
 
+// Sub-componente para historial de precios por pedido y producto
+function HistorialPreciosPedidos({ clienteId }: { clienteId: string }) {
+  const [historial, setHistorial] = useState<Array<{
+    folio: string;
+    fecha: string;
+    producto: string;
+    cantidad: number;
+    precio: number;
+    subtotal: number;
+  }>>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchHistorial = async () => {
+      setLoading(true);
+      try {
+        const { data: pedidos } = await supabase
+          .from("pedidos")
+          .select("id, folio, fecha_pedido")
+          .eq("cliente_id", clienteId)
+          .not("status", "eq", "cancelado")
+          .order("fecha_pedido", { ascending: false })
+          .limit(20);
+
+        if (!pedidos || pedidos.length === 0) { setHistorial([]); return; }
+
+        const pedidoIds = pedidos.map(p => p.id);
+        const { data: detalles } = await supabase
+          .from("pedidos_detalles")
+          .select("pedido_id, cantidad, precio_unitario, subtotal, productos(nombre)")
+          .in("pedido_id", pedidoIds);
+
+        const rows = (detalles || []).map(d => {
+          const ped = pedidos.find(p => p.id === d.pedido_id);
+          const prod = d.productos as { nombre: string } | null;
+          return {
+            folio: ped?.folio || "",
+            fecha: ped?.fecha_pedido || "",
+            producto: prod?.nombre || "—",
+            cantidad: d.cantidad || 0,
+            precio: d.precio_unitario || 0,
+            subtotal: d.subtotal || 0,
+          };
+        });
+        setHistorial(rows);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (clienteId) fetchHistorial();
+  }, [clienteId]);
+
+  if (loading) return <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-12" />)}</div>;
+  if (historial.length === 0) return (
+    <div className="text-center py-8 text-muted-foreground">
+      <History className="h-12 w-12 mx-auto mb-3 opacity-40" />
+      <p>Sin historial de precios</p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm text-muted-foreground">Últimos 20 pedidos — precios aplicados por producto</p>
+      {historial.map((row, i) => (
+        <Card key={i} className="hover:bg-muted/30 transition-colors">
+          <CardContent className="p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{row.producto}</p>
+                <p className="text-xs text-muted-foreground">
+                  {row.folio} · {new Date(row.fecha).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "2-digit" })}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-sm font-semibold">{formatCurrency(row.precio)}/u</p>
+                <p className="text-xs text-muted-foreground">{row.cantidad} × = {formatCurrency(row.subtotal)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 export function ClienteDetalleSheet({ 
   open, 
   onOpenChange, 
@@ -112,10 +200,19 @@ export function ClienteDetalleSheet({
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [notificaciones, setNotificaciones] = useState<NotificacionEnviada[]>([]);
   const [showRegistrarPago, setShowRegistrarPago] = useState(false);
+  const [productosFrequentes, setProductosFrecuentes] = useState<Array<{
+    producto_id: string;
+    nombre: string;
+    codigo: string;
+    veces_pedido: number;
+    cantidad_total: number;
+  }>>([]);
+  const [loadingFrecuentes, setLoadingFrecuentes] = useState(false);
 
   useEffect(() => {
     if (open && clienteId) {
       fetchClienteCompleto();
+      fetchProductosFrecuentes(clienteId);
     }
   }, [open, clienteId]);
 
@@ -205,6 +302,51 @@ export function ClienteDetalleSheet({
     }
   };
 
+  const fetchProductosFrecuentes = async (cid: string) => {
+    setLoadingFrecuentes(true);
+    try {
+      const { data: pedidos } = await supabase
+        .from("pedidos")
+        .select("id")
+        .eq("cliente_id", cid)
+        .not("status", "eq", "cancelado");
+
+      if (!pedidos || pedidos.length === 0) {
+        setProductosFrecuentes([]);
+        return;
+      }
+
+      const pedidoIds = pedidos.map(p => p.id);
+      const { data: detalles } = await supabase
+        .from("pedidos_detalles")
+        .select("pedido_id, cantidad, productos(id, nombre, codigo)")
+        .in("pedido_id", pedidoIds);
+
+      if (!detalles) {
+        setProductosFrecuentes([]);
+        return;
+      }
+
+      const mapa: Record<string, { producto_id: string; nombre: string; codigo: string; veces_pedido: number; cantidad_total: number }> = {};
+      for (const d of detalles) {
+        const prod = d.productos as { id: string; nombre: string; codigo: string } | null;
+        if (!prod) continue;
+        if (!mapa[prod.id]) {
+          mapa[prod.id] = { producto_id: prod.id, nombre: prod.nombre, codigo: prod.codigo, veces_pedido: 0, cantidad_total: 0 };
+        }
+        mapa[prod.id].veces_pedido += 1;
+        mapa[prod.id].cantidad_total += d.cantidad || 0;
+      }
+
+      const sorted = Object.values(mapa).sort((a, b) => b.veces_pedido - a.veces_pedido).slice(0, 10);
+      setProductosFrecuentes(sorted);
+    } catch (err) {
+      console.error("Error fetchProductosFrecuentes:", err);
+    } finally {
+      setLoadingFrecuentes(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
       pendiente: { label: "Pendiente", variant: "secondary" },
@@ -273,12 +415,20 @@ export function ClienteDetalleSheet({
 
           <ScrollArea className="flex-1 mt-4">
             <Tabs defaultValue="info" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="info">Info</TabsTrigger>
-                <TabsTrigger value="pedidos">Pedidos</TabsTrigger>
-                <TabsTrigger value="facturas">Facturas</TabsTrigger>
-                <TabsTrigger value="pagos">Pagos</TabsTrigger>
-                <TabsTrigger value="emails" className="flex items-center gap-1">
+              <TabsList className="grid w-full grid-cols-7 text-xs">
+                <TabsTrigger value="info" className="text-xs px-1">Info</TabsTrigger>
+                <TabsTrigger value="pedidos" className="text-xs px-1">Pedidos</TabsTrigger>
+                <TabsTrigger value="frecuencia" className="text-xs px-1 flex items-center gap-0.5">
+                  <BarChart3 className="h-3 w-3" />
+                  Freq.
+                </TabsTrigger>
+                <TabsTrigger value="historial" className="text-xs px-1 flex items-center gap-0.5">
+                  <History className="h-3 w-3" />
+                  Hist.
+                </TabsTrigger>
+                <TabsTrigger value="facturas" className="text-xs px-1">Facturas</TabsTrigger>
+                <TabsTrigger value="pagos" className="text-xs px-1">Pagos</TabsTrigger>
+                <TabsTrigger value="emails" className="text-xs px-1 flex items-center gap-0.5">
                   <Send className="h-3 w-3" />
                   Emails
                 </TabsTrigger>
@@ -437,6 +587,53 @@ export function ClienteDetalleSheet({
                     ))}
                   </div>
                 )}
+              </TabsContent>
+
+              {/* Frecuencia Tab */}
+              <TabsContent value="frecuencia" className="mt-4 space-y-3">
+                {loadingFrecuentes ? (
+                  <div className="space-y-3">
+                    {[1,2,3].map(i => <Skeleton key={i} className="h-14" />)}
+                  </div>
+                ) : productosFrequentes.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Package className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                    <p>Sin historial de compras</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm text-muted-foreground">Top 10 productos más comprados</p>
+                    {productosFrequentes.map((prod, index) => (
+                      <Card key={prod.producto_id} className="hover:bg-muted/30 transition-colors">
+                        <CardContent className="p-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                              index === 0 ? "bg-yellow-100 text-yellow-700" :
+                              index === 1 ? "bg-slate-100 text-slate-600" :
+                              index === 2 ? "bg-amber-100 text-amber-700" :
+                              "bg-muted text-muted-foreground"
+                            }`}>
+                              {index + 1}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{prod.nombre}</p>
+                              <p className="text-xs text-muted-foreground">{prod.codigo}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-sm font-semibold">{prod.veces_pedido} pedidos</p>
+                              <p className="text-xs text-muted-foreground">{prod.cantidad_total.toFixed(prod.cantidad_total % 1 === 0 ? 0 : 1)} unid.</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </>
+                )}
+              </TabsContent>
+
+              {/* Historial Tab */}
+              <TabsContent value="historial" className="mt-4">
+                <HistorialPreciosPedidos clienteId={clienteId!} />
               </TabsContent>
 
               {/* Facturas Tab */}

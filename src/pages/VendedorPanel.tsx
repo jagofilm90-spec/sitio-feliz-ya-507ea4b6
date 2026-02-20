@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { toast } from "sonner";
-import { Users, ShoppingCart, CreditCard, LogOut, TrendingUp, Calendar, IdCard, Sparkles, List, Wallet, Percent } from "lucide-react";
+import { Users, ShoppingCart, CreditCard, LogOut, TrendingUp, Calendar, IdCard, Sparkles, List, Wallet, Percent, BarChart3 } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
 import { VendedorMisClientesTab } from "@/components/vendedor/VendedorMisClientesTab";
 import { VendedorNuevoPedidoTab } from "@/components/vendedor/VendedorNuevoPedidoTab";
@@ -17,6 +17,7 @@ import { VendedorComisionesTab } from "@/components/vendedor/VendedorComisionesT
 import { VendedorSaldosTab } from "@/components/vendedor/VendedorSaldosTab";
 import { VendedorListaPreciosTab } from "@/components/vendedor/VendedorListaPreciosTab";
 import { VendedorNovedadesTab } from "@/components/vendedor/VendedorNovedadesTab";
+import { VendedorAnalisisClientesTab } from "@/components/vendedor/VendedorAnalisisClientesTab";
 import { VendedorSidebar } from "@/components/vendedor/VendedorSidebar";
 import { VendedorBienvenidaDialog } from "@/components/vendedor/VendedorBienvenidaDialog";
 // PushNotificationSetup removed - now handled centrally by PushNotificationsGate in App.tsx
@@ -215,6 +216,7 @@ export default function VendedorPanel() {
     { id: "precios", label: "Precios", icon: List },
     { id: "saldos", label: "Saldos", icon: Wallet },
     { id: "comisiones", label: "Comisiones", icon: Percent },
+    { id: "analisis", label: "Análisis", icon: BarChart3 },
   ];
 
   return (
@@ -362,13 +364,14 @@ export default function VendedorPanel() {
             <div className="hidden md:block">
               <Card>
                 <CardContent className="p-6">
-                  {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
+              {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
                   {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} onNavigateToVentas={() => setActiveTab("ventas")} />}
                   {activeTab === "ventas" && <VendedorMisVentasTab />}
                   {activeTab === "novedades" && <VendedorNovedadesTab />}
                   {activeTab === "precios" && <VendedorListaPreciosTab />}
                   {activeTab === "saldos" && <VendedorSaldosTab />}
                   {activeTab === "comisiones" && <VendedorComisionesTab />}
+                  {activeTab === "analisis" && <VendedorAnalisisClientesTab onNavigateNuevoPedido={(clienteId) => { setActiveTab("nuevo"); }} />}
                 </CardContent>
               </Card>
             </div>
@@ -382,6 +385,7 @@ export default function VendedorPanel() {
               {activeTab === "precios" && <VendedorListaPreciosTab />}
               {activeTab === "saldos" && <VendedorSaldosTab />}
               {activeTab === "comisiones" && <VendedorComisionesTab />}
+              {activeTab === "analisis" && <VendedorAnalisisClientesTab onNavigateNuevoPedido={(clienteId) => { setActiveTab("nuevo"); }} />}
             </div>
           </div>
         </main>

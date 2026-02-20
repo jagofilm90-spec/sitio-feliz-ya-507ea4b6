@@ -74,7 +74,7 @@ export const VendedorSidebar = ({
     { id: "precios", label: "Precios", icon: List },
     { id: "saldos", label: "Saldos", icon: Wallet },
     { id: "comisiones", label: "Comisiones", icon: Percent },
-    { id: "analisis", label: "Análisis", icon: BarChart3, isLink: true },
+    { id: "analisis", label: "Análisis", icon: BarChart3 },
   ];
 
   return (
