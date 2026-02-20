@@ -1,85 +1,134 @@
 
-# Fix: El Sidebar no se expande con el botón de Toggle
+# Rediseño del formulario "Nuevo Cliente"
 
-## Diagnóstico exacto
+## El problema actual
 
-El problema está en `src/components/ui/sidebar.tsx`. La versión actual del componente `<Sidebar>` fue modificada para implementar el modo "Gmail-style hover". Como resultado, en desktop el ancho del sidebar siempre se controla por `isHovering` (hover del mouse), no por el estado `open` del toggle:
+El flujo actual obliga al vendedor a elegir primero entre "Subir CSF" o "Manual" ANTES de ver cualquier campo. Esto:
+- Es confuso — el vendedor no sabe a qué se compromete antes de empezar
+- Duplica toda la lógica del formulario (hay dos secciones casi idénticas)
+- Esconde información importante (el CSF debería ser opcional, no la puerta de entrada)
 
-```tsx
-// Línea 242 — el ancho SIEMPRE usa isHovering, ignorando open/toggleSidebar
-isHovering ? "w-[--sidebar-width] shadow-xl" : "w-[--sidebar-width-icon]"
+## La solución: formulario único, lineal y claro
+
+Un solo formulario con todos los campos visibles desde el inicio:
+
+```text
+┌─────────────────────────────────────┐
+│  Nuevo Cliente              [X]     │
+├─────────────────────────────────────┤
+│                                     │
+│  Nombre del cliente *               │
+│  [_______________________________]  │
+│                                     │
+│  Teléfonos                          │
+│  [+55 1234 5678] [WhatsApp] [+]     │
+│  • 55-1111-2222 · Principal         │
+│                                     │
+│  Correos                            │
+│  [ventas@..............] [Todo] [+] │
+│                                     │
+│  ─── Dirección del negocio ──────── │
+│  Calle, No., Colonia, CP...         │
+│                                     │
+│  📍 Ubicación de entrega            │
+│  ☑ La entrega es en esta dirección  │
+│  (si desmarco → segunda dirección   │
+│   + mapa para GPS)                  │
+│                                     │
+│  ─── CSF (opcional) ─────────────── │
+│  [📄 Subir CSF] ← si se sube,      │
+│   la IA extrae RFC/Razón Social y   │
+│   el cliente queda como "con factura"│
+│   Si NO se sube → "solo remisión"   │
+│                                     │
+│  Zona, horarios, notas...           │
+│                                     │
+├─────────────────────────────────────┤
+│  [        Crear Cliente         ]   │
+└─────────────────────────────────────┘
 ```
 
-Y el `visualState` (usado para `data-state` y para que `VendedorSidebar` sepa si está colapsado):
+## Lógica de dirección de entrega (respuesta a tu pregunta)
 
-```tsx
-// Línea 153 — isDesktopWithMouse requiere expandOnHover=true
-const visualState = isDesktopWithMouse && isHovering ? "expanded" : "collapsed";
+**Sí, usamos un checkbox.** Aquí está la lógica exacta:
+
+```text
+Dirección del negocio:
+  Calle *, No. Ext *, No. Int, Colonia, CP *, Alcaldía *
+
+☑ "La entrega es en esta misma dirección"
+   └─ Si MARCADO (default):
+        • La sucursal "Principal" usa la misma dirección del negocio
+        • No se captura GPS por ahora (se puede actualizar después)
+   
+   └─ Si DESMARCADO:
+        • Aparece un campo adicional con Google Maps autocomplete
+        • El vendedor busca la dirección de entrega específica
+        • Se capturan coordenadas GPS automáticamente
+        • Esas coordenadas se muestran en el mapa global y para los choferes
 ```
 
-Cuando se quitó `expandOnHover` del `VendedorSidebar`, `isDesktopWithMouse` quedó en `false`, por lo que `visualState` siempre es `"collapsed"` y el ancho siempre usa `isHovering` (que sin hover activo es `false`). El `SidebarTrigger` cambia `open` correctamente pero eso no tiene ningún efecto visual.
+La clave: la **sucursal "Principal"** (tabla `cliente_sucursales`) es quien tiene `latitud` y `longitud` — es lo que usa el mapa global (`MapaGlobalSucursales.tsx`) y los choferes (`ChoferPanel.tsx`). Al crear el cliente siempre se crea esta sucursal.
 
-## Solución — Cambio solo en `sidebar.tsx`
+## Lógica del CSF (simplificada)
 
-Hacer que el ancho y el `visualState` del sidebar respondan a `open` cuando `expandOnHover={false}`:
+```text
+NO subió CSF  → preferencia_facturacion = "siempre_remision"  
+                 Sin RFC, sin razón social, factura nunca aplica
 
-- Si `expandOnHover={true}` → comportamiento Gmail: ancho controlado por `isHovering`
-- Si `expandOnHover={false}` → comportamiento toggle: ancho controlado por `open` (el estado del `SidebarProvider`)
-
-### Cambio 1 — Leer `open` en el componente `Sidebar`
-
-```tsx
-// ANTES (línea 145):
-const { isMobile, openMobile, setOpenMobile, isHovering, setIsHovering } = useSidebar();
-
-// DESPUÉS:
-const { isMobile, open, openMobile, setOpenMobile, isHovering, setIsHovering } = useSidebar();
+SÍ subió CSF  → IA extrae datos fiscales automáticamente
+                 preferencia_facturacion = "siempre_factura"
+                 Sección colapsable con RFC, Razón Social (editables)
 ```
 
-### Cambio 2 — `visualState` correcto según modo
-
-```tsx
-// ANTES (línea 153):
-const visualState = isDesktopWithMouse && isHovering ? "expanded" : "collapsed";
-
-// DESPUÉS:
-const visualState = isDesktopWithMouse
-  ? (isHovering ? "expanded" : "collapsed")   // Gmail-style: basado en hover
-  : (open ? "expanded" : "collapsed");          // Toggle: basado en open
-```
-
-### Cambio 3 — Ancho del sidebar real según modo
-
-```tsx
-// ANTES (línea 242):
-isHovering ? "w-[--sidebar-width] shadow-xl" : "w-[--sidebar-width-icon]",
-
-// DESPUÉS:
-(isDesktopWithMouse ? isHovering : open)
-  ? "w-[--sidebar-width] shadow-xl"
-  : "w-[--sidebar-width-icon]",
-```
-
-### Cambio 4 — Gap placeholder según modo
-
-El `div` placeholder (líneas 226-231) siempre mantiene el ancho del icon para reservar espacio. En modo toggle, cuando el sidebar está expandido debe tener el ancho completo para no superponer el contenido (o mantenerlo en icon para overlay — decisión de diseño: **mantenerlo en icon** para que el sidebar haga overlay encima del contenido, igual que Gmail, y así no mueve el layout).
-
-El placeholder se deja igual (`w-[--sidebar-width-icon]` siempre) para que el sidebar haga overlay cuando se expande con toggle. Esto es consistente con el comportamiento actual de hover y evita que el contenido salte al expandirse.
-
-## Resultado visual esperado
-
-| Acción | Antes | Después |
-|--------|-------|---------|
-| Click botón [←] | Nada pasa en el ancho | Sidebar se colapsa a iconos |
-| Click botón [→] | Nada pasa en el ancho | Sidebar se expande a ancho completo (overlay) |
-| Hover sobre sidebar | Se expande | Sin cambio (expandOnHover=false) |
-| Tooltips en iconos | ✓ Funcionan | ✓ Siguen funcionando |
-| Tab activo resaltado | ✓ Funciona | ✓ Sigue funcionando |
+La sección de CSF aparece **siempre visible** en el formulario (no es la pantalla inicial), con un botón "📄 Subir CSF" que puede tocarse en cualquier momento. Si ya se subió, muestra un badge verde "Datos fiscales extraídos" y los campos RFC/Razón Social aparecen debajo para revisión.
 
 ## Archivos a modificar
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/components/ui/sidebar.tsx` | 3 líneas: leer `open` del context, corregir `visualState`, corregir ancho del sidebar |
+| Archivo | Qué cambia |
+|---------|-----------|
+| `src/components/vendedor/VendedorNuevoClienteSheet.tsx` | Reescritura completa del formulario con flujo lineal unificado |
 
-Solo se modifica `sidebar.tsx`. `VendedorSidebar.tsx` y `VendedorPanel.tsx` ya están correctos.
+Solo un archivo. La lógica de submit, las llamadas a Supabase, y los sub-componentes (`VendedorTelefonosCliente`, `VendedorCorreosCliente`) se reutilizan tal como están.
+
+## Estructura del nuevo formulario (secciones en orden)
+
+**1. Datos básicos**
+- Nombre del cliente (campo grande, obligatorio)
+
+**2. Contacto**
+- Teléfonos: componente `VendedorTelefonosCliente` ya existente (1 o más)
+- Correos: componente `VendedorCorreosCliente` ya existente (1 o más)
+
+**3. Dirección del negocio** (campos estructurados)
+- Calle *, No. Ext *, No. Int (opcional), Colonia, CP *, Alcaldía/Municipio *
+- El CP tiene auto-completado de alcaldía (lógica ya existente)
+- Zona de entrega (auto-asignada por CP o manual)
+
+**4. Ubicación de entrega** (checkbox + dirección opcional)
+- `☑ La entrega es en esta misma dirección` (marcado por default)
+- Si se desmarca: GoogleMapsAddressAutocomplete + coordenadas GPS visibles
+- Nota: "GPS se puede actualizar con visita física desde Mis Clientes"
+
+**5. Restricciones de entrega** (colapsable/acordeón)
+- Horario de entrega (inicio/fin)
+- Días sin entrega (botones de días)
+
+**6. Facturación / CSF** (sección con upload)
+- Card con estado: "Sin datos fiscales (solo remisión)" → botón Subir CSF
+- Si se carga: muestra badge verde + campos RFC y Razón Social editables
+- Si se procesa: muestra los datos extraídos por IA listos para revisar
+
+**7. Notas**
+- Textarea de instrucciones especiales
+
+**8. Footer fijo**
+- Botón "Crear Cliente" — habilitado cuando hay nombre + al menos dirección
+
+## Comportamiento en submit
+
+El submit es igual al actual, solo cambia el orden de recolección de datos. El cliente se crea con:
+- `preferencia_facturacion`: `"siempre_factura"` si se subió CSF, `"siempre_remision"` si no
+- La sucursal "Principal" se crea siempre con:
+  - Si el checkbox está marcado: `direccion` = dirección del negocio, `latitud/longitud` = null (GPS pendiente)
+  - Si el checkbox está desmarcado: `direccion` = dirección separada de entrega con coordenadas GPS del Google Maps autocomplete
