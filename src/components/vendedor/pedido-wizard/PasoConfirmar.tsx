@@ -7,6 +7,49 @@ import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/lib/utils";
 import { getDisplayName } from "@/lib/productUtils";
 import { LineaPedido, Cliente, Sucursal, TotalesCalculados } from "./types";
+import { supabase } from "@/integrations/supabase/client";
+
+export async function enviarEmailPedido(payload: {
+  folio: string;
+  clienteNombre: string;
+  sucursalNombre?: string;
+  vendedorNombre: string;
+  terminoCredito: string;
+  notas?: string;
+  lineas: LineaPedido[];
+  totales: TotalesCalculados;
+  fechaPedido: string;
+}) {
+  try {
+    const body = {
+      folio: payload.folio,
+      clienteNombre: payload.clienteNombre,
+      sucursalNombre: payload.sucursalNombre,
+      vendedorNombre: payload.vendedorNombre,
+      terminoCredito: payload.terminoCredito,
+      notas: payload.notas,
+      fechaPedido: payload.fechaPedido,
+      lineas: payload.lineas.map(l => ({
+        producto: getDisplayName(l.producto),
+        cantidad: l.cantidad,
+        precioUnitario: l.precioUnitario,
+        subtotal: l.subtotal,
+        esPorKilo: l.producto.precio_por_kilo,
+        pesoKg: l.producto.peso_kg || 0,
+        descuento: l.descuento,
+      })),
+      subtotal: payload.totales.subtotal,
+      iva: payload.totales.iva,
+      ieps: payload.totales.ieps,
+      total: payload.totales.total,
+      pesoTotalKg: payload.totales.pesoTotalKg,
+      totalUnidades: payload.totales.totalUnidades,
+    };
+    await supabase.functions.invoke("enviar-pedido-interno", { body });
+  } catch (err) {
+    console.warn("Email de pedido no enviado:", err);
+  }
+}
 
 interface PasoConfirmarProps {
   cliente: Cliente | undefined;

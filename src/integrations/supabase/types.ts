@@ -864,6 +864,77 @@ export type Database = {
           },
         ]
       }
+      cobros_pedido: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          fecha_cheque: string | null
+          forma_pago: string
+          id: string
+          monto: number
+          notas: string | null
+          pedido_id: string
+          referencia: string | null
+          registrado_por: string
+          updated_at: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          fecha_cheque?: string | null
+          forma_pago?: string
+          id?: string
+          monto: number
+          notas?: string | null
+          pedido_id: string
+          referencia?: string | null
+          registrado_por: string
+          updated_at?: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          fecha_cheque?: string | null
+          forma_pago?: string
+          id?: string
+          monto?: number
+          notas?: string | null
+          pedido_id?: string
+          referencia?: string | null
+          registrado_por?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cobros_pedido_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cobros_pedido_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cobros_pedido_registrado_por_fkey"
+            columns: ["registrado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cobros_pedido_registrado_por_fkey"
+            columns: ["registrado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comisiones_detalle: {
         Row: {
           comision_id: string | null
@@ -3431,11 +3502,13 @@ export type Database = {
           id: string
           impuestos: number | null
           notas: string | null
+          pagado: boolean
           peso_total_kg: number | null
           prioridad_entrega:
             | Database["public"]["Enums"]["delivery_priority"]
             | null
           requiere_factura: boolean
+          saldo_pendiente: number | null
           status: Database["public"]["Enums"]["order_status"]
           subtotal: number | null
           sucursal_id: string | null
@@ -3461,11 +3534,13 @@ export type Database = {
           id?: string
           impuestos?: number | null
           notas?: string | null
+          pagado?: boolean
           peso_total_kg?: number | null
           prioridad_entrega?:
             | Database["public"]["Enums"]["delivery_priority"]
             | null
           requiere_factura?: boolean
+          saldo_pendiente?: number | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number | null
           sucursal_id?: string | null
@@ -3491,11 +3566,13 @@ export type Database = {
           id?: string
           impuestos?: number | null
           notas?: string | null
+          pagado?: boolean
           peso_total_kg?: number | null
           prioridad_entrega?:
             | Database["public"]["Enums"]["delivery_priority"]
             | null
           requiere_factura?: boolean
+          saldo_pendiente?: number | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number | null
           sucursal_id?: string | null
@@ -5932,6 +6009,18 @@ export type Database = {
       obtener_termino_credito: {
         Args: { p_cliente_id: string; p_producto_id: string }
         Returns: Database["public"]["Enums"]["credit_term"]
+      }
+      registrar_cobro_pedido: {
+        Args: {
+          p_cliente_id: string
+          p_fecha_cheque?: string
+          p_forma_pago: string
+          p_monto: number
+          p_notas?: string
+          p_pedido_id: string
+          p_referencia?: string
+        }
+        Returns: string
       }
     }
     Enums: {
