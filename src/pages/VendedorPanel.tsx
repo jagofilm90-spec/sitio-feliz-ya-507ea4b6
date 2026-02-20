@@ -255,6 +255,7 @@ export default function VendedorPanel() {
               </div>
             </div>
             <div className="flex items-center gap-1">
+              <SidebarTrigger className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full" />
               <Button 
                 variant="ghost" 
                 size="icon" 

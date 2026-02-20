@@ -608,26 +608,19 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent side="bottom" className="h-[90vh] sm:h-[85vh] overflow-hidden">
-        <SheetHeader className="pb-4">
+      <SheetContent side="bottom" className="h-[92vh] flex flex-col p-0 gap-0">
+        <SheetHeader className="px-4 pt-4 pb-3 border-b shrink-0">
           <SheetTitle className="text-xl">Nuevo Cliente</SheetTitle>
         </SheetHeader>
 
-        <div className="overflow-y-auto h-[calc(100%-140px)] pb-8">
+        <div className="flex-1 overflow-y-auto px-4 py-4">
           <div className="space-y-6 max-w-2xl mx-auto">
             
             {/* ========== MODO DE ENTRADA ========== */}
             {modoEntrada === null && (
               <div className="space-y-4">
                 {/* CSF Upload Option */}
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    onChange={handleCsfUpload}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    disabled={parsingCsf}
-                  />
+                <label htmlFor="csf-upload" className="cursor-pointer block">
                   <div className="border-2 border-dashed border-primary/50 rounded-xl p-6 text-center hover:border-primary hover:bg-primary/5 transition-colors">
                     <div className="flex flex-col items-center gap-3">
                       <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
@@ -645,7 +638,15 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
                       </div>
                     </div>
                   </div>
-                </div>
+                </label>
+                <input
+                  id="csf-upload"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleCsfUpload}
+                  className="sr-only"
+                  disabled={parsingCsf}
+                />
 
                 <div className="relative flex items-center justify-center">
                   <div className="absolute inset-0 flex items-center">
@@ -1064,9 +1065,9 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
           </div>
         </div>
 
-        {/* Fixed Submit Button */}
+        {/* Footer fijo */}
         {((modoEntrada === "csf" && csfProcessed) || modoEntrada === "manual") && !parsingCsf && (
-          <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t">
+          <div className="shrink-0 p-4 border-t bg-background">
             <div className="max-w-2xl mx-auto">
               <Button 
                 onClick={handleSubmit} 

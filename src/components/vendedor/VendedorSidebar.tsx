@@ -78,8 +78,7 @@ export const VendedorSidebar = ({
   ];
 
   return (
-    <div className="dark">
-      <Sidebar collapsible="icon" expandOnHover className="border-r border-sidebar-border">
+    <Sidebar collapsible="icon" expandOnHover className="border-r border-sidebar-border">
         {/* Header con Logo - Siempre visible */}
         <SidebarHeader className="border-b border-sidebar-border">
           <div className="flex flex-col items-center py-3">
@@ -225,6 +224,5 @@ export const VendedorSidebar = ({
           </SidebarMenuButton>
         </SidebarFooter>
       </Sidebar>
-    </div>
   );
 };
