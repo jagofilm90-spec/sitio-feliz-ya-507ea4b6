@@ -1,159 +1,130 @@
 
-# Diagnóstico y Plan Completo del Módulo Vendedor
+# Fases C y D — Análisis de Clientes + Notificación al Vendedor cuando el Chofer entrega
 
-## Qué ya existe (no hay que construir)
+## Lo que se va a implementar
 
-El módulo Vendedor ya tiene una base muy sólida implementada:
+### Fase C — Análisis de Clientes (Inteligencia Comercial)
 
-| Función | Estado | Componente |
-|---------|--------|-----------|
-| Lista de precios con descuento máximo visible | LISTO | VendedorListaPreciosTab.tsx |
-| Alta de clientes propios | LISTO | VendedorNuevoClienteSheet.tsx |
-| Base de datos de clientes por zonas (tabs CDMX / Foráneas) | LISTO | VendedorMisClientesTab.tsx |
-| Levantar pedidos multi-producto con wizard 4 pasos | LISTO | VendedorNuevoPedidoTab.tsx + pedido-wizard/ |
-| Identificación KG vs Bulto/Caja con conversiones | LISTO | Tipos y wizard ya lo manejan |
-| Selección de término de crédito (Contado, 8, 15, 30, 60 días) | LISTO | PasoCredito.tsx |
-| Vencimiento calculado desde fecha_entrega_real | LISTO | creditoUtils + BD trigger |
-| Saldos por cliente con semáforo de crédito | LISTO | VendedorSaldosTab.tsx |
-| Registrar pagos (parciales, forma de pago, referencia) | LISTO | RegistrarPagoDialog.tsx |
-| Tab "Mis Ventas" con estados del pedido | LISTO | VendedorMisVentasTab.tsx |
-| Detalle de cliente (pedidos, facturas, contactos) | LISTO | ClienteDetalleSheet.tsx |
-| Comisiones del 1% | LISTO | VendedorComisionesTab.tsx |
-| Cobranza con indicadores de vencimiento por días | LISTO | VendedorCobranzaTab.tsx |
+**3 cambios principales:**
 
-## Qué FALTA por construir (las brechas reales)
+1. Nueva sección "Análisis" dentro del tab de Mis Clientes (o como tab separado)
+   - Sub-sección "Inactivos": lista de clientes del vendedor sin pedido en los últimos 30/60/90 días, con botón para llamar o levantar nuevo pedido
+   - Sub-sección "Frecuencia": top productos más pedidos por cada cliente
 
-Revisando el código contra tus requisitos, hay 6 brechas que necesitamos cerrar:
+2. Nuevas pestañas en `ClienteDetalleSheet.tsx`
+   - Tab "Frecuencia": top 10 productos más comprados por el cliente (conteo + veces que aparece + cantidad total)
+   - Tab "Historial": precios pagados en pedidos históricos por producto y mes (igual al componente ClienteHistorialAnalytics.tsx que ya existe)
 
-### Brecha 1 -- Registro de cobro enlazado a PEDIDOS (no facturas)
+3. `VendedorPanel.tsx`
+   - Agregar nuevo tab "analisis" al sidebar y al mobile nav
+   - Renderizar un componente `VendedorAnalisisClientesTab`
 
-El `RegistrarPagoDialog` actual aplica pagos contra *facturas* (`pagos_cliente` / `facturas`). Pero el flujo real del vendedor es: cobrar contra un *pedido* específico con saldo parcial acumulado. Cuando el cliente paga $25,000 de una nota de $50,000, el saldo de ese pedido debe quedar en $25,000, no tocar la tabla de facturas.
-
-**Lo que falta:** El sistema de cobro debe trabajar sobre `pedidos` directamente (campo `saldo_pendiente` en la tabla pedidos o tabla `cobros_pedido`), con soporte para:
-- Pagos parciales a cuenta del pedido
-- Fecha de depósito para cheques
-- El pedido se marca como "saldado" solo cuando llega a $0
-
-### Brecha 2 -- KG totales sumados por ruta/destino
-
-El pedido ya calcula kg totales por pedido, pero no hay una vista donde el vendedor pueda ver: "Para Cuernavaca tengo pedido A (120 kg) + pedido B (85 kg) = 205 kg para esa ruta". Esto le ayuda a coordinar con logística.
-
-**Lo que falta:** En la pestaña "Mis Ventas", agregar una agrupación por zona/destino que muestre kg totales consolidados cuando hay más de un pedido para el mismo destino.
-
-### Brecha 3 -- Secciones de estado del pedido separadas
-
-Actualmente "Mis Ventas" muestra TODOS los pedidos mezclados con un filtro de período. El vendedor necesita ver 4 secciones claras:
-- **Pendientes** (por autorizar / autorizados, no en ruta aún) -- con días transcurridos desde creación
-- **En Ruta** (status `en_ruta`)
-- **Entregados** (status `entregado`) -- donde aplica comisión
-- **Por cobrar** (entregados + no pagados)
-
-**Lo que falta:** Rediseñar `VendedorMisVentasTab` con tabs o secciones por estado, y mostrar el contador de días desde creación del pedido.
-
-### Brecha 4 -- Notificación al vendedor cuando el chofer marca entrega + PDF
-
-Cuando el chofer en `ChoferPanel` marca un pedido como entregado, no existe un mecanismo que notifique al vendedor con un PDF de recepción. 
-
-**Lo que falta:** 
-- Edge function que se dispare cuando `entregas.entregado = true`
-- Generar PDF de confirmación de entrega (folio, cliente, productos, kg totales, firma del chofer)
-- Enviar push notification al vendedor (ya tienen Firebase/FCM configurado) y/o email
-
-### Brecha 5 -- Análisis de clientes inactivos e historial de productos frecuentes
-
-No existe ninguna sección que muestre qué clientes llevan tiempo sin comprar, ni qué productos compra frecuentemente cada cliente.
-
-**Lo que falta:** Nueva pestaña o sección dentro del detalle del cliente:
-- "Clientes inactivos": lista de clientes del vendedor con más de X días sin pedido (configurable: 30, 60, 90 días)
-- "Productos frecuentes": top 5-10 productos más pedidos por cada cliente (conteo de apariciones en `pedidos_detalle`)
-- "Auditoría de precios": historial de pedidos pasados con los precios aplicados en cada compra
-
-### Brecha 6 -- Envío de email del pedido a pedidos@almasa.com.mx
-
-Cuando el vendedor confirma un pedido en el wizard, no hay un mecanismo que envíe automáticamente una copia a `pedidos@almasa.com.mx`.
-
-**Lo que falta:** Al crear el pedido exitosamente, invocar una edge function que envíe el detalle del pedido (folio, cliente, productos, cantidades, kg totales, total) por email a la dirección de pedidos.
+**Archivos a crear/modificar:**
+- `src/components/vendedor/VendedorAnalisisClientesTab.tsx` (NUEVO) — clientes inactivos y frecuencia global
+- `src/components/vendedor/ClienteDetalleSheet.tsx` — agregar tabs "Frecuencia" e "Historial"
+- `src/pages/VendedorPanel.tsx` — registrar tab "analisis" en nav y contenido
 
 ---
 
-## Plan de implementación (orden sugerido)
+### Fase D — Notificación al Vendedor cuando el Chofer confirma entrega
 
-### Fase A -- Cobro enlazado a pedidos (más urgente, afecta operación diaria)
+**Mecanismo:** Cuando el chofer presiona "Confirmar Entrega" en `RegistrarEntregaSheet.tsx` y el status es `entregado` o `parcial`, se invoca una edge function `notificar-entrega-vendedor` que:
 
-**Cambios:**
-1. Agregar campo `saldo_pendiente` a la tabla `pedidos` (inicializado = total del pedido)
-2. Crear tabla `cobros_pedido` con: `pedido_id`, `monto`, `forma_pago`, `referencia`, `fecha_cheque`, `notas`, `registrado_por`, `created_at`
-3. Modificar/crear nuevo `RegistrarCobro` que funcione sobre pedidos (no facturas), mostrando lista de pedidos entregados con saldo > 0 del cliente seleccionado
-4. Cuando el cobro liquida el pedido, marcar `pedidos.pagado = true` y actualizar `clientes.saldo_pendiente`
+1. Obtiene los datos completos del pedido, cliente, productos y kg totales
+2. Obtiene el `vendedor_id` del pedido → busca su email en `profiles`
+3. Envía un email con Resend (ya tiene `RESEND_API_KEY`) al vendedor con:
+   - Folio del pedido
+   - Nombre del cliente y sucursal
+   - Nombre del receptor y hora de entrega
+   - Listado de productos con cantidades y kg
+   - Total de kg del pedido
+   - Estado: Completa / Parcial
+4. Si el pedido fue entregado completamente, inicializa `saldo_pendiente` en `pedidos` con el `total` del pedido (para que aparezca en cobranza)
 
-### Fase B -- Secciones de estado en Mis Ventas
-
-**Cambios:**
-1. Rediseñar `VendedorMisVentasTab` con 4 tabs: Pendientes | En Ruta | Entregados | Por Cobrar
-2. En tab "Pendientes": mostrar días transcurridos desde `fecha_pedido`
-3. En tab "Por Cobrar": integrar directamente el botón de registrar cobro
-4. Agregar subtotal de KG por zona/destino en tab "En Ruta"
-
-### Fase C -- Análisis de clientes (inteligencia comercial)
-
-**Cambios:**
-1. Nueva pestaña o sección "Análisis" en el panel vendedor
-2. Sub-sección "Inactivos": clientes sin pedido en los últimos 30/60/90 días
-3. En detalle del cliente: tab "Frecuencia" con top productos y frecuencia de compra
-4. En detalle del cliente: tab "Historial Precios" con precios aplicados en pedidos históricos
-
-### Fase D -- Notificación de entrega al vendedor
-
-**Cambios:**
-1. Edge function `notificar-entrega-vendedor` que recibe `entrega_id` cuando se marca como entregado
-2. Genera mini PDF de comprobante (html2canvas/jsPDF -- ya están instalados)
-3. Envía push notification FCM al vendedor (token ya almacenado)
-4. Opcionalmente envía email con el PDF adjunto
-
-### Fase E -- Email automático al crear pedido
-
-**Cambios:**
-1. Llamada a edge function `enviar-pedido-interno` al final del wizard (en `PasoConfirmar.tsx`)
-2. La función formatea el pedido en HTML y lo envía a `pedidos@almasa.com.mx` via Resend (ya tienen `RESEND_API_KEY`)
+**Archivos a crear/modificar:**
+- `supabase/functions/notificar-entrega-vendedor/index.ts` (NUEVO)
+- `src/components/chofer/RegistrarEntregaSheet.tsx` — agregar invocación a la edge function después de registrar entrega
 
 ---
 
-## Lo que NO necesita cambios
+## Detalles técnicos
 
-- Clientes visibles para Admin y Secretaria: ya funciona (se ven en `/clientes` con el vendedor asignado)
-- Selección de términos de crédito en el pedido: ya está en el wizard
-- Cálculo de vencimiento desde fecha_entrega_real: ya funciona via trigger de BD
-- Identificación KG vs Bulto en el pedido: ya implementado
+### VendedorAnalisisClientesTab.tsx
+
+```
+┌─────────────────────────────────────┐
+│ Análisis de Clientes                │
+│                                     │
+│ [Inactivos]  [Top Productos]        │
+│                                     │
+│ Filtro: Sin pedido en: [30d][60d][90d]│
+│                                     │
+│ ┌─────────────────────────────────┐ │
+│ │ 🏢 Cliente ABC     87 días sin  │ │
+│ │    Saldo: $12,000  comprar      │ │
+│ │    [📞 Llamar] [🛒 Pedir]       │ │
+│ └─────────────────────────────────┘ │
+└─────────────────────────────────────┘
+```
+
+- Query: `clientes` del vendedor → para cada uno busca el último pedido. Filtra los que tienen más de X días sin comprar
+- Se muestra el saldo pendiente como indicador de urgencia
+- Botón "Levantar Pedido" cambia el tab activo a "nuevo" con el cliente preseleccionado
+
+### ClienteDetalleSheet — tab "Frecuencia"
+
+Query a `pedidos_detalles` JOIN `productos` JOIN `pedidos` para el `cliente_id`:
+- Agrupa por `producto_id`
+- Cuenta cuántas veces aparece (número de pedidos diferentes)
+- Suma cantidad total pedida
+- Ordena de mayor a menor frecuencia
+
+### ClienteDetalleSheet — tab "Historial"
+
+Reutiliza la lógica de `ClienteHistorialAnalytics.tsx` (componente que ya existe), pasándole el `clienteId` y `clienteNombre` directamente.
+
+### Edge Function notificar-entrega-vendedor
+
+```
+POST /notificar-entrega-vendedor
+Body: { entregaId, status }
+
+1. SELECT entregas + pedidos + clientes + pedidos_detalles + productos
+2. SELECT profiles WHERE id = pedido.vendedor_id
+3. Resend email → vendedor_email
+   Subject: "✅ Pedido {folio} entregado - {cliente}"
+   Body HTML con tabla de productos y kg
+4. Si status = "entregado" → UPDATE pedidos SET saldo_pendiente = total WHERE id = pedido_id AND saldo_pendiente IS NULL
+```
+
+### RegistrarEntregaSheet.tsx — llamada a la función
+
+Después de la línea que actualiza `entregas` exitosamente (línea ~198), y además del `send-client-notification` existente, agregar:
+
+```typescript
+// Notificar al vendedor
+await supabase.functions.invoke("notificar-entrega-vendedor", {
+  body: { entregaId: entrega.id, status }
+});
+```
 
 ---
 
-## Archivos que se crearán o modificarán
+## Archivos a modificar/crear
 
-**Fase A (Cobro por pedido):**
-- Migración BD: tabla `cobros_pedido` + campo `saldo_pendiente` en `pedidos`
-- `src/components/vendedor/RegistrarCobroPedidoDialog.tsx` (nuevo)
-- `src/components/vendedor/VendedorCobranzaTab.tsx` (actualizar para usar pedidos)
-
-**Fase B (Mis Ventas con secciones):**
-- `src/components/vendedor/VendedorMisVentasTab.tsx` (rediseño de secciones)
-
-**Fase C (Análisis clientes):**
-- `src/components/vendedor/VendedorAnalisisClientesTab.tsx` (nuevo)
-- `src/components/vendedor/ClienteDetalleSheet.tsx` (agregar tabs de frecuencia e historial)
-- `src/pages/VendedorPanel.tsx` (agregar nueva pestaña al nav)
-
-**Fase D (Notificación entrega):**
-- `supabase/functions/notificar-entrega-vendedor/index.ts` (nuevo)
-- `src/pages/ChoferPanel.tsx` (disparar función al confirmar entrega)
-
-**Fase E (Email al crear pedido):**
-- `supabase/functions/enviar-pedido-interno/index.ts` (nuevo)
-- `src/components/vendedor/pedido-wizard/PasoConfirmar.tsx` (invocar función)
+| Archivo | Acción |
+|---------|--------|
+| `supabase/functions/notificar-entrega-vendedor/index.ts` | CREAR |
+| `src/components/vendedor/VendedorAnalisisClientesTab.tsx` | CREAR |
+| `src/components/vendedor/ClienteDetalleSheet.tsx` | MODIFICAR (agregar tabs Frecuencia e Historial, cambiar de 5 a 7 columnas en TabsList) |
+| `src/pages/VendedorPanel.tsx` | MODIFICAR (agregar tab "analisis" en navItems, sidebar, y contenido desktop/mobile) |
+| `src/components/chofer/RegistrarEntregaSheet.tsx` | MODIFICAR (invocar notificar-entrega-vendedor al confirmar) |
 
 ---
 
-## Recomendación de inicio
+## Resultado final
 
-El orden recomendado es A → B → E → C → D, ya que A y B impactan directamente la operación diaria del vendedor (cobros y seguimiento de pedidos), E es rápido de implementar, C agrega inteligencia comercial valiosa, y D requiere coordinación con el flujo del chofer.
-
-¿Por cuál fase quieres empezar?
+- El vendedor puede ver qué clientes lleva tiempo sin comprar y actuar inmediatamente (llamar o crear pedido)
+- En el detalle de cualquier cliente puede ver sus productos favoritos y el historial de precios por mes
+- Cuando el chofer marca una entrega como completada, el vendedor recibe automáticamente un email con el comprobante incluyendo todos los productos, kg totales, quién recibió y a qué hora
+- El pedido entregado queda con saldo pendiente inicializado para que aparezca en el tab "Por Cobrar" de Mis Ventas
