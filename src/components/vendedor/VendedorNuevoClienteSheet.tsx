@@ -60,6 +60,7 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
   const [modoEntrada, setModoEntrada] = useState<ModoEntrada>(null);
   const [parsingCsf, setParsingCsf] = useState(false);
   const [csfProcessed, setCsfProcessed] = useState(false);
+  const [csfFile, setCsfFile] = useState<File | null>(null); // guardamos el archivo para subirlo después
   
   // Listas
   const [correos, setCorreos] = useState<CorreoCliente[]>([]);
@@ -133,6 +134,7 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
     setModoEntrada(null);
     setParsingCsf(false);
     setCsfProcessed(false);
+    setCsfFile(null);
     setCorreos([]);
     setTelefonos([]);
     setContactos([]);
@@ -278,6 +280,7 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
 
     setParsingCsf(true);
     setModoEntrada("csf");
+    setCsfFile(file); // guardar el archivo para subirlo al crear el cliente
 
     try {
       const base64 = await fileToBase64(file);
@@ -327,10 +330,8 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
 
         // Auto-asignar zona basándose en el municipio de la CSF
         if (csfData.nombre_municipio && zonas.length > 0) {
-          // Primero buscar por municipio exacto
           let zonaMatch = buscarZonaPorMunicipio(csfData.nombre_municipio);
           
-          // Si no encuentra, buscar por estado como fallback
           if (!zonaMatch && csfData.nombre_entidad_federativa) {
             zonaMatch = buscarZonaPorMunicipio(csfData.nombre_entidad_federativa);
             
@@ -352,10 +353,8 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
           toast.success("Datos fiscales extraídos correctamente");
         }
 
-        // Auto-completar código postal y buscar colonias disponibles
         if (csfData.codigo_postal) {
           setCodigoPostal(csfData.codigo_postal);
-          // Buscar datos del CP para obtener colonias disponibles
           buscarCodigoPostal(csfData.codigo_postal);
         }
       }
@@ -363,6 +362,7 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
       console.error("Error parsing CSF:", error);
       toast.error("Error al procesar el CSF. Intente de nuevo.");
       setModoEntrada(null);
+      setCsfFile(null);
     } finally {
       setParsingCsf(false);
     }
@@ -510,6 +510,35 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
         .single();
 
       if (clienteError) throw clienteError;
+
+      // Subir CSF al storage si el vendedor cargó uno
+      if (modoEntrada === "csf" && csfFile) {
+        try {
+          const extension = csfFile.name.endsWith('.pdf') ? 'pdf' : 'jpg';
+          const storagePath = `${cliente.id}/csf.${extension}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('clientes-csf')
+            .upload(storagePath, csfFile, { upsert: true });
+
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage
+              .from('clientes-csf')
+              .getPublicUrl(storagePath);
+            
+            // Actualizar el cliente con la URL del CSF
+            await supabase
+              .from("clientes")
+              .update({ csf_archivo_url: urlData.publicUrl })
+              .eq("id", cliente.id);
+          } else {
+            console.warn("No se pudo subir el CSF al storage:", uploadError);
+          }
+        } catch (uploadErr) {
+          console.warn("Error subiendo CSF:", uploadErr);
+          // No bloquear la creación del cliente si falla la subida
+        }
+      }
 
       // Create default branch with delivery restrictions
       const horarioEntrega = `${horarioInicio} - ${horarioFin}`;

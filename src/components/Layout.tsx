@@ -437,8 +437,26 @@ const Layout = ({ children }: LayoutProps) => {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden">
-            <aside className="fixed left-0 top-[calc(4rem+env(safe-area-inset-top))] bottom-0 w-64 border-r bg-card overflow-y-auto">
+          <div 
+            className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm md:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <aside 
+              className="fixed left-0 top-[calc(4rem+env(safe-area-inset-top))] bottom-0 w-72 border-r bg-card shadow-2xl overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close button */}
+              <div className="flex items-center justify-between px-4 py-3 border-b">
+                <span className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Menú</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
               <nav className="flex flex-col p-4 pb-24">
                 {renderMenuItems(true)}
                 {canViewEmails && (
