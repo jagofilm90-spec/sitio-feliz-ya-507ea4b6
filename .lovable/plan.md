@@ -1,116 +1,156 @@
 
-# Correcciones: CSF al crear cliente, Factura en Pedido, y Menú Desplegable
+# Corrección: Formulario Nuevo Cliente + Sidebar Visual
 
-## Qué se va a corregir
+## Problemas identificados
 
-Hay 3 temas independientes que atacamos en este plan.
+### Problema 1 — Formulario "Nuevo Cliente" no muestra la sección de CSF correctamente en móvil
 
----
+**Causa raíz**: El `SheetContent` tiene `h-[90vh]` con `overflow-hidden`, y el área scrollable interna usa `h-[calc(100%-140px)]`. En móvil esto falla porque:
+- El header del Sheet ocupa más espacio del calculado (el título + padding)
+- El botón fijo inferior (`absolute bottom-0`) se encima sobre el contenido scrollable
+- En la pantalla inicial (las 2 opciones de entrada), el `input[type=file]` es invisible y está superpuesto sobre el div, lo cual funciona en desktop pero en iOS/Android touch puede no activar el file picker correctamente
 
-## Problema 1 — El vendedor sube CSF pero no se guarda el archivo en Storage
+**Solución**:
+- Convertir el Sheet a un layout **flex column** con altura fija: header (fijo) + contenido (flex-1, overflow-y-auto) + footer (fijo)
+- Reemplazar el `input[type=file]` invisible con un `<label htmlFor>` + `<input id>` que es más confiable en móvil
+- Asegurarse de que el botón "Crear Cliente" siempre sea visible al fondo sin cortar el contenido
 
-**Estado actual:** El formulario `VendedorNuevoClienteSheet` parsea el CSF con AI para extraer RFC y domicilio, pero nunca sube el archivo PDF al bucket `clientes-csf`. Solo guarda los datos de texto. El campo `csf_archivo_url` en la tabla `clientes` queda siempre en NULL.
+**Antes:**
+```
+SheetContent h-[90vh] overflow-hidden
+  SheetHeader (altura variable)
+  div overflow-y-auto h-[calc(100%-140px)]   ← cálculo frágil
+  div absolute bottom-0                       ← se encima
+```
 
-**Además:** El bucket `clientes-csf` solo tiene RLS para admin y secretaria — el vendedor no puede subir ni leer archivos.
-
-**Lo que falta:**
-1. Migración SQL: agregar policy de INSERT al bucket `clientes-csf` para vendedores
-2. En `VendedorNuevoClienteSheet.tsx`: después de parsear el CSF con AI, subir el PDF al bucket con la ruta `{cliente_id}/{timestamp}_csf.pdf` y guardar la URL pública en `clienteData.csf_archivo_url`
-
----
-
-## Problema 2 — El pedido siempre sale como "remisión" sin opción de factura
-
-**Estado actual:** El wizard de pedidos no tiene ninguna pantalla ni opción para marcar si el pedido requiere factura. El campo `requiere_factura` en `pedidos` siempre queda en `false`. El paso 4 (Confirmar) muestra los datos pero nunca pregunta al vendedor si quiere factura.
-
-**Flujo correcto:**
-- Si el cliente tiene CSF subido (`csf_archivo_url IS NOT NULL` o `preferencia_facturacion = 'siempre_factura'`): mostrar un toggle/switch en el paso 4 para que el vendedor seleccione "Con Factura" o "Solo Remisión"
-- Si el cliente NO tiene CSF: el pedido siempre es remisión (sin opción de factura), ya que no hay datos fiscales para facturar
-- Al guardar el pedido, pasar el valor correcto de `requiere_factura` al INSERT
-
-**Lo que cambia:**
-- `src/components/vendedor/pedido-wizard/types.ts`: agregar `preferencia_facturacion` y `csf_archivo_url` al tipo `Cliente`
-- `src/components/vendedor/VendedorNuevoPedidoTab.tsx`: incluir `preferencia_facturacion, csf_archivo_url` en la query de clientes; agregar estado `requiereFactura`; pasarlo al `PasoConfirmar`; incluirlo en el INSERT de pedido
-- `src/components/vendedor/pedido-wizard/PasoConfirmar.tsx`: mostrar sección de "Tipo de documento" solo si el cliente tiene CSF (switch entre Remisión / Con Factura), visual claro con icono de factura
-- El email que se envía a `pedidos@almasa.com.mx` ya incluye la info del pedido, agregarle si requiere factura o no
+**Después:**
+```
+SheetContent h-[90vh] flex flex-col
+  SheetHeader shrink-0                        ← altura real
+  div flex-1 overflow-y-auto                  ← scroll correcto
+  div shrink-0                                ← botón siempre visible
+```
 
 ---
 
-## Problema 3 — Menú desplegable roto/feo
+### Problema 2 — Sidebar se ve mal visualmente
 
-**Estado actual:** El dropdown del Layout usa `Collapsible` de shadcn para las cuentas de correo, que funciona bien. El problema que reportas es visual: el menú no se ve "bonito" ni se mantiene fijo en pantallas móviles. Revisando el código:
-- El mobile menu usa `fixed inset-0 bg-background/80 backdrop-blur-sm` — el overlay cubre toda la pantalla pero el contenido del menú puede solaparse con el header
-- Los DropdownMenuContent de Radix ya usan `Portal` (z-50) — esto está bien
-- El sidebar mobile (`aside`) empieza en `top-[calc(4rem+env(safe-area-inset-top))]` — correcto
+**Causa raíz**: El `VendedorSidebar` envuelve todo en un `<div className="dark">` que fuerza el tema oscuro permanentemente. Esto puede generar conflictos visuales cuando el usuario usa modo claro, y causa que los dropdown/tooltips se vean con colores incorrectos.
 
-**Ajustes a hacer:**
-1. Agregar `bg-card` sólido al sidebar mobile con `shadow-xl` para que se vea como panel flotante
-2. Cerrar el mobile menu cuando se hace tap en el overlay (ya funciona al hacer click en un ítem, pero no en el overlay)
-3. El `DropdownMenuContent` en `ui/dropdown-menu.tsx` — asegurar `bg-popover` explícito y `shadow-md` (ya existe pero puede perderse en dark mode con ciertos temas)
-4. Agregar botón "Cerrar menú" visible en la parte superior del menú móvil con la X más grande y más fácil de tocar
+**Además**: El sidebar usa `expandOnHover` (Gmail-style) que en mobile no funciona porque no hay hover — el trigger del sidebar mobile abre un Sheet lateral que **no está visualmente integrado** con el header del panel vendedor.
+
+**Solución**:
+1. Eliminar el `<div className="dark">` que fuerza el tema — dejar que el tema del usuario controle los colores
+2. Mantener el sidebar con sus colores propios usando variables CSS del sidebar (`sidebar-background`, `sidebar-foreground`) que ya están definidas en el tema
+3. En mobile, el `SidebarTrigger` del header móvil debe ser visible — agregar uno en el header móvil del VendedorPanel
 
 ---
 
-## Archivos que se modifican
+## Archivos a modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| Migración SQL | RLS: vendedor puede INSERT en bucket `clientes-csf` |
-| `src/components/vendedor/VendedorNuevoClienteSheet.tsx` | Subir archivo CSF al bucket y guardar URL |
-| `src/components/vendedor/pedido-wizard/types.ts` | Agregar `preferencia_facturacion` y `csf_archivo_url` al tipo `Cliente` |
-| `src/components/vendedor/VendedorNuevoPedidoTab.tsx` | Incluir campos CSF en query; estado `requiereFactura`; pasa a wizard; INSERT correcto |
-| `src/components/vendedor/pedido-wizard/PasoConfirmar.tsx` | Nueva sección "Tipo de documento" condicional al CSF del cliente |
-| `src/components/Layout.tsx` | Mejorar UX del mobile menu: overlay clickeable para cerrar, sidebar más visible |
+| `src/components/vendedor/VendedorNuevoClienteSheet.tsx` | Layout flex column en SheetContent; input[type=file] con label/id explícito para mejor soporte móvil |
+| `src/components/vendedor/VendedorSidebar.tsx` | Eliminar `<div className="dark">` wrapper; usar variables CSS correctas |
+| `src/pages/VendedorPanel.tsx` | Agregar `SidebarTrigger` en header móvil para abrir el sidebar en drawer mode |
 
 ---
 
-## Flujo de negocio resultante
+## Cambios técnicos detallados
 
-```text
-Vendedor crea cliente SIN CSF:
-  → preferencia_facturacion = "siempre_remision"
-  → csf_archivo_url = NULL
-  → Al crear pedido: requiere_factura = false (sin opción)
-  → Email a pedidos@ dice: REMISION
+### VendedorNuevoClienteSheet.tsx — Layout fix
 
-Vendedor crea cliente CON CSF:
-  → Sube PDF → se guarda en Storage
-  → preferencia_facturacion = "siempre_factura"
-  → csf_archivo_url = "https://...clientes-csf/..."
-  → Al crear pedido: aparece toggle "¿Requiere factura?"
-  → Vendedor elige → requiere_factura = true/false
-  → Email a pedidos@ dice: CON FACTURA o REMISION
+**Línea 611** — SheetContent:
+```tsx
+// ANTES:
+<SheetContent side="bottom" className="h-[90vh] sm:h-[85vh] overflow-hidden">
 
-Cuando el pedido es entregado y requiere_factura = true:
-  → Secretaria ve el pedido marcado para facturar
-  → Puede generar CFDI desde el detalle del pedido
+// DESPUÉS:
+<SheetContent side="bottom" className="h-[92vh] flex flex-col p-0 gap-0">
+```
+
+**Línea 612-614** — SheetHeader con shrink-0:
+```tsx
+<SheetHeader className="px-4 pt-4 pb-3 border-b shrink-0">
+  <SheetTitle className="text-xl">Nuevo Cliente</SheetTitle>
+</SheetHeader>
+```
+
+**Línea 616** — Área scrollable:
+```tsx
+// ANTES:
+<div className="overflow-y-auto h-[calc(100%-140px)] pb-8">
+
+// DESPUÉS:
+<div className="flex-1 overflow-y-auto px-4 py-4">
+```
+
+**Líneas 1067-1082** — Footer fijo:
+```tsx
+// ANTES: absolute bottom-0 left-0 right-0
+// DESPUÉS: shrink-0 (en el flujo normal del flex column)
+<div className="shrink-0 p-4 border-t bg-background">
+```
+
+**Líneas 623-648** — Input de archivo más confiable en móvil:
+```tsx
+// ANTES: input invisible superpuesto sobre div
+<div className="relative">
+  <input type="file" className="absolute inset-0 opacity-0 cursor-pointer z-10" ... />
+  <div className="border-2 border-dashed ...">...</div>
+</div>
+
+// DESPUÉS: label explícito con htmlFor — estándar de accesibilidad y más confiable en iOS
+<label htmlFor="csf-upload" className="cursor-pointer block">
+  <div className="border-2 border-dashed ...">...</div>
+</label>
+<input 
+  id="csf-upload"
+  type="file" 
+  accept="image/*,application/pdf" 
+  className="sr-only"  ← oculto pero accesible
+  onChange={handleCsfUpload}
+/>
+```
+
+### VendedorSidebar.tsx — Eliminar dark wrapper
+
+**Línea 81** — Eliminar `<div className="dark">`:
+```tsx
+// ANTES:
+return (
+  <div className="dark">
+    <Sidebar collapsible="icon" expandOnHover ...>
+
+// DESPUÉS:
+return (
+  <Sidebar collapsible="icon" expandOnHover ...>
+```
+
+Y ajustar el cierre correspondiente (línea 228).
+
+### VendedorPanel.tsx — SidebarTrigger en móvil
+
+En el header móvil (línea ~248), agregar `SidebarTrigger` al inicio de los botones de acción:
+```tsx
+<div className="flex items-center gap-1">
+  <SidebarTrigger className="text-primary-foreground hover:bg-primary-foreground/20" />
+  {/* botones existentes */}
+</div>
 ```
 
 ---
 
-## Detalle técnico de la subida de CSF
+## Resultado visual esperado
 
-En `VendedorNuevoClienteSheet`, la subida ocurre en 2 momentos:
+**Nuevo Cliente en móvil:**
+- Se abre un panel deslizable desde abajo que ocupa 92% de la pantalla
+- Header con título fijo arriba
+- Contenido scrollable en el medio (las 2 opciones o el formulario)
+- Botón "Crear Cliente" siempre visible en la parte inferior sin cortar el contenido
+- Tocar el área de CSF abre el selector de archivo de forma confiable en iOS y Android
 
-1. **Al parsear (en `handleCsfUpload`)**: guardar el `File` en estado local, no subirlo aún
-2. **Al confirmar el cliente (en `handleSubmit`)**: primero crear el cliente, luego subir el archivo con la ruta `{cliente_id}/csf.pdf`, y finalmente hacer `UPDATE clientes SET csf_archivo_url = url WHERE id = cliente_id`
-
-Esto garantiza que si el parseo falla o el usuario cancela, no queda archivo huérfano en storage.
-
-La policy RLS que se agrega:
-
-```sql
-CREATE POLICY "Vendedores pueden subir CSF de sus clientes"
-ON storage.objects FOR INSERT
-WITH CHECK (
-  bucket_id = 'clientes-csf'
-  AND has_role(auth.uid(), 'vendedor'::app_role)
-);
-
-CREATE POLICY "Vendedores pueden ver CSF de sus clientes"
-ON storage.objects FOR SELECT
-USING (
-  bucket_id = 'clientes-csf'
-  AND has_role(auth.uid(), 'vendedor'::app_role)
-);
-```
+**Sidebar:**
+- Respeta el tema del usuario (claro/oscuro) sin forzar modo oscuro
+- En desktop: se expande al hover (Gmail-style)
+- En móvil: el botón en el header abre el sidebar como drawer lateral
