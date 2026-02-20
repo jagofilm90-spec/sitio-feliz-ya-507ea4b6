@@ -142,15 +142,17 @@ const Sidebar = React.forwardRef<
     expandOnHover?: boolean;
   }
 >(({ side = "left", variant = "sidebar", collapsible = "offcanvas", expandOnHover = false, className, children, ...props }, ref) => {
-  const { isMobile, openMobile, setOpenMobile, isHovering, setIsHovering } = useSidebar();
+  const { isMobile, open, openMobile, setOpenMobile, isHovering, setIsHovering } = useSidebar();
   const hasPointer = useHasPointer();
   const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   
-  // Desktop with mouse: always collapsed, expand only on hover
+  // Desktop with mouse: always collapsed, expand only on hover (Gmail-style)
   const isDesktopWithMouse = !isMobile && hasPointer && expandOnHover;
   
-  // Visual state: expanded when hovering (for desktop with mouse + expandOnHover)
-  const visualState = isDesktopWithMouse && isHovering ? "expanded" : "collapsed";
+  // Visual state: hover-based for Gmail-style, open-based for toggle mode
+  const visualState = isDesktopWithMouse
+    ? (isHovering ? "expanded" : "collapsed")
+    : (open ? "expanded" : "collapsed");
   
   const handleMouseEnter = React.useCallback(() => {
     if (!isDesktopWithMouse) return;
@@ -239,7 +241,9 @@ const Sidebar = React.forwardRef<
             ? "p-2"
             : "group-data-[side=left]:border-r group-data-[side=right]:border-l",
           // Width based on hover state
-          isHovering ? "w-[--sidebar-width] shadow-xl" : "w-[--sidebar-width-icon]",
+          (isDesktopWithMouse ? isHovering : open)
+            ? "w-[--sidebar-width] shadow-xl"
+            : "w-[--sidebar-width-icon]",
           className,
         )}
         {...props}
