@@ -63,8 +63,8 @@ export const VendedorSidebar = ({
   vendedorNombre,
   novedadesCount,
 }: VendedorSidebarProps) => {
-  const { state, isHovering } = useSidebar();
-  const isCollapsed = state === "collapsed" && !isHovering;
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
 
   const navItems: NavItem[] = [
     { id: "clientes", label: "Clientes", icon: Users },
@@ -78,10 +78,10 @@ export const VendedorSidebar = ({
   ];
 
   return (
-    <Sidebar collapsible="icon" expandOnHover className="border-r border-sidebar-border">
-        {/* Header con Logo - Siempre visible */}
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+        {/* Header con Logo y Toggle */}
         <SidebarHeader className="border-b border-sidebar-border">
-          <div className="flex flex-col items-center py-3">
+          <div className="flex items-center justify-between py-2 px-2">
             <img 
               src={logoAlmasa} 
               alt="ALMASA" 
@@ -90,7 +90,15 @@ export const VendedorSidebar = ({
                 isCollapsed ? "h-6 w-auto" : "h-8 w-auto"
               )} 
             />
+            {!isCollapsed && (
+              <SidebarTrigger className="h-7 w-7 text-sidebar-foreground/70 hover:text-sidebar-foreground" />
+            )}
           </div>
+          {isCollapsed && (
+            <div className="flex justify-center py-1">
+              <SidebarTrigger className="h-7 w-7 text-sidebar-foreground/70 hover:text-sidebar-foreground" />
+            </div>
+          )}
         </SidebarHeader>
 
         {/* User Info - Nombre siempre visible, avatar solo expandido */}
