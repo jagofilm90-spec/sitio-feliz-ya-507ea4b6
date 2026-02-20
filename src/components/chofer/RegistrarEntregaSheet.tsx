@@ -219,10 +219,22 @@ export function RegistrarEntregaSheet({
                 },
               },
             });
-          }
+        }
         } catch (notifError) {
           console.error("Error sending delivery notification:", notifError);
           // No interrumpir el flujo si falla la notificación
+        }
+      }
+
+      // Notificar al vendedor (entregas completas y parciales)
+      if (status === "entregado" || status === "parcial") {
+        try {
+          await supabase.functions.invoke("notificar-entrega-vendedor", {
+            body: { entregaId: entrega.id, status }
+          });
+        } catch (vendedorNotifError) {
+          console.error("Error notificando al vendedor:", vendedorNotifError);
+          // No interrumpir el flujo principal
         }
       }
 
