@@ -1,7 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@4.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY") as string);
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,6 +51,91 @@ function formatCreditTerm(term: string): string {
   };
   return labels[term] || term.replace("_", " ");
 }
+
+// --- Gmail helpers (same pattern as gmail-api edge function) ---
+
+async function refreshAccessToken(refreshToken: string): Promise<{ access_token: string; expires_in: number } | null> {
+  const GMAIL_CLIENT_ID = Deno.env.get("GMAIL_CLIENT_ID");
+  const GMAIL_CLIENT_SECRET = Deno.env.get("GMAIL_CLIENT_SECRET");
+
+  try {
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: GMAIL_CLIENT_ID!,
+        client_secret: GMAIL_CLIENT_SECRET!,
+        refresh_token: refreshToken,
+        grant_type: "refresh_token",
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Failed to refresh token:", await response.text());
+      return null;
+    }
+
+    return response.json();
+  } catch (error: any) {
+    console.error("Token refresh error:", error.message);
+    return null;
+  }
+}
+
+async function getValidAccessToken(supabase: any, cuenta: any): Promise<string | null> {
+  const now = new Date();
+  const tokenExpiry = new Date(cuenta.token_expires_at);
+
+  if (tokenExpiry > new Date(now.getTime() + 5 * 60 * 1000)) {
+    return cuenta.access_token;
+  }
+
+  if (!cuenta.refresh_token) {
+    console.error("No refresh token available for:", cuenta.email);
+    return null;
+  }
+
+  const newTokens = await refreshAccessToken(cuenta.refresh_token);
+  if (!newTokens) return null;
+
+  const newExpiry = new Date(Date.now() + newTokens.expires_in * 1000);
+  await supabase
+    .from("gmail_cuentas")
+    .update({
+      access_token: newTokens.access_token,
+      token_expires_at: newExpiry.toISOString(),
+    })
+    .eq("id", cuenta.id);
+
+  return newTokens.access_token;
+}
+
+function buildRawEmail(from: string, to: string, subject: string, htmlBody: string): string {
+  const encoder = new TextEncoder();
+
+  const subjectB64 = btoa(String.fromCharCode(...encoder.encode(subject)));
+  const bodyB64 = btoa(String.fromCharCode(...encoder.encode(htmlBody)));
+  const boundary = `boundary_${Date.now()}`;
+
+  const email = [
+    `From: Pedidos ALMASA <${from}>`,
+    `To: ${to}`,
+    `Subject: =?UTF-8?B?${subjectB64}?=`,
+    `MIME-Version: 1.0`,
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    ``,
+    `--${boundary}`,
+    `Content-Type: text/html; charset=UTF-8`,
+    `Content-Transfer-Encoding: base64`,
+    ``,
+    bodyB64,
+    `--${boundary}--`,
+  ].join("\r\n");
+
+  return btoa(email).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+// --- Email HTML builder (kept from original) ---
 
 function buildEmailHtml(data: PedidoEmailPayload): string {
   const lineasHtml = data.lineas
@@ -180,6 +263,10 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     const payload: PedidoEmailPayload = await req.json();
 
     if (!payload.folio || !payload.clienteNombre || !payload.lineas?.length) {
@@ -189,31 +276,73 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    const html = buildEmailHtml(payload);
+    console.log(`[enviar-pedido-interno] Procesando pedido ${payload.folio} para ${payload.clienteNombre}`);
 
-    const { data, error } = await resend.emails.send({
-      from: "Pedidos ALMASA <noreply@almasa.com.mx>",
-      to: ["pedidos@almasa.com.mx"],
-      subject: `Nuevo Pedido ${payload.folio} — ${payload.clienteNombre} — ${formatCurrency(payload.total)}`,
-      html,
-    });
+    // Get Gmail account for pedidos@almasa.com.mx
+    const senderEmail = "pedidos@almasa.com.mx";
+    const { data: gmailCuenta, error: gmailError } = await supabase
+      .from("gmail_cuentas")
+      .select("*")
+      .eq("email", senderEmail)
+      .eq("activo", true)
+      .single();
 
-    if (error) {
-      console.error("Resend error:", error);
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+    if (gmailError || !gmailCuenta) {
+      console.error(`Gmail account ${senderEmail} not found:`, gmailError?.message);
+      throw new Error(`Cuenta de Gmail ${senderEmail} no configurada o no activa`);
     }
 
-    console.log(`Email enviado para pedido ${payload.folio}:`, data);
+    const accessToken = await getValidAccessToken(supabase, gmailCuenta);
+    if (!accessToken) {
+      throw new Error(`No se pudo obtener token para ${senderEmail}. Reconecte la cuenta.`);
+    }
 
-    return new Response(JSON.stringify({ success: true, id: data?.id }), {
+    const html = buildEmailHtml(payload);
+    const subject = `Nuevo Pedido ${payload.folio} — ${payload.clienteNombre} — ${formatCurrency(payload.total)}`;
+
+    // Send to pedidos@almasa.com.mx via Gmail API
+    const rawEmail = buildRawEmail(senderEmail, "pedidos@almasa.com.mx", subject, html);
+
+    const sendResponse = await fetch(
+      "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ raw: rawEmail }),
+      }
+    );
+
+    if (!sendResponse.ok) {
+      const errorText = await sendResponse.text();
+      console.error("Gmail API error:", errorText);
+      throw new Error(`Error enviando email via Gmail: ${errorText}`);
+    }
+
+    const sendResult = await sendResponse.json();
+    console.log(`[enviar-pedido-interno] Email enviado para pedido ${payload.folio}, messageId: ${sendResult.id}`);
+
+    // Log to correos_enviados
+    await supabase.from("correos_enviados").insert({
+      tipo: "pedido_interno",
+      referencia_id: payload.folio,
+      destinatario: "pedidos@almasa.com.mx",
+      asunto: subject,
+      contenido_preview: `Pedido ${payload.folio} - ${payload.clienteNombre}`,
+      fecha_envio: new Date().toISOString(),
+      gmail_cuenta_id: gmailCuenta.id,
+      gmail_message_id: sendResult.id,
+      error: null,
+    });
+
+    return new Response(JSON.stringify({ success: true, id: sendResult.id }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (err: any) {
-    console.error("Error en enviar-pedido-interno:", err);
+    console.error("[enviar-pedido-interno] Error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders },

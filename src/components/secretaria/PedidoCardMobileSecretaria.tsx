@@ -56,23 +56,23 @@ export function PedidoCardMobileSecretaria({
   return (
     <Card className="transition-all active:scale-[0.98]">
       <CardContent className="p-4 space-y-3">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-mono font-bold">{folio}</span>
+        {/* Header: Cliente + Status */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-base leading-tight truncate">{clienteNombre}</p>
+            {sucursalNombre && (
+              <p className="text-xs text-muted-foreground truncate">{sucursalNombre}</p>
+            )}
           </div>
-          <Badge variant={config.variant} className="gap-1 text-xs">
+          <Badge variant={config.variant} className="gap-1 text-xs shrink-0">
             <StatusIcon className="h-3 w-3" />
             {config.label}
           </Badge>
         </div>
 
-        {/* Cliente */}
+        {/* Folio */}
         <div>
-          <p className="font-medium text-sm">{clienteNombre}</p>
-          {sucursalNombre && (
-            <p className="text-xs text-muted-foreground">{sucursalNombre}</p>
-          )}
+          <span className="font-mono text-xs text-muted-foreground">{folio}</span>
         </div>
 
         {/* Info row */}

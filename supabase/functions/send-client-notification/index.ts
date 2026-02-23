@@ -317,7 +317,7 @@ serve(async (req) => {
 
     // Get client emails that match the notification purpose
     const propositos = TIPO_TO_PROPOSITOS[tipo];
-    const { data: correos, error: correosError } = await supabase
+    let { data: correos, error: correosError } = await supabase
       .from("cliente_correos")
       .select("email, nombre_contacto")
       .eq("cliente_id", clienteId)
@@ -328,16 +328,30 @@ serve(async (req) => {
       throw new Error("Error fetching client emails");
     }
 
+    // Fallback: if no specific correos configured, try email from clientes table
     if (!correos || correos.length === 0) {
-      console.log(`No emails configured for client ${clienteId} with purposes: ${propositos.join(", ")}`);
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: "No emails configured for this notification type",
-          emailsSent: 0 
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      console.log(`No client_correos for client ${clienteId} with purposes: ${propositos.join(", ")}. Trying fallback from clientes table...`);
+      
+      const { data: clienteEmail } = await supabase
+        .from("clientes")
+        .select("email")
+        .eq("id", clienteId)
+        .single();
+      
+      if (clienteEmail?.email) {
+        console.log(`Fallback: using client email from clientes table: ${clienteEmail.email}`);
+        correos = [{ email: clienteEmail.email, nombre_contacto: null }];
+      } else {
+        console.log(`No fallback email found for client ${clienteId}`);
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: "No emails configured for this notification type",
+            emailsSent: 0 
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Generate email content
