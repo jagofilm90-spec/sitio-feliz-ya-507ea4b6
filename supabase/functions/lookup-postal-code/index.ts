@@ -35,9 +35,10 @@ Deno.serve(async (req) => {
           
           // Extract state and municipality from the data
           // Zippopotam returns state in "state" and municipality info in place name
-          const estado = firstPlace.state || "";
-          // For Mexico, the "state abbreviation" often contains useful info
-          const municipio = extractMunicipio(firstPlace, estado);
+          let estado = firstPlace.state || "";
+          // Normalize CDMX name
+          if (estado === "Distrito Federal") estado = "Ciudad de México";
+          const municipio = extractMunicipio(firstPlace, estado, codigo_postal);
           
           return new Response(
             JSON.stringify({
@@ -110,15 +111,36 @@ Deno.serve(async (req) => {
   }
 });
 
+// CDMX alcaldías by postal code range
+function getAlcaldiaCDMX(cp: string): string {
+  const n = parseInt(cp, 10);
+  if (n >= 1000 && n <= 1999) return "Centro / Cuauhtémoc";
+  if (n >= 2000 && n <= 2999) return "Azcapotzalco";
+  if (n >= 3000 && n <= 3999) return "Coyoacán";
+  if (n >= 4000 && n <= 4999) return "Cuajimalpa de Morelos";
+  if (n >= 5000 && n <= 5999) return "Gustavo A. Madero";
+  if (n >= 6000 && n <= 6999) return "Cuauhtémoc";
+  if (n >= 7000 && n <= 7999) return "Iztapalapa";
+  if (n >= 8000 && n <= 8999) return "Iztacalco";
+  if (n >= 9000 && n <= 9999) return "Iztapalapa";
+  if (n >= 10000 && n <= 10999) return "Álvaro Obregón";
+  if (n >= 11000 && n <= 11999) return "Miguel Hidalgo";
+  if (n >= 12000 && n <= 12999) return "Tlalpan";
+  if (n >= 13000 && n <= 13999) return "Tláhuac";
+  if (n >= 14000 && n <= 14999) return "Tlalpan";
+  if (n >= 15000 && n <= 15999) return "Venustiano Carranza";
+  if (n >= 16000 && n <= 16999) return "Xochimilco";
+  return "Ciudad de México";
+}
+
 // Helper to extract municipio from Zippopotam data
-function extractMunicipio(place: { state: string; "place name": string; "state abbreviation"?: string }, estado: string): string {
-  // For CDMX, the state abbreviation often contains the delegación/alcaldía
+function extractMunicipio(place: { state: string; "place name": string; "state abbreviation"?: string }, estado: string, codigoPostal: string): string {
+  // For CDMX, use postal code ranges to determine alcaldía
   if (estado === "Distrito Federal" || estado === "Ciudad de Mexico" || estado === "Ciudad de México") {
-    // The place name might contain the colonia, try to get delegación from other sources
-    // Common CDMX alcaldías based on postal code ranges
-    return place["state abbreviation"] || "Ciudad de México";
+    return getAlcaldiaCDMX(codigoPostal);
   }
   
-  // For other states, try to get municipio from the place data
+  // For other states, the state abbreviation is usually the state code (not useful as municipio)
+  // Return the state name as fallback - the real municipio isn't available from Zippopotam
   return place["state abbreviation"] || estado;
 }
