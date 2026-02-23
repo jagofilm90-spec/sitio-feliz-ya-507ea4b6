@@ -101,7 +101,7 @@ function EmptyState({ icono: Icon, titulo, descripcion }: { icono: any; titulo: 
   );
 }
 
-export function VendedorMisVentasTab() {
+export function VendedorMisVentasTab({ onDashboardRefresh }: { onDashboardRefresh?: () => void } = {}) {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [ventasMensuales, setVentasMensuales] = useState<VentaMensual[]>([]);
@@ -473,7 +473,7 @@ export function VendedorMisVentasTab() {
         <>
           <PedidoDetalleVendedorDialog open={showDetalle} onOpenChange={setShowDetalle} pedidoId={selectedPedido.id} />
           <CancelarPedidoDialog open={showCancelar} onOpenChange={setShowCancelar} pedido={selectedPedido} onPedidoCancelado={fetchPedidos} />
-          <EliminarPedidoDialog open={showEliminar} onOpenChange={setShowEliminar} pedido={selectedPedido} onPedidoEliminado={fetchPedidos} />
+          <EliminarPedidoDialog open={showEliminar} onOpenChange={setShowEliminar} pedido={selectedPedido} onPedidoEliminado={() => { fetchPedidos(); fetchVentasMensuales(); onDashboardRefresh?.(); }} />
         </>
       )}
 

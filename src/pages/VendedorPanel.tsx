@@ -368,7 +368,7 @@ export default function VendedorPanel() {
                 <CardContent className="p-6">
               {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
                   {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} onNavigateToVentas={() => setActiveTab("ventas")} />}
-                  {activeTab === "ventas" && <VendedorMisVentasTab />}
+                  {activeTab === "ventas" && <VendedorMisVentasTab onDashboardRefresh={fetchDashboardData} />}
                   {activeTab === "novedades" && <VendedorNovedadesTab />}
                   {activeTab === "precios" && <VendedorListaPreciosTab />}
                   {activeTab === "saldos" && <VendedorSaldosTab />}
@@ -382,7 +382,7 @@ export default function VendedorPanel() {
             <div className="md:hidden">
               {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
               {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} onNavigateToVentas={() => setActiveTab("ventas")} />}
-              {activeTab === "ventas" && <VendedorMisVentasTab />}
+              {activeTab === "ventas" && <VendedorMisVentasTab onDashboardRefresh={fetchDashboardData} />}
               {activeTab === "novedades" && <VendedorNovedadesTab />}
               {activeTab === "precios" && <VendedorListaPreciosTab />}
               {activeTab === "saldos" && <VendedorSaldosTab />}
