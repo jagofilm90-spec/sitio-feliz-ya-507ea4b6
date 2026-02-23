@@ -1,134 +1,58 @@
 
-# Rediseño del formulario "Nuevo Cliente"
 
-## El problema actual
+## Plan: Corregir Emails de Pedidos y Mejorar Vista de Pedidos
 
-El flujo actual obliga al vendedor a elegir primero entre "Subir CSF" o "Manual" ANTES de ver cualquier campo. Esto:
-- Es confuso — el vendedor no sabe a qué se compromete antes de empezar
-- Duplica toda la lógica del formulario (hay dos secciones casi idénticas)
-- Esconde información importante (el CSF debería ser opcional, no la puerta de entrada)
+### Problema 1: No llega email a pedidos@almasa.com.mx
 
-## La solución: formulario único, lineal y claro
+El sistema tiene dos mecanismos de email para pedidos:
+- **enviar-pedido-interno**: Usa Resend (servicio externo) para enviar a pedidos@almasa.com.mx. No tiene logs, lo que indica que posiblemente no se esta invocando correctamente o Resend tiene un problema de configuracion.
+- **send-client-notification**: Usa Gmail API para enviar al cliente. Tampoco tiene logs.
 
-Un solo formulario con todos los campos visibles desde el inicio:
+**Solucion**: Migrar el envio del email interno (a pedidos@almasa.com.mx) para que use Gmail API en lugar de Resend, ya que el sistema ya tiene configurada la cuenta pedidos@almasa.com.mx en Gmail. Asi se unifica todo bajo un solo sistema que ya funciona.
 
-```text
-┌─────────────────────────────────────┐
-│  Nuevo Cliente              [X]     │
-├─────────────────────────────────────┤
-│                                     │
-│  Nombre del cliente *               │
-│  [_______________________________]  │
-│                                     │
-│  Teléfonos                          │
-│  [+55 1234 5678] [WhatsApp] [+]     │
-│  • 55-1111-2222 · Principal         │
-│                                     │
-│  Correos                            │
-│  [ventas@..............] [Todo] [+] │
-│                                     │
-│  ─── Dirección del negocio ──────── │
-│  Calle, No., Colonia, CP...         │
-│                                     │
-│  📍 Ubicación de entrega            │
-│  ☑ La entrega es en esta dirección  │
-│  (si desmarco → segunda dirección   │
-│   + mapa para GPS)                  │
-│                                     │
-│  ─── CSF (opcional) ─────────────── │
-│  [📄 Subir CSF] ← si se sube,      │
-│   la IA extrae RFC/Razón Social y   │
-│   el cliente queda como "con factura"│
-│   Si NO se sube → "solo remisión"   │
-│                                     │
-│  Zona, horarios, notas...           │
-│                                     │
-├─────────────────────────────────────┤
-│  [        Crear Cliente         ]   │
-└─────────────────────────────────────┘
-```
+Se modificara la funcion `enviar-pedido-interno` para usar Gmail API (mismo patron que `send-client-notification`) en lugar de Resend.
 
-## Lógica de dirección de entrega (respuesta a tu pregunta)
+### Problema 2: Email de confirmacion al cliente
 
-**Sí, usamos un checkbox.** Aquí está la lógica exacta:
+El codigo ya llama a `send-client-notification` con tipo `pedido_confirmado` al crear un pedido, pero no hay logs. Esto indica que la cuenta de Gmail `pedidos@almasa.com.mx` puede no estar activa o los correos del cliente no estan configurados con el proposito correcto.
 
-```text
-Dirección del negocio:
-  Calle *, No. Ext *, No. Int, Colonia, CP *, Alcaldía *
+**Solucion**: Verificar y asegurar que la llamada funcione. Ademas, agregar un fallback: si el cliente tiene email directo en la tabla `clientes`, enviar ahi tambien.
 
-☑ "La entrega es en esta misma dirección"
-   └─ Si MARCADO (default):
-        • La sucursal "Principal" usa la misma dirección del negocio
-        • No se captura GPS por ahora (se puede actualizar después)
-   
-   └─ Si DESMARCADO:
-        • Aparece un campo adicional con Google Maps autocomplete
-        • El vendedor busca la dirección de entrega específica
-        • Se capturan coordenadas GPS automáticamente
-        • Esas coordenadas se muestran en el mapa global y para los choferes
-```
+### Problema 3: Notificacion "en ruta" al cliente
 
-La clave: la **sucursal "Principal"** (tabla `cliente_sucursales`) es quien tiene `latitud` y `longitud` — es lo que usa el mapa global (`MapaGlobalSucursales.tsx`) y los choferes (`ChoferPanel.tsx`). Al crear el cliente siempre se crea esta sucursal.
+Ya esta implementado en `PlanificadorRutas.tsx` linea 377. Usa `send-client-notification` con tipo `en_ruta`. El template del email ya existe y dice "Tu pedido esta en camino".
 
-## Lógica del CSF (simplificada)
+**Solucion**: Mismo fix que el punto 2 - asegurar que funcione correctamente.
 
-```text
-NO subió CSF  → preferencia_facturacion = "siempre_remision"  
-                 Sin RFC, sin razón social, factura nunca aplica
+### Problema 4: UI - Nombre del cliente mas grande en las tarjetas de pedidos
 
-SÍ subió CSF  → IA extrae datos fiscales automáticamente
-                 preferencia_facturacion = "siempre_factura"
-                 Sección colapsable con RFC, Razón Social (editables)
-```
+Actualmente en `PedidoCardMobile.tsx` y `PedidoCardMobileSecretaria.tsx`, el folio se muestra grande y el nombre del cliente en texto pequeno.
 
-La sección de CSF aparece **siempre visible** en el formulario (no es la pantalla inicial), con un botón "📄 Subir CSF" que puede tocarse en cualquier momento. Si ya se subió, muestra un badge verde "Datos fiscales extraídos" y los campos RFC/Razón Social aparecen debajo para revisión.
+**Solucion**: Invertir la jerarquia visual:
+- Nombre del cliente en texto grande y prominente
+- Folio del pedido en texto pequeno/secundario
 
-## Archivos a modificar
+---
 
-| Archivo | Qué cambia |
-|---------|-----------|
-| `src/components/vendedor/VendedorNuevoClienteSheet.tsx` | Reescritura completa del formulario con flujo lineal unificado |
+### Cambios Tecnicos
 
-Solo un archivo. La lógica de submit, las llamadas a Supabase, y los sub-componentes (`VendedorTelefonosCliente`, `VendedorCorreosCliente`) se reutilizan tal como están.
+#### 1. Edge function `enviar-pedido-interno/index.ts`
+- Reescribir para usar Gmail API (misma logica de `send-client-notification`)
+- Obtener token de la cuenta `pedidos@almasa.com.mx` de `gmail_cuentas`
+- Mantener el mismo template HTML del email
+- Eliminar dependencia de Resend
 
-## Estructura del nuevo formulario (secciones en orden)
+#### 2. Edge function `send-client-notification/index.ts`
+- Agregar fallback: si no hay `cliente_correos` configurados, buscar email directamente en la tabla `clientes`
+- Esto asegura que clientes sin correos especificos configurados tambien reciban notificaciones
 
-**1. Datos básicos**
-- Nombre del cliente (campo grande, obligatorio)
+#### 3. `src/components/pedidos/PedidoCardMobile.tsx`
+- Nombre del cliente: texto grande (text-base font-bold)
+- Folio: texto pequeno (text-xs font-mono text-muted-foreground)
 
-**2. Contacto**
-- Teléfonos: componente `VendedorTelefonosCliente` ya existente (1 o más)
-- Correos: componente `VendedorCorreosCliente` ya existente (1 o más)
+#### 4. `src/components/secretaria/PedidoCardMobileSecretaria.tsx`
+- Mismo cambio de jerarquia visual
 
-**3. Dirección del negocio** (campos estructurados)
-- Calle *, No. Ext *, No. Int (opcional), Colonia, CP *, Alcaldía/Municipio *
-- El CP tiene auto-completado de alcaldía (lógica ya existente)
-- Zona de entrega (auto-asignada por CP o manual)
-
-**4. Ubicación de entrega** (checkbox + dirección opcional)
-- `☑ La entrega es en esta misma dirección` (marcado por default)
-- Si se desmarca: GoogleMapsAddressAutocomplete + coordenadas GPS visibles
-- Nota: "GPS se puede actualizar con visita física desde Mis Clientes"
-
-**5. Restricciones de entrega** (colapsable/acordeón)
-- Horario de entrega (inicio/fin)
-- Días sin entrega (botones de días)
-
-**6. Facturación / CSF** (sección con upload)
-- Card con estado: "Sin datos fiscales (solo remisión)" → botón Subir CSF
-- Si se carga: muestra badge verde + campos RFC y Razón Social editables
-- Si se procesa: muestra los datos extraídos por IA listos para revisar
-
-**7. Notas**
-- Textarea de instrucciones especiales
-
-**8. Footer fijo**
-- Botón "Crear Cliente" — habilitado cuando hay nombre + al menos dirección
-
-## Comportamiento en submit
-
-El submit es igual al actual, solo cambia el orden de recolección de datos. El cliente se crea con:
-- `preferencia_facturacion`: `"siempre_factura"` si se subió CSF, `"siempre_remision"` si no
-- La sucursal "Principal" se crea siempre con:
-  - Si el checkbox está marcado: `direccion` = dirección del negocio, `latitud/longitud` = null (GPS pendiente)
-  - Si el checkbox está desmarcado: `direccion` = dirección separada de entrega con coordenadas GPS del Google Maps autocomplete
+#### 5. Verificar invocacion en `VendedorNuevoPedidoTab.tsx`
+- Confirmar que `enviarEmailPedido` se llama correctamente despues de crear el pedido
+- Agregar mejor manejo de errores con logs visibles
