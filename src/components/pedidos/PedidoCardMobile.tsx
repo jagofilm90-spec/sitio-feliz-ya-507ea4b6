@@ -56,25 +56,25 @@ export function PedidoCardMobile({
   return (
     <Card className={`${showStatus ? config.bgClass : ""} transition-all active:scale-[0.98]`}>
       <CardContent className="p-4 space-y-3">
-        {/* Header: Folio + Status */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <StatusIcon className={`h-4 w-4 ${status === "por_autorizar" ? "text-amber-600" : "text-muted-foreground"}`} />
-            <span className="font-mono font-bold text-base">{folio}</span>
+        {/* Header: Cliente + Status */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-base leading-tight truncate">{clienteNombre}</p>
+            {sucursalNombre && (
+              <p className="text-xs text-muted-foreground truncate">{sucursalNombre}</p>
+            )}
           </div>
           {showStatus && (
-            <Badge variant={config.variant} className="gap-1 text-xs">
+            <Badge variant={config.variant} className="gap-1 text-xs shrink-0">
+              <StatusIcon className="h-3 w-3" />
               {config.label}
             </Badge>
           )}
         </div>
 
-        {/* Cliente info */}
-        <div className="space-y-0.5">
-          <p className="font-medium text-sm leading-tight">{clienteNombre}</p>
-          {sucursalNombre && (
-            <p className="text-xs text-muted-foreground">{sucursalNombre}</p>
-          )}
+        {/* Folio */}
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs text-muted-foreground">{folio}</span>
         </div>
 
         {/* Productos y peso */}
