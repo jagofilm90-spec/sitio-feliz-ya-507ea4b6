@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -157,16 +157,33 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
     setNotas("");
   };
 
-  const handleOpenChange = async (isOpen: boolean) => {
-    onOpenChange(isOpen);
-    if (isOpen && zonas.length === 0) {
-      const { data } = await supabase
+  // Cargar zonas cuando se abre el sheet
+  const fetchZonas = async () => {
+    try {
+      const { data, error } = await supabase
         .from("zonas")
         .select("id, nombre")
         .eq("activo", true)
         .order("nombre");
+      if (error) {
+        console.error("Error cargando zonas:", error);
+        return;
+      }
       setZonas(data || []);
+    } catch (err) {
+      console.error("Error cargando zonas:", err);
     }
+  };
+
+  // useEffect para cargar zonas al abrir
+  useEffect(() => {
+    if (open && zonas.length === 0) {
+      fetchZonas();
+    }
+  }, [open]);
+
+  const handleOpenChange = (isOpen: boolean) => {
+    onOpenChange(isOpen);
     if (!isOpen) resetForm();
   };
 
