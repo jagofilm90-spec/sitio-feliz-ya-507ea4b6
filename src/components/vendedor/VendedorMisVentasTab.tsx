@@ -29,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Pedido {
   id: string;
+  cliente_id: string;
   folio: string;
   fecha_pedido: string;
   fecha_entrega_real: string | null;
@@ -157,7 +158,7 @@ export function VendedorMisVentasTab() {
         .from("pedidos")
         .select(`
           id, folio, fecha_pedido, fecha_entrega_real, total, saldo_pendiente, 
-          status, termino_credito, pagado, peso_total_kg,
+          status, termino_credito, pagado, peso_total_kg, cliente_id,
           cliente:clientes(nombre),
           sucursal:cliente_sucursales(nombre, zona:zonas(nombre))
         `)

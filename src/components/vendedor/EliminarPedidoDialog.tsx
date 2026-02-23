@@ -11,10 +11,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { AlertTriangle, Loader2, Trash2 } from "lucide-react";
+import { AlertTriangle, Loader2, Trash2, UserX, FileWarning } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { captureDeviceInfo, getPublicIP } from "@/lib/auditoria-pedidos";
+
+type MotivoEliminacion = "cancelo_cliente" | "error_pedido";
 
 interface Props {
   open: boolean;
@@ -24,6 +27,7 @@ interface Props {
     folio: string;
     total: number;
     status: string;
+    cliente_id?: string;
     cliente: {
       nombre: string;
     };
@@ -33,15 +37,19 @@ interface Props {
 
 export function EliminarPedidoDialog({ open, onOpenChange, pedido, onPedidoEliminado }: Props) {
   const [folioConfirmacion, setFolioConfirmacion] = useState("");
+  const [motivo, setMotivo] = useState<MotivoEliminacion | "">("");
   const [loading, setLoading] = useState(false);
 
   const folioCoincide = folioConfirmacion === pedido.folio;
+  const puedeEliminar = folioCoincide && motivo !== "";
+
+  const motivoLabels: Record<MotivoEliminacion, string> = {
+    cancelo_cliente: "Canceló el cliente",
+    error_pedido: "Error de pedido (error del vendedor)",
+  };
 
   const handleEliminar = async () => {
-    if (!folioCoincide) {
-      toast.error("El folio no coincide");
-      return;
-    }
+    if (!puedeEliminar) return;
 
     try {
       setLoading(true);
@@ -94,7 +102,8 @@ export function EliminarPedidoDialog({ open, onOpenChange, pedido, onPedidoElimi
           cliente_nombre: pedido.cliente.nombre,
           total: pedido.total,
           status_al_eliminar: pedido.status,
-          motivo: "Eliminado por vendedor - error en creación",
+          motivo: motivoLabels[motivo as MotivoEliminacion],
+          motivo_codigo: motivo,
           device: JSON.parse(JSON.stringify(deviceInfo))
         }
       }]);
@@ -103,7 +112,37 @@ export function EliminarPedidoDialog({ open, onOpenChange, pedido, onPedidoElimi
         console.error("Error en auditoría:", auditError);
       }
 
-      // 5. Eliminar detalles del pedido primero
+      // 5. Si el motivo es "canceló el cliente", notificar al cliente por email
+      if (motivo === "cancelo_cliente" && pedido.cliente_id) {
+        try {
+          await supabase.functions.invoke("send-client-notification", {
+            body: {
+              clienteId: pedido.cliente_id,
+              tipo: "pedido_confirmado", // reuse template but with cancellation subject
+              data: {
+                pedidoFolio: pedido.folio,
+                total: pedido.total,
+              },
+            },
+          });
+          // We send a custom cancellation email via the gmail-api directly
+          await supabase.functions.invoke("gmail-api", {
+            body: {
+              action: "send",
+              email: "pedidos@almasa.com.mx",
+              to: await getClientEmail(pedido.cliente_id),
+              subject: `Pedido ${pedido.folio} cancelado - Almasa`,
+              body: buildCancellationEmailHtml(pedido.folio, pedido.cliente.nombre, pedido.total),
+            },
+          });
+          console.log("Notificación de cancelación enviada al cliente");
+        } catch (notifError) {
+          console.warn("No se pudo notificar al cliente:", notifError);
+          // Don't block deletion if notification fails
+        }
+      }
+
+      // 6. Eliminar detalles del pedido primero
       const { error: deleteDetallesError } = await supabase
         .from("pedidos_detalles")
         .delete()
@@ -111,13 +150,13 @@ export function EliminarPedidoDialog({ open, onOpenChange, pedido, onPedidoElimi
 
       if (deleteDetallesError) throw deleteDetallesError;
 
-      // 6. Eliminar solicitudes de descuento asociadas (si existen)
+      // 7. Eliminar solicitudes de descuento asociadas (si existen)
       await supabase
         .from("solicitudes_descuento")
         .delete()
         .eq("pedido_id", pedido.id);
 
-      // 7. Eliminar el pedido
+      // 8. Eliminar el pedido
       const { error: deletePedidoError } = await supabase
         .from("pedidos")
         .delete()
@@ -126,7 +165,7 @@ export function EliminarPedidoDialog({ open, onOpenChange, pedido, onPedidoElimi
       if (deletePedidoError) throw deletePedidoError;
 
       toast.success("Pedido eliminado correctamente");
-      setFolioConfirmacion("");
+      resetForm();
       onPedidoEliminado();
       onOpenChange(false);
     } catch (error) {
@@ -137,8 +176,13 @@ export function EliminarPedidoDialog({ open, onOpenChange, pedido, onPedidoElimi
     }
   };
 
+  const resetForm = () => {
+    setFolioConfirmacion("");
+    setMotivo("");
+  };
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
       <AlertDialogContent className="w-[calc(100vw-2rem)] sm:max-w-md overflow-x-hidden">
         <AlertDialogHeader>
           <div className="flex items-center gap-3">
@@ -170,6 +214,43 @@ export function EliminarPedidoDialog({ open, onOpenChange, pedido, onPedidoElimi
             </div>
           </div>
 
+          {/* Motivo de eliminación */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">¿Por qué se elimina este pedido?</Label>
+            <RadioGroup
+              value={motivo}
+              onValueChange={(v) => setMotivo(v as MotivoEliminacion)}
+              className="space-y-2"
+            >
+              <label
+                htmlFor="motivo-cancelo"
+                className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
+                  motivo === "cancelo_cliente" ? "border-destructive bg-destructive/5" : "border-border hover:bg-muted/50"
+                }`}
+              >
+                <RadioGroupItem value="cancelo_cliente" id="motivo-cancelo" />
+                <UserX className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Canceló el cliente</p>
+                  <p className="text-xs text-muted-foreground">Se notificará al cliente por correo</p>
+                </div>
+              </label>
+              <label
+                htmlFor="motivo-error"
+                className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
+                  motivo === "error_pedido" ? "border-destructive bg-destructive/5" : "border-border hover:bg-muted/50"
+                }`}
+              >
+                <RadioGroupItem value="error_pedido" id="motivo-error" />
+                <FileWarning className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Error de pedido</p>
+                  <p className="text-xs text-muted-foreground">Error del vendedor al crear el pedido</p>
+                </div>
+              </label>
+            </RadioGroup>
+          </div>
+
           {/* Confirmación de folio */}
           <div className="space-y-2">
             <Label htmlFor="folio-confirmacion" className="text-sm">
@@ -196,7 +277,7 @@ export function EliminarPedidoDialog({ open, onOpenChange, pedido, onPedidoElimi
           <Button
             variant="outline"
             onClick={() => {
-              setFolioConfirmacion("");
+              resetForm();
               onOpenChange(false);
             }}
             disabled={loading}
@@ -206,7 +287,7 @@ export function EliminarPedidoDialog({ open, onOpenChange, pedido, onPedidoElimi
           <Button
             variant="destructive"
             onClick={handleEliminar}
-            disabled={!folioCoincide || loading}
+            disabled={!puedeEliminar || loading}
           >
             {loading ? (
               <>
@@ -224,4 +305,52 @@ export function EliminarPedidoDialog({ open, onOpenChange, pedido, onPedidoElimi
       </AlertDialogContent>
     </AlertDialog>
   );
+}
+
+// Helper: get client email for cancellation notification
+async function getClientEmail(clienteId: string): Promise<string | null> {
+  // Try cliente_correos first
+  const { data: correos } = await supabase
+    .from("cliente_correos")
+    .select("email")
+    .eq("cliente_id", clienteId)
+    .eq("activo", true)
+    .in("proposito", ["todo", "pedidos"])
+    .limit(1);
+
+  if (correos && correos.length > 0) return correos[0].email;
+
+  // Fallback to clientes table
+  const { data: cliente } = await supabase
+    .from("clientes")
+    .select("email")
+    .eq("id", clienteId)
+    .single();
+
+  return cliente?.email || null;
+}
+
+// Build cancellation email HTML
+function buildCancellationEmailHtml(folio: string, clienteNombre: string, total: number): string {
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #dc2626, #991b1b); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 22px;">Pedido Cancelado</h1>
+      </div>
+      <div style="background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb;">
+        <p>Estimado/a <strong>${clienteNombre}</strong>,</p>
+        <p>Le informamos que su pedido ha sido cancelado.</p>
+        <div style="background: #fee2e2; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #ef4444;">
+          <strong>Folio:</strong> ${folio}<br>
+          <strong>Total:</strong> $${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+        </div>
+        <p>Si tiene alguna duda sobre esta cancelación, no dude en contactarnos.</p>
+        <p>¡Gracias por su preferencia!</p>
+      </div>
+      <div style="background: #1f2937; color: #9ca3af; padding: 20px; text-align: center; font-size: 12px; border-radius: 0 0 8px 8px;">
+        <p style="margin: 0;">Almasa - Distribuidora de Alimentos</p>
+        <p style="margin: 4px 0 0 0;">Este es un correo automático, por favor no responda directamente.</p>
+      </div>
+    </div>
+  `;
 }
