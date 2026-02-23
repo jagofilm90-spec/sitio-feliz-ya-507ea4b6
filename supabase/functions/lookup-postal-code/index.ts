@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
 // CDMX alcaldías by postal code range
 function getAlcaldiaCDMX(cp: string): string {
   const n = parseInt(cp, 10);
-  if (n >= 1000 && n <= 1999) return "Centro / Cuauhtémoc";
+  if (n >= 1000 && n <= 1999) return "Cuauhtémoc";
   if (n >= 2000 && n <= 2999) return "Azcapotzalco";
   if (n >= 3000 && n <= 3999) return "Coyoacán";
   if (n >= 4000 && n <= 4999) return "Cuajimalpa de Morelos";
