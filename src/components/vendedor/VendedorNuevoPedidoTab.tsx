@@ -548,15 +548,16 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       return;
     }
 
-    const productosConDescuentoNoAutorizado = lineas.filter(
-      l => l.requiereAutorizacion && l.autorizacionStatus !== 'aprobado' && l.autorizacionStatus !== 'pendiente'
+    // Auto-mark products needing authorization as 'pendiente'
+    const productosNecesitanAutorizacion = lineas.filter(
+      l => l.requiereAutorizacion && l.autorizacionStatus !== 'aprobado'
     );
-
-    if (productosConDescuentoNoAutorizado.length > 0) {
-      toast.error("Hay productos con descuentos no autorizados", {
-        description: "Solicita autorización o marca para revisión",
-      });
-      return;
+    if (productosNecesitanAutorizacion.length > 0) {
+      setLineas(prev => prev.map(l => 
+        l.requiereAutorizacion && l.autorizacionStatus !== 'aprobado'
+          ? { ...l, autorizacionStatus: 'pendiente' as const }
+          : l
+      ));
     }
 
     setSubmitting(true);
