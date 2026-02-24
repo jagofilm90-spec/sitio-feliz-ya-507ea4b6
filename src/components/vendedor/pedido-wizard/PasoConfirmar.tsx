@@ -114,7 +114,7 @@ export function PasoConfirmar({
     productos: lineas.map(l => {
       const pesoKg = l.producto.peso_kg || 0;
       const esPorKilo = l.producto.precio_por_kilo;
-      const pesoTotal = esPorKilo && pesoKg > 0 ? l.cantidad * pesoKg : null;
+      const pesoTotal = pesoKg > 0 ? l.cantidad * pesoKg : null;
       return {
         cantidad: l.cantidad,
         descripcion: getDisplayName(l.producto),
