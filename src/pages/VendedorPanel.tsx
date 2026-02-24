@@ -144,8 +144,6 @@ export default function VendedorPanel() {
 
   const handleDiscardAndNavigate = () => {
     if (pendingTabChange) {
-      // Clear sessionStorage draft
-      sessionStorage.removeItem("vendedor_cart_draft");
       hasActiveOrder.current = false;
       setActiveTab(pendingTabChange);
       setPendingTabChange(null);
