@@ -33,6 +33,12 @@ export default function VendedorPanel() {
   const [loading, setLoading] = useState(true);
   const [vendedorNombre, setVendedorNombre] = useState("");
   const [activeTab, setActiveTab] = useState("clientes");
+  const [preSelectedClienteId, setPreSelectedClienteId] = useState<string | undefined>();
+
+  const handleNavigateNuevoPedido = (clienteId?: string) => {
+    setPreSelectedClienteId(clienteId);
+    setActiveTab("nuevo");
+  };
   const [showBienvenida, setShowBienvenida] = useState(false);
   const [stats, setStats] = useState({
     totalClientes: 0,
@@ -366,28 +372,28 @@ export default function VendedorPanel() {
             <div className="hidden md:block">
               <Card>
                 <CardContent className="p-6">
-              {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
-                  {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} onNavigateToVentas={() => setActiveTab("ventas")} />}
+              {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} onNavigateNuevoPedido={handleNavigateNuevoPedido} />}
+                  {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} onNavigateToVentas={() => setActiveTab("ventas")} preSelectedClienteId={preSelectedClienteId} />}
                   {activeTab === "ventas" && <VendedorMisVentasTab onDashboardRefresh={fetchDashboardData} />}
                   {activeTab === "novedades" && <VendedorNovedadesTab />}
                   {activeTab === "precios" && <VendedorListaPreciosTab />}
                   {activeTab === "saldos" && <VendedorSaldosTab />}
                   {activeTab === "comisiones" && <VendedorComisionesTab />}
-                  {activeTab === "analisis" && <VendedorAnalisisClientesTab onNavigateNuevoPedido={(clienteId) => { setActiveTab("nuevo"); }} />}
+                  {activeTab === "analisis" && <VendedorAnalisisClientesTab onNavigateNuevoPedido={handleNavigateNuevoPedido} />}
                 </CardContent>
               </Card>
             </div>
 
             {/* Mobile Content */}
             <div className="md:hidden">
-              {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} />}
-              {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} onNavigateToVentas={() => setActiveTab("ventas")} />}
+              {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} onNavigateNuevoPedido={handleNavigateNuevoPedido} />}
+              {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} onNavigateToVentas={() => setActiveTab("ventas")} preSelectedClienteId={preSelectedClienteId} />}
               {activeTab === "ventas" && <VendedorMisVentasTab onDashboardRefresh={fetchDashboardData} />}
               {activeTab === "novedades" && <VendedorNovedadesTab />}
               {activeTab === "precios" && <VendedorListaPreciosTab />}
               {activeTab === "saldos" && <VendedorSaldosTab />}
               {activeTab === "comisiones" && <VendedorComisionesTab />}
-              {activeTab === "analisis" && <VendedorAnalisisClientesTab onNavigateNuevoPedido={(clienteId) => { setActiveTab("nuevo"); }} />}
+              {activeTab === "analisis" && <VendedorAnalisisClientesTab onNavigateNuevoPedido={handleNavigateNuevoPedido} />}
             </div>
           </div>
         </main>
