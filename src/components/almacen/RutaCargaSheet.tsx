@@ -32,6 +32,7 @@ import {
   CheckCheck,
 } from "lucide-react";
 import { CargaProductosChecklist } from "./CargaProductosChecklist";
+import { CargaResumenFinal } from "./CargaResumenFinal";
 import { FirmaDigitalDialog } from "./FirmaDigitalDialog";
 import { FirmaChoferDialog } from "./FirmaChoferDialog";
 import { CargaEvidenciasSection } from "./CargaEvidenciasSection";
@@ -100,6 +101,7 @@ interface ProductoCarga {
   cantidad_cargada: number | null;
   cargado: boolean;
   lote_id: string | null;
+  peso_real_kg?: number | null;
   es_cortesia: boolean;
   producto: {
     id: string;
@@ -174,6 +176,7 @@ export const RutaCargaSheet = ({
   
   // Estado para firma del chofer
   const [firmaChoferBase64, setFirmaChoferBase64] = useState<string | null>(ruta.firma_chofer_carga || null);
+  const [firmaAlmacenistaBase64, setFirmaAlmacenistaBase64] = useState<string | null>(null);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
@@ -251,7 +254,8 @@ export const RutaCargaSheet = ({
             cantidad_solicitada,
             cantidad_cargada,
             cargado,
-            lote_id
+            lote_id,
+            peso_real_kg
           `)
           .eq("entrega_id", entrega.id);
 
@@ -340,6 +344,7 @@ export const RutaCargaSheet = ({
             cantidad_cargada: cp.cantidad_cargada,
             cargado: cp.cargado || false,
             lote_id: cp.lote_id,
+            peso_real_kg: (cp as any).peso_real_kg || null,
             es_cortesia: (detalle as any)?.es_cortesia || false,
             producto: (detalle?.producto as any) || {
               id: "",
@@ -622,6 +627,33 @@ export const RutaCargaSheet = ({
     }
   };
 
+  // Guardar peso real de un producto
+  const handlePesoChange = async (cargaId: string, pesoKg: number) => {
+    try {
+      const { error } = await supabase
+        .from("carga_productos")
+        .update({ peso_real_kg: pesoKg })
+        .eq("id", cargaId);
+
+      if (error) throw error;
+
+      // Update local state
+      setEntregas(prev => prev.map(e => ({
+        ...e,
+        productos: e.productos.map(p => 
+          p.id === cargaId ? { ...p, peso_real_kg: pesoKg } : p
+        ),
+      })));
+    } catch (error) {
+      console.error("Error guardando peso:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo guardar el peso",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Confirmar entrega individual
   const handleConfirmarEntrega = async (entregaId: string) => {
     try {
@@ -741,6 +773,7 @@ export const RutaCargaSheet = ({
 
   const handleCompletarCarga = async (firmaBase64: string) => {
     setSaving(true);
+    setFirmaAlmacenistaBase64(firmaBase64);
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -994,6 +1027,7 @@ export const RutaCargaSheet = ({
                           <CargaProductosChecklist
                             productos={productosNormales}
                             onToggle={handleProductoToggle}
+                            onPesoChange={handlePesoChange}
                             disabled={!cargaIniciada || ruta.carga_completada || false}
                             entregaConfirmada={entrega.carga_confirmada}
                           />
@@ -1009,6 +1043,7 @@ export const RutaCargaSheet = ({
                             <CargaProductosChecklist
                               productos={cortesias}
                               onToggle={handleProductoToggle}
+                              onPesoChange={handlePesoChange}
                               disabled={!cargaIniciada || ruta.carga_completada || false}
                               entregaConfirmada={entrega.carga_confirmada}
                               isCortesia
@@ -1092,6 +1127,33 @@ export const RutaCargaSheet = ({
                   onEvidenciaAdded={loadEvidencias}
                   disabled={!cargaIniciada || ruta.carga_completada || false}
                 />
+
+                {/* Resumen final cuando la carga está completada */}
+                {ruta.carga_completada && (
+                  <CargaResumenFinal
+                    tiempoTranscurrido={tiempoTranscurrido}
+                    totalProductos={totalProductos}
+                    productosCargados={productosCargados}
+                    pesoTotalTeorico={entregas.reduce((acc, e) => 
+                      acc + e.productos.reduce((pacc, p) => 
+                        pacc + (p.producto.peso_kg || 0) * p.cantidad_solicitada, 0
+                      ), 0
+                    )}
+                    pesoTotalReal={entregas.reduce((acc, e) => 
+                      acc + e.productos.reduce((pacc, p) => 
+                        pacc + (p.peso_real_kg || (p.producto.peso_kg || 0) * p.cantidad_solicitada), 0
+                      ), 0
+                    )}
+                    totalUnidades={entregas.reduce((acc, e) => 
+                      acc + e.productos.reduce((pacc, p) => 
+                        pacc + (p.cantidad_cargada || p.cantidad_solicitada), 0
+                      ), 0
+                    )}
+                    firmaAlmacenista={firmaAlmacenistaBase64}
+                    firmaChofer={firmaChoferBase64}
+                    choferNombre={ruta.chofer?.nombre_completo}
+                  />
+                )}
               </div>
             )}
           </ScrollArea>
