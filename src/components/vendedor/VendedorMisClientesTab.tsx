@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Search, Plus, MapPin, Phone, Building2, MessageCircle, ShoppingCart, History, Navigation, AlertTriangle, MapPinned, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, MapPin, Phone, Building2, MessageCircle, ShoppingCart, History, Navigation, AlertTriangle, MapPinned, Pencil, Trash2, ExternalLink } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { VendedorNuevoClienteSheet } from "./VendedorNuevoClienteSheet";
 import { GeocodificarSucursalSheet } from "./GeocodificarSucursalSheet";
@@ -435,6 +435,36 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
                       )}
                     </div>
                   </div>
+
+                  {/* Sucursales con GPS - Botón para ver en Google Maps */}
+                  {cliente.sucursales?.some(s => s.latitud && s.longitud) && (
+                    <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                      <p className="text-xs text-green-700 dark:text-green-300 mb-2">
+                        🗺️ Ver en Google Maps:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {cliente.sucursales
+                          ?.filter((s) => s.latitud && s.longitud)
+                          .map((sucursal) => (
+                            <Button
+                              key={sucursal.id}
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs bg-white dark:bg-background"
+                              onClick={() => {
+                                window.open(
+                                  `https://www.google.com/maps?q=${sucursal.latitud},${sucursal.longitud}`,
+                                  '_blank'
+                                );
+                              }}
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              {sucursal.nombre}
+                            </Button>
+                          ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Sucursales sin GPS - Botón para geocodificar */}
                   {(cliente.sucursales_sin_gps || 0) > 0 && (
