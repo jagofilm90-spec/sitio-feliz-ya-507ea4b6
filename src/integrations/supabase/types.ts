@@ -146,6 +146,7 @@ export type Database = {
           movimiento_inventario_id: string | null
           notas: string | null
           pedido_detalle_id: string
+          peso_real_kg: number | null
           updated_at: string | null
         }
         Insert: {
@@ -163,6 +164,7 @@ export type Database = {
           movimiento_inventario_id?: string | null
           notas?: string | null
           pedido_detalle_id: string
+          peso_real_kg?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -180,6 +182,7 @@ export type Database = {
           movimiento_inventario_id?: string | null
           notas?: string | null
           pedido_detalle_id?: string
+          peso_real_kg?: number | null
           updated_at?: string | null
         }
         Relationships: [

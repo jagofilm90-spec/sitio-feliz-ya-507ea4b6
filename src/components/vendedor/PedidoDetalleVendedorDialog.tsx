@@ -196,6 +196,7 @@ export function PedidoDetalleVendedorDialog({ open, onOpenChange, pedidoId }: Pr
     });
 
     return {
+      pedidoId: pedido.id,
       folio: pedido.folio,
       fecha: pedido.fecha_pedido,
       vendedor: pedido.vendedor?.full_name || "Sin asignar",

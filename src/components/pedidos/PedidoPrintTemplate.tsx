@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { COMPANY_DATA } from "@/constants/companyData";
+import { QRCodeSVG } from "qrcode.react";
 
 interface ProductoPedido {
   cantidad: number;
@@ -12,6 +13,7 @@ interface ProductoPedido {
 }
 
 export interface DatosPedidoPrint {
+  pedidoId?: string;
   folio: string;
   fecha: string;
   vendedor: string;
@@ -250,12 +252,24 @@ export const PedidoPrintTemplate = ({ datos }: PedidoPrintTemplateProps) => {
         </div>
       </div>
 
-      {/* ═══════ FOOTER FISCAL (letra chiquita) ═══════ */}
-      <div className="mt-auto border-t border-gray-200 pt-1.5 text-center text-[7.5px] text-gray-400 leading-tight">
-        <p className="font-semibold text-[8px] text-gray-500">{COMPANY_DATA.razonSocialLarga}</p>
-        <p>RFC: {COMPANY_DATA.rfc} | Régimen: {COMPANY_DATA.regimenFiscalDescripcion}</p>
-        <p>{COMPANY_DATA.direccionCompletaMayusculas}</p>
-        <p>Tel: {COMPANY_DATA.telefonosFormateados} | {COMPANY_DATA.emails.ventas}</p>
+      {/* ═══════ FOOTER FISCAL + QR ═══════ */}
+      <div className="mt-auto border-t border-gray-200 pt-1.5 flex items-end justify-between">
+        <div className="text-[7.5px] text-gray-400 leading-tight">
+          <p className="font-semibold text-[8px] text-gray-500">{COMPANY_DATA.razonSocialLarga}</p>
+          <p>RFC: {COMPANY_DATA.rfc} | Régimen: {COMPANY_DATA.regimenFiscalDescripcion}</p>
+          <p>{COMPANY_DATA.direccionCompletaMayusculas}</p>
+          <p>Tel: {COMPANY_DATA.telefonosFormateados} | {COMPANY_DATA.emails.ventas}</p>
+        </div>
+        {datos.pedidoId && (
+          <div className="flex flex-col items-center gap-0.5">
+            <QRCodeSVG
+              value={`${typeof window !== 'undefined' ? window.location.origin : ''}/almacen-tablet/carga-scan/${datos.pedidoId}`}
+              size={56}
+              level="M"
+            />
+            <p className="text-[6px] text-gray-400">Escanear para cargar</p>
+          </div>
+        )}
       </div>
     </div>
   );
