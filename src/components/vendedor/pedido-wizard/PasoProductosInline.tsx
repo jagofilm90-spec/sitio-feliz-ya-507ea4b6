@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Star, ChevronRight, ChevronLeft, Package, AlertTriangle, Send, Clock, CheckCircle2, Loader2, CreditCard, FileText, ChevronDown } from "lucide-react";
+import { Search, Star, ChevronRight, ChevronLeft, Package, AlertTriangle, Send, Clock, CheckCircle2, Loader2, CreditCard, FileText, ChevronDown, Trash2, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -468,22 +468,72 @@ export function PasoProductosInline({
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Fixed Summary Footer */}
-      <Card className="bg-muted/30 border-primary/20">
-        <CardContent className="py-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span>{lineas.length} productos</span>
-              <span>{totales.totalUnidades} uds</span>
-              <span>{totales.pesoTotalKg.toLocaleString()} kg</span>
-              {totales.ahorroDescuentos > 0 && (
-                <span className="text-green-600">-{formatCurrency(totales.ahorroDescuentos)}</span>
-              )}
+      {/* Resumen de productos agregados */}
+      {lineas.length > 0 && (
+        <Card className="border-primary/20">
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              Productos en pedido ({lineas.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-3 pt-0">
+            <div className="space-y-0 divide-y">
+              {lineas.map((linea) => (
+                <div key={linea.producto.id} className="flex items-center gap-2 py-2">
+                  <span className="text-sm flex-1 min-w-0 truncate">{getDisplayName(linea.producto)}</span>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    value={linea.cantidad || ""}
+                    className="h-7 w-16 text-center text-sm px-1"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "") { onActualizarCantidad(linea.producto.id, 0); return; }
+                      if (/^\d+$/.test(val)) onActualizarCantidad(linea.producto.id, parseInt(val, 10));
+                    }}
+                  />
+                  <span className="text-xs text-muted-foreground">×</span>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={linea.precioUnitario || ""}
+                    className={cn(
+                      "h-7 w-20 text-center text-sm px-1",
+                      linea.requiereAutorizacion && "border-destructive text-destructive"
+                    )}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "" || /^\d*\.?\d{0,2}$/.test(val)) {
+                        onActualizarPrecio(linea.producto.id, parseFloat(val) || 0);
+                      }
+                    }}
+                  />
+                  <span className="text-sm font-semibold text-primary w-24 text-right">{formatCurrency(linea.subtotal)}</span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => onActualizarCantidad(linea.producto.id, 0)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
             </div>
-            <span className="text-xl font-bold text-primary">{formatCurrency(totales.total)}</span>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="flex items-center justify-between pt-3 mt-2 border-t">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <span>{totales.totalUnidades} uds</span>
+                <span>{totales.pesoTotalKg.toLocaleString()} kg</span>
+                {totales.ahorroDescuentos > 0 && (
+                  <span className="text-green-600">-{formatCurrency(totales.ahorroDescuentos)}</span>
+                )}
+              </div>
+              <span className="text-xl font-bold text-primary">{formatCurrency(totales.total)}</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Navigation */}
       <div className="flex gap-3 pt-1">
