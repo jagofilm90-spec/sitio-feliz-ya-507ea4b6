@@ -523,9 +523,11 @@ export function PasoProductosInline({
                       <td className="py-1.5 px-1 text-sm leading-tight">{getDisplayName(linea.producto)}</td>
                       <td className="py-1.5 px-1 text-right text-sm whitespace-nowrap">
                         {pesoTotal != null ? `${pesoTotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })} kg` : "—"}
+
                       </td>
                       <td className="py-1.5 px-1">
                         <div className="flex items-center justify-end gap-0.5">
+                          <span className="text-sm text-muted-foreground">$</span>
                           <Input
                             type="text"
                             inputMode="decimal"
