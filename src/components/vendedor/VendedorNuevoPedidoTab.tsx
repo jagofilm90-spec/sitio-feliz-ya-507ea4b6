@@ -153,9 +153,73 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     }
   };
 
-  const handleContinuarBorrador = (borradorId: string, clienteId: string) => {
-    setSelectedClienteId(clienteId);
-    toast.info("Cliente del borrador seleccionado. Agrega los productos.");
+  const [restoringDraftId, setRestoringDraftId] = useState<string | null>(null);
+
+  const handleContinuarBorrador = async (borradorId: string, clienteId: string) => {
+    try {
+      setRestoringDraftId(borradorId);
+
+      // 1. Load draft header
+      const { data: pedido, error: pedidoError } = await supabase
+        .from("pedidos")
+        .select("id, sucursal_id, notas, termino_credito, requiere_factura")
+        .eq("id", borradorId)
+        .single();
+
+      if (pedidoError) throw pedidoError;
+
+      // 2. Load draft line items with product data
+      const { data: detalles, error: detallesError } = await supabase
+        .from("pedidos_detalles")
+        .select(`
+          id, producto_id, cantidad, precio_unitario, subtotal, notas_ajuste,
+          productos!inner(id, codigo, nombre, especificaciones, marca, contenido_empaque, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo)
+        `)
+        .eq("pedido_id", borradorId);
+
+      if (detallesError) throw detallesError;
+
+      // 3. Set client (triggers sucursal/frecuentes fetch)
+      setSelectedClienteId(clienteId);
+      if (pedido.sucursal_id) {
+        setSelectedSucursalId(pedido.sucursal_id);
+      }
+      setNotas(pedido.notas || "");
+      setTerminoCredito(pedido.termino_credito || "contado");
+      setRequiereFactura(pedido.requiere_factura || false);
+
+      // 4. Build lineas from detalles
+      const restoredLineas: LineaPedido[] = (detalles || []).map((d: any) => {
+        const prod = d.productos as Producto;
+        const descuento = prod.precio_venta - d.precio_unitario;
+        return {
+          producto: prod,
+          cantidad: d.cantidad,
+          precioLista: prod.precio_venta,
+          precioUnitario: d.precio_unitario,
+          descuento: Math.max(0, descuento),
+          subtotal: d.subtotal,
+          requiereAutorizacion: descuento > (prod.descuento_maximo || 0),
+        };
+      });
+      setLineas(restoredLineas);
+
+      // 5. Delete the draft from DB (it's now "in memory")
+      await supabase.from("pedidos_detalles").delete().eq("pedido_id", borradorId);
+      await supabase.from("pedidos").delete().eq("id", borradorId);
+      setBorradoresDB(prev => prev.filter(b => b.id !== borradorId));
+
+      // 6. Navigate to step 2
+      setCompletedSteps([1]);
+      setStep(2);
+
+      toast.success("Borrador restaurado — continúa tu pedido");
+    } catch (err) {
+      console.error("Error restoring draft:", err);
+      toast.error("Error al restaurar borrador");
+    } finally {
+      setRestoringDraftId(null);
+    }
   };
 
   // ==================== Guardar Borrador en BD ====================
@@ -857,8 +921,8 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
                         </div>
                       </div>
                       <div className="flex gap-1.5 shrink-0">
-                        <Button size="sm" className="h-7 text-xs" onClick={() => handleContinuarBorrador(b.id, b.cliente_id)}>
-                          Continuar <ArrowRight className="h-3 w-3 ml-1" />
+                        <Button size="sm" className="h-7 text-xs" disabled={restoringDraftId === b.id} onClick={() => handleContinuarBorrador(b.id, b.cliente_id)}>
+                          {restoringDraftId === b.id ? "Cargando..." : "Continuar"} <ArrowRight className="h-3 w-3 ml-1" />
                         </Button>
                         <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => setDeleteId(b.id)}>
                           <Trash2 className="h-3 w-3" />
