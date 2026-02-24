@@ -263,7 +263,7 @@ export const PedidoPrintTemplate = ({ datos }: PedidoPrintTemplateProps) => {
         {datos.pedidoId && (
           <div className="flex flex-col items-center gap-0.5">
             <QRCodeSVG
-              value={`${typeof window !== 'undefined' ? window.location.origin : ''}/almacen-tablet/carga-scan/${datos.pedidoId}`}
+              value={`almasa:carga:${datos.pedidoId}`}
               size={56}
               level="M"
             />
