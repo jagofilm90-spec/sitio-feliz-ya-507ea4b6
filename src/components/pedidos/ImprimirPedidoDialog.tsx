@@ -63,9 +63,6 @@ export const ImprimirPedidoDialog = ({ open, onOpenChange, datos }: ImprimirPedi
     const printContent = printRef.current;
     if (!printContent) return;
 
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-
     const styles = Array.from(document.styleSheets)
       .map((ss) => {
         try {
@@ -76,16 +73,36 @@ export const ImprimirPedidoDialog = ({ open, onOpenChange, datos }: ImprimirPedi
       })
       .join("\n");
 
-    printWindow.document.write(`<!DOCTYPE html><html><head>
+    // Use hidden iframe instead of window.open to avoid popup blockers
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.top = "-10000px";
+    iframe.style.left = "-10000px";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!iframeDoc) {
+      document.body.removeChild(iframe);
+      toast.error("No se pudo abrir la ventana de impresión");
+      return;
+    }
+
+    iframeDoc.open();
+    iframeDoc.write(`<!DOCTYPE html><html><head>
       <title>Pedido ${datos?.folio}</title>
       <style>${styles}
         @media print { body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; margin: 0; } @page { size: letter; margin: 0.5in; } }
         body { font-family: Arial, Helvetica, sans-serif; background: white; }
       </style></head><body>${printContent.innerHTML}</body></html>`);
+    iframeDoc.close();
 
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => document.body.removeChild(iframe), 1000);
+    }, 250);
   };
 
   if (!datos) return null;
