@@ -66,6 +66,7 @@ interface PasoConfirmarProps {
   onSubmit: () => void;
   onBack: () => void;
   vendedorNombre: string;
+  printRef?: React.RefObject<HTMLDivElement>;
 }
 
 export function PasoConfirmar({
@@ -81,8 +82,10 @@ export function PasoConfirmar({
   onSubmit,
   onBack,
   vendedorNombre,
+  printRef: externalPrintRef,
 }: PasoConfirmarProps) {
-  const printRef = useRef<HTMLDivElement>(null);
+  const internalPrintRef = useRef<HTMLDivElement>(null);
+  const printRef = externalPrintRef || internalPrintRef;
   const [isDownloading, setIsDownloading] = useState(false);
 
   const tieneCSF = !!(cliente?.csf_archivo_url || cliente?.preferencia_facturacion === 'siempre_factura');

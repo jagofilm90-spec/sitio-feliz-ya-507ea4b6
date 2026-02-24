@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import { captureDeviceInfo, getPublicIP } from "@/lib/auditoria-pedidos";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { CheckCircle2, ExternalLink, FileEdit, Trash2, ArrowRight, Store, Clock } from "lucide-react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 // Wizard components
 import { StepIndicator } from "./pedido-wizard/StepIndicator";
@@ -62,6 +64,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
   const [notas, setNotas] = useState("");
   const [requiereFactura, setRequiereFactura] = useState(false);
   const [vendedorNombre, setVendedorNombre] = useState("Vendedor");
+  const confirmPrintRef = useRef<HTMLDivElement>(null);
 
   // Discount authorization dialog
   const [solicitudDialogOpen, setSolicitudDialogOpen] = useState(false);
@@ -818,6 +821,29 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       } catch (emailError) {
         console.error("Error sending email:", emailError);
       }
+      // Generate PDF for email attachments
+      let pdfBase64: string | null = null;
+      try {
+        if (confirmPrintRef.current) {
+          const canvas = await html2canvas(confirmPrintRef.current, {
+            scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff'
+          });
+          const imgData = canvas.toDataURL('image/png');
+          const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = pdf.internal.pageSize.getHeight();
+          const ratio = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
+          const imgX = (pdfWidth - canvas.width * ratio) / 2;
+          pdf.addImage(imgData, 'PNG', imgX, 5, canvas.width * ratio, canvas.height * ratio);
+          pdfBase64 = pdf.output('datauristring').split(',')[1];
+        }
+      } catch (pdfError) {
+        console.error("Error generating PDF for email:", pdfError);
+      }
+
+      const sucursalObj = sucursales.find(s => s.id === selectedSucursalId);
+      const direccionEntrega = sucursalObj?.direccion || selectedCliente?.zona?.nombre || "No especificada";
+
       // Solo enviar confirmación al cliente si NO requiere autorización
       const esPorAutorizar = lineas.some(l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente');
       if (!esPorAutorizar) {
@@ -826,7 +852,9 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
             body: {
               clienteId: selectedClienteId,
               tipo: 'pedido_confirmado',
-              data: { pedidoFolio: folio, total: totales.total }
+              data: { pedidoFolio: folio, total: totales.total },
+              pdfBase64: pdfBase64 || undefined,
+              pdfFilename: `Pedido_${folio}.pdf`,
             }
           });
         } catch (clientEmailError) {
@@ -834,19 +862,20 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
         }
       }
 
-      // Enviar email interno con detalle completo a pedidos@almasa.com.mx
+      // Enviar email interno simplificado a pedidos@almasa.com.mx con PDF adjunto
       try {
-        const { enviarEmailPedido } = await import('./pedido-wizard/PasoConfirmar');
-        await enviarEmailPedido({
-          folio,
-          clienteNombre,
-          sucursalNombre: sucursales.find(s => s.id === selectedSucursalId)?.nombre,
-          vendedorNombre,
-          terminoCredito,
-          notas,
-          lineas,
-          totales,
-          fechaPedido: new Date().toISOString(),
+        await supabase.functions.invoke("enviar-pedido-interno", {
+          body: {
+            folio,
+            clienteNombre,
+            vendedorNombre,
+            terminoCredito,
+            direccionEntrega,
+            total: totales.total,
+            pedidoId: pedido.id,
+            pdfBase64: pdfBase64 || undefined,
+            pdfFilename: `Pedido_${folio}.pdf`,
+          }
         });
       } catch (emailInternoError) {
         console.error("Error sending internal email:", emailInternoError);
@@ -1047,6 +1076,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
           onSubmit={handleSubmit}
           onBack={handlePrevStep}
           vendedorNombre={vendedorNombre}
+          printRef={confirmPrintRef}
         />
       )}
 
