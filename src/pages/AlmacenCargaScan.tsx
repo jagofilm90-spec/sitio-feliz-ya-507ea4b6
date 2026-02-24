@@ -352,12 +352,18 @@ export default function AlmacenCargaScan() {
   // ─── QR scan input (manual fallback) ───
   const [scanInput, setScanInput] = useState("");
   const handleScanSubmit = () => {
-    // Extract pedido ID from URL or raw ID
-    const match = scanInput.match(/carga-scan\/([a-f0-9-]+)/i);
-    const id = match ? match[1] : scanInput.trim();
+    const input = scanInput.trim();
+    // Parse internal QR format: almasa:carga:<uuid>
+    const almasaMatch = input.match(/^almasa:carga:([a-f0-9-]+)$/i);
+    // Fallback: also accept old URL format or raw UUID
+    const urlMatch = input.match(/carga-scan\/([a-f0-9-]+)/i);
+    const uuidMatch = input.match(/^[a-f0-9-]{36}$/i);
+    const id = almasaMatch?.[1] || urlMatch?.[1] || (uuidMatch ? input : null);
     if (id) {
       agregarPedidoACola(id);
       setScanInput("");
+    } else {
+      toast.error("Código QR no válido. Escanea un pedido de ALMASA.");
     }
   };
 
@@ -430,7 +436,7 @@ export default function AlmacenCargaScan() {
         {/* Scan input */}
         <div className="flex gap-2 mt-2">
           <Input
-            placeholder="Pegar URL del QR o ID del pedido..."
+            placeholder="Escanea código QR del pedido..."
             value={scanInput}
             onChange={(e) => setScanInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleScanSubmit()}
