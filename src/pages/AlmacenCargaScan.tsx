@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useParams, useNavigate } from "react-router-dom";
+import { CameraQrScanner } from "@/components/almacen/CameraQrScanner";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import {
   Trash2,
   Truck,
   User,
+  Camera,
 } from "lucide-react";
 import { CargaProductosChecklist } from "@/components/almacen/CargaProductosChecklist";
 import html2canvas from "html2canvas";
@@ -523,18 +525,28 @@ export default function AlmacenCargaScan() {
 
   // ─── QR scan input (manual fallback) ───
   const [scanInput, setScanInput] = useState("");
+  const [cameraActive, setCameraActive] = useState(false);
   const handleScanSubmit = () => {
     const input = scanInput.trim();
+    processScanInput(input);
+    setScanInput("");
+  };
+
+  const processScanInput = (input: string) => {
     const almasaMatch = input.match(/^almasa:carga:([a-f0-9-]+)$/i);
     const urlMatch = input.match(/carga-scan\/([a-f0-9-]+)/i);
     const uuidMatch = input.match(/^[a-f0-9-]{36}$/i);
     const id = almasaMatch?.[1] || urlMatch?.[1] || (uuidMatch ? input : null);
     if (id) {
       agregarPedidoACola(id);
-      setScanInput("");
+      setCameraActive(false);
     } else {
       toast.error("Código QR no válido. Escanea un pedido de ALMASA.");
     }
+  };
+
+  const handleCameraScan = (decodedText: string) => {
+    processScanInput(decodedText);
   };
 
   const pedidoActual = cola[indiceCola];
@@ -693,10 +705,27 @@ export default function AlmacenCargaScan() {
           </div>
         </div>
 
-        {/* Scan input */}
+        {/* Camera QR Scanner */}
+        <div className="mt-2">
+          <CameraQrScanner
+            active={cameraActive}
+            onScan={handleCameraScan}
+            onClose={() => setCameraActive(false)}
+          />
+        </div>
+
+        {/* Scan input + camera toggle */}
         <div className="flex gap-2 mt-2">
+          <Button
+            variant={cameraActive ? "destructive" : "secondary"}
+            size="lg"
+            className="h-12 px-3 shrink-0"
+            onClick={() => setCameraActive(!cameraActive)}
+          >
+            <Camera className="h-5 w-5" />
+          </Button>
           <Input
-            placeholder="Escanea código QR del pedido..."
+            placeholder="O pega el código QR aquí..."
             value={scanInput}
             onChange={(e) => setScanInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleScanSubmit()}
