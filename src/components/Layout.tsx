@@ -117,7 +117,7 @@ const Layout = ({ children }: LayoutProps) => {
     return roles.length === 1 && roles.includes("chofer");
   }, [roles]);
 
-  const allowedPagesForAlmacen = ["/almacen-tablet", "/chat"];
+  const allowedPagesForAlmacen = ["/almacen-tablet", "/almacen-tablet/carga-scan", "/chat"];
   const allowedPagesForSecretaria = ["/secretaria", "/chat"];
   const allowedPagesForVendedor = ["/vendedor", "/chat", "/precios"];
   const allowedPagesForChofer = ["/chofer", "/chat"];
@@ -204,11 +204,11 @@ const Layout = ({ children }: LayoutProps) => {
   }, [checkAccess]);
 
   // Redirección automática por rol (después de todos los hooks)
-  if (!rolesLoading && isOnlyAlmacen && !allowedPagesForAlmacen.includes(location.pathname)) {
+  if (!rolesLoading && isOnlyAlmacen && !allowedPagesForAlmacen.some(p => location.pathname.startsWith(p))) {
     return <Navigate to="/almacen-tablet" replace />;
   }
 
-  if (!rolesLoading && isOnlyGerenteAlmacen && !allowedPagesForAlmacen.includes(location.pathname) && location.pathname !== "/configuracion") {
+  if (!rolesLoading && isOnlyGerenteAlmacen && !allowedPagesForAlmacen.some(p => location.pathname.startsWith(p)) && location.pathname !== "/configuracion") {
     return <Navigate to="/almacen-tablet" replace />;
   }
 

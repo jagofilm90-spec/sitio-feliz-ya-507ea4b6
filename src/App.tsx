@@ -32,6 +32,7 @@ import DisenosCamioneta from "./pages/DisenosCamioneta";
 import Permisos from "./pages/Permisos";
 import Respaldos from "./pages/Respaldos";
 import AlmacenTablet from "./pages/AlmacenTablet";
+import AlmacenCargaScan from "./pages/AlmacenCargaScan";
 import ChoferPanel from "./pages/ChoferPanel";
 import VendedorPanel from "./pages/VendedorPanel";
 import VendedorAnalisisVentas from "./pages/VendedorAnalisisVentas";
@@ -147,6 +148,7 @@ const App = () => (
               <Route path="/permisos" element={<Permisos />} />
               <Route path="/respaldos" element={<Respaldos />} />
               <Route path="/almacen-tablet" element={<AlmacenTablet />} />
+              <Route path="/almacen-tablet/carga-scan/:pedidoId?" element={<AlmacenCargaScan />} />
               <Route path="/chofer" element={<ChoferPanel />} />
               <Route path="/vendedor" element={<VendedorPanel />} />
               <Route path="/vendedor/analisis" element={<VendedorAnalisisVentas />} />
