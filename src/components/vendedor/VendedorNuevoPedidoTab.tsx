@@ -160,7 +160,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     try {
       setRestoringDraftId(borradorId);
 
-      // 1. Load draft header
+      // 1) Cargar encabezado del borrador
       const { data: pedido, error: pedidoError } = await supabase
         .from("pedidos")
         .select("id, sucursal_id, notas, termino_credito, requiere_factura")
@@ -169,18 +169,36 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
 
       if (pedidoError) throw pedidoError;
 
-      // 2. Load draft line items with product data
+      // 2) Cargar líneas sin join para evitar perder filas por filtros de relación
       const { data: detalles, error: detallesError } = await supabase
         .from("pedidos_detalles")
-        .select(`
-          id, producto_id, cantidad, precio_unitario, subtotal, notas_ajuste,
-          productos!inner(id, codigo, nombre, especificaciones, marca, contenido_empaque, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo)
-        `)
+        .select("id, producto_id, cantidad, precio_unitario, subtotal, notas_ajuste")
         .eq("pedido_id", borradorId);
 
       if (detallesError) throw detallesError;
 
-      // 3. Set client (triggers sucursal/frecuentes fetch)
+      if (!detalles || detalles.length === 0) {
+        toast.warning("Este borrador no tiene productos para continuar");
+        return;
+      }
+
+      // 3) Hidratar productos de esas líneas (incluye fallback al catálogo ya cargado)
+      const productoIds = Array.from(new Set(detalles.map((d: any) => d.producto_id)));
+
+      const { data: productosDB, error: productosError } = await supabase
+        .from("productos")
+        .select("id, codigo, nombre, especificaciones, marca, contenido_empaque, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
+        .in("id", productoIds);
+
+      if (productosError) throw productosError;
+
+      const productosMap = new Map<string, Producto>();
+      (productosDB || []).forEach((p: any) => productosMap.set(p.id, p as Producto));
+      productos.forEach((p) => {
+        if (!productosMap.has(p.id)) productosMap.set(p.id, p);
+      });
+
+      // 4) Restaurar contexto del pedido
       setSelectedClienteId(clienteId);
       if (pedido.sucursal_id) {
         setSelectedSucursalId(pedido.sucursal_id);
@@ -189,32 +207,50 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       setTerminoCredito(pedido.termino_credito || "contado");
       setRequiereFactura(pedido.requiere_factura || false);
 
-      // 4. Build lineas from detalles
-      const restoredLineas: LineaPedido[] = (detalles || []).map((d: any) => {
-        const prod = d.productos as Producto;
-        const descuento = prod.precio_venta - d.precio_unitario;
-        return {
-          producto: prod,
-          cantidad: d.cantidad,
-          precioLista: prod.precio_venta,
-          precioUnitario: d.precio_unitario,
-          descuento: Math.max(0, descuento),
-          subtotal: d.subtotal,
-          requiereAutorizacion: descuento > (prod.descuento_maximo || 0),
-        };
-      });
+      // 5) Construir líneas restauradas
+      const restoredLineas: LineaPedido[] = (detalles || [])
+        .map((d: any) => {
+          const prod = productosMap.get(d.producto_id);
+          if (!prod) return null;
+
+          const precioLista = prod.precio_venta;
+          const descuentoUnitario = Math.max(0, precioLista - d.precio_unitario);
+          const requiereAutorizacion = descuentoUnitario > (prod.descuento_maximo || 0);
+
+          let autorizacionStatus: LineaPedido["autorizacionStatus"] = null;
+          if (d.notas_ajuste?.includes("[PENDIENTE REVISIÓN]")) autorizacionStatus = "pendiente";
+          if (d.notas_ajuste?.includes("[APROBADO]")) autorizacionStatus = "aprobado";
+
+          return {
+            producto: prod,
+            cantidad: d.cantidad,
+            precioLista,
+            precioUnitario: d.precio_unitario,
+            descuento: descuentoUnitario,
+            subtotal: d.subtotal,
+            requiereAutorizacion,
+            autorizacionStatus,
+          } as LineaPedido;
+        })
+        .filter((l): l is LineaPedido => l !== null);
+
+      if (restoredLineas.length === 0) {
+        toast.error("No se pudieron cargar los productos del borrador");
+        return;
+      }
+
       setLineas(restoredLineas);
 
-      // 5. Delete the draft from DB (it's now "in memory")
+      // 6) Convertir borrador a pedido en memoria y evitar duplicados
       await supabase.from("pedidos_detalles").delete().eq("pedido_id", borradorId);
       await supabase.from("pedidos").delete().eq("id", borradorId);
       setBorradoresDB(prev => prev.filter(b => b.id !== borradorId));
 
-      // 6. Navigate to step 2
+      // 7) Navegar al paso de productos
       setCompletedSteps([1]);
       setStep(2);
 
-      toast.success("Borrador restaurado — continúa tu pedido");
+      toast.success(`Borrador restaurado (${restoredLineas.length} producto${restoredLineas.length !== 1 ? "s" : ""})`);
     } catch (err) {
       console.error("Error restoring draft:", err);
       toast.error("Error al restaurar borrador");
