@@ -18,7 +18,7 @@ interface PasoProductosProps {
   productosFrecuentes: Producto[];
   lineas: LineaPedido[];
   loadingFrecuentes: boolean;
-  onAgregarProducto: (producto: Producto) => void;
+  onAgregarProducto: (producto: Producto, cantidadInicial?: number) => void;
   onActualizarCantidad: (productoId: string, cantidad: number) => void;
   onActualizarDescuento: (productoId: string, descuento: number) => void;
   onSolicitarAutorizacion: (linea: LineaPedido) => void;
@@ -244,8 +244,7 @@ export function PasoProductos({
                                 if (/^\d+$/.test(val)) {
                                   const num = parseInt(val, 10);
                                   if (cantidadEnCarrito === 0 && num > 0) {
-                                    onAgregarProducto(producto);
-                                    if (num > 1) onActualizarCantidad(producto.id, num);
+                                    onAgregarProducto(producto, num);
                                   } else {
                                     onActualizarCantidad(producto.id, num);
                                   }
