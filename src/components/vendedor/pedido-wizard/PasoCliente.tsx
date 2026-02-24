@@ -162,25 +162,51 @@ export function PasoCliente({
                 <MapPin className="h-4 w-4" />
                 Sucursal de entrega
               </Label>
-              <Select value={selectedSucursalId} onValueChange={onSucursalChange}>
-                <SelectTrigger className="h-14 text-lg">
-                  <SelectValue placeholder="Seleccionar sucursal..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {sucursales.map((sucursal) => (
-                    <SelectItem key={sucursal.id} value={sucursal.id} className="text-base py-3">
-                      <div>
-                        <span className="font-medium">{sucursal.nombre}</span>
-                        {sucursal.direccion && (
-                          <span className="text-muted-foreground text-sm block">
-                            {sucursal.direccion}
-                          </span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {sucursales.length === 1 ? (
+                // Auto-select and show prominently when only one branch
+                <div className="p-4 rounded-lg border-2 border-primary/30 bg-primary/5">
+                  <p className="font-semibold text-lg">{sucursales[0].nombre}</p>
+                  {sucursales[0].direccion && (
+                    <p className="text-sm text-muted-foreground mt-1 flex items-start gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                      {sucursales[0].direccion}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <Select value={selectedSucursalId} onValueChange={onSucursalChange}>
+                  <SelectTrigger className="h-auto min-h-[3.5rem] text-base py-3">
+                    <SelectValue placeholder="Seleccionar sucursal...">
+                      {selectedSucursalId && (() => {
+                        const sel = sucursales.find(s => s.id === selectedSucursalId);
+                        if (!sel) return null;
+                        return (
+                          <div className="text-left">
+                            <span className="font-medium">{sel.nombre}</span>
+                            {sel.direccion && (
+                              <span className="text-muted-foreground text-sm block">{sel.direccion}</span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sucursales.map((sucursal) => (
+                      <SelectItem key={sucursal.id} value={sucursal.id} className="text-base py-3">
+                        <div>
+                          <span className="font-medium">{sucursal.nombre}</span>
+                          {sucursal.direccion && (
+                            <span className="text-muted-foreground text-sm block">
+                              {sucursal.direccion}
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           )}
         </CardContent>
