@@ -598,9 +598,6 @@ export function PasoProductosInline({
                 {totales.productosConIeps > 0 && (
                   <span className="text-xs">{totales.productosConIeps} producto{totales.productosConIeps > 1 ? 's' : ''} con IEPS (8%)</span>
                 )}
-                {totales.ahorroDescuentos > 0 && (
-                  <span className="text-xs text-green-600">Ahorro por descuentos: -{formatCurrency(totales.ahorroDescuentos)}</span>
-                )}
               </div>
               <table className="text-sm w-56">
                 <tbody>
