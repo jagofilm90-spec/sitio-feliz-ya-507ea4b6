@@ -1,8 +1,8 @@
-import { Check, Store, Package, CreditCard, FileCheck } from "lucide-react";
+import { Check, Store, Package, FileCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Step {
-  number: 1 | 2 | 3 | 4;
+  number: 1 | 2 | 3;
   title: string;
   icon: React.ReactNode;
 }
@@ -10,14 +10,13 @@ interface Step {
 const steps: Step[] = [
   { number: 1, title: "Cliente", icon: <Store className="h-4 w-4" /> },
   { number: 2, title: "Productos", icon: <Package className="h-4 w-4" /> },
-  { number: 3, title: "Pago", icon: <CreditCard className="h-4 w-4" /> },
-  { number: 4, title: "Confirmar", icon: <FileCheck className="h-4 w-4" /> },
+  { number: 3, title: "Confirmar", icon: <FileCheck className="h-4 w-4" /> },
 ];
 
 interface StepIndicatorProps {
-  currentStep: 1 | 2 | 3 | 4;
+  currentStep: 1 | 2 | 3;
   completedSteps: number[];
-  onStepClick?: (step: 1 | 2 | 3 | 4) => void;
+  onStepClick?: (step: 1 | 2 | 3) => void;
 }
 
 export function StepIndicator({ currentStep, completedSteps, onStepClick }: StepIndicatorProps) {
