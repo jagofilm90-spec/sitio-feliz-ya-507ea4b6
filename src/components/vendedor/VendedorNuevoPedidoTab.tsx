@@ -20,10 +20,8 @@ import { PasoCliente } from "./pedido-wizard/PasoCliente";
 import { PasoProductosInline } from "./pedido-wizard/PasoProductosInline";
 import { PasoConfirmar } from "./pedido-wizard/PasoConfirmar";
 import { SolicitudDescuentoDialog } from "./SolicitudDescuentoDialog";
-import type { Cliente, Sucursal, Producto, LineaPedido, CartDraft, TotalesCalculados } from "./pedido-wizard/types";
+import type { Cliente, Sucursal, Producto, LineaPedido, TotalesCalculados } from "./pedido-wizard/types";
 
-// Storage key for persistent cart
-const CART_STORAGE_KEY = 'vendedor_cart_draft';
 
 interface Props {
   onPedidoCreado: () => void;
@@ -76,9 +74,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     cantidad: number;
   } | null>(null);
   
-  // Draft restoration flag
-  const [hasDraft, setHasDraft] = useState(false);
-  const [isRestoringDraft, setIsRestoringDraft] = useState(false);
   
   // Success confirmation dialog
   const [pedidoCreado, setPedidoCreado] = useState<PedidoCreadoInfo | null>(null);
@@ -100,48 +95,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
   const [loadingBorradores, setLoadingBorradores] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  // ==================== Cart Persistence Functions ====================
-  
-  const saveCartDraft = useCallback(() => {
-    if (isRestoringDraft || (lineas.length === 0 && !selectedClienteId)) {
-      return;
-    }
-    
-    const draft: CartDraft = {
-      clienteId: selectedClienteId,
-      sucursalId: selectedSucursalId,
-      lineas: lineas.map(l => ({
-        productoId: l.producto.id,
-        cantidad: l.cantidad,
-        precioLista: l.precioLista,
-        precioUnitario: l.precioUnitario,
-        descuento: l.descuento,
-        requiereAutorizacion: l.requiereAutorizacion,
-        autorizacionStatus: l.autorizacionStatus,
-      })),
-      terminoCredito,
-      notas,
-      savedAt: new Date().toISOString(),
-    };
-    
-    sessionStorage.setItem(CART_STORAGE_KEY, JSON.stringify(draft));
-    setHasDraft(lineas.length > 0 || !!selectedClienteId);
-  }, [lineas, selectedClienteId, selectedSucursalId, terminoCredito, notas, isRestoringDraft]);
-
-  const loadCartDraft = useCallback((): CartDraft | null => {
-    try {
-      const saved = sessionStorage.getItem(CART_STORAGE_KEY);
-      if (!saved) return null;
-      return JSON.parse(saved) as CartDraft;
-    } catch {
-      return null;
-    }
-  }, []);
-
-  const clearCartDraft = useCallback(() => {
-    sessionStorage.removeItem(CART_STORAGE_KEY);
-    setHasDraft(false);
-  }, []);
 
   // ==================== Borradores ====================
 
@@ -201,10 +154,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
   };
 
   const handleContinuarBorrador = (borradorId: string, clienteId: string) => {
-    // Set the client and go to step 1 with client pre-selected
     setSelectedClienteId(clienteId);
-    clearCartDraft();
-    // TODO: restore products from DB borrador in a future iteration
     toast.info("Cliente del borrador seleccionado. Agrega los productos.");
   };
 
@@ -219,17 +169,15 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     if (selectedClienteId) {
       fetchSucursales(selectedClienteId);
       fetchProductosFrecuentes(selectedClienteId);
-      if (!isRestoringDraft) {
-        const cliente = clientes.find(c => c.id === selectedClienteId);
-        setTerminoCredito(cliente?.termino_credito || "contado");
-      }
+      const cliente = clientes.find(c => c.id === selectedClienteId);
+      setTerminoCredito(cliente?.termino_credito || "contado");
     } else {
       setSucursales([]);
       setSelectedSucursalId("");
       setTerminoCredito("");
       setProductosFrecuentes([]);
     }
-  }, [selectedClienteId, clientes, isRestoringDraft]);
+  }, [selectedClienteId, clientes]);
 
   // Auto-select pre-selected client
   useEffect(() => {
@@ -237,93 +185,17 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       const exists = clientes.find(c => c.id === preSelectedClienteId);
       if (exists) {
         setSelectedClienteId(preSelectedClienteId);
-        clearCartDraft();
       }
     }
   }, [preSelectedClienteId, clientes]);
 
-  // Auto-save cart on changes & notify parent
+  // Notify parent about active order
   useEffect(() => {
     if (!loading) {
-      saveCartDraft();
       const hasOrder = lineas.length > 0 || !!selectedClienteId;
       onHasActiveOrder?.(hasOrder);
     }
-  }, [saveCartDraft, loading, lineas.length, selectedClienteId]);
-
-  // Restore cart on component mount
-  useEffect(() => {
-    if (loading || productos.length === 0) return;
-    
-    const draft = loadCartDraft();
-    if (!draft || (draft.lineas.length === 0 && !draft.clienteId)) return;
-    
-    const savedTime = new Date(draft.savedAt).getTime();
-    const now = Date.now();
-    const fourHoursMs = 4 * 60 * 60 * 1000;
-    
-    if (now - savedTime > fourHoursMs) {
-      clearCartDraft();
-      return;
-    }
-    
-    const restoredLineas: LineaPedido[] = [];
-    draft.lineas.forEach(saved => {
-      const producto = productos.find(p => p.id === saved.productoId);
-      if (producto) {
-        restoredLineas.push({
-          producto,
-          cantidad: saved.cantidad,
-          precioLista: saved.precioLista,
-          precioUnitario: saved.precioUnitario,
-          descuento: saved.descuento,
-          subtotal: producto.precio_por_kilo && producto.peso_kg
-            ? redondear(saved.precioUnitario * saved.cantidad * producto.peso_kg)
-            : redondear(saved.precioUnitario * saved.cantidad),
-          requiereAutorizacion: saved.requiereAutorizacion,
-          autorizacionStatus: saved.autorizacionStatus,
-        });
-      }
-    });
-    
-    if (restoredLineas.length > 0 || draft.clienteId) {
-      setIsRestoringDraft(true);
-      
-      toast.info("Borrador de pedido recuperado", {
-        description: `${restoredLineas.length} producto(s) - guardado ${formatDistanceToNow(new Date(draft.savedAt), { locale: es, addSuffix: true })}`,
-        action: {
-          label: "Descartar",
-          onClick: () => {
-            clearCartDraft();
-            setLineas([]);
-            setSelectedClienteId("");
-            setSelectedSucursalId("");
-            setTerminoCredito("contado");
-            setNotas("");
-            setHasDraft(false);
-            setStep(1);
-            setCompletedSteps([]);
-          }
-        },
-        duration: 8000,
-      });
-      
-      setSelectedClienteId(draft.clienteId);
-      setSelectedSucursalId(draft.sucursalId);
-      setLineas(restoredLineas);
-      setTerminoCredito(draft.terminoCredito);
-      setNotas(draft.notas);
-      setHasDraft(true);
-      
-      // If draft has client, start at step 2
-      if (draft.clienteId && restoredLineas.length > 0) {
-        setStep(2);
-        setCompletedSteps([1]);
-      }
-      
-      setTimeout(() => setIsRestoringDraft(false), 500);
-    }
-  }, [loading, productos]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loading, lineas.length, selectedClienteId]);
 
   // ==================== Data Fetching ====================
 
@@ -783,15 +655,14 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
             termino_credito: terminoCredito,
             status_inicial: pedido.status,
             device: JSON.parse(JSON.stringify(deviceInfo)),
-            session_draft_restored: hasDraft
+            session_draft_restored: false
           }
         }]);
       } catch (auditError) {
         console.error("Error creating audit log:", auditError);
       }
 
-      // Clear draft and reset
-      clearCartDraft();
+      // Reset form
       setSelectedClienteId("");
       setSelectedSucursalId("");
       setLineas([]);
@@ -855,13 +726,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
 
   return (
     <div className={cn("mx-auto space-y-4", step === 2 ? "px-2" : "max-w-4xl p-4")}>
-      {/* Draft indicator */}
-      {hasDraft && (
-        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg py-2">
-          <FileEdit className="h-4 w-4" />
-          <span>Borrador guardado automáticamente</span>
-        </div>
-      )}
 
       {/* Step Indicator */}
       <StepIndicator
