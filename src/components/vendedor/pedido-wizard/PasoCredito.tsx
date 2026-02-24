@@ -153,8 +153,9 @@ export function PasoCredito({
           onClick={onNext} 
           size="lg"
           className="flex-1 h-12 font-semibold"
+          disabled={!terminoCredito}
         >
-          Revisar pedido
+          {!terminoCredito ? "Selecciona un plazo" : "Revisar pedido"}
           <ChevronRight className="h-4 w-4 ml-2" />
         </Button>
       </div>

@@ -1,4 +1,4 @@
-import { Store, ChevronRight, CreditCard, MapPin, Loader2 } from "lucide-react";
+import { Store, ChevronRight, Users, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -128,12 +128,7 @@ export function PasoCliente({
                       </SelectLabel>
                       {clientesPorRegion[regionKey].map((cliente) => (
                         <SelectItem key={cliente.id} value={cliente.id} className="text-base py-3">
-                          <div className="flex items-center justify-between w-full gap-4">
-                            <span>{cliente.nombre}</span>
-                            <Badge variant="outline" className="text-xs">
-                              {formatCreditTerm(cliente.termino_credito)}
-                            </Badge>
-                          </div>
+                          <span>{cliente.nombre}</span>
                         </SelectItem>
                       ))}
                     </SelectGroup>
@@ -146,12 +141,9 @@ export function PasoCliente({
           {/* Selected Client Info */}
           {selectedCliente && (
             <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
-              <CreditCard className="h-5 w-5 text-primary shrink-0" />
+              <Users className="h-5 w-5 text-primary shrink-0" />
               <div className="flex-1">
                 <p className="font-medium">{selectedCliente.nombre}</p>
-                <p className="text-sm text-muted-foreground">
-                  Plazo de crédito: <span className="font-medium text-foreground">{formatCreditTerm(selectedCliente.termino_credito)}</span>
-                </p>
               </div>
             </div>
           )}
