@@ -1,0 +1,1 @@
+UPDATE profiles SET email = 'alejandra@almasa.com.mx' WHERE id = '6cacb2e8-5acf-4f19-9d36-51818bab7813' AND email = 'alejandra@almasa.commx'
