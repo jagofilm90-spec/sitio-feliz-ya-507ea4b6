@@ -142,13 +142,24 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
   const handleDeleteBorrador = async () => {
     if (!deleteId) return;
     try {
-      await supabase.from("pedidos_detalles").delete().eq("pedido_id", deleteId);
-      await supabase.from("pedidos").delete().eq("id", deleteId);
+      const { error: detallesError } = await supabase
+        .from("pedidos_detalles")
+        .delete()
+        .eq("pedido_id", deleteId);
+      if (detallesError) throw detallesError;
+
+      const { error: pedidoError } = await supabase
+        .from("pedidos")
+        .delete()
+        .eq("id", deleteId)
+        .eq("status", "borrador");
+      if (pedidoError) throw pedidoError;
+
       setBorradoresDB(prev => prev.filter(b => b.id !== deleteId));
       toast.success("Borrador eliminado");
     } catch (err) {
       console.error(err);
-      toast.error("Error al eliminar borrador");
+      toast.error("No se pudo eliminar el borrador");
     } finally {
       setDeleteId(null);
     }
