@@ -41,12 +41,13 @@ export interface DatosPedidoPrint {
 
 interface PedidoPrintTemplateProps {
   datos: DatosPedidoPrint;
+  hideQR?: boolean;
 }
 
 const fmtMoney = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`;
 const fmtKg = (n: number) => `${n.toLocaleString("es-MX", { maximumFractionDigits: 2 })} kg`;
 
-export const PedidoPrintTemplate = ({ datos }: PedidoPrintTemplateProps) => {
+export const PedidoPrintTemplate = ({ datos, hideQR = false }: PedidoPrintTemplateProps) => {
   const fechaFormateada = format(new Date(datos.fecha), "dd 'de' MMMM 'de' yyyy", { locale: es });
   const direccionEntrega = datos.sucursal?.direccion || datos.direccionEntrega || datos.cliente.direccionFiscal || "";
 
@@ -260,7 +261,7 @@ export const PedidoPrintTemplate = ({ datos }: PedidoPrintTemplateProps) => {
           <p>{COMPANY_DATA.direccionCompletaMayusculas}</p>
           <p>Tel: {COMPANY_DATA.telefonosFormateados} | {COMPANY_DATA.emails.ventas}</p>
         </div>
-        {datos.pedidoId && (
+        {datos.pedidoId && !hideQR && (
           <div className="flex flex-col items-center gap-0.5">
             <QRCodeSVG
               value={`almasa:carga:${datos.pedidoId}`}

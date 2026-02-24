@@ -826,6 +826,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       }
       // Generate high-quality PDF with real folio/pedidoId for email attachments
       let pdfBase64: string | null = null;
+      let clientPdfBase64: string | null = null;
       try {
         // Build print data with real folio and pedidoId (for QR)
         const datosPrintFinal: DatosPedidoPrint = {
@@ -862,36 +863,46 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
           notas: notas || undefined,
         };
 
-        // Create off-screen container at full size for high-quality capture
-        const tempContainer = document.createElement('div');
-        tempContainer.style.position = 'absolute';
-        tempContainer.style.left = '-9999px';
-        tempContainer.style.top = '0';
-        tempContainer.style.width = '8.5in';
-        tempContainer.style.backgroundColor = '#ffffff';
-        document.body.appendChild(tempContainer);
+        // Helper to generate PDF from template
+        const generatePdfFromTemplate = async (hideQR: boolean): Promise<string> => {
+          const tempContainer = document.createElement('div');
+          tempContainer.style.position = 'absolute';
+          tempContainer.style.left = '-9999px';
+          tempContainer.style.top = '0';
+          tempContainer.style.width = '8.5in';
+          tempContainer.style.backgroundColor = '#ffffff';
+          document.body.appendChild(tempContainer);
 
-        const root = createRoot(tempContainer);
-        root.render(<PedidoPrintTemplate datos={datosPrintFinal} />);
+          const root = createRoot(tempContainer);
+          root.render(<PedidoPrintTemplate datos={datosPrintFinal} hideQR={hideQR} />);
 
-        // Wait for render + QR code SVG to appear
-        await new Promise(resolve => setTimeout(resolve, 500));
+          // Wait for render + QR code SVG to appear
+          await new Promise(resolve => setTimeout(resolve, 500));
 
-        const canvas = await html2canvas(tempContainer, {
-          scale: 3, useCORS: true, logging: false, backgroundColor: '#ffffff'
-        });
+          const canvas = await html2canvas(tempContainer, {
+            scale: 3, useCORS: true, logging: false, backgroundColor: '#ffffff'
+          });
 
-        root.unmount();
-        document.body.removeChild(tempContainer);
+          root.unmount();
+          document.body.removeChild(tempContainer);
 
-        const imgData = canvas.toDataURL('image/jpeg', 0.92);
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const ratio = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
-        const imgX = (pdfWidth - canvas.width * ratio) / 2;
-        pdf.addImage(imgData, 'JPEG', imgX, 5, canvas.width * ratio, canvas.height * ratio);
-        pdfBase64 = pdf.output('datauristring').split(',')[1];
+          const imgData = canvas.toDataURL('image/png');
+          const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = pdf.internal.pageSize.getHeight();
+          const ratio = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
+          const imgX = (pdfWidth - canvas.width * ratio) / 2;
+          pdf.addImage(imgData, 'PNG', imgX, 5, canvas.width * ratio, canvas.height * ratio);
+          return pdf.output('datauristring').split(',')[1];
+        };
+
+        // Generate internal PDF (with QR) and client PDF (without QR)
+        const [internoPdf, clientePdf] = await Promise.all([
+          generatePdfFromTemplate(false),
+          generatePdfFromTemplate(true),
+        ]);
+        pdfBase64 = internoPdf;
+        clientPdfBase64 = clientePdf;
       } catch (pdfError) {
         console.error("Error generating PDF for email:", pdfError);
       }
@@ -908,7 +919,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
               clienteId: selectedClienteId,
               tipo: 'pedido_confirmado',
               data: { pedidoFolio: folio, total: totales.total },
-              pdfBase64: pdfBase64 || undefined,
+              pdfBase64: clientPdfBase64 || undefined,
               pdfFilename: `Pedido_${folio}.pdf`,
             }
           });
