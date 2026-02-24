@@ -1,15 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { formatCurrency, cn } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { calcularDesgloseImpuestos, redondear, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
 import { captureDeviceInfo, getPublicIP } from "@/lib/auditoria-pedidos";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { CheckCircle2, ExternalLink, FileEdit } from "lucide-react";
+import { CheckCircle2, ExternalLink, FileEdit, Trash2, ArrowRight, Store, Clock } from "lucide-react";
 
 // Wizard components
 import { StepIndicator } from "./pedido-wizard/StepIndicator";
@@ -26,7 +29,6 @@ interface Props {
   onPedidoCreado: () => void;
   onNavigateToVentas?: () => void;
   preSelectedClienteId?: string;
-  draftPedidoId?: string;
   onHasActiveOrder?: (hasOrder: boolean) => void;
   onSaveDraft?: () => void;
 }
@@ -37,7 +39,7 @@ interface PedidoCreadoInfo {
   cliente: string;
 }
 
-export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, preSelectedClienteId, draftPedidoId, onHasActiveOrder, onSaveDraft }: Props) {
+export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, preSelectedClienteId, onHasActiveOrder, onSaveDraft }: Props) {
   // Data state
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
@@ -80,6 +82,23 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
   
   // Success confirmation dialog
   const [pedidoCreado, setPedidoCreado] = useState<PedidoCreadoInfo | null>(null);
+
+  // Borradores (drafts from DB)
+  interface BorradorDB {
+    id: string;
+    folio: string;
+    cliente_id: string;
+    cliente_nombre: string;
+    sucursal_nombre?: string;
+    total: number;
+    notas: string | null;
+    created_at: string;
+    updated_at: string;
+    num_productos: number;
+  }
+  const [borradoresDB, setBorradoresDB] = useState<BorradorDB[]>([]);
+  const [loadingBorradores, setLoadingBorradores] = useState(true);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // ==================== Cart Persistence Functions ====================
   
@@ -124,10 +143,76 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     setHasDraft(false);
   }, []);
 
+  // ==================== Borradores ====================
+
+  const fetchBorradoresDB = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("pedidos")
+        .select(`
+          id, folio, cliente_id, total, notas, created_at, updated_at,
+          clientes!inner(nombre),
+          cliente_sucursales(nombre),
+          pedidos_detalles(id)
+        `)
+        .eq("vendedor_id", user.id)
+        .eq("status", "borrador")
+        .order("updated_at", { ascending: false });
+
+      if (error) throw error;
+
+      setBorradoresDB(
+        (data || []).map((p: any) => ({
+          id: p.id,
+          folio: p.folio,
+          cliente_id: p.cliente_id,
+          cliente_nombre: p.clientes?.nombre || "—",
+          sucursal_nombre: p.cliente_sucursales?.nombre,
+          total: p.total || 0,
+          notas: p.notas,
+          created_at: p.created_at,
+          updated_at: p.updated_at,
+          num_productos: p.pedidos_detalles?.length || 0,
+        }))
+      );
+    } catch (err) {
+      console.error("Error fetching borradores:", err);
+    } finally {
+      setLoadingBorradores(false);
+    }
+  }, []);
+
+  const handleDeleteBorrador = async () => {
+    if (!deleteId) return;
+    try {
+      await supabase.from("pedidos_detalles").delete().eq("pedido_id", deleteId);
+      await supabase.from("pedidos").delete().eq("id", deleteId);
+      setBorradoresDB(prev => prev.filter(b => b.id !== deleteId));
+      toast.success("Borrador eliminado");
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al eliminar borrador");
+    } finally {
+      setDeleteId(null);
+    }
+  };
+
+  const handleContinuarBorrador = (borradorId: string, clienteId: string) => {
+    // Set the client and go to step 1 with client pre-selected
+    setSelectedClienteId(clienteId);
+    clearCartDraft();
+    // TODO: restore products from DB borrador in a future iteration
+    toast.info("Cliente del borrador seleccionado. Agrega los productos.");
+  };
+
   // ==================== Effects ====================
 
   useEffect(() => {
     fetchData();
+    fetchBorradoresDB();
   }, []);
 
   useEffect(() => {
@@ -787,16 +872,61 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
 
       {/* Step Content */}
       {step === 1 && (
-        <PasoCliente
-          clientes={clientes}
-          sucursales={sucursales}
-          selectedClienteId={selectedClienteId}
-          selectedSucursalId={selectedSucursalId}
-          loading={loadingSucursales}
-          onClienteChange={setSelectedClienteId}
-          onSucursalChange={setSelectedSucursalId}
-          onNext={handleNextStep}
-        />
+        <>
+          <PasoCliente
+            clientes={clientes}
+            sucursales={sucursales}
+            selectedClienteId={selectedClienteId}
+            selectedSucursalId={selectedSucursalId}
+            loading={loadingSucursales}
+            onClienteChange={setSelectedClienteId}
+            onSucursalChange={setSelectedSucursalId}
+            onNext={handleNextStep}
+          />
+
+          {/* Borradores inline */}
+          {!loadingBorradores && borradoresDB.length > 0 && (
+            <div className="space-y-3 mt-6">
+              <h3 className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+                <FileEdit className="h-4 w-4" />
+                Pedidos en Borrador ({borradoresDB.length})
+              </h3>
+              {borradoresDB.map(b => (
+                <Card key={b.id} className="border-l-4 border-l-muted-foreground/40">
+                  <CardContent className="p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <Store className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="font-semibold text-sm truncate">{b.cliente_nombre}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="font-mono">{b.folio}</span>
+                          <span>·</span>
+                          <span>{b.num_productos} producto{b.num_productos !== 1 ? "s" : ""}</span>
+                          <span>·</span>
+                          <span className="font-semibold text-foreground">{formatCurrency(b.total)}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                          <Clock className="h-3 w-3" />
+                          <span>{formatDistanceToNow(new Date(b.updated_at), { locale: es, addSuffix: true })}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-1.5 shrink-0">
+                        <Button size="sm" className="h-7 text-xs" onClick={() => handleContinuarBorrador(b.id, b.cliente_id)}>
+                          Continuar <ArrowRight className="h-3 w-3 ml-1" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => setDeleteId(b.id)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {step === 2 && (
@@ -876,6 +1006,24 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete borrador confirmation */}
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar borrador?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Este borrador se eliminará permanentemente. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteBorrador} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
