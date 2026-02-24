@@ -86,6 +86,7 @@ export function PasoConfirmar({
     l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente'
   );
   const productosSinStock = lineas.filter(l => l.producto.stock_actual <= 0);
+  const requiereAutorizacionPedido = productosConDescuentoPendiente.length > 0;
 
   const formatCreditTerm = (term: string) => {
     if (term === 'contado') return 'Contado';
@@ -339,7 +340,12 @@ export function PasoConfirmar({
           {submitting ? (
             <>
               <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              Creando pedido...
+              {requiereAutorizacionPedido ? "Enviando para autorización..." : "Creando pedido..."}
+            </>
+          ) : requiereAutorizacionPedido ? (
+            <>
+              <AlertTriangle className="h-5 w-5 mr-2" />
+              Enviar Pedido para Autorización
             </>
           ) : (
             <>

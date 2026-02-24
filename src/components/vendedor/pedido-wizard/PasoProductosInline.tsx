@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, Fragment } from "react";
 import { Search, Star, ChevronRight, ChevronLeft, Package, AlertTriangle, Send, Clock, CheckCircle2, Loader2, CreditCard, FileText, ChevronDown, Trash2, ShoppingCart, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -220,20 +220,13 @@ function FilaProducto({
         {excedeLimite && linea && linea.autorizacionStatus !== 'aprobado' && (
           <div className="flex items-center gap-2 pt-1">
             <AlertTriangle className="h-3.5 w-3.5 text-red-500 shrink-0" />
-            <span className="text-xs text-red-600 flex-1">Excede descuento máximo</span>
-            {linea.autorizacionStatus === 'pendiente' ? (
+            <span className="text-xs text-red-600 flex-1">
+              {getDisplayName(producto)} necesita precio de autorización
+            </span>
+            {linea.autorizacionStatus === 'pendiente' && (
               <Badge variant="outline" className="text-xs text-amber-600 border-amber-400">
                 <Clock className="h-3 w-3 mr-1" />Pendiente
               </Badge>
-            ) : (
-              <div className="flex gap-1">
-                <Button size="sm" variant="outline" className="h-6 text-xs px-2" onClick={() => onSolicitarAutorizacion(linea)}>
-                  <Send className="h-3 w-3 mr-1" />Solicitar
-                </Button>
-                <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => onMarcarParaRevision(producto.id)}>
-                  Revisar
-                </Button>
-              </div>
             )}
           </div>
         )}
@@ -331,9 +324,7 @@ function FilaProducto({
           linea.autorizacionStatus === 'pendiente' ? (
             <span aria-label="Pendiente revisión"><Clock className="h-4 w-4 text-amber-500" /></span>
           ) : (
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onSolicitarAutorizacion(linea)} aria-label="Solicitar autorización">
-              <Send className="h-3.5 w-3.5 text-destructive" />
-            </Button>
+            <span aria-label="Necesita autorización"><AlertTriangle className="h-4 w-4 text-destructive" /></span>
           )
         )}
         {linea?.autorizacionStatus === 'aprobado' && (
@@ -561,7 +552,8 @@ export function PasoProductosInline({
                     ? linea.cantidad * linea.producto.peso_kg
                     : null;
                   return (
-                    <tr key={linea.producto.id} className="border-b last:border-b-0 hover:bg-muted/30">
+                    <React.Fragment key={linea.producto.id}>
+                    <tr className="border-b last:border-b-0 hover:bg-muted/30">
                       <td className="py-1.5 px-1">
                         <Input
                           type="text"
@@ -570,7 +562,7 @@ export function PasoProductosInline({
                           className="h-7 w-16 text-center text-sm px-1 mx-auto"
                           onChange={(e) => {
                             const val = e.target.value;
-                            if (val === "") return; // solo el bote de basura elimina la línea
+                            if (val === "") return;
                             if (/^\d+$/.test(val)) onActualizarCantidad(linea.producto.id, parseInt(val, 10));
                           }}
                         />
@@ -588,7 +580,6 @@ export function PasoProductosInline({
                       </td>
                       <td className="py-1.5 px-1 text-right text-sm whitespace-nowrap">
                         {pesoTotal != null ? `${pesoTotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })} kg` : "—"}
-
                       </td>
                       <td className="py-1.5 px-1">
                         <div className="flex items-center justify-end gap-0.5">
@@ -616,6 +607,17 @@ export function PasoProductosInline({
                         </Button>
                       </td>
                     </tr>
+                    {linea.requiereAutorizacion && linea.autorizacionStatus !== 'aprobado' && (
+                      <tr>
+                        <td colSpan={6} className="py-0.5 px-1">
+                          <div className="flex items-center gap-1.5 text-xs text-destructive">
+                            <AlertTriangle className="h-3 w-3 shrink-0" />
+                            <span>{getDisplayName(linea.producto)} necesita precio de autorización</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
