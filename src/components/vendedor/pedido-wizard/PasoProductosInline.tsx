@@ -515,7 +515,7 @@ export function PasoProductosInline({
                           className="h-7 w-16 text-center text-sm px-1 mx-auto"
                           onChange={(e) => {
                             const val = e.target.value;
-                            if (val === "") { onActualizarCantidad(linea.producto.id, 0); return; }
+                            if (val === "") return; // solo el bote de basura elimina la línea
                             if (/^\d+$/.test(val)) onActualizarCantidad(linea.producto.id, parseInt(val, 10));
                           }}
                         />
