@@ -14,8 +14,7 @@ import { CheckCircle2, ExternalLink, FileEdit } from "lucide-react";
 // Wizard components
 import { StepIndicator } from "./pedido-wizard/StepIndicator";
 import { PasoCliente } from "./pedido-wizard/PasoCliente";
-import { PasoProductos } from "./pedido-wizard/PasoProductos";
-import { PasoCredito } from "./pedido-wizard/PasoCredito";
+import { PasoProductosInline } from "./pedido-wizard/PasoProductosInline";
 import { PasoConfirmar } from "./pedido-wizard/PasoConfirmar";
 import { SolicitudDescuentoDialog } from "./SolicitudDescuentoDialog";
 import type { Cliente, Sucursal, Producto, LineaPedido, CartDraft, TotalesCalculados } from "./pedido-wizard/types";
@@ -49,7 +48,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
   const [submitting, setSubmitting] = useState(false);
   
   // Wizard state
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   
   // Form state
@@ -133,7 +132,8 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       fetchSucursales(selectedClienteId);
       fetchProductosFrecuentes(selectedClienteId);
       if (!isRestoringDraft) {
-        setTerminoCredito("");
+        const cliente = clientes.find(c => c.id === selectedClienteId);
+        setTerminoCredito(cliente?.termino_credito || "contado");
       }
     } else {
       setSucursales([]);
@@ -398,6 +398,26 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
         descuento,
         precioUnitario: nuevoPrecio,
         subtotal: nuevoPrecio * l.cantidad,
+        requiereAutorizacion,
+        autorizacionStatus: requiereAutorizacion ? l.autorizacionStatus : null,
+        solicitudId: requiereAutorizacion ? l.solicitudId : undefined,
+      };
+    }));
+  };
+
+  const actualizarPrecio = (productoId: string, precio: number) => {
+    setLineas(lineas.map(l => {
+      if (l.producto.id !== productoId) return l;
+      
+      const descuento = l.precioLista - precio;
+      const descuentoMaximo = l.producto.descuento_maximo || 0;
+      const requiereAutorizacion = descuento > descuentoMaximo;
+      
+      return {
+        ...l,
+        precioUnitario: precio,
+        descuento: Math.max(0, descuento),
+        subtotal: precio * l.cantidad,
         requiereAutorizacion,
         autorizacionStatus: requiereAutorizacion ? l.autorizacionStatus : null,
         solicitudId: requiereAutorizacion ? l.solicitudId : undefined,
@@ -689,19 +709,19 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
   // ==================== Navigation ====================
 
   const handleNextStep = () => {
-    if (step < 4) {
+    if (step < 3) {
       setCompletedSteps(prev => [...new Set([...prev, step])]);
-      setStep((step + 1) as 1 | 2 | 3 | 4);
+      setStep((step + 1) as 1 | 2 | 3);
     }
   };
 
   const handlePrevStep = () => {
     if (step > 1) {
-      setStep((step - 1) as 1 | 2 | 3 | 4);
+      setStep((step - 1) as 1 | 2 | 3);
     }
   };
 
-  const handleStepClick = (targetStep: 1 | 2 | 3 | 4) => {
+  const handleStepClick = (targetStep: 1 | 2 | 3) => {
     if (completedSteps.includes(targetStep) || targetStep < step) {
       setStep(targetStep);
     }
@@ -755,28 +775,20 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       )}
 
       {step === 2 && (
-        <PasoProductos
+        <PasoProductosInline
           productos={productos}
           productosFrecuentes={productosFrecuentes}
           lineas={lineas}
           loadingFrecuentes={loadingFrecuentes}
           onAgregarProducto={agregarProducto}
           onActualizarCantidad={actualizarCantidad}
-          onActualizarDescuento={actualizarDescuento}
+          onActualizarPrecio={actualizarPrecio}
           onSolicitarAutorizacion={handleSolicitarAutorizacion}
           onMarcarParaRevision={marcarParaRevision}
           totales={totales}
-          onNext={handleNextStep}
-          onBack={handlePrevStep}
-        />
-      )}
-
-      {step === 3 && (
-        <PasoCredito
           terminoCredito={terminoCredito}
           notas={notas}
           clienteDefaultCredito={selectedCliente?.termino_credito || "contado"}
-          totales={totales}
           onTerminoCreditoChange={setTerminoCredito}
           onNotasChange={setNotas}
           onNext={handleNextStep}
@@ -784,7 +796,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
         />
       )}
 
-      {step === 4 && (
+      {step === 3 && (
         <PasoConfirmar
           cliente={selectedCliente}
           sucursal={selectedSucursal}

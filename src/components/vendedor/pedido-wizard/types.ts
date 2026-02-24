@@ -50,7 +50,7 @@ export interface Sucursal {
 }
 
 export interface WizardState {
-  step: 1 | 2 | 3 | 4;
+  step: 1 | 2 | 3;
   clienteId: string;
   sucursalId: string;
   lineas: LineaPedido[];
