@@ -37,8 +37,10 @@ import {
   WifiOff,
   Settings,
   Calendar,
-  Clock
+  Clock,
+  QrCode,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfiguracionFlotillaDialog } from "./ConfiguracionFlotillaDialog";
@@ -85,6 +87,7 @@ export const AlmacenSidebar = ({
   empleadoFotoUrl,
   onFotoUpdated
 }: AlmacenSidebarProps) => {
+  const navigate = useNavigate();
   const { isHovering, isMobile } = useSidebar();
   const [configOpen, setConfigOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -255,6 +258,32 @@ export const AlmacenSidebar = ({
             </div>
           )}
         </div>
+
+          {/* Botón Escanear QR - Destacado */}
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <div className={cn("px-2", isCollapsed ? "py-1" : "py-2")}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => navigate("/almacen-tablet/carga-scan")}
+                      className={cn(
+                        "w-full gap-2 font-bold",
+                        isCollapsed ? "h-11 px-0" : "h-12 text-base"
+                      )}
+                      size={isCollapsed ? "icon" : "lg"}
+                    >
+                      <QrCode className="h-5 w-5 shrink-0" />
+                      {!isCollapsed && "Escanear QR"}
+                    </Button>
+                  </TooltipTrigger>
+                  {isCollapsed && (
+                    <TooltipContent side="right">Escanear QR para Cargar</TooltipContent>
+                  )}
+                </Tooltip>
+              </div>
+            </SidebarGroupContent>
+          </SidebarGroup>
 
           {/* Navegación */}
           <SidebarContent>

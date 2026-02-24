@@ -460,10 +460,41 @@ export default function AlmacenCargaScan() {
 
       {/* Main content */}
       {!pedidoActual ? (
-        <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground gap-4">
-          <QrCode className="h-16 w-16 opacity-30" />
-          <p className="text-lg">Escanea el código QR de un pedido para iniciar la carga</p>
-          <p className="text-sm">O pega la URL/ID arriba manualmente</p>
+        <div className="flex flex-col items-center justify-center p-12 text-center gap-6">
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary/10 rounded-full blur-2xl scale-150" />
+            <div className="relative bg-primary/5 border-2 border-dashed border-primary/30 rounded-3xl p-8">
+              <QrCode className="h-20 w-20 text-primary/60" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-foreground">¡Listo para cargar!</h2>
+            <p className="text-lg text-muted-foreground max-w-sm">
+              Escanea el <strong className="text-foreground">código QR</strong> de cada pedido impreso en el orden que necesitas cargar
+            </p>
+          </div>
+          <div className="bg-muted/50 rounded-xl p-4 max-w-sm space-y-3">
+            <p className="text-sm font-medium text-foreground">📋 Pasos:</p>
+            <ol className="text-sm text-muted-foreground space-y-2 text-left">
+              <li className="flex gap-2">
+                <span className="bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shrink-0">1</span>
+                <span>Pide al chofer el <strong>orden de entrega</strong></span>
+              </li>
+              <li className="flex gap-2">
+                <span className="bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shrink-0">2</span>
+                <span>Escanea primero el pedido que va <strong>al fondo</strong> del camión</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shrink-0">3</span>
+                <span>Confirma peso y cantidad de cada producto</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shrink-0">4</span>
+                <span>Al terminar, se generan los PDFs corregidos</span>
+              </li>
+            </ol>
+          </div>
+          <p className="text-xs text-muted-foreground">También puedes pegar la URL o ID del pedido en el campo de arriba</p>
         </div>
       ) : loading ? (
         <div className="flex items-center justify-center p-12">
