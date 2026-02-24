@@ -7,8 +7,18 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Search, Plus, MapPin, Phone, Building2, MessageCircle, ShoppingCart, History, Navigation, AlertTriangle, MapPinned, Pencil } from "lucide-react";
+import { Search, Plus, MapPin, Phone, Building2, MessageCircle, ShoppingCart, History, Navigation, AlertTriangle, MapPinned, Pencil, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { VendedorNuevoClienteSheet } from "./VendedorNuevoClienteSheet";
 import { GeocodificarSucursalSheet } from "./GeocodificarSucursalSheet";
@@ -76,6 +86,11 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
   // Editar cliente
   const [showEditarCliente, setShowEditarCliente] = useState(false);
   const [selectedClienteId, setSelectedClienteId] = useState<string | null>(null);
+
+  // Eliminar cliente
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [clienteToDelete, setClienteToDelete] = useState<{ id: string; nombre: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchClientes();
@@ -225,6 +240,30 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
 
   const handleGeocodificado = () => {
     fetchClientes();
+  };
+
+  const handleDeleteCliente = async () => {
+    if (!clienteToDelete) return;
+    try {
+      setDeleting(true);
+      const { error } = await supabase
+        .from("clientes")
+        .update({ activo: false })
+        .eq("id", clienteToDelete.id);
+
+      if (error) throw error;
+
+      toast.success(`Cliente "${clienteToDelete.nombre}" eliminado`);
+      setShowDeleteConfirm(false);
+      setClienteToDelete(null);
+      fetchClientes();
+      onClienteCreado(); // refresh dashboard
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("Error al eliminar el cliente");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (loading) {
@@ -423,7 +462,7 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
                   )}
 
                   {/* Action Buttons - Large and tactile */}
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-5 gap-2">
                     <Button 
                       variant="outline" 
                       className="h-12 flex-col gap-1 p-2"
@@ -471,6 +510,17 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
                       <Pencil className="h-4 w-4" />
                       <span className="text-[10px]">Editar</span>
                     </Button>
+                    <Button 
+                      variant="outline"
+                      className="h-12 flex-col gap-1 p-2 text-destructive hover:text-destructive"
+                      onClick={() => {
+                        setClienteToDelete({ id: cliente.id, nombre: cliente.nombre });
+                        setShowDeleteConfirm(true);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="text-[10px]">Eliminar</span>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -509,6 +559,27 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
           onClienteActualizado={fetchClientes}
         />
       )}
+      {/* Confirmar eliminar cliente */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar cliente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              El cliente <strong>{clienteToDelete?.nombre}</strong> será desactivado y ya no aparecerá en tu lista. Esta acción puede ser revertida por un administrador.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCliente}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Eliminando..." : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
