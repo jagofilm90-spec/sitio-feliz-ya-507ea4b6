@@ -130,6 +130,9 @@ export default function VendedorPanel() {
       setPendingTabChange(newTab);
       return;
     }
+    if (activeTab === "nuevo" && newTab !== "nuevo") {
+      setPreSelectedClienteId(undefined);
+    }
     setActiveTab(newTab);
   }, [activeTab]);
 
@@ -141,6 +144,7 @@ export default function VendedorPanel() {
       setActiveTab(pendingTabChange);
       setPendingTabChange(null);
       hasActiveOrder.current = false;
+      setPreSelectedClienteId(undefined);
       fetchBorradoresCount();
     }
   };
@@ -148,6 +152,7 @@ export default function VendedorPanel() {
   const handleDiscardAndNavigate = () => {
     if (pendingTabChange) {
       hasActiveOrder.current = false;
+      setPreSelectedClienteId(undefined);
       setActiveTab(pendingTabChange);
       setPendingTabChange(null);
     }
