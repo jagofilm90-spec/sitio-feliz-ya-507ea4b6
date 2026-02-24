@@ -36,6 +36,7 @@ export default function VendedorPanel() {
   const [activeTab, setActiveTab] = useState("clientes");
   const [preSelectedClienteId, setPreSelectedClienteId] = useState<string | undefined>();
   const [borradoresCount, setBorradoresCount] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   
   // Navigation guard for leaving "nuevo" tab with pending work
   const [pendingTabChange, setPendingTabChange] = useState<string | null>(null);
@@ -282,7 +283,7 @@ export default function VendedorPanel() {
   ];
 
   return (
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
       <div className="min-h-screen bg-background flex flex-col lg:flex-row w-full">
         {/* PushNotificationSetup removed - handled by PushNotificationsGate */}
         
@@ -340,7 +341,7 @@ export default function VendedorPanel() {
         </header>
 
         {/* Contenido principal */}
-        <main className="flex-1">
+        <main className="flex-1" onClick={() => sidebarOpen && setSidebarOpen(false)}>
           <div className="p-4 lg:p-8 pb-32 md:pb-8">
             {/* Header con toggle en desktop */}
             <div className="hidden md:flex items-center gap-4 mb-6">
