@@ -818,17 +818,38 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       } catch (emailError) {
         console.error("Error sending email:", emailError);
       }
+      // Solo enviar confirmación al cliente si NO requiere autorización
+      const esPorAutorizar = lineas.some(l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente');
+      if (!esPorAutorizar) {
+        try {
+          await supabase.functions.invoke('send-client-notification', {
+            body: {
+              clienteId: selectedClienteId,
+              tipo: 'pedido_confirmado',
+              data: { pedidoFolio: folio, total: totales.total }
+            }
+          });
+        } catch (clientEmailError) {
+          console.error("Error sending client email:", clientEmailError);
+        }
+      }
 
+      // Enviar email interno con detalle completo a pedidos@almasa.com.mx
       try {
-        await supabase.functions.invoke('send-client-notification', {
-          body: {
-            clienteId: selectedClienteId,
-            tipo: 'pedido_confirmado',
-            data: { pedidoFolio: folio, total: totales.total }
-          }
+        const { enviarEmailPedido } = await import('./pedido-wizard/PasoConfirmar');
+        await enviarEmailPedido({
+          folio,
+          clienteNombre,
+          sucursalNombre: sucursales.find(s => s.id === selectedSucursalId)?.nombre,
+          vendedorNombre,
+          terminoCredito,
+          notas,
+          lineas,
+          totales,
+          fechaPedido: new Date().toISOString(),
         });
-      } catch (clientEmailError) {
-        console.error("Error sending client email:", clientEmailError);
+      } catch (emailInternoError) {
+        console.error("Error sending internal email:", emailInternoError);
       }
 
       // Audit log

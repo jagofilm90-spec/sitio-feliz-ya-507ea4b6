@@ -6,6 +6,32 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface GmailCuenta {
+  id: string;
+  email: string;
+  access_token: string;
+  refresh_token: string;
+  token_expiry: string;
+}
+
+interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string;
+}
+
+interface CorreosEnviados {
+  id?: string;
+  tipo: string;
+  destinatario: string;
+  asunto: string;
+  contenido_preview: string;
+  referencia_id: string;
+  gmail_cuenta_id: string;
+  gmail_message_id: string;
+  fecha_envio: string;
+}
+
 interface SecretaryNotificationRequest {
   tipo: 'nuevo_pedido' | 'pedido_urgente';
   pedidoId: string;
@@ -16,7 +42,6 @@ interface SecretaryNotificationRequest {
   requiereFactura?: boolean;
 }
 
-// Refresh Gmail access token
 async function refreshAccessToken(supabase: any, cuentaId: string, refreshToken: string): Promise<string | null> {
   const clientId = Deno.env.get('GMAIL_CLIENT_ID');
   const clientSecret = Deno.env.get('GMAIL_CLIENT_SECRET');
@@ -41,7 +66,6 @@ async function refreshAccessToken(supabase: any, cuentaId: string, refreshToken:
     const data = await response.json();
 
     if (data.access_token) {
-      // Update token in database
       await supabase
         .from('gmail_cuentas')
         .update({
@@ -60,17 +84,14 @@ async function refreshAccessToken(supabase: any, cuentaId: string, refreshToken:
   }
 }
 
-// Get valid access token
 async function getValidAccessToken(supabase: any, cuenta: any): Promise<string | null> {
   const now = new Date();
   const expiry = cuenta.token_expiry ? new Date(cuenta.token_expiry) : null;
 
-  // If token is valid for at least 5 more minutes
   if (cuenta.access_token && expiry && expiry > new Date(now.getTime() + 5 * 60 * 1000)) {
     return cuenta.access_token;
   }
 
-  // Refresh token
   if (cuenta.refresh_token) {
     return await refreshAccessToken(supabase, cuenta.id, cuenta.refresh_token);
   }
@@ -78,7 +99,6 @@ async function getValidAccessToken(supabase: any, cuenta: any): Promise<string |
   return null;
 }
 
-// Build raw email for Gmail API
 function buildRawEmail(to: string, from: string, subject: string, htmlContent: string): string {
   const boundary = "boundary_" + Date.now();
   
@@ -101,7 +121,6 @@ function buildRawEmail(to: string, from: string, subject: string, htmlContent: s
   return btoa(rawEmail).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-// Format currency
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',
@@ -109,7 +128,6 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-// Generate email content
 function generateEmailContent(data: SecretaryNotificationRequest, appUrl: string): { subject: string; html: string } {
   const subject = `📦 Nuevo Pedido ${data.folio} - ${data.cliente}`;
   
@@ -203,7 +221,6 @@ function generateEmailContent(data: SecretaryNotificationRequest, appUrl: string
 }
 
 serve(async (req) => {
-  // Handle CORS
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -216,9 +233,6 @@ serve(async (req) => {
     const requestData: SecretaryNotificationRequest = await req.json();
     console.log("Request data:", requestData);
 
-    // Get app URL from Supabase URL
-    const appUrl = supabaseUrl.replace('.supabase.co', '.lovable.app').replace('https://vrcyjmfpteoccqdmdmqn', 'https://id-preview--vrcyjmfpteoccqdmdmqn');
-    // Use a fixed production URL for the app
     const productionAppUrl = "https://almasa-erp.lovable.app";
 
     // Get sender account (pedidos@almasa.com.mx)
@@ -237,7 +251,6 @@ serve(async (req) => {
       );
     }
 
-    // Get valid access token
     const accessToken = await getValidAccessToken(supabase, gmailCuenta);
     if (!accessToken) {
       return new Response(
@@ -246,11 +259,11 @@ serve(async (req) => {
       );
     }
 
-    // Get secretaria users and their emails
+    // FIX: Use lowercase 'secretaria' to match the app_role enum
     const { data: secretariaRoles, error: rolesError } = await supabase
       .from('user_roles')
       .select('user_id')
-      .eq('role', 'Secretaria');
+      .eq('role', 'secretaria');
 
     if (rolesError || !secretariaRoles || secretariaRoles.length === 0) {
       console.log("No secretaria users found:", rolesError);
@@ -262,7 +275,6 @@ serve(async (req) => {
 
     const userIds = secretariaRoles.map(r => r.user_id);
 
-    // Get profiles with emails
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
       .select('id, email, full_name')
@@ -276,12 +288,10 @@ serve(async (req) => {
       );
     }
 
-    // Generate email content
     const { subject, html } = generateEmailContent(requestData, productionAppUrl);
 
     const results: any[] = [];
 
-    // Send email to each secretaria
     for (const profile of profiles) {
       if (!profile.email) continue;
 
@@ -303,7 +313,6 @@ serve(async (req) => {
         const gmailResult = await gmailResponse.json();
 
         if (gmailResponse.ok) {
-          // Log successful send
           await supabase.from('correos_enviados').insert({
             tipo: 'notificacion_secretaria',
             destinatario: profile.email,
@@ -344,3 +353,4 @@ serve(async (req) => {
     );
   }
 });
+
