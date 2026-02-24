@@ -85,8 +85,7 @@ export function PasoProductos({
         (p.especificaciones?.toLowerCase() || "").includes(term) ||
         (p.marca?.toLowerCase() || "").includes(term);
     })
-    .filter(p => !productosFrecuentes.some(f => f.id === p.id))
-    .slice(0, 50);
+    .filter(p => !productosFrecuentes.some(f => f.id === p.id));
 
   return (
     <div className="space-y-4">
@@ -220,7 +219,7 @@ export function PasoProductos({
                         <div className="flex items-center gap-2 ml-2">
                           <span className="font-bold text-sm">{formatCurrency(producto.precio_venta)}</span>
                           
-                          <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1">
                             <Button
                               size="icon"
                               variant="outline"
@@ -230,9 +229,30 @@ export function PasoProductos({
                             >
                               <Minus className="h-3 w-3" />
                             </Button>
-                            <span className="w-8 text-center text-sm font-medium">
-                              {cantidadEnCarrito}
-                            </span>
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              value={cantidadEnCarrito || ""}
+                              placeholder="0"
+                              className="w-14 h-7 text-center text-sm font-medium px-1 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === "") {
+                                  onActualizarCantidad(producto.id, 0);
+                                  return;
+                                }
+                                if (/^\d+$/.test(val)) {
+                                  const num = parseInt(val, 10);
+                                  if (cantidadEnCarrito === 0 && num > 0) {
+                                    onAgregarProducto(producto);
+                                    if (num > 1) onActualizarCantidad(producto.id, num);
+                                  } else {
+                                    onActualizarCantidad(producto.id, num);
+                                  }
+                                }
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            />
                             <Button
                               size="icon"
                               variant="outline"
