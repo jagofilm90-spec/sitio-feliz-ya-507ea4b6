@@ -44,12 +44,19 @@ const CREDIT_OPTIONS = [
   { value: "60_dias", label: "60 días" },
 ];
 
-function getPrecioMinimo(producto: Producto): number {
-  const precioLista = obtenerPrecioUnitarioVenta({
+function getPrecioLista(producto: Producto): number {
+  if (producto.precio_por_kilo) {
+    return producto.precio_venta; // raw $/kg
+  }
+  return obtenerPrecioUnitarioVenta({
     precio_venta: producto.precio_venta,
     precio_por_kilo: producto.precio_por_kilo,
     peso_kg: producto.peso_kg,
   });
+}
+
+function getPrecioMinimo(producto: Producto): number {
+  const precioLista = getPrecioLista(producto);
   const descMax = producto.descuento_maximo || 0;
   return precioLista - descMax;
 }
@@ -75,11 +82,8 @@ function FilaProducto({
   onMarcarParaRevision: (productoId: string) => void;
   isMobile: boolean;
 }) {
-  const precioLista = obtenerPrecioUnitarioVenta({
-    precio_venta: producto.precio_venta,
-    precio_por_kilo: producto.precio_por_kilo,
-    peso_kg: producto.peso_kg,
-  });
+  const precioLista = getPrecioLista(producto);
+  const esPorKilo = producto.precio_por_kilo;
   const descMax = producto.descuento_maximo || 0;
   const precioMinimo = precioLista - descMax;
   const cantidad = linea?.cantidad || 0;
@@ -111,7 +115,7 @@ function FilaProducto({
         {/* Row 2: Prices info */}
         <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
           <span>{producto.marca || "—"}</span>
-          <span>Lista: <span className="font-medium text-foreground">{formatCurrency(precioLista)}</span></span>
+          <span>Lista: <span className="font-medium text-foreground">{formatCurrency(precioLista)}{esPorKilo && '/kg'}</span></span>
           {descMax > 0 && (
             <span>Mín: <span className="font-medium text-green-600">{formatCurrency(precioMinimo)}</span></span>
           )}
@@ -220,9 +224,15 @@ function FilaProducto({
           <span className="text-green-600 font-medium">{producto.stock_actual}</span>
         )}
       </td>
-      <td className="py-2 px-2 text-sm text-right whitespace-nowrap">{formatCurrency(precioLista)}</td>
+      <td className="py-2 px-2 text-sm text-right whitespace-nowrap">
+        {formatCurrency(precioLista)}
+        {esPorKilo && <span className="text-xs text-muted-foreground">/kg</span>}
+      </td>
       <td className="py-2 px-2 text-xs text-right text-muted-foreground whitespace-nowrap">{descMax > 0 ? formatCurrency(descMax) : "—"}</td>
-      <td className="py-2 px-2 text-sm text-right text-green-600 whitespace-nowrap font-medium">{descMax > 0 ? formatCurrency(precioMinimo) : "—"}</td>
+      <td className="py-2 px-2 text-sm text-right text-green-600 whitespace-nowrap font-medium">
+        {descMax > 0 ? formatCurrency(precioMinimo) : "—"}
+        {descMax > 0 && esPorKilo && <span className="text-xs">/kg</span>}
+      </td>
       <td className="py-2 px-1">
         <Input
           type="text"
