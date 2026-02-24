@@ -26,6 +26,9 @@ interface Props {
   onPedidoCreado: () => void;
   onNavigateToVentas?: () => void;
   preSelectedClienteId?: string;
+  draftPedidoId?: string;
+  onHasActiveOrder?: (hasOrder: boolean) => void;
+  onSaveDraft?: () => void;
 }
 
 interface PedidoCreadoInfo {
@@ -34,7 +37,7 @@ interface PedidoCreadoInfo {
   cliente: string;
 }
 
-export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, preSelectedClienteId }: Props) {
+export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, preSelectedClienteId, draftPedidoId, onHasActiveOrder, onSaveDraft }: Props) {
   // Data state
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
@@ -154,12 +157,14 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     }
   }, [preSelectedClienteId, clientes]);
 
-  // Auto-save cart on changes
+  // Auto-save cart on changes & notify parent
   useEffect(() => {
     if (!loading) {
       saveCartDraft();
+      const hasOrder = lineas.length > 0 || !!selectedClienteId;
+      onHasActiveOrder?.(hasOrder);
     }
-  }, [saveCartDraft, loading]);
+  }, [saveCartDraft, loading, lineas.length, selectedClienteId]);
 
   // Restore cart on component mount
   useEffect(() => {

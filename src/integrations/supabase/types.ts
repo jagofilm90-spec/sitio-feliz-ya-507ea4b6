@@ -6046,6 +6046,7 @@ export type Database = {
         | "fecha_sugerida"
         | "flexible"
       order_status:
+        | "borrador"
         | "por_autorizar"
         | "pendiente"
         | "en_ruta"
@@ -6231,6 +6232,7 @@ export const Constants = {
         "flexible",
       ],
       order_status: [
+        "borrador",
         "por_autorizar",
         "pendiente",
         "en_ruta",

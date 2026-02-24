@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/useUserRoles";
@@ -6,9 +6,10 @@ import { useSystemPresence } from "@/hooks/useSystemPresence";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { toast } from "sonner";
-import { Users, ShoppingCart, CreditCard, LogOut, TrendingUp, Calendar, IdCard, Sparkles, List, Wallet, Percent, BarChart3 } from "lucide-react";
+import { Users, ShoppingCart, CreditCard, LogOut, TrendingUp, Calendar, IdCard, Sparkles, List, Wallet, Percent, BarChart3, FileEdit } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
 import { VendedorMisClientesTab } from "@/components/vendedor/VendedorMisClientesTab";
 import { VendedorNuevoPedidoTab } from "@/components/vendedor/VendedorNuevoPedidoTab";
@@ -18,9 +19,9 @@ import { VendedorSaldosTab } from "@/components/vendedor/VendedorSaldosTab";
 import { VendedorListaPreciosTab } from "@/components/vendedor/VendedorListaPreciosTab";
 import { VendedorNovedadesTab } from "@/components/vendedor/VendedorNovedadesTab";
 import { VendedorAnalisisClientesTab } from "@/components/vendedor/VendedorAnalisisClientesTab";
+import { VendedorBorradoresTab } from "@/components/vendedor/VendedorBorradoresTab";
 import { VendedorSidebar } from "@/components/vendedor/VendedorSidebar";
 import { VendedorBienvenidaDialog } from "@/components/vendedor/VendedorBienvenidaDialog";
-// PushNotificationSetup removed - now handled centrally by PushNotificationsGate in App.tsx
 import logoBlanco from "@/assets/logos/logo-blanco.png";
 
 export default function VendedorPanel() {
@@ -34,9 +35,16 @@ export default function VendedorPanel() {
   const [vendedorNombre, setVendedorNombre] = useState("");
   const [activeTab, setActiveTab] = useState("clientes");
   const [preSelectedClienteId, setPreSelectedClienteId] = useState<string | undefined>();
+  const [borradoresCount, setBorradoresCount] = useState(0);
+  const [draftPedidoId, setDraftPedidoId] = useState<string | undefined>();
+  
+  // Navigation guard for leaving "nuevo" tab with pending work
+  const [pendingTabChange, setPendingTabChange] = useState<string | null>(null);
+  const hasActiveOrder = useRef(false);
 
   const handleNavigateNuevoPedido = (clienteId?: string) => {
     setPreSelectedClienteId(clienteId);
+    setDraftPedidoId(undefined);
     setActiveTab("nuevo");
   };
   const [showBienvenida, setShowBienvenida] = useState(false);
@@ -60,7 +68,7 @@ export default function VendedorPanel() {
     if (!rolesLoading && (isVendedor || isAdmin)) {
       fetchDashboardData();
       fetchNovedadesCount();
-      // Mostrar bienvenida solo una vez por sesión
+      fetchBorradoresCount();
       const yaVisto = sessionStorage.getItem("vendedor_bienvenida_mostrado");
       if (!yaVisto) {
         setShowBienvenida(true);
@@ -99,6 +107,57 @@ export default function VendedorPanel() {
     } catch (error) {
       console.error("Error fetching novedades count:", error);
     }
+  };
+
+  const fetchBorradoresCount = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { count } = await supabase
+        .from("pedidos")
+        .select("id", { count: "exact", head: true })
+        .eq("vendedor_id", user.id)
+        .eq("status", "borrador");
+      setBorradoresCount(count || 0);
+    } catch (err) {
+      console.error("Error fetching borradores count:", err);
+    }
+  };
+
+  // Tab change handler with navigation guard
+  const handleTabChange = useCallback((newTab: string) => {
+    if (activeTab === "nuevo" && newTab !== "nuevo" && hasActiveOrder.current) {
+      setPendingTabChange(newTab);
+      return;
+    }
+    setActiveTab(newTab);
+  }, [activeTab]);
+
+  const handleSaveDraftAndNavigate = async () => {
+    // The VendedorNuevoPedidoTab will handle saving via onSaveDraft callback
+    // For now just navigate
+    if (pendingTabChange) {
+      setActiveTab(pendingTabChange);
+      setPendingTabChange(null);
+      hasActiveOrder.current = false;
+      fetchBorradoresCount();
+    }
+  };
+
+  const handleDiscardAndNavigate = () => {
+    if (pendingTabChange) {
+      // Clear sessionStorage draft
+      sessionStorage.removeItem("vendedor_cart_draft");
+      hasActiveOrder.current = false;
+      setActiveTab(pendingTabChange);
+      setPendingTabChange(null);
+    }
+  };
+
+  const handleContinuarBorrador = (pedidoId: string, clienteId: string) => {
+    setDraftPedidoId(pedidoId);
+    setPreSelectedClienteId(clienteId);
+    setActiveTab("nuevo");
   };
 
   const fetchDashboardData = async () => {
@@ -217,6 +276,7 @@ export default function VendedorPanel() {
   const navItems = [
     { id: "clientes", label: "Clientes", icon: Users },
     { id: "nuevo", label: "Nuevo Pedido", icon: ShoppingCart },
+    { id: "borradores", label: "Borradores", icon: FileEdit, badge: borradoresCount },
     { id: "ventas", label: "Mis Ventas", icon: CreditCard },
     { id: "novedades", label: "Novedades", icon: Sparkles, badge: novedadesCount },
     { id: "precios", label: "Precios", icon: List },
@@ -242,12 +302,13 @@ export default function VendedorPanel() {
         {/* Sidebar para desktop/tablet */}
         <VendedorSidebar
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           onLogout={handleLogout}
           onNavigateTarjeta={() => navigate("/tarjeta")}
           onNavigateAnalisis={() => navigate("/vendedor/analisis")}
           vendedorNombre={vendedorNombre}
           novedadesCount={novedadesCount}
+          borradoresCount={borradoresCount}
         />
 
         {/* Header móvil */}
@@ -373,7 +434,8 @@ export default function VendedorPanel() {
               <Card>
                 <CardContent className="p-6">
               {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} onNavigateNuevoPedido={handleNavigateNuevoPedido} />}
-                  {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} onNavigateToVentas={() => setActiveTab("ventas")} preSelectedClienteId={preSelectedClienteId} />}
+                  {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={() => { fetchDashboardData(); fetchBorradoresCount(); }} onNavigateToVentas={() => setActiveTab("ventas")} preSelectedClienteId={preSelectedClienteId} draftPedidoId={draftPedidoId} onHasActiveOrder={(v) => { hasActiveOrder.current = v; }} onSaveDraft={handleSaveDraftAndNavigate} />}
+                  {activeTab === "borradores" && <VendedorBorradoresTab onContinuarBorrador={handleContinuarBorrador} onRefresh={fetchBorradoresCount} />}
                   {activeTab === "ventas" && <VendedorMisVentasTab onDashboardRefresh={fetchDashboardData} />}
                   {activeTab === "novedades" && <VendedorNovedadesTab />}
                   {activeTab === "precios" && <VendedorListaPreciosTab />}
@@ -387,7 +449,8 @@ export default function VendedorPanel() {
             {/* Mobile Content */}
             <div className="md:hidden">
               {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} onNavigateNuevoPedido={handleNavigateNuevoPedido} />}
-              {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={fetchDashboardData} onNavigateToVentas={() => setActiveTab("ventas")} preSelectedClienteId={preSelectedClienteId} />}
+              {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={() => { fetchDashboardData(); fetchBorradoresCount(); }} onNavigateToVentas={() => setActiveTab("ventas")} preSelectedClienteId={preSelectedClienteId} draftPedidoId={draftPedidoId} onHasActiveOrder={(v) => { hasActiveOrder.current = v; }} onSaveDraft={handleSaveDraftAndNavigate} />}
+              {activeTab === "borradores" && <VendedorBorradoresTab onContinuarBorrador={handleContinuarBorrador} onRefresh={fetchBorradoresCount} />}
               {activeTab === "ventas" && <VendedorMisVentasTab onDashboardRefresh={fetchDashboardData} />}
               {activeTab === "novedades" && <VendedorNovedadesTab />}
               {activeTab === "precios" && <VendedorListaPreciosTab />}
@@ -401,13 +464,12 @@ export default function VendedorPanel() {
         {/* Mobile Bottom Navigation - Scrollable with fade indicators */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50 pb-[env(safe-area-inset-bottom)]">
           <div className="relative">
-            {/* Fade gradient on the right to indicate scrollability */}
             <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
             <div className="flex overflow-x-auto scrollbar-hide">
               {navItems.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => handleTabChange(item.id)}
                   className={cn(
                     "flex flex-col items-center justify-center py-2 px-3 transition-colors min-h-[56px] min-w-[60px] relative flex-shrink-0",
                     activeTab === item.id
@@ -424,11 +486,10 @@ export default function VendedorPanel() {
                     )}
                   </div>
                   <span className="text-[10px] font-medium whitespace-nowrap">
-                    {item.id === "novedades" ? "Nuevo" : item.label.split(" ")[0]}
+                    {item.id === "novedades" ? "Nuevo" : item.id === "borradores" ? "Borrad." : item.label.split(" ")[0]}
                   </span>
                 </button>
               ))}
-              {/* Logout Button */}
               <button
                 onClick={handleLogout}
                 className="flex flex-col items-center justify-center py-2 px-3 transition-colors min-h-[56px] min-w-[60px] text-destructive hover:bg-destructive/10 flex-shrink-0"
@@ -439,6 +500,26 @@ export default function VendedorPanel() {
             </div>
           </div>
         </nav>
+
+        {/* Navigation guard dialog */}
+        <AlertDialog open={!!pendingTabChange} onOpenChange={(open) => !open && setPendingTabChange(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Pedido en proceso</AlertDialogTitle>
+              <AlertDialogDescription>
+                Estás en proceso de un pedido. ¿Deseas guardarlo como borrador?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleDiscardAndNavigate}>
+                No, descartar
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleSaveDraftAndNavigate}>
+                Sí, guardar borrador
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </SidebarProvider>
   );
