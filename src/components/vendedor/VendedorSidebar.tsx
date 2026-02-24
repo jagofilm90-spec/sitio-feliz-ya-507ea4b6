@@ -32,7 +32,6 @@ import {
   LogOut, 
   User, 
   IdCard,
-  FileEdit 
 } from "lucide-react";
 import logoAlmasa from "@/assets/logo-almasa.png";
 
@@ -53,7 +52,6 @@ interface VendedorSidebarProps {
   onNavigateAnalisis: () => void;
   vendedorNombre: string;
   novedadesCount: number;
-  borradoresCount: number;
 }
 
 export const VendedorSidebar = ({
@@ -64,7 +62,6 @@ export const VendedorSidebar = ({
   onNavigateAnalisis,
   vendedorNombre,
   novedadesCount,
-  borradoresCount,
 }: VendedorSidebarProps) => {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -72,7 +69,6 @@ export const VendedorSidebar = ({
   const navItems: NavItem[] = [
     { id: "clientes", label: "Clientes", icon: Users },
     { id: "nuevo", label: "Nuevo Pedido", icon: ShoppingCart },
-    { id: "borradores", label: "Borradores", icon: FileEdit, badge: borradoresCount },
     { id: "ventas", label: "Mis Ventas", icon: ClipboardList },
     { id: "novedades", label: "Novedades", icon: Sparkles, badge: novedadesCount },
     { id: "precios", label: "Precios", icon: List },
