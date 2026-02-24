@@ -500,7 +500,7 @@ export function PasoProductosInline({
                 </tr>
               </thead>
               <tbody>
-                {lineas.map((linea) => {
+                {lineas.map((linea, idx) => {
                   const esPorKilo = linea.producto.precio_por_kilo;
                   const pesoTotal = linea.producto.peso_kg
                     ? linea.cantidad * linea.producto.peso_kg
@@ -520,7 +520,17 @@ export function PasoProductosInline({
                           }}
                         />
                       </td>
-                      <td className="py-1.5 px-1 text-sm leading-tight">{getDisplayName(linea.producto)}</td>
+                      <td className="py-1.5 px-1 text-sm leading-tight">
+                        <span>{getDisplayName(linea.producto)}</span>
+                        {(linea.producto.aplica_iva || linea.producto.aplica_ieps) && (
+                          <span className="ml-1.5 text-[10px] text-muted-foreground">
+                            {[
+                              linea.producto.aplica_iva && 'IVA',
+                              linea.producto.aplica_ieps && 'IEPS',
+                            ].filter(Boolean).join(' + ')}
+                          </span>
+                        )}
+                      </td>
                       <td className="py-1.5 px-1 text-right text-sm whitespace-nowrap">
                         {pesoTotal != null ? `${pesoTotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })} kg` : "—"}
 
@@ -564,15 +574,43 @@ export function PasoProductosInline({
                 })}
               </tbody>
             </table>
-            <div className="flex items-center justify-between pt-3 mt-2 border-t">
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span>{totales.totalUnidades} uds</span>
-                <span>Peso: {totales.pesoTotalKg.toLocaleString("es-MX", { maximumFractionDigits: 2 })} kg</span>
+            <div className="flex items-start justify-between pt-3 mt-2 border-t gap-4">
+              <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                <span>{totales.totalUnidades} unidades · Peso: {totales.pesoTotalKg.toLocaleString("es-MX", { maximumFractionDigits: 2 })} kg</span>
+                {totales.productosConIva > 0 && (
+                  <span className="text-xs">{totales.productosConIva} producto{totales.productosConIva > 1 ? 's' : ''} con IVA (16%)</span>
+                )}
+                {totales.productosConIeps > 0 && (
+                  <span className="text-xs">{totales.productosConIeps} producto{totales.productosConIeps > 1 ? 's' : ''} con IEPS (8%)</span>
+                )}
                 {totales.ahorroDescuentos > 0 && (
-                  <span className="text-green-600">-{formatCurrency(totales.ahorroDescuentos)}</span>
+                  <span className="text-xs text-green-600">Ahorro por descuentos: -{formatCurrency(totales.ahorroDescuentos)}</span>
                 )}
               </div>
-              <span className="text-xl font-bold text-primary">{formatCurrency(totales.total)}</span>
+              <table className="text-sm w-56">
+                <tbody>
+                  <tr>
+                    <td className="py-0.5 pr-2 text-right text-muted-foreground">Subtotal:</td>
+                    <td className="py-0.5 text-right font-medium">{formatCurrency(totales.subtotal)}</td>
+                  </tr>
+                  {totales.iva > 0 && (
+                    <tr>
+                      <td className="py-0.5 pr-2 text-right text-muted-foreground">IVA (16%):</td>
+                      <td className="py-0.5 text-right font-medium">{formatCurrency(totales.iva)}</td>
+                    </tr>
+                  )}
+                  {totales.ieps > 0 && (
+                    <tr>
+                      <td className="py-0.5 pr-2 text-right text-muted-foreground">IEPS (8%):</td>
+                      <td className="py-0.5 text-right font-medium">{formatCurrency(totales.ieps)}</td>
+                    </tr>
+                  )}
+                  <tr className="border-t">
+                    <td className="py-1 pr-2 text-right font-bold">Total:</td>
+                    <td className="py-1 text-right text-lg font-bold text-primary">{formatCurrency(totales.total)}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>
