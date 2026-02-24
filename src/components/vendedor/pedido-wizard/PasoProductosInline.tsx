@@ -204,13 +204,13 @@ function FilaProducto({
   // Desktop row
   return (
     <tr className={cn("border-b last:border-b-0 hover:bg-muted/30 transition-colors", rowBg)}>
-      <td className="py-2 px-2 truncate">
-        <div className="flex items-center gap-1.5">
+      <td className="py-2 px-2">
+        <div className="flex items-center gap-1.5 min-w-0">
           {isFrecuente && <Star className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
-          <span className="text-sm font-medium truncate">{getDisplayName(producto)}</span>
+          <span className="text-sm font-medium leading-tight">{getDisplayName(producto)}</span>
         </div>
       </td>
-      <td className="py-2 px-2 text-xs text-muted-foreground truncate">{producto.marca || "—"}</td>
+      <td className="py-2 px-2 text-xs text-muted-foreground leading-tight">{producto.marca || "—"}</td>
       <td className="py-2 px-2 text-xs text-center whitespace-nowrap">
         {producto.stock_actual <= 0 ? (
           <span className="text-destructive font-medium">0</span>
@@ -371,16 +371,16 @@ export function PasoProductosInline({
           ) : (
               <table className="w-full table-fixed">
                 <colgroup>
-                  <col className="w-[30%]" />
-                  <col className="w-[8%]" />
-                  <col className="w-[5%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[8%]" />
-                  <col className="w-[9%]" />
-                  <col className="w-[8%]" />
-                  <col className="w-[9%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[3%]" />
+                  <col style={{ width: '28%' }} />
+                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '5%' }} />
+                  <col style={{ width: '9%' }} />
+                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '9%' }} />
+                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '9%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '4%' }} />
                 </colgroup>
                 <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
                   <tr className="text-xs text-muted-foreground uppercase tracking-wider">
