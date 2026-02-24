@@ -189,13 +189,12 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     }
   }, [preSelectedClienteId, clientes]);
 
-  // Notify parent about active order
+  // Notify parent about active order - only when there are products in cart
   useEffect(() => {
     if (!loading) {
-      const hasOrder = lineas.length > 0 || !!selectedClienteId;
-      onHasActiveOrder?.(hasOrder);
+      onHasActiveOrder?.(lineas.length > 0);
     }
-  }, [loading, lineas.length, selectedClienteId]);
+  }, [loading, lineas.length]);
 
   // ==================== Data Fetching ====================
 
