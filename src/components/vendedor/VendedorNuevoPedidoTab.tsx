@@ -56,7 +56,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
   const [selectedClienteId, setSelectedClienteId] = useState("");
   const [selectedSucursalId, setSelectedSucursalId] = useState("");
   const [lineas, setLineas] = useState<LineaPedido[]>([]);
-  const [terminoCredito, setTerminoCredito] = useState("contado");
+  const [terminoCredito, setTerminoCredito] = useState("");
   const [notas, setNotas] = useState("");
   const [requiereFactura, setRequiereFactura] = useState(false);
 
@@ -133,15 +133,12 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       fetchSucursales(selectedClienteId);
       fetchProductosFrecuentes(selectedClienteId);
       if (!isRestoringDraft) {
-        const cliente = clientes.find(c => c.id === selectedClienteId);
-        if (cliente) {
-          setTerminoCredito(cliente.termino_credito);
-        }
+        setTerminoCredito("");
       }
     } else {
       setSucursales([]);
       setSelectedSucursalId("");
-      setTerminoCredito("contado");
+      setTerminoCredito("");
       setProductosFrecuentes([]);
     }
   }, [selectedClienteId, clientes, isRestoringDraft]);
