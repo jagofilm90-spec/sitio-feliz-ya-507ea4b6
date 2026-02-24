@@ -26,6 +26,7 @@ import { EditarClienteSheet } from "./EditarClienteSheet";
 
 interface Props {
   onClienteCreado: () => void;
+  onNavigateNuevoPedido?: (clienteId: string) => void;
 }
 
 interface Sucursal {
@@ -72,7 +73,7 @@ const REGIONES_FORANEAS = [
   { key: 'tlaxcala', label: 'Tlaxcala', regions: ['tlaxcala'] },
 ];
 
-export function VendedorMisClientesTab({ onClienteCreado }: Props) {
+export function VendedorMisClientesTab({ onClienteCreado, onNavigateNuevoPedido }: Props) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -513,7 +514,11 @@ export function VendedorMisClientesTab({ onClienteCreado }: Props) {
                       variant="outline"
                       className="h-12 flex-col gap-1 p-2"
                       onClick={() => {
-                        toast.info("Ve a la pestaña 'Nueva Venta' y selecciona este cliente");
+                        if (onNavigateNuevoPedido) {
+                          onNavigateNuevoPedido(cliente.id);
+                        } else {
+                          toast.info("Ve a la pestaña 'Nueva Venta' y selecciona este cliente");
+                        }
                       }}
                     >
                       <ShoppingCart className="h-4 w-4" />

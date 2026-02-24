@@ -26,6 +26,7 @@ const CART_STORAGE_KEY = 'vendedor_cart_draft';
 interface Props {
   onPedidoCreado: () => void;
   onNavigateToVentas?: () => void;
+  preSelectedClienteId?: string;
 }
 
 interface PedidoCreadoInfo {
@@ -34,7 +35,7 @@ interface PedidoCreadoInfo {
   cliente: string;
 }
 
-export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: Props) {
+export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, preSelectedClienteId }: Props) {
   // Data state
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
@@ -144,6 +145,17 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas }: P
       setProductosFrecuentes([]);
     }
   }, [selectedClienteId, clientes, isRestoringDraft]);
+
+  // Auto-select pre-selected client
+  useEffect(() => {
+    if (preSelectedClienteId && clientes.length > 0 && !selectedClienteId) {
+      const exists = clientes.find(c => c.id === preSelectedClienteId);
+      if (exists) {
+        setSelectedClienteId(preSelectedClienteId);
+        clearCartDraft();
+      }
+    }
+  }, [preSelectedClienteId, clientes]);
 
   // Auto-save cart on changes
   useEffect(() => {
