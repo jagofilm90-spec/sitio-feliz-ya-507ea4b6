@@ -26,6 +26,8 @@ interface NotificationRequest {
     horaEntrega?: string;
     nombreReceptor?: string;
   };
+  pdfBase64?: string;
+  pdfFilename?: string;
 }
 
 // Map notification type to email purposes
@@ -106,23 +108,36 @@ async function getValidAccessToken(supabase: any, cuenta: any): Promise<string |
 }
 
 // Build RFC 2822 email message
-function buildRawEmail(from: string, to: string, subject: string, htmlBody: string): string {
+function buildRawEmail(from: string, to: string, subject: string, htmlBody: string, pdfBase64?: string, pdfFilename?: string): string {
   const boundary = `boundary_${Date.now()}`;
   
-  const email = [
+  const parts = [
     `From: Almasa <${from}>`,
     `To: ${to}`,
     `Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`,
     `MIME-Version: 1.0`,
-    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    `Content-Type: multipart/mixed; boundary="${boundary}"`,
     ``,
     `--${boundary}`,
     `Content-Type: text/html; charset=UTF-8`,
     `Content-Transfer-Encoding: base64`,
     ``,
     btoa(unescape(encodeURIComponent(htmlBody))),
-    `--${boundary}--`,
-  ].join("\r\n");
+  ];
+
+  if (pdfBase64 && pdfFilename) {
+    parts.push(
+      `--${boundary}`,
+      `Content-Type: application/pdf; name="${pdfFilename}"`,
+      `Content-Disposition: attachment; filename="${pdfFilename}"`,
+      `Content-Transfer-Encoding: base64`,
+      ``,
+      pdfBase64,
+    );
+  }
+
+  parts.push(`--${boundary}--`);
+  const email = parts.join("\r\n");
 
   // Base64 URL-safe encoding
   return btoa(email).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -275,7 +290,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { clienteId, tipo, data }: NotificationRequest = await req.json();
+    const { clienteId, tipo, data, pdfBase64, pdfFilename }: NotificationRequest = await req.json();
 
     if (!clienteId || !tipo) {
       throw new Error("clienteId and tipo are required");
@@ -362,7 +377,7 @@ serve(async (req) => {
     for (const correo of correos) {
       try {
         // Build raw email
-        const rawEmail = buildRawEmail(senderEmail, correo.email, subject, html);
+        const rawEmail = buildRawEmail(senderEmail, correo.email, subject, html, pdfBase64, pdfFilename);
 
         // Send via Gmail API
         const sendResponse = await fetch(
