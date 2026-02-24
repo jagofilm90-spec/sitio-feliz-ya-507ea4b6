@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import { calcularDesgloseImpuestos, redondear, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
 import { captureDeviceInfo, getPublicIP } from "@/lib/auditoria-pedidos";
 import { formatDistanceToNow } from "date-fns";
@@ -744,7 +744,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
   const selectedSucursal = sucursales.find(s => s.id === selectedSucursalId);
 
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-4">
+    <div className={cn("mx-auto p-4 space-y-4", step === 2 ? "max-w-7xl" : "max-w-4xl")}>
       {/* Draft indicator */}
       {hasDraft && (
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg py-2">
