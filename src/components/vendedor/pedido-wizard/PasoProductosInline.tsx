@@ -370,7 +370,7 @@ export function PasoProductosInline({
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-[900px] w-full">
+              <table className="w-full">
                 <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
                   <tr className="text-xs text-muted-foreground uppercase tracking-wider">
                     <th className="py-2 px-2 text-left font-medium">Producto</th>
