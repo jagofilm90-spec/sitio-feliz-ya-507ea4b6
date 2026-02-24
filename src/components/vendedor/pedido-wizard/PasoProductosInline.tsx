@@ -83,7 +83,7 @@ function FilaProducto({
   const descMax = producto.descuento_maximo || 0;
   const precioMinimo = precioLista - descMax;
   const cantidad = linea?.cantidad || 0;
-  const precioActual = linea?.precioUnitario || precioLista;
+  const precioActual = linea?.precioUnitario ?? precioLista;
   const excedeLimite = linea?.requiereAutorizacion || false;
   const enCarrito = cantidad > 0;
 
@@ -149,7 +149,7 @@ function FilaProducto({
               type="text"
               inputMode="decimal"
               placeholder={formatCurrency(precioLista)}
-              value={enCarrito ? precioActual : ""}
+              value={enCarrito ? (precioActual || "") : ""}
               className={cn(
                 "h-9 text-center text-sm font-medium",
                 excedeLimite && "border-red-400 text-red-600"
@@ -243,7 +243,7 @@ function FilaProducto({
           type="text"
           inputMode="decimal"
           placeholder={precioLista.toFixed(2)}
-          value={enCarrito ? precioActual : ""}
+          value={enCarrito ? (precioActual || "") : ""}
           className={cn(
             "h-8 w-[90px] text-center text-sm font-medium px-1",
             excedeLimite && "border-red-400 text-red-600 bg-red-50 dark:bg-red-950/20"
