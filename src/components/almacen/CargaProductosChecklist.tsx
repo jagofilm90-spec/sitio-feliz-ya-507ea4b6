@@ -1,15 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   Select,
   SelectContent,
@@ -17,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Package, ChevronDown, AlertTriangle, Calendar, Gift, Warehouse } from "lucide-react";
+import { Package, AlertTriangle, Calendar, Gift, Warehouse, Weight, Scale } from "lucide-react";
 import { getCompactDisplayName } from "@/lib/productUtils";
 
 interface LoteDisponible {
@@ -36,6 +30,7 @@ interface ProductoCarga {
   cantidad_cargada: number | null;
   cargado: boolean;
   lote_id: string | null;
+  peso_real_kg?: number | null;
   producto: {
     id: string;
     codigo: string;
@@ -58,6 +53,7 @@ export interface CargaProductosChecklistProps {
     loteId: string | null
   ) => void;
   onDesmarcar?: (producto: ProductoCarga) => void;
+  onPesoChange?: (cargaId: string, pesoKg: number) => void;
   disabled?: boolean;
   isCortesia?: boolean;
   entregaConfirmada?: boolean;
@@ -67,58 +63,78 @@ export const CargaProductosChecklist = ({
   productos,
   onToggle,
   onDesmarcar,
+  onPesoChange,
   disabled = false,
   isCortesia = false,
   entregaConfirmada = false,
 }: CargaProductosChecklistProps) => {
   return (
-    <div className="space-y-2">
-      {productos.map((producto) => (
-        <ProductoItem
-          key={producto.id}
-          producto={producto}
-          onToggle={onToggle}
-          onDesmarcar={onDesmarcar}
-          disabled={disabled || entregaConfirmada}
-          isCortesia={isCortesia}
-        />
-      ))}
+    <div className="space-y-0">
+      {/* Table Header */}
+      <div className="grid grid-cols-[48px_1fr_100px_100px_120px] gap-2 px-3 py-2 bg-muted/60 rounded-t-lg border border-b-0 border-border text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+        <div className="flex items-center justify-center">✓</div>
+        <div>Producto</div>
+        <div className="text-center">Cantidad</div>
+        <div className="text-center">Peso (kg)</div>
+        <div className="text-center">Lote</div>
+      </div>
+
+      {/* Product Rows */}
+      <div className="border border-border rounded-b-lg divide-y divide-border/50 overflow-hidden">
+        {productos.map((producto) => (
+          <ProductoRow
+            key={producto.id}
+            producto={producto}
+            onToggle={onToggle}
+            onPesoChange={onPesoChange}
+            disabled={disabled || entregaConfirmada}
+            isCortesia={isCortesia}
+          />
+        ))}
+      </div>
     </div>
   );
 };
 
-const ProductoItem = ({
+const ProductoRow = ({
   producto,
   onToggle,
-  onDesmarcar,
+  onPesoChange,
   disabled,
   isCortesia = false,
 }: {
   producto: ProductoCarga;
   onToggle: CargaProductosChecklistProps["onToggle"];
-  onDesmarcar?: CargaProductosChecklistProps["onDesmarcar"];
+  onPesoChange?: CargaProductosChecklistProps["onPesoChange"];
   disabled: boolean;
   isCortesia?: boolean;
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [cantidadCargada, setCantidadCargada] = useState(
     producto.cantidad_cargada || producto.cantidad_solicitada
+  );
+  const [pesoReal, setPesoReal] = useState<number>(
+    producto.peso_real_kg || (producto.producto.peso_kg ? producto.cantidad_solicitada * producto.producto.peso_kg : 0)
   );
   const [loteSeleccionado, setLoteSeleccionado] = useState(
     producto.lote_id || (producto.lotes_disponibles[0]?.id ?? null)
   );
 
-  // Lote sugerido por FIFO (el primero que tiene fecha de caducidad más próxima)
+  // Sync with external changes
+  useEffect(() => {
+    setCantidadCargada(producto.cantidad_cargada || producto.cantidad_solicitada);
+  }, [producto.cantidad_cargada, producto.cantidad_solicitada]);
+
+  const pesoTeoricoUnitario = producto.producto.peso_kg || 0;
+  const pesoTeoricoTotal = pesoTeoricoUnitario * producto.cantidad_solicitada;
+  const tienePeso = pesoTeoricoUnitario > 0;
+
+  const cantidadDifiere = cantidadCargada !== producto.cantidad_solicitada;
+  const pesoDifiere = tienePeso && Math.abs(pesoReal - pesoTeoricoTotal) > 0.1;
+
   const loteFIFO = producto.lotes_disponibles[0];
-  
-  // Obtener bodega del lote seleccionado
-  const loteActual = producto.lotes_disponibles.find(
-    (l) => l.id === loteSeleccionado
-  );
-  const bodegaNombre = loteActual?.bodega_nombre || loteFIFO?.bodega_nombre;
+  const loteActual = producto.lotes_disponibles.find(l => l.id === loteSeleccionado);
 
   const handleCheckChange = (checked: boolean) => {
-    // Marcar o desmarcar - el toggle maneja ambos casos
     onToggle(producto.id, checked, cantidadCargada, loteSeleccionado);
   };
 
@@ -127,205 +143,153 @@ const ProductoItem = ({
     setCantidadCargada(cantidad);
   };
 
-  const handleLoteChange = (loteId: string) => {
-    setLoteSeleccionado(loteId);
+  const handleCantidadBlur = () => {
+    // If already checked and quantity changed, re-toggle
+    if (producto.cargado && cantidadCargada !== (producto.cantidad_cargada || producto.cantidad_solicitada)) {
+      // User needs to uncheck first
+    }
   };
 
+  const handlePesoChange = (value: string) => {
+    const peso = parseFloat(value) || 0;
+    setPesoReal(peso);
+  };
+
+  const handlePesoBlur = () => {
+    if (onPesoChange && pesoReal !== producto.peso_real_kg) {
+      onPesoChange(producto.id, pesoReal);
+    }
+  };
+
+  const rowBg = producto.cargado
+    ? isCortesia
+      ? "bg-amber-50/80 dark:bg-amber-950/20"
+      : "bg-green-50/80 dark:bg-green-950/20"
+    : "";
+
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div
-        className={`border rounded-lg transition-colors ${
-          producto.cargado
-            ? isCortesia
-              ? "bg-amber-100 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800"
-              : "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800"
-            : isCortesia
-              ? "bg-amber-50 border-amber-200"
-              : "bg-card border-border"
-        }`}
-      >
-        {/* Línea principal - optimizada para tablet */}
-        <div className="flex items-center gap-4 p-5">
-          <Checkbox
-            checked={producto.cargado}
-            onCheckedChange={handleCheckChange}
-            disabled={disabled}
-            className="h-8 w-8 rounded-md border-2"
-          />
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              {isCortesia && <Gift className="w-4 h-4 text-amber-600" />}
-              <span className="font-medium text-base">
-                {producto.cantidad_solicitada} {producto.producto.unidad}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {producto.producto.codigo}
-              </span>
-              {isCortesia && (
-                <Badge className="bg-amber-500 text-white text-xs">CORTESÍA</Badge>
-              )}
-              {/* *** NUEVO: Indicador de bodega *** */}
-              {bodegaNombre && (
-                <Badge variant="outline" className="text-xs flex items-center gap-1">
-                  <Warehouse className="w-3 h-3" />
-                  {bodegaNombre}
-                </Badge>
-              )}
-            </div>
-            <p className="text-sm text-muted-foreground truncate">
-              {getCompactDisplayName(producto.producto)}
-            </p>
-          </div>
-
-          {/* FIFO Badge */}
-          {loteFIFO && (
-            <Badge
-              variant="outline"
-              className="text-xs whitespace-nowrap flex items-center gap-1"
-            >
-              <Calendar className="w-3 h-3" />
-              {loteFIFO.fecha_caducidad
-                ? format(new Date(loteFIFO.fecha_caducidad), "dd/MMM/yy", {
-                    locale: es,
-                  })
-                : "Sin cad."}
-            </Badge>
-          )}
-
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="icon" className="shrink-0 h-12 w-12">
-              <ChevronDown
-                className={`w-6 h-6 transition-transform ${
-                  isOpen ? "rotate-180" : ""
-                }`}
-              />
-            </Button>
-          </CollapsibleTrigger>
-        </div>
-
-        {/* Detalles expandibles */}
-        <CollapsibleContent>
-          <div className="px-4 pb-4 pt-0 space-y-3 border-t border-border/50">
-            {/* Cantidad real cargada - optimizada para tablet */}
-            <div className="flex items-center gap-4 mt-3">
-              <label className="text-base text-muted-foreground whitespace-nowrap">
-                Cantidad cargada:
-              </label>
-              <Input
-                type="number"
-                inputMode="numeric"
-                value={cantidadCargada}
-                onChange={(e) => handleCantidadChange(e.target.value)}
-                className="w-28 h-14 text-center text-xl font-medium"
-                disabled={disabled}
-              />
-              <span className="text-sm text-muted-foreground">
-                de {producto.cantidad_solicitada} solicitados
-              </span>
-              {cantidadCargada !== producto.cantidad_solicitada && (
-                <Badge variant="destructive" className="flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" />
-                  Diferencia
-                </Badge>
-              )}
-            </div>
-
-            {/* Selector de lote FIFO con indicador de bodega */}
-            {producto.lotes_disponibles.length > 0 && (
-              <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">
-                  Seleccionar lote (FIFO sugerido primero):
-                </label>
-                <Select
-                  value={loteSeleccionado || ""}
-                  onValueChange={handleLoteChange}
-                  disabled={disabled}
-                >
-                  <SelectTrigger className="h-14 text-base">
-                    <SelectValue placeholder="Seleccionar lote" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {producto.lotes_disponibles.map((lote, index) => (
-                      <SelectItem
-                        key={lote.id}
-                        value={lote.id}
-                        className="py-3"
-                      >
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {index === 0 && (
-                            <Badge variant="secondary" className="text-xs">
-                              FIFO
-                            </Badge>
-                          )}
-                          {lote.bodega_nombre && (
-                            <Badge variant="outline" className="text-xs">
-                              {lote.bodega_nombre}
-                            </Badge>
-                          )}
-                          <span>{lote.lote_referencia || "Sin ref."}</span>
-                          <span className="text-muted-foreground">
-                            - {lote.cantidad_disponible} disponibles
-                          </span>
-                          {lote.fecha_caducidad && (
-                            <span className="text-muted-foreground">
-                              (Cad:{" "}
-                              {format(
-                                new Date(lote.fecha_caducidad),
-                                "dd/MM/yyyy"
-                              )}
-                              )
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {producto.lotes_disponibles.length === 0 && (
-              <div className="flex items-center gap-2 text-sm text-destructive">
-                <AlertTriangle className="w-4 h-4" />
-                No hay lotes disponibles para este producto
-              </div>
-            )}
-
-            {/* Info del lote actual */}
-            {loteActual && (
-              <div className="bg-muted/50 rounded-lg p-3 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground flex-wrap">
-                  <Package className="w-4 h-4" />
-                  <span>
-                    Lote: {loteActual.lote_referencia || "Sin referencia"}
-                  </span>
-                  {loteActual.bodega_nombre && (
-                    <>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Warehouse className="w-3 h-3" />
-                        {loteActual.bodega_nombre}
-                      </span>
-                    </>
-                  )}
-                  <span>•</span>
-                  <span>{loteActual.cantidad_disponible} disponibles</span>
-                  {loteActual.fecha_caducidad && (
-                    <>
-                      <span>•</span>
-                      <span>
-                        Caduca:{" "}
-                        {format(new Date(loteActual.fecha_caducidad), "dd/MM/yyyy")}
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </CollapsibleContent>
+    <div className={`grid grid-cols-[48px_1fr_100px_100px_120px] gap-2 px-3 py-3 items-center transition-colors ${rowBg}`}>
+      {/* Checkbox */}
+      <div className="flex items-center justify-center">
+        <Checkbox
+          checked={producto.cargado}
+          onCheckedChange={handleCheckChange}
+          disabled={disabled}
+          className="h-7 w-7 rounded-md border-2"
+        />
       </div>
-    </Collapsible>
+
+      {/* Product info */}
+      <div className="min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {isCortesia && <Gift className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
+          <span className="font-semibold text-sm">{producto.cantidad_solicitada} {producto.producto.unidad}</span>
+          <span className="text-xs text-muted-foreground font-mono">{producto.producto.codigo}</span>
+          {isCortesia && <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0">CORTESÍA</Badge>}
+          {producto.cargado && (
+            <Badge className="bg-green-600 text-white text-[10px] px-1.5 py-0">CARGADO</Badge>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground truncate mt-0.5">
+          {getCompactDisplayName(producto.producto)}
+        </p>
+        {/* Lote & Bodega info inline */}
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+          {loteActual?.bodega_nombre && (
+            <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+              <Warehouse className="w-3 h-3" />
+              {loteActual.bodega_nombre}
+            </span>
+          )}
+          {loteFIFO?.fecha_caducidad && (
+            <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+              <Calendar className="w-3 h-3" />
+              {format(new Date(loteFIFO.fecha_caducidad), "dd/MMM/yy", { locale: es })}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Cantidad cargada - editable */}
+      <div className="flex flex-col items-center gap-0.5">
+        <Input
+          type="number"
+          inputMode="numeric"
+          value={cantidadCargada}
+          onChange={(e) => handleCantidadChange(e.target.value)}
+          onBlur={handleCantidadBlur}
+          className={`h-10 text-center text-base font-semibold ${
+            cantidadDifiere ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : ""
+          }`}
+          disabled={disabled || producto.cargado}
+        />
+        {cantidadDifiere && (
+          <span className="text-[10px] text-amber-600 flex items-center gap-0.5">
+            <AlertTriangle className="w-3 h-3" />
+            ≠ {producto.cantidad_solicitada}
+          </span>
+        )}
+      </div>
+
+      {/* Peso real - editable */}
+      <div className="flex flex-col items-center gap-0.5">
+        {tienePeso ? (
+          <>
+            <Input
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              value={pesoReal || ""}
+              onChange={(e) => handlePesoChange(e.target.value)}
+              onBlur={handlePesoBlur}
+              placeholder={pesoTeoricoTotal.toFixed(1)}
+              className={`h-10 text-center text-base font-semibold ${
+                pesoDifiere ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : ""
+              }`}
+              disabled={disabled}
+            />
+            {pesoDifiere && (
+              <span className="text-[10px] text-amber-600 flex items-center gap-0.5">
+                <Scale className="w-3 h-3" />
+                Teórico: {pesoTeoricoTotal.toFixed(1)}
+              </span>
+            )}
+          </>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </div>
+
+      {/* Lote selector - compact */}
+      <div>
+        {producto.lotes_disponibles.length > 0 ? (
+          <Select
+            value={loteSeleccionado || ""}
+            onValueChange={setLoteSeleccionado}
+            disabled={disabled || producto.cargado}
+          >
+            <SelectTrigger className="h-10 text-xs">
+              <SelectValue placeholder="Lote" />
+            </SelectTrigger>
+            <SelectContent>
+              {producto.lotes_disponibles.map((lote, index) => (
+                <SelectItem key={lote.id} value={lote.id} className="py-2">
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {index === 0 && <Badge variant="secondary" className="text-[9px] px-1 py-0">FIFO</Badge>}
+                    <span className="text-xs">{lote.lote_referencia || "Sin ref."}</span>
+                    <span className="text-[10px] text-muted-foreground">({lote.cantidad_disponible})</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <span className="text-xs text-destructive flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" />
+            Sin lotes
+          </span>
+        )}
+      </div>
+    </div>
   );
 };
