@@ -187,7 +187,9 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
           precioLista: saved.precioLista,
           precioUnitario: saved.precioUnitario,
           descuento: saved.descuento,
-          subtotal: saved.precioUnitario * saved.cantidad,
+          subtotal: producto.precio_por_kilo && producto.peso_kg
+            ? redondear(saved.precioUnitario * saved.cantidad * producto.peso_kg)
+            : redondear(saved.precioUnitario * saved.cantidad),
           requiereAutorizacion: saved.requiereAutorizacion,
           autorizacionStatus: saved.autorizacionStatus,
         });
@@ -338,6 +340,18 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     }
   };
 
+  /**
+   * Calcula subtotal correcto según tipo de precio:
+   * - precio_por_kilo: cantidad × peso_kg × precio_por_kg
+   * - precio por unidad: cantidad × precio_unitario
+   */
+  const calcularSubtotalLinea = (producto: Producto, cantidad: number, precioUnitario: number): number => {
+    if (producto.precio_por_kilo && producto.peso_kg) {
+      return redondear(cantidad * producto.peso_kg * precioUnitario);
+    }
+    return redondear(cantidad * precioUnitario);
+  };
+
   // ==================== Product Actions ====================
 
   const agregarProducto = (producto: Producto, cantidadInicial: number = 1) => {
@@ -354,20 +368,25 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       });
     }
 
-    const precio = obtenerPrecioUnitarioVenta({
-      precio_venta: producto.precio_venta,
-      precio_por_kilo: producto.precio_por_kilo,
-      peso_kg: producto.peso_kg
-    });
+    // For precio_por_kilo products, use raw $/kg price
+    // For unit products, use obtenerPrecioUnitarioVenta (which is just precio_venta)
+    const precio = producto.precio_por_kilo
+      ? producto.precio_venta // raw $/kg
+      : obtenerPrecioUnitarioVenta({
+          precio_venta: producto.precio_venta,
+          precio_por_kilo: producto.precio_por_kilo,
+          peso_kg: producto.peso_kg
+        });
 
     const qty = Math.max(1, cantidadInicial);
+    const subtotal = calcularSubtotalLinea(producto, qty, precio);
     setLineas([...lineas, {
       producto,
       cantidad: qty,
       precioLista: precio,
       precioUnitario: precio,
       descuento: 0,
-      subtotal: precio * qty,
+      subtotal,
       requiereAutorizacion: false,
     }]);
   };
@@ -380,7 +399,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
 
     setLineas(lineas.map(l => 
       l.producto.id === productoId 
-        ? { ...l, cantidad, subtotal: l.precioUnitario * cantidad }
+        ? { ...l, cantidad, subtotal: calcularSubtotalLinea(l.producto, cantidad, l.precioUnitario) }
         : l
     ));
   };
@@ -397,7 +416,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
         ...l,
         descuento,
         precioUnitario: nuevoPrecio,
-        subtotal: nuevoPrecio * l.cantidad,
+        subtotal: calcularSubtotalLinea(l.producto, l.cantidad, nuevoPrecio),
         requiereAutorizacion,
         autorizacionStatus: requiereAutorizacion ? l.autorizacionStatus : null,
         solicitudId: requiereAutorizacion ? l.solicitudId : undefined,
@@ -417,7 +436,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
         ...l,
         precioUnitario: precio,
         descuento: Math.max(0, descuento),
-        subtotal: precio * l.cantidad,
+        subtotal: calcularSubtotalLinea(l.producto, l.cantidad, precio),
         requiereAutorizacion,
         autorizacionStatus: requiereAutorizacion ? l.autorizacionStatus : null,
         solicitudId: requiereAutorizacion ? l.solicitudId : undefined,
@@ -445,7 +464,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
         ...l,
         precioUnitario: precioAprobado,
         descuento: l.precioLista - precioAprobado,
-        subtotal: precioAprobado * l.cantidad,
+        subtotal: calcularSubtotalLinea(l.producto, l.cantidad, precioAprobado),
         requiereAutorizacion: false,
         autorizacionStatus: 'aprobado',
       };
