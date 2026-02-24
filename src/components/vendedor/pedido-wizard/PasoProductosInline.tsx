@@ -212,6 +212,11 @@ function FilaProducto({
         <div className="flex items-center gap-1.5 min-w-0">
           {isFrecuente && <Star className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
           <span className="text-sm font-medium leading-tight">{getDisplayName(producto)}</span>
+          {(producto.aplica_iva || producto.aplica_ieps) && (
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+              {[producto.aplica_iva && 'IVA', producto.aplica_ieps && 'IEPS'].filter(Boolean).join('+')}
+            </span>
+          )}
         </div>
       </td>
       <td className="py-2 px-2 text-xs text-muted-foreground leading-tight">{producto.marca || "—"}</td>
