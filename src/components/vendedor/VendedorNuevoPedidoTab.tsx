@@ -808,6 +808,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
           terminoCredito={terminoCredito}
           notas={notas}
           clienteDefaultCredito={selectedCliente?.termino_credito || "contado"}
+          clienteNombre={selectedCliente?.nombre}
           onTerminoCreditoChange={setTerminoCredito}
           onNotasChange={setNotas}
           onNext={handleNextStep}
