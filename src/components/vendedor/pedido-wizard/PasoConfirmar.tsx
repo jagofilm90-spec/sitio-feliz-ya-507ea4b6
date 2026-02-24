@@ -1,14 +1,15 @@
-import { ChevronLeft, Loader2, Store, MapPin, CreditCard, AlertTriangle, Clock, CheckCircle2, FileText, Receipt, Truck, Send } from "lucide-react";
+import { useRef, useState } from "react";
+import { ChevronLeft, Loader2, AlertTriangle, Clock, CheckCircle2, FileText, Receipt, Send, Download, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { formatCurrency } from "@/lib/utils";
+import { PedidoPrintTemplate, DatosPedidoPrint } from "@/components/pedidos/PedidoPrintTemplate";
 import { getDisplayName } from "@/lib/productUtils";
 import { LineaPedido, Cliente, Sucursal, TotalesCalculados } from "./types";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 export async function enviarEmailPedido(payload: {
   folio: string;
@@ -64,6 +65,7 @@ interface PasoConfirmarProps {
   onRequiereFacturaChange: (value: boolean) => void;
   onSubmit: () => void;
   onBack: () => void;
+  vendedorNombre: string;
 }
 
 export function PasoConfirmar({
@@ -78,13 +80,16 @@ export function PasoConfirmar({
   onRequiereFacturaChange,
   onSubmit,
   onBack,
+  vendedorNombre,
 }: PasoConfirmarProps) {
+  const printRef = useRef<HTMLDivElement>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+
   const tieneCSF = !!(cliente?.csf_archivo_url || cliente?.preferencia_facturacion === 'siempre_factura');
 
   const productosConDescuentoPendiente = lineas.filter(
     l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente'
   );
-  const productosSinStock = lineas.filter(l => l.producto.stock_actual <= 0);
   const requiereAutorizacionPedido = productosConDescuentoPendiente.length > 0;
 
   const formatCreditTerm = (term: string) => {
@@ -92,62 +97,100 @@ export function PasoConfirmar({
     return term.replace('_', ' ');
   };
 
+  // Build data for the print template
+  const datosPrint: DatosPedidoPrint = {
+    folio: "(Pendiente)",
+    fecha: new Date().toISOString(),
+    vendedor: vendedorNombre,
+    terminoCredito: formatCreditTerm(terminoCredito),
+    cliente: {
+      nombre: cliente?.nombre || "",
+      telefono: (cliente as any)?.telefono || undefined,
+    },
+    sucursal: sucursal ? {
+      nombre: sucursal.nombre,
+      direccion: sucursal.direccion || undefined,
+    } : undefined,
+    productos: lineas.map(l => {
+      const pesoKg = l.producto.peso_kg || 0;
+      const esPorKilo = l.producto.precio_por_kilo;
+      const pesoTotal = esPorKilo && pesoKg > 0 ? l.cantidad * pesoKg : null;
+      return {
+        cantidad: l.cantidad,
+        descripcion: getDisplayName(l.producto),
+        pesoTotal,
+        precioUnitario: l.precioUnitario,
+        importe: l.subtotal,
+        precioPorKilo: !!esPorKilo,
+      };
+    }),
+    subtotal: totales.subtotal,
+    iva: totales.iva,
+    ieps: totales.ieps,
+    total: totales.total,
+    pesoTotalKg: totales.pesoTotalKg,
+    notas: notas || undefined,
+  };
+
+  const handleDownloadPdf = async () => {
+    const printContent = printRef.current;
+    if (!printContent) return;
+    setIsDownloading(true);
+    try {
+      const canvas = await html2canvas(printContent, {
+        scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff'
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const ratio = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
+      const imgX = (pdfWidth - canvas.width * ratio) / 2;
+      pdf.addImage(imgData, 'PNG', imgX, 5, canvas.width * ratio, canvas.height * ratio);
+      const pdfBlob = pdf.output('blob');
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `Preview_Pedido.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      toast.success('PDF descargado');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Error al generar el PDF');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
-    <div className="space-y-4 max-w-lg mx-auto">
-      {/* Compact header */}
-      <div className="text-center space-y-1">
-        <h2 className="text-xl font-bold flex items-center justify-center gap-2">
+    <div className="space-y-4">
+      {/* Header with actions */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold flex items-center gap-2">
           <Send className="h-5 w-5 text-primary" />
-          Confirmar y Enviar
+          Vista previa del pedido
         </h2>
+        <Button onClick={handleDownloadPdf} variant="outline" size="sm" disabled={isDownloading} className="gap-1.5">
+          {isDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+          PDF
+        </Button>
       </div>
 
-      {/* Client + delivery compact row */}
-      <Card>
-        <CardContent className="py-3">
-          <div className="flex items-center gap-3">
-            <Store className="h-4 w-4 text-primary shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm truncate">{cliente?.nombre}</p>
-              {sucursal && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
-                  <MapPin className="h-3 w-3 shrink-0" />
-                  {sucursal.nombre}{sucursal.direccion ? ` — ${sucursal.direccion}` : ''}
-                </p>
-              )}
-            </div>
-            <Badge variant="outline" className="shrink-0 text-xs">
-              <CreditCard className="h-3 w-3 mr-1" />
-              {formatCreditTerm(terminoCredito)}
-            </Badge>
+      {/* Alerts */}
+      {productosConDescuentoPendiente.length > 0 && (
+        <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+          <Clock className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-amber-800 dark:text-amber-200 text-sm">
+              {productosConDescuentoPendiente.length} producto(s) pendiente de autorización
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              El pedido quedará como "Por Autorizar"
+            </p>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Alerts — only if needed */}
-      {(productosConDescuentoPendiente.length > 0 || productosSinStock.length > 0) && (
-        <div className="space-y-2">
-          {productosConDescuentoPendiente.length > 0 && (
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-              <Clock className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-amber-800 dark:text-amber-200 text-sm">
-                  {productosConDescuentoPendiente.length} producto(s) pendiente de autorización
-                </p>
-                <p className="text-xs text-amber-700 dark:text-amber-300">
-                  El pedido quedará como "Por Autorizar"
-                </p>
-              </div>
-            </div>
-          )}
-          {productosSinStock.length > 0 && (
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800">
-              <AlertTriangle className="h-4 w-4 text-orange-600 shrink-0 mt-0.5" />
-              <p className="font-medium text-orange-800 dark:text-orange-200 text-sm">
-                {productosSinStock.length} producto(s) sin stock — se surtirán después
-              </p>
-            </div>
-          )}
         </div>
       )}
 
@@ -176,63 +219,31 @@ export function PasoConfirmar({
         </Card>
       )}
 
-      {/* Notes */}
-      {notas && (
-        <p className="text-sm text-muted-foreground px-1">
-          <span className="font-medium">Notas:</span> {notas}
-        </p>
-      )}
-
-      {/* Compact Totals */}
-      <Card className="bg-muted/30">
-        <CardContent className="py-4 space-y-1.5">
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>{lineas.length} productos • {totales.totalUnidades} uds • {totales.pesoTotalKg.toLocaleString()} kg</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Subtotal</span>
-            <span>{formatCurrency(totales.subtotal)}</span>
-          </div>
-          {totales.iva > 0 && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">IVA</span>
-              <span>{formatCurrency(totales.iva)}</span>
+      {/* PDF Preview — scrollable */}
+      <div className="border rounded-lg overflow-hidden bg-muted/30">
+        <div className="overflow-auto max-h-[55vh]">
+          <div className="relative" style={{ height: '600px' }}>
+            <div ref={printRef} className="bg-white absolute top-0 left-0" style={{ transform: 'scale(0.48)', transformOrigin: 'top left', width: '8.5in' }}>
+              <PedidoPrintTemplate datos={datosPrint} />
             </div>
-          )}
-          {totales.ieps > 0 && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">IEPS</span>
-              <span>{formatCurrency(totales.ieps)}</span>
-            </div>
-          )}
-          {totales.ahorroDescuentos > 0 && (
-            <div className="flex justify-between text-sm text-green-600">
-              <span>Descuentos</span>
-              <span>-{formatCurrency(totales.ahorroDescuentos)}</span>
-            </div>
-          )}
-          <Separator />
-          <div className="flex justify-between font-bold text-xl pt-1">
-            <span>Total</span>
-            <span className="text-primary">{formatCurrency(totales.total)}</span>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-3 pt-2">
-        <Button 
-          variant="outline" 
-          onClick={onBack} 
-          size="lg" 
+      <div className="flex gap-3 pt-1">
+        <Button
+          variant="outline"
+          onClick={onBack}
+          size="lg"
           className="h-14"
           disabled={submitting}
         >
           <ChevronLeft className="h-4 w-4 mr-2" />
           Atrás
         </Button>
-        <Button 
-          onClick={onSubmit} 
+        <Button
+          onClick={onSubmit}
           size="lg"
           className="flex-1 h-14 text-lg font-bold"
           disabled={submitting}
