@@ -1,8 +1,7 @@
-import { FileCheck, ChevronLeft, Loader2, Store, MapPin, CreditCard, AlertTriangle, Clock, Package, Truck, CheckCircle2, FileText, Receipt } from "lucide-react";
+import { ChevronLeft, Loader2, Store, MapPin, CreditCard, AlertTriangle, Clock, CheckCircle2, FileText, Receipt, Truck, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -94,36 +93,30 @@ export function PasoConfirmar({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Step Header */}
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold flex items-center justify-center gap-2">
-          <FileCheck className="h-6 w-6 text-primary" />
-          Revisa tu pedido
+    <div className="space-y-4 max-w-lg mx-auto">
+      {/* Compact header */}
+      <div className="text-center space-y-1">
+        <h2 className="text-xl font-bold flex items-center justify-center gap-2">
+          <Send className="h-5 w-5 text-primary" />
+          Confirmar y Enviar
         </h2>
-        <p className="text-muted-foreground">
-          Verifica que toda la información esté correcta
-        </p>
       </div>
 
-      {/* Client & Branch Info */}
+      {/* Client + delivery compact row */}
       <Card>
-        <CardContent className="py-4">
-          <div className="flex items-start gap-4">
-            <Store className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-semibold text-lg">{cliente?.nombre}</p>
+        <CardContent className="py-3">
+          <div className="flex items-center gap-3">
+            <Store className="h-4 w-4 text-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm truncate">{cliente?.nombre}</p>
               {sucursal && (
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
-                  <MapPin className="h-3.5 w-3.5" />
-                  <span>{sucursal.nombre}</span>
-                  {sucursal.direccion && (
-                    <span className="truncate">- {sucursal.direccion}</span>
-                  )}
-                </div>
+                <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+                  <MapPin className="h-3 w-3 shrink-0" />
+                  {sucursal.nombre}{sucursal.direccion ? ` — ${sucursal.direccion}` : ''}
+                </p>
               )}
             </div>
-            <Badge variant="outline" className="shrink-0">
+            <Badge variant="outline" className="shrink-0 text-xs">
               <CreditCard className="h-3 w-3 mr-1" />
               {formatCreditTerm(terminoCredito)}
             </Badge>
@@ -131,196 +124,103 @@ export function PasoConfirmar({
         </CardContent>
       </Card>
 
-      {/* Alerts */}
+      {/* Alerts — only if needed */}
       {(productosConDescuentoPendiente.length > 0 || productosSinStock.length > 0) && (
         <div className="space-y-2">
           {productosConDescuentoPendiente.length > 0 && (
             <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-              <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <Clock className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
               <div>
                 <p className="font-medium text-amber-800 dark:text-amber-200 text-sm">
-                  {productosConDescuentoPendiente.length} producto(s) con descuento pendiente de revisión
+                  {productosConDescuentoPendiente.length} producto(s) pendiente de autorización
                 </p>
                 <p className="text-xs text-amber-700 dark:text-amber-300">
-                  El pedido se creará como "Por Autorizar"
+                  El pedido quedará como "Por Autorizar"
                 </p>
               </div>
             </div>
           )}
           {productosSinStock.length > 0 && (
             <div className="flex items-start gap-3 p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800">
-              <AlertTriangle className="h-5 w-5 text-orange-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-orange-800 dark:text-orange-200 text-sm">
-                  {productosSinStock.length} producto(s) sin stock disponible
-                </p>
-                <p className="text-xs text-orange-700 dark:text-orange-300">
-                  Se surtirán cuando haya disponibilidad
-                </p>
-              </div>
+              <AlertTriangle className="h-4 w-4 text-orange-600 shrink-0 mt-0.5" />
+              <p className="font-medium text-orange-800 dark:text-orange-200 text-sm">
+                {productosSinStock.length} producto(s) sin stock — se surtirán después
+              </p>
             </div>
           )}
         </div>
       )}
 
-      {/* Invoice Toggle — only show if client has CSF */}
+      {/* Invoice Toggle */}
       {tieneCSF && (
         <Card className={requiereFactura ? "border-primary/50 bg-primary/5" : ""}>
-          <CardContent className="py-4">
+          <CardContent className="py-3">
             <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                {requiereFactura ? (
-                  <FileText className="h-5 w-5 text-primary shrink-0" />
-                ) : (
-                  <Receipt className="h-5 w-5 text-muted-foreground shrink-0" />
-                )}
-                <div>
-                  <p className="font-semibold text-sm">
-                    {requiereFactura ? "Con Factura" : "Solo Remisión"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {requiereFactura
-                      ? "La secretaria generará CFDI al entregar"
-                      : "Se entregará únicamente remisión"}
-                  </p>
-                </div>
-              </div>
               <div className="flex items-center gap-2">
-                <Label htmlFor="factura-switch" className="text-xs text-muted-foreground">
-                  {requiereFactura ? "Factura" : "Remisión"}
-                </Label>
-                <Switch
-                  id="factura-switch"
-                  checked={requiereFactura}
-                  onCheckedChange={onRequiereFacturaChange}
-                />
+                {requiereFactura ? (
+                  <FileText className="h-4 w-4 text-primary" />
+                ) : (
+                  <Receipt className="h-4 w-4 text-muted-foreground" />
+                )}
+                <span className="font-medium text-sm">
+                  {requiereFactura ? "Con Factura" : "Solo Remisión"}
+                </span>
               </div>
+              <Switch
+                id="factura-switch"
+                checked={requiereFactura}
+                onCheckedChange={onRequiereFacturaChange}
+              />
             </div>
           </CardContent>
         </Card>
       )}
-
-      {/* Products List */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              Productos
-            </span>
-            <Badge variant="secondary">{lineas.length}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <ScrollArea className="max-h-[300px]">
-            <div className="divide-y">
-              {lineas.map((linea) => {
-                const esPorKilo = linea.producto.precio_por_kilo;
-                const presentacionKg = linea.producto.peso_kg || 0;
-                const kilosTotales = esPorKilo && presentacionKg > 0 ? linea.cantidad * presentacionKg : 0;
-                const tieneDescuento = linea.descuento > 0;
-
-                return (
-                  <div key={linea.producto.id} className="p-3 flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{getDisplayName(linea.producto)}</p>
-                      <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                        <span className="text-xs text-muted-foreground">
-                          {linea.cantidad} × {formatCurrency(linea.precioUnitario)}
-                        </span>
-                        {esPorKilo && presentacionKg > 0 && (
-                          <Badge variant="outline" className="text-xs">
-                            {kilosTotales} kg
-                          </Badge>
-                        )}
-                        {tieneDescuento && (
-                          <Badge variant="secondary" className="text-xs text-green-600">
-                            -{formatCurrency(linea.descuento * linea.cantidad)}
-                          </Badge>
-                        )}
-                        {linea.producto.stock_actual <= 0 && (
-                          <Badge variant="destructive" className="text-xs">Sin stock</Badge>
-                        )}
-                        {linea.autorizacionStatus === 'pendiente' && (
-                          <Badge variant="outline" className="text-xs text-amber-600 border-amber-400">
-                            <Clock className="h-3 w-3 mr-1" />
-                            Pendiente
-                          </Badge>
-                        )}
-                        {linea.autorizacionStatus === 'aprobado' && (
-                          <Badge variant="outline" className="text-xs text-green-600 border-green-400">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Aprobado
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <span className="font-bold text-sm shrink-0">
-                      {formatCurrency(linea.subtotal)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
 
       {/* Notes */}
       {notas && (
-        <Card>
-          <CardContent className="py-3">
-            <p className="text-sm">
-              <span className="font-medium text-muted-foreground">Notas: </span>
-              {notas}
-            </p>
-          </CardContent>
-        </Card>
+        <p className="text-sm text-muted-foreground px-1">
+          <span className="font-medium">Notas:</span> {notas}
+        </p>
       )}
 
-      {/* Totals Summary */}
+      {/* Compact Totals */}
       <Card className="bg-muted/30">
-        <CardContent className="py-4 space-y-2">
+        <CardContent className="py-4 space-y-1.5">
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <span>{lineas.length} productos • {totales.totalUnidades} uds • {totales.pesoTotalKg.toLocaleString()} kg</span>
+          </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Subtotal</span>
             <span>{formatCurrency(totales.subtotal)}</span>
           </div>
           {totales.iva > 0 && (
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">IVA (16%)</span>
+              <span className="text-muted-foreground">IVA</span>
               <span>{formatCurrency(totales.iva)}</span>
             </div>
           )}
           {totales.ieps > 0 && (
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">IEPS (8%)</span>
+              <span className="text-muted-foreground">IEPS</span>
               <span>{formatCurrency(totales.ieps)}</span>
             </div>
           )}
           {totales.ahorroDescuentos > 0 && (
             <div className="flex justify-between text-sm text-green-600">
-              <span>Descuentos aplicados</span>
+              <span>Descuentos</span>
               <span>-{formatCurrency(totales.ahorroDescuentos)}</span>
             </div>
           )}
           <Separator />
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Truck className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                {totales.totalUnidades} unidades • {totales.pesoTotalKg.toLocaleString()} kg
-              </span>
-            </div>
-          </div>
-          <div className="flex justify-between font-bold text-xl pt-2">
+          <div className="flex justify-between font-bold text-xl pt-1">
             <span>Total</span>
             <span className="text-primary">{formatCurrency(totales.total)}</span>
           </div>
         </CardContent>
       </Card>
 
-      {/* Navigation Buttons */}
-      <div className="flex gap-3">
+      {/* Action Buttons */}
+      <div className="flex gap-3 pt-2">
         <Button 
           variant="outline" 
           onClick={onBack} 
@@ -329,7 +229,7 @@ export function PasoConfirmar({
           disabled={submitting}
         >
           <ChevronLeft className="h-4 w-4 mr-2" />
-          Anterior
+          Atrás
         </Button>
         <Button 
           onClick={onSubmit} 
@@ -340,12 +240,12 @@ export function PasoConfirmar({
           {submitting ? (
             <>
               <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              {requiereAutorizacionPedido ? "Enviando para autorización..." : "Creando pedido..."}
+              {requiereAutorizacionPedido ? "Enviando..." : "Creando..."}
             </>
           ) : requiereAutorizacionPedido ? (
             <>
               <AlertTriangle className="h-5 w-5 mr-2" />
-              Enviar Pedido para Autorización
+              Enviar para Autorización
             </>
           ) : (
             <>
