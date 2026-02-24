@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Star, ChevronRight, ChevronLeft, Package, AlertTriangle, Send, Clock, CheckCircle2, Loader2, CreditCard, FileText, ChevronDown, Trash2, ShoppingCart } from "lucide-react";
+import { Search, Star, ChevronRight, ChevronLeft, Package, AlertTriangle, Send, Clock, CheckCircle2, Loader2, CreditCard, FileText, ChevronDown, Trash2, ShoppingCart, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +32,7 @@ interface PasoProductosInlineProps {
   clienteDefaultCredito: string;
   onTerminoCreditoChange: (term: string) => void;
   onNotasChange: (notas: string) => void;
+  clienteNombre?: string;
   onNext: () => void;
   onBack: () => void;
 }
@@ -317,6 +318,7 @@ export function PasoProductosInline({
   terminoCredito,
   notas,
   clienteDefaultCredito,
+  clienteNombre,
   onTerminoCreditoChange,
   onNotasChange,
   onNext,
@@ -349,6 +351,14 @@ export function PasoProductosInline({
 
   return (
     <div className="space-y-4">
+      {/* Client indicator */}
+      {clienteNombre && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
+          <Store className="h-4 w-4 text-primary shrink-0" />
+          <span className="text-sm font-medium">Pedido para: <span className="font-bold">{clienteNombre}</span></span>
+        </div>
+      )}
+
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
