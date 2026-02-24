@@ -531,7 +531,7 @@ export function PasoProductosInline({
                           <Input
                             type="text"
                             inputMode="decimal"
-                            value={linea.precioUnitario || ""}
+                            value={linea.precioUnitario ? linea.precioUnitario.toFixed(2) : ""}
                             className={cn(
                               "h-7 w-24 text-right text-sm px-1",
                               linea.requiereAutorizacion && "border-destructive text-destructive"
