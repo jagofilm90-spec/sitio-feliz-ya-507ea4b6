@@ -1,5 +1,6 @@
 import { Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
@@ -82,9 +83,23 @@ export function ProductoItemMobile({
             >
               <Minus className="h-4 w-4" />
             </Button>
-            <span className="w-10 text-center text-base font-semibold">
-              {cantidadEnCarrito}
-            </span>
+            <Input
+              type="text"
+              inputMode="numeric"
+              value={cantidadEnCarrito || ""}
+              placeholder="0"
+              className="w-16 h-9 text-center text-base font-semibold px-1 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "") {
+                  onActualizarCantidad(producto.id, 0);
+                  return;
+                }
+                if (/^\d+$/.test(val)) {
+                  onActualizarCantidad(producto.id, parseInt(val, 10));
+                }
+              }}
+            />
             <Button
               size="icon"
               variant="outline"
