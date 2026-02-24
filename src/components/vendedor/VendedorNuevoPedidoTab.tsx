@@ -340,7 +340,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
 
   // ==================== Product Actions ====================
 
-  const agregarProducto = (producto: Producto) => {
+  const agregarProducto = (producto: Producto, cantidadInicial: number = 1) => {
     const existe = lineas.find(l => l.producto.id === producto.id);
     if (existe) {
       actualizarCantidad(producto.id, existe.cantidad + 1);
@@ -360,13 +360,14 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       peso_kg: producto.peso_kg
     });
 
+    const qty = Math.max(1, cantidadInicial);
     setLineas([...lineas, {
       producto,
-      cantidad: 1,
+      cantidad: qty,
       precioLista: precio,
       precioUnitario: precio,
       descuento: 0,
-      subtotal: precio,
+      subtotal: precio * qty,
       requiereAutorizacion: false,
     }]);
   };
