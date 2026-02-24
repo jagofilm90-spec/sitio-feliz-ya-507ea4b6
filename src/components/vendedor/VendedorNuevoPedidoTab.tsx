@@ -744,7 +744,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
   const selectedSucursal = sucursales.find(s => s.id === selectedSucursalId);
 
   return (
-    <div className={cn("mx-auto p-4 space-y-4", step === 2 ? "max-w-7xl" : "max-w-4xl")}>
+    <div className={cn("mx-auto space-y-4", step === 2 ? "px-2" : "max-w-4xl p-4")}>
       {/* Draft indicator */}
       {hasDraft && (
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg py-2">
