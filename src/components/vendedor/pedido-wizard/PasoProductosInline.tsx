@@ -204,13 +204,13 @@ function FilaProducto({
   // Desktop row
   return (
     <tr className={cn("border-b last:border-b-0 hover:bg-muted/30 transition-colors", rowBg)}>
-      <td className="py-2 px-2">
+      <td className="py-2 px-2 truncate">
         <div className="flex items-center gap-1.5">
           {isFrecuente && <Star className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
-          <span className="text-sm font-medium whitespace-nowrap">{getDisplayName(producto)}</span>
+          <span className="text-sm font-medium truncate">{getDisplayName(producto)}</span>
         </div>
       </td>
-      <td className="py-2 px-2 text-xs text-muted-foreground whitespace-nowrap">{producto.marca || "—"}</td>
+      <td className="py-2 px-2 text-xs text-muted-foreground truncate">{producto.marca || "—"}</td>
       <td className="py-2 px-2 text-xs text-center whitespace-nowrap">
         {producto.stock_actual <= 0 ? (
           <span className="text-destructive font-medium">0</span>
@@ -223,13 +223,13 @@ function FilaProducto({
       <td className="py-2 px-2 text-sm text-right whitespace-nowrap">{formatCurrency(precioLista)}</td>
       <td className="py-2 px-2 text-xs text-right text-muted-foreground whitespace-nowrap">{descMax > 0 ? formatCurrency(descMax) : "—"}</td>
       <td className="py-2 px-2 text-sm text-right text-green-600 whitespace-nowrap font-medium">{descMax > 0 ? formatCurrency(precioMinimo) : "—"}</td>
-      <td className="py-2 px-2 w-[80px]">
+      <td className="py-2 px-1">
         <Input
           type="text"
           inputMode="numeric"
           placeholder="0"
           value={cantidad || ""}
-          className="h-8 w-[70px] text-center text-sm font-medium px-1 [&::-webkit-inner-spin-button]:appearance-none"
+          className="h-8 w-full text-center text-sm font-medium px-1 [&::-webkit-inner-spin-button]:appearance-none"
           onChange={(e) => {
             const val = e.target.value;
             if (val === "") {
@@ -247,14 +247,14 @@ function FilaProducto({
           }}
         />
       </td>
-      <td className="py-2 px-2 w-[100px]">
+      <td className="py-2 px-1">
         <Input
           type="text"
           inputMode="decimal"
           placeholder={precioLista.toFixed(2)}
           value={enCarrito ? (precioActual || "") : ""}
           className={cn(
-            "h-8 w-[90px] text-center text-sm font-medium px-1",
+            "h-8 w-full text-center text-sm font-medium px-1",
             excedeLimite && "border-red-400 text-red-600 bg-red-50 dark:bg-red-950/20"
           )}
           disabled={!enCarrito}
@@ -270,7 +270,7 @@ function FilaProducto({
       <td className="py-2 px-2 text-sm font-bold text-right text-primary whitespace-nowrap">
         {enCarrito ? formatCurrency(linea!.subtotal) : ""}
       </td>
-      <td className="py-2 px-1 w-[40px]">
+      <td className="py-2 px-1">
         {excedeLimite && linea && linea.autorizacionStatus !== 'aprobado' && (
           linea.autorizacionStatus === 'pendiente' ? (
             <span aria-label="Pendiente revisión"><Clock className="h-4 w-4 text-amber-500" /></span>
@@ -369,8 +369,19 @@ export function PasoProductosInline({
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full table-fixed">
+                <colgroup>
+                  <col className="w-[30%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[5%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[3%]" />
+                </colgroup>
                 <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
                   <tr className="text-xs text-muted-foreground uppercase tracking-wider">
                     <th className="py-2 px-2 text-left font-medium">Producto</th>
@@ -382,7 +393,7 @@ export function PasoProductosInline({
                     <th className="py-2 px-2 text-center font-medium">Cant.</th>
                     <th className="py-2 px-2 text-center font-medium">P. Pactado</th>
                     <th className="py-2 px-2 text-right font-medium">Subtotal</th>
-                    <th className="py-2 px-1 w-[40px]"></th>
+                    <th className="py-2 px-1"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -409,7 +420,6 @@ export function PasoProductosInline({
                   )}
                 </tbody>
               </table>
-            </div>
           )}
         </ScrollArea>
       </Card>
