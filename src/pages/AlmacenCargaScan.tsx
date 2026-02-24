@@ -174,6 +174,18 @@ export default function AlmacenCargaScan() {
 
       const { data: { user } } = await supabase.auth.getUser();
 
+      if (!user) {
+        toast.error("Tu sesión expiró. Inicia sesión nuevamente.");
+        navigate("/auth", { replace: true });
+        return;
+      }
+
+      const { data: empleadoActual } = await supabase
+        .from("empleados")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
       // Create route
       const { data: ruta, error: rutaError } = await supabase
         .from("rutas")
@@ -184,9 +196,9 @@ export default function AlmacenCargaScan() {
           vehiculo_id: vehiculoId,
           tipo_ruta: "local",
           status: "programada",
-          almacenista_id: user?.id || null,
+          almacenista_id: empleadoActual?.id || null,
           carga_iniciada_en: new Date().toISOString(),
-          carga_iniciada_por: user?.id || null,
+          carga_iniciada_por: user.id,
         })
         .select("id, folio")
         .single();
@@ -209,9 +221,9 @@ export default function AlmacenCargaScan() {
         setTimeout(() => agregarPedidoACola(pendingPedidoId.current!), 300);
         pendingPedidoId.current = null;
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error("Error al crear la ruta");
+      toast.error(`Error al crear la ruta: ${err?.message || "intenta de nuevo"}`);
     }
   };
 
