@@ -40,6 +40,7 @@ export default function VendedorPanel() {
   // Navigation guard for leaving "nuevo" tab with pending work
   const [pendingTabChange, setPendingTabChange] = useState<string | null>(null);
   const hasActiveOrder = useRef(false);
+  const saveDraftRef = useRef<(() => Promise<void>) | null>(null);
 
   const handleNavigateNuevoPedido = (clienteId?: string) => {
     setPreSelectedClienteId(clienteId);
@@ -132,8 +133,9 @@ export default function VendedorPanel() {
   }, [activeTab]);
 
   const handleSaveDraftAndNavigate = async () => {
-    // The VendedorNuevoPedidoTab will handle saving via onSaveDraft callback
-    // For now just navigate
+    if (saveDraftRef.current) {
+      await saveDraftRef.current();
+    }
     if (pendingTabChange) {
       setActiveTab(pendingTabChange);
       setPendingTabChange(null);
@@ -427,7 +429,7 @@ export default function VendedorPanel() {
               <Card>
                 <CardContent className="p-6">
               {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} onNavigateNuevoPedido={handleNavigateNuevoPedido} />}
-                  {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={() => { fetchDashboardData(); fetchBorradoresCount(); }} onNavigateToVentas={() => setActiveTab("ventas")} preSelectedClienteId={preSelectedClienteId} onHasActiveOrder={(v) => { hasActiveOrder.current = v; }} onSaveDraft={handleSaveDraftAndNavigate} />}
+                  {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={() => { fetchDashboardData(); fetchBorradoresCount(); }} onNavigateToVentas={() => setActiveTab("ventas")} preSelectedClienteId={preSelectedClienteId} onHasActiveOrder={(v) => { hasActiveOrder.current = v; }} saveDraftRef={saveDraftRef} />}
                   {activeTab === "ventas" && <VendedorMisVentasTab onDashboardRefresh={fetchDashboardData} />}
                   {activeTab === "novedades" && <VendedorNovedadesTab />}
                   {activeTab === "precios" && <VendedorListaPreciosTab />}
@@ -441,7 +443,7 @@ export default function VendedorPanel() {
             {/* Mobile Content */}
             <div className="md:hidden">
               {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} onNavigateNuevoPedido={handleNavigateNuevoPedido} />}
-              {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={() => { fetchDashboardData(); fetchBorradoresCount(); }} onNavigateToVentas={() => setActiveTab("ventas")} preSelectedClienteId={preSelectedClienteId} onHasActiveOrder={(v) => { hasActiveOrder.current = v; }} onSaveDraft={handleSaveDraftAndNavigate} />}
+              {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={() => { fetchDashboardData(); fetchBorradoresCount(); }} onNavigateToVentas={() => setActiveTab("ventas")} preSelectedClienteId={preSelectedClienteId} onHasActiveOrder={(v) => { hasActiveOrder.current = v; }} saveDraftRef={saveDraftRef} />}
               {activeTab === "ventas" && <VendedorMisVentasTab onDashboardRefresh={fetchDashboardData} />}
               {activeTab === "novedades" && <VendedorNovedadesTab />}
               {activeTab === "precios" && <VendedorListaPreciosTab />}

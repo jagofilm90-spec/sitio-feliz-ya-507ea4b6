@@ -28,7 +28,7 @@ interface Props {
   onNavigateToVentas?: () => void;
   preSelectedClienteId?: string;
   onHasActiveOrder?: (hasOrder: boolean) => void;
-  onSaveDraft?: () => void;
+  saveDraftRef?: React.MutableRefObject<(() => Promise<void>) | null>;
 }
 
 interface PedidoCreadoInfo {
@@ -37,7 +37,7 @@ interface PedidoCreadoInfo {
   cliente: string;
 }
 
-export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, preSelectedClienteId, onHasActiveOrder, onSaveDraft }: Props) {
+export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, preSelectedClienteId, onHasActiveOrder, saveDraftRef }: Props) {
   // Data state
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
@@ -157,6 +157,87 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     setSelectedClienteId(clienteId);
     toast.info("Cliente del borrador seleccionado. Agrega los productos.");
   };
+
+  // ==================== Guardar Borrador en BD ====================
+
+  const guardarBorradorEnDB = useCallback(async () => {
+    if (lineas.length === 0 || !selectedClienteId) return;
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No autenticado");
+
+      const totales = calcularTotales();
+      const timestamp = Date.now().toString().slice(-6);
+      const folio = `BOR-V-${timestamp}`;
+
+      const { data: pedido, error: pedidoError } = await supabase
+        .from("pedidos")
+        .insert({
+          folio,
+          cliente_id: selectedClienteId,
+          vendedor_id: user.id,
+          sucursal_id: selectedSucursalId || null,
+          fecha_pedido: new Date().toISOString(),
+          subtotal: totales.subtotal,
+          impuestos: totales.impuestos,
+          total: totales.total,
+          status: "borrador",
+          notas: notas || null,
+          termino_credito: terminoCredito as any,
+          requiere_factura: requiereFactura,
+        })
+        .select()
+        .single();
+
+      if (pedidoError) throw pedidoError;
+
+      const detallesInsert = lineas.map(l => ({
+        pedido_id: pedido.id,
+        producto_id: l.producto.id,
+        cantidad: l.cantidad,
+        precio_unitario: l.precioUnitario,
+        subtotal: l.subtotal,
+        notas_ajuste: l.descuento > 0
+          ? `Descuento: ${formatCurrency(l.descuento)}`
+          : null
+      }));
+
+      const { error: detallesError } = await supabase
+        .from("pedidos_detalles")
+        .insert(detallesInsert);
+
+      if (detallesError) throw detallesError;
+
+      // Reset form
+      setSelectedClienteId("");
+      setSelectedSucursalId("");
+      setLineas([]);
+      setTerminoCredito("contado");
+      setNotas("");
+      setRequiereFactura(false);
+      setStep(1);
+      setCompletedSteps([]);
+
+      toast.success("Borrador guardado exitosamente");
+      fetchBorradoresDB();
+    } catch (error: any) {
+      console.error("Error saving draft:", error);
+      toast.error(error.message || "Error al guardar borrador");
+    }
+  }, [selectedClienteId, selectedSucursalId, lineas, notas, terminoCredito, requiereFactura]);
+
+  // Expose guardarBorrador to parent via ref
+  useEffect(() => {
+    if (saveDraftRef) {
+      saveDraftRef.current = guardarBorradorEnDB;
+    }
+    return () => {
+      if (saveDraftRef) {
+        saveDraftRef.current = null;
+      }
+    };
+  }, [guardarBorradorEnDB, saveDraftRef]);
 
   // ==================== Effects ====================
 
