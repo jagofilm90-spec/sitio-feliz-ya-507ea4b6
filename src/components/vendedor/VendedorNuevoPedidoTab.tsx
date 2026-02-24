@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { createRoot } from "react-dom/client";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,8 @@ import { PasoCliente } from "./pedido-wizard/PasoCliente";
 import { PasoProductosInline } from "./pedido-wizard/PasoProductosInline";
 import { PasoConfirmar } from "./pedido-wizard/PasoConfirmar";
 import { SolicitudDescuentoDialog } from "./SolicitudDescuentoDialog";
+import { PedidoPrintTemplate, DatosPedidoPrint } from "@/components/pedidos/PedidoPrintTemplate";
+import { getDisplayName } from "@/lib/productUtils";
 import type { Cliente, Sucursal, Producto, LineaPedido, TotalesCalculados } from "./pedido-wizard/types";
 
 
@@ -821,22 +824,74 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       } catch (emailError) {
         console.error("Error sending email:", emailError);
       }
-      // Generate PDF for email attachments
+      // Generate high-quality PDF with real folio/pedidoId for email attachments
       let pdfBase64: string | null = null;
       try {
-        if (confirmPrintRef.current) {
-          const canvas = await html2canvas(confirmPrintRef.current, {
-            scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff'
-          });
-          const imgData = canvas.toDataURL('image/png');
-          const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
-          const pdfWidth = pdf.internal.pageSize.getWidth();
-          const pdfHeight = pdf.internal.pageSize.getHeight();
-          const ratio = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
-          const imgX = (pdfWidth - canvas.width * ratio) / 2;
-          pdf.addImage(imgData, 'PNG', imgX, 5, canvas.width * ratio, canvas.height * ratio);
-          pdfBase64 = pdf.output('datauristring').split(',')[1];
-        }
+        // Build print data with real folio and pedidoId (for QR)
+        const datosPrintFinal: DatosPedidoPrint = {
+          pedidoId: pedido.id,
+          folio,
+          fecha: new Date().toISOString(),
+          vendedor: vendedorNombre,
+          terminoCredito: terminoCredito === 'contado' ? 'Contado' : terminoCredito.replace('_', ' '),
+          cliente: {
+            nombre: selectedCliente?.nombre || "",
+            telefono: (selectedCliente as any)?.telefono || undefined,
+          },
+          sucursal: (() => {
+            const suc = sucursales.find(s => s.id === selectedSucursalId);
+            return suc ? { nombre: suc.nombre, direccion: suc.direccion || undefined } : undefined;
+          })(),
+          productos: lineas.map(l => {
+            const pesoKg = l.producto.peso_kg || 0;
+            const pesoTotal = pesoKg > 0 ? l.cantidad * pesoKg : null;
+            return {
+              cantidad: l.cantidad,
+              descripcion: getDisplayName(l.producto),
+              pesoTotal,
+              precioUnitario: l.precioUnitario,
+              importe: l.subtotal,
+              precioPorKilo: !!l.producto.precio_por_kilo,
+            };
+          }),
+          subtotal: totales.subtotal,
+          iva: totales.iva,
+          ieps: totales.ieps,
+          total: totales.total,
+          pesoTotalKg: totales.pesoTotalKg,
+          notas: notas || undefined,
+        };
+
+        // Create off-screen container at full size for high-quality capture
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-9999px';
+        tempContainer.style.top = '0';
+        tempContainer.style.width = '8.5in';
+        tempContainer.style.backgroundColor = '#ffffff';
+        document.body.appendChild(tempContainer);
+
+        const root = createRoot(tempContainer);
+        root.render(<PedidoPrintTemplate datos={datosPrintFinal} />);
+
+        // Wait for render + QR code SVG to appear
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        const canvas = await html2canvas(tempContainer, {
+          scale: 3, useCORS: true, logging: false, backgroundColor: '#ffffff'
+        });
+
+        root.unmount();
+        document.body.removeChild(tempContainer);
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const ratio = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
+        const imgX = (pdfWidth - canvas.width * ratio) / 2;
+        pdf.addImage(imgData, 'JPEG', imgX, 5, canvas.width * ratio, canvas.height * ratio);
+        pdfBase64 = pdf.output('datauristring').split(',')[1];
       } catch (pdfError) {
         console.error("Error generating PDF for email:", pdfError);
       }
