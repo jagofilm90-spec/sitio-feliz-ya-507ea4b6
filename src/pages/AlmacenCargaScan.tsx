@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   QrCode,
   Package,
@@ -19,16 +20,20 @@ import {
   Printer,
   Scale,
   Trash2,
+  Truck,
+  User,
 } from "lucide-react";
 import { CargaProductosChecklist } from "@/components/almacen/CargaProductosChecklist";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { format } from "date-fns";
 
 // ─── Types ────────────────────────────────────────────────
 interface PedidoEnCola {
   pedidoId: string;
   folio: string;
   clienteNombre: string;
+  clienteId: string;
   completado: boolean;
 }
 
@@ -61,10 +66,32 @@ interface ProductoCargaScan {
   }[];
 }
 
+interface ChoferOption {
+  id: string;
+  nombre_completo: string;
+  puesto: string;
+}
+
+interface VehiculoOption {
+  id: string;
+  nombre: string;
+  placa: string | null;
+  tipo: string | null;
+}
+
 // ─── Component ────────────────────────────────────────────
 export default function AlmacenCargaScan() {
   const { pedidoId } = useParams<{ pedidoId: string }>();
   const navigate = useNavigate();
+
+  // Pre-scan step: chofer + vehículo selection
+  const [paso, setPaso] = useState<"seleccion" | "escaneo">("seleccion");
+  const [choferId, setChoferId] = useState<string>("");
+  const [vehiculoId, setVehiculoId] = useState<string>("");
+  const [choferes, setChoferes] = useState<ChoferOption[]>([]);
+  const [vehiculos, setVehiculos] = useState<VehiculoOption[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(true);
+  const [rutaId, setRutaId] = useState<string | null>(null);
 
   const [cola, setCola] = useState<PedidoEnCola[]>([]);
   const [indiceCola, setIndiceCola] = useState(0);
@@ -78,12 +105,33 @@ export default function AlmacenCargaScan() {
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // If we arrived via QR with a single pedidoId, add it to queue
+  // Load choferes and vehículos for selection step
   useEffect(() => {
-    if (pedidoId && cola.length === 0) {
-      agregarPedidoACola(pedidoId);
-    }
-  }, [pedidoId]);
+    const loadOptions = async () => {
+      setLoadingOptions(true);
+      const [choferesRes, vehiculosRes] = await Promise.all([
+        supabase
+          .from("empleados")
+          .select("id, nombre_completo, puesto")
+          .in("puesto", ["Chofer", "Ayudante de Chofer"])
+          .eq("activo", true)
+          .order("nombre_completo"),
+        supabase
+          .from("vehiculos")
+          .select("id, nombre, placa, tipo")
+          .eq("activo", true)
+          .eq("status", "disponible")
+          .order("nombre"),
+      ]);
+      setChoferes(choferesRes.data || []);
+      setVehiculos(vehiculosRes.data || []);
+      setLoadingOptions(false);
+    };
+    loadOptions();
+  }, []);
+
+  // If we arrived via QR with a single pedidoId, skip to scanning after selection
+  const pendingPedidoId = useRef(pedidoId || null);
 
   // Timer
   useEffect(() => {
@@ -101,9 +149,72 @@ export default function AlmacenCargaScan() {
     return `${m}:${sec.toString().padStart(2, "0")}`;
   };
 
+  // ─── Start loading: create route and proceed ───
+  const handleEmpezarCarga = async () => {
+    if (!choferId || !vehiculoId) {
+      toast.error("Selecciona chofer y vehículo antes de continuar");
+      return;
+    }
+
+    try {
+      // Generate folio
+      const { data: lastRuta } = await supabase
+        .from("rutas")
+        .select("folio")
+        .ilike("folio", "RUT-%")
+        .order("folio", { ascending: false })
+        .limit(1);
+
+      const lastNumber = lastRuta?.[0]?.folio
+        ? parseInt(lastRuta[0].folio.replace("RUT-", ""))
+        : 0;
+      const newFolio = `RUT-${String(lastNumber + 1).padStart(4, "0")}`;
+
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Create route
+      const { data: ruta, error: rutaError } = await supabase
+        .from("rutas")
+        .insert({
+          folio: newFolio,
+          fecha_ruta: format(new Date(), "yyyy-MM-dd"),
+          chofer_id: choferId,
+          vehiculo_id: vehiculoId,
+          tipo_ruta: "local",
+          status: "programada",
+          almacenista_id: user?.id || null,
+          carga_iniciada_en: new Date().toISOString(),
+          carga_iniciada_por: user?.id || null,
+        })
+        .select("id, folio")
+        .single();
+
+      if (rutaError) throw rutaError;
+
+      setRutaId(ruta.id);
+
+      // Update vehicle status
+      await supabase
+        .from("vehiculos")
+        .update({ status: "en_ruta" })
+        .eq("id", vehiculoId);
+
+      setPaso("escaneo");
+      toast.success(`Ruta ${ruta.folio} creada. Empieza a escanear pedidos.`);
+
+      // If we had a pending QR pedidoId, add it now
+      if (pendingPedidoId.current) {
+        setTimeout(() => agregarPedidoACola(pendingPedidoId.current!), 300);
+        pendingPedidoId.current = null;
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al crear la ruta");
+    }
+  };
+
   // ─── Add pedido to queue ───
   const agregarPedidoACola = async (id: string) => {
-    // Check not already in queue
     if (cola.find((c) => c.pedidoId === id)) {
       toast.info("Este pedido ya está en la cola");
       return;
@@ -112,7 +223,7 @@ export default function AlmacenCargaScan() {
     try {
       const { data, error } = await supabase
         .from("pedidos")
-        .select("id, folio, cliente:clientes(nombre)")
+        .select("id, folio, cliente_id, cliente:clientes(nombre)")
         .eq("id", id)
         .single();
 
@@ -125,6 +236,7 @@ export default function AlmacenCargaScan() {
         pedidoId: data.id,
         folio: data.folio,
         clienteNombre: (data.cliente as any)?.nombre || "Sin cliente",
+        clienteId: data.cliente_id,
         completado: false,
       };
 
@@ -138,6 +250,23 @@ export default function AlmacenCargaScan() {
         loadProductosPedido(data.id);
       }
 
+      // Link entrega to the route
+      if (rutaId) {
+        const { data: entrega } = await supabase
+          .from("entregas")
+          .select("id")
+          .eq("pedido_id", data.id)
+          .limit(1)
+          .maybeSingle();
+
+        if (entrega) {
+          await supabase
+            .from("entregas")
+            .update({ ruta_id: rutaId, orden_entrega: cola.length + 1 })
+            .eq("id", entrega.id);
+        }
+      }
+
       toast.success(`Pedido ${data.folio} agregado a la cola`);
     } catch {
       toast.error("Error al buscar pedido");
@@ -148,7 +277,6 @@ export default function AlmacenCargaScan() {
   const loadProductosPedido = async (pedId: string) => {
     setLoading(true);
     try {
-      // Find the entrega for this pedido
       const { data: entrega, error: entregaErr } = await supabase
         .from("entregas")
         .select("id")
@@ -164,7 +292,6 @@ export default function AlmacenCargaScan() {
 
       setEntregaId(entrega.id);
 
-      // Load or create carga_productos
       let { data: cargaProds, error: cargaErr } = await supabase
         .from("carga_productos")
         .select("id, pedido_detalle_id, cantidad_solicitada, cantidad_cargada, cargado, lote_id, peso_real_kg")
@@ -172,7 +299,6 @@ export default function AlmacenCargaScan() {
 
       if (cargaErr) throw cargaErr;
 
-      // If no records exist, create them
       if (!cargaProds || cargaProds.length === 0) {
         const { data: detalles } = await supabase
           .from("pedidos_detalles")
@@ -197,7 +323,6 @@ export default function AlmacenCargaScan() {
         }
       }
 
-      // Enrich with product info and lots
       const enriched: ProductoCargaScan[] = [];
       for (const cp of cargaProds || []) {
         const { data: detalle } = await supabase
@@ -252,10 +377,8 @@ export default function AlmacenCargaScan() {
         const prod = productos.find((p) => p.id === cargaId);
         if (!prod) return;
 
-        // Decrement lot
         await supabase.rpc("decrementar_lote", { p_lote_id: loteId, p_cantidad: cantidadCargada });
 
-        // Create inventory movement
         await supabase.from("inventario_movimientos").insert({
           producto_id: prod.producto.id,
           tipo_movimiento: "salida",
@@ -274,7 +397,6 @@ export default function AlmacenCargaScan() {
           cargado_por: user?.id,
         }).eq("id", cargaId);
       } else if (!cargado) {
-        // Unload - reverse
         const prod = productos.find((p) => p.id === cargaId);
         if (prod?.lote_id && prod.cantidad_cargada) {
           await supabase.rpc("incrementar_lote", { p_lote_id: prod.lote_id, p_cantidad: prod.cantidad_cargada });
@@ -289,7 +411,6 @@ export default function AlmacenCargaScan() {
         }).eq("id", cargaId);
       }
 
-      // Update local state
       setProductos((prev) =>
         prev.map((p) =>
           p.id === cargaId
@@ -315,7 +436,6 @@ export default function AlmacenCargaScan() {
   const guardarYSiguiente = async () => {
     setSaving(true);
     try {
-      // Mark entrega carga as confirmed
       const { data: { user } } = await supabase.auth.getUser();
       if (entregaId) {
         await supabase.from("entregas").update({
@@ -335,9 +455,8 @@ export default function AlmacenCargaScan() {
         setIndiceCola(siguiente);
         await loadProductosPedido(cola[siguiente].pedidoId);
       } else {
-        // All done
-        setFinalizado(true);
-        if (timerRef.current) clearInterval(timerRef.current);
+        // All done — finalize
+        await finalizarCarga();
       }
 
       toast.success("Pedido guardado");
@@ -349,13 +468,64 @@ export default function AlmacenCargaScan() {
     }
   };
 
+  // ─── Finalize: update statuses + send emails ───
+  const finalizarCarga = async () => {
+    setFinalizado(true);
+    if (timerRef.current) clearInterval(timerRef.current);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Get chofer name for email
+      const chofer = choferes.find(c => c.id === choferId);
+      const choferNombre = chofer?.nombre_completo || "Chofer";
+
+      // Mark route as loaded
+      if (rutaId) {
+        await supabase.from("rutas").update({
+          carga_completada: true,
+          carga_completada_por: user?.id,
+          carga_completada_en: new Date().toISOString(),
+          status: "cargada",
+        }).eq("id", rutaId);
+      }
+
+      // Update each pedido to "en_ruta" and send notification
+      for (const item of cola) {
+        // Update pedido status
+        await supabase
+          .from("pedidos")
+          .update({ status: "en_ruta", updated_at: new Date().toISOString() })
+          .eq("id", item.pedidoId);
+
+        // Send "en_ruta" notification email to client
+        try {
+          await supabase.functions.invoke("send-client-notification", {
+            body: {
+              clienteId: item.clienteId,
+              tipo: "en_ruta",
+              data: {
+                pedidoFolio: item.folio,
+                choferNombre,
+              },
+            },
+          });
+          console.log(`Email en_ruta enviado para pedido ${item.folio}`);
+        } catch (emailErr) {
+          console.error(`Error enviando email para ${item.folio}:`, emailErr);
+        }
+      }
+    } catch (err) {
+      console.error("Error al finalizar carga:", err);
+      toast.error("Error al actualizar estados");
+    }
+  };
+
   // ─── QR scan input (manual fallback) ───
   const [scanInput, setScanInput] = useState("");
   const handleScanSubmit = () => {
     const input = scanInput.trim();
-    // Parse internal QR format: almasa:carga:<uuid>
     const almasaMatch = input.match(/^almasa:carga:([a-f0-9-]+)$/i);
-    // Fallback: also accept old URL format or raw UUID
     const urlMatch = input.match(/carga-scan\/([a-f0-9-]+)/i);
     const uuidMatch = input.match(/^[a-f0-9-]{36}$/i);
     const id = almasaMatch?.[1] || urlMatch?.[1] || (uuidMatch ? input : null);
@@ -372,6 +542,92 @@ export default function AlmacenCargaScan() {
   const cargados = productos.filter((p) => p.cargado).length;
   const progreso = productos.length > 0 ? (cargados / productos.length) * 100 : 0;
 
+  // ─── Step 1: Chofer + Vehicle selection ───
+  if (paso === "seleccion") {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="sticky top-0 z-10 bg-background border-b p-3">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/almacen-tablet")}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="font-bold text-lg">Preparar Carga</h1>
+          </div>
+        </div>
+
+        <div className="p-4 space-y-6 max-w-md mx-auto">
+          <div className="text-center space-y-2 py-4">
+            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+              <Truck className="h-8 w-8 text-primary" />
+            </div>
+            <h2 className="text-xl font-bold">Selecciona Chofer y Unidad</h2>
+            <p className="text-muted-foreground text-sm">
+              Antes de escanear, asigna el chofer y el vehículo para esta carga
+            </p>
+          </div>
+
+          {loadingOptions ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Chofer */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Chofer
+                </label>
+                <Select value={choferId} onValueChange={setChoferId}>
+                  <SelectTrigger className="h-12 text-base">
+                    <SelectValue placeholder="Selecciona un chofer..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {choferes.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nombre_completo} ({c.puesto})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Vehículo */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Truck className="h-4 w-4" />
+                  Vehículo / Unidad
+                </label>
+                <Select value={vehiculoId} onValueChange={setVehiculoId}>
+                  <SelectTrigger className="h-12 text-base">
+                    <SelectValue placeholder="Selecciona un vehículo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vehiculos.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.nombre} {v.placa ? `(${v.placa})` : ""} {v.tipo ? `— ${v.tipo}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button
+                onClick={handleEmpezarCarga}
+                disabled={!choferId || !vehiculoId}
+                size="lg"
+                className="w-full h-14 text-lg font-bold mt-4"
+              >
+                <QrCode className="h-5 w-5 mr-2" />
+                Empezar a Cargar
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // ─── Finalized summary ───
   if (finalizado) {
     return (
@@ -386,6 +642,9 @@ export default function AlmacenCargaScan() {
                 <Timer className="h-5 w-5" />
                 <span>Tiempo total: <strong className="text-foreground">{formatTiempo(tiempoSeg)}</strong></span>
               </div>
+              <p className="text-sm">
+                Los clientes han sido notificados por correo 📧
+              </p>
             </div>
             <div className="space-y-2 pt-2">
               {cola.map((c, i) => (
@@ -412,6 +671,7 @@ export default function AlmacenCargaScan() {
     );
   }
 
+  // ─── Step 2: Scanning + Loading ───
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -496,7 +756,7 @@ export default function AlmacenCargaScan() {
               </li>
               <li className="flex gap-2">
                 <span className="bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shrink-0">4</span>
-                <span>Al terminar, se generan los PDFs corregidos</span>
+                <span>Al terminar, se notifica al cliente y se genera la ruta</span>
               </li>
             </ol>
           </div>
@@ -598,7 +858,6 @@ function ProductoCargaConPeso({
     }
     onToggle(producto.id, true, cantidadCargada, loteId);
 
-    // Save peso real if entered
     if (esPorKilo && pesoReal) {
       onPesoRealChange(producto.id, parseFloat(pesoReal));
     }
@@ -631,7 +890,6 @@ function ProductoCargaConPeso({
 
         {!producto.cargado ? (
           <div className="space-y-2 pt-1">
-            {/* Cantidad */}
             <div className="flex items-center gap-3">
               <label className="text-sm text-muted-foreground w-24">Cantidad:</label>
               <Input
@@ -643,7 +901,6 @@ function ProductoCargaConPeso({
               />
             </div>
 
-            {/* Peso real - only for precio_por_kilo */}
             {esPorKilo && (
               <div className="flex items-center gap-3">
                 <label className="text-sm text-muted-foreground w-24 flex items-center gap-1">
@@ -662,7 +919,6 @@ function ProductoCargaConPeso({
               </div>
             )}
 
-            {/* Lote selector */}
             {producto.lotes_disponibles.length > 0 ? (
               <div className="flex items-center gap-3">
                 <label className="text-sm text-muted-foreground w-24">Lote:</label>
