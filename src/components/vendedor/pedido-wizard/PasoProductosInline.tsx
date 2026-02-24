@@ -62,6 +62,46 @@ function getPrecioMinimo(producto: Producto): number {
   return precioLista - descMax;
 }
 
+// Editable price input with local state to avoid toFixed fighting user input
+function PrecioInput({ precio, productoId, requiereAutorizacion, onActualizarPrecio }: {
+  precio: number;
+  productoId: string;
+  requiereAutorizacion?: boolean;
+  onActualizarPrecio: (id: string, precio: number) => void;
+}) {
+  const [localValue, setLocalValue] = useState(precio ? precio.toFixed(2) : "");
+  const [editing, setEditing] = useState(false);
+
+  // Sync from parent when not editing
+  const displayValue = editing ? localValue : (precio ? precio.toFixed(2) : "");
+
+  return (
+    <Input
+      type="text"
+      inputMode="decimal"
+      value={displayValue}
+      className={cn(
+        "h-7 w-24 text-right text-sm px-1",
+        requiereAutorizacion && "border-destructive text-destructive"
+      )}
+      onFocus={() => {
+        setEditing(true);
+        setLocalValue(precio ? precio.toFixed(2) : "");
+      }}
+      onChange={(e) => {
+        const val = e.target.value;
+        if (val === "" || /^\d*\.?\d{0,2}$/.test(val)) {
+          setLocalValue(val);
+          onActualizarPrecio(productoId, parseFloat(val) || 0);
+        }
+      }}
+      onBlur={() => {
+        setEditing(false);
+      }}
+    />
+  );
+}
+
 function FilaProducto({
   producto,
   linea,
@@ -553,20 +593,11 @@ export function PasoProductosInline({
                       <td className="py-1.5 px-1">
                         <div className="flex items-center justify-end gap-0.5">
                           <span className="text-sm text-muted-foreground">$</span>
-                          <Input
-                            type="text"
-                            inputMode="decimal"
-                            value={linea.precioUnitario ? linea.precioUnitario.toFixed(2) : ""}
-                            className={cn(
-                              "h-7 w-24 text-right text-sm px-1",
-                              linea.requiereAutorizacion && "border-destructive text-destructive"
-                            )}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val === "" || /^\d*\.?\d{0,2}$/.test(val)) {
-                                onActualizarPrecio(linea.producto.id, parseFloat(val) || 0);
-                              }
-                            }}
+                          <PrecioInput
+                            precio={linea.precioUnitario}
+                            productoId={linea.producto.id}
+                            requiereAutorizacion={linea.requiereAutorizacion}
+                            onActualizarPrecio={onActualizarPrecio}
                           />
                           {esPorKilo && <span className="text-xs text-muted-foreground">/kg</span>}
                         </div>
