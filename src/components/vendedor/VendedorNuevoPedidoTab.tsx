@@ -61,6 +61,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
   const [terminoCredito, setTerminoCredito] = useState("");
   const [notas, setNotas] = useState("");
   const [requiereFactura, setRequiereFactura] = useState(false);
+  const [vendedorNombre, setVendedorNombre] = useState("Vendedor");
 
   // Discount authorization dialog
   const [solicitudDialogOpen, setSolicitudDialogOpen] = useState(false);
@@ -348,6 +349,10 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Fetch vendor name
+      const { data: profileData } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+      setVendedorNombre(profileData?.full_name || "Vendedor");
 
       const { data: clientesData } = await supabase
         .from("clientes")
@@ -973,6 +978,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
           onRequiereFacturaChange={setRequiereFactura}
           onSubmit={handleSubmit}
           onBack={handlePrevStep}
+          vendedorNombre={vendedorNombre}
         />
       )}
 
