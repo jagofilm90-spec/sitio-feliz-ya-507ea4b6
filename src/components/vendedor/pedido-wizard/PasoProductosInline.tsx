@@ -207,10 +207,19 @@ function FilaProducto({
       <td className="py-2 px-2">
         <div className="flex items-center gap-1.5">
           {isFrecuente && <Star className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
-          <span className="text-sm font-medium truncate max-w-[250px]">{getDisplayName(producto)}</span>
+          <span className="text-sm font-medium whitespace-nowrap">{getDisplayName(producto)}</span>
         </div>
       </td>
       <td className="py-2 px-2 text-xs text-muted-foreground whitespace-nowrap">{producto.marca || "—"}</td>
+      <td className="py-2 px-2 text-xs text-center whitespace-nowrap">
+        {producto.stock_actual <= 0 ? (
+          <span className="text-destructive font-medium">0</span>
+        ) : producto.stock_actual <= (producto.stock_minimo || 10) ? (
+          <span className="text-amber-600 font-medium">{producto.stock_actual}</span>
+        ) : (
+          <span className="text-green-600 font-medium">{producto.stock_actual}</span>
+        )}
+      </td>
       <td className="py-2 px-2 text-sm text-right whitespace-nowrap">{formatCurrency(precioLista)}</td>
       <td className="py-2 px-2 text-xs text-right text-muted-foreground whitespace-nowrap">{descMax > 0 ? formatCurrency(descMax) : "—"}</td>
       <td className="py-2 px-2 text-sm text-right text-green-600 whitespace-nowrap font-medium">{descMax > 0 ? formatCurrency(precioMinimo) : "—"}</td>
@@ -338,7 +347,7 @@ export function PasoProductosInline({
 
       {/* Product Table */}
       <Card>
-        <ScrollArea className={isMobile ? "h-[calc(100vh-380px)]" : "h-[400px] lg:h-[500px]"}>
+        <ScrollArea className={isMobile ? "h-[calc(100vh-380px)]" : "h-[500px] lg:h-[600px]"}>
           {isMobile ? (
             <div>
               {productosOrdenados.map((producto) => (
@@ -360,44 +369,47 @@ export function PasoProductosInline({
               )}
             </div>
           ) : (
-            <table className="w-full">
-              <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
-                <tr className="text-xs text-muted-foreground uppercase tracking-wider">
-                  <th className="py-2 px-2 text-left font-medium">Producto</th>
-                  <th className="py-2 px-2 text-left font-medium">Marca</th>
-                  <th className="py-2 px-2 text-right font-medium">P. Lista</th>
-                  <th className="py-2 px-2 text-right font-medium">Desc. Máx</th>
-                  <th className="py-2 px-2 text-right font-medium">P. Mínimo</th>
-                  <th className="py-2 px-2 text-center font-medium">Cant.</th>
-                  <th className="py-2 px-2 text-center font-medium">P. Pactado</th>
-                  <th className="py-2 px-2 text-right font-medium">Subtotal</th>
-                  <th className="py-2 px-1 w-[40px]"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {productosOrdenados.map((producto) => (
-                  <FilaProducto
-                    key={producto.id}
-                    producto={producto}
-                    linea={lineas.find(l => l.producto.id === producto.id)}
-                    isFrecuente={frecuenteIds.has(producto.id)}
-                    onAgregarProducto={onAgregarProducto}
-                    onActualizarCantidad={onActualizarCantidad}
-                    onActualizarPrecio={onActualizarPrecio}
-                    onSolicitarAutorizacion={onSolicitarAutorizacion}
-                    onMarcarParaRevision={onMarcarParaRevision}
-                    isMobile={false}
-                  />
-                ))}
-                {productosOrdenados.length === 0 && (
-                  <tr>
-                    <td colSpan={9} className="text-center text-muted-foreground py-8">
-                      No se encontraron productos
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="min-w-[900px] w-full">
+                <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
+                  <tr className="text-xs text-muted-foreground uppercase tracking-wider">
+                    <th className="py-2 px-2 text-left font-medium">Producto</th>
+                    <th className="py-2 px-2 text-left font-medium">Marca</th>
+                    <th className="py-2 px-2 text-center font-medium">Stock</th>
+                    <th className="py-2 px-2 text-right font-medium">P. Lista</th>
+                    <th className="py-2 px-2 text-right font-medium">Desc. Máx</th>
+                    <th className="py-2 px-2 text-right font-medium">P. Mínimo</th>
+                    <th className="py-2 px-2 text-center font-medium">Cant.</th>
+                    <th className="py-2 px-2 text-center font-medium">P. Pactado</th>
+                    <th className="py-2 px-2 text-right font-medium">Subtotal</th>
+                    <th className="py-2 px-1 w-[40px]"></th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {productosOrdenados.map((producto) => (
+                    <FilaProducto
+                      key={producto.id}
+                      producto={producto}
+                      linea={lineas.find(l => l.producto.id === producto.id)}
+                      isFrecuente={frecuenteIds.has(producto.id)}
+                      onAgregarProducto={onAgregarProducto}
+                      onActualizarCantidad={onActualizarCantidad}
+                      onActualizarPrecio={onActualizarPrecio}
+                      onSolicitarAutorizacion={onSolicitarAutorizacion}
+                      onMarcarParaRevision={onMarcarParaRevision}
+                      isMobile={false}
+                    />
+                  ))}
+                  {productosOrdenados.length === 0 && (
+                    <tr>
+                      <td colSpan={10} className="text-center text-muted-foreground py-8">
+                        No se encontraron productos
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
         </ScrollArea>
       </Card>
