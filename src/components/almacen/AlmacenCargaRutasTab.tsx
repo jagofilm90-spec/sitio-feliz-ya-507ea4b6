@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { format, differenceInMinutes, parseISO, set } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -14,7 +16,9 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  Timer
+  Timer,
+  QrCode,
+  ArrowRight,
 } from "lucide-react";
 import { RutaCargaSheet } from "@/components/almacen/RutaCargaSheet";
 
@@ -49,6 +53,7 @@ interface AlmacenCargaRutasTabProps {
 }
 
 export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCargaRutasTabProps) => {
+  const navigate = useNavigate();
   const [rutas, setRutas] = useState<Ruta[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRuta, setSelectedRuta] = useState<Ruta | null>(null);
@@ -271,6 +276,32 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
 
   return (
     <>
+      {/* Banner Empezar a Cargar */}
+      <Card className="border-primary/30 bg-primary/5">
+        <CardContent className="py-4">
+          <div className="flex items-center gap-4">
+            <div className="bg-primary/10 rounded-xl p-3 shrink-0">
+              <QrCode className="h-8 w-8 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-lg text-foreground">Empezar a cargar</h3>
+              <p className="text-sm text-muted-foreground">
+                Escanea los códigos QR de los pedidos impresos en el orden de carga
+              </p>
+            </div>
+            <Button 
+              onClick={() => navigate("/almacen-tablet/carga-scan")}
+              size="lg"
+              className="h-14 px-6 text-base font-bold gap-2 shrink-0"
+            >
+              <QrCode className="h-5 w-5" />
+              Escanear QR
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
