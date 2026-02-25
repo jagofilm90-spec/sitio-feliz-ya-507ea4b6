@@ -770,7 +770,9 @@ export const RutaCargaSheet = ({
     e.productos.every((p) => p.cargado)
   );
   
-  const todasEntregasConfirmadas = entregas.every(e => e.carga_confirmada);
+  const todasEntregasConfirmadas = entregas.length <= 1 
+    ? todosLosProdutosCargados 
+    : entregas.every(e => e.carga_confirmada);
   
   const selloEvidencia = evidencias.find(e => e.tipo_evidencia === "sello_salida_1");
   const sellosValidos = !llevaSellos || (llevaSellos && selloEvidencia);
@@ -1083,8 +1085,8 @@ export const RutaCargaSheet = ({
                           </div>
                         )}
 
-                        {/* Botón de confirmar entrega */}
-                        {cargaIniciada && !entrega.carga_confirmada && !ruta.carga_completada && (
+                        {/* Botón de confirmar entrega - solo visible si hay múltiples entregas */}
+                        {entregas.length > 1 && cargaIniciada && !entrega.carga_confirmada && !ruta.carga_completada && (
                           <div className="mt-4 pt-4 border-t">
                             <Button
                               className="w-full h-12"
