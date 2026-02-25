@@ -1,6 +1,6 @@
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import {
   Sidebar,
   SidebarContent,
@@ -34,8 +34,7 @@ import {
   LayoutDashboard,
   Store,
   Coins,
-  PanelLeftClose,
-  PanelLeft,
+  User,
 } from "lucide-react";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import { LiveIndicator } from "@/components/ui/live-indicator";
@@ -73,8 +72,8 @@ export const SecretariaSidebar = ({
   counters,
   hasMultipleRoles = false,
 }: SecretariaSidebarProps) => {
-  const { state, isHovering } = useSidebar();
-  const isCollapsed = state === "collapsed" && !isHovering;
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
 
   const navItems: NavItem[] = [
     { id: "productos", label: "Productos", icon: Package },
@@ -91,70 +90,73 @@ export const SecretariaSidebar = ({
   ];
 
   return (
-    <div className="dark">
-      <Sidebar collapsible="icon" expandOnHover className="border-r border-sidebar-border">
-        {/* Header con Logo - Siempre visible */}
-        <SidebarHeader className="border-b border-sidebar-border shrink-0">
-          <div className="flex flex-col items-center py-3">
-            <img 
-              src={logoAlmasa} 
-              alt="ALMASA" 
-              className={cn(
-                "object-contain transition-all duration-200",
-                isCollapsed ? "h-6 w-auto" : "h-8 w-auto"
-              )} 
-            />
-          </div>
-        </SidebarHeader>
-
-        {/* User Info - Nombre siempre visible, avatar solo expandido */}
-        <div className="shrink-0 border-b border-sidebar-border">
-          <div className={cn(
-            "flex items-center gap-2 p-2",
-            isCollapsed ? "flex-col justify-center" : "flex-row bg-sidebar-accent/50"
-          )}>
-            {/* Avatar - Solo cuando expandido */}
-            {!isCollapsed && (
-              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shrink-0">
-                <span className="text-primary-foreground font-semibold text-sm">
-                  {userName?.charAt(0)?.toUpperCase() || "S"}
-                </span>
-              </div>
-            )}
-            
-            {/* Nombre - Siempre visible */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={cn(
-                  "min-w-0",
-                  isCollapsed ? "w-full text-center" : "flex-1 text-left"
-                )}>
-                  <p className={cn(
-                    "text-sidebar-foreground font-medium truncate",
-                    isCollapsed ? "text-[10px]" : "text-sm"
-                  )}>
-                    {isCollapsed 
-                      ? (userName?.split(' ')[0] || "Secretaria")
-                      : (userName || "Secretaria")
-                    }
-                  </p>
-                  {!isCollapsed && (
-                    <p className="text-xs text-sidebar-foreground/60">Panel Secretaria</p>
-                  )}
-                </div>
-              </TooltipTrigger>
-              {isCollapsed && (
-                <TooltipContent side="right">
-                  <p>{userName || "Secretaria"}</p>
-                  <p className="text-xs text-muted-foreground">Panel Secretaria</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </div>
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+      {/* Header con Logo y Toggle */}
+      <SidebarHeader className="border-b border-sidebar-border">
+        <div className="flex items-center justify-between py-2 px-2">
+          <img 
+            src={logoAlmasa} 
+            alt="ALMASA" 
+            className={cn(
+              "object-contain transition-all duration-200",
+              isCollapsed ? "h-6 w-auto" : "h-8 w-auto"
+            )} 
+          />
+          {!isCollapsed && (
+            <SidebarTrigger className="h-7 w-7 text-sidebar-foreground/70 hover:text-sidebar-foreground" />
+          )}
         </div>
+        {isCollapsed && (
+          <div className="flex justify-center py-1">
+            <SidebarTrigger className="h-7 w-7 text-sidebar-foreground/70 hover:text-sidebar-foreground" />
+          </div>
+        )}
+      </SidebarHeader>
 
-        {/* Navigation */}
-        <SidebarContent className="flex-1 overflow-y-auto overflow-x-hidden">
+      {/* User Info */}
+      <div className="border-b border-sidebar-border">
+        <div className={cn(
+          "flex items-center gap-2 p-2",
+          isCollapsed ? "flex-col justify-center" : "flex-row"
+        )}>
+          {!isCollapsed && (
+            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md ring-2 ring-primary/20 shrink-0">
+              <User className="h-4 w-4 text-primary-foreground" />
+            </div>
+          )}
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className={cn(
+                "min-w-0",
+                isCollapsed ? "w-full text-center" : "flex-1 text-left"
+              )}>
+                <p className={cn(
+                  "text-sidebar-foreground font-semibold truncate",
+                  isCollapsed ? "text-[10px]" : "text-sm"
+                )}>
+                  {isCollapsed 
+                    ? (userName?.split(' ')[0] || "Secretaria")
+                    : (userName || "Secretaria")
+                  }
+                </p>
+                {!isCollapsed && (
+                  <p className="text-xs text-muted-foreground font-medium">Panel Secretaria</p>
+                )}
+              </div>
+            </TooltipTrigger>
+            {isCollapsed && (
+              <TooltipContent side="right">
+                <p>{userName || "Secretaria"}</p>
+                <p className="text-xs text-muted-foreground">Panel Secretaria</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Módulos</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -172,23 +174,22 @@ export const SecretariaSidebar = ({
                       onClick={() => onTabChange(item.id)}
                       className={cn(
                         "transition-all duration-200",
-                        isActive && "bg-sidebar-primary text-sidebar-primary-foreground"
+                        isActive && "bg-primary text-primary-foreground shadow-sm"
                       )}
                     >
                       <div className="relative">
                         <Icon className="h-4 w-4" />
                         {hasBadge && isCollapsed && (
-                          <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-destructive rounded-full ring-2 ring-sidebar" />
+                          <span className="absolute -top-1 -right-1 h-3 w-3 flex items-center justify-center bg-destructive text-destructive-foreground text-[8px] font-bold rounded-full">
+                            {item.badge! > 9 ? "+" : item.badge}
+                          </span>
                         )}
                       </div>
-                      <span>{item.label}</span>
+                      <span className="font-medium">{item.label}</span>
                       {hasBadge && !isCollapsed && (
                         <Badge 
-                          variant={isActive ? "secondary" : "destructive"} 
-                          className={cn(
-                            "ml-auto text-xs h-5 min-w-5 flex items-center justify-center px-1.5",
-                            isActive && "bg-sidebar-primary-foreground/20 text-sidebar-primary-foreground"
-                          )}
+                          variant="secondary"
+                          className="ml-auto text-xs"
                         >
                           {item.badge! > 99 ? "99+" : item.badge}
                         </Badge>
@@ -202,38 +203,37 @@ export const SecretariaSidebar = ({
         </SidebarGroup>
       </SidebarContent>
 
-        {/* Footer */}
-        <SidebarFooter className="border-t border-sidebar-border shrink-0">
-          {/* Live indicator */}
-          {!isCollapsed && (
-            <div className="px-2 py-1">
-              <LiveIndicator label="Sincronizado" className="text-sidebar-foreground/60 text-xs" />
-            </div>
-          )}
+      {/* Footer */}
+      <SidebarFooter className="border-t border-sidebar-border">
+        {/* Live indicator */}
+        {!isCollapsed && (
+          <div className="px-2 py-1">
+            <LiveIndicator label="Sincronizado" className="text-sidebar-foreground/60 text-xs" />
+          </div>
+        )}
 
-          {/* Dashboard button for multiple roles */}
-          {hasMultipleRoles && (
-            <SidebarMenuButton
-              tooltip="Dashboard"
-              onClick={onNavigateDashboard}
-              className="hover:bg-sidebar-accent"
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              <span>Dashboard</span>
-            </SidebarMenuButton>
-          )}
-
-          {/* Logout button */}
+        {/* Dashboard button for multiple roles */}
+        {hasMultipleRoles && (
           <SidebarMenuButton
-            tooltip="Cerrar sesión"
-            onClick={onLogout}
-            className="hover:bg-destructive/10 hover:text-destructive"
+            tooltip="Dashboard"
+            onClick={onNavigateDashboard}
+            className="hover:bg-sidebar-accent"
           >
-            <LogOut className="h-4 w-4" />
-            <span>Cerrar sesión</span>
+            <LayoutDashboard className="h-4 w-4" />
+            <span>Dashboard</span>
           </SidebarMenuButton>
-        </SidebarFooter>
-      </Sidebar>
-    </div>
+        )}
+
+        {/* Logout button */}
+        <SidebarMenuButton
+          tooltip="Cerrar sesión"
+          onClick={onLogout}
+          className="hover:bg-destructive/10 hover:text-destructive"
+        >
+          <LogOut className="h-4 w-4" />
+          <span>Cerrar sesión</span>
+        </SidebarMenuButton>
+      </SidebarFooter>
+    </Sidebar>
   );
 };
