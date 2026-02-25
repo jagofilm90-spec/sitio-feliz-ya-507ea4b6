@@ -783,196 +783,198 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       const vendedorNombre = profile?.full_name || "Vendedor";
       const clienteNombre = selectedCliente?.nombre || "Cliente";
 
-      // Notifications (fire and forget)
-      try {
-        await supabase.from("notificaciones").insert({
-          tipo: "nuevo_pedido_vendedor",
-          titulo: `Nuevo pedido ${folio}`,
-          descripcion: `${vendedorNombre} creó pedido para ${clienteNombre} - ${formatCurrency(totales.total)}`,
-          pedido_id: pedido.id,
-          leida: false,
-        });
-      } catch (notifError) {
-        console.error("Error creating notification:", notifError);
-      }
-
-      try {
-        await supabase.functions.invoke('send-push-notification', {
-          body: {
-            roles: ['secretaria'],
-            title: '📦 Nuevo Pedido',
-            body: `${vendedorNombre} → ${clienteNombre} - ${formatCurrency(totales.total)}`,
-            data: { type: 'nuevo_pedido', pedido_id: pedido.id, folio }
-          }
-        });
-      } catch (pushError) {
-        console.error("Error sending push:", pushError);
-      }
-
-      try {
-        await supabase.functions.invoke('send-secretary-notification', {
-          body: {
-            tipo: 'nuevo_pedido',
-            pedidoId: pedido.id,
-            folio,
-            vendedor: vendedorNombre,
-            cliente: clienteNombre,
-            total: totales.total,
-            requiereFactura: selectedCliente?.termino_credito !== 'contado'
-          }
-        });
-      } catch (emailError) {
-        console.error("Error sending email:", emailError);
-      }
-      // Generate high-quality PDF with real folio/pedidoId for email attachments
-      let pdfBase64: string | null = null;
-      let clientPdfBase64: string | null = null;
-      try {
-        // Build print data with real folio and pedidoId (for QR)
-        const datosPrintFinal: DatosPedidoPrint = {
-          pedidoId: pedido.id,
-          folio,
-          fecha: new Date().toISOString(),
-          vendedor: vendedorNombre,
-          terminoCredito: terminoCredito === 'contado' ? 'Contado' : terminoCredito.replace('_', ' '),
-          cliente: {
-            nombre: selectedCliente?.nombre || "",
-            telefono: (selectedCliente as any)?.telefono || undefined,
-          },
-          sucursal: (() => {
-            const suc = sucursales.find(s => s.id === selectedSucursalId);
-            return suc ? { nombre: suc.nombre, direccion: suc.direccion || undefined } : undefined;
-          })(),
-          productos: lineas.map(l => {
-            const pesoKg = l.producto.peso_kg || 0;
-            const pesoTotal = pesoKg > 0 ? l.cantidad * pesoKg : null;
-            return {
-              cantidad: l.cantidad,
-              descripcion: getDisplayName(l.producto),
-              pesoTotal,
-              precioUnitario: l.precioUnitario,
-              importe: l.subtotal,
-              precioPorKilo: !!l.producto.precio_por_kilo,
-            };
-          }),
-          subtotal: totales.subtotal,
-          iva: totales.iva,
-          ieps: totales.ieps,
-          total: totales.total,
-          pesoTotalKg: totales.pesoTotalKg,
-          notas: notas || undefined,
-        };
-
-        // Helper to generate PDF from template
-        const generatePdfFromTemplate = async (hideQR: boolean): Promise<string> => {
-          const tempContainer = document.createElement('div');
-          tempContainer.style.position = 'absolute';
-          tempContainer.style.left = '-9999px';
-          tempContainer.style.top = '0';
-          tempContainer.style.width = '8.5in';
-          tempContainer.style.backgroundColor = '#ffffff';
-          document.body.appendChild(tempContainer);
-
-          const root = createRoot(tempContainer);
-          root.render(<PedidoPrintTemplate datos={datosPrintFinal} hideQR={hideQR} />);
-
-          // Wait for render + QR code SVG to appear
-          await new Promise(resolve => setTimeout(resolve, 500));
-
-          const canvas = await html2canvas(tempContainer, {
-            scale: 3, useCORS: true, logging: false, backgroundColor: '#ffffff'
-          });
-
-          root.unmount();
-          document.body.removeChild(tempContainer);
-
-          const imgData = canvas.toDataURL('image/png');
-          const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
-          const pdfWidth = pdf.internal.pageSize.getWidth();
-          const pdfHeight = pdf.internal.pageSize.getHeight();
-          const ratio = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
-          const imgX = (pdfWidth - canvas.width * ratio) / 2;
-          pdf.addImage(imgData, 'PNG', imgX, 5, canvas.width * ratio, canvas.height * ratio);
-          return pdf.output('datauristring').split(',')[1];
-        };
-
-        // Generate internal PDF (with QR) and client PDF (without QR)
-        const [internoPdf, clientePdf] = await Promise.all([
-          generatePdfFromTemplate(false),
-          generatePdfFromTemplate(true),
-        ]);
-        pdfBase64 = internoPdf;
-        clientPdfBase64 = clientePdf;
-      } catch (pdfError) {
-        console.error("Error generating PDF for email:", pdfError);
-      }
-
-      const sucursalObj = sucursales.find(s => s.id === selectedSucursalId);
-      const direccionEntrega = sucursalObj?.direccion || selectedCliente?.zona?.nombre || "No especificada";
-
-      // Solo enviar confirmación al cliente si NO requiere autorización
-      const esPorAutorizar = lineas.some(l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente');
-      if (!esPorAutorizar) {
+      // === BACKGROUND TASKS (no bloquean la UI) ===
+      // Ejecutar notificaciones, PDFs y emails en paralelo sin await
+      const backgroundTasks = async () => {
         try {
-          await supabase.functions.invoke('send-client-notification', {
-            body: {
-              clienteId: selectedClienteId,
-              tipo: 'pedido_confirmado',
-              data: { pedidoFolio: folio, total: totales.total },
-              pdfBase64: clientPdfBase64 || undefined,
-              pdfFilename: `Pedido_${folio}.pdf`,
-            }
-          });
-        } catch (clientEmailError) {
-          console.error("Error sending client email:", clientEmailError);
-        }
-      }
+          // 1. Notificaciones rápidas en paralelo (no dependen de PDF)
+          const notifPromises = [
+            Promise.resolve(supabase.from("notificaciones").insert({
+              tipo: "nuevo_pedido_vendedor",
+              titulo: `Nuevo pedido ${folio}`,
+              descripcion: `${vendedorNombre} creó pedido para ${clienteNombre} - ${formatCurrency(totales.total)}`,
+              pedido_id: pedido.id,
+              leida: false,
+            })).catch(e => console.error("Notif error:", e)),
+            
+            supabase.functions.invoke('send-push-notification', {
+              body: {
+                roles: ['secretaria'],
+                title: '📦 Nuevo Pedido',
+                body: `${vendedorNombre} → ${clienteNombre} - ${formatCurrency(totales.total)}`,
+                data: { type: 'nuevo_pedido', pedido_id: pedido.id, folio }
+              }
+            }).catch(e => console.error("Push error:", e)),
+            
+            supabase.functions.invoke('send-secretary-notification', {
+              body: {
+                tipo: 'nuevo_pedido',
+                pedidoId: pedido.id,
+                folio,
+                vendedor: vendedorNombre,
+                cliente: clienteNombre,
+                total: totales.total,
+                requiereFactura: selectedCliente?.termino_credito !== 'contado'
+              }
+            }).catch(e => console.error("Secretary email error:", e)),
+          ];
 
-      // Enviar email interno simplificado a pedidos@almasa.com.mx con PDF adjunto
-      try {
-        await supabase.functions.invoke("enviar-pedido-interno", {
-          body: {
-            folio,
-            clienteNombre,
-            vendedorNombre,
-            terminoCredito,
-            direccionEntrega,
-            total: totales.total,
+          // 2. Generar PDFs en paralelo con las notificaciones
+          const datosPrintFinal: DatosPedidoPrint = {
             pedidoId: pedido.id,
-            pdfBase64: pdfBase64 || undefined,
-            pdfFilename: `Pedido_${folio}.pdf`,
-          }
-        });
-      } catch (emailInternoError) {
-        console.error("Error sending internal email:", emailInternoError);
-      }
-
-      // Audit log
-      try {
-        const deviceInfo = captureDeviceInfo();
-        const ipAddress = await getPublicIP();
-        
-        await supabase.from("security_audit_log").insert([{
-          user_id: user.id,
-          action: "pedido_creado",
-          table_name: "pedidos",
-          record_id: pedido.id,
-          ip_address: ipAddress,
-          details: {
             folio,
-            cliente_id: selectedClienteId,
-            cliente_nombre: clienteNombre,
+            fecha: new Date().toISOString(),
+            vendedor: vendedorNombre,
+            terminoCredito: terminoCredito === 'contado' ? 'Contado' : terminoCredito.replace('_', ' '),
+            cliente: {
+              nombre: selectedCliente?.nombre || "",
+              telefono: (selectedCliente as any)?.telefono || undefined,
+            },
+            sucursal: (() => {
+              const suc = sucursales.find(s => s.id === selectedSucursalId);
+              return suc ? { nombre: suc.nombre, direccion: suc.direccion || undefined } : undefined;
+            })(),
+            productos: lineas.map(l => {
+              const pesoKg = l.producto.peso_kg || 0;
+              const pesoTotal = pesoKg > 0 ? l.cantidad * pesoKg : null;
+              return {
+                cantidad: l.cantidad,
+                descripcion: getDisplayName(l.producto),
+                pesoTotal,
+                precioUnitario: l.precioUnitario,
+                importe: l.subtotal,
+                precioPorKilo: !!l.producto.precio_por_kilo,
+              };
+            }),
+            subtotal: totales.subtotal,
+            iva: totales.iva,
+            ieps: totales.ieps,
             total: totales.total,
-            num_productos: lineas.length,
-            termino_credito: terminoCredito,
-            status_inicial: pedido.status,
-            device: JSON.parse(JSON.stringify(deviceInfo)),
-            session_draft_restored: false
+            pesoTotalKg: totales.pesoTotalKg,
+            notas: notas || undefined,
+          };
+
+          const generatePdfFromTemplate = async (hideQR: boolean): Promise<string> => {
+            const tempContainer = document.createElement('div');
+            tempContainer.style.position = 'absolute';
+            tempContainer.style.left = '-9999px';
+            tempContainer.style.top = '0';
+            tempContainer.style.width = '8.5in';
+            tempContainer.style.backgroundColor = '#ffffff';
+            document.body.appendChild(tempContainer);
+
+            const root = createRoot(tempContainer);
+            root.render(<PedidoPrintTemplate datos={datosPrintFinal} hideQR={hideQR} />);
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            const canvas = await html2canvas(tempContainer, {
+              scale: 3, useCORS: true, logging: false, backgroundColor: '#ffffff'
+            });
+
+            root.unmount();
+            document.body.removeChild(tempContainer);
+
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const ratio = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
+            const imgX = (pdfWidth - canvas.width * ratio) / 2;
+            pdf.addImage(imgData, 'PNG', imgX, 5, canvas.width * ratio, canvas.height * ratio);
+            return pdf.output('datauristring').split(',')[1];
+          };
+
+          // Generar ambos PDFs en paralelo
+          const pdfPromise = Promise.all([
+            generatePdfFromTemplate(false),
+            generatePdfFromTemplate(true),
+          ]).catch(e => { console.error("PDF gen error:", e); return [null, null] as (string | null)[]; });
+
+          // Esperar notificaciones y PDFs en paralelo
+          const [, pdfResults] = await Promise.all([
+            Promise.all(notifPromises),
+            pdfPromise,
+          ]);
+
+          const [pdfBase64, clientPdfBase64] = pdfResults || [null, null];
+
+          // 3. Enviar emails con PDFs adjuntos en paralelo
+          const sucursalObj = sucursales.find(s => s.id === selectedSucursalId);
+          const direccionEntrega = sucursalObj?.direccion || selectedCliente?.zona?.nombre || "No especificada";
+
+          const emailPromises: Promise<any>[] = [];
+
+          // Email interno siempre
+          emailPromises.push(
+            supabase.functions.invoke("enviar-pedido-interno", {
+              body: {
+                folio,
+                clienteNombre,
+                vendedorNombre,
+                terminoCredito,
+                direccionEntrega,
+                total: totales.total,
+                pedidoId: pedido.id,
+                pdfBase64: pdfBase64 || undefined,
+                pdfFilename: `Pedido_${folio}.pdf`,
+              }
+            }).catch(e => console.error("Internal email error:", e))
+          );
+
+          // Email al cliente solo si no requiere autorización
+          const esPorAutorizar = lineas.some(l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente');
+          if (!esPorAutorizar) {
+            emailPromises.push(
+              supabase.functions.invoke('send-client-notification', {
+                body: {
+                  clienteId: selectedClienteId,
+                  tipo: 'pedido_confirmado',
+                  data: { pedidoFolio: folio, total: totales.total },
+                  pdfBase64: clientPdfBase64 || undefined,
+                  pdfFilename: `Pedido_${folio}.pdf`,
+                }
+              }).catch(e => console.error("Client email error:", e))
+            );
           }
-        }]);
-      } catch (auditError) {
-        console.error("Error creating audit log:", auditError);
-      }
+
+          // Audit log
+          emailPromises.push(
+            (async () => {
+              try {
+                const deviceInfo = captureDeviceInfo();
+                const ipAddress = await getPublicIP();
+                await supabase.from("security_audit_log").insert([{
+                  user_id: user.id,
+                  action: "pedido_creado",
+                  table_name: "pedidos",
+                  record_id: pedido.id,
+                  ip_address: ipAddress,
+                  details: {
+                    folio,
+                    cliente_id: selectedClienteId,
+                    cliente_nombre: clienteNombre,
+                    total: totales.total,
+                    num_productos: lineas.length,
+                    termino_credito: terminoCredito,
+                    status_inicial: pedido.status,
+                    device: JSON.parse(JSON.stringify(deviceInfo)),
+                    session_draft_restored: false
+                  }
+                }]);
+              } catch (e) {
+                console.error("Audit log error:", e);
+              }
+            })()
+          );
+
+          await Promise.all(emailPromises);
+        } catch (bgError) {
+          console.error("Background tasks error:", bgError);
+        }
+      };
+
+      // Lanzar tareas en background SIN bloquear la UI
+      backgroundTasks();
 
       // Reset form
       setSelectedClienteId("");
