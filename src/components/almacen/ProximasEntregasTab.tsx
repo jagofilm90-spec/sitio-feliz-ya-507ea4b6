@@ -238,8 +238,14 @@ export const ProximasEntregasTab = ({ onEntregaReprogramada }: ProximasEntregasT
         <div className="space-y-1">
           {fechasOrdenadas.map(fecha => {
             const entregas = entregasPorFecha[fecha];
+            const fechaDate = new Date(fecha + "T12:00:00");
+            const hoy = new Date();
+            hoy.setHours(12, 0, 0, 0);
+            const manana = new Date(hoy);
+            manana.setDate(manana.getDate() + 1);
+            const esMañana = fechaDate.toDateString() === manana.toDateString();
             const fechaFormateada = format(
-              new Date(fecha + "T12:00:00"),
+              fechaDate,
               "EEEE d 'de' MMMM",
               { locale: es }
             );
@@ -247,9 +253,10 @@ export const ProximasEntregasTab = ({ onEntregaReprogramada }: ProximasEntregasT
             return (
               <div key={fecha}>
                 {/* Header de fecha */}
-                <div className="px-4 py-2 bg-muted/60 border-y border-border sticky top-0 z-10">
+                <div className={`px-4 py-2 border-y border-border sticky top-0 z-10 ${esMañana ? 'bg-amber-50 dark:bg-amber-950/30' : 'bg-muted/60'}`}>
                   <div className="flex items-center gap-2 text-sm font-medium">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <Calendar className={`w-4 h-4 ${esMañana ? 'text-amber-600' : 'text-muted-foreground'}`} />
+                    {esMañana && <span className="text-amber-700 dark:text-amber-400 font-semibold">Mañana —</span>}
                     <span className="capitalize">{fechaFormateada}</span>
                     <span className="text-muted-foreground">({entregas.length})</span>
                   </div>
