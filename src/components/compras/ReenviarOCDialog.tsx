@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { COMPANY_DATA } from "@/constants/companyData";
 import { getProveedorFiscalHTML } from "@/lib/proveedorUtils";
+import { htmlToPdfBase64 } from "@/lib/htmlToPdfBase64";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -353,7 +354,7 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
     try {
       // Generate PDF content
       const pdfContent = await generarPDFContent();
-      const pdfBase64 = btoa(unescape(encodeURIComponent(pdfContent)));
+      const pdfBase64 = await htmlToPdfBase64(pdfContent);
 
       // NOTE: Confirmation URL generation removed - confirmation system deprecated
       // Email is sent without confirmation buttons
@@ -377,7 +378,7 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
             <h2 style="color: #2e7d32; margin-top: 0;">Orden de Compra: ${orden.folio}</h2>
             <p>Estimado proveedor <strong>${nombreProveedor}</strong>,</p>
             <p>Por medio del presente, le reenviamos nuestra orden de compra.</p>
-            <p><strong>Adjunto encontrará el documento formal de la orden de compra en formato HTML que puede abrir en cualquier navegador e imprimir.</strong></p>
+            <p><strong>Adjunto encontrará el documento formal de la orden de compra en formato PDF.</strong></p>
             
             <div style="background-color: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
               <p style="margin: 5px 0;"><strong>Folio:</strong> ${orden.folio}</p>
@@ -399,9 +400,9 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
 
       const attachments = [
         {
-          filename: `Orden_Compra_${orden.folio}.html`,
+          filename: `Orden_Compra_${orden.folio}.pdf`,
           content: pdfBase64,
-          mimeType: 'text/html'
+          mimeType: 'application/pdf'
         }
       ];
 

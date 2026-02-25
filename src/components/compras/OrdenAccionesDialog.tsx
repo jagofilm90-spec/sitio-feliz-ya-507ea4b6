@@ -52,6 +52,7 @@ import { ConciliacionRapidaDialog } from "./ConciliacionRapidaDialog";
 import { AjustarCostosOCDialog } from "./AjustarCostosOCDialog";
 import { ModificarProductosOCDialog } from "./ModificarProductosOCDialog";
 import logoAlmasa from "@/assets/logo-almasa.png";
+import { htmlToPdfBase64 } from "@/lib/htmlToPdfBase64";
 
 // Helper function to convert image to base64
 const getLogoBase64 = async (): Promise<string> => {
@@ -464,7 +465,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
             '<div class="order-title">ORDEN CANCELADA</div><div style="background: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-top: 5px;">❌ CANCELADA</div>'
           );
           
-          const pdfBase64 = btoa(unescape(encodeURIComponent(cancelledPdfContent)));
+          const pdfBase64 = await htmlToPdfBase64(cancelledPdfContent);
           const asunto = `❌ ORDEN CANCELADA: ${orden.folio} - ${proveedorNombre.toUpperCase()}`;
 
           // Send cancellation email
@@ -476,9 +477,9 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
               subject: asunto,
               body: htmlBody,
               attachments: [{
-                filename: `OC_${orden.folio}_CANCELADA.html`,
+                filename: `OC_${orden.folio}_CANCELADA.pdf`,
                 content: pdfBase64,
-                mimeType: 'text/html'
+                mimeType: 'application/pdf'
               }]
             },
           });
@@ -1344,11 +1345,8 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       // Generate PDF content
       const pdfContent = await generarPDFContent(!!orden.autorizado_por);
       
-      // Convert HTML to base64 for attachment
-      const pdfBase64 = btoa(unescape(encodeURIComponent(pdfContent)));
-
-      // NOTE: Confirmation URL generation removed - confirmation system deprecated
-      // Email is sent without confirmation buttons
+      // Convert HTML to real PDF
+      const pdfBase64 = await htmlToPdfBase64(pdfContent);
 
       // Get logo URL from current origin
       const logoUrl = `${window.location.origin}/logo-almasa-header.png`;
@@ -1371,7 +1369,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
           <h2 style="color: #2e7d32; margin-top: 0;">Orden de Compra: ${orden.folio}</h2>
           <p>Estimado proveedor <strong>${orden.proveedores?.nombre}</strong>,</p>
           <p>Por medio del presente, le enviamos nuestra orden de compra.</p>
-          <p><strong>Adjunto encontrará el documento formal de la orden de compra en formato HTML que puede abrir en cualquier navegador e imprimir.</strong></p>
+          <p><strong>Adjunto encontrará el documento formal de la orden de compra en formato PDF.</strong></p>
           
           <div style="background-color: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
             <p style="margin: 5px 0;"><strong>Folio:</strong> ${orden.folio}</p>
@@ -1394,9 +1392,9 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       // Prepare attachment
       const attachments = [
         {
-          filename: `Orden_Compra_${orden.folio}.html`,
+          filename: `Orden_Compra_${orden.folio}.pdf`,
           content: pdfBase64,
-          mimeType: 'text/html'
+          mimeType: 'application/pdf'
         }
       ];
 
@@ -1555,7 +1553,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
     try {
       // Generate PDF content for the internal copy
       const pdfContent = await generarPDFContent(!!orden.autorizado_por);
-      const pdfBase64 = btoa(unescape(encodeURIComponent(pdfContent)));
+      const pdfBase64 = await htmlToPdfBase64(pdfContent);
 
       // Send internal copy email to compras@almasa.com.mx
       const copyHtmlBody = `
@@ -1586,9 +1584,9 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
 
       const attachments = [
         {
-          filename: `Orden_Compra_${orden.folio}.html`,
+          filename: `Orden_Compra_${orden.folio}.pdf`,
           content: pdfBase64,
-          mimeType: 'text/html'
+          mimeType: 'application/pdf'
         }
       ];
 
