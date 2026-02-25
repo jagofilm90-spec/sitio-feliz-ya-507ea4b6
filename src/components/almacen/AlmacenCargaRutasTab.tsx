@@ -120,6 +120,9 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
         // Si no tiene rutas asignadas, mostrar todas (modo fallback)
       }
       
+      // Filtrar rutas que no tienen entregas (no deberían mostrarse)
+      rutasFiltradas = rutasFiltradas.filter(r => r.entregas && r.entregas.length > 0);
+      
       setModoVisualizacion(modo);
       console.log("📋 Modo visualización:", modo, "- Rutas a mostrar:", rutasFiltradas.length);
 
