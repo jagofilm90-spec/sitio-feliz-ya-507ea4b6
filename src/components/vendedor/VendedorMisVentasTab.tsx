@@ -119,6 +119,31 @@ export function VendedorMisVentasTab({ onDashboardRefresh }: { onDashboardRefres
   useEffect(() => {
     fetchPedidos();
     fetchVentasMensuales();
+
+    // Suscripción en tiempo real para cambios en pedidos del vendedor
+    const channel = supabase
+      .channel('vendedor-pedidos-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'pedidos',
+        },
+        (payload) => {
+          // Refrescar cuando cambie el status de algún pedido
+          if (payload.new && payload.old && payload.new.status !== payload.old.status) {
+            fetchPedidos();
+            fetchVentasMensuales();
+            onDashboardRefresh?.();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchVentasMensuales = async () => {
