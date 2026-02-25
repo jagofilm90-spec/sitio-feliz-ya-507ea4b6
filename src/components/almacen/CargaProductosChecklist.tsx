@@ -71,11 +71,11 @@ export const CargaProductosChecklist = ({
   return (
     <div className="space-y-0">
       {/* Table Header */}
-      <div className="grid grid-cols-[48px_1fr_100px_100px_120px] gap-2 px-3 py-2 bg-muted/60 rounded-t-lg border border-b-0 border-border text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+      <div className="grid grid-cols-[40px_1fr_80px_80px_100px] gap-1 px-2 py-2 bg-muted/60 rounded-t-lg border border-b-0 border-border text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
         <div className="flex items-center justify-center">✓</div>
         <div>Producto</div>
-        <div className="text-center">Cantidad</div>
-        <div className="text-center">Peso (kg)</div>
+        <div className="text-center">Cant.</div>
+        <div className="text-center">Peso</div>
         <div className="text-center">Lote</div>
       </div>
 
@@ -178,7 +178,7 @@ const ProductoRow = ({
     : "";
 
   return (
-    <div className={`grid grid-cols-[48px_1fr_100px_100px_120px] gap-2 px-3 py-3 items-center transition-colors ${rowBg}`}>
+    <div className={`grid grid-cols-[40px_1fr_80px_80px_100px] gap-1 px-2 py-3 items-center transition-colors ${rowBg}`}>
       {/* Checkbox */}
       <div className="flex items-center justify-center">
         <Checkbox
