@@ -207,8 +207,8 @@ export const RutaCargaSheet = ({
     setEvidencias(data || []);
   };
 
-  const loadEntregasYProductos = async () => {
-    setLoading(true);
+  const loadEntregasYProductos = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       // Query mejorada con info completa de sucursal, cliente y confirmación
       const { data: entregasData, error: entregasError } = await supabase
@@ -380,7 +380,7 @@ export const RutaCargaSheet = ({
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -619,7 +619,7 @@ export const RutaCargaSheet = ({
         });
       }
 
-      await loadEntregasYProductos();
+      await loadEntregasYProductos(false);
     } catch (error) {
       console.error("Error actualizando producto:", error);
       toast({
@@ -678,7 +678,7 @@ export const RutaCargaSheet = ({
         description: "Los productos de esta entrega están bloqueados",
       });
 
-      await loadEntregasYProductos();
+      await loadEntregasYProductos(false);
     } catch (error) {
       console.error("Error confirmando entrega:", error);
       toast({
