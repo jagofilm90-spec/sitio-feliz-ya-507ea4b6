@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+
 import {
   Collapsible,
   CollapsibleContent,
@@ -34,10 +34,20 @@ import {
   Search, 
   Truck, 
   Clock,
-  AlertTriangle,
+  
   Package,
   Loader2,
 } from "lucide-react";
+
+interface ProductoOC {
+  cantidad_ordenada: number;
+  cantidad_recibida: number | null;
+  producto: {
+    codigo: string;
+    nombre: string;
+    unidad: string;
+  } | null;
+}
 
 interface EntregaFutura {
   id: string;
@@ -56,6 +66,7 @@ interface EntregaFutura {
       id: string;
       nombre: string;
     } | null;
+    detalles: ProductoOC[];
   };
 }
 
@@ -120,7 +131,12 @@ export const BusquedaLlegadaAnticipada = ({
             status,
             proveedor_id,
             proveedor_nombre_manual,
-            proveedor:proveedores(id, nombre)
+            proveedor:proveedores(id, nombre),
+            detalles:ordenes_compra_detalles(
+              cantidad_ordenada,
+              cantidad_recibida,
+              producto:productos(codigo, nombre, unidad)
+            )
           )
         `)
         .eq("status", "programada")
@@ -131,7 +147,7 @@ export const BusquedaLlegadaAnticipada = ({
 
       if (error) throw error;
       // Filtrar OCs que están pendientes de pago (no deben aparecer)
-      const entregasFiltradas = (data as EntregaFutura[] || []).filter(
+      const entregasFiltradas = (data as unknown as EntregaFutura[] || []).filter(
         entrega => entrega.orden_compra?.status !== "pendiente_pago"
       );
       setEntregasFuturas(entregasFiltradas);
@@ -204,15 +220,6 @@ export const BusquedaLlegadaAnticipada = ({
     );
   });
 
-  // Calcular días restantes
-  const getDiasRestantes = (fechaProgramada: string) => {
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    const fecha = new Date(fechaProgramada + "T00:00:00");
-    const diffMs = fecha.getTime() - hoy.getTime();
-    const dias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    return dias;
-  };
 
   return (
     <div className="border-t border-border">
@@ -270,8 +277,15 @@ export const BusquedaLlegadaAnticipada = ({
                     ? (entrega.orden_compra?.proveedor?.nombre || "Sin proveedor")
                     : (entrega.orden_compra?.proveedor_nombre_manual || "Sin proveedor");
                   
-                  const diasRestantes = getDiasRestantes(entrega.fecha_programada);
+                  
                   const esForzando = forzandoId === entrega.id;
+
+                  const fechaCompleta = format(
+                    new Date(entrega.fecha_programada + "T12:00:00"), 
+                    "EEEE d 'de' MMMM 'del' yyyy", 
+                    { locale: es }
+                  );
+                  const productos = entrega.orden_compra?.detalles || [];
 
                   return (
                     <div 
@@ -291,21 +305,32 @@ export const BusquedaLlegadaAnticipada = ({
                             <span className="font-medium">{entrega.cantidad_bultos} bultos</span>
                           </div>
                         </div>
-                        
-                        <Badge variant="outline" className="flex-shrink-0 gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {format(new Date(entrega.fecha_programada + "T12:00:00"), "dd/MM", { locale: es })}
-                        </Badge>
                       </div>
 
-                      {/* Alerta de días restantes y botón */}
-                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                      {/* Productos de la OC */}
+                      {productos.length > 0 && (
+                        <div className="bg-background/60 rounded-md border p-2 space-y-1">
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Productos:</p>
+                          {productos.map((prod, idx) => (
+                            <div key={idx} className="flex justify-between items-center text-sm">
+                              <span className="truncate flex-1 min-w-0">
+                                <span className="text-muted-foreground text-xs mr-1">{prod.producto?.codigo}</span>
+                                {prod.producto?.nombre || "Producto"}
+                              </span>
+                              <span className="font-medium text-right shrink-0 ml-2">
+                                {prod.cantidad_ordenada} {prod.producto?.unidad || "u"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Fecha completa y botón */}
+                      <div className="space-y-2">
                         <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-                          <AlertTriangle className="w-4 h-4" />
+                          <Calendar className="w-4 h-4 shrink-0" />
                           <span className="text-sm font-medium">
-                            {diasRestantes === 1 
-                              ? "Programada para mañana" 
-                              : `Programada para en ${diasRestantes} días`}
+                            Esta entrega está contemplada para el {fechaCompleta}
                           </span>
                         </div>
                         
@@ -315,7 +340,7 @@ export const BusquedaLlegadaAnticipada = ({
                               <Button
                                 variant="secondary"
                                 size="lg"
-                                className="gap-2 h-11 touch-manipulation"
+                                className="gap-2 h-11 touch-manipulation w-full"
                                 onClick={() => setConfirmandoEntrega(entrega)}
                                 disabled={esForzando}
                               >
