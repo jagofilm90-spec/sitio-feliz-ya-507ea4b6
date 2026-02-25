@@ -30,6 +30,7 @@ import {
   Timer,
   Lock,
   CheckCheck,
+  Eraser,
 } from "lucide-react";
 import { CargaProductosChecklist } from "./CargaProductosChecklist";
 import { CargaResumenFinal } from "./CargaResumenFinal";
@@ -1137,10 +1138,23 @@ export const RutaCargaSheet = ({
                           <span className="font-medium">Firma del Chofer</span>
                         </div>
                         {firmaChoferBase64 ? (
-                          <Badge className="bg-green-600">
-                            <CheckCircle2 className="w-3 h-3 mr-1" />
-                            Firmado
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-green-600">
+                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                              Firmado
+                            </Badge>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setFirmaChoferBase64(null);
+                                supabase.from('rutas').update({ firma_chofer_carga: null }).eq('id', ruta.id);
+                              }}
+                            >
+                              <Eraser className="w-3 h-3 mr-1" />
+                              Repetir
+                            </Button>
+                          </div>
                         ) : (
                           <Button onClick={() => setFirmaChoferOpen(true)}>
                             Solicitar firma
