@@ -126,7 +126,8 @@ const ProductoRow = ({
 
   const pesoTeoricoUnitario = producto.producto.peso_kg || 0;
   const pesoTeoricoTotal = pesoTeoricoUnitario * producto.cantidad_solicitada;
-  const tienePeso = pesoTeoricoUnitario > 0;
+  const esVentaPorKg = producto.producto.unidad === 'kg';
+  const tienePeso = esVentaPorKg && pesoTeoricoUnitario > 0;
 
   const cantidadDifiere = cantidadCargada !== producto.cantidad_solicitada;
   const pesoDifiere = tienePeso && Math.abs(pesoReal - pesoTeoricoTotal) > 0.1;
