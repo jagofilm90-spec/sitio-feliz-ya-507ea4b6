@@ -316,22 +316,50 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
     );
   }
 
-  if (rutas.length === 0) {
-    return (
-      <div className="p-8 text-center text-muted-foreground">
-        <Truck className="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p>No hay rutas programadas para hoy</p>
-        <p className="text-xs mt-1">Las rutas se crean desde el módulo de planificación</p>
-      </div>
-    );
-  }
-
   if (showInlineFlow) {
     return (
       <CargaRutaInlineFlow
         onClose={() => setShowInlineFlow(false)}
         onRutaCreada={() => { loadRutas(); setShowInlineFlow(false); }}
       />
+    );
+  }
+
+  if (rutas.length === 0) {
+    return (
+      <div className="space-y-6">
+        {/* Banner Empezar a Cargar - siempre visible */}
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-4">
+              <div className="bg-primary/10 rounded-xl p-3 shrink-0">
+                <QrCode className="h-8 w-8 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-lg text-foreground">Empezar a cargar</h3>
+                <p className="text-sm text-muted-foreground">
+                  Selecciona personal, escanea pedidos y confirma la carga
+                </p>
+              </div>
+              <Button 
+                onClick={() => setShowInlineFlow(true)}
+                size="lg"
+                className="h-14 px-6 text-base font-bold gap-2 shrink-0"
+              >
+                <QrCode className="h-5 w-5" />
+                Nueva Carga
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="p-8 text-center text-muted-foreground">
+          <Truck className="w-12 h-12 mx-auto mb-3 opacity-50" />
+          <p>No hay rutas programadas para hoy</p>
+          <p className="text-xs mt-1">Presiona "Nueva Carga" para crear una ruta</p>
+        </div>
+      </div>
     );
   }
 
