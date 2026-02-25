@@ -594,11 +594,34 @@ export default function AlmacenCargaScan() {
     setScanInput("");
   };
 
-  const processScanInput = (input: string) => {
+  const processScanInput = async (input: string) => {
     const almasaMatch = input.match(/^almasa:carga:([a-f0-9-]+)$/i);
     const urlMatch = input.match(/carga-scan\/([a-f0-9-]+)/i);
     const uuidMatch = input.match(/^[a-f0-9-]{36}$/i);
-    const id = almasaMatch?.[1] || urlMatch?.[1] || (uuidMatch ? input : null);
+    const folioMatch = input.match(/^(PED-[A-Z]?-?\d+)$/i);
+    let id = almasaMatch?.[1] || urlMatch?.[1] || (uuidMatch ? input : null);
+    
+    // If no UUID found, try searching by folio
+    if (!id && folioMatch) {
+      const folio = folioMatch[1].toUpperCase();
+      const { data } = await supabase
+        .from("pedidos")
+        .select("id")
+        .eq("folio", folio)
+        .maybeSingle();
+      if (data) id = data.id;
+    }
+    
+    // Also try as folio even without strict match (e.g. scanned text)
+    if (!id && input.toUpperCase().startsWith("PED")) {
+      const { data } = await supabase
+        .from("pedidos")
+        .select("id")
+        .eq("folio", input.toUpperCase().trim())
+        .maybeSingle();
+      if (data) id = data.id;
+    }
+
     if (id) {
       agregarPedidoACola(id);
       setCameraActive(false);
