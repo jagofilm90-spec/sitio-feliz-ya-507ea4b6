@@ -861,7 +861,11 @@ export const RutaCargaSheet = ({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
+      <Sheet open={open} onOpenChange={(val) => {
+          // Prevent sheet from closing while firma dialogs are open
+          if (!val && (firmaChoferOpen || firmaAlmacenistaOpen)) return;
+          onOpenChange(val);
+        }}>
         <SheetContent side="right" className="w-full sm:max-w-2xl p-0">
           <SheetHeader className="p-4 border-b bg-muted/30">
             <div className="flex items-center gap-3">
