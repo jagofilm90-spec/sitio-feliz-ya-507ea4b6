@@ -564,6 +564,14 @@ export const RutaCargaSheet = ({
 
         if (updateError) throw updateError;
 
+        // Optimistic UI update
+        setEntregas(prev => prev.map(e => ({
+          ...e,
+          productos: e.productos.map(p => 
+            p.id === cargaId ? { ...p, cargado: true, cantidad_cargada: cantidadCargada, lote_id: loteId } : p
+          ),
+        })));
+
         toast({
           title: "Producto cargado",
           description: `Stock descontado del lote`,
@@ -617,11 +625,19 @@ export const RutaCargaSheet = ({
           title: "Producto desmarcado",
           description: "Stock restaurado al inventario",
         });
-      }
 
-      await loadEntregasYProductos(false);
+        // Optimistic UI update
+        setEntregas(prev => prev.map(e => ({
+          ...e,
+          productos: e.productos.map(p => 
+            p.id === cargaId ? { ...p, cargado: false, cantidad_cargada: 0, lote_id: null } : p
+          ),
+        })));
+      }
     } catch (error) {
       console.error("Error actualizando producto:", error);
+      // On error, reload to get correct state
+      await loadEntregasYProductos(false);
       toast({
         title: "Error",
         description: "No se pudo actualizar el producto",
@@ -673,12 +689,15 @@ export const RutaCargaSheet = ({
 
       if (error) throw error;
 
+      // Optimistic UI update
+      setEntregas(prev => prev.map(e => 
+        e.id === entregaId ? { ...e, carga_confirmada: true } : e
+      ));
+
       toast({
         title: "Entrega confirmada",
         description: "Los productos de esta entrega están bloqueados",
       });
-
-      await loadEntregasYProductos(false);
     } catch (error) {
       console.error("Error confirmando entrega:", error);
       toast({
