@@ -1372,24 +1372,39 @@ export const AlmacenRecepcionSheet = ({
         }
 
         // Cargar las evidencias fotográficas con URLs firmadas para el PDF
-        const { data: evidenciasDB } = await supabase
+        const { data: evidenciasDB, error: evidenciasError } = await supabase
           .from("ordenes_compra_entregas_evidencias" as any)
           .select("tipo_evidencia, ruta_storage")
           .eq("entrega_id", entrega.id);
         
+        if (evidenciasError) {
+          console.error("Error al cargar evidencias para PDF:", evidenciasError);
+        }
+        
         const evidenciasConTipos: { url: string; tipo: string }[] = [];
-        if (evidenciasDB) {
+        if (evidenciasDB && evidenciasDB.length > 0) {
+          console.log(`Cargando ${evidenciasDB.length} evidencias para PDF...`);
           for (const ev of evidenciasDB as any[]) {
-            const { data: signedData } = await supabase.storage
-              .from("recepciones-evidencias")
-              .createSignedUrl(ev.ruta_storage, 3600);
-            if (signedData?.signedUrl) {
-              evidenciasConTipos.push({
-                url: signedData.signedUrl,
-                tipo: ev.tipo_evidencia
-              });
+            try {
+              const { data: signedData, error: signError } = await supabase.storage
+                .from("recepciones-evidencias")
+                .createSignedUrl(ev.ruta_storage, 3600);
+              if (signError) {
+                console.error("Error generando URL firmada:", ev.ruta_storage, signError);
+                continue;
+              }
+              if (signedData?.signedUrl) {
+                evidenciasConTipos.push({
+                  url: signedData.signedUrl,
+                  tipo: ev.tipo_evidencia
+                });
+              }
+            } catch (urlErr) {
+              console.error("Error procesando evidencia:", ev.ruta_storage, urlErr);
             }
           }
+        } else {
+          console.warn("No se encontraron evidencias en la BD para entrega:", entrega.id);
         }
 
         // Preparar datos de productos para el PDF
@@ -1411,6 +1426,11 @@ export const AlmacenRecepcionSheet = ({
 
         // Generar PDF como base64 para adjuntar al correo
         console.log("Generando PDF de recepción para adjuntar al correo...");
+        // IMPORTANTE: Usar los PARÁMETROS de firma (no el state que puede no haberse actualizado aún)
+        console.log("Evidencias para PDF:", evidenciasConTipos.length, "fotos encontradas");
+        console.log("Firma almacenista disponible:", !!firmaConformidadAlmacenista);
+        console.log("Firma chofer disponible:", !!firmaConformidadChofer);
+        
         pdfBase64Data = await generarRecepcionPDFBase64({
           recepcion: {
             id: entrega.id,
@@ -1418,10 +1438,10 @@ export const AlmacenRecepcionSheet = ({
             cantidad_bultos: entrega.cantidad_bultos || 0,
             fecha_programada: entrega.fecha_programada,
             fecha_entrega_real: new Date().toISOString(),
-            status: "completada",
+            status: "recibida",
             notas: notas || null,
-            firma_chofer_conformidad: firmaChoferConformidad,
-            firma_almacenista: firmaAlmacenista,
+            firma_chofer_conformidad: firmaConformidadChofer,
+            firma_almacenista: firmaConformidadAlmacenista,
             recibido_por_profile: { full_name: currentUserName },
             orden_compra: {
               id: entrega.orden_compra.id,
@@ -1432,8 +1452,11 @@ export const AlmacenRecepcionSheet = ({
           },
           productos: productosParaPDF,
           evidenciasConTipos: evidenciasConTipos,
-          firmaChofer: firmaChoferConformidad,
-          firmaAlmacenista: firmaAlmacenista,
+          firmaChofer: firmaConformidadChofer,
+          firmaAlmacenista: firmaConformidadAlmacenista,
+          firmaChoferDiferencia: firmaDiferencia,
+          firmaSinSellos: (entrega as any).sin_sellos ? firmaConformidadChofer : null,
+          sinSellos: (entrega as any).sin_sellos || false,
           llegadaRegistradaEn: entrega.llegada_registrada_en,
           recepcionFinalizadaEn: new Date().toISOString(),
           placasVehiculo: entrega.placas_vehiculo,

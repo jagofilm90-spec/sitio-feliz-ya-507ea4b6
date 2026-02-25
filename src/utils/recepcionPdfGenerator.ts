@@ -131,6 +131,7 @@ const formatDuration = (minutes: number): string => {
 const getStatusDisplay = (status: string): { text: string; color: { r: number; g: number; b: number } } => {
   const statusMap: Record<string, { text: string; color: { r: number; g: number; b: number } }> = {
     recibida: { text: "✓ RECIBIDA", color: { r: 34, g: 139, b: 34 } },
+    completada: { text: "✓ COMPLETADA", color: { r: 34, g: 139, b: 34 } },
     en_descarga: { text: "⏳ EN DESCARGA", color: { r: 255, g: 140, b: 0 } },
     programada: { text: "📅 PROGRAMADA", color: { r: 70, g: 130, b: 180 } },
     cancelada: { text: "✕ CANCELADA", color: { r: 178, g: 34, b: 34 } },
@@ -237,41 +238,39 @@ const generarDocumentoPDF = async (data: RecepcionData): Promise<{ doc: jsPDF; f
   
   yPos += 8;
   
-  // Left column
-  doc.setFontSize(8);
+  // Left column - standardized typography
+  doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
   doc.text("PROVEEDOR", 20, yPos);
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
-  // Truncar proveedor si es muy largo
   const proveedorTruncado = proveedorNombre.length > 35 
     ? proveedorNombre.substring(0, 32) + "..." 
     : proveedorNombre;
   doc.text(proveedorTruncado, 20, yPos + 5);
   
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
   doc.text("RECIBIDO POR", 20, yPos + 14);
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold"); // Importante destacar
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
   doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
   const recibidoPorNombre = recepcion.recibido_por_profile?.full_name || "—";
   doc.text(recibidoPorNombre.length > 30 ? recibidoPorNombre.substring(0, 27) + "..." : recibidoPorNombre, 20, yPos + 19);
   
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
   doc.text("BULTOS", 20, yPos + 28);
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
   doc.text(recepcion.cantidad_bultos?.toLocaleString() || "—", 20, yPos + 34);
   
-  // Right column
-  // Fecha recepción usando timestamp correcto
+  // Right column - standardized typography
   const fechaRecepcionDisplay = recepcionFinalizadaEn 
     ? format(new Date(recepcionFinalizadaEn), "dd/MM/yyyy")
     : recepcion.fecha_entrega_real 
@@ -282,27 +281,27 @@ const generarDocumentoPDF = async (data: RecepcionData): Promise<{ doc: jsPDF; f
     ? format(new Date(recepcionFinalizadaEn), "HH:mm")
     : "—";
   
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
   doc.text("FECHA RECEPCIÓN", 120, yPos);
-  doc.setFontSize(14);
+  doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
   doc.text(fechaRecepcionDisplay, 120, yPos + 7);
-  doc.setFontSize(10);
+  doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
   doc.text(`a las ${horaRecepcion}`, 120, yPos + 13);
   
-  // Tiempo de descarga (si existe)
+  // Tiempo de descarga
   if (llegadaRegistradaEn && recepcionFinalizadaEn) {
     const duracionMin = differenceInMinutes(new Date(recepcionFinalizadaEn), new Date(llegadaRegistradaEn));
-    doc.setFontSize(8);
+    doc.setFontSize(7);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(BRAND_GRAY.r, BRAND_GRAY.g, BRAND_GRAY.b);
     doc.text("TIEMPO DESCARGA", 120, yPos + 22);
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(BRAND_DARK.r, BRAND_DARK.g, BRAND_DARK.b);
     doc.text(formatDuration(duracionMin), 120, yPos + 28);
