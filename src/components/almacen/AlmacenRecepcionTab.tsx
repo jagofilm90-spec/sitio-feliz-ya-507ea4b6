@@ -37,7 +37,7 @@ import {
 import { RegistrarLlegadaSheet } from "./RegistrarLlegadaSheet";
 import { AlmacenRecepcionSheet } from "./AlmacenRecepcionSheet";
 import { CancelarDescargaDialog } from "./CancelarDescargaDialog";
-import { BusquedaLlegadaAnticipada } from "./BusquedaLlegadaAnticipada";
+import { ProximasEntregasTab } from "./ProximasEntregasTab";
 import { getCompactDisplayName } from "@/lib/productUtils";
 import {
   Tooltip,
@@ -119,6 +119,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
   const [tomarRecepcionEntrega, setTomarRecepcionEntrega] = useState<EntregaCompra | null>(null);
   const [tomandoRecepcion, setTomandoRecepcion] = useState(false);
   const [cancelarDescargaEntrega, setCancelarDescargaEntrega] = useState<EntregaCompra | null>(null);
+  const [activeTab, setActiveTab] = useState<"hoy" | "proximas">("hoy");
   const { toast } = useToast();
 
   // Obtener usuario actual
@@ -427,28 +428,6 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
     );
   }
 
-  if (entregas.length === 0) {
-    return (
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            Recepciones pendientes
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="p-8 text-center text-muted-foreground">
-            <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>No hay entregas programadas para hoy</p>
-            <p className="text-sm mt-1">Pero puedes buscar llegadas anticipadas abajo</p>
-          </div>
-          {/* Panel de llegada anticipada - abierto por defecto cuando no hay entregas */}
-          <BusquedaLlegadaAnticipada onEntregaReprogramada={loadEntregas} defaultOpen={true} />
-        </CardContent>
-      </Card>
-    );
-  }
-
   // Separar por status para mostrar en grupos
   const entregasEnDescarga = entregas.filter(e => e.status === "en_descarga");
   const entregasPendientes = entregas.filter(e => e.status === "programada" || e.status === "en_transito");
@@ -456,55 +435,94 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
   return (
     <>
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-0">
           <CardTitle className="text-lg flex items-center gap-2">
             <Package className="w-5 h-5" />
-            Recepciones pendientes
+            Recepción de mercancía
           </CardTitle>
+          {/* Pestañas */}
+          <div className="flex gap-1 mt-3 border-b border-border -mx-6 px-6">
+            <button
+              onClick={() => setActiveTab("hoy")}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors touch-manipulation ${
+                activeTab === "hoy"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Hoy
+              {entregas.length > 0 && (
+                <span className="ml-1.5 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+                  {entregas.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab("proximas")}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors touch-manipulation ${
+                activeTab === "proximas"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Próximas entregas
+            </button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
-          <ScrollArea className="h-[calc(100vh-320px)] min-h-[300px]">
-            <div className="divide-y divide-border">
-              {/* Entregas en descarga (prioritarias) */}
-              {entregasEnDescarga.length > 0 && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/20">
-                  <div className="text-sm font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2 mb-2">
-                    <Clock className="w-4 h-4" />
-                    En descarga ({entregasEnDescarga.length})
-                  </div>
-                  <div className="space-y-2">
-                    {entregasEnDescarga.map((entrega) => (
-                      <EntregaCard 
-                        key={entrega.id}
-                        entrega={entrega}
-                        currentUserId={currentUserId}
-                        onRegistrarLlegada={handleRegistrarLlegada}
-                        onCompletarRecepcion={handleCompletarRecepcion}
-                        onTomarRecepcion={setTomarRecepcionEntrega}
-                        onCancelarDescarga={setCancelarDescargaEntrega}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
+          {activeTab === "hoy" ? (
+            entregas.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground">
+                <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>No hay entregas programadas para hoy</p>
+                <p className="text-sm mt-1">Revisa la pestaña "Próximas entregas"</p>
+              </div>
+            ) : (
+              <ScrollArea className="h-[calc(100vh-380px)] min-h-[300px]">
+                <div className="divide-y divide-border">
+                  {/* Entregas en descarga (prioritarias) */}
+                  {entregasEnDescarga.length > 0 && (
+                    <div className="p-3 bg-amber-50 dark:bg-amber-950/20">
+                      <div className="text-sm font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2 mb-2">
+                        <Clock className="w-4 h-4" />
+                        En descarga ({entregasEnDescarga.length})
+                      </div>
+                      <div className="space-y-2">
+                        {entregasEnDescarga.map((entrega) => (
+                          <EntregaCard 
+                            key={entrega.id}
+                            entrega={entrega}
+                            currentUserId={currentUserId}
+                            onRegistrarLlegada={handleRegistrarLlegada}
+                            onCompletarRecepcion={handleCompletarRecepcion}
+                            onTomarRecepcion={setTomarRecepcionEntrega}
+                            onCancelarDescarga={setCancelarDescargaEntrega}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-              {/* Entregas pendientes */}
-              {entregasPendientes.map((entrega) => (
-                <EntregaCard 
-                  key={entrega.id}
-                  entrega={entrega}
-                  currentUserId={currentUserId}
-                  onRegistrarLlegada={handleRegistrarLlegada}
-                  onCompletarRecepcion={handleCompletarRecepcion}
-                  onTomarRecepcion={setTomarRecepcionEntrega}
-                  onCancelarDescarga={setCancelarDescargaEntrega}
-                />
-              ))}
-              
-              {/* Panel para buscar llegadas anticipadas */}
-              <BusquedaLlegadaAnticipada onEntregaReprogramada={loadEntregas} />
-            </div>
-          </ScrollArea>
+                  {/* Entregas pendientes */}
+                  {entregasPendientes.map((entrega) => (
+                    <EntregaCard 
+                      key={entrega.id}
+                      entrega={entrega}
+                      currentUserId={currentUserId}
+                      onRegistrarLlegada={handleRegistrarLlegada}
+                      onCompletarRecepcion={handleCompletarRecepcion}
+                      onTomarRecepcion={setTomarRecepcionEntrega}
+                      onCancelarDescarga={setCancelarDescargaEntrega}
+                    />
+                  ))}
+                </div>
+              </ScrollArea>
+            )
+          ) : (
+            <ScrollArea className="h-[calc(100vh-380px)] min-h-[300px]">
+              <ProximasEntregasTab onEntregaReprogramada={loadEntregas} />
+            </ScrollArea>
+          )}
         </CardContent>
       </Card>
 
