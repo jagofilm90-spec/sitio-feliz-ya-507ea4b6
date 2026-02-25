@@ -1114,7 +1114,15 @@ export const RutaCargaSheet = ({
                   );
                 })}
 
-                {/* Sección de sellos */}
+                {/* 1. Sección de evidencias fotográficas (antes de cerrar puertas) */}
+                <CargaEvidenciasSection
+                  rutaId={ruta.id}
+                  evidencias={evidencias}
+                  onEvidenciaAdded={loadEvidencias}
+                  disabled={!cargaIniciada || ruta.carga_completada || false}
+                />
+
+                {/* 2. Sección de sellos (después de cerrar puertas) */}
                 {cargaIniciada && !ruta.carga_completada && (
                   <SellosSection
                     rutaId={ruta.id}
@@ -1128,7 +1136,7 @@ export const RutaCargaSheet = ({
                   />
                 )}
 
-                {/* Sección de firma del chofer */}
+                {/* 3. Sección de firma del chofer (conformidad final) */}
                 {cargaIniciada && todasEntregasConfirmadas && !ruta.carga_completada && (
                   <Card>
                     <CardContent className="p-4">
@@ -1173,14 +1181,6 @@ export const RutaCargaSheet = ({
                     </CardContent>
                   </Card>
                 )}
-
-                {/* Sección de evidencias fotográficas */}
-                <CargaEvidenciasSection
-                  rutaId={ruta.id}
-                  evidencias={evidencias}
-                  onEvidenciaAdded={loadEvidencias}
-                  disabled={!cargaIniciada || ruta.carga_completada || false}
-                />
 
                 {/* Resumen final cuando la carga está completada */}
                 {ruta.carga_completada && (
