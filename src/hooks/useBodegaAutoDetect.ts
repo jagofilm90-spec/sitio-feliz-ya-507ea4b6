@@ -122,7 +122,11 @@ export const useBodegaAutoDetect = (): BodegaDetectadaResult => {
     );
 
     if (bodegasConGPS.length === 0) {
-      setError('No hay bodegas con coordenadas GPS configuradas');
+      const sinGPS = bodegas
+        .filter(b => b.latitud === null || b.longitud === null)
+        .map(b => b.nombre);
+      const nombres = sinGPS.length > 0 ? sinGPS.join(', ') : 'todas';
+      setError(`Sin coordenadas GPS: ${nombres}. Configúralas en Ajustes → Bodegas.`);
       setMetodoDeteccion('manual');
       setDetectando(false);
       return;
