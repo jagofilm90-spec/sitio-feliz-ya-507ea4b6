@@ -11,12 +11,11 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
   CheckCircle2, Loader2, Scale, Trash2, Timer, Package, ArrowDown, ArrowUp, Truck, User,
-  Camera, PenTool, ArrowRight,
+  Camera, PenTool, ArrowRight, AlertTriangle,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { getCompactDisplayName } from "@/lib/productUtils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { CargaEvidenciasSection } from "./CargaEvidenciasSection";
@@ -39,6 +38,9 @@ interface ProductoHoja {
   productoId: string;
   codigo: string;
   nombre: string;
+  marca: string | null;
+  especificaciones: string | null;
+  contenido_empaque: string | null;
   unidad: string;
   pesoKgUnit: number | null;
   precioPorKilo: boolean;
@@ -53,6 +55,7 @@ interface ProductoHoja {
     bodega_nombre: string | null;
   }[];
   eliminado: boolean;
+  confirmado: boolean;
 }
 
 interface PersonalInfo {
@@ -133,10 +136,10 @@ export const CargaHojaInteractiva = ({
         for (const cp of cargaProds || []) {
           const { data: detalle } = await supabase
             .from("pedidos_detalles")
-            .select("producto:productos(id, codigo, nombre, peso_kg, unidad, precio_por_kilo)")
+            .select("producto:productos(id, codigo, nombre, marca, especificaciones, contenido_empaque, peso_kg, unidad, precio_por_kilo)")
             .eq("id", cp.pedido_detalle_id).single();
 
-          const prod = (detalle?.producto as any) || { id: "", codigo: "N/A", nombre: "N/A", peso_kg: null, unidad: "unidad", precio_por_kilo: false };
+          const prod = (detalle?.producto as any) || { id: "", codigo: "N/A", nombre: "N/A", marca: null, especificaciones: null, contenido_empaque: null, peso_kg: null, unidad: "unidad", precio_por_kilo: false };
 
           const { data: lotes } = await supabase
             .from("inventario_lotes")
@@ -153,6 +156,9 @@ export const CargaHojaInteractiva = ({
             productoId: prod.id,
             codigo: prod.codigo,
             nombre: prod.nombre,
+            marca: prod.marca,
+            especificaciones: prod.especificaciones,
+            contenido_empaque: prod.contenido_empaque,
             unidad: prod.unidad,
             pesoKgUnit: prod.peso_kg,
             precioPorKilo: prod.precio_por_kilo,
@@ -166,6 +172,7 @@ export const CargaHojaInteractiva = ({
               bodega_nombre: (l.bodega as any)?.nombre || null,
             })),
             eliminado: false,
+            confirmado: false,
           });
         }
       }
@@ -446,60 +453,101 @@ export const CargaHojaInteractiva = ({
                       {group.items.filter(i => !i.eliminado).length} productos
                     </span>
                   </div>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[200px]">Producto</TableHead>
-                        <TableHead className="w-[80px] text-center">Solicitado</TableHead>
-                        <TableHead className="w-[100px] text-center">Cantidad</TableHead>
-                        <TableHead className="w-[100px] text-center">Peso KG</TableHead>
-                        <TableHead className="w-[160px]">Lote</TableHead>
-                        <TableHead className="w-[50px]"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {group.items.map(item => {
-                        if (item.eliminado) return (
-                          <TableRow key={item.cargaProductoId} className="opacity-30 line-through">
-                            <TableCell colSpan={5}>{item.codigo} — {item.nombre}</TableCell>
-                            <TableCell>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600"
-                                onClick={() => updateProducto(item.originalIdx, { eliminado: false })}>
-                                ↩
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
+                  <div className="space-y-2">
+                    {group.items.map(item => {
+                      if (item.eliminado) return (
+                        <div key={item.cargaProductoId} className="flex items-center gap-3 p-3 border rounded-lg opacity-40 line-through border-l-4 border-l-muted-foreground/30">
+                          <span className="text-sm flex-1">{item.codigo} — {item.nombre}</span>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600"
+                            onClick={() => updateProducto(item.originalIdx, { eliminado: false })}>
+                            ↩
+                          </Button>
+                        </div>
+                      );
 
-                        const pesoTeoricoItem = item.pesoKgUnit ? item.cantidadACargar * item.pesoKgUnit : null;
+                      const pesoTeoricoItem = item.pesoKgUnit ? item.cantidadACargar * item.pesoKgUnit : null;
+                      const cantidadDifiere = item.cantidadACargar !== item.cantidadSolicitada;
+                      const tienePeso = (item.precioPorKilo || item.pesoKgUnit) && item.pesoKgUnit;
+                      const displayName = getCompactDisplayName({
+                        nombre: item.nombre,
+                        marca: item.marca,
+                        especificaciones: item.especificaciones,
+                        contenido_empaque: item.contenido_empaque,
+                        peso_kg: item.pesoKgUnit,
+                      });
 
-                        return (
-                          <TableRow key={item.cargaProductoId}>
-                            <TableCell>
-                              <p className="font-medium text-sm">{item.codigo}</p>
-                              <p className="text-xs text-muted-foreground truncate max-w-[180px]">{item.nombre}</p>
-                            </TableCell>
-                            <TableCell className="text-center font-medium">{item.cantidadSolicitada}</TableCell>
-                            <TableCell className="text-center">
-                              <Input type="number" inputMode="numeric"
+                      return (
+                        <div key={item.cargaProductoId}
+                          className={`border rounded-lg overflow-hidden border-l-4 ${
+                            item.confirmado
+                              ? "border-l-green-500 bg-green-50/50 dark:bg-green-950/20"
+                              : "border-l-muted-foreground/30"
+                          }`}>
+                          {/* Row 1: Checkbox + full product name */}
+                          <div className="flex items-start gap-3 p-3 pb-2">
+                            <Checkbox
+                              checked={item.confirmado}
+                              onCheckedChange={(checked) => updateProducto(item.originalIdx, { confirmado: !!checked })}
+                              className="h-8 w-8 rounded-md border-2 mt-0.5 shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <span className="font-semibold text-sm leading-snug">
+                                {displayName}
+                              </span>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <span className="text-[11px] text-muted-foreground font-mono">{item.codigo}</span>
+                                {item.confirmado && (
+                                  <Badge className="bg-green-600 text-white text-[10px] px-1.5 py-0">CARGADO</Badge>
+                                )}
+                              </div>
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
+                              onClick={() => updateProducto(item.originalIdx, { eliminado: true })}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          {/* Row 2: Controls — Cantidad, Peso, Lote */}
+                          <div className="flex items-center gap-2 px-3 pb-3 pl-14">
+                            <div className="flex flex-col items-center gap-0.5">
+                              <label className="text-[10px] text-muted-foreground font-medium uppercase">Cant.</label>
+                              <Input
+                                type="number" inputMode="numeric"
                                 value={item.cantidadACargar}
                                 onChange={e => updateProducto(item.originalIdx, { cantidadACargar: parseFloat(e.target.value) || 0 })}
-                                className="w-20 h-9 text-center mx-auto" />
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {item.precioPorKilo || item.pesoKgUnit ? (
-                                <Input type="number" inputMode="decimal"
+                                className={`h-9 w-20 text-center text-sm font-semibold ${
+                                  cantidadDifiere ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : ""
+                                }`}
+                                disabled={item.confirmado}
+                              />
+                              {cantidadDifiere && (
+                                <span className="text-[10px] text-amber-600 flex items-center gap-0.5">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  ≠ {item.cantidadSolicitada}
+                                </span>
+                              )}
+                            </div>
+
+                            {tienePeso && (
+                              <div className="flex flex-col items-center gap-0.5">
+                                <label className="text-[10px] text-muted-foreground font-medium uppercase">Peso kg</label>
+                                <Input
+                                  type="number" inputMode="decimal" step="0.1"
                                   value={item.pesoRealKg ?? (pesoTeoricoItem?.toFixed(1) || "")}
                                   onChange={e => updateProducto(item.originalIdx, { pesoRealKg: e.target.value ? parseFloat(e.target.value) : null })}
-                                  className="w-20 h-9 text-center mx-auto" />
-                              ) : (
-                                <span className="text-xs text-muted-foreground">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
+                                  placeholder={pesoTeoricoItem?.toFixed(1) || ""}
+                                  className="h-9 w-20 text-center text-sm font-semibold"
+                                  disabled={item.confirmado}
+                                />
+                              </div>
+                            )}
+
+                            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                              <label className="text-[10px] text-muted-foreground font-medium uppercase text-center">Lote</label>
                               {item.lotesDisponibles.length > 0 ? (
                                 <select value={item.loteId || ""}
                                   onChange={e => updateProducto(item.originalIdx, { loteId: e.target.value })}
+                                  disabled={item.confirmado}
                                   className="w-full h-9 rounded-md border bg-background px-2 text-xs">
                                   {item.lotesDisponibles.map(l => (
                                     <option key={l.id} value={l.id}>
@@ -508,31 +556,34 @@ export const CargaHojaInteractiva = ({
                                   ))}
                                 </select>
                               ) : (
-                                <span className="text-xs text-destructive">Sin lotes</span>
+                                <span className="text-xs text-destructive flex items-center justify-center gap-1 h-9">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  Sin lotes
+                                </span>
                               )}
-                            </TableCell>
-                            <TableCell>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={() => updateProducto(item.originalIdx, { eliminado: true })}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               ))}
             </div>
           </ScrollArea>
 
           {/* Confirm checklist button */}
-          <Button onClick={handleConfirmarCarga} disabled={saving || productosActivos.length === 0}
-            size="lg" className="w-full h-14 text-lg font-bold">
-            {saving ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <CheckCircle2 className="h-5 w-5 mr-2" />}
-            Confirmar Carga ({productosActivos.length} productos)
-          </Button>
+          {(() => {
+            const confirmados = productosActivos.filter(p => p.confirmado).length;
+            const todosConfirmados = confirmados === productosActivos.length && productosActivos.length > 0;
+            return (
+              <Button onClick={handleConfirmarCarga} disabled={saving || !todosConfirmados}
+                size="lg" className="w-full h-14 text-lg font-bold">
+                {saving ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <CheckCircle2 className="h-5 w-5 mr-2" />}
+                Confirmar Carga ({confirmados}/{productosActivos.length})
+              </Button>
+            );
+          })()}
         </>
       )}
 
