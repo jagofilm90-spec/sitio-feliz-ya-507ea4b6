@@ -12,7 +12,7 @@ import { es } from 'date-fns/locale';
 import { useMonitoreoRutas, type RutaMonitoreo } from '@/hooks/useMonitoreoRutas';
 import { RutaMonitorCard } from './RutaMonitorCard';
 import { AlertasPanel } from './AlertasPanel';
-import { RutaDetalleSheet } from './RutaDetalleSheet';
+import { RutaDetalleFullScreen } from './RutaDetalleFullScreen';
 import { LiveIndicator } from '@/components/ui/live-indicator';
 
 const StatCard = ({ 
@@ -206,12 +206,13 @@ export const MonitoreoRutasTab = () => {
         </div>
       </div>
 
-      {/* Sheet de detalles */}
-      <RutaDetalleSheet 
-        ruta={selectedRuta} 
-        open={!!selectedRuta} 
-        onOpenChange={(open) => !open && setSelectedRuta(null)} 
-      />
+      {/* Vista fullscreen tipo PDF */}
+      {selectedRuta && (
+        <RutaDetalleFullScreen 
+          ruta={selectedRuta} 
+          onClose={() => setSelectedRuta(null)} 
+        />
+      )}
     </div>
   );
 };
