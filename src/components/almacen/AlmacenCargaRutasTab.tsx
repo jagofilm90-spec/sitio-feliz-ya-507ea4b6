@@ -28,6 +28,10 @@ interface Ruta {
   carga_completada_en: string | null;
   hora_salida_sugerida: string | null;
   carga_iniciada_en: string | null;
+  ayudantes_ids: string[] | null;
+  lleva_sellos: boolean | null;
+  numero_sello_salida: string | null;
+  firma_chofer_carga: string | null;
   vehiculo: {
     id: string;
     nombre: string;
@@ -138,6 +142,10 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
           hora_salida_sugerida,
           carga_iniciada_en,
           almacenista_id,
+          ayudantes_ids,
+          lleva_sellos,
+          numero_sello_salida,
+          firma_chofer_carga,
           vehiculo:vehiculos(id, nombre, placa),
           chofer:empleados!rutas_chofer_id_fkey(id, nombre_completo),
           entregas(id, pedido_id)
