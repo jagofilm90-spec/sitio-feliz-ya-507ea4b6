@@ -24,6 +24,7 @@ import {
   Truck,
   User,
   Camera,
+  X,
 } from "lucide-react";
 import { CargaProductosChecklist } from "@/components/almacen/CargaProductosChecklist";
 import html2canvas from "html2canvas";
@@ -79,6 +80,7 @@ interface VehiculoOption {
   nombre: string;
   placa: string | null;
   tipo: string | null;
+  chofer_asignado_id: string | null;
 }
 
 // ─── Component ────────────────────────────────────────────
@@ -89,7 +91,7 @@ export default function AlmacenCargaScan() {
   // Pre-scan step: chofer + vehículo selection
   const [paso, setPaso] = useState<"seleccion" | "escaneo">("seleccion");
   const [choferId, setChoferId] = useState<string>("");
-  const [ayudanteId, setAyudanteId] = useState<string>("");
+  const [ayudantesIds, setAyudantesIds] = useState<string[]>([]);
   const [vehiculoId, setVehiculoId] = useState<string>("");
   const [choferes, setChoferes] = useState<ChoferOption[]>([]);
   const [ayudantes, setAyudantes] = useState<ChoferOption[]>([]);
@@ -134,7 +136,7 @@ export default function AlmacenCargaScan() {
           .order("nombre_completo"),
         supabase
           .from("vehiculos")
-          .select("id, nombre, placa, tipo")
+          .select("id, nombre, placa, tipo, chofer_asignado_id")
           .eq("activo", true)
           .order("nombre"),
       ]);
@@ -624,7 +626,14 @@ export default function AlmacenCargaScan() {
                   <User className="h-4 w-4" />
                   Chofer
                 </label>
-                <Select value={choferId} onValueChange={setChoferId}>
+                <Select value={choferId} onValueChange={(val) => {
+                  setChoferId(val);
+                  // Auto-select the vehicle assigned to this chofer
+                  const vehiculoAsignado = vehiculos.find(v => v.chofer_asignado_id === val);
+                  if (vehiculoAsignado) {
+                    setVehiculoId(vehiculoAsignado.id);
+                  }
+                }}>
                   <SelectTrigger className="h-12 text-base">
                     <SelectValue placeholder="Selecciona un chofer..." />
                   </SelectTrigger>
@@ -641,25 +650,53 @@ export default function AlmacenCargaScan() {
                 </Select>
               </div>
 
-              {/* Ayudante de Chofer */}
+              {/* Ayudantes de Chofer (multi-select) */}
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  Ayudante de Chofer <span className="text-muted-foreground font-normal">(opcional)</span>
+                  Ayudantes <span className="text-muted-foreground font-normal">(opcional)</span>
                 </label>
-                <Select value={ayudanteId} onValueChange={setAyudanteId}>
+                {ayudantesIds.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {ayudantesIds.map((aId) => {
+                      const a = ayudantes.find((x) => x.id === aId);
+                      return (
+                        <Badge key={aId} variant="secondary" className="text-sm py-1 px-3 gap-1">
+                          {a?.nombre_completo || "..."}
+                          <button
+                            type="button"
+                            onClick={() => setAyudantesIds((prev) => prev.filter((id) => id !== aId))}
+                            className="ml-1 hover:text-destructive"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                )}
+                <Select
+                  value=""
+                  onValueChange={(val) => {
+                    if (val && !ayudantesIds.includes(val)) {
+                      setAyudantesIds((prev) => [...prev, val]);
+                    }
+                  }}
+                >
                   <SelectTrigger className="h-12 text-base">
-                    <SelectValue placeholder="Selecciona un ayudante..." />
+                    <SelectValue placeholder="Agregar ayudante..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {ayudantes.length === 0 && (
-                      <div className="px-3 py-2 text-sm text-muted-foreground">No hay ayudantes disponibles</div>
+                    {ayudantes.filter((a) => !ayudantesIds.includes(a.id)).length === 0 && (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">No hay más ayudantes disponibles</div>
                     )}
-                    {ayudantes.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.nombre_completo}
-                      </SelectItem>
-                    ))}
+                    {ayudantes
+                      .filter((a) => !ayudantesIds.includes(a.id))
+                      .map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.nombre_completo}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
