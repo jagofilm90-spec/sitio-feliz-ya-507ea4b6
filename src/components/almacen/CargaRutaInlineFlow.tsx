@@ -414,33 +414,51 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
         </div>
 
         {/* Camera */}
-        <CameraQrScanner active={cameraActive} onScan={(text) => processScanInput(text)} onClose={() => setCameraActive(false)} />
+        {cameraActive && (
+          <CameraQrScanner active={cameraActive} onScan={(text) => processScanInput(text)} onClose={() => setCameraActive(false)} />
+        )}
 
-        {/* Scan controls */}
-        <div className="flex gap-2">
-          <Button variant={cameraActive ? "destructive" : "secondary"} size="lg" className="h-12 px-3 shrink-0"
-            onClick={() => setCameraActive(!cameraActive)}>
-            <Camera className="h-5 w-5" />
-          </Button>
-          <Input placeholder="O pega el código QR aquí..." value={scanInput}
-            onChange={e => setScanInput(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") { processScanInput(scanInput.trim()); setScanInput(""); } }}
-            className="h-12 text-base" />
-          <Button onClick={() => { processScanInput(scanInput.trim()); setScanInput(""); }} size="lg" className="h-12 px-4">
-            <QrCode className="h-5 w-5 mr-1" />Agregar
-          </Button>
-        </div>
+        {/* Scan controls - Input manual prominente */}
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="py-4 space-y-3">
+            <p className="text-sm font-medium text-foreground">Escribe o pega el folio del pedido (ej: PED-V-384128)</p>
+            <div className="flex gap-2">
+              <Input 
+                placeholder="Folio del pedido..." 
+                value={scanInput}
+                onChange={e => setScanInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && scanInput.trim()) { processScanInput(scanInput.trim()); setScanInput(""); } }}
+                className="h-14 text-lg font-mono"
+                autoFocus
+              />
+              <Button 
+                onClick={() => { if (scanInput.trim()) { processScanInput(scanInput.trim()); setScanInput(""); } }} 
+                size="lg" 
+                className="h-14 px-6 text-base font-bold shrink-0"
+                disabled={!scanInput.trim()}
+              >
+                <QrCode className="h-5 w-5 mr-2" />Agregar
+              </Button>
+            </div>
+            <Button 
+              variant={cameraActive ? "destructive" : "outline"} 
+              size="sm"
+              onClick={() => setCameraActive(!cameraActive)}
+              className="gap-2"
+            >
+              <Camera className="h-4 w-4" />
+              {cameraActive ? "Cerrar Cámara" : "Usar Cámara QR"}
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* Scanned orders list */}
         {cola.length === 0 ? (
-          <div className="text-center py-12 space-y-3">
+          <div className="text-center py-8 space-y-3">
             <div className="mx-auto w-16 h-16 bg-primary/5 border-2 border-dashed border-primary/30 rounded-2xl flex items-center justify-center">
               <QrCode className="h-8 w-8 text-primary/50" />
             </div>
-            <p className="text-muted-foreground">Aún no has escaneado ningún pedido</p>
-            <Button variant="outline" onClick={() => setCameraActive(true)}>
-              <Camera className="h-4 w-4 mr-2" />Abrir Cámara
-            </Button>
+            <p className="text-muted-foreground">Escribe el folio del pedido arriba y presiona "Agregar"</p>
           </div>
         ) : (
           <div className="space-y-2">
