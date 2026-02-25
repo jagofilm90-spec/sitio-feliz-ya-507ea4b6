@@ -193,16 +193,13 @@ const ProductoRow = ({
       <div className="min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
           {isCortesia && <Gift className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
-          <span className="font-semibold text-sm">{producto.cantidad_solicitada} {producto.producto.unidad}</span>
-          <span className="text-xs text-muted-foreground font-mono">{producto.producto.codigo}</span>
+          <span className="font-semibold text-sm truncate">{getCompactDisplayName(producto.producto)}</span>
           {isCortesia && <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0">CORTESÍA</Badge>}
           {producto.cargado && (
             <Badge className="bg-green-600 text-white text-[10px] px-1.5 py-0">CARGADO</Badge>
           )}
         </div>
-        <p className="text-xs text-muted-foreground truncate mt-0.5">
-          {getCompactDisplayName(producto.producto)}
-        </p>
+        <span className="text-[11px] text-muted-foreground font-mono">{producto.producto.codigo}</span>
         {/* Lote & Bodega info inline */}
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           {loteActual?.bodega_nombre && (
