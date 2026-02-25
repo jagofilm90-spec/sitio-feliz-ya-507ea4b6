@@ -89,8 +89,10 @@ export default function AlmacenCargaScan() {
   // Pre-scan step: chofer + vehículo selection
   const [paso, setPaso] = useState<"seleccion" | "escaneo">("seleccion");
   const [choferId, setChoferId] = useState<string>("");
+  const [ayudanteId, setAyudanteId] = useState<string>("");
   const [vehiculoId, setVehiculoId] = useState<string>("");
   const [choferes, setChoferes] = useState<ChoferOption[]>([]);
+  const [ayudantes, setAyudantes] = useState<ChoferOption[]>([]);
   const [vehiculos, setVehiculos] = useState<VehiculoOption[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [rutaId, setRutaId] = useState<string | null>(null);
@@ -123,7 +125,7 @@ export default function AlmacenCargaScan() {
       const choferesEnRuta = new Set((rutasHoy || []).map(r => r.chofer_id).filter(Boolean));
       const vehiculosEnRuta = new Set((rutasHoy || []).map(r => r.vehiculo_id).filter(Boolean));
 
-      const [choferesRes, vehiculosRes] = await Promise.all([
+      const [empleadosRes, vehiculosRes] = await Promise.all([
         supabase
           .from("empleados")
           .select("id, nombre_completo, puesto")
@@ -137,11 +139,15 @@ export default function AlmacenCargaScan() {
           .order("nombre"),
       ]);
 
-      // Filter out those already assigned to a route today
-      const choferesDisponibles = (choferesRes.data || []).filter(c => !choferesEnRuta.has(c.id));
+      const allEmpleados = empleadosRes.data || [];
+      
+      // Split into choferes and ayudantes
+      const soloChoferes = allEmpleados.filter(e => e.puesto === "Chofer" && !choferesEnRuta.has(e.id));
+      const soloAyudantes = allEmpleados.filter(e => e.puesto === "Ayudante de Chofer" && !choferesEnRuta.has(e.id));
       const vehiculosDisponibles = (vehiculosRes.data || []).filter(v => !vehiculosEnRuta.has(v.id));
 
-      setChoferes(choferesDisponibles);
+      setChoferes(soloChoferes);
+      setAyudantes(soloAyudantes);
       setVehiculos(vehiculosDisponibles);
       setLoadingOptions(false);
     };
@@ -623,9 +629,35 @@ export default function AlmacenCargaScan() {
                     <SelectValue placeholder="Selecciona un chofer..." />
                   </SelectTrigger>
                   <SelectContent>
+                    {choferes.length === 0 && (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">No hay choferes disponibles</div>
+                    )}
                     {choferes.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.nombre_completo} ({c.puesto})
+                        {c.nombre_completo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Ayudante de Chofer */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Ayudante de Chofer <span className="text-muted-foreground font-normal">(opcional)</span>
+                </label>
+                <Select value={ayudanteId} onValueChange={setAyudanteId}>
+                  <SelectTrigger className="h-12 text-base">
+                    <SelectValue placeholder="Selecciona un ayudante..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ayudantes.length === 0 && (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">No hay ayudantes disponibles</div>
+                    )}
+                    {ayudantes.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.nombre_completo}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -643,6 +675,9 @@ export default function AlmacenCargaScan() {
                     <SelectValue placeholder="Selecciona un vehículo..." />
                   </SelectTrigger>
                   <SelectContent>
+                    {vehiculos.length === 0 && (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">No hay vehículos disponibles</div>
+                    )}
                     {vehiculos.map((v) => (
                       <SelectItem key={v.id} value={v.id}>
                         {v.nombre} {v.placa ? `(${v.placa})` : ""} {v.tipo ? `— ${v.tipo}` : ""}
