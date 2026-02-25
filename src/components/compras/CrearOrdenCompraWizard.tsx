@@ -1067,16 +1067,9 @@ const CrearOrdenCompraWizard = ({
         if (entregaError) throw entregaError;
       }
 
-      // Update productos with last purchase info
-      for (const p of productosEnOrden) {
-        await supabase
-          .from("productos")
-          .update({
-            ultimo_costo_compra: p.precio_unitario,
-            fecha_ultima_compra: new Date().toISOString(),
-          })
-          .eq("id", p.producto_id);
-      }
+      // NOTE: ultimo_costo_compra is NOT updated here.
+      // Cost updates only happen at conciliation (ConciliarFacturaDialog / ConciliacionRapidaDialog)
+      // to ensure ultimo_costo_compra reflects verified financial data.
 
       // Apply selected credits to the OC
       if (creditosSeleccionados.size > 0) {
