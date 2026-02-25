@@ -1371,57 +1371,56 @@ export const AlmacenRecepcionSheet = ({
           if (profile?.full_name) currentUserName = profile.full_name;
         }
 
-        // Cargar las evidencias fotográficas con URLs firmadas para el PDF
-        const { data: evidenciasDB, error: evidenciasError } = await supabase
-          .from("ordenes_compra_entregas_evidencias" as any)
-          .select("tipo_evidencia, ruta_storage")
-          .eq("entrega_id", entrega.id);
+        // Usar directamente los archivos en memoria (más confiable que re-consultar la BD y generar signed URLs)
+        const evidenciasConTipos: { url: string; tipo: string }[] = [];
         
-        if (evidenciasError) {
-          console.error("Error al cargar evidencias para PDF:", evidenciasError);
+        // Evidencias regulares del state
+        for (const ev of evidencias) {
+          const blobUrl = URL.createObjectURL(ev.file);
+          evidenciasConTipos.push({ url: blobUrl, tipo: ev.tipo });
         }
         
-        const evidenciasConTipos: { url: string; tipo: string }[] = [];
-        if (evidenciasDB && evidenciasDB.length > 0) {
-          console.log(`Cargando ${evidenciasDB.length} evidencias para PDF...`);
-          for (const ev of evidenciasDB as any[]) {
-            try {
-              // Intentar signed URL primero
-              const { data: signedData, error: signError } = await supabase.storage
-                .from("recepciones-evidencias")
-                .createSignedUrl(ev.ruta_storage, 3600);
-              
-              if (!signError && signedData?.signedUrl) {
-                evidenciasConTipos.push({
-                  url: signedData.signedUrl,
-                  tipo: ev.tipo_evidencia
-                });
-                continue;
+        // Foto de remisión del proveedor
+        if (fotoRemisionProveedor) {
+          const blobUrl = URL.createObjectURL(fotoRemisionProveedor.file);
+          evidenciasConTipos.push({ url: blobUrl, tipo: "remision_proveedor" });
+        }
+        
+        // Foto de caja vacía
+        if (fotoCajaVacia) {
+          const blobUrl = URL.createObjectURL(fotoCajaVacia.file);
+          evidenciasConTipos.push({ url: blobUrl, tipo: "caja_vacia" });
+        }
+        
+        // También cargar evidencias de la fase de llegada (placas, sellos, etc.) desde la BD
+        try {
+          const { data: evidenciasLlegada } = await supabase
+            .from("ordenes_compra_entregas_evidencias" as any)
+            .select("tipo_evidencia, ruta_storage")
+            .eq("entrega_id", entrega.id)
+            .eq("fase", "llegada");
+          
+          if (evidenciasLlegada && (evidenciasLlegada as any[]).length > 0) {
+            console.log(`Cargando ${(evidenciasLlegada as any[]).length} evidencias de llegada para PDF...`);
+            for (const ev of evidenciasLlegada as any[]) {
+              try {
+                const { data: downloadData } = await supabase.storage
+                  .from("recepciones-evidencias")
+                  .download(ev.ruta_storage);
+                if (downloadData) {
+                  const blobUrl = URL.createObjectURL(downloadData);
+                  evidenciasConTipos.push({ url: blobUrl, tipo: ev.tipo_evidencia });
+                }
+              } catch (e) {
+                console.warn("No se pudo cargar evidencia de llegada:", ev.ruta_storage);
               }
-              
-              // Fallback: descargar directamente como blob
-              console.warn("Signed URL falló para:", ev.ruta_storage, "signError:", signError, "signedData:", signedData);
-              const { data: downloadData, error: downloadError } = await supabase.storage
-                .from("recepciones-evidencias")
-                .download(ev.ruta_storage);
-              
-              if (!downloadError && downloadData) {
-                const blobUrl = URL.createObjectURL(downloadData);
-                evidenciasConTipos.push({
-                  url: blobUrl,
-                  tipo: ev.tipo_evidencia
-                });
-                console.log("Evidencia cargada via download:", ev.tipo_evidencia);
-              } else {
-                console.error("Error descargando evidencia:", ev.ruta_storage, downloadError);
-              }
-            } catch (urlErr) {
-              console.error("Error procesando evidencia:", ev.ruta_storage, urlErr);
             }
           }
-        } else {
-          console.warn("No se encontraron evidencias en la BD para entrega:", entrega.id);
+        } catch (e) {
+          console.warn("Error cargando evidencias de llegada:", e);
         }
+        
+        console.log(`Total evidencias para PDF: ${evidenciasConTipos.length} (${evidencias.length} recepción + llegada)`);
 
         // Preparar datos de productos para el PDF
         const productosParaPDF = productos.map(p => ({
