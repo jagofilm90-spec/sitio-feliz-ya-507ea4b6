@@ -442,7 +442,7 @@ export const CargaHojaInteractiva = ({
           </div>
 
           {/* Product tables by pedido */}
-          <ScrollArea className="max-h-[calc(100vh-550px)]">
+          <div>
             <div className="space-y-6">
               {pedidoGroups.map(group => (
                 <div key={group.pedidoId}>
@@ -570,7 +570,7 @@ export const CargaHojaInteractiva = ({
                 </div>
               ))}
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Confirm checklist button */}
           {(() => {
