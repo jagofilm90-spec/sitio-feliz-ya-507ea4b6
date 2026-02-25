@@ -107,10 +107,22 @@ export default function AlmacenCargaScan() {
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load choferes and vehículos for selection step
+  // Load choferes and vehículos for selection step, excluding those already on a route today
   useEffect(() => {
     const loadOptions = async () => {
       setLoadingOptions(true);
+      const fechaHoy = format(new Date(), "yyyy-MM-dd");
+
+      // Get today's active routes to know which choferes/vehiculos are busy
+      const { data: rutasHoy } = await supabase
+        .from("rutas")
+        .select("chofer_id, vehiculo_id")
+        .eq("fecha_ruta", fechaHoy)
+        .not("status", "eq", "cancelada");
+
+      const choferesEnRuta = new Set((rutasHoy || []).map(r => r.chofer_id).filter(Boolean));
+      const vehiculosEnRuta = new Set((rutasHoy || []).map(r => r.vehiculo_id).filter(Boolean));
+
       const [choferesRes, vehiculosRes] = await Promise.all([
         supabase
           .from("empleados")
@@ -122,11 +134,15 @@ export default function AlmacenCargaScan() {
           .from("vehiculos")
           .select("id, nombre, placa, tipo")
           .eq("activo", true)
-          .eq("status", "disponible")
           .order("nombre"),
       ]);
-      setChoferes(choferesRes.data || []);
-      setVehiculos(vehiculosRes.data || []);
+
+      // Filter out those already assigned to a route today
+      const choferesDisponibles = (choferesRes.data || []).filter(c => !choferesEnRuta.has(c.id));
+      const vehiculosDisponibles = (vehiculosRes.data || []).filter(v => !vehiculosEnRuta.has(v.id));
+
+      setChoferes(choferesDisponibles);
+      setVehiculos(vehiculosDisponibles);
       setLoadingOptions(false);
     };
     loadOptions();
