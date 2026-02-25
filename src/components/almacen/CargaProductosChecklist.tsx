@@ -109,11 +109,13 @@ const ProductoRow = ({
   disabled: boolean;
   isCortesia?: boolean;
 }) => {
+  const pesoTeoricoUnitario = producto.producto.peso_kg || 0;
+  
   const [cantidadCargada, setCantidadCargada] = useState(
     producto.cantidad_cargada || producto.cantidad_solicitada
   );
   const [pesoReal, setPesoReal] = useState<number>(
-    producto.peso_real_kg || (producto.producto.peso_kg ? producto.cantidad_solicitada * producto.producto.peso_kg : 0)
+    producto.peso_real_kg || (pesoTeoricoUnitario * (producto.cantidad_cargada || producto.cantidad_solicitada))
   );
   const [loteSeleccionado, setLoteSeleccionado] = useState(
     producto.lote_id || (producto.lotes_disponibles[0]?.id ?? null)
@@ -124,8 +126,7 @@ const ProductoRow = ({
     setCantidadCargada(producto.cantidad_cargada || producto.cantidad_solicitada);
   }, [producto.cantidad_cargada, producto.cantidad_solicitada]);
 
-  const pesoTeoricoUnitario = producto.producto.peso_kg || 0;
-  const pesoTeoricoTotal = pesoTeoricoUnitario * producto.cantidad_solicitada;
+  const pesoTeoricoTotal = pesoTeoricoUnitario * cantidadCargada;
   const esVentaPorKg = producto.producto.unidad === 'kg';
   const tienePeso = esVentaPorKg && pesoTeoricoUnitario > 0;
 
@@ -142,6 +143,14 @@ const ProductoRow = ({
   const handleCantidadChange = (value: string) => {
     const cantidad = parseFloat(value) || 0;
     setCantidadCargada(cantidad);
+    // Auto-recalculate weight based on new quantity
+    if (pesoTeoricoUnitario > 0) {
+      const nuevoPeso = cantidad * pesoTeoricoUnitario;
+      setPesoReal(nuevoPeso);
+      if (onPesoChange) {
+        onPesoChange(producto.id, nuevoPeso);
+      }
+    }
   };
 
   const handleCantidadBlur = () => {
