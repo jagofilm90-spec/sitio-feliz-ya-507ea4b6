@@ -235,106 +235,81 @@ export const ProximasEntregasTab = ({ onEntregaReprogramada }: ProximasEntregasT
           )}
         </div>
       ) : (
-        <div className="space-y-1">
-          {fechasOrdenadas.map(fecha => {
-            const entregas = entregasPorFecha[fecha];
-            const fechaDate = new Date(fecha + "T12:00:00");
-            const hoy = new Date();
-            hoy.setHours(12, 0, 0, 0);
-            const manana = new Date(hoy);
-            manana.setDate(manana.getDate() + 1);
-            const esMañana = fechaDate.toDateString() === manana.toDateString();
-            const fechaFormateada = format(
-              fechaDate,
-              "EEEE d 'de' MMMM",
-              { locale: es }
-            );
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/60 text-left">
+                <th className="px-3 py-2 font-medium text-muted-foreground">Fecha</th>
+                <th className="px-3 py-2 font-medium text-muted-foreground">Proveedor</th>
+                <th className="px-3 py-2 font-medium text-muted-foreground">Folio</th>
+                <th className="px-3 py-2 font-medium text-muted-foreground text-center">Ent.</th>
+                <th className="px-3 py-2 font-medium text-muted-foreground text-center">Bultos</th>
+                <th className="px-3 py-2 font-medium text-muted-foreground text-right">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {fechasOrdenadas.map(fecha => {
+                const entregas = entregasPorFecha[fecha];
+                const fechaDate = new Date(fecha + "T12:00:00");
+                const hoy = new Date();
+                hoy.setHours(12, 0, 0, 0);
+                const manana = new Date(hoy);
+                manana.setDate(manana.getDate() + 1);
+                const esMañana = fechaDate.toDateString() === manana.toDateString();
+                const fechaCorta = format(fechaDate, "EEE d MMM", { locale: es });
 
-            return (
-              <div key={fecha}>
-                {/* Header de fecha */}
-                <div className={`px-4 py-2 border-y border-border sticky top-0 z-10 ${esMañana ? 'bg-amber-50 dark:bg-amber-950/30' : 'bg-muted/60'}`}>
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Calendar className={`w-4 h-4 ${esMañana ? 'text-amber-600' : 'text-muted-foreground'}`} />
-                    {esMañana && <span className="text-amber-700 dark:text-amber-400 font-semibold">Mañana —</span>}
-                    <span className="capitalize">{fechaFormateada}</span>
-                    <span className="text-muted-foreground">({entregas.length})</span>
-                  </div>
-                </div>
+                return entregas.map((entrega, idx) => {
+                  const proveedorNombre = entrega.orden_compra?.proveedor_id 
+                    ? (entrega.orden_compra?.proveedor?.nombre || "Sin proveedor")
+                    : (entrega.orden_compra?.proveedor_nombre_manual || "Sin proveedor");
+                  const esForzando = forzandoId === entrega.id;
 
-                {/* Entregas de ese día */}
-                <div className="divide-y divide-border">
-                  {entregas.map(entrega => {
-                    const proveedorNombre = entrega.orden_compra?.proveedor_id 
-                      ? (entrega.orden_compra?.proveedor?.nombre || "Sin proveedor")
-                      : (entrega.orden_compra?.proveedor_nombre_manual || "Sin proveedor");
-                    const esForzando = forzandoId === entrega.id;
-                    const productos = entrega.orden_compra?.detalles || [];
-
-                    return (
-                      <div key={entrega.id} className="p-4 space-y-3">
-                        {/* Header: proveedor + folio */}
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-base truncate">
-                            {proveedorNombre}
-                          </div>
-                          <div className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
-                            <span>{entrega.orden_compra?.folio}</span>
-                            <span>•</span>
-                            <span>Entrega #{entrega.numero_entrega}</span>
-                            <span>•</span>
-                            <span className="font-medium">{entrega.cantidad_bultos} bultos</span>
-                          </div>
-                        </div>
-
-                        {/* Productos */}
-                        {productos.length > 0 && (
-                          <div className="bg-muted/40 rounded-md border p-2.5 space-y-1">
-                            {productos.map((prod, idx) => (
-                              <div key={idx} className="flex justify-between items-center text-sm">
-                                <span className="truncate flex-1 min-w-0">
-                                  <span className="text-muted-foreground text-xs mr-1">{prod.producto?.codigo}</span>
-                                  {prod.producto?.nombre || "Producto"}
-                                </span>
-                                <span className="font-medium text-right shrink-0 ml-2">
-                                  {prod.cantidad_ordenada} {prod.producto?.unidad || "u"}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Botón llegó antes */}
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="default"
-                                className="gap-2 h-9 touch-manipulation w-full"
-                                onClick={() => setConfirmandoEntrega(entrega)}
-                                disabled={esForzando}
-                              >
-                                {esForzando ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <Truck className="w-4 h-4" />
-                                )}
-                                {esForzando ? "Reprogramando..." : "Llegó antes, registrar hoy"}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Reprograma la entrega a hoy y permite registrar la llegada</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+                  return (
+                    <tr 
+                      key={entrega.id} 
+                      className={`border-b transition-colors hover:bg-muted/30 ${esMañana ? 'bg-amber-50/60 dark:bg-amber-950/20' : ''}`}
+                    >
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        {idx === 0 ? (
+                          <span className={`capitalize font-medium ${esMañana ? 'text-amber-700 dark:text-amber-400' : ''}`}>
+                            {esMañana ? '🔶 Mañana' : fechaCorta}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2.5 font-medium truncate max-w-[200px]">
+                        {proveedorNombre}
+                      </td>
+                      <td className="px-3 py-2.5 text-muted-foreground">
+                        {entrega.orden_compra?.folio}
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        #{entrega.numero_entrega}
+                      </td>
+                      <td className="px-3 py-2.5 text-center font-medium">
+                        {entrega.cantidad_bultos}
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1.5 h-8 text-xs touch-manipulation"
+                          onClick={() => setConfirmandoEntrega(entrega)}
+                          disabled={esForzando}
+                        >
+                          {esForzando ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Truck className="w-3.5 h-3.5" />
+                          )}
+                          {esForzando ? "..." : "Llegó antes"}
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                });
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
