@@ -28,7 +28,6 @@ interface CargaEvidenciasSectionProps {
 }
 
 const TIPOS_EVIDENCIA = [
-  { tipo: 'sello_salida', label: 'Sellos de Salida', icon: Stamp },
   { tipo: 'carga_vehiculo', label: 'Carga en Vehículo', icon: Package },
   { tipo: 'carta_porte', label: 'Carta Porte', icon: FileText },
 ];
@@ -148,7 +147,7 @@ export function CargaEvidenciasSection({
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Capture buttons */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {TIPOS_EVIDENCIA.map(({ tipo, label, icon: Icon }) => (
               <Button
                 key={tipo}
