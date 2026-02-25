@@ -1214,6 +1214,16 @@ const CrearOrdenCompraWizard = ({
         }
 
         if (emailProveedor) {
+          // 0. Obtener nombre del creador
+          let nombreCreador = '';
+          try {
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            if (currentUser) {
+              const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", currentUser.id).single();
+              nombreCreador = profile?.full_name || '';
+            }
+          } catch { /* ignore */ }
+
           // 1. Obtener logo en Base64
           let logoBase64 = '';
           try {
@@ -1381,15 +1391,10 @@ const CrearOrdenCompraWizard = ({
                 </div>
               ` : ''}
 
-              <div class="footer">
+              <div class="footer" style="justify-content: center;">
                 <div class="signature-box">
+                  ${nombreCreador ? `<div style="text-align: center; font-size: 12px; margin-bottom: 4px;">${nombreCreador}</div>` : ''}
                   <div class="signature-line">Elaboró</div>
-                </div>
-                <div class="signature-box">
-                  <div class="signature-line">Autorizó</div>
-                </div>
-                <div class="signature-box">
-                  <div class="signature-line">Recibió Proveedor</div>
                 </div>
               </div>
             </body>

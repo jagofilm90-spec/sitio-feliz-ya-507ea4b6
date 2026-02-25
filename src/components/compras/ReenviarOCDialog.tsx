@@ -308,9 +308,7 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
         ${orden.notas ? `<div class="notes"><h4>📝 Notas</h4><p>${orden.notas}</p></div>` : ''}
 
         <div class="signature-section">
-          <div class="signature-box"><div class="signature-line">Elaboró</div><div class="signature-name">${nombreCreador}</div></div>
-          <div class="signature-box"><div class="signature-line">Autorizó</div>${nombreAutorizador ? `<div class="signature-name">${nombreAutorizador}</div>` : ''}</div>
-          <div class="signature-box"><div class="signature-line">Recibió Proveedor</div></div>
+          <div class="signature-box">${nombreCreador ? `<div class="signature-name">${nombreCreador}</div>` : ''}<div class="signature-line">Elaboró</div></div>
         </div>
 
         <div class="footer">
