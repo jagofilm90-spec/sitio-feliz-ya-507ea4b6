@@ -6,6 +6,17 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -636,6 +647,54 @@ export default function AlmacenCargaScan() {
     processScanInput(decodedText);
   };
 
+  // ─── Cancel / Delete route ───
+  const [cancelling, setCancelling] = useState(false);
+  const handleCancelarRuta = async () => {
+    if (!rutaId) return;
+    setCancelling(true);
+    try {
+      for (const prod of productos) {
+        if (prod.cargado && prod.lote_id && prod.cantidad_cargada) {
+          await supabase.rpc("incrementar_lote", {
+            p_lote_id: prod.lote_id,
+            p_cantidad: prod.cantidad_cargada,
+          });
+        }
+      }
+      const { data: entregasRuta } = await supabase
+        .from("entregas")
+        .select("id")
+        .eq("ruta_id", rutaId);
+      if (entregasRuta && entregasRuta.length > 0) {
+        const eIds = entregasRuta.map((e) => e.id);
+        await supabase.from("carga_productos").delete().in("entrega_id", eIds);
+      }
+      await supabase.from("entregas").delete().eq("ruta_id", rutaId);
+      if (vehiculoId) {
+        await supabase.from("vehiculos").update({ status: "disponible" }).eq("id", vehiculoId);
+      }
+      await supabase.from("rutas").delete().eq("id", rutaId);
+      setRutaId(null);
+      setCola([]);
+      setIndiceCola(0);
+      setProductos([]);
+      setEntregaId(null);
+      setHoraInicio(null);
+      setTiempoSeg(0);
+      setFinalizado(false);
+      setChoferId("");
+      setAyudantesIds([]);
+      setVehiculoId("");
+      setPaso("seleccion");
+      toast.success("Ruta eliminada. Puedes empezar de nuevo.");
+    } catch (err: any) {
+      console.error("Error cancelando ruta:", err);
+      toast.error("Error al eliminar la ruta: " + (err?.message || ""));
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const pedidoActual = cola[indiceCola];
   const todosCargados = productos.length > 0 && productos.every((p) => p.cargado);
   const cargados = productos.filter((p) => p.cargado).length;
@@ -854,6 +913,28 @@ export default function AlmacenCargaScan() {
               </div>
             )}
           </div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm" disabled={cancelling}>
+                {cancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
+                Cancelar Ruta
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Eliminar esta ruta?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Se eliminará la ruta, todas las entregas y productos cargados. El inventario se revertirá. Esta acción no se puede deshacer.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>No, mantener</AlertDialogCancel>
+                <AlertDialogAction onClick={handleCancelarRuta} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Sí, eliminar ruta
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         {/* Camera QR Scanner */}
