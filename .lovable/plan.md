@@ -1,58 +1,59 @@
 
 
-## Plan: Corregir Emails de Pedidos y Mejorar Vista de Pedidos
+# Rediseno del Flujo de Carga de Rutas
 
-### Problema 1: No llega email a pedidos@almasa.com.mx
+## Resumen
+Se va a reorganizar el flujo de carga para que todo ocurra dentro de la pestana "Carga de Rutas" sin necesidad de ir a otra pagina. Se elimina el boton "Escanear QR" del sidebar y se reemplaza el flujo actual con un proceso paso a paso mas claro e integrado, incluyendo una vista tipo PDF interactiva para modificar cantidades/pesos.
 
-El sistema tiene dos mecanismos de email para pedidos:
-- **enviar-pedido-interno**: Usa Resend (servicio externo) para enviar a pedidos@almasa.com.mx. No tiene logs, lo que indica que posiblemente no se esta invocando correctamente o Resend tiene un problema de configuracion.
-- **send-client-notification**: Usa Gmail API para enviar al cliente. Tampoco tiene logs.
+## Cambios principales
 
-**Solucion**: Migrar el envio del email interno (a pedidos@almasa.com.mx) para que use Gmail API en lugar de Resend, ya que el sistema ya tiene configurada la cuenta pedidos@almasa.com.mx en Gmail. Asi se unifica todo bajo un solo sistema que ya funciona.
+### 1. Eliminar boton "Escanear QR" del Sidebar
+- Quitar la seccion completa del boton QR en `AlmacenSidebar.tsx` (lineas 262-286)
+- El acceso sera exclusivamente desde la pestana "Carga de Rutas"
 
-Se modificara la funcion `enviar-pedido-interno` para usar Gmail API (mismo patron que `send-client-notification`) en lugar de Resend.
+### 2. Redisenar el flujo dentro de AlmacenCargaRutasTab
+En lugar de navegar a `/almacen-tablet/carga-scan`, todo el proceso se manejara inline con pasos claros:
 
-### Problema 2: Email de confirmacion al cliente
+**Paso 1 - Seleccion de personal** (reemplaza el banner actual de "Empezar a cargar")
+- Selector de Chofer
+- Selector de Ayudante(s) (opcional, multi-select)
+- Vehiculo se auto-selecciona al elegir chofer (su unidad asignada), pero se puede cambiar
+- Boton "Escanear QR" para avanzar al paso 2
 
-El codigo ya llama a `send-client-notification` con tipo `pedido_confirmado` al crear un pedido, pero no hay logs. Esto indica que la cuenta de Gmail `pedidos@almasa.com.mx` puede no estar activa o los correos del cliente no estan configurados con el proposito correcto.
+**Paso 2 - Escaneo de pedidos**
+- Al dar click en "Escanear QR" se abre la camara para escanear
+- Se escanea QR 1, QR 2, QR 3... uno por uno
+- Cada pedido escaneado aparece en una lista con folio y cliente
+- Se puede seguir escaneando o cerrar la camara
+- Boton "Empezar a Cargar" (solo visible cuando hay al menos 1 pedido escaneado)
 
-**Solucion**: Verificar y asegurar que la llamada funcione. Ademas, agregar un fallback: si el cliente tiene email directo en la tabla `clientes`, enviar ahi tambien.
+**Paso 3 - Vista PDF interactiva (hoja de carga)**
+- Se muestra un documento tipo PDF/hoja impresa con todos los productos de todos los pedidos escaneados
+- Tabla interactiva con columnas: Producto, Cantidad solicitada, Cantidad a cargar (editable), Peso KG (editable), Lote, Acciones
+- Se pueden eliminar filas de productos que no hay en inventario
+- **Indicador de peso total** prominente: muestra KG teoricos vs KG reales en tiempo real
+- Boton para confirmar/finalizar la carga
 
-### Problema 3: Notificacion "en ruta" al cliente
+### 3. Indicador de peso total
+- Card prominente mostrando:
+  - "Peso teorico: X kg" (suma de cantidades x peso_kg de cada producto)
+  - "Peso real: Y kg" (suma de pesos reales capturados)
+  - Diferencia visual (verde si coincide, amarillo/rojo si hay discrepancia)
 
-Ya esta implementado en `PlanificadorRutas.tsx` linea 377. Usa `send-client-notification` con tipo `en_ruta`. El template del email ya existe y dice "Tu pedido esta en camino".
+## Archivos a modificar
 
-**Solucion**: Mismo fix que el punto 2 - asegurar que funcione correctamente.
+1. **`src/components/almacen/AlmacenSidebar.tsx`** - Eliminar boton "Escanear QR" del sidebar
+2. **`src/components/almacen/AlmacenCargaRutasTab.tsx`** - Redisenar completamente: integrar el flujo de seleccion + escaneo + carga inline con pasos, eliminar el banner que navega a otra pagina
+3. **`src/pages/AlmacenCargaScan.tsx`** - Extraer la logica reutilizable (procesamiento de QR, creacion de ruta, manejo de productos) pero mantener la pagina como ruta alternativa por si se accede directamente
+4. **Nuevo: `src/components/almacen/CargaRutaInlineFlow.tsx`** - Componente principal del flujo inline con los 3 pasos
+5. **Nuevo: `src/components/almacen/CargaHojaInteractiva.tsx`** - Vista tipo PDF/documento interactivo con tabla editable de productos, eliminacion de filas, y resumen de peso total
 
-### Problema 4: UI - Nombre del cliente mas grande en las tarjetas de pedidos
+## Detalles tecnicos
 
-Actualmente en `PedidoCardMobile.tsx` y `PedidoCardMobileSecretaria.tsx`, el folio se muestra grande y el nombre del cliente en texto pequeno.
+- La logica de escaneo QR (regex para folios, URI scheme almasa, UUIDs) se reutiliza del componente existente
+- La creacion de ruta, entregas y carga_productos sigue la misma logica de `AlmacenCargaScan.tsx`
+- El componente `CameraQrScanner` existente se reutiliza tal cual
+- El peso total se calcula en tiempo real sumando `cantidad * peso_kg` (teorico) y `peso_real_kg` (real) de todos los productos
+- Al eliminar una fila de producto, no se descuenta inventario (porque aun no se ha cargado); simplemente se quita de la lista
+- La finalizacion sigue el mismo flujo: marcar ruta como "cargada", enviar notificaciones a clientes, actualizar inventario
 
-**Solucion**: Invertir la jerarquia visual:
-- Nombre del cliente en texto grande y prominente
-- Folio del pedido en texto pequeno/secundario
-
----
-
-### Cambios Tecnicos
-
-#### 1. Edge function `enviar-pedido-interno/index.ts`
-- Reescribir para usar Gmail API (misma logica de `send-client-notification`)
-- Obtener token de la cuenta `pedidos@almasa.com.mx` de `gmail_cuentas`
-- Mantener el mismo template HTML del email
-- Eliminar dependencia de Resend
-
-#### 2. Edge function `send-client-notification/index.ts`
-- Agregar fallback: si no hay `cliente_correos` configurados, buscar email directamente en la tabla `clientes`
-- Esto asegura que clientes sin correos especificos configurados tambien reciban notificaciones
-
-#### 3. `src/components/pedidos/PedidoCardMobile.tsx`
-- Nombre del cliente: texto grande (text-base font-bold)
-- Folio: texto pequeno (text-xs font-mono text-muted-foreground)
-
-#### 4. `src/components/secretaria/PedidoCardMobileSecretaria.tsx`
-- Mismo cambio de jerarquia visual
-
-#### 5. Verificar invocacion en `VendedorNuevoPedidoTab.tsx`
-- Confirmar que `enviarEmailPedido` se llama correctamente despues de crear el pedido
-- Agregar mejor manejo de errores con logs visibles
