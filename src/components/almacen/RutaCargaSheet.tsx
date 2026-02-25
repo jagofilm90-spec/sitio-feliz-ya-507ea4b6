@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { sendPushNotification } from "@/services/pushNotifications";
+import { COMPANY_DATA } from "@/constants/companyData";
 import {
   Sheet,
   SheetContent,
@@ -860,6 +863,8 @@ export const RutaCargaSheet = ({
     }
   };
 
+  const fechaFormateada = format(new Date(ruta.fecha_ruta), "dd 'de' MMMM 'de' yyyy", { locale: es });
+
   return (
     <>
       <Sheet open={open} onOpenChange={(val) => {
@@ -867,356 +872,364 @@ export const RutaCargaSheet = ({
           if (!val && (firmaChoferOpen || firmaAlmacenistaOpen)) return;
           onOpenChange(val);
         }}>
-        <SheetContent side="right" className="w-full sm:max-w-2xl p-0">
-          <SheetHeader className="p-4 border-b bg-muted/30">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onOpenChange(false)}
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <div className="flex-1">
-                <SheetTitle className="text-xl">{ruta.folio}</SheetTitle>
-                <div className="flex flex-col gap-1 text-sm text-muted-foreground mt-1">
-                  <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1">
-                      <Truck className="w-4 h-4" />
-                      {ruta.vehiculo?.nombre} 
-                      {ruta.vehiculo?.placas && (
-                        <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">
-                          {ruta.vehiculo.placas}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <User className="w-4 h-4" />
-                    <span className="font-medium">{ruta.chofer?.nombre_completo || "Sin chofer"}</span>
-                  </div>
-                  {ayudantes.length > 0 && (
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
-                      <span>Ayudantes: {ayudantes.map(a => a.nombre_completo).join(", ")}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <Badge variant={ruta.carga_completada ? "default" : "secondary"}>
-                {porcentajeCarga}% cargado
+        <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
+          {/* Botón volver compacto */}
+          <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/30 shrink-0">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onOpenChange(false)}>
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <SheetTitle className="sr-only">Hoja de carga {ruta.folio}</SheetTitle>
+            <span className="text-xs text-muted-foreground">Hoja de Carga</span>
+            <div className="ml-auto">
+              <Badge variant={ruta.carga_completada ? "default" : "secondary"} className="text-xs">
+                {porcentajeCarga}%
               </Badge>
             </div>
-          </SheetHeader>
-
-          {/* Progress bar */}
-          <div className="h-2 bg-muted">
-            <div
-              className="h-full bg-primary transition-all duration-300"
-              style={{ width: `${porcentajeCarga}%` }}
-            />
           </div>
 
-          {/* Panel de estado de carga con temporizador */}
-          {!loading && (
-            <div className="p-4 border-b">
-              {!cargaIniciada && !ruta.carga_completada ? (
-                <div className="flex flex-col items-center gap-3 py-4">
-                  <AlertCircle className="w-12 h-12 text-amber-500" />
-                  <p className="text-center text-muted-foreground">
-                    Los checkboxes están bloqueados hasta iniciar la carga
+          {/* Progress bar */}
+          <div className="h-1.5 bg-muted shrink-0">
+            <div className="h-full bg-primary transition-all duration-300" style={{ width: `${porcentajeCarga}%` }} />
+          </div>
+
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-3">
+              {/* ═══════ HEADER TIPO DOCUMENTO ═══════ */}
+              <div className="bg-white dark:bg-card border rounded-lg overflow-hidden shadow-sm">
+                {/* Logo + Título */}
+                <div className="text-center border-b border-border/60 px-4 py-3">
+                  <div className="flex items-center justify-center gap-3 mb-1">
+                    <img src="/logo-almasa-header.png" alt="ALMASA" className="h-8 w-auto object-contain" />
+                    <h1 className="text-base font-black uppercase tracking-tight text-foreground">HOJA DE CARGA</h1>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    {COMPANY_DATA.razonSocial} | RFC: {COMPANY_DATA.rfc}
                   </p>
-                  <Button
-                    size="lg"
-                    className="w-full h-16 text-xl bg-green-600 hover:bg-green-700"
-                    onClick={handleIniciarCarga}
-                    disabled={iniciandoCarga}
-                  >
-                    {iniciandoCarga ? (
-                      <Loader2 className="w-6 h-6 mr-2 animate-spin" />
-                    ) : (
-                      <Play className="w-6 h-6 mr-2" />
-                    )}
-                    INICIAR CARGA
-                  </Button>
                 </div>
-              ) : (
-                <div className={`rounded-lg border p-4 ${getTimerColor()}`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Timer className="w-5 h-5" />
-                      <span className="font-medium">
-                        {ruta.carga_completada ? "Carga finalizada" : "Carga en progreso"}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-3xl font-mono font-bold">
-                        {formatearTiempo(tiempoTranscurrido)}
-                      </div>
-                      {horaInicio && (
-                        <div className="text-xs opacity-75">
-                          Iniciada: {horaInicio.toLocaleTimeString('es-MX', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                        </div>
-                      )}
+
+                {/* Datos de la ruta en grid tipo PDF */}
+                <div className="grid grid-cols-[1fr_auto] text-sm">
+                  {/* Fila 1: Folio + Fecha */}
+                  <div className="border-b border-r border-border/40 px-3 py-2">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Folio Ruta:</span>
+                    <span className="ml-1.5 font-bold text-base text-foreground">{ruta.folio}</span>
+                  </div>
+                  <div className="border-b border-border/40 px-3 py-2 text-center min-w-[130px]">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Fecha:</span>
+                    <span className="ml-1 text-xs text-foreground">{fechaFormateada}</span>
+                  </div>
+
+                  {/* Fila 2: Vehículo + Placas */}
+                  <div className="border-b border-r border-border/40 px-3 py-2 flex items-center gap-2">
+                    <Truck className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <div>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase">Vehículo:</span>
+                      <span className="ml-1 font-semibold text-foreground">{ruta.vehiculo?.nombre || "Sin asignar"}</span>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                  <div className="border-b border-border/40 px-3 py-2 text-center">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Placas:</span>
+                    <span className="ml-1 font-mono font-semibold text-foreground">{ruta.vehiculo?.placas || "—"}</span>
+                  </div>
 
-          <ScrollArea className="h-[calc(100vh-400px)]">
-            {loading ? (
-              <div className="p-4 space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-32 w-full" />
-                ))}
+                  {/* Fila 3: Chofer */}
+                  <div className="border-b border-r border-border/40 px-3 py-2 flex items-center gap-2">
+                    <User className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <div>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase">Chofer:</span>
+                      <span className="ml-1 font-semibold text-foreground">{ruta.chofer?.nombre_completo || "Sin chofer"}</span>
+                    </div>
+                  </div>
+                  <div className="border-b border-border/40 px-3 py-2 text-center">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Entregas:</span>
+                    <span className="ml-1 font-bold text-foreground">{entregas.length}</span>
+                  </div>
+
+                  {/* Fila 4: Ayudantes */}
+                  <div className="px-3 py-2 flex items-center gap-2 col-span-2">
+                    <Users className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Ayudantes:</span>
+                    <span className="text-xs text-foreground">
+                      {ayudantes.length > 0 
+                        ? ayudantes.map(a => a.nombre_completo).join(", ")
+                        : <span className="italic text-muted-foreground">Sin ayudantes</span>
+                      }
+                    </span>
+                  </div>
+                </div>
               </div>
-            ) : (
-              <div className="p-4 space-y-6">
-                {entregas.map((entrega) => {
-                  const productosNormales = entrega.productos.filter(p => !p.es_cortesia);
-                  const cortesias = entrega.productos.filter(p => p.es_cortesia);
-                  const sucursal = entrega.pedido.sucursal;
-                  const cliente = entrega.pedido.cliente;
-                  const direccionEntrega = sucursal?.direccion || cliente?.direccion;
-                  const telefonoEntrega = sucursal?.telefono || cliente?.telefono;
-                  
-                  const todosProductosCargadosEntrega = entrega.productos.every(p => p.cargado);
-                  
-                  return (
-                    <Card key={entrega.id} className={`overflow-hidden ${entrega.carga_confirmada ? 'ring-2 ring-green-500' : ''}`}>
-                      {/* Header de entrega con info completa */}
-                      <div className="bg-muted/50 p-4 border-b">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge variant="outline" className="text-xs shrink-0">
-                                #{entrega.orden_entrega}
-                              </Badge>
-                              <span className="font-semibold text-lg truncate">
-                                {cliente.nombre}
-                              </span>
-                              {entrega.carga_confirmada && (
-                                <Badge className="bg-green-600 text-xs">
-                                  <Lock className="w-3 h-3 mr-1" />
-                                  Confirmada
-                                </Badge>
-                              )}
-                            </div>
-                            
-                            {sucursal && (
-                              <div className="text-sm text-muted-foreground mb-2">
-                                <span className="font-medium">{sucursal.nombre}</span>
-                                {sucursal.codigo_sucursal && (
-                                  <span className="ml-1 text-xs font-mono bg-muted px-1.5 py-0.5 rounded">
-                                    {sucursal.codigo_sucursal}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                            
-                            {direccionEntrega && (
-                              <div className="flex items-start gap-2 text-sm mb-1">
-                                <MapPin className="w-4 h-4 shrink-0 mt-0.5 text-muted-foreground" />
-                                <span className="text-muted-foreground">{direccionEntrega}</span>
-                              </div>
-                            )}
-                            
-                            <div className="flex flex-wrap gap-4 text-sm">
-                              {telefonoEntrega && (
-                                <div className="flex items-center gap-1">
-                                  <Phone className="w-4 h-4 text-muted-foreground" />
-                                  <span>{telefonoEntrega}</span>
-                                </div>
-                              )}
-                              {sucursal?.contacto && (
-                                <div className="flex items-center gap-1">
-                                  <User className="w-4 h-4 text-muted-foreground" />
-                                  <span>{sucursal.contacto}</span>
-                                </div>
-                              )}
-                              {sucursal?.horario_entrega && (
-                                <div className="flex items-center gap-1">
-                                  <Clock className="w-4 h-4 text-muted-foreground" />
-                                  <span>{sucursal.horario_entrega}</span>
-                                </div>
-                              )}
-                            </div>
+
+              {/* ═══════ BARRA RESUMEN: Productos + Peso + Timer ═══════ */}
+              <div className="grid grid-cols-3 border rounded-lg overflow-hidden text-xs bg-white dark:bg-card shadow-sm">
+                <div className="border-r border-border/40 px-3 py-2">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase block">Productos</span>
+                  <span className="font-bold text-foreground">{productosCargados}/{totalProductos}</span>
+                </div>
+                <div className="border-r border-border/40 px-3 py-2">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase block">Peso Est.</span>
+                  <span className="font-bold text-foreground">
+                    {entregas.reduce((acc, e) => 
+                      acc + e.productos.reduce((pacc, p) => 
+                        pacc + (p.producto.peso_kg || 0) * (p.cantidad_cargada || p.cantidad_solicitada), 0
+                      ), 0
+                    ).toFixed(1)} kg
+                  </span>
+                </div>
+                <div className={`px-3 py-2 ${cargaIniciada ? getTimerColor() : ''}`}>
+                  <span className="text-[10px] font-bold uppercase block" style={{ opacity: 0.7 }}>
+                    {ruta.carga_completada ? "Duración" : cargaIniciada ? "Tiempo" : "Estado"}
+                  </span>
+                  <span className="font-bold font-mono">
+                    {cargaIniciada ? formatearTiempo(tiempoTranscurrido) : "Sin iniciar"}
+                  </span>
+                </div>
+              </div>
+
+              {/* ═══════ BOTÓN INICIAR CARGA ═══════ */}
+              {!loading && !cargaIniciada && !ruta.carga_completada && (
+                <Button
+                  size="lg"
+                  className="w-full h-14 text-lg bg-green-600 hover:bg-green-700 text-white"
+                  onClick={handleIniciarCarga}
+                  disabled={iniciandoCarga}
+                >
+                  {iniciandoCarga ? (
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  ) : (
+                    <Play className="w-5 h-5 mr-2" />
+                  )}
+                  INICIAR CARGA
+                </Button>
+              )}
+
+              {/* ═══════ ENTREGAS (TABLA DE PRODUCTOS INTERACTIVA) ═══════ */}
+              {loading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-32 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <>
+                  {entregas.map((entrega) => {
+                    const productosNormales = entrega.productos.filter(p => !p.es_cortesia);
+                    const cortesias = entrega.productos.filter(p => p.es_cortesia);
+                    const sucursal = entrega.pedido.sucursal;
+                    const cliente = entrega.pedido.cliente;
+                    const direccionEntrega = sucursal?.direccion || cliente?.direccion;
+                    const telefonoEntrega = sucursal?.telefono || cliente?.telefono;
+                    
+                    const todosProductosCargadosEntrega = entrega.productos.every(p => p.cargado);
+                    
+                    return (
+                      <div key={entrega.id} className={`border rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm ${entrega.carga_confirmada ? 'ring-2 ring-green-500' : ''}`}>
+                        {/* Header entrega estilo documento */}
+                        <div className="bg-gray-800 dark:bg-gray-900 text-white px-3 py-2 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="bg-white/20 rounded px-1.5 py-0.5 text-[10px] font-bold">#{entrega.orden_entrega}</span>
+                            <span className="font-bold text-sm">{cliente.nombre}</span>
                           </div>
-                          
-                          <Badge variant="secondary" className="shrink-0 text-xs">
-                            {entrega.pedido.folio}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-mono opacity-80">{entrega.pedido.folio}</span>
+                            {entrega.carga_confirmada && (
+                              <Badge className="bg-green-600 text-[10px] h-5">
+                                <Lock className="w-3 h-3 mr-0.5" />
+                                OK
+                              </Badge>
+                            )}
+                          </div>
                         </div>
-                        
+
+                        {/* Datos del cliente / sucursal */}
+                        <div className="px-3 py-2 border-b border-border/40 text-xs space-y-1">
+                          {sucursal && (
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <MapPin className="w-3 h-3 shrink-0" />
+                              <span className="font-medium text-foreground">{sucursal.nombre}</span>
+                              {sucursal.codigo_sucursal && (
+                                <span className="font-mono bg-muted px-1 py-0.5 rounded text-[10px]">{sucursal.codigo_sucursal}</span>
+                              )}
+                            </div>
+                          )}
+                          {direccionEntrega && (
+                            <p className="text-[11px] text-muted-foreground pl-4">{direccionEntrega}</p>
+                          )}
+                          <div className="flex flex-wrap gap-3 pl-4">
+                            {telefonoEntrega && (
+                              <span className="flex items-center gap-1 text-muted-foreground">
+                                <Phone className="w-3 h-3" /> {telefonoEntrega}
+                              </span>
+                            )}
+                            {sucursal?.contacto && (
+                              <span className="flex items-center gap-1 text-muted-foreground">
+                                <User className="w-3 h-3" /> {sucursal.contacto}
+                              </span>
+                            )}
+                            {sucursal?.horario_entrega && (
+                              <span className="flex items-center gap-1 text-muted-foreground">
+                                <Clock className="w-3 h-3" /> {sucursal.horario_entrega}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Notas importantes */}
                         {(sucursal?.notas || entrega.pedido.notas) && (
-                          <div className="mt-3 p-2 bg-amber-100 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 rounded-md">
-                            <div className="flex items-start gap-2 text-sm text-amber-800 dark:text-amber-200">
-                              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <div className="mx-3 mt-2 p-2 bg-amber-100 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 rounded text-xs">
+                            <div className="flex items-start gap-1.5 text-amber-800 dark:text-amber-200">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                               <span>{sucursal?.notas || entrega.pedido.notas}</span>
                             </div>
                           </div>
                         )}
-                      </div>
-                      
-                      <CardContent className="p-4">
-                        {productosNormales.length > 0 && (
-                          <CargaProductosChecklist
-                            productos={productosNormales}
-                            onToggle={handleProductoToggle}
-                            onPesoChange={handlePesoChange}
-                            disabled={!cargaIniciada || ruta.carga_completada || false}
-                            entregaConfirmada={entrega.carga_confirmada}
-                          />
-                        )}
-                        
-                        {cortesias.length > 0 && (
-                          <div className="mt-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-                            <div className="flex items-center gap-2 mb-3">
-                              <Gift className="h-5 w-5 text-amber-600" />
-                              <span className="font-semibold text-amber-800 dark:text-amber-200">CORTESÍAS A INCLUIR</span>
-                              <Badge className="bg-amber-500 text-white text-xs">Sin Cargo</Badge>
-                            </div>
+
+                        {/* Productos */}
+                        <div className="p-3">
+                          {productosNormales.length > 0 && (
                             <CargaProductosChecklist
-                              productos={cortesias}
+                              productos={productosNormales}
                               onToggle={handleProductoToggle}
                               onPesoChange={handlePesoChange}
                               disabled={!cargaIniciada || ruta.carga_completada || false}
                               entregaConfirmada={entrega.carga_confirmada}
-                              isCortesia
                             />
-                          </div>
-                        )}
+                          )}
+                          
+                          {cortesias.length > 0 && (
+                            <div className="mt-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Gift className="h-4 w-4 text-amber-600" />
+                                <span className="font-bold text-xs text-amber-800 dark:text-amber-200 uppercase">Cortesías</span>
+                                <Badge className="bg-amber-500 text-white text-[10px] h-4">Sin Cargo</Badge>
+                              </div>
+                              <CargaProductosChecklist
+                                productos={cortesias}
+                                onToggle={handleProductoToggle}
+                                onPesoChange={handlePesoChange}
+                                disabled={!cargaIniciada || ruta.carga_completada || false}
+                                entregaConfirmada={entrega.carga_confirmada}
+                                isCortesia
+                              />
+                            </div>
+                          )}
 
-                        {/* Botón de confirmar entrega - solo visible si hay múltiples entregas */}
-                        {entregas.length > 1 && cargaIniciada && !entrega.carga_confirmada && !ruta.carga_completada && (
-                          <div className="mt-4 pt-4 border-t">
-                            <Button
-                              className="w-full h-12"
-                              variant={todosProductosCargadosEntrega ? "default" : "outline"}
-                              disabled={!todosProductosCargadosEntrega}
-                              onClick={() => handleConfirmarEntrega(entrega.id)}
-                            >
-                              <CheckCheck className="w-5 h-5 mr-2" />
-                              {todosProductosCargadosEntrega 
-                                ? `Confirmar entrega #${entrega.orden_entrega}`
-                                : `Faltan productos por cargar`
-                              }
-                            </Button>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                          {/* Confirmar entrega individual */}
+                          {entregas.length > 1 && cargaIniciada && !entrega.carga_confirmada && !ruta.carga_completada && (
+                            <div className="mt-3 pt-3 border-t">
+                              <Button
+                                className="w-full h-10"
+                                variant={todosProductosCargadosEntrega ? "default" : "outline"}
+                                disabled={!todosProductosCargadosEntrega}
+                                onClick={() => handleConfirmarEntrega(entrega.id)}
+                              >
+                                <CheckCheck className="w-4 h-4 mr-2" />
+                                {todosProductosCargadosEntrega 
+                                  ? `Confirmar entrega #${entrega.orden_entrega}`
+                                  : `Faltan productos por cargar`
+                                }
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
 
-                {/* 1. Sección de evidencias fotográficas (antes de cerrar puertas) */}
-                <CargaEvidenciasSection
-                  rutaId={ruta.id}
-                  evidencias={evidencias}
-                  onEvidenciaAdded={loadEvidencias}
-                  disabled={!cargaIniciada || ruta.carga_completada || false}
-                />
-
-                {/* 2. Sección de sellos (después de cerrar puertas) */}
-                {cargaIniciada && !ruta.carga_completada && (
-                  <SellosSection
+                  {/* ═══════ EVIDENCIAS FOTOGRÁFICAS ═══════ */}
+                  <CargaEvidenciasSection
                     rutaId={ruta.id}
                     evidencias={evidencias}
                     onEvidenciaAdded={loadEvidencias}
-                    disabled={ruta.carga_completada || false}
-                    llevaSellos={llevaSellos}
-                    onLlevaSellosChange={handleLlevaSellosChange}
-                    numeroSello={numeroSello}
-                    onNumeroSelloChange={handleNumeroSelloChange}
+                    disabled={!cargaIniciada || ruta.carga_completada || false}
                   />
-                )}
 
-                {/* 3. Sección de firma del chofer (conformidad final) */}
-                {cargaIniciada && todasEntregasConfirmadas && !ruta.carga_completada && (
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Truck className="w-5 h-5 text-primary" />
-                          <span className="font-medium">Firma del Chofer</span>
-                        </div>
-                        {firmaChoferBase64 ? (
+                  {/* ═══════ SELLOS ═══════ */}
+                  {cargaIniciada && !ruta.carga_completada && (
+                    <SellosSection
+                      rutaId={ruta.id}
+                      evidencias={evidencias}
+                      onEvidenciaAdded={loadEvidencias}
+                      disabled={ruta.carga_completada || false}
+                      llevaSellos={llevaSellos}
+                      onLlevaSellosChange={handleLlevaSellosChange}
+                      numeroSello={numeroSello}
+                      onNumeroSelloChange={handleNumeroSelloChange}
+                    />
+                  )}
+
+                  {/* ═══════ FIRMA DEL CHOFER ═══════ */}
+                  {cargaIniciada && todasEntregasConfirmadas && !ruta.carga_completada && (
+                    <div className="border rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm">
+                      <div className="bg-gray-800 dark:bg-gray-900 text-white px-3 py-2">
+                        <span className="font-bold text-xs uppercase">Firma del Chofer</span>
+                      </div>
+                      <div className="p-3">
+                        <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <Badge className="bg-green-600">
-                              <CheckCircle2 className="w-3 h-3 mr-1" />
-                              Firmado
-                            </Badge>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => {
+                            <Truck className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-sm font-medium text-foreground">{ruta.chofer?.nombre_completo}</span>
+                          </div>
+                          {firmaChoferBase64 ? (
+                            <div className="flex items-center gap-2">
+                              <Badge className="bg-green-600 text-[10px]">
+                                <CheckCircle2 className="w-3 h-3 mr-1" /> Firmado
+                              </Badge>
+                              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
                                 setFirmaChoferBase64(null);
                                 supabase.from('rutas').update({ firma_chofer_carga: null }).eq('id', ruta.id);
-                              }}
-                            >
-                              <Eraser className="w-3 h-3 mr-1" />
-                              Repetir
-                            </Button>
+                              }}>
+                                <Eraser className="w-3 h-3 mr-1" /> Repetir
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button size="sm" onClick={() => setFirmaChoferOpen(true)}>Solicitar firma</Button>
+                          )}
+                        </div>
+                        {firmaChoferBase64 && (
+                          <div className="mt-2 p-2 bg-muted rounded">
+                            <img src={firmaChoferBase64} alt="Firma del chofer" className="h-14 object-contain" />
                           </div>
-                        ) : (
-                          <Button onClick={() => setFirmaChoferOpen(true)}>
-                            Solicitar firma
-                          </Button>
                         )}
                       </div>
-                      {firmaChoferBase64 && (
-                        <div className="mt-3 p-2 bg-muted rounded-lg">
-                          <img 
-                            src={firmaChoferBase64} 
-                            alt="Firma del chofer" 
-                            className="h-16 object-contain"
-                          />
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
+                    </div>
+                  )}
 
-                {/* Resumen final cuando la carga está completada */}
-                {ruta.carga_completada && (
-                  <CargaResumenFinal
-                    tiempoTranscurrido={tiempoTranscurrido}
-                    totalProductos={totalProductos}
-                    productosCargados={productosCargados}
-                    pesoTotalTeorico={entregas.reduce((acc, e) => 
-                      acc + e.productos.reduce((pacc, p) => 
-                        pacc + (p.producto.peso_kg || 0) * (p.cantidad_cargada || p.cantidad_solicitada), 0
-                      ), 0
-                    )}
-                    pesoTotalReal={entregas.reduce((acc, e) => 
-                      acc + e.productos.reduce((pacc, p) => 
-                        pacc + (p.peso_real_kg || (p.producto.peso_kg || 0) * (p.cantidad_cargada || p.cantidad_solicitada)), 0
-                      ), 0
-                    )}
-                    totalUnidades={entregas.reduce((acc, e) => 
-                      acc + e.productos.reduce((pacc, p) => 
-                        pacc + (p.cantidad_cargada || p.cantidad_solicitada), 0
-                      ), 0
-                    )}
-                    firmaAlmacenista={firmaAlmacenistaBase64}
-                    firmaChofer={firmaChoferBase64}
-                    choferNombre={ruta.chofer?.nombre_completo}
-                  />
-                )}
-              </div>
-            )}
+                  {/* ═══════ RESUMEN FINAL ═══════ */}
+                  {ruta.carga_completada && (
+                    <CargaResumenFinal
+                      tiempoTranscurrido={tiempoTranscurrido}
+                      totalProductos={totalProductos}
+                      productosCargados={productosCargados}
+                      pesoTotalTeorico={entregas.reduce((acc, e) => 
+                        acc + e.productos.reduce((pacc, p) => 
+                          pacc + (p.producto.peso_kg || 0) * (p.cantidad_cargada || p.cantidad_solicitada), 0
+                        ), 0
+                      )}
+                      pesoTotalReal={entregas.reduce((acc, e) => 
+                        acc + e.productos.reduce((pacc, p) => 
+                          pacc + (p.peso_real_kg || (p.producto.peso_kg || 0) * (p.cantidad_cargada || p.cantidad_solicitada)), 0
+                        ), 0
+                      )}
+                      totalUnidades={entregas.reduce((acc, e) => 
+                        acc + e.productos.reduce((pacc, p) => 
+                          pacc + (p.cantidad_cargada || p.cantidad_solicitada), 0
+                        ), 0
+                      )}
+                      firmaAlmacenista={firmaAlmacenistaBase64}
+                      firmaChofer={firmaChoferBase64}
+                      choferNombre={ruta.chofer?.nombre_completo}
+                    />
+                  )}
+                </>
+              )}
+            </div>
           </ScrollArea>
 
           {/* Footer con botón de completar */}
-          <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-background">
+          <div className="p-3 border-t bg-background shrink-0">
             <Button
               size="lg"
-              className="w-full h-14 text-lg"
+              className="w-full h-12 text-base"
               disabled={!puedeCompletar || ruta.carga_completada || saving}
               onClick={() => setFirmaAlmacenistaOpen(true)}
             >
@@ -1225,35 +1238,26 @@ export const RutaCargaSheet = ({
               ) : (
                 <CheckCircle2 className="w-5 h-5 mr-2" />
               )}
-              {ruta.carga_completada
-                ? "Carga completada"
-                : "Firmar y completar carga"}
+              {ruta.carga_completada ? "Carga completada" : "Firmar y completar carga"}
             </Button>
             
-            {/* Mensajes de validación */}
             {cargaIniciada && !ruta.carga_completada && (
-              <div className="mt-2 space-y-1 text-center text-sm">
+              <div className="mt-1.5 space-y-0.5 text-center text-xs">
                 {!todasEntregasConfirmadas && (
-                  <p className="text-amber-600">
-                    ⚠️ Confirma todas las entregas para continuar
-                  </p>
+                  <p className="text-amber-600">⚠️ Confirma todas las entregas</p>
                 )}
                 {todasEntregasConfirmadas && !firmaChoferBase64 && (
-                  <p className="text-amber-600">
-                    ⚠️ Falta la firma del chofer
-                  </p>
+                  <p className="text-amber-600">⚠️ Falta la firma del chofer</p>
                 )}
                 {llevaSellos && !selloEvidencia && (
-                  <p className="text-amber-600">
-                    ⚠️ Falta foto del sello de salida
-                  </p>
+                  <p className="text-amber-600">⚠️ Falta foto del sello de salida</p>
                 )}
               </div>
             )}
             
             {!cargaIniciada && !ruta.carga_completada && (
-              <p className="text-center text-sm text-amber-600 mt-2">
-                ⚠️ Presiona "INICIAR CARGA" para habilitar los checkboxes
+              <p className="text-center text-xs text-amber-600 mt-1.5">
+                ⚠️ Presiona "INICIAR CARGA" para comenzar
               </p>
             )}
           </div>
