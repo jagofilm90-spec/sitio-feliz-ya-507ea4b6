@@ -466,7 +466,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
           );
           
           const pdfBase64 = await htmlToPdfBase64(cancelledPdfContent);
-          const asunto = `❌ ORDEN CANCELADA: ${orden.folio} - ${proveedorNombre.toUpperCase()}`;
+          const asunto = `ORDEN CANCELADA: ${orden.folio} - ${proveedorNombre.toUpperCase()}`;
 
           // Send cancellation email
           const { error: emailError } = await supabase.functions.invoke('gmail-api', {

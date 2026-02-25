@@ -628,7 +628,7 @@ const NotificarCambiosOCDialog = ({
         </div>
       `;
 
-      const asunto = `⚠️ MODIFICACIÓN OC ${folio} - ${proveedorNombre.toUpperCase()}`;
+      const asunto = `MODIFICACION OC ${folio} - ${proveedorNombre.toUpperCase()}`;
 
       // Prepare attachment
       const attachments = [
