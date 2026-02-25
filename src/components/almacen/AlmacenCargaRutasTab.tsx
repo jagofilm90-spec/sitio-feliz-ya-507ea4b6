@@ -8,6 +8,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { 
   Package, 
   Truck, 
@@ -19,6 +30,8 @@ import {
   Timer,
   QrCode,
   ArrowRight,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import { RutaCargaSheet } from "@/components/almacen/RutaCargaSheet";
 
@@ -60,8 +73,61 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
   const [sheetOpen, setSheetOpen] = useState(false);
   const [modoVisualizacion, setModoVisualizacion] = useState<"asignadas" | "todas">("asignadas");
   const { toast } = useToast();
+  const [deletingRutaId, setDeletingRutaId] = useState<string | null>(null);
 
   const fechaHoy = format(new Date(), "yyyy-MM-dd");
+
+  const handleEliminarRuta = async (rutaId: string, vehiculoId?: string) => {
+    setDeletingRutaId(rutaId);
+    try {
+      // 1. Get entregas for this route
+      const { data: entregas } = await supabase
+        .from("entregas")
+        .select("id")
+        .eq("ruta_id", rutaId);
+
+      if (entregas && entregas.length > 0) {
+        const entregaIds = entregas.map(e => e.id);
+        
+        // Revert inventory for loaded products
+        const { data: cargaProds } = await supabase
+          .from("carga_productos")
+          .select("id, cargado, lote_id, cantidad_cargada")
+          .in("entrega_id", entregaIds);
+        
+        for (const cp of cargaProds || []) {
+          if (cp.cargado && cp.lote_id && cp.cantidad_cargada) {
+            await supabase.rpc("incrementar_lote", {
+              p_lote_id: cp.lote_id,
+              p_cantidad: cp.cantidad_cargada,
+            });
+          }
+        }
+
+        // Delete carga_productos
+        await supabase.from("carga_productos").delete().in("entrega_id", entregaIds);
+      }
+
+      // 2. Delete entregas
+      await supabase.from("entregas").delete().eq("ruta_id", rutaId);
+
+      // 3. Reset vehicle
+      if (vehiculoId) {
+        await supabase.from("vehiculos").update({ status: "disponible" }).eq("id", vehiculoId);
+      }
+
+      // 4. Delete route
+      await supabase.from("rutas").delete().eq("id", rutaId);
+
+      toast({ title: "Ruta eliminada", description: "La ruta fue eliminada correctamente." });
+      loadRutas();
+    } catch (err: any) {
+      console.error("Error eliminando ruta:", err);
+      toast({ title: "Error", description: err?.message || "No se pudo eliminar la ruta", variant: "destructive" });
+    } finally {
+      setDeletingRutaId(null);
+    }
+  };
 
   const loadRutas = useCallback(async () => {
     console.log("🔄 loadRutas iniciando, empleadoId:", empleadoId, "fechaHoy:", fechaHoy);
@@ -120,8 +186,8 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
         // Si no tiene rutas asignadas, mostrar todas (modo fallback)
       }
       
-      // Filtrar rutas que no tienen entregas (no deberían mostrarse)
-      rutasFiltradas = rutasFiltradas.filter(r => r.entregas && r.entregas.length > 0);
+      // Show all routes including empty ones so they can be deleted
+      // rutasFiltradas = rutasFiltradas.filter(r => r.entregas && r.entregas.length > 0);
       
       setModoVisualizacion(modo);
       console.log("📋 Modo visualización:", modo, "- Rutas a mostrar:", rutasFiltradas.length);
@@ -330,21 +396,25 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
                 const urgencia = !ruta.carga_completada ? getUrgencia(ruta.hora_salida_sugerida) : null;
                 
                 return (
-                  <button
+                  <div
                     key={ruta.id}
-                    onClick={() => handleSelectRuta(ruta)}
                     className={`w-full p-4 hover:bg-muted/50 transition-colors text-left flex items-center gap-4 ${
-                      urgencia?.nivel === 'urgente' || urgencia?.nivel === 'atrasada' ? 'bg-red-50' : ''
+                      urgencia?.nivel === 'urgente' || urgencia?.nivel === 'atrasada' ? 'bg-destructive/5' : ''
                     }`}
                   >
                     <div className={`w-3 h-3 rounded-full ${urgencia ? urgencia.color : estado.color}`} />
                     
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => ruta.entregas.length > 0 ? handleSelectRuta(ruta) : null}>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-semibold text-lg">{ruta.folio}</span>
                         <Badge variant="outline" className="text-xs">
                           {ruta.entregas.length} entregas
                         </Badge>
+                        {ruta.entregas.length === 0 && (
+                          <Badge variant="outline" className="text-xs border-destructive/30 text-destructive">
+                            Vacía
+                          </Badge>
+                        )}
                         {urgencia && !ruta.carga_completada && (
                           <Badge className={`${urgencia.color} text-white text-xs`}>
                             <Timer className="w-3 h-3 mr-1" />
@@ -376,6 +446,41 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {!ruta.carga_completada && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {deletingRutaId === ruta.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>¿Eliminar ruta {ruta.folio}?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Se eliminará la ruta, sus entregas y productos cargados. El inventario se revertirá automáticamente. Esta acción no se puede deshacer.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleEliminarRuta(ruta.id, ruta.vehiculo?.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Sí, eliminar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                       <Badge
                         variant={ruta.carga_completada ? "default" : "secondary"}
                         className="flex items-center gap-1"
@@ -383,9 +488,11 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
                         <EstadoIcon className="w-3 h-3" />
                         {estado.label}
                       </Badge>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                      {ruta.entregas.length > 0 && (
+                        <ChevronRight className="w-5 h-5 text-muted-foreground cursor-pointer" onClick={() => handleSelectRuta(ruta)} />
+                      )}
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
