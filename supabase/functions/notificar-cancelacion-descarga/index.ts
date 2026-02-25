@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { entregaId, motivo } = await req.json()
+    const { entregaId, motivo, fotosUrls } = await req.json()
 
     if (!entregaId) {
       return new Response(
@@ -71,7 +71,29 @@ Deno.serve(async (req) => {
         })
       : 'Sin fecha'
 
-    const asunto = `⛔ Descarga Cancelada - ${folio}`
+    const asunto = `⛔ Descarga Cancelada - Producto en mal estado - ${folio}`
+
+    // Build photos HTML section
+    let fotosHTML = ''
+    const urls: string[] = fotosUrls || []
+    if (urls.length > 0) {
+      const fotosItems = urls.map((url: string, i: number) =>
+        `<div style="display:inline-block;margin:5px;">
+          <a href="${url}" target="_blank">
+            <img src="${url}" alt="Evidencia ${i + 1}" style="width:180px;height:130px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;" />
+          </a>
+        </div>`
+      ).join('')
+
+      fotosHTML = `
+        <div style="margin: 20px 0;">
+          <p style="font-weight: bold; color: #374151; margin-bottom: 10px;">📷 Evidencia fotográfica:</p>
+          <div style="text-align: center;">
+            ${fotosItems}
+          </div>
+        </div>
+      `
+    }
 
     const cuerpoHTML = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -79,16 +101,18 @@ Deno.serve(async (req) => {
           <h1 style="color: white; margin: 0; font-size: 24px;">Abarrotes La Manita</h1>
         </div>
         <div style="padding: 20px; background: #f9fafb;">
-          <h2 style="color: #dc2626; margin-top: 0;">Descarga Cancelada</h2>
+          <h2 style="color: #dc2626; margin-top: 0;">Descarga Cancelada — Producto en mal estado</h2>
           <p>Estimado ${proveedorNombre},</p>
-          <p>Le informamos que la descarga de la orden <strong>${folio}</strong> programada para el <strong>${fechaFormateada}</strong> ha sido <strong style="color: #dc2626;">cancelada</strong>.</p>
+          <p>Le informamos que la descarga de la orden <strong>${folio}</strong> programada para el <strong>${fechaFormateada}</strong> ha sido <strong style="color: #dc2626;">cancelada</strong> debido a que el producto se encontró en mal estado.</p>
           
           <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0;">
             <p style="font-weight: bold; color: #dc2626; margin: 0 0 10px;">Motivo de cancelación:</p>
             <p style="color: #7f1d1d; margin: 0;">${motivo}</p>
           </div>
+
+          ${fotosHTML}
           
-          <p>Se requiere coordinación para reprogramar la entrega. Por favor comuníquese con nuestro departamento de compras.</p>
+          <p>Se requiere coordinación para la devolución del producto y reprogramar la entrega. Por favor comuníquese con nuestro departamento de compras.</p>
           
           <p style="margin-top: 30px;">Saludos cordiales,<br><strong>Departamento de Compras</strong></p>
         </div>
