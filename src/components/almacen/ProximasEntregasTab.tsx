@@ -244,6 +244,7 @@ export const ProximasEntregasTab = ({ onEntregaReprogramada }: ProximasEntregasT
                 <th className="px-3 py-2 font-medium text-muted-foreground">Folio</th>
                 <th className="px-3 py-2 font-medium text-muted-foreground text-center">Ent.</th>
                 <th className="px-3 py-2 font-medium text-muted-foreground text-center">Bultos</th>
+                <th className="px-3 py-2 font-medium text-muted-foreground">Productos</th>
                 <th className="px-3 py-2 font-medium text-muted-foreground text-right">Acción</th>
               </tr>
             </thead>
@@ -287,6 +288,28 @@ export const ProximasEntregasTab = ({ onEntregaReprogramada }: ProximasEntregasT
                       </td>
                       <td className="px-3 py-2.5 text-center font-medium">
                         {entrega.cantidad_bultos}
+                      </td>
+                      <td className="px-3 py-2.5 text-muted-foreground text-xs max-w-[250px]">
+                        {(() => {
+                          const detalles = entrega.orden_compra?.detalles || [];
+                          const pendientes = detalles.filter(d => {
+                            const ordenada = d.cantidad_ordenada || 0;
+                            const recibida = d.cantidad_recibida || 0;
+                            return ordenada > recibida;
+                          });
+                          const items = pendientes.length > 0 ? pendientes : detalles;
+                          if (items.length === 0) return <span className="italic">—</span>;
+                          if (items.length === 1) {
+                            const p = items[0];
+                            return <span>{p.producto?.nombre || p.producto?.codigo || "?"}</span>;
+                          }
+                          return (
+                            <span title={items.map(i => i.producto?.nombre).join(", ")}>
+                              {items[0].producto?.nombre || items[0].producto?.codigo}
+                              <span className="ml-1 text-muted-foreground/70">+{items.length - 1} más</span>
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-3 py-2.5 text-right">
                         <Button
