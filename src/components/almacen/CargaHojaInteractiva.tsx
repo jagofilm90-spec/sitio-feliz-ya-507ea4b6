@@ -453,12 +453,23 @@ export const CargaHojaInteractiva = ({
                       {group.items.filter(i => !i.eliminado).length} productos
                     </span>
                   </div>
-                  <div className="space-y-2">
+                  {/* Table header */}
+                  <div className="grid grid-cols-[auto_70px_1fr_90px_minmax(120px,1fr)_36px] gap-1 px-2 py-1.5 bg-muted/60 rounded-t-md text-[10px] font-bold uppercase text-muted-foreground items-center">
+                    <span className="w-6"></span>
+                    <span className="text-center">Cant.</span>
+                    <span>Descripción</span>
+                    <span className="text-center">Peso kg</span>
+                    <span className="text-center">Lote</span>
+                    <span></span>
+                  </div>
+                  {/* Rows */}
+                  <div className="divide-y divide-border border rounded-b-md">
                     {group.items.map(item => {
                       if (item.eliminado) return (
-                        <div key={item.cargaProductoId} className="flex items-center gap-3 p-3 border rounded-lg opacity-40 line-through border-l-4 border-l-muted-foreground/30">
-                          <span className="text-sm flex-1">{item.codigo} — {item.nombre}</span>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600"
+                        <div key={item.cargaProductoId} className="grid grid-cols-[auto_1fr_36px] gap-2 px-2 py-2 items-center opacity-40 line-through">
+                          <span className="w-6" />
+                          <span className="text-sm">{item.codigo} — {item.nombre}</span>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600"
                             onClick={() => updateProducto(item.originalIdx, { eliminado: false })}>
                             ↩
                           </Button>
@@ -479,106 +490,97 @@ export const CargaHojaInteractiva = ({
 
                       return (
                         <div key={item.cargaProductoId}
-                          className={`border rounded-lg overflow-hidden border-l-4 ${
-                            item.confirmado
-                              ? "border-l-green-500 bg-green-50/50 dark:bg-green-950/20"
-                              : "border-l-muted-foreground/30"
+                          className={`grid grid-cols-[auto_70px_1fr_90px_minmax(120px,1fr)_36px] gap-1 px-2 py-2 items-center ${
+                            item.confirmado ? "bg-green-50/50 dark:bg-green-950/20" : ""
                           }`}>
-                          {/* Row 1: Checkbox + full product name */}
-                          <div className="flex items-start gap-3 p-3 pb-2">
-                            <Checkbox
-                              checked={item.confirmado}
-                              onCheckedChange={(checked) => updateProducto(item.originalIdx, { confirmado: !!checked })}
-                              className="h-8 w-8 rounded-md border-2 mt-0.5 shrink-0"
+                          {/* Col 1: Checkbox */}
+                          <Checkbox
+                            checked={item.confirmado}
+                            onCheckedChange={(checked) => updateProducto(item.originalIdx, { confirmado: !!checked })}
+                            className="h-5 w-5 rounded border-2 shrink-0"
+                          />
+
+                          {/* Col 2: Cantidad */}
+                          <div className="flex flex-col items-center">
+                            <Input
+                              type="number" inputMode="numeric"
+                              value={item.cantidadACargar}
+                              onChange={e => {
+                                const newCant = parseFloat(e.target.value) || 0;
+                                const updates: Partial<ProductoHoja> = { cantidadACargar: newCant };
+                                if (tienePeso && !esVentaPorKg) {
+                                  updates.pesoRealKg = newCant * (item.pesoKgUnit || 0);
+                                }
+                                updateProducto(item.originalIdx, updates);
+                              }}
+                              className={`h-8 w-full text-center text-sm font-semibold ${
+                                cantidadDifiere ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : ""
+                              }`}
+                              disabled={item.confirmado}
                             />
-                            <div className="flex-1 min-w-0">
-                              <span className="font-semibold text-sm leading-snug">
-                                {displayName}
+                            {cantidadDifiere && (
+                              <span className="text-[9px] text-amber-600 flex items-center gap-0.5 mt-0.5">
+                                <AlertTriangle className="w-2.5 h-2.5" />
+                                ≠{item.cantidadSolicitada}
                               </span>
-                              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                <span className="text-[11px] text-muted-foreground font-mono">{item.codigo}</span>
-                                {item.confirmado && (
-                                  <Badge className="bg-green-600 text-white text-[10px] px-1.5 py-0">CARGADO</Badge>
-                                )}
-                              </div>
-                            </div>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
-                              onClick={() => updateProducto(item.originalIdx, { eliminado: true })}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            )}
                           </div>
 
-                          {/* Row 2: Controls — Cantidad, Peso, Lote */}
-                          <div className="flex items-center gap-2 px-3 pb-3 pl-14">
-                            <div className="flex flex-col items-center gap-0.5">
-                              <label className="text-[10px] text-muted-foreground font-medium uppercase">Cant.</label>
+                          {/* Col 3: Descripción completa */}
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium leading-snug">{displayName}</p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="text-[10px] text-muted-foreground font-mono">{item.codigo}</span>
+                              {item.confirmado && (
+                                <Badge className="bg-green-600 text-white text-[9px] px-1 py-0">✓</Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Col 4: Peso kg */}
+                          {tienePeso ? (
+                            esVentaPorKg ? (
                               <Input
-                                type="number" inputMode="numeric"
-                                value={item.cantidadACargar}
-                                onChange={e => {
-                                  const newCant = parseFloat(e.target.value) || 0;
-                                  const updates: Partial<ProductoHoja> = { cantidadACargar: newCant };
-                                  // Auto-recalculate peso for non-kg products
-                                  if (tienePeso && !esVentaPorKg) {
-                                    updates.pesoRealKg = newCant * (item.pesoKgUnit || 0);
-                                  }
-                                  updateProducto(item.originalIdx, updates);
-                                }}
-                                className={`h-9 w-20 text-center text-sm font-semibold ${
-                                  cantidadDifiere ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : ""
-                                }`}
+                                type="number" inputMode="decimal" step="0.1"
+                                value={item.pesoRealKg ?? (pesoTeoricoItem?.toFixed(1) || "")}
+                                onChange={e => updateProducto(item.originalIdx, { pesoRealKg: e.target.value ? parseFloat(e.target.value) : null })}
+                                placeholder={pesoTeoricoItem?.toFixed(1) || ""}
+                                className="h-8 w-full text-center text-sm font-semibold"
                                 disabled={item.confirmado}
                               />
-                              {cantidadDifiere && (
-                                <span className="text-[10px] text-amber-600 flex items-center gap-0.5">
-                                  <AlertTriangle className="w-3 h-3" />
-                                  ≠ {item.cantidadSolicitada}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Peso: editable solo si precio_por_kilo, sino read-only auto-calculado */}
-                            {tienePeso && (
-                              <div className="flex flex-col items-center gap-0.5">
-                                <label className="text-[10px] text-muted-foreground font-medium uppercase">Peso kg</label>
-                                {esVentaPorKg ? (
-                                  <Input
-                                    type="number" inputMode="decimal" step="0.1"
-                                    value={item.pesoRealKg ?? (pesoTeoricoItem?.toFixed(1) || "")}
-                                    onChange={e => updateProducto(item.originalIdx, { pesoRealKg: e.target.value ? parseFloat(e.target.value) : null })}
-                                    placeholder={pesoTeoricoItem?.toFixed(1) || ""}
-                                    className="h-9 w-24 text-center text-sm font-semibold"
-                                    disabled={item.confirmado}
-                                  />
-                                ) : (
-                                  <div className="h-9 w-24 flex items-center justify-center rounded-md border bg-muted text-sm font-semibold text-muted-foreground">
-                                    {(item.pesoRealKg ?? pesoTeoricoItem)?.toLocaleString("es-MX", { maximumFractionDigits: 1 }) || "—"}
-                                  </div>
-                                )}
+                            ) : (
+                              <div className="h-8 flex items-center justify-center rounded-md border bg-muted text-sm font-medium text-muted-foreground">
+                                {(item.pesoRealKg ?? pesoTeoricoItem)?.toLocaleString("es-MX", { maximumFractionDigits: 1 }) || "—"}
                               </div>
-                            )}
+                            )
+                          ) : (
+                            <span className="text-center text-xs text-muted-foreground">—</span>
+                          )}
 
-                            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                              <label className="text-[10px] text-muted-foreground font-medium uppercase text-center">Lote</label>
-                              {item.lotesDisponibles.length > 0 ? (
-                                <select value={item.loteId || ""}
-                                  onChange={e => updateProducto(item.originalIdx, { loteId: e.target.value })}
-                                  disabled={item.confirmado}
-                                  className="w-full h-9 rounded-md border bg-background px-2 text-xs">
-                                  {item.lotesDisponibles.map(l => (
-                                    <option key={l.id} value={l.id}>
-                                      {l.lote_referencia || "Sin ref"} ({l.cantidad_disponible})
-                                    </option>
-                                  ))}
-                                </select>
-                              ) : (
-                                <span className="text-xs text-destructive flex items-center justify-center gap-1 h-9">
-                                  <AlertTriangle className="w-3 h-3" />
-                                  Sin lotes
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                          {/* Col 5: Lote */}
+                          {item.lotesDisponibles.length > 0 ? (
+                            <select value={item.loteId || ""}
+                              onChange={e => updateProducto(item.originalIdx, { loteId: e.target.value })}
+                              disabled={item.confirmado}
+                              className="w-full h-8 rounded-md border bg-background px-1.5 text-xs">
+                              {item.lotesDisponibles.map(l => (
+                                <option key={l.id} value={l.id}>
+                                  {l.lote_referencia || "Sin ref"} ({l.cantidad_disponible})
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className="text-[10px] text-destructive flex items-center justify-center gap-0.5">
+                              <AlertTriangle className="w-3 h-3" />
+                              Sin lotes
+                            </span>
+                          )}
+
+                          {/* Col 6: Delete */}
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => updateProducto(item.originalIdx, { eliminado: true })}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       );
                     })}
