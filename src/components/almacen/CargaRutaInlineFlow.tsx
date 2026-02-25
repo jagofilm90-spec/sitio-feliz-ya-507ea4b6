@@ -495,6 +495,10 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
 
   // ─── PASO 3: Hoja de carga interactiva ───
   if (paso === "hoja_carga") {
+    const choferObj = choferes.find(c => c.id === choferId);
+    const vehiculoObj = vehiculos.find(v => v.id === vehiculoId);
+    const ayudantesNombres = ayudantesIds.map(aId => ayudantes.find(a => a.id === aId)?.nombre_completo || "").filter(Boolean);
+
     return (
       <CargaHojaInteractiva
         rutaId={rutaId!}
@@ -505,6 +509,12 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
         onFinalizar={handleFinalizarCarga}
         onCancelar={handleCancelarRuta}
         cancelling={cancelling}
+        personal={{
+          choferNombre: choferObj?.nombre_completo || "",
+          ayudantesNombres,
+          vehiculoNombre: vehiculoObj?.nombre || "",
+          vehiculoPlaca: vehiculoObj?.placa || "",
+        }}
       />
     );
   }

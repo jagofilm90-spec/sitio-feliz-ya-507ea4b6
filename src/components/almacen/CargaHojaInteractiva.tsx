@@ -14,8 +14,10 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  CheckCircle2, Loader2, Scale, Trash2, Timer, Package, ArrowDown, ArrowUp,
+  CheckCircle2, Loader2, Scale, Trash2, Timer, Package, ArrowDown, ArrowUp, Truck, User,
 } from "lucide-react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface PedidoEnCola {
   pedidoId: string;
@@ -49,6 +51,13 @@ interface ProductoHoja {
   eliminado: boolean;
 }
 
+interface PersonalInfo {
+  choferNombre: string;
+  ayudantesNombres: string[];
+  vehiculoNombre: string;
+  vehiculoPlaca: string;
+}
+
 interface CargaHojaInteractivaProps {
   rutaId: string;
   rutaFolio: string;
@@ -58,10 +67,11 @@ interface CargaHojaInteractivaProps {
   onFinalizar: () => void;
   onCancelar: () => void;
   cancelling: boolean;
+  personal?: PersonalInfo;
 }
 
 export const CargaHojaInteractiva = ({
-  rutaId, rutaFolio, pedidos, tiempoSeg, formatTiempo, onFinalizar, onCancelar, cancelling,
+  rutaId, rutaFolio, pedidos, tiempoSeg, formatTiempo, onFinalizar, onCancelar, cancelling, personal,
 }: CargaHojaInteractivaProps) => {
   const [productos, setProductos] = useState<ProductoHoja[]>([]);
   const [loading, setLoading] = useState(true);
@@ -250,16 +260,64 @@ export const CargaHojaInteractiva = ({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold">Hoja de Carga — {rutaFolio}</h2>
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1"><Timer className="h-3.5 w-3.5" />{formatTiempo(tiempoSeg)}</span>
-            <span>{productosActivos.length} productos</span>
-            <span>{pedidos.length} pedidos</span>
+      {/* ─── Document-style Header ─── */}
+      <div className="border border-border rounded-lg overflow-hidden bg-card">
+        {/* Top bar: Logo + Title + Folio */}
+        <div className="bg-gray-900 text-white px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src="/logo-almasa-header.png" alt="ALMASA" className="h-7 w-auto brightness-200" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            <div>
+              <h1 className="text-base font-black uppercase tracking-tight">HOJA DE CARGA</h1>
+              <p className="text-[10px] text-gray-400 uppercase">{format(new Date(), "EEEE d 'de' MMMM yyyy", { locale: es })}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-lg font-black">{rutaFolio}</p>
+            <div className="flex items-center gap-1 text-xs text-gray-400">
+              <Timer className="h-3 w-3" />
+              <span>{formatTiempo(tiempoSeg)}</span>
+            </div>
           </div>
         </div>
+
+        {/* Info grid: Chofer, Ayudantes, Vehículo, Pedidos */}
+        <div className="grid grid-cols-2 md:grid-cols-4 text-sm divide-x divide-y divide-border">
+          <div className="px-3 py-2">
+            <p className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
+              <User className="h-3 w-3" />Chofer
+            </p>
+            <p className="font-semibold truncate">{personal?.choferNombre || "—"}</p>
+          </div>
+          <div className="px-3 py-2">
+            <p className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
+              <User className="h-3 w-3" />Ayudantes
+            </p>
+            {personal?.ayudantesNombres && personal.ayudantesNombres.length > 0 ? (
+              <p className="font-semibold truncate">{personal.ayudantesNombres.join(", ")}</p>
+            ) : (
+              <p className="text-muted-foreground text-xs">Sin ayudantes</p>
+            )}
+          </div>
+          <div className="px-3 py-2">
+            <p className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
+              <Truck className="h-3 w-3" />Vehículo
+            </p>
+            <p className="font-semibold">
+              Unidad {personal?.vehiculoNombre || "—"}
+              {personal?.vehiculoPlaca && <span className="text-muted-foreground ml-1">({personal.vehiculoPlaca})</span>}
+            </p>
+          </div>
+          <div className="px-3 py-2">
+            <p className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
+              <Package className="h-3 w-3" />Resumen
+            </p>
+            <p className="font-semibold">{productosActivos.length} productos · {pedidos.length} pedido{pedidos.length > 1 ? "s" : ""}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Cancel button */}
+      <div className="flex justify-end">
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="destructive" size="sm" disabled={cancelling}>
@@ -289,7 +347,7 @@ export const CargaHojaInteractiva = ({
             <p className="text-xs text-muted-foreground">kg</p>
           </CardContent>
         </Card>
-        <Card className={diferenciaPeso === 0 ? "border-green-300" : Math.abs(diferenciaPeso) < pesoTeorico * 0.05 ? "border-amber-300" : "border-red-300"}>
+        <Card className={diferenciaPeso === 0 ? "border-green-500/50" : Math.abs(diferenciaPeso) < pesoTeorico * 0.05 ? "border-amber-500/50" : "border-destructive/50"}>
           <CardContent className="py-3 text-center">
             <p className="text-xs text-muted-foreground">Peso Real</p>
             <p className="text-2xl font-bold">{pesoReal.toFixed(1)}</p>
@@ -299,7 +357,7 @@ export const CargaHojaInteractiva = ({
         <Card>
           <CardContent className="py-3 text-center">
             <p className="text-xs text-muted-foreground">Diferencia</p>
-            <p className={`text-2xl font-bold flex items-center justify-center gap-1 ${diferenciaPeso > 0 ? "text-green-600" : diferenciaPeso < 0 ? "text-red-600" : ""}`}>
+            <p className={`text-2xl font-bold flex items-center justify-center gap-1 ${diferenciaPeso > 0 ? "text-green-600" : diferenciaPeso < 0 ? "text-destructive" : ""}`}>
               {diferenciaPeso > 0 && <ArrowUp className="h-4 w-4" />}
               {diferenciaPeso < 0 && <ArrowDown className="h-4 w-4" />}
               {Math.abs(diferenciaPeso).toFixed(1)}
@@ -310,12 +368,12 @@ export const CargaHojaInteractiva = ({
       </div>
 
       {/* Product tables by pedido */}
-      <ScrollArea className="max-h-[calc(100vh-400px)]">
+      <ScrollArea className="max-h-[calc(100vh-500px)]">
         <div className="space-y-6">
           {pedidoGroups.map(group => (
             <div key={group.pedidoId}>
               <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline" className="text-sm">{group.folio}</Badge>
+                <Badge variant="outline" className="text-sm font-bold">{group.folio}</Badge>
                 <span className="text-sm text-muted-foreground">{group.clienteNombre}</span>
                 <span className="text-xs text-muted-foreground ml-auto">
                   {group.items.filter(i => !i.eliminado).length} productos
