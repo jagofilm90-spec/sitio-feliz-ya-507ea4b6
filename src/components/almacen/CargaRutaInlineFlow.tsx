@@ -60,9 +60,10 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
   const [cameraActive, setCameraActive] = useState(false);
   const [scanInput, setScanInput] = useState("");
 
-  // Ruta
+  // Ruta (se crea al confirmar, NO al escanear)
   const [rutaId, setRutaId] = useState<string | null>(null);
   const [rutaFolio, setRutaFolio] = useState("");
+  const [creatingRoute, setCreatingRoute] = useState(false);
   const [horaInicio, setHoraInicio] = useState<Date | null>(null);
   const [tiempoSeg, setTiempoSeg] = useState(0);
   const [cancelling, setCancelling] = useState(false);
@@ -123,55 +124,13 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
     load();
   }, []);
 
-  // Create route and move to scanning
-  const handleCrearRutaYEscanear = async () => {
+  // Paso 1 → Paso 2: solo ir a escaneo, SIN crear ruta
+  const handleIrAEscaneo = () => {
     if (!choferId || !vehiculoId) {
       toast.error("Selecciona chofer y vehículo");
       return;
     }
-
-    try {
-      const { data: lastRuta } = await supabase
-        .from("rutas").select("folio").ilike("folio", "RUT-%")
-        .order("folio", { ascending: false }).limit(1);
-
-      const lastNumber = lastRuta?.[0]?.folio ? parseInt(lastRuta[0].folio.replace("RUT-", "")) : 0;
-      const newFolio = `RUT-${String(lastNumber + 1).padStart(4, "0")}`;
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { toast.error("Sesión expirada"); return; }
-
-      const { data: empleadoActual } = await supabase
-        .from("empleados").select("id").eq("user_id", user.id).maybeSingle();
-
-      const { data: ruta, error } = await supabase
-        .from("rutas")
-        .insert({
-          folio: newFolio,
-          fecha_ruta: format(new Date(), "yyyy-MM-dd"),
-          chofer_id: choferId,
-          vehiculo_id: vehiculoId,
-          tipo_ruta: "local",
-          status: "programada",
-          almacenista_id: empleadoActual?.id || null,
-          carga_iniciada_en: new Date().toISOString(),
-          carga_iniciada_por: user.id,
-        })
-        .select("id, folio").single();
-
-      if (error) throw error;
-
-      await supabase.from("vehiculos").update({ status: "en_ruta" }).eq("id", vehiculoId);
-
-      setRutaId(ruta.id);
-      setRutaFolio(ruta.folio);
-      setHoraInicio(new Date());
-      setCameraActive(true);
-      setPaso("escaneo");
-      toast.success(`Ruta ${ruta.folio} creada. Escanea los pedidos.`);
-    } catch (err: any) {
-      toast.error(`Error: ${err?.message || "intenta de nuevo"}`);
-    }
+    setPaso("escaneo");
   };
 
   // QR processing
@@ -216,29 +175,88 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
         clienteId: data.cliente_id,
       }]);
 
-      // Create/link entrega
-      if (rutaId) {
-        let { data: entrega } = await supabase
-          .from("entregas").select("id").eq("pedido_id", data.id).limit(1).maybeSingle();
-
-        if (!entrega) {
-          await supabase.from("entregas").insert({
-            pedido_id: data.id, ruta_id: rutaId, orden_entrega: cola.length + 1,
-          });
-        } else {
-          await supabase.from("entregas").update({ ruta_id: rutaId, orden_entrega: cola.length + 1 }).eq("id", entrega.id);
-        }
-      }
-
       toast.success(`Pedido ${data.folio} agregado`);
     } catch {
       toast.error("Error al buscar pedido");
     }
   };
 
-  // Cancel route
+  // Crear ruta y entregas, luego ir a hoja de carga
+  const handleCrearRutaYCargar = async () => {
+    if (cola.length === 0) {
+      toast.error("Escanea al menos un pedido primero");
+      return;
+    }
+
+    setCreatingRoute(true);
+    try {
+      const { data: lastRuta } = await supabase
+        .from("rutas").select("folio").ilike("folio", "RUT-%")
+        .order("folio", { ascending: false }).limit(1);
+
+      const lastNumber = lastRuta?.[0]?.folio ? parseInt(lastRuta[0].folio.replace("RUT-", "")) : 0;
+      const newFolio = `RUT-${String(lastNumber + 1).padStart(4, "0")}`;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error("Sesión expirada"); return; }
+
+      const { data: empleadoActual } = await supabase
+        .from("empleados").select("id").eq("user_id", user.id).maybeSingle();
+
+      const { data: ruta, error } = await supabase
+        .from("rutas")
+        .insert({
+          folio: newFolio,
+          fecha_ruta: format(new Date(), "yyyy-MM-dd"),
+          chofer_id: choferId,
+          vehiculo_id: vehiculoId,
+          tipo_ruta: "local",
+          status: "programada",
+          almacenista_id: empleadoActual?.id || null,
+          carga_iniciada_en: new Date().toISOString(),
+          carga_iniciada_por: user.id,
+        })
+        .select("id, folio").single();
+
+      if (error) throw error;
+
+      await supabase.from("vehiculos").update({ status: "en_ruta" }).eq("id", vehiculoId);
+
+      // Crear entregas para cada pedido escaneado
+      for (let i = 0; i < cola.length; i++) {
+        const item = cola[i];
+        const { data: existingEntrega } = await supabase
+          .from("entregas").select("id").eq("pedido_id", item.pedidoId).limit(1).maybeSingle();
+
+        if (!existingEntrega) {
+          await supabase.from("entregas").insert({
+            pedido_id: item.pedidoId, ruta_id: ruta.id, orden_entrega: i + 1,
+          });
+        } else {
+          await supabase.from("entregas").update({ ruta_id: ruta.id, orden_entrega: i + 1 }).eq("id", existingEntrega.id);
+        }
+      }
+
+      setRutaId(ruta.id);
+      setRutaFolio(ruta.folio);
+      setHoraInicio(new Date());
+      setCameraActive(false);
+      setPaso("hoja_carga");
+      toast.success(`Ruta ${ruta.folio} creada con ${cola.length} pedido${cola.length > 1 ? "s" : ""}`);
+    } catch (err: any) {
+      toast.error(`Error al crear ruta: ${err?.message || "intenta de nuevo"}`);
+    } finally {
+      setCreatingRoute(false);
+    }
+  };
+
+  // Cancel route (solo si ya existe)
   const handleCancelarRuta = async () => {
-    if (!rutaId) return;
+    if (!rutaId) {
+      // Si no hay ruta creada aún, simplemente cerrar
+      onClose();
+      return;
+    }
     setCancelling(true);
     try {
       const { data: entregasRuta } = await supabase.from("entregas").select("id").eq("ruta_id", rutaId);
@@ -374,7 +392,7 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
               </Select>
             </div>
 
-            <Button onClick={handleCrearRutaYEscanear} disabled={!choferId || !vehiculoId} size="lg" className="w-full h-14 text-lg font-bold mt-4">
+            <Button onClick={handleIrAEscaneo} disabled={!choferId || !vehiculoId} size="lg" className="w-full h-14 text-lg font-bold mt-4">
               <QrCode className="h-5 w-5 mr-2" />
               Escanear QR de Pedidos
             </Button>
@@ -384,39 +402,19 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
     );
   }
 
-  // ─── PASO 2: Escaneo de pedidos ───
+  // ─── PASO 2: Escaneo de pedidos (SIN ruta creada aún) ───
   if (paso === "escaneo") {
     return (
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => setPaso("seleccion")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
           <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold">{rutaFolio}</h2>
-              <Badge variant="outline">
-                <Timer className="h-3 w-3 mr-1" />{formatTiempo(tiempoSeg)}
-              </Badge>
-            </div>
+            <h2 className="text-xl font-bold">Escanear Pedidos</h2>
             <p className="text-sm text-muted-foreground">Escanea los códigos QR de los pedidos impresos</p>
           </div>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm" disabled={cancelling}>
-                {cancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
-                Cancelar
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>¿Eliminar ruta {rutaFolio}?</AlertDialogTitle>
-                <AlertDialogDescription>Se eliminará la ruta y todos los pedidos escaneados.</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>No</AlertDialogCancel>
-                <AlertDialogAction onClick={handleCancelarRuta} className="bg-destructive text-destructive-foreground">Sí, eliminar</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
         </div>
 
         {/* Camera */}
@@ -424,39 +422,21 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
           <CameraQrScanner active={cameraActive} onScan={(text) => processScanInput(text)} onClose={() => setCameraActive(false)} />
         )}
 
-        {/* Scan controls - Input manual prominente */}
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="py-4 space-y-3">
-            <p className="text-sm font-medium text-foreground">Escribe o pega el folio del pedido (ej: PED-V-384128)</p>
-            <div className="flex gap-2">
-              <Input 
-                placeholder="Folio del pedido..." 
-                value={scanInput}
-                onChange={e => setScanInput(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter" && scanInput.trim()) { processScanInput(scanInput.trim()); setScanInput(""); } }}
-                className="h-14 text-lg font-mono"
-                autoFocus
-              />
-              <Button 
-                onClick={() => { if (scanInput.trim()) { processScanInput(scanInput.trim()); setScanInput(""); } }} 
-                size="lg" 
-                className="h-14 px-6 text-base font-bold shrink-0"
-                disabled={!scanInput.trim()}
-              >
-                <QrCode className="h-5 w-5 mr-2" />Agregar
-              </Button>
-            </div>
-            <Button 
-              variant={cameraActive ? "destructive" : "outline"} 
-              size="sm"
-              onClick={() => setCameraActive(!cameraActive)}
-              className="gap-2"
-            >
-              <Camera className="h-4 w-4" />
-              {cameraActive ? "Cerrar Cámara" : "Usar Cámara QR"}
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Scan controls */}
+        <div className="flex gap-2">
+          <Button variant={cameraActive ? "destructive" : "secondary"} size="lg" className="h-12 px-3 shrink-0"
+            onClick={() => setCameraActive(!cameraActive)}>
+            <Camera className="h-5 w-5" />
+          </Button>
+          <Input placeholder="O pega el folio aquí (PED-V-...)..." value={scanInput}
+            onChange={e => setScanInput(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && scanInput.trim()) { processScanInput(scanInput.trim()); setScanInput(""); } }}
+            className="h-12 text-base" />
+          <Button onClick={() => { if (scanInput.trim()) { processScanInput(scanInput.trim()); setScanInput(""); } }} size="lg" className="h-12 px-4"
+            disabled={!scanInput.trim()}>
+            <QrCode className="h-5 w-5 mr-1" />Agregar
+          </Button>
+        </div>
 
         {/* Scanned orders list */}
         {cola.length === 0 ? (
@@ -464,7 +444,7 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
             <div className="mx-auto w-16 h-16 bg-primary/5 border-2 border-dashed border-primary/30 rounded-2xl flex items-center justify-center">
               <QrCode className="h-8 w-8 text-primary/50" />
             </div>
-            <p className="text-muted-foreground">Escribe el folio del pedido arriba y presiona "Agregar"</p>
+            <p className="text-muted-foreground">Escanea o escribe el folio de cada pedido para agregarlo</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -485,9 +465,13 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
               </Card>
             ))}
 
-            <Button onClick={() => setPaso("hoja_carga")} size="lg" className="w-full h-14 text-lg font-bold mt-4">
-              <Package className="h-5 w-5 mr-2" />
-              Empezar a Cargar ({cola.length} pedido{cola.length > 1 ? "s" : ""})
+            <Button onClick={handleCrearRutaYCargar} disabled={creatingRoute} size="lg" className="w-full h-14 text-lg font-bold mt-4">
+              {creatingRoute ? (
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              ) : (
+                <Package className="h-5 w-5 mr-2" />
+              )}
+              {creatingRoute ? "Creando ruta..." : `Empezar a Cargar (${cola.length} pedido${cola.length > 1 ? "s" : ""})`}
             </Button>
           </div>
         )}
@@ -516,7 +500,7 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
     <div className="flex items-center justify-center py-12">
       <Card className="w-full max-w-md">
         <CardContent className="pt-6 text-center space-y-4">
-          <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
+          <CheckCircle2 className="h-16 w-16 text-primary mx-auto" />
           <h2 className="text-2xl font-bold">¡Carga completada!</h2>
           <div className="space-y-2 text-muted-foreground">
             <p className="text-lg">{cola.length} pedido{cola.length > 1 ? "s" : ""} cargado{cola.length > 1 ? "s" : ""}</p>
@@ -529,7 +513,7 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
           <div className="space-y-2 pt-2">
             {cola.map((c, i) => (
               <div key={i} className="flex items-center gap-2 text-sm justify-center">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <CheckCircle2 className="h-4 w-4 text-primary" />
                 <span className="font-medium">{c.folio}</span>
                 <span className="text-muted-foreground">— {c.clienteNombre}</span>
               </div>
