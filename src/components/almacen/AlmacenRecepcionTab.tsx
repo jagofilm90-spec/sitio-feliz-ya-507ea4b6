@@ -761,7 +761,6 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
   // ========================================
   // LÓGICA PARA DESHABILITAR BOTÓN "REGISTRAR LLEGADA"
   // ========================================
-  // Solo se puede registrar llegada si la fecha programada es hoy o anterior
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
   
@@ -769,13 +768,14 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
     ? new Date(entrega.fecha_programada + "T00:00:00") 
     : null;
   
-  // Puede registrar si: no hay fecha programada O la fecha es hoy o anterior
   const puedeRegistrarLlegada = !fechaProgramada || fechaProgramada <= hoy;
   
-  // Calcular días restantes para el tooltip
   const diasRestantes = fechaProgramada 
     ? Math.ceil((fechaProgramada.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
     : 0;
+
+  // Verificar si la entrega es para mañana
+  const esMañana = diasRestantes === 1;
 
   return (
     <div className="p-4 hover:bg-muted/50 transition-colors">
@@ -789,6 +789,13 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
               <span className="font-semibold text-lg truncate">
                 {proveedorNombre}
               </span>
+              {/* Badge de mañana */}
+              {esMañana && (
+                <Badge variant="outline" className="gap-1 border-blue-500 text-blue-600 dark:text-blue-400 flex-shrink-0">
+                  <Calendar className="w-3 h-3" />
+                  Mañana
+                </Badge>
+              )}
               {/* Badge de llegada anticipada */}
               {esLlegadaAnticipada && (
                 <Badge variant="outline" className="gap-1 border-amber-500 text-amber-600 dark:text-amber-400 flex-shrink-0">
