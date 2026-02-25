@@ -59,6 +59,8 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
   const [cola, setCola] = useState<PedidoEnCola[]>([]);
   const [cameraActive, setCameraActive] = useState(false);
   const [scanInput, setScanInput] = useState("");
+  const lastScannedRef = useRef<string>("");
+  const scanCooldownRef = useRef<NodeJS.Timeout | null>(null);
 
   // Ruta (se crea al confirmar, NO al escanear)
   const [rutaId, setRutaId] = useState<string | null>(null);
@@ -133,8 +135,14 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
     setPaso("escaneo");
   };
 
-  // QR processing
+  // QR processing with dedup
   const processScanInput = async (input: string) => {
+    // Prevent duplicate scans within 2 seconds
+    if (lastScannedRef.current === input) return;
+    lastScannedRef.current = input;
+    if (scanCooldownRef.current) clearTimeout(scanCooldownRef.current);
+    scanCooldownRef.current = setTimeout(() => { lastScannedRef.current = ""; }, 2000);
+
     const almasaMatch = input.match(/^almasa:carga:([a-f0-9-]+)$/i);
     const urlMatch = input.match(/carga-scan\/([a-f0-9-]+)/i);
     const uuidMatch = input.match(/^[a-f0-9-]{36}$/i);
