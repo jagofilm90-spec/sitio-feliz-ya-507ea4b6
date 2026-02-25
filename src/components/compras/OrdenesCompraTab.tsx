@@ -1449,7 +1449,7 @@ const OrdenesCompraTab = () => {
             </div>
           `;
 
-          const asunto = `❌ ORDEN CANCELADA: ${orden.folio} - ${proveedorNombre.toUpperCase()}`;
+          const asunto = `ORDEN CANCELADA: ${orden.folio} - ${proveedorNombre.toUpperCase()}`;
 
           // Enviar correo de cancelación
           const { error: emailError } = await supabase.functions.invoke('gmail-api', {
