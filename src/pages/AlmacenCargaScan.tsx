@@ -288,16 +288,28 @@ export default function AlmacenCargaScan() {
         loadProductosPedido(data.id);
       }
 
-      // Link entrega to the route
+      // Link or create entrega for this pedido on the route
       if (rutaId) {
-        const { data: entrega } = await supabase
+        let { data: entrega } = await supabase
           .from("entregas")
           .select("id")
           .eq("pedido_id", data.id)
           .limit(1)
           .maybeSingle();
 
-        if (entrega) {
+        if (!entrega) {
+          // Auto-create entrega if it doesn't exist
+          const { data: nuevaEntrega } = await supabase
+            .from("entregas")
+            .insert({
+              pedido_id: data.id,
+              ruta_id: rutaId,
+              orden_entrega: cola.length + 1,
+            })
+            .select("id")
+            .single();
+          entrega = nuevaEntrega;
+        } else {
           await supabase
             .from("entregas")
             .update({ ruta_id: rutaId, orden_entrega: cola.length + 1 })
@@ -315,17 +327,31 @@ export default function AlmacenCargaScan() {
   const loadProductosPedido = async (pedId: string) => {
     setLoading(true);
     try {
-      const { data: entrega, error: entregaErr } = await supabase
+      let { data: entrega, error: entregaErr } = await supabase
         .from("entregas")
         .select("id")
         .eq("pedido_id", pedId)
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (entregaErr || !entrega) {
-        toast.error("No se encontró la entrega para este pedido");
-        setLoading(false);
-        return;
+      if (!entrega) {
+        // Auto-create entrega if missing
+        const { data: nuevaEntrega, error: createErr } = await supabase
+          .from("entregas")
+          .insert({
+            pedido_id: pedId,
+            ruta_id: rutaId!,
+            orden_entrega: cola.length,
+          })
+          .select("id")
+          .single();
+
+        if (createErr || !nuevaEntrega) {
+          toast.error("No se pudo crear la entrega para este pedido");
+          setLoading(false);
+          return;
+        }
+        entrega = nuevaEntrega;
       }
 
       setEntregaId(entrega.id);
