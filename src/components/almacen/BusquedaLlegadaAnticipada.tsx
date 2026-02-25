@@ -86,15 +86,24 @@ export const BusquedaLlegadaAnticipada = ({
   const loadEntregasFuturas = async () => {
     setLoading(true);
     try {
-      // Calcular fechas: desde mañana hasta 7 días adelante
+      // Calcular fechas: desde mañana hasta 7 días laborales (lun-sáb) adelante
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
       
       const manana = new Date(hoy);
       manana.setDate(manana.getDate() + 1);
       
-      const en7Dias = new Date(hoy);
-      en7Dias.setDate(en7Dias.getDate() + 7);
+      // Avanzar 7 días laborales (lunes a sábado, excluyendo domingo)
+      let diasLaboralesContados = 0;
+      const fechaLimite = new Date(hoy);
+      while (diasLaboralesContados < 7) {
+        fechaLimite.setDate(fechaLimite.getDate() + 1);
+        // 0 = domingo, se salta
+        if (fechaLimite.getDay() !== 0) {
+          diasLaboralesContados++;
+        }
+      }
+      const en7Dias = fechaLimite;
 
       const { data, error } = await supabase
         .from("ordenes_compra_entregas")
@@ -249,7 +258,7 @@ export const BusquedaLlegadaAnticipada = ({
             ) : entregasFiltradas.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Package className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                <p>No hay entregas programadas para los próximos 7 días</p>
+                <p>No hay entregas programadas para los próximos 7 días laborales</p>
                 {searchQuery && (
                   <p className="text-sm mt-1">Intenta con otra búsqueda</p>
                 )}
