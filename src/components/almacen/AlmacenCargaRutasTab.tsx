@@ -306,6 +306,16 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
     setSheetOpen(true);
   };
 
+  // IMPORTANT: Check inline flow BEFORE loading, so realtime reloads don't unmount/reset the flow
+  if (showInlineFlow) {
+    return (
+      <CargaRutaInlineFlow
+        onClose={() => setShowInlineFlow(false)}
+        onRutaCreada={() => { loadRutas(); setShowInlineFlow(false); }}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div className="p-4 space-y-4">
@@ -313,15 +323,6 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
           <Skeleton key={i} className="h-24 w-full" />
         ))}
       </div>
-    );
-  }
-
-  if (showInlineFlow) {
-    return (
-      <CargaRutaInlineFlow
-        onClose={() => setShowInlineFlow(false)}
-        onRutaCreada={() => { loadRutas(); setShowInlineFlow(false); }}
-      />
     );
   }
 
