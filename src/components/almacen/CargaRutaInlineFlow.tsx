@@ -281,8 +281,14 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
       }
       await supabase.from("entregas").delete().eq("ruta_id", rutaId);
       if (vehiculoId) await supabase.from("vehiculos").update({ status: "disponible" }).eq("id", vehiculoId);
+      
+      // Regresar pedidos a status "proceso_entrega" para que queden disponibles de nuevo
+      for (const item of cola) {
+        await supabase.from("pedidos").update({ status: "pendiente" as any, updated_at: new Date().toISOString() }).eq("id", item.pedidoId);
+      }
+      
       await supabase.from("rutas").delete().eq("id", rutaId);
-      toast.success("Ruta eliminada");
+      toast.success("Ruta eliminada — los pedidos volvieron a quedar disponibles");
       onClose();
     } catch (err: any) {
       toast.error("Error: " + (err?.message || ""));
