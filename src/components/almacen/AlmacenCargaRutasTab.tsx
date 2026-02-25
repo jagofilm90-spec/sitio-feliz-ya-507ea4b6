@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
 import { format, differenceInMinutes, parseISO, set } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -9,31 +8,15 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { 
-  Package, 
-  Truck, 
-  User, 
-  ChevronRight,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  Timer,
-  QrCode,
-  ArrowRight,
-  Trash2,
-  Loader2,
+  Package, Truck, User, ChevronRight, CheckCircle2, Clock, AlertCircle,
+  Timer, QrCode, ArrowRight, Trash2, Loader2,
 } from "lucide-react";
 import { RutaCargaSheet } from "@/components/almacen/RutaCargaSheet";
+import { CargaRutaInlineFlow } from "@/components/almacen/CargaRutaInlineFlow";
 
 interface Ruta {
   id: string;
@@ -66,7 +49,6 @@ interface AlmacenCargaRutasTabProps {
 }
 
 export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCargaRutasTabProps) => {
-  const navigate = useNavigate();
   const [rutas, setRutas] = useState<Ruta[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRuta, setSelectedRuta] = useState<Ruta | null>(null);
@@ -74,6 +56,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
   const [modoVisualizacion, setModoVisualizacion] = useState<"asignadas" | "todas">("asignadas");
   const { toast } = useToast();
   const [deletingRutaId, setDeletingRutaId] = useState<string | null>(null);
+  const [showInlineFlow, setShowInlineFlow] = useState(false);
 
   const fechaHoy = format(new Date(), "yyyy-MM-dd");
 
@@ -343,6 +326,15 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
     );
   }
 
+  if (showInlineFlow) {
+    return (
+      <CargaRutaInlineFlow
+        onClose={() => setShowInlineFlow(false)}
+        onRutaCreada={() => { loadRutas(); setShowInlineFlow(false); }}
+      />
+    );
+  }
+
   return (
     <>
       {/* Banner Empezar a Cargar */}
@@ -355,16 +347,16 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
             <div className="flex-1 min-w-0">
               <h3 className="font-bold text-lg text-foreground">Empezar a cargar</h3>
               <p className="text-sm text-muted-foreground">
-                Escanea los códigos QR de los pedidos impresos en el orden de carga
+                Selecciona personal, escanea pedidos y confirma la carga
               </p>
             </div>
             <Button 
-              onClick={() => navigate("/almacen-tablet/carga-scan")}
+              onClick={() => setShowInlineFlow(true)}
               size="lg"
               className="h-14 px-6 text-base font-bold gap-2 shrink-0"
             >
               <QrCode className="h-5 w-5" />
-              Escanear QR
+              Nueva Carga
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
