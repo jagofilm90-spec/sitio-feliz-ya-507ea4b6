@@ -76,7 +76,7 @@ export const CancelarDescargaDialog = ({
       if (!user) throw new Error("No autenticado");
 
       // Subir fotos de evidencia
-      const fotosUrls: string[] = [];
+      const fotosStoragePaths: string[] = [];
       for (const foto of fotos) {
         const path = `cancelaciones/${entregaId}/${Date.now()}_${foto.name}`;
         const { error: uploadError } = await supabase.storage
@@ -84,10 +84,7 @@ export const CancelarDescargaDialog = ({
           .upload(path, foto);
 
         if (!uploadError) {
-          const { data: urlData } = supabase.storage
-            .from("recepciones-evidencias")
-            .getPublicUrl(path);
-          fotosUrls.push(urlData.publicUrl);
+          fotosStoragePaths.push(path);
         }
       }
 
@@ -119,7 +116,7 @@ export const CancelarDescargaDialog = ({
       // Notificar al proveedor por correo con fotos
       try {
         await supabase.functions.invoke("notificar-cancelacion-descarga", {
-          body: { entregaId, motivo: motivoCompleto, fotosUrls },
+          body: { entregaId, motivo: motivoCompleto, fotosStoragePaths },
         });
       } catch (emailError) {
         console.error("Error al notificar proveedor:", emailError);

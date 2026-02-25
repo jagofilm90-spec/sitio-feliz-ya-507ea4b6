@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { entregaId, motivo, fotosUrls } = await req.json()
+    const { entregaId, motivo, fotosStoragePaths } = await req.json()
 
     if (!entregaId) {
       return new Response(
@@ -73,26 +73,38 @@ Deno.serve(async (req) => {
 
     const asunto = `⛔ Descarga Cancelada - Producto en mal estado - ${folio}`
 
-    // Build photos HTML section
+    // Build photos HTML section using signed URLs (bucket is private)
     let fotosHTML = ''
-    const urls: string[] = fotosUrls || []
-    if (urls.length > 0) {
-      const fotosItems = urls.map((url: string, i: number) =>
-        `<div style="display:inline-block;margin:5px;">
-          <a href="${url}" target="_blank">
-            <img src="${url}" alt="Evidencia ${i + 1}" style="width:180px;height:130px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;" />
-          </a>
-        </div>`
-      ).join('')
+    const storagePaths: string[] = fotosStoragePaths || []
+    if (storagePaths.length > 0) {
+      // Generate signed URLs valid for 7 days
+      const signedItems: string[] = []
+      for (let i = 0; i < storagePaths.length; i++) {
+        const { data: signedData } = await supabase.storage
+          .from('recepciones-evidencias')
+          .createSignedUrl(storagePaths[i], 60 * 60 * 24 * 7) // 7 days
 
-      fotosHTML = `
-        <div style="margin: 20px 0;">
-          <p style="font-weight: bold; color: #374151; margin-bottom: 10px;">📷 Evidencia fotográfica:</p>
-          <div style="text-align: center;">
-            ${fotosItems}
+        if (signedData?.signedUrl) {
+          signedItems.push(
+            `<div style="display:inline-block;margin:5px;">
+              <a href="${signedData.signedUrl}" target="_blank">
+                <img src="${signedData.signedUrl}" alt="Evidencia ${i + 1}" style="width:180px;height:130px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;" />
+              </a>
+            </div>`
+          )
+        }
+      }
+
+      if (signedItems.length > 0) {
+        fotosHTML = `
+          <div style="margin: 20px 0;">
+            <p style="font-weight: bold; color: #374151; margin-bottom: 10px;">📷 Evidencia fotográfica:</p>
+            <div style="text-align: center;">
+              ${signedItems.join('')}
+            </div>
           </div>
-        </div>
-      `
+        `
+      }
     }
 
     const cuerpoHTML = `
