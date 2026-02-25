@@ -1030,10 +1030,15 @@ export const AlmacenRecepcionSheet = ({
               }
             }
 
-            // Nota: El stock ahora se actualiza automáticamente via trigger SQL (sync_stock_from_lotes)
-            // IMPORTANTE: NO actualizar ultimo_costo_compra aquí - se actualiza en conciliación
-            // El costo del producto solo se actualizará cuando se verifique con la factura del proveedor
-            // Esto garantiza que el catálogo de productos refleje costos confirmados, no provisionales
+            // Actualizar ultimo_costo_compra del producto con el precio de la OC
+            // Si la factura trae un precio diferente, se corrige en "Ajustar Costos"
+            await supabase
+              .from("productos")
+              .update({
+                ultimo_costo_compra: precioCompra,
+                fecha_ultima_compra: new Date().toISOString(),
+              })
+              .eq("id", producto.producto_id);
           }
         }
       }
