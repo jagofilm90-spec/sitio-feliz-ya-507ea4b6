@@ -10,7 +10,7 @@ import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CentroNotificaciones } from "@/components/CentroNotificaciones";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Loader2, LogOut, Home } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -39,6 +39,7 @@ const SecretariaPanel = () => {
   const [user, setUser] = useState<any>(null);
   const [userName, setUserName] = useState("");
   const [showBienvenida, setShowBienvenida] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const { roles, isLoading: rolesLoading, hasRole } = useUserRoles();
   
@@ -172,8 +173,8 @@ const SecretariaPanel = () => {
   };
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen bg-background flex w-full">
+    <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
+      <div className="min-h-screen bg-background flex flex-col lg:flex-row w-full">
         {/* Desktop Sidebar */}
         <SecretariaSidebar
           activeTab={activeTab}
@@ -185,65 +186,64 @@ const SecretariaPanel = () => {
           hasMultipleRoles={hasMultipleRoles}
         />
 
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col min-h-screen">
-          {/* Mobile Header */}
-          <header className="md:hidden sticky top-0 z-40 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground px-4 py-3 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <img src={logoAlmasa} alt="ALMASA" className="h-8 brightness-0 invert" />
-                <div className="border-l border-white/30 pl-3">
-                  <p className="text-sm font-medium truncate max-w-[120px]">{userName}</p>
-                  <p className="text-[10px] opacity-70">Secretaria</p>
-                </div>
+        {/* Mobile Header */}
+        <header className="md:hidden sticky top-0 z-50 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground px-4 py-3 shadow-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img src={logoAlmasa} alt="ALMASA" className="h-8 brightness-0 invert" />
+              <div className="border-l border-primary-foreground/30 pl-3">
+                <p className="text-sm font-medium truncate max-w-[120px]">{userName}</p>
+                <p className="text-[10px] opacity-70">Secretaria</p>
               </div>
-              <div className="flex items-center gap-1">
-                <ThemeToggle />
-                <CentroNotificaciones />
-                {hasMultipleRoles && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => navigate("/dashboard")}
-                    className="text-white hover:bg-white/20"
-                  >
-                    <Home className="h-5 w-5" />
-                  </Button>
-                )}
+            </div>
+            <div className="flex items-center gap-1">
+              <SidebarTrigger className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full" />
+              <ThemeToggle />
+              <CentroNotificaciones />
+              {hasMultipleRoles && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={handleLogout}
-                  className="text-white hover:bg-white/20"
+                  onClick={() => navigate("/dashboard")}
+                  className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full"
                 >
-                  <LogOut className="h-5 w-5" />
+                  <Home className="h-5 w-5" />
                 </Button>
-              </div>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
             </div>
-          </header>
+          </div>
+        </header>
 
-          {/* Desktop/Tablet Header */}
-          <header className="hidden md:flex sticky top-0 z-40 bg-background/95 backdrop-blur border-b px-6 py-4 items-center justify-between">
-            <div className="flex items-center gap-4">
+        {/* Main Content */}
+        <main className="flex-1" onClick={() => sidebarOpen && setSidebarOpen(false)}>
+          <div className="p-4 lg:p-8 pb-32 md:pb-8">
+            {/* Desktop header with sidebar toggle */}
+            <div className="hidden md:flex items-center gap-4 mb-6">
+              <SidebarTrigger className="h-8 w-8 shrink-0" />
               <div>
                 <h1 className="text-xl font-semibold text-foreground">Panel Secretaria</h1>
                 <p className="text-sm text-muted-foreground">
                   {format(new Date(), "EEEE d 'de' MMMM, yyyy", { locale: es })}
                 </p>
               </div>
+              <div className="ml-auto flex items-center gap-3">
+                <ThemeToggle />
+                <CentroNotificaciones />
+                <span className="text-sm text-muted-foreground">{user?.email}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <ThemeToggle />
-              <CentroNotificaciones />
-              <span className="text-sm text-muted-foreground">{user?.email}</span>
-            </div>
-          </header>
 
-          {/* Content Area */}
-          <main className="flex-1 p-4 md:p-6 pb-40 md:pb-6">
             {renderTabContent()}
-          </main>
-        </div>
+          </div>
+        </main>
 
         {/* Mobile Bottom Navigation */}
         <SecretariaMobileNav
