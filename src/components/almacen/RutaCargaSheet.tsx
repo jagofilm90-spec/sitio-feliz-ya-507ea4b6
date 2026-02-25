@@ -775,7 +775,9 @@ export const RutaCargaSheet = ({
     : entregas.every(e => e.carga_confirmada);
   
   const selloEvidencia = evidencias.find(e => e.tipo_evidencia === "sello_salida_1");
-  const sellosValidos = !llevaSellos || (llevaSellos && selloEvidencia);
+  // Si es 1 sola entrega, los sellos son obligatorios; si son 2+, son opcionales
+  const sellosObligatorios = entregas.length <= 1;
+  const sellosValidos = !sellosObligatorios || !llevaSellos || (llevaSellos && selloEvidencia);
   
   const puedeCompletar = todosLosProdutosCargados && 
                          todasEntregasConfirmadas && 
