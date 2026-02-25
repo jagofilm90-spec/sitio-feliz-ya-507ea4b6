@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -121,6 +121,12 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
   const [cancelarDescargaEntrega, setCancelarDescargaEntrega] = useState<EntregaCompra | null>(null);
   const [activeTab, setActiveTab] = useState<"hoy" | "proximas">("hoy");
   const { toast } = useToast();
+  
+  // Refs para saber si hay sheets abiertos (accesible desde realtime callbacks)
+  const sheetOpenRef = useRef(false);
+  useEffect(() => {
+    sheetOpenRef.current = llegadaSheetOpen || recepcionSheetOpen;
+  }, [llegadaSheetOpen, recepcionSheetOpen]);
 
   // Obtener usuario actual
   useEffect(() => {
@@ -372,7 +378,10 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
           table: 'ordenes_compra_entregas'
         },
         async () => {
-          await loadEntregas();
+          // No recargar si hay un sheet abierto para evitar parpadeos
+          if (!sheetOpenRef.current) {
+            await loadEntregas();
+          }
         }
       )
       .subscribe();
