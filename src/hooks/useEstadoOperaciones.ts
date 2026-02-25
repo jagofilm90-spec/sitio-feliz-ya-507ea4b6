@@ -161,9 +161,12 @@ export const useEstadoOperaciones = () => {
 
       const programadas = data.filter((e) => e.status === "programada").length;
       const enDescarga = data.filter((e) => 
-        ["llegada_registrada", "en_descarga", "trabajando"].includes(e.status)
+        ["llegada_registrada", "en_descarga", "trabajando", "en_recepcion"].includes(e.status)
       ).length;
-      const completadas = data.filter((e) => e.status === "completada").length;
+      // El status final de una recepción completada es "recibida", no "completada"
+      const completadas = data.filter((e) => 
+        ["recibida", "completada"].includes(e.status)
+      ).length;
 
       return {
         programadas,
