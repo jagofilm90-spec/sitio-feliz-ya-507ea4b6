@@ -467,7 +467,8 @@ export const CargaHojaInteractiva = ({
 
                       const pesoTeoricoItem = item.pesoKgUnit ? item.cantidadACargar * item.pesoKgUnit : null;
                       const cantidadDifiere = item.cantidadACargar !== item.cantidadSolicitada;
-                      const tienePeso = (item.precioPorKilo || item.pesoKgUnit) && item.pesoKgUnit;
+                      const esVentaPorKg = item.precioPorKilo;
+                      const tienePeso = !!item.pesoKgUnit;
                       const displayName = getCompactDisplayName({
                         nombre: item.nombre,
                         marca: item.marca,
@@ -514,7 +515,15 @@ export const CargaHojaInteractiva = ({
                               <Input
                                 type="number" inputMode="numeric"
                                 value={item.cantidadACargar}
-                                onChange={e => updateProducto(item.originalIdx, { cantidadACargar: parseFloat(e.target.value) || 0 })}
+                                onChange={e => {
+                                  const newCant = parseFloat(e.target.value) || 0;
+                                  const updates: Partial<ProductoHoja> = { cantidadACargar: newCant };
+                                  // Auto-recalculate peso for non-kg products
+                                  if (tienePeso && !esVentaPorKg) {
+                                    updates.pesoRealKg = newCant * (item.pesoKgUnit || 0);
+                                  }
+                                  updateProducto(item.originalIdx, updates);
+                                }}
                                 className={`h-9 w-20 text-center text-sm font-semibold ${
                                   cantidadDifiere ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : ""
                                 }`}
@@ -528,17 +537,24 @@ export const CargaHojaInteractiva = ({
                               )}
                             </div>
 
+                            {/* Peso: editable solo si precio_por_kilo, sino read-only auto-calculado */}
                             {tienePeso && (
                               <div className="flex flex-col items-center gap-0.5">
                                 <label className="text-[10px] text-muted-foreground font-medium uppercase">Peso kg</label>
-                                <Input
-                                  type="number" inputMode="decimal" step="0.1"
-                                  value={item.pesoRealKg ?? (pesoTeoricoItem?.toFixed(1) || "")}
-                                  onChange={e => updateProducto(item.originalIdx, { pesoRealKg: e.target.value ? parseFloat(e.target.value) : null })}
-                                  placeholder={pesoTeoricoItem?.toFixed(1) || ""}
-                                  className="h-9 w-20 text-center text-sm font-semibold"
-                                  disabled={item.confirmado}
-                                />
+                                {esVentaPorKg ? (
+                                  <Input
+                                    type="number" inputMode="decimal" step="0.1"
+                                    value={item.pesoRealKg ?? (pesoTeoricoItem?.toFixed(1) || "")}
+                                    onChange={e => updateProducto(item.originalIdx, { pesoRealKg: e.target.value ? parseFloat(e.target.value) : null })}
+                                    placeholder={pesoTeoricoItem?.toFixed(1) || ""}
+                                    className="h-9 w-24 text-center text-sm font-semibold"
+                                    disabled={item.confirmado}
+                                  />
+                                ) : (
+                                  <div className="h-9 w-24 flex items-center justify-center rounded-md border bg-muted text-sm font-semibold text-muted-foreground">
+                                    {(item.pesoRealKg ?? pesoTeoricoItem)?.toLocaleString("es-MX", { maximumFractionDigits: 1 }) || "—"}
+                                  </div>
+                                )}
                               </div>
                             )}
 
