@@ -577,7 +577,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog para cancelar/pausar descarga */}
+      {/* Dialog para cancelar descarga */}
       <CancelarDescargaDialog
         open={!!cancelarDescargaEntrega}
         onOpenChange={(open) => !open && setCancelarDescargaEntrega(null)}
@@ -886,7 +886,7 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
           <div className="flex gap-3 pt-2 flex-wrap">
             {esEnDescarga ? (
               <>
-                {/* Botón para cancelar/pausar */}
+                {/* Botón para cancelar descarga */}
                 {(!otroUsuarioTrabajando || yoEstoyTrabajando) && (
                   <Button 
                     size="lg" 
@@ -895,7 +895,7 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
                     className="gap-2 h-12 px-5 text-destructive border-destructive/50 hover:bg-destructive/10 touch-manipulation"
                   >
                     <XCircle className="w-5 h-5" />
-                    Cancelar/Pausar
+                    Cancelar Descarga
                   </Button>
                 )}
                 {/* Solo mostrar botón de completar si soy yo o no hay nadie asignado */}
