@@ -1386,18 +1386,34 @@ export const AlmacenRecepcionSheet = ({
           console.log(`Cargando ${evidenciasDB.length} evidencias para PDF...`);
           for (const ev of evidenciasDB as any[]) {
             try {
+              // Intentar signed URL primero
               const { data: signedData, error: signError } = await supabase.storage
                 .from("recepciones-evidencias")
                 .createSignedUrl(ev.ruta_storage, 3600);
-              if (signError) {
-                console.error("Error generando URL firmada:", ev.ruta_storage, signError);
-                continue;
-              }
-              if (signedData?.signedUrl) {
+              
+              if (!signError && signedData?.signedUrl) {
                 evidenciasConTipos.push({
                   url: signedData.signedUrl,
                   tipo: ev.tipo_evidencia
                 });
+                continue;
+              }
+              
+              // Fallback: descargar directamente como blob
+              console.warn("Signed URL falló para:", ev.ruta_storage, "signError:", signError, "signedData:", signedData);
+              const { data: downloadData, error: downloadError } = await supabase.storage
+                .from("recepciones-evidencias")
+                .download(ev.ruta_storage);
+              
+              if (!downloadError && downloadData) {
+                const blobUrl = URL.createObjectURL(downloadData);
+                evidenciasConTipos.push({
+                  url: blobUrl,
+                  tipo: ev.tipo_evidencia
+                });
+                console.log("Evidencia cargada via download:", ev.tipo_evidencia);
+              } else {
+                console.error("Error descargando evidencia:", ev.ruta_storage, downloadError);
               }
             } catch (urlErr) {
               console.error("Error procesando evidencia:", ev.ruta_storage, urlErr);
@@ -1466,6 +1482,7 @@ export const AlmacenRecepcionSheet = ({
         console.log("PDF generado:", pdfBase64Data.fileName);
 
         if (proveedorId && entrega.llegada_registrada_en) {
+          // Obtener contacto de logística
           const { data: contactoLogistica } = await supabase
             .from("proveedor_contactos")
             .select("nombre, email")
@@ -1482,13 +1499,60 @@ export const AlmacenRecepcionSheet = ({
             const duracionFormateada = duracionMinutos < 60 
               ? `${duracionMinutos} minutos` 
               : `${Math.floor(duracionMinutos / 60)}h ${duracionMinutos % 60}min`;
-            
-            const asunto = `✅ Descarga completada - OC ${entrega.orden_compra.folio} - ${nombreProveedor}`;
+
+            // Verificar si hay devoluciones/faltantes
+            const productosConDiferencia = getProductosConDiferencia();
+            const hayDiferencias = productosConDiferencia.length > 0;
+
+            // Construir sección de diferencias si aplica
+            let seccionDiferencias = "";
+            if (hayDiferencias) {
+              const tablaProductos = productosConDiferencia.map(p => {
+                const esperado = p.cantidad_ordenada;
+                const recibido = getCantidadNumerica(p.id);
+                const diferencia = esperado - recibido;
+                const razon = razonesDiferencia[p.id] || "No especificada";
+                const razonLabel = RAZONES_DIFERENCIA.find(r => r.value === razon)?.label || razon;
+                
+                return `
+                  <tr>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${p.producto.nombre}</td>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${esperado}</td>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${recibido}</td>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; color: #dc2626; font-weight: bold;">${diferencia}</td>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${razonLabel}</td>
+                  </tr>
+                `;
+              }).join("");
+
+              seccionDiferencias = `
+                <div style="margin-top: 25px; border-top: 2px solid #dc2626; padding-top: 15px;">
+                  <h3 style="color: #dc2626; margin-bottom: 10px;">⚠️ Productos con Diferencia / Devolución</h3>
+                  <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+                    <thead>
+                      <tr style="background: #fef2f2;">
+                        <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: left;">Producto</th>
+                        <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">Esperados</th>
+                        <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">Recibidos</th>
+                        <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">Diferencia</th>
+                        <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: left;">Razón</th>
+                      </tr>
+                    </thead>
+                    <tbody>${tablaProductos}</tbody>
+                  </table>
+                </div>
+              `;
+            }
+
+            const asunto = hayDiferencias
+              ? `⚠️ Descarga completada con diferencias - OC ${entrega.orden_compra.folio} - ${nombreProveedor}`
+              : `✅ Descarga completada - OC ${entrega.orden_compra.folio} - ${nombreProveedor}`;
+
             const htmlBody = `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #16a34a;">✅ Descarga Completada</h2>
+              <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto;">
+                <h2 style="color: ${hayDiferencias ? '#dc2626' : '#16a34a'};">${hayDiferencias ? '⚠️' : '✅'} Descarga Completada${hayDiferencias ? ' - Con Diferencias' : ''}</h2>
                 <p>Estimado(a) ${contactoLogistica.nombre},</p>
-                <p>Le informamos que la descarga de su unidad ha finalizado exitosamente.</p>
+                <p>Le informamos que la descarga de su unidad ha finalizado.</p>
                 <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
                   <tr style="background: #f3f4f6;">
                     <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Proveedor:</strong></td>
@@ -1510,20 +1574,44 @@ export const AlmacenRecepcionSheet = ({
                     <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Duración total:</strong></td>
                     <td style="padding: 8px; border: 1px solid #e5e7eb;">${duracionFormateada}</td>
                   </tr>
+                  <tr>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Estado:</strong></td>
+                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${hayDiferencias ? '<span style="color: #dc2626; font-weight: bold;">Con diferencias</span>' : '<span style="color: #16a34a; font-weight: bold;">Recepción completa</span>'}</td>
+                  </tr>
                 </table>
-                <p><strong>Su unidad puede retirarse.</strong></p>
+
+                ${seccionDiferencias}
+
+                <p style="margin-top: 20px;"><strong>Su unidad puede retirarse.</strong></p>
                 <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
                   Este es un correo automático del sistema de ALMASA. Adjunto encontrará el comprobante de recepción con evidencias fotográficas y firmas.
                 </p>
               </div>
             `;
 
-            // Enviar email CON PDF adjunto
+            // Determinar destinatarios: logística + devoluciones (si hay diferencias y existe contacto diferente)
+            let ccEmails: string[] = [];
+            if (hayDiferencias && proveedorId) {
+              const { data: contactoDevol } = await supabase
+                .from("proveedor_contactos")
+                .select("email")
+                .eq("proveedor_id", proveedorId)
+                .eq("recibe_devoluciones", true)
+                .not("email", "is", null)
+                .limit(1)
+                .single();
+              if (contactoDevol?.email && contactoDevol.email !== contactoLogistica.email) {
+                ccEmails.push(contactoDevol.email);
+              }
+            }
+
+            // Enviar UN solo correo con toda la info
             const { data: emailData, error: emailError } = await supabase.functions.invoke("gmail-api", {
               body: {
                 action: "send",
                 email: "compras@almasa.com.mx",
                 to: contactoLogistica.email,
+                cc: ccEmails.length > 0 ? ccEmails.join(",") : undefined,
                 subject: asunto,
                 body: htmlBody,
                 attachments: pdfBase64Data ? [{
@@ -1535,19 +1623,19 @@ export const AlmacenRecepcionSheet = ({
             });
 
             await registrarCorreoEnviado({
-              tipo: "logistica_fin",
+              tipo: hayDiferencias ? "logistica_fin_con_diferencias" : "logistica_fin",
               referencia_id: entrega.orden_compra.id,
-              destinatario: contactoLogistica.email,
+              destinatario: [contactoLogistica.email, ...ccEmails].join(", "),
               asunto: asunto,
               gmail_message_id: emailData?.messageId || null,
               error: emailError?.message || null
             });
 
             if (!emailError) {
-              console.log("Notificación de fin de descarga con PDF enviada a:", contactoLogistica.email);
+              console.log("Notificación de descarga enviada a:", contactoLogistica.email, ccEmails.length > 0 ? `CC: ${ccEmails.join(", ")}` : "");
               toast({
-                title: "📧 Correo enviado al proveedor",
-                description: `Se notificó a ${contactoLogistica.email} con el PDF de recepción (fotos y firmas incluidas)`,
+                title: hayDiferencias ? "📧 Correo enviado (con diferencias)" : "📧 Correo enviado al proveedor",
+                description: `Se notificó a ${contactoLogistica.email} con el PDF de recepción`,
               });
             } else {
               console.error("Error enviando correo de logística:", emailError);
@@ -1571,150 +1659,13 @@ export const AlmacenRecepcionSheet = ({
                   mimeType: "application/pdf"
                 }] : undefined
               });
-              console.log("Copias internas de logística (fin) con PDF enviadas a:", emailsInternos.length, "usuarios");
+              console.log("Copias internas con PDF enviadas a:", emailsInternos.length, "usuarios");
             }
           }
         }
       } catch (emailErr) {
         console.error("Error enviando notificación de logística:", emailErr);
         // No bloqueamos el flujo principal por error de email
-      }
-
-      // ========== NOTIFICACIÓN DE DEVOLUCIONES/FALTANTES ==========
-      try {
-        const productosConDiferencia = getProductosConDiferencia();
-        if (productosConDiferencia.length > 0) {
-          const proveedorId = entrega.orden_compra?.proveedor?.id;
-          const nombreProveedor = entrega.orden_compra?.proveedor?.nombre 
-            || entrega.orden_compra?.proveedor_nombre_manual 
-            || "Proveedor";
-
-          // Buscar contacto que recibe devoluciones
-          let emailDevoluciones: string | null = null;
-          if (proveedorId) {
-            const { data: contactoDevol } = await supabase
-              .from("proveedor_contactos")
-              .select("nombre, email")
-              .eq("proveedor_id", proveedorId)
-              .eq("recibe_devoluciones", true)
-              .not("email", "is", null)
-              .limit(1)
-              .single();
-            emailDevoluciones = contactoDevol?.email || null;
-          }
-
-          // Construir tabla de diferencias
-          const tablaProductos = productosConDiferencia.map(p => {
-            const faltante = p.cantidad_ordenada - p.cantidad_recibida;
-            const recibido = getCantidadNumerica(p.id);
-            const diferencia = faltante - recibido;
-            const razon = razonesDiferencia[p.id] || "No especificada";
-            const razonLabel = RAZONES_DIFERENCIA.find(r => r.value === razon)?.label || razon;
-            
-            return `
-              <tr>
-                <td style="padding: 8px; border: 1px solid #e5e7eb;">${p.producto.nombre}</td>
-                <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${faltante}</td>
-                <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${recibido}</td>
-                <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; color: #dc2626; font-weight: bold;">${diferencia}</td>
-                <td style="padding: 8px; border: 1px solid #e5e7eb;">${razonLabel}</td>
-              </tr>
-            `;
-          }).join("");
-
-          const asuntoDevoluciones = `⚠️ Devolución/Faltante - OC ${entrega.orden_compra.folio} - ${nombreProveedor}`;
-          const htmlBodyDevoluciones = `
-            <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto;">
-              <h2 style="color: #dc2626;">⚠️ Notificación de Devolución/Faltante</h2>
-              <p>Se registró una recepción con diferencias en la siguiente orden de compra:</p>
-              
-              <div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
-                <p><strong>Proveedor:</strong> ${nombreProveedor}</p>
-                <p><strong>Orden de Compra:</strong> ${entrega.orden_compra.folio}</p>
-                <p><strong>Entrega #:</strong> ${entrega.numero_entrega}</p>
-                <p><strong>Fecha de recepción:</strong> ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: es })}</p>
-              </div>
-
-              <h3 style="color: #374151;">Productos con Diferencia:</h3>
-              <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-                <thead>
-                  <tr style="background: #f3f4f6;">
-                    <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: left;">Producto</th>
-                    <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">Esperados</th>
-                    <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">Recibidos</th>
-                    <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">Diferencia</th>
-                    <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: left;">Razón</th>
-                  </tr>
-                </thead>
-                <tbody>${tablaProductos}</tbody>
-              </table>
-
-              <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
-                Este es un correo automático del sistema de ALMASA. Adjunto encontrará el comprobante de recepción con evidencias fotográficas y firmas.
-              </p>
-            </div>
-          `;
-
-          // Enviar al proveedor si tiene contacto de devoluciones
-          if (emailDevoluciones) {
-            const { data: emailDevData, error: emailDevError } = await supabase.functions.invoke("gmail-api", {
-              body: {
-                action: "send",
-                email: "compras@almasa.com.mx",
-                to: emailDevoluciones,
-                subject: asuntoDevoluciones,
-                body: htmlBodyDevoluciones,
-                attachments: pdfBase64Data ? [{
-                  filename: pdfBase64Data.fileName,
-                  content: pdfBase64Data.base64,
-                  mimeType: "application/pdf"
-                }] : undefined
-              }
-            });
-
-            await registrarCorreoEnviado({
-              tipo: "devolucion_proveedor",
-              referencia_id: entrega.orden_compra.id,
-              destinatario: emailDevoluciones,
-              asunto: asuntoDevoluciones,
-              gmail_message_id: emailDevData?.messageId || null,
-              error: emailDevError?.message || null
-            });
-
-            if (!emailDevError) {
-              console.log("Notificación de devolución con PDF enviada a proveedor:", emailDevoluciones);
-              toast({
-                title: "📧 Notificación de diferencias enviada",
-                description: `Se informó al proveedor (${emailDevoluciones}) sobre faltantes/devoluciones con PDF adjunto`,
-              });
-            } else {
-              console.error("Error enviando correo de devoluciones:", emailDevError);
-              toast({
-                title: "Error al notificar diferencias",
-                description: "No se pudo enviar la notificación de faltantes al proveedor",
-                variant: "destructive"
-              });
-            }
-          }
-
-          // Enviar copia a usuarios internos (admin y secretaria)
-          const emailsInternos = await getEmailsInternos();
-          if (emailsInternos.length > 0) {
-            await enviarCopiaInterna({
-              asunto: asuntoDevoluciones,
-              htmlBody: htmlBodyDevoluciones,
-              emailsDestinatarios: emailsInternos,
-              attachments: pdfBase64Data ? [{
-                filename: pdfBase64Data.fileName,
-                content: pdfBase64Data.base64,
-                mimeType: "application/pdf"
-              }] : undefined
-            });
-            console.log("Copias internas de devolución con PDF enviadas a:", emailsInternos.length, "usuarios");
-          }
-        }
-      } catch (devolErr) {
-        console.error("Error enviando notificación de devoluciones:", devolErr);
       }
 
       onRecepcionCompletada();
