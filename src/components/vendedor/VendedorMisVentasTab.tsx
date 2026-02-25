@@ -126,13 +126,14 @@ export function VendedorMisVentasTab({ onDashboardRefresh }: { onDashboardRefres
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'pedidos',
         },
         (payload) => {
-          // Refrescar cuando cambie el status de algún pedido
-          if (payload.new && payload.old && payload.new.status !== payload.old.status) {
+          const isStatusChange = payload.eventType === 'UPDATE' && payload.new && payload.old && payload.new.status !== payload.old.status;
+          const isDeleteOrInsert = payload.eventType === 'DELETE' || payload.eventType === 'INSERT';
+          if (isStatusChange || isDeleteOrInsert) {
             fetchPedidos();
             fetchVentasMensuales();
             onDashboardRefresh?.();
