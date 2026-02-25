@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { COMPANY_DATA } from "@/constants/companyData";
 import { formatDireccionFiscal } from "@/lib/proveedorUtils";
+import { htmlToPdfBase64 } from "@/lib/htmlToPdfBase64";
 import { getRegimenDescripcion } from "@/constants/catalogoSAT";
 import { CalendarioOcupacion } from "./CalendarioOcupacion";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -1395,8 +1396,8 @@ const CrearOrdenCompraWizard = ({
             </html>
           `;
 
-          // 5. Convertir PDF a Base64
-          const pdfBase64 = btoa(unescape(encodeURIComponent(pdfHtml)));
+          // 5. Convertir HTML a PDF real de alta calidad
+          const pdfBase64 = await htmlToPdfBase64(pdfHtml);
 
           // 6. Generar URLs de confirmación
           const { data: confirmUrlData } = await supabase.functions.invoke(
@@ -1476,11 +1477,11 @@ const CrearOrdenCompraWizard = ({
             </div>
           `;
 
-          // 9. Preparar adjunto
+          // 9. Preparar adjunto PDF
           const attachments = [{
-            filename: `Orden_Compra_${orden.folio}.html`,
+            filename: `Orden_Compra_${orden.folio}.pdf`,
             content: pdfBase64,
-            mimeType: 'text/html'
+            mimeType: 'application/pdf'
           }];
 
           // 10. Enviar correo via gmail-api
