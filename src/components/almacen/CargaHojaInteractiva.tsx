@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,9 +15,13 @@ import {
 } from "@/components/ui/table";
 import {
   CheckCircle2, Loader2, Scale, Trash2, Timer, Package, ArrowDown, ArrowUp, Truck, User,
+  Camera, PenTool, ArrowRight,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { CargaEvidenciasSection } from "./CargaEvidenciasSection";
+import { SellosSection } from "./SellosSection";
+import { FirmaChoferDialog } from "./FirmaChoferDialog";
 
 interface PedidoEnCola {
   pedidoId: string;
@@ -76,6 +80,14 @@ export const CargaHojaInteractiva = ({
   const [productos, setProductos] = useState<ProductoHoja[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // Post-carga flow phases: checklist → evidencias → firma
+  const [fase, setFase] = useState<"checklist" | "evidencias" | "firma">("checklist");
+  const [evidencias, setEvidencias] = useState<any[]>([]);
+  const [llevaSellos, setLlevaSellos] = useState(true);
+  const [numeroSello, setNumeroSello] = useState("");
+  const [showFirma, setShowFirma] = useState(false);
+  const [firmaLoading, setFirmaLoading] = useState(false);
 
   // Load all products for all pedidos
   useEffect(() => {
@@ -181,7 +193,20 @@ export const CargaHojaInteractiva = ({
     setProductos(prev => prev.map((p, i) => i === idx ? { ...p, ...updates } : p));
   };
 
-  // Confirm and save all
+  // Load evidencias
+  const loadEvidencias = useCallback(async () => {
+    const { data } = await supabase
+      .from("carga_evidencias")
+      .select("id, tipo_evidencia, ruta_storage, nombre_archivo, created_at")
+      .eq("ruta_id", rutaId);
+    setEvidencias(data || []);
+  }, [rutaId]);
+
+  useEffect(() => {
+    if (fase === "evidencias") loadEvidencias();
+  }, [fase, loadEvidencias]);
+
+  // Confirm checklist and move to evidencias phase
   const handleConfirmarCarga = async () => {
     setSaving(true);
     try {
@@ -194,10 +219,8 @@ export const CargaHojaInteractiva = ({
           return;
         }
 
-        // Decrement inventory
         await supabase.rpc("decrementar_lote", { p_lote_id: prod.loteId, p_cantidad: prod.cantidadACargar });
 
-        // Record movement
         await supabase.from("inventario_movimientos").insert({
           producto_id: prod.productoId,
           tipo_movimiento: "salida",
@@ -208,7 +231,6 @@ export const CargaHojaInteractiva = ({
           usuario_id: user?.id,
         });
 
-        // Update carga_productos
         await supabase.from("carga_productos").update({
           cargado: true,
           cantidad_cargada: prod.cantidadACargar,
@@ -219,13 +241,11 @@ export const CargaHojaInteractiva = ({
         }).eq("id", prod.cargaProductoId);
       }
 
-      // Delete removed products from DB
       const eliminados = productos.filter(p => p.eliminado);
       for (const del of eliminados) {
         await supabase.from("carga_productos").delete().eq("id", del.cargaProductoId);
       }
 
-      // Confirm entregas
       const entregaIds = [...new Set(productosActivos.map(p => p.entregaId))];
       for (const eId of entregaIds) {
         await supabase.from("entregas").update({
@@ -235,12 +255,41 @@ export const CargaHojaInteractiva = ({
         }).eq("id", eId);
       }
 
-      await onFinalizar();
+      toast.success("Carga confirmada — ahora captura evidencias");
+      setFase("evidencias");
     } catch (err: any) {
       console.error(err);
       toast.error("Error al confirmar carga: " + (err?.message || ""));
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Save sellos info and move to firma
+  const handleIrAFirma = async () => {
+    // Save sellos info to ruta
+    await supabase.from("rutas").update({
+      lleva_sellos: llevaSellos,
+      numero_sello_salida: llevaSellos ? numeroSello : null,
+    }).eq("id", rutaId);
+
+    setFase("firma");
+  };
+
+  // Handle firma and finalize
+  const handleFirmaConfirmada = async (firmaBase64: string) => {
+    setFirmaLoading(true);
+    try {
+      await supabase.from("rutas").update({
+        firma_chofer_carga: firmaBase64,
+      }).eq("id", rutaId);
+
+      setShowFirma(false);
+      await onFinalizar();
+    } catch (err: any) {
+      toast.error("Error al guardar firma: " + (err?.message || ""));
+    } finally {
+      setFirmaLoading(false);
     }
   };
 
@@ -338,134 +387,214 @@ export const CargaHojaInteractiva = ({
         </AlertDialog>
       </div>
 
-      {/* Weight summary */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card>
-          <CardContent className="py-3 text-center">
-            <p className="text-xs text-muted-foreground">Peso Teórico</p>
-            <p className="text-2xl font-bold">{pesoTeorico.toFixed(1)}</p>
-            <p className="text-xs text-muted-foreground">kg</p>
-          </CardContent>
-        </Card>
-        <Card className={diferenciaPeso === 0 ? "border-green-500/50" : Math.abs(diferenciaPeso) < pesoTeorico * 0.05 ? "border-amber-500/50" : "border-destructive/50"}>
-          <CardContent className="py-3 text-center">
-            <p className="text-xs text-muted-foreground">Peso Real</p>
-            <p className="text-2xl font-bold">{pesoReal.toFixed(1)}</p>
-            <p className="text-xs text-muted-foreground">kg</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-3 text-center">
-            <p className="text-xs text-muted-foreground">Diferencia</p>
-            <p className={`text-2xl font-bold flex items-center justify-center gap-1 ${diferenciaPeso > 0 ? "text-green-600" : diferenciaPeso < 0 ? "text-destructive" : ""}`}>
-              {diferenciaPeso > 0 && <ArrowUp className="h-4 w-4" />}
-              {diferenciaPeso < 0 && <ArrowDown className="h-4 w-4" />}
-              {Math.abs(diferenciaPeso).toFixed(1)}
-            </p>
-            <p className="text-xs text-muted-foreground">kg</p>
-          </CardContent>
-        </Card>
+      {/* ─── Phase indicator ─── */}
+      <div className="flex items-center gap-2 text-sm">
+        <Badge variant={fase === "checklist" ? "default" : "secondary"} className="gap-1">
+          <Package className="h-3 w-3" />1. Checklist
+        </Badge>
+        <ArrowRight className="h-3 w-3 text-muted-foreground" />
+        <Badge variant={fase === "evidencias" ? "default" : "secondary"} className="gap-1">
+          <Camera className="h-3 w-3" />2. Evidencias
+        </Badge>
+        <ArrowRight className="h-3 w-3 text-muted-foreground" />
+        <Badge variant={fase === "firma" ? "default" : "secondary"} className="gap-1">
+          <PenTool className="h-3 w-3" />3. Firma
+        </Badge>
       </div>
 
-      {/* Product tables by pedido */}
-      <ScrollArea className="max-h-[calc(100vh-500px)]">
-        <div className="space-y-6">
-          {pedidoGroups.map(group => (
-            <div key={group.pedidoId}>
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline" className="text-sm font-bold">{group.folio}</Badge>
-                <span className="text-sm text-muted-foreground">{group.clienteNombre}</span>
-                <span className="text-xs text-muted-foreground ml-auto">
-                  {group.items.filter(i => !i.eliminado).length} productos
-                </span>
-              </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[200px]">Producto</TableHead>
-                    <TableHead className="w-[80px] text-center">Solicitado</TableHead>
-                    <TableHead className="w-[100px] text-center">Cantidad</TableHead>
-                    <TableHead className="w-[100px] text-center">Peso KG</TableHead>
-                    <TableHead className="w-[160px]">Lote</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {group.items.map(item => {
-                    if (item.eliminado) return (
-                      <TableRow key={item.cargaProductoId} className="opacity-30 line-through">
-                        <TableCell colSpan={5}>{item.codigo} — {item.nombre}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600"
-                            onClick={() => updateProducto(item.originalIdx, { eliminado: false })}>
-                            ↩
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
+      {/* ═══ FASE 1: Checklist de productos ═══ */}
+      {fase === "checklist" && (
+        <>
+          {/* Weight summary */}
+          <div className="grid grid-cols-3 gap-3">
+            <Card>
+              <CardContent className="py-3 text-center">
+                <p className="text-xs text-muted-foreground">Peso Teórico</p>
+                <p className="text-2xl font-bold">{pesoTeorico.toFixed(1)}</p>
+                <p className="text-xs text-muted-foreground">kg</p>
+              </CardContent>
+            </Card>
+            <Card className={diferenciaPeso === 0 ? "border-green-500/50" : Math.abs(diferenciaPeso) < pesoTeorico * 0.05 ? "border-amber-500/50" : "border-destructive/50"}>
+              <CardContent className="py-3 text-center">
+                <p className="text-xs text-muted-foreground">Peso Real</p>
+                <p className="text-2xl font-bold">{pesoReal.toFixed(1)}</p>
+                <p className="text-xs text-muted-foreground">kg</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="py-3 text-center">
+                <p className="text-xs text-muted-foreground">Diferencia</p>
+                <p className={`text-2xl font-bold flex items-center justify-center gap-1 ${diferenciaPeso > 0 ? "text-green-600" : diferenciaPeso < 0 ? "text-destructive" : ""}`}>
+                  {diferenciaPeso > 0 && <ArrowUp className="h-4 w-4" />}
+                  {diferenciaPeso < 0 && <ArrowDown className="h-4 w-4" />}
+                  {Math.abs(diferenciaPeso).toFixed(1)}
+                </p>
+                <p className="text-xs text-muted-foreground">kg</p>
+              </CardContent>
+            </Card>
+          </div>
 
-                    const pesoTeoricoItem = item.pesoKgUnit ? item.cantidadACargar * item.pesoKgUnit : null;
-
-                    return (
-                      <TableRow key={item.cargaProductoId}>
-                        <TableCell>
-                          <p className="font-medium text-sm">{item.codigo}</p>
-                          <p className="text-xs text-muted-foreground truncate max-w-[180px]">{item.nombre}</p>
-                        </TableCell>
-                        <TableCell className="text-center font-medium">{item.cantidadSolicitada}</TableCell>
-                        <TableCell className="text-center">
-                          <Input type="number" inputMode="numeric"
-                            value={item.cantidadACargar}
-                            onChange={e => updateProducto(item.originalIdx, { cantidadACargar: parseFloat(e.target.value) || 0 })}
-                            className="w-20 h-9 text-center mx-auto" />
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {item.precioPorKilo || item.pesoKgUnit ? (
-                            <Input type="number" inputMode="decimal"
-                              value={item.pesoRealKg ?? (pesoTeoricoItem?.toFixed(1) || "")}
-                              onChange={e => updateProducto(item.originalIdx, { pesoRealKg: e.target.value ? parseFloat(e.target.value) : null })}
-                              className="w-20 h-9 text-center mx-auto" />
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {item.lotesDisponibles.length > 0 ? (
-                            <select value={item.loteId || ""}
-                              onChange={e => updateProducto(item.originalIdx, { loteId: e.target.value })}
-                              className="w-full h-9 rounded-md border bg-background px-2 text-xs">
-                              {item.lotesDisponibles.map(l => (
-                                <option key={l.id} value={l.id}>
-                                  {l.lote_referencia || "Sin ref"} ({l.cantidad_disponible})
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <span className="text-xs text-destructive">Sin lotes</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => updateProducto(item.originalIdx, { eliminado: true })}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
+          {/* Product tables by pedido */}
+          <ScrollArea className="max-h-[calc(100vh-550px)]">
+            <div className="space-y-6">
+              {pedidoGroups.map(group => (
+                <div key={group.pedidoId}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="outline" className="text-sm font-bold">{group.folio}</Badge>
+                    <span className="text-sm text-muted-foreground">{group.clienteNombre}</span>
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {group.items.filter(i => !i.eliminado).length} productos
+                    </span>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[200px]">Producto</TableHead>
+                        <TableHead className="w-[80px] text-center">Solicitado</TableHead>
+                        <TableHead className="w-[100px] text-center">Cantidad</TableHead>
+                        <TableHead className="w-[100px] text-center">Peso KG</TableHead>
+                        <TableHead className="w-[160px]">Lote</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {group.items.map(item => {
+                        if (item.eliminado) return (
+                          <TableRow key={item.cargaProductoId} className="opacity-30 line-through">
+                            <TableCell colSpan={5}>{item.codigo} — {item.nombre}</TableCell>
+                            <TableCell>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600"
+                                onClick={() => updateProducto(item.originalIdx, { eliminado: false })}>
+                                ↩
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+
+                        const pesoTeoricoItem = item.pesoKgUnit ? item.cantidadACargar * item.pesoKgUnit : null;
+
+                        return (
+                          <TableRow key={item.cargaProductoId}>
+                            <TableCell>
+                              <p className="font-medium text-sm">{item.codigo}</p>
+                              <p className="text-xs text-muted-foreground truncate max-w-[180px]">{item.nombre}</p>
+                            </TableCell>
+                            <TableCell className="text-center font-medium">{item.cantidadSolicitada}</TableCell>
+                            <TableCell className="text-center">
+                              <Input type="number" inputMode="numeric"
+                                value={item.cantidadACargar}
+                                onChange={e => updateProducto(item.originalIdx, { cantidadACargar: parseFloat(e.target.value) || 0 })}
+                                className="w-20 h-9 text-center mx-auto" />
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {item.precioPorKilo || item.pesoKgUnit ? (
+                                <Input type="number" inputMode="decimal"
+                                  value={item.pesoRealKg ?? (pesoTeoricoItem?.toFixed(1) || "")}
+                                  onChange={e => updateProducto(item.originalIdx, { pesoRealKg: e.target.value ? parseFloat(e.target.value) : null })}
+                                  className="w-20 h-9 text-center mx-auto" />
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {item.lotesDisponibles.length > 0 ? (
+                                <select value={item.loteId || ""}
+                                  onChange={e => updateProducto(item.originalIdx, { loteId: e.target.value })}
+                                  className="w-full h-9 rounded-md border bg-background px-2 text-xs">
+                                  {item.lotesDisponibles.map(l => (
+                                    <option key={l.id} value={l.id}>
+                                      {l.lote_referencia || "Sin ref"} ({l.cantidad_disponible})
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span className="text-xs text-destructive">Sin lotes</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => updateProducto(item.originalIdx, { eliminado: true })}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </ScrollArea>
+          </ScrollArea>
 
-      {/* Confirm button */}
-      <Button onClick={handleConfirmarCarga} disabled={saving || productosActivos.length === 0}
-        size="lg" className="w-full h-14 text-lg font-bold">
-        {saving ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <CheckCircle2 className="h-5 w-5 mr-2" />}
-        Confirmar Carga ({productosActivos.length} productos)
-      </Button>
+          {/* Confirm checklist button */}
+          <Button onClick={handleConfirmarCarga} disabled={saving || productosActivos.length === 0}
+            size="lg" className="w-full h-14 text-lg font-bold">
+            {saving ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <CheckCircle2 className="h-5 w-5 mr-2" />}
+            Confirmar Carga ({productosActivos.length} productos)
+          </Button>
+        </>
+      )}
+
+      {/* ═══ FASE 2: Evidencias fotográficas y sellos ═══ */}
+      {fase === "evidencias" && (
+        <div className="space-y-4">
+          <CargaEvidenciasSection
+            rutaId={rutaId}
+            evidencias={evidencias.filter(e => !e.tipo_evidencia.startsWith("sello_"))}
+            onEvidenciaAdded={loadEvidencias}
+          />
+
+          <SellosSection
+            rutaId={rutaId}
+            evidencias={evidencias}
+            onEvidenciaAdded={loadEvidencias}
+            llevaSellos={llevaSellos}
+            onLlevaSellosChange={setLlevaSellos}
+            numeroSello={numeroSello}
+            onNumeroSelloChange={setNumeroSello}
+          />
+
+          <Button onClick={handleIrAFirma} size="lg" className="w-full h-14 text-lg font-bold">
+            <PenTool className="h-5 w-5 mr-2" />
+            Continuar a Firma del Chofer
+          </Button>
+        </div>
+      )}
+
+      {/* ═══ FASE 3: Firma del chofer ═══ */}
+      {fase === "firma" && (
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="py-6 text-center space-y-4">
+              <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto" />
+              <div>
+                <h3 className="text-lg font-bold">Carga verificada</h3>
+                <p className="text-sm text-muted-foreground">
+                  {productosActivos.length} productos confirmados · Evidencias capturadas
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Solo falta la firma del chofer para completar la carga
+              </p>
+              <Button onClick={() => setShowFirma(true)} size="lg" className="w-full h-14 text-lg font-bold">
+                <PenTool className="h-5 w-5 mr-2" />
+                Firma del Chofer — {personal?.choferNombre || "Chofer"}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Firma dialog */}
+      <FirmaChoferDialog
+        open={showFirma}
+        onOpenChange={setShowFirma}
+        onConfirm={handleFirmaConfirmada}
+        choferNombre={personal?.choferNombre || "Chofer"}
+        rutaFolio={rutaFolio}
+        loading={firmaLoading}
+      />
     </div>
   );
 };
