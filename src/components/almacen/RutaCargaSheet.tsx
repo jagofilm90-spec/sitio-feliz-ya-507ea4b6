@@ -1168,12 +1168,12 @@ export const RutaCargaSheet = ({
                     productosCargados={productosCargados}
                     pesoTotalTeorico={entregas.reduce((acc, e) => 
                       acc + e.productos.reduce((pacc, p) => 
-                        pacc + (p.producto.peso_kg || 0) * p.cantidad_solicitada, 0
+                        pacc + (p.producto.peso_kg || 0) * (p.cantidad_cargada || p.cantidad_solicitada), 0
                       ), 0
                     )}
                     pesoTotalReal={entregas.reduce((acc, e) => 
                       acc + e.productos.reduce((pacc, p) => 
-                        pacc + (p.peso_real_kg || (p.producto.peso_kg || 0) * p.cantidad_solicitada), 0
+                        pacc + (p.peso_real_kg || (p.producto.peso_kg || 0) * (p.cantidad_cargada || p.cantidad_solicitada)), 0
                       ), 0
                     )}
                     totalUnidades={entregas.reduce((acc, e) => 
