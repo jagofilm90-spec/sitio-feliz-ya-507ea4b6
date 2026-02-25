@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { sendPushNotification } from "@/services/pushNotifications";
@@ -476,6 +476,9 @@ export const RutaCargaSheet = ({
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
+      if (selloDebounceRef.current) {
+        clearTimeout(selloDebounceRef.current);
+      }
     };
   }, [open, ruta.id]);
 
@@ -725,13 +728,23 @@ export const RutaCargaSheet = ({
       .eq("id", ruta.id);
   };
 
-  const handleNumeroSelloChange = async (value: string) => {
+  // Debounce para no guardar en cada tecla y evitar que realtime recargue todo
+  const selloDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const handleNumeroSelloChange = useCallback((value: string) => {
     setNumeroSello(value);
-    await supabase
-      .from("rutas")
-      .update({ numero_sello_salida: value })
-      .eq("id", ruta.id);
-  };
+    
+    if (selloDebounceRef.current) {
+      clearTimeout(selloDebounceRef.current);
+    }
+    
+    selloDebounceRef.current = setTimeout(async () => {
+      await supabase
+        .from("rutas")
+        .update({ numero_sello_salida: value })
+        .eq("id", ruta.id);
+    }, 800);
+  }, [ruta.id]);
 
   // Validaciones para completar carga
   const todosLosProdutosCargados = entregas.every((e) =>

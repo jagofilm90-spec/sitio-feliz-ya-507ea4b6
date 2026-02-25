@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { format, differenceInMinutes, parseISO, set } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -52,7 +52,12 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
   const [rutas, setRutas] = useState<Ruta[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRuta, setSelectedRuta] = useState<Ruta | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetOpen, _setSheetOpen] = useState(false);
+  const sheetOpenRef = useRef(false);
+  const setSheetOpen = useCallback((val: boolean) => {
+    sheetOpenRef.current = val;
+    _setSheetOpen(val);
+  }, []);
   const [modoVisualizacion, setModoVisualizacion] = useState<"asignadas" | "todas">("asignadas");
   const { toast } = useToast();
   const [deletingRutaId, setDeletingRutaId] = useState<string | null>(null);
@@ -257,6 +262,8 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
         },
         async (payload) => {
           const updatedRuta = payload.new as any;
+          // No recargar si el sheet de carga está abierto (evita refrescos al editar sellos, etc.)
+          if (sheetOpenRef.current) return;
           // Solo recargar si es una ruta de hoy
           if (updatedRuta.fecha_ruta === fechaHoy) {
             await loadRutas();
