@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { COMPANY_DATA } from "@/constants/companyData";
 import { getProveedorFiscalHTML } from "@/lib/proveedorUtils";
+import { htmlToPdfBase64 } from "@/lib/htmlToPdfBase64";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -435,7 +436,7 @@ const NotificarCambiosOCDialog = ({
 
       // Generate the updated PDF
       const pdfContent = await generarPDFContent();
-      const pdfBase64 = btoa(unescape(encodeURIComponent(pdfContent)));
+      const pdfBase64 = await htmlToPdfBase64(pdfContent);
 
       // Build HTML table of changes
       const cambiosHTML = cambiosANotificar.map(c => {
@@ -632,9 +633,9 @@ const NotificarCambiosOCDialog = ({
       // Prepare attachment
       const attachments = [
         {
-          filename: `OC_${folio}_ACTUALIZADA.html`,
+          filename: `OC_${folio}_ACTUALIZADA.pdf`,
           content: pdfBase64,
-          mimeType: 'text/html'
+          mimeType: 'application/pdf'
         }
       ];
 
