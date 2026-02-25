@@ -238,6 +238,18 @@ export const ConfiguracionBodegaSheet = ({
               </div>
             </div>
 
+            {latitud && longitud && (
+              <a
+                href={`https://www.google.com/maps?q=${latitud},${longitud}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-primary underline hover:text-primary/80 flex items-center gap-1"
+              >
+                <MapPin className="h-3 w-3" />
+                Ver ubicación en Google Maps
+              </a>
+            )}
+
             <Button
               type="button"
               variant="outline"
