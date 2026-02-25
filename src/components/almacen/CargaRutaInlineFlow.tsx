@@ -78,6 +78,13 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [horaInicio, paso]);
 
+  // Al entrar al paso de escaneo, abrir cámara automáticamente
+  useEffect(() => {
+    if (paso === "escaneo") {
+      setCameraActive(true);
+    }
+  }, [paso]);
+
   const formatTiempo = (s: number) => {
     const m = Math.floor(s / 60);
     const sec = s % 60;
@@ -186,7 +193,6 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
 
     if (id) {
       await agregarPedidoACola(id);
-      setCameraActive(false);
     } else {
       toast.error("Código QR no válido");
     }
