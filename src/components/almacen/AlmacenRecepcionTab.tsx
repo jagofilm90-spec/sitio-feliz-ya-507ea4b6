@@ -542,8 +542,11 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
           open={llegadaSheetOpen}
           onOpenChange={setLlegadaSheetOpen}
           onLlegadaRegistrada={() => {
-            loadEntregas();
             setLlegadaSheetOpen(false);
+            // Delay reload to let the sheet animation finish before re-rendering
+            setTimeout(() => {
+              loadEntregas();
+            }, 300);
           }}
         />
       )}
@@ -555,8 +558,10 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
           open={recepcionSheetOpen}
           onOpenChange={setRecepcionSheetOpen}
           onRecepcionCompletada={() => {
-            loadEntregas();
             setRecepcionSheetOpen(false);
+            setTimeout(() => {
+              loadEntregas();
+            }, 300);
           }}
         />
       )}
