@@ -159,6 +159,7 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
       setRutaId(ruta.id);
       setRutaFolio(ruta.folio);
       setHoraInicio(new Date());
+      setCameraActive(true);
       setPaso("escaneo");
       toast.success(`Ruta ${ruta.folio} creada. Escanea los pedidos.`);
     } catch (err: any) {
