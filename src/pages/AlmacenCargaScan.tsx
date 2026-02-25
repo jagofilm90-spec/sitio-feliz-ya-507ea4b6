@@ -117,15 +117,17 @@ export default function AlmacenCargaScan() {
       setLoadingOptions(true);
       const fechaHoy = format(new Date(), "yyyy-MM-dd");
 
-      // Get today's active routes to know which choferes/vehiculos are busy
+      // Get today's active routes that actually have entregas (orders loaded)
       const { data: rutasHoy } = await supabase
         .from("rutas")
-        .select("chofer_id, vehiculo_id")
+        .select("chofer_id, vehiculo_id, entregas(id)")
         .eq("fecha_ruta", fechaHoy)
         .not("status", "eq", "cancelada");
 
-      const choferesEnRuta = new Set((rutasHoy || []).map(r => r.chofer_id).filter(Boolean));
-      const vehiculosEnRuta = new Set((rutasHoy || []).map(r => r.vehiculo_id).filter(Boolean));
+      // Only exclude choferes/vehiculos from routes that have at least 1 entrega
+      const rutasConCarga = (rutasHoy || []).filter(r => r.entregas && r.entregas.length > 0);
+      const choferesEnRuta = new Set(rutasConCarga.map(r => r.chofer_id).filter(Boolean));
+      const vehiculosEnRuta = new Set(rutasConCarga.map(r => r.vehiculo_id).filter(Boolean));
 
       const [empleadosRes, vehiculosRes] = await Promise.all([
         supabase
@@ -143,7 +145,7 @@ export default function AlmacenCargaScan() {
 
       const allEmpleados = empleadosRes.data || [];
       
-      // Split into choferes and ayudantes
+      // Split into choferes and ayudantes - only exclude those on routes WITH loaded orders
       const soloChoferes = allEmpleados.filter(e => e.puesto === "Chofer" && !choferesEnRuta.has(e.id));
       const soloAyudantes = allEmpleados.filter(e => e.puesto === "Ayudante de Chofer" && !choferesEnRuta.has(e.id));
       const vehiculosDisponibles = (vehiculosRes.data || []).filter(v => !vehiculosEnRuta.has(v.id));
