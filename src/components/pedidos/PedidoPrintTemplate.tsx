@@ -212,46 +212,7 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false }: PedidoPrintTempla
         <p className="mt-1 text-[8px] text-gray-500">Enviar comprobante de pago a: {COMPANY_DATA.emails.pagos}</p>
       </div>
 
-      {/* ═══════ AVISO IMPORTANTE + PAGARÉ ═══════ */}
-      <div className="grid grid-cols-2 gap-2 mb-2">
-        {/* Aviso */}
-        <div className="border border-gray-400 rounded p-2">
-          <p className="font-bold text-[10px] uppercase text-red-700 mb-1">Aviso Importante</p>
-          <p className="text-[8px] leading-tight text-gray-700">
-            FAVOR DE REVISAR SU PEDIDO COMPLETO A LA LLEGADA. RECIBIDA LA MERCANCÍA NO SE ADMITEN RECLAMACIONES NI CAMBIOS.
-          </p>
-          <p className="text-[8px] mt-1 text-gray-500">Quejas: {COMPANY_DATA.telefonos.principal}</p>
-        </div>
-
-        {/* Pagaré */}
-        <div className="border border-gray-400 rounded p-2">
-          <p className="font-bold text-[10px] uppercase text-center mb-1">Pagaré</p>
-          <p className="text-[7.5px] leading-tight text-gray-600">
-            Debo(emos) y pagaré(mos) incondicionalmente a la orden de {COMPANY_DATA.razonSocial} la cantidad arriba mencionada, 
-            recibida a mi(nuestra) entera satisfacción. En caso de mora se cobrará un interés del 10% mensual hasta su liquidación.
-            Se cobrará el 25% de indemnización por cheque devuelto, sin que por ello se prorrogue el plazo.
-          </p>
-        </div>
-      </div>
-
-      {/* ═══════ FIRMA DE CONFORMIDAD ═══════ */}
-      <div className="border border-gray-400 rounded p-2 mb-2">
-        <p className="text-center font-bold text-[9px] uppercase text-gray-600 mb-2">Nombre y Firma de Conformidad</p>
-        <div className="grid grid-cols-3 gap-6">
-          <div className="text-center">
-            <div className="border-b border-black mb-1 h-7" />
-            <p className="text-[8px]">Nombre y firma</p>
-          </div>
-          <div className="text-center">
-            <div className="border-b border-black mb-1 h-7" />
-            <p className="text-[8px]">Fecha de recepción</p>
-          </div>
-          <div className="text-center">
-            <div className="border-b border-black mb-1 h-7" />
-            <p className="text-[8px]">Sello del cliente</p>
-          </div>
-        </div>
-      </div>
+      {/* Firmas y secciones legales se incluyen solo en la hoja de carga, no en el pedido del vendedor */}
 
       {/* ═══════ FOOTER FISCAL + QR ═══════ */}
       <div className="mt-auto border-t border-gray-200 pt-1.5 flex items-end justify-between">
