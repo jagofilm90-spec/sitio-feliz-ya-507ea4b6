@@ -117,6 +117,7 @@ export function VendedorMisVentasTab({ onDashboardRefresh }: { onDashboardRefres
   const [showCobro, setShowCobro] = useState(false);
   const [pedidoParaCobro, setPedidoParaCobro] = useState<any>(null);
   const [enCargaCount, setEnCargaCount] = useState(0);
+  const [pedidosEnCargaIds, setPedidosEnCargaIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchPedidos();
@@ -125,13 +126,7 @@ export function VendedorMisVentasTab({ onDashboardRefresh }: { onDashboardRefres
     // Suscripción en tiempo real para cambios en pedidos del vendedor
     const channel = supabase
       .channel('vendedor-pedidos-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'pedidos',
-        },
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos' },
         (payload) => {
           const isStatusChange = payload.eventType === 'UPDATE' && payload.new && payload.old && payload.new.status !== payload.old.status;
           const isDeleteOrInsert = payload.eventType === 'DELETE' || payload.eventType === 'INSERT';
@@ -142,6 +137,8 @@ export function VendedorMisVentasTab({ onDashboardRefresh }: { onDashboardRefres
           }
         }
       )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rutas' }, () => fetchPedidos())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'entregas' }, () => fetchPedidos())
       .subscribe();
 
     return () => {
@@ -227,29 +224,35 @@ export function VendedorMisVentasTab({ onDashboardRefresh }: { onDashboardRefres
   };
 
   // Clasificación por tab
-  const pedidosPendientes = pedidos.filter(p => p.status === "por_autorizar" || p.status === "pendiente");
+  // Exclude pedidos that are currently being loaded from "Pedidos" tab
+  const pedidosPendientes = pedidos.filter(p => 
+    (p.status === "por_autorizar" || p.status === "pendiente") && !pedidosEnCargaIds.has(p.id)
+  );
   const enRuta = pedidos.filter(p => p.status === "en_ruta");
   const entregadosAll = pedidos.filter(p => p.status === "entregado");
   const porCobrar = pedidos.filter(p => p.status === "entregado" && !p.pagado);
 
-  // Count for "En Carga" badge - pedidos in rutas being loaded
-  useEffect(() => {
-    const fetchCargaCount = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { count } = await supabase
-        .from("entregas")
-        .select("id, pedido:pedidos!inner(vendedor_id), ruta:rutas!inner(status, carga_completada)", { count: "exact", head: true })
-        .eq("pedido.vendedor_id", user.id)
-        .eq("ruta.status", "programada")
-        .eq("ruta.carga_completada", false);
-      setEnCargaCount(count || 0);
-    };
-    fetchCargaCount();
+  // Fetch pedidos en carga (IDs + count)
+  const fetchPedidosEnCarga = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from("entregas")
+      .select("pedido_id, pedido:pedidos!inner(vendedor_id), ruta:rutas!inner(status, carga_completada)")
+      .eq("pedido.vendedor_id", user.id)
+      .eq("ruta.status", "programada")
+      .eq("ruta.carga_completada", false);
+    const ids = new Set((data || []).map((e: any) => e.pedido_id));
+    setPedidosEnCargaIds(ids);
+    setEnCargaCount(ids.size);
+  };
 
+  useEffect(() => {
+    fetchPedidosEnCarga();
     const ch = supabase.channel("vendedor-carga-count")
-      .on("postgres_changes", { event: "*", schema: "public", table: "carga_productos" }, fetchCargaCount)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rutas" }, fetchCargaCount)
+      .on("postgres_changes", { event: "*", schema: "public", table: "carga_productos" }, fetchPedidosEnCarga)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rutas" }, fetchPedidosEnCarga)
+      .on("postgres_changes", { event: "*", schema: "public", table: "entregas" }, fetchPedidosEnCarga)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
