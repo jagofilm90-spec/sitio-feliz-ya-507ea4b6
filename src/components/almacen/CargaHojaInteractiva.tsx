@@ -342,7 +342,7 @@ export const CargaHojaInteractiva = ({
       // Auto-save to DB so progress persists
       const item = updated[idx];
       const dbUpdates: Record<string, any> = {};
-      if ('confirmado' in updates) dbUpdates.cargado = updates.confirmado;
+      // Don't auto-save confirmado here — handled by handleToggleConfirmado
       if ('cantidadACargar' in updates) dbUpdates.cantidad_cargada = updates.cantidadACargar;
       if ('pesoRealKg' in updates) dbUpdates.peso_real_kg = updates.pesoRealKg;
       if ('loteId' in updates) dbUpdates.lote_id = updates.loteId;
@@ -351,6 +351,121 @@ export const CargaHojaInteractiva = ({
       }
       return updated;
     });
+  };
+
+  // Toggle checkbox with immediate inventory adjustment
+  const handleToggleConfirmado = async (idx: number, checked: boolean) => {
+    const item = productos[idx];
+    if (!item || !item.loteId) {
+      toast.error("Selecciona un lote primero");
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (checked) {
+        // MARKING AS LOADED — check if already had inventory deducted
+        const { data: cargaActual } = await supabase
+          .from("carga_productos")
+          .select("cargado, movimiento_inventario_id, cantidad_cargada")
+          .eq("id", item.cargaProductoId)
+          .single();
+
+        if (cargaActual?.movimiento_inventario_id) {
+          // Already has movement — adjust difference only
+          const cantidadPrevia = cargaActual.cantidad_cargada || 0;
+          const diferencia = item.cantidadACargar - cantidadPrevia;
+
+          if (diferencia !== 0) {
+            if (diferencia > 0) {
+              await supabase.rpc("decrementar_lote", { p_lote_id: item.loteId, p_cantidad: diferencia });
+            } else {
+              await supabase.rpc("incrementar_lote", { p_lote_id: item.loteId, p_cantidad: Math.abs(diferencia) });
+            }
+            await supabase.from("inventario_movimientos").update({
+              cantidad: item.cantidadACargar,
+            }).eq("id", cargaActual.movimiento_inventario_id);
+          }
+        } else {
+          // First time — full decrement
+          await supabase.rpc("decrementar_lote", { p_lote_id: item.loteId, p_cantidad: item.cantidadACargar });
+
+          const { data: movimiento } = await supabase.from("inventario_movimientos").insert({
+            producto_id: item.productoId,
+            tipo_movimiento: "salida",
+            cantidad: item.cantidadACargar,
+            motivo: "Carga de pedido",
+            lote_id: item.loteId,
+            referencia_id: item.entregaId,
+            usuario_id: user?.id,
+          }).select("id").single();
+
+          if (movimiento) {
+            await supabase.from("carga_productos").update({
+              movimiento_inventario_id: movimiento.id,
+            }).eq("id", item.cargaProductoId);
+
+            // Update local state with movimiento ID
+            setProductos(prev => prev.map((p, i) =>
+              i === idx ? { ...p, movimientoInventarioId: movimiento.id } : p
+            ));
+          }
+        }
+
+        // Save cargado state
+        await supabase.from("carga_productos").update({
+          cargado: true,
+          cantidad_cargada: item.cantidadACargar,
+          lote_id: item.loteId,
+          peso_real_kg: item.pesoRealKg,
+          cargado_en: new Date().toISOString(),
+          cargado_por: user?.id,
+        }).eq("id", item.cargaProductoId);
+
+        toast.success(`${item.codigo} cargado — inventario actualizado`);
+      } else {
+        // UNCHECKING — revert inventory
+        const { data: cargaActual } = await supabase
+          .from("carga_productos")
+          .select("movimiento_inventario_id, cantidad_cargada, lote_id")
+          .eq("id", item.cargaProductoId)
+          .single();
+
+        if (cargaActual?.lote_id && cargaActual?.cantidad_cargada) {
+          await supabase.rpc("incrementar_lote", {
+            p_lote_id: cargaActual.lote_id,
+            p_cantidad: cargaActual.cantidad_cargada,
+          });
+
+          if (cargaActual.movimiento_inventario_id) {
+            await supabase.from("inventario_movimientos").delete()
+              .eq("id", cargaActual.movimiento_inventario_id);
+          }
+        }
+
+        await supabase.from("carga_productos").update({
+          cargado: false,
+          cargado_en: null,
+          cargado_por: null,
+          movimiento_inventario_id: null,
+        }).eq("id", item.cargaProductoId);
+
+        setProductos(prev => prev.map((p, i) =>
+          i === idx ? { ...p, movimientoInventarioId: null } : p
+        ));
+
+        toast.info(`${item.codigo} desmarcado — inventario restaurado`);
+      }
+
+      // Update local confirmado state
+      setProductos(prev => prev.map((p, i) =>
+        i === idx ? { ...p, confirmado: checked } : p
+      ));
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Error al actualizar inventario: " + (err?.message || ""));
+    }
   };
 
   // Load evidencias
@@ -379,48 +494,35 @@ export const CargaHojaInteractiva = ({
           return;
         }
 
-        // Skip inventory decrement if already processed (has movimiento_inventario_id)
-        if (!prod.movimientoInventarioId) {
-          await supabase.rpc("decrementar_lote", { p_lote_id: prod.loteId, p_cantidad: prod.cantidadACargar });
-
-          const { data: movimiento } = await supabase.from("inventario_movimientos").insert({
-            producto_id: prod.productoId,
-            tipo_movimiento: "salida",
-            cantidad: prod.cantidadACargar,
-            motivo: "Carga de pedido",
-            lote_id: prod.loteId,
-            referencia_id: prod.entregaId,
-            usuario_id: user?.id,
-          }).select("id").single();
-
-          // Link movimiento to carga_producto to prevent double-decrement
-          if (movimiento) {
-            await supabase.from("carga_productos").update({ movimiento_inventario_id: movimiento.id }).eq("id", prod.cargaProductoId);
-          }
-        } else {
-          // Already processed — adjust difference if quantity changed
-          const { data: cargaPrevia } = await supabase
+        // If not yet confirmed/loaded via checkbox, handle inventory now
+        if (!prod.confirmado || !prod.movimientoInventarioId) {
+          // Check DB state to avoid double-processing
+          const { data: cargaActual } = await supabase
             .from("carga_productos")
-            .select("cantidad_cargada")
+            .select("movimiento_inventario_id, cantidad_cargada")
             .eq("id", prod.cargaProductoId)
             .single();
 
-          const cantidadPrevia = cargaPrevia?.cantidad_cargada || 0;
-          const diferencia = prod.cantidadACargar - cantidadPrevia;
+          if (!cargaActual?.movimiento_inventario_id) {
+            await supabase.rpc("decrementar_lote", { p_lote_id: prod.loteId, p_cantidad: prod.cantidadACargar });
 
-          if (diferencia !== 0) {
-            if (diferencia > 0) {
-              await supabase.rpc("decrementar_lote", { p_lote_id: prod.loteId, p_cantidad: diferencia });
-            } else {
-              await supabase.rpc("incrementar_lote", { p_lote_id: prod.loteId, p_cantidad: Math.abs(diferencia) });
-            }
-
-            await supabase.from("inventario_movimientos").update({
+            const { data: movimiento } = await supabase.from("inventario_movimientos").insert({
+              producto_id: prod.productoId,
+              tipo_movimiento: "salida",
               cantidad: prod.cantidadACargar,
-            }).eq("id", prod.movimientoInventarioId);
+              motivo: "Carga de pedido",
+              lote_id: prod.loteId,
+              referencia_id: prod.entregaId,
+              usuario_id: user?.id,
+            }).select("id").single();
+
+            if (movimiento) {
+              await supabase.from("carga_productos").update({ movimiento_inventario_id: movimiento.id }).eq("id", prod.cargaProductoId);
+            }
           }
         }
 
+        // Ensure final state is saved
         await supabase.from("carga_productos").update({
           cargado: true,
           cantidad_cargada: prod.cantidadACargar,
@@ -886,7 +988,7 @@ export const CargaHojaInteractiva = ({
                         }`}>
                         <Checkbox
                           checked={item.confirmado}
-                          onCheckedChange={(checked) => updateProducto(item.originalIdx, { confirmado: !!checked })}
+                          onCheckedChange={(checked) => handleToggleConfirmado(item.originalIdx, !!checked)}
                           className="h-5 w-5 rounded border-2 shrink-0"
                         />
                         <div className="flex flex-col items-center">
