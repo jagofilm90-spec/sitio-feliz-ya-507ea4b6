@@ -105,7 +105,7 @@ export const CargaHojaInteractiva = ({
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [evidencias, setEvidencias] = useState<any[]>([]);
   const [llevaSellos, setLlevaSellos] = useState(true);
-  const [numeroSello, setNumeroSello] = useState("");
+  const [numerosSello, setNumerosSello] = useState<string[]>([""]);
   const [showFirma, setShowFirma] = useState(false);
   const [firmaLoading, setFirmaLoading] = useState(false);
 
@@ -241,7 +241,12 @@ export const CargaHojaInteractiva = ({
         setFase("evidencias");
         if (rutaData) {
           setLlevaSellos(rutaData.lleva_sellos ?? true);
-          setNumeroSello(rutaData.numero_sello_salida || "");
+          try {
+            const parsed = JSON.parse(rutaData.numero_sello_salida || "[]");
+            setNumerosSello(Array.isArray(parsed) ? parsed : [rutaData.numero_sello_salida || ""]);
+          } catch {
+            setNumerosSello(rutaData.numero_sello_salida ? [rutaData.numero_sello_salida] : [""]);
+          }
         }
       }
 
@@ -362,10 +367,31 @@ export const CargaHojaInteractiva = ({
 
   // Save sellos info and move to firma
   const handleIrAFirma = async () => {
+    // Validate carga_vehiculo photo
+    const hasCargaVehiculo = evidencias.some(e => e.tipo_evidencia === 'carga_vehiculo');
+    if (!hasCargaVehiculo) {
+      toast.error("Falta la foto de caja abierta (obligatoria)");
+      return;
+    }
+
+    // Validate seals for direct orders (1 pedido)
+    const esDirecto = pedidos.length === 1;
+    if (esDirecto && llevaSellos) {
+      const selloEvidencias = evidencias.filter(e => e.tipo_evidencia.startsWith("sello_salida_"));
+      if (selloEvidencias.length === 0) {
+        toast.error("Pedido directo: al menos 1 sello con foto es obligatorio");
+        return;
+      }
+    }
+
+    if (!esDirecto && !llevaSellos) {
+      // OK - multiple pedidos without seals
+    }
+
     // Save sellos info to ruta
     await supabase.from("rutas").update({
       lleva_sellos: llevaSellos,
-      numero_sello_salida: llevaSellos ? numeroSello : null,
+      numero_sello_salida: llevaSellos ? JSON.stringify(numerosSello.filter(n => n.trim())) : null,
     }).eq("id", rutaId);
 
     setFase("firma");
@@ -852,8 +878,9 @@ export const CargaHojaInteractiva = ({
             onEvidenciaAdded={loadEvidencias}
             llevaSellos={llevaSellos}
             onLlevaSellosChange={setLlevaSellos}
-            numeroSello={numeroSello}
-            onNumeroSelloChange={setNumeroSello}
+            numerosSello={numerosSello}
+            onNumerosSelloChange={setNumerosSello}
+            totalPedidos={pedidos.length}
           />
 
           <Button onClick={handleIrAFirma} size="lg" className="w-full h-14 text-lg font-bold">
