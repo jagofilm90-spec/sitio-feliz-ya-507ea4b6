@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -127,6 +127,22 @@ export const CargaHojaInteractiva = ({
     };
     loadUser();
   }, []);
+
+  // Auto-save sellos to DB whenever they change (debounced)
+  const sellosInitializedRef = useRef(false);
+  useEffect(() => {
+    if (loading || !sellosInitializedRef.current) {
+      if (!loading) sellosInitializedRef.current = true;
+      return;
+    }
+    const timeout = setTimeout(() => {
+      supabase.from("rutas").update({
+        lleva_sellos: llevaSellos,
+        numero_sello_salida: llevaSellos ? JSON.stringify(numerosSello) : null,
+      }).eq("id", rutaId);
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [numerosSello, llevaSellos, rutaId, loading]);
 
   // Load current ayudantes_ids from ruta when popover opens
   const handleOpenAyudantesEdit = async () => {
@@ -262,7 +278,8 @@ export const CargaHojaInteractiva = ({
           setLlevaSellos(rutaData.lleva_sellos ?? true);
           try {
             const parsed = JSON.parse(rutaData.numero_sello_salida || "[]");
-            setNumerosSello(Array.isArray(parsed) ? parsed : [rutaData.numero_sello_salida || ""]);
+            const arr = Array.isArray(parsed) ? parsed : [rutaData.numero_sello_salida || ""];
+            setNumerosSello(arr.length > 0 ? arr : [""]);
           } catch {
             setNumerosSello(rutaData.numero_sello_salida ? [rutaData.numero_sello_salida] : [""]);
           }
