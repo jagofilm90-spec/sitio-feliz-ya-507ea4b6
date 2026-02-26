@@ -627,15 +627,32 @@ export const CargaHojaInteractiva = ({
       {/* Cancel button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm">
-          <Badge variant={fase === "checklist" ? "default" : "secondary"} className="gap-1">
-            <Package className="h-3 w-3" />1. Checklist
-          </Badge>
+          <button
+            onClick={() => setFase("checklist")}
+            className="inline-flex items-center"
+          >
+            <Badge variant={fase === "checklist" ? "default" : "secondary"} className="gap-1 cursor-pointer hover:opacity-80">
+              <Package className="h-3 w-3" />1. Checklist
+            </Badge>
+          </button>
           <ArrowRight className="h-3 w-3 text-muted-foreground" />
-          <Badge variant={fase === "evidencias" ? "default" : "secondary"} className="gap-1">
-            <Camera className="h-3 w-3" />2. Evidencias
-          </Badge>
+          <button
+            onClick={() => { if (fase === "firma") setFase("evidencias"); }}
+            disabled={fase === "checklist"}
+            className="inline-flex items-center"
+          >
+            <Badge
+              variant={fase === "evidencias" ? "default" : "secondary"}
+              className={`gap-1 ${fase !== "checklist" ? "cursor-pointer hover:opacity-80" : "opacity-50"}`}
+            >
+              <Camera className="h-3 w-3" />2. Evidencias
+            </Badge>
+          </button>
           <ArrowRight className="h-3 w-3 text-muted-foreground" />
-          <Badge variant={fase === "firma" ? "default" : "secondary"} className="gap-1">
+          <Badge
+            variant={fase === "firma" ? "default" : "secondary"}
+            className="gap-1 opacity-50"
+          >
             <PenTool className="h-3 w-3" />3. Firma
           </Badge>
         </div>
