@@ -106,13 +106,17 @@ export const CargaHojaInteractiva = ({
     setAyudantesPopoverOpen(true);
     setLoadingAyudantes(true);
     try {
-      const [rutaRes, empRes] = await Promise.all([
+      const fechaHoy = format(new Date(), "yyyy-MM-dd");
+      const [rutaRes, empRes, otrasRutasRes] = await Promise.all([
         supabase.from("rutas").select("ayudantes_ids").eq("id", rutaId).single(),
-        supabase.from("empleados").select("id, nombre_completo").eq("puesto", "Ayudante de Chofer").eq("activo", true),
+        supabase.from("empleados").select("id, nombre_completo").eq("puesto", "Ayudante de Chofer").eq("activo", true).order("nombre_completo"),
+        supabase.from("rutas").select("ayudantes_ids").eq("fecha_ruta", fechaHoy).not("status", "eq", "cancelada").neq("id", rutaId),
       ]);
       const currentIds: string[] = rutaRes.data?.ayudantes_ids || [];
+      const ayudantesEnOtrasRutas = new Set((otrasRutasRes.data || []).flatMap(r => r.ayudantes_ids || []).filter(Boolean));
       setAyudantesEditIds(currentIds);
-      setAllAyudantes(empRes.data || []);
+      // Show ayudantes not in other routes, plus the ones already on this route
+      setAllAyudantes((empRes.data || []).filter(a => !ayudantesEnOtrasRutas.has(a.id) || currentIds.includes(a.id)));
     } catch { }
     setLoadingAyudantes(false);
   };

@@ -102,13 +102,14 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
 
       const { data: rutasHoy } = await supabase
         .from("rutas")
-        .select("chofer_id, vehiculo_id, entregas(id)")
+        .select("chofer_id, vehiculo_id, ayudantes_ids, entregas(id)")
         .eq("fecha_ruta", fechaHoy)
         .not("status", "eq", "cancelada");
 
       const rutasConCarga = (rutasHoy || []).filter(r => r.entregas && r.entregas.length > 0);
       const choferesEnRuta = new Set(rutasConCarga.map(r => r.chofer_id).filter(Boolean));
       const vehiculosEnRuta = new Set(rutasConCarga.map(r => r.vehiculo_id).filter(Boolean));
+      const ayudantesEnRuta = new Set(rutasConCarga.flatMap(r => r.ayudantes_ids || []).filter(Boolean));
 
       const [empleadosRes, vehiculosRes] = await Promise.all([
         supabase.from("empleados").select("id, nombre_completo, puesto")
@@ -119,7 +120,7 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
 
       const all = empleadosRes.data || [];
       setChoferes(all.filter(e => e.puesto === "Chofer" && !choferesEnRuta.has(e.id)));
-      setAyudantes(all.filter(e => e.puesto === "Ayudante de Chofer" && !choferesEnRuta.has(e.id)));
+      setAyudantes(all.filter(e => e.puesto === "Ayudante de Chofer" && !ayudantesEnRuta.has(e.id)));
       setVehiculos((vehiculosRes.data || []).filter(v => !vehiculosEnRuta.has(v.id)));
       setLoadingOptions(false);
     };
