@@ -35,7 +35,7 @@ interface Pedido {
   pagado: boolean;
   peso_total_kg: number | null;
   cliente: { nombre: string };
-  sucursal?: { nombre: string; zona?: { nombre: string } | null } | null;
+  sucursal?: { nombre: string; direccion?: string | null; zona?: { nombre: string } | null } | null;
 }
 
 interface GrupoZona {
@@ -152,7 +152,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
           id, folio, fecha_pedido, fecha_entrega_real, total, saldo_pendiente, 
           status, termino_credito, pagado, peso_total_kg, cliente_id,
           cliente:clientes(nombre),
-          sucursal:cliente_sucursales(nombre, zona:zonas(nombre))
+          sucursal:cliente_sucursales(nombre, direccion, zona:zonas(nombre))
         `)
         .eq("vendedor_id", user.id)
         .neq("status", "cancelado")
@@ -334,6 +334,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                     <TableHead className="w-[110px]">Pedido</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead className="w-[90px]">Fecha</TableHead>
+                    <TableHead>Dirección</TableHead>
                     <TableHead className="w-[80px]">Crédito</TableHead>
                     <TableHead className="text-right w-[100px]">Total</TableHead>
                     <TableHead className="text-center w-[50px]">PDF</TableHead>
@@ -363,6 +364,11 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                         <TableCell>
                           <span className="text-xs text-muted-foreground">
                             {format(new Date(p.fecha_pedido), "d MMM yy", { locale: es })}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs text-muted-foreground truncate max-w-[150px] block">
+                            {(p.sucursal as any)?.direccion || "—"}
                           </span>
                         </TableCell>
                         <TableCell>
