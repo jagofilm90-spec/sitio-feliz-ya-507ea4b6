@@ -96,6 +96,7 @@ export const CargaHojaInteractiva = ({
 
   // Post-carga flow phases: checklist → evidencias → firma
   const [fase, setFase] = useState<"checklist" | "evidencias" | "firma">("checklist");
+  const [pedidoActualIdx, setPedidoActualIdx] = useState(0);
   const [evidencias, setEvidencias] = useState<any[]>([]);
   const [llevaSellos, setLlevaSellos] = useState(true);
   const [numeroSello, setNumeroSello] = useState("");
@@ -482,9 +483,9 @@ export const CargaHojaInteractiva = ({
           </div>
           <div className="px-3 py-2">
             <p className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
-              <Package className="h-3 w-3" />Productos
+              <Package className="h-3 w-3" />Pedidos
             </p>
-            <p className="font-semibold">{productosActivos.length} · {pedidos.length} ped.</p>
+            <p className="font-semibold">{pedidos.length}</p>
           </div>
           <div className="px-3 py-2">
             <p className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
@@ -548,148 +549,195 @@ export const CargaHojaInteractiva = ({
       {/* ═══ FASE 1: Checklist de productos ═══ */}
       {fase === "checklist" && (
         <>
-          {/* Product tables by pedido */}
-          <div>
-            <div className="space-y-6">
-              {pedidoGroups.map(group => (
-                <div key={group.pedidoId}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="outline" className="text-sm font-bold">{group.folio}</Badge>
-                    <span className="text-sm text-muted-foreground">{group.clienteNombre}</span>
-                    <span className="text-xs text-muted-foreground ml-auto">
-                      {group.items.filter(i => !i.eliminado).length} productos
-                    </span>
-                  </div>
-                  {/* Table header */}
-                  <div className="grid grid-cols-[auto_90px_1fr_90px_36px] gap-1 px-2 py-1.5 bg-muted/60 rounded-t-md text-[10px] font-bold uppercase text-muted-foreground items-center">
-                    <span className="w-6"></span>
-                    <span className="text-center">Cant.</span>
-                    <span>Descripción</span>
-                    <span className="text-center">Peso kg</span>
-                    <span></span>
-                  </div>
-                  {/* Rows */}
-                  <div className="divide-y divide-border border rounded-b-md">
-                    {group.items.map(item => {
-                      if (item.eliminado) return (
-                        <div key={item.cargaProductoId} className="grid grid-cols-[auto_1fr_36px] gap-2 px-2 py-2 items-center opacity-40 line-through">
-                          <span className="w-6" />
-                          <span className="text-sm">{item.codigo} — {item.nombre}</span>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600"
-                            onClick={() => updateProducto(item.originalIdx, { eliminado: false })}>
-                            ↩
-                          </Button>
-                        </div>
-                      );
+          {/* Tabs de pedidos (solo si hay más de 1) */}
+          {pedidoGroups.length > 1 && (
+            <div className="flex gap-1 overflow-x-auto pb-1">
+              {pedidoGroups.map((group, idx) => {
+                const itemsActivos = group.items.filter(i => !i.eliminado);
+                const todosCheck = itemsActivos.length > 0 && itemsActivos.every(i => i.confirmado);
+                const isActive = idx === pedidoActualIdx;
+                return (
+                  <button
+                    key={group.pedidoId}
+                    onClick={() => setPedidoActualIdx(idx)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap border transition-colors ${
+                      isActive
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : todosCheck
+                          ? "bg-green-100 dark:bg-green-950/30 border-green-500 text-green-700 dark:text-green-400"
+                          : "bg-muted/50 border-border text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {todosCheck && <CheckCircle2 className="h-3.5 w-3.5" />}
+                    <span>{group.clienteNombre}</span>
+                    <span className="text-[10px] opacity-70">({itemsActivos.length})</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
-                      const pesoTeoricoItem = item.pesoKgUnit ? item.cantidadACargar * item.pesoKgUnit : null;
-                      const cantidadDifiere = item.cantidadACargar !== item.cantidadSolicitada;
-                      const esVentaPorKg = item.precioPorKilo;
-                      const tienePeso = !!item.pesoKgUnit;
-                      const displayName = getCompactDisplayName({
-                        nombre: item.nombre,
-                        marca: item.marca,
-                        especificaciones: item.especificaciones,
-                        contenido_empaque: item.contenido_empaque,
-                        peso_kg: item.pesoKgUnit,
-                      });
+          {/* Current pedido products */}
+          {(() => {
+            const group = pedidoGroups[pedidoActualIdx];
+            if (!group) return null;
+            const itemsActivos = group.items.filter(i => !i.eliminado);
+            const confirmadosGrupo = itemsActivos.filter(i => i.confirmado).length;
+            const todosGrupoCheck = confirmadosGrupo === itemsActivos.length && itemsActivos.length > 0;
 
-                      return (
-                        <div key={item.cargaProductoId}
-                          className={`grid grid-cols-[auto_90px_1fr_90px_36px] gap-1 px-2 py-2 items-center ${
-                            item.confirmado ? "bg-green-50/50 dark:bg-green-950/20" : ""
-                          }`}>
-                          {/* Col 1: Checkbox */}
-                          <Checkbox
-                            checked={item.confirmado}
-                            onCheckedChange={(checked) => updateProducto(item.originalIdx, { confirmado: !!checked })}
-                            className="h-5 w-5 rounded border-2 shrink-0"
+            // Global check: all pedidos done?
+            const todosGlobal = productosActivos.length > 0 && productosActivos.every(p => p.confirmado);
+            const esUltimoPedido = pedidoActualIdx === pedidoGroups.length - 1;
+
+            return (
+              <div>
+                {/* Pedido header */}
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="text-sm font-bold">{group.folio}</Badge>
+                  <span className="text-sm font-semibold">{group.clienteNombre}</span>
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    {pedidoActualIdx + 1}/{pedidoGroups.length} · {confirmadosGrupo}/{itemsActivos.length} productos
+                  </span>
+                </div>
+
+                {/* Table header */}
+                <div className="grid grid-cols-[auto_90px_1fr_90px_36px] gap-1 px-2 py-1.5 bg-muted/60 rounded-t-md text-[10px] font-bold uppercase text-muted-foreground items-center">
+                  <span className="w-6"></span>
+                  <span className="text-center">Cant.</span>
+                  <span>Descripción</span>
+                  <span className="text-center">Peso kg</span>
+                  <span></span>
+                </div>
+
+                {/* Rows */}
+                <div className="divide-y divide-border border rounded-b-md">
+                  {group.items.map(item => {
+                    if (item.eliminado) return (
+                      <div key={item.cargaProductoId} className="grid grid-cols-[auto_1fr_36px] gap-2 px-2 py-2 items-center opacity-40 line-through">
+                        <span className="w-6" />
+                        <span className="text-sm">{item.codigo} — {item.nombre}</span>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600"
+                          onClick={() => updateProducto(item.originalIdx, { eliminado: false })}>
+                          ↩
+                        </Button>
+                      </div>
+                    );
+
+                    const pesoTeoricoItem = item.pesoKgUnit ? item.cantidadACargar * item.pesoKgUnit : null;
+                    const cantidadDifiere = item.cantidadACargar !== item.cantidadSolicitada;
+                    const esVentaPorKg = item.precioPorKilo;
+                    const tienePeso = !!item.pesoKgUnit;
+                    const displayName = getCompactDisplayName({
+                      nombre: item.nombre,
+                      marca: item.marca,
+                      especificaciones: item.especificaciones,
+                      contenido_empaque: item.contenido_empaque,
+                      peso_kg: item.pesoKgUnit,
+                    });
+
+                    return (
+                      <div key={item.cargaProductoId}
+                        className={`grid grid-cols-[auto_90px_1fr_90px_36px] gap-1 px-2 py-2 items-center ${
+                          item.confirmado ? "bg-green-50/50 dark:bg-green-950/20" : ""
+                        }`}>
+                        <Checkbox
+                          checked={item.confirmado}
+                          onCheckedChange={(checked) => updateProducto(item.originalIdx, { confirmado: !!checked })}
+                          className="h-5 w-5 rounded border-2 shrink-0"
+                        />
+                        <div className="flex flex-col items-center">
+                          <Input
+                            type="number" inputMode="numeric"
+                            value={item.cantidadACargar || ""}
+                            onChange={e => {
+                              const raw = e.target.value;
+                              const newCant = raw === "" ? 0 : parseFloat(raw);
+                              if (isNaN(newCant)) return;
+                              const updates: Partial<ProductoHoja> = { cantidadACargar: newCant };
+                              if (tienePeso && !esVentaPorKg) {
+                                updates.pesoRealKg = newCant * (item.pesoKgUnit || 0);
+                              }
+                              updateProducto(item.originalIdx, updates);
+                            }}
+                            className={`h-8 w-full text-center text-sm font-semibold ${
+                              cantidadDifiere ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : ""
+                            }`}
+                            disabled={item.confirmado}
                           />
-
-                          {/* Col 2: Cantidad */}
-                          <div className="flex flex-col items-center">
-                            <Input
-                              type="number" inputMode="numeric"
-                              value={item.cantidadACargar || ""}
-                              onChange={e => {
-                                const raw = e.target.value;
-                                const newCant = raw === "" ? 0 : parseFloat(raw);
-                                if (isNaN(newCant)) return;
-                                const updates: Partial<ProductoHoja> = { cantidadACargar: newCant };
-                                if (tienePeso && !esVentaPorKg) {
-                                  updates.pesoRealKg = newCant * (item.pesoKgUnit || 0);
-                                }
-                                updateProducto(item.originalIdx, updates);
-                              }}
-                              className={`h-8 w-full text-center text-sm font-semibold ${
-                                cantidadDifiere ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : ""
-                              }`}
-                              disabled={item.confirmado}
-                            />
-                            {cantidadDifiere && (
-                              <span className="text-[9px] text-amber-600 flex items-center gap-0.5 mt-0.5">
-                                <AlertTriangle className="w-2.5 h-2.5" />
-                                ≠{item.cantidadSolicitada}
-                              </span>
+                          {cantidadDifiere && (
+                            <span className="text-[9px] text-amber-600 flex items-center gap-0.5 mt-0.5">
+                              <AlertTriangle className="w-2.5 h-2.5" />
+                              ≠{item.cantidadSolicitada}
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium leading-snug">{displayName}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[10px] text-muted-foreground font-mono">{item.codigo}</span>
+                            {item.confirmado && (
+                              <Badge className="bg-green-600 text-white text-[9px] px-1 py-0">✓</Badge>
                             )}
                           </div>
-
-                          {/* Col 3: Descripción completa */}
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium leading-snug">{displayName}</p>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="text-[10px] text-muted-foreground font-mono">{item.codigo}</span>
-                              {item.confirmado && (
-                                <Badge className="bg-green-600 text-white text-[9px] px-1 py-0">✓</Badge>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Col 4: Peso kg */}
-                          {tienePeso ? (
-                            esVentaPorKg ? (
-                              <Input
-                                type="number" inputMode="decimal" step="0.1"
-                                value={item.pesoRealKg ?? (pesoTeoricoItem?.toFixed(1) || "")}
-                                onChange={e => updateProducto(item.originalIdx, { pesoRealKg: e.target.value ? parseFloat(e.target.value) : null })}
-                                placeholder={pesoTeoricoItem?.toFixed(1) || ""}
-                                className="h-8 w-full text-center text-sm font-semibold"
-                                disabled={item.confirmado}
-                              />
-                            ) : (
-                              <div className="h-8 flex items-center justify-center rounded-md border bg-muted text-sm font-medium text-muted-foreground">
-                                {(item.pesoRealKg ?? pesoTeoricoItem)?.toLocaleString("es-MX", { maximumFractionDigits: 1 }) || "—"}
-                              </div>
-                            )
-                          ) : (
-                            <span className="text-center text-xs text-muted-foreground">—</span>
-                          )}
-
-
-                          {/* Col 6: Delete */}
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
-                            onClick={() => updateProducto(item.originalIdx, { eliminado: true })}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
                         </div>
-                      );
-                    })}
+                        {tienePeso ? (
+                          esVentaPorKg ? (
+                            <Input
+                              type="number" inputMode="decimal" step="0.1"
+                              value={item.pesoRealKg ?? (pesoTeoricoItem?.toFixed(1) || "")}
+                              onChange={e => updateProducto(item.originalIdx, { pesoRealKg: e.target.value ? parseFloat(e.target.value) : null })}
+                              placeholder={pesoTeoricoItem?.toFixed(1) || ""}
+                              className="h-8 w-full text-center text-sm font-semibold"
+                              disabled={item.confirmado}
+                            />
+                          ) : (
+                            <div className="h-8 flex items-center justify-center rounded-md border bg-muted text-sm font-medium text-muted-foreground">
+                              {(item.pesoRealKg ?? pesoTeoricoItem)?.toLocaleString("es-MX", { maximumFractionDigits: 1 }) || "—"}
+                            </div>
+                          )
+                        ) : (
+                          <span className="text-center text-xs text-muted-foreground">—</span>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => updateProducto(item.originalIdx, { eliminado: true })}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Navigation / Confirm button */}
+                <div className="flex gap-2 mt-4">
+                  {pedidoActualIdx > 0 && (
+                    <Button variant="outline" size="lg" className="h-14 text-lg"
+                      onClick={() => setPedidoActualIdx(prev => prev - 1)}>
+                      ← Anterior
+                    </Button>
+                  )}
+                  <div className="flex-1">
+                    {todosGlobal ? (
+                      <Button onClick={handleConfirmarCarga} disabled={saving}
+                        size="lg" className="w-full h-14 text-lg font-bold">
+                        {saving ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <CheckCircle2 className="h-5 w-5 mr-2" />}
+                        Finalizar Carga — Pasar a Evidencias
+                      </Button>
+                    ) : !esUltimoPedido ? (
+                      <Button onClick={() => setPedidoActualIdx(prev => prev + 1)}
+                        size="lg" className="w-full h-14 text-lg font-bold"
+                        disabled={!todosGrupoCheck}>
+                        Siguiente → {pedidoGroups[pedidoActualIdx + 1]?.clienteNombre}
+                        <span className="ml-2 text-sm opacity-70">({pedidoActualIdx + 2}/{pedidoGroups.length})</span>
+                      </Button>
+                    ) : (
+                      <Button disabled size="lg" className="w-full h-14 text-lg font-bold opacity-50">
+                        <CheckCircle2 className="h-5 w-5 mr-2" />
+                        Faltan pedidos por confirmar
+                      </Button>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Confirm checklist button */}
-          {(() => {
-            const confirmados = productosActivos.filter(p => p.confirmado).length;
-            const todosConfirmados = confirmados === productosActivos.length && productosActivos.length > 0;
-            return (
-              <Button onClick={handleConfirmarCarga} disabled={saving || !todosConfirmados}
-                size="lg" className="w-full h-14 text-lg font-bold">
-                {saving ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <CheckCircle2 className="h-5 w-5 mr-2" />}
-                Confirmar Carga ({confirmados}/{productosActivos.length})
-              </Button>
+              </div>
             );
           })()}
         </>
