@@ -221,6 +221,7 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
           tipo_ruta: "local",
           status: "programada",
           almacenista_id: empleadoActual?.id || null,
+          ayudantes_ids: ayudantesIds.length > 0 ? ayudantesIds : null,
           carga_iniciada_en: new Date().toISOString(),
           carga_iniciada_por: user.id,
         })
