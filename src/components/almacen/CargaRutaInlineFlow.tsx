@@ -62,6 +62,7 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
   const [scanInput, setScanInput] = useState("");
   const lastScannedRef = useRef<string>("");
   const scanCooldownRef = useRef<NodeJS.Timeout | null>(null);
+  const autoStartRef = useRef<NodeJS.Timeout | null>(null);
 
   // Ruta (se crea al confirmar, NO al escanear)
   const [rutaId, setRutaId] = useState<string | null>(null);
@@ -88,6 +89,16 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
       setCameraActive(true);
     }
   }, [paso]);
+
+  // Auto-proceed when exactly 1 pedido is scanned (single-order shortcut)
+  useEffect(() => {
+    if (paso === "escaneo" && cola.length === 1 && !creatingRoute) {
+      autoStartRef.current = setTimeout(() => {
+        handleCrearRutaYCargar();
+      }, 800);
+    }
+    return () => { if (autoStartRef.current) clearTimeout(autoStartRef.current); };
+  }, [cola.length, paso]);
 
   const formatTiempo = (s: number) => {
     const m = Math.floor(s / 60);
@@ -180,12 +191,14 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
         .from("pedidos").select("id, folio, cliente_id, cliente:clientes(nombre)").eq("id", id).single();
       if (error || !data) { toast.error("Pedido no encontrado"); return; }
 
-      setCola(prev => [...prev, {
+      const newItem = {
         pedidoId: data.id,
         folio: data.folio,
         clienteNombre: (data.cliente as any)?.nombre || "Sin cliente",
         clienteId: data.cliente_id,
-      }]);
+      };
+
+      setCola(prev => [...prev, newItem]);
 
       toast.success(`Pedido ${data.folio} agregado`);
     } catch {
