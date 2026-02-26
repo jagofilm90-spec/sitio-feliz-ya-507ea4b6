@@ -124,10 +124,10 @@ export function SellosSection({
 
       if (error) throw error;
 
-      // Also remove the number for this seal
+      // Clear only the number for this specific seal, don't shift others
       const newNumeros = [...numerosSello];
       if (selloIdx < newNumeros.length) {
-        newNumeros.splice(selloIdx, 1);
+        newNumeros[selloIdx] = "";
         onNumerosSelloChange(newNumeros);
       }
 
