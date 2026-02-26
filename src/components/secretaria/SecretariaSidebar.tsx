@@ -35,6 +35,7 @@ import {
   Store,
   Coins,
   User,
+  Truck,
 } from "lucide-react";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import { LiveIndicator } from "@/components/ui/live-indicator";
@@ -86,6 +87,7 @@ export const SecretariaSidebar = ({
     { id: "facturacion", label: "Facturación", icon: FileText, badge: counters.facturas },
     { id: "chat", label: "Chat", icon: MessageCircle, badge: counters.chat },
     { id: "correos", label: "Correos", icon: Mail, badge: counters.correos },
+    { id: "rutas", label: "Rutas", icon: Truck },
     { id: "clientes", label: "Clientes", icon: Users },
   ];
 

@@ -2042,7 +2042,11 @@ export type Database = {
           motivo_rechazo: string | null
           nombre_receptor: string | null
           notas: string | null
+          notas_conciliacion: string | null
           orden_entrega: number
+          papeles_recibidos: boolean | null
+          papeles_recibidos_en: string | null
+          papeles_recibidos_por: string | null
           pedido_id: string
           ruta_id: string
           status_entrega: string | null
@@ -2061,7 +2065,11 @@ export type Database = {
           motivo_rechazo?: string | null
           nombre_receptor?: string | null
           notas?: string | null
+          notas_conciliacion?: string | null
           orden_entrega: number
+          papeles_recibidos?: boolean | null
+          papeles_recibidos_en?: string | null
+          papeles_recibidos_por?: string | null
           pedido_id: string
           ruta_id: string
           status_entrega?: string | null
@@ -2080,7 +2088,11 @@ export type Database = {
           motivo_rechazo?: string | null
           nombre_receptor?: string | null
           notas?: string | null
+          notas_conciliacion?: string | null
           orden_entrega?: number
+          papeles_recibidos?: boolean | null
+          papeles_recibidos_en?: string | null
+          papeles_recibidos_por?: string | null
           pedido_id?: string
           ruta_id?: string
           status_entrega?: string | null
