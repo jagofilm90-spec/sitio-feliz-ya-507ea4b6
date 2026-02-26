@@ -221,7 +221,7 @@ export const useMonitoreoRutas = () => {
           chofer_id, ayudante_id,
           vehiculo:vehiculos!rutas_vehiculo_id_fkey (id, nombre)
         `)
-        .or(`fecha_ruta.eq.${hoy},and(status.in.(programada,en_carga,cargada,en_curso),carga_completada.is.null)`)
+        .or(`fecha_ruta.eq.${hoy},and(status.in.(programada,en_carga,cargada,en_curso),carga_completada.neq.true)`)
         .neq('status', 'cancelada')
         .order('created_at', { ascending: true });
 
