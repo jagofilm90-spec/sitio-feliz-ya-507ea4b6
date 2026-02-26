@@ -459,7 +459,7 @@ export const CargaHojaInteractiva = ({
                     </span>
                   </div>
                   {/* Table header */}
-                  <div className="grid grid-cols-[auto_70px_1fr_90px_36px] gap-1 px-2 py-1.5 bg-muted/60 rounded-t-md text-[10px] font-bold uppercase text-muted-foreground items-center">
+                  <div className="grid grid-cols-[auto_90px_1fr_90px_36px] gap-1 px-2 py-1.5 bg-muted/60 rounded-t-md text-[10px] font-bold uppercase text-muted-foreground items-center">
                     <span className="w-6"></span>
                     <span className="text-center">Cant.</span>
                     <span>Descripción</span>
@@ -494,7 +494,7 @@ export const CargaHojaInteractiva = ({
 
                       return (
                         <div key={item.cargaProductoId}
-                          className={`grid grid-cols-[auto_70px_1fr_90px_36px] gap-1 px-2 py-2 items-center ${
+                          className={`grid grid-cols-[auto_90px_1fr_90px_36px] gap-1 px-2 py-2 items-center ${
                             item.confirmado ? "bg-green-50/50 dark:bg-green-950/20" : ""
                           }`}>
                           {/* Col 1: Checkbox */}
@@ -508,9 +508,11 @@ export const CargaHojaInteractiva = ({
                           <div className="flex flex-col items-center">
                             <Input
                               type="number" inputMode="numeric"
-                              value={item.cantidadACargar}
+                              value={item.cantidadACargar || ""}
                               onChange={e => {
-                                const newCant = parseFloat(e.target.value) || 0;
+                                const raw = e.target.value;
+                                const newCant = raw === "" ? 0 : parseFloat(raw);
+                                if (isNaN(newCant)) return;
                                 const updates: Partial<ProductoHoja> = { cantidadACargar: newCant };
                                 if (tienePeso && !esVentaPorKg) {
                                   updates.pesoRealKg = newCant * (item.pesoKgUnit || 0);
