@@ -461,8 +461,8 @@ export default function AlmacenCargaScan() {
           .eq("id", cargaId)
           .single();
 
-        if (cargaActual?.cargado && cargaActual?.movimiento_inventario_id) {
-          // Already loaded — adjust difference if quantity changed
+        if (cargaActual?.cargado) {
+          // Already loaded — adjust difference
           const cantidadPrevia = cargaActual.cantidad_cargada || 0;
           const diferencia = cantidadCargada - cantidadPrevia;
 
@@ -471,15 +471,34 @@ export default function AlmacenCargaScan() {
             return;
           }
 
+          // Adjust lot stock by difference
           if (diferencia > 0) {
             await supabase.rpc("decrementar_lote", { p_lote_id: loteId, p_cantidad: diferencia });
           } else {
             await supabase.rpc("incrementar_lote", { p_lote_id: loteId, p_cantidad: Math.abs(diferencia) });
           }
 
-          await supabase.from("inventario_movimientos").update({
-            cantidad: cantidadCargada,
-          }).eq("id", cargaActual.movimiento_inventario_id);
+          if (cargaActual.movimiento_inventario_id) {
+            // Update existing movement
+            await supabase.from("inventario_movimientos").update({
+              cantidad: cantidadCargada,
+            }).eq("id", cargaActual.movimiento_inventario_id);
+          } else {
+            // Create movement that was missing
+            const { data: movimiento } = await supabase.from("inventario_movimientos").insert({
+              producto_id: prod.producto.id,
+              tipo_movimiento: "salida",
+              cantidad: cantidadCargada,
+              motivo: "Carga de pedido (corrección)",
+              lote_id: loteId,
+              referencia_id: entregaId,
+              usuario_id: user?.id,
+            }).select("id").single();
+
+            await supabase.from("carga_productos").update({
+              movimiento_inventario_id: movimiento?.id || null,
+            }).eq("id", cargaId);
+          }
 
           await supabase.from("carga_productos").update({
             cantidad_cargada: cantidadCargada,
