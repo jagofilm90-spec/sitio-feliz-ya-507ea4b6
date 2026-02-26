@@ -611,8 +611,7 @@ export const CargaHojaInteractiva = ({
                     }`}
                   >
                     {todosCheck && <CheckCircle2 className="h-3.5 w-3.5" />}
-                    <span>{group.clienteNombre}</span>
-                    <span className="text-[10px] opacity-70">({itemsActivos.length})</span>
+                    <span>{pedidoGroups.length - idx}. {group.clienteNombre}</span>
                   </button>
                 );
               })}
