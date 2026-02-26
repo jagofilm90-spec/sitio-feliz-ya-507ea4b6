@@ -67,9 +67,12 @@ export function SellosSection({
     input.type = "file";
     input.accept = "image/*";
     input.capture = "environment";
+    input.style.display = "none";
+    document.body.appendChild(input);
 
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
+      document.body.removeChild(input);
       if (!file) return;
 
       setUploading(tipo);
