@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Camera, Package, FileText, Loader2, X, Eye, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { compressImageForUpload } from '@/lib/imageUtils';
@@ -132,34 +132,33 @@ export function CargaEvidenciasSection({
   ) => {
     if (evidencia) {
       return (
-        <div className="relative aspect-video rounded-lg border overflow-hidden group">
-          <EvidenciaThumbnail
-            rutaStorage={evidencia.ruta_storage}
-            onClick={() => handlePreview(evidencia)}
-          />
-          <div className="absolute top-2 right-2 flex gap-1">
+        <div
+          className="flex items-center justify-between border rounded-lg px-3 py-2 bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
+          onClick={() => handlePreview(evidencia)}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <Check className="h-4 w-4 text-green-600 shrink-0" />
+            <span className="text-sm truncate">{label}</span>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
             <Button
-              variant="secondary"
+              variant="ghost"
               size="icon"
-              className="h-7 w-7 bg-background/80"
-              onClick={() => handlePreview(evidencia)}
+              className="h-7 w-7"
+              onClick={(e) => { e.stopPropagation(); handlePreview(evidencia); }}
             >
               <Eye className="h-4 w-4" />
             </Button>
             <Button
-              variant="destructive"
+              variant="ghost"
               size="icon"
-              className="h-7 w-7"
-              onClick={() => handleRemove(evidencia)}
+              className="h-7 w-7 text-destructive"
+              onClick={(e) => { e.stopPropagation(); handleRemove(evidencia); }}
               disabled={disabled}
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <Badge className="absolute bottom-2 left-2 bg-green-600">
-            <Check className="h-3 w-3 mr-1" />
-            Capturado
-          </Badge>
         </div>
       );
     }
@@ -167,16 +166,16 @@ export function CargaEvidenciasSection({
     return (
       <Button
         variant="outline"
-        className="w-full h-24 flex flex-col gap-1"
+        className="w-full h-12 gap-2"
         onClick={() => handleCapture(tipo, label)}
         disabled={disabled || uploading === tipo}
       >
         {uploading === tipo ? (
-          <Loader2 className="h-6 w-6 animate-spin" />
+          <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
-          <Camera className="h-6 w-6" />
+          <Camera className="h-4 w-4" />
         )}
-        <span className="text-xs">Capturar</span>
+        <span className="text-sm">Capturar {label}</span>
       </Button>
     );
   };
@@ -191,21 +190,21 @@ export function CargaEvidenciasSection({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
             {/* Carga en Vehículo - Obligatoria */}
-            <div className="space-y-2">
+            <div className="space-y-1">
               <p className="text-sm font-medium flex items-center gap-1">
                 <Package className="h-4 w-4" />
                 Caja abierta <span className="text-destructive">*</span>
               </p>
-              {renderEvidenciaSlot(cargaVehiculo, 'carga_vehiculo', 'Carga en Vehículo', true)}
+              {renderEvidenciaSlot(cargaVehiculo, 'carga_vehiculo', 'Foto caja abierta', true)}
             </div>
 
             {/* Carta Porte - Opcional */}
-            <div className="space-y-2">
+            <div className="space-y-1">
               <p className="text-sm font-medium flex items-center gap-1 text-muted-foreground">
                 <FileText className="h-4 w-4" />
-                Carta Porte
+                Carta Porte <span className="text-xs">(opcional)</span>
               </p>
               {renderEvidenciaSlot(cartaPorte, 'carta_porte', 'Carta Porte', false)}
             </div>
@@ -239,46 +238,3 @@ export function CargaEvidenciasSection({
   );
 }
 
-function EvidenciaThumbnail({
-  rutaStorage,
-  onClick,
-}: {
-  rutaStorage: string;
-  onClick: () => void;
-}) {
-  const [url, setUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useState(() => {
-    supabase.storage
-      .from('cargas-evidencias')
-      .createSignedUrl(rutaStorage, 300)
-      .then(({ data }) => {
-        if (data?.signedUrl) {
-          setUrl(data.signedUrl);
-        }
-        setLoading(false);
-      });
-  });
-
-  if (loading) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-muted">
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  return url ? (
-    <img
-      src={url}
-      alt="Evidencia"
-      className="w-full h-full object-cover cursor-pointer"
-      onClick={onClick}
-    />
-  ) : (
-    <div className="w-full h-full flex items-center justify-center bg-muted">
-      <Camera className="h-4 w-4 text-muted-foreground" />
-    </div>
-  );
-}
