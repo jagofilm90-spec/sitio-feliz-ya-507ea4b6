@@ -72,14 +72,24 @@ const Layout = ({ children }: LayoutProps) => {
   const { allowedPaths, isLoading: permissionsLoading, checkAccess } = useUserModulePermissions();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        navigate("/auth");
-      } else {
+    const initSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
         setUser(session.user);
+        setLoading(false);
+      } else {
+        // Intentar refrescar antes de redirigir
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        if (refreshed.session) {
+          setUser(refreshed.session.user);
+          setLoading(false);
+        } else {
+          setLoading(false);
+          navigate("/auth");
+        }
       }
-      setLoading(false);
-    });
+    };
+    initSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
@@ -87,6 +97,7 @@ const Layout = ({ children }: LayoutProps) => {
       } else if (session) {
         setUser(session.user);
       }
+      // No redirigir en TOKEN_REFRESHED, INITIAL_SESSION, etc.
     });
 
     return () => subscription.unsubscribe();
