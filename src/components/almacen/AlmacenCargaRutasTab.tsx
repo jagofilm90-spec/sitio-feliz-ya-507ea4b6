@@ -15,7 +15,7 @@ import {
   Package, Truck, User, ChevronRight, CheckCircle2, Clock, AlertCircle,
   Timer, QrCode, ArrowRight, Trash2, Loader2,
 } from "lucide-react";
-import { RutaCargaSheet } from "@/components/almacen/RutaCargaSheet";
+import { RutaCargaInlineView } from "@/components/almacen/RutaCargaInlineView";
 import { CargaRutaInlineFlow } from "@/components/almacen/CargaRutaInlineFlow";
 
 interface Ruta {
@@ -56,12 +56,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
   const [rutas, setRutas] = useState<Ruta[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRuta, setSelectedRuta] = useState<Ruta | null>(null);
-  const [sheetOpen, _setSheetOpen] = useState(false);
   const sheetOpenRef = useRef(false);
-  const setSheetOpen = useCallback((val: boolean) => {
-    sheetOpenRef.current = val;
-    _setSheetOpen(val);
-  }, []);
   const [modoVisualizacion, setModoVisualizacion] = useState<"asignadas" | "todas">("asignadas");
   const { toast } = useToast();
   const [deletingRutaId, setDeletingRutaId] = useState<string | null>(null);
@@ -318,15 +313,26 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
 
   const handleSelectRuta = (ruta: Ruta) => {
     setSelectedRuta(ruta);
-    setSheetOpen(true);
+    sheetOpenRef.current = true;
   };
 
-  // IMPORTANT: Check inline flow BEFORE loading, so realtime reloads don't unmount/reset the flow
+  // Show inline flow for new route (scan)
   if (showInlineFlow) {
     return (
       <CargaRutaInlineFlow
         onClose={() => setShowInlineFlow(false)}
         onRutaCreada={() => { loadRutas(); setShowInlineFlow(false); }}
+      />
+    );
+  }
+
+  // Show inline view for existing route
+  if (selectedRuta) {
+    return (
+      <RutaCargaInlineView
+        ruta={selectedRuta}
+        onClose={() => { setSelectedRuta(null); sheetOpenRef.current = false; loadRutas(); }}
+        onCargaCompletada={() => { setSelectedRuta(null); sheetOpenRef.current = false; loadRutas(); }}
       />
     );
   }
@@ -536,17 +542,6 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
         </CardContent>
       </Card>
 
-      {selectedRuta && (
-        <RutaCargaSheet
-          ruta={selectedRuta}
-          open={sheetOpen}
-          onOpenChange={setSheetOpen}
-          onCargaCompletada={() => {
-            loadRutas();
-            setSheetOpen(false);
-          }}
-        />
-      )}
     </>
   );
 };
