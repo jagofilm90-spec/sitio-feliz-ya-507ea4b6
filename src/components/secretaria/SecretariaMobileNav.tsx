@@ -12,6 +12,7 @@ import {
   Users,
   Store,
   LogOut,
+  Truck,
 } from "lucide-react";
 
 interface SecretariaMobileNavProps {
@@ -49,6 +50,7 @@ export const SecretariaMobileNav = ({
     { id: "compras", label: "Compras", icon: ShoppingCart, badge: counters.compras },
     { id: "inventario", label: "Inventario", icon: Warehouse },
     { id: "mostrador", label: "Mostrador", icon: Store, badge: counters.mostrador },
+    { id: "rutas", label: "Rutas", icon: Truck },
   ];
 
   return (

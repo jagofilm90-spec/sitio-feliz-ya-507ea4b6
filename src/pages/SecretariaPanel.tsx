@@ -32,6 +32,7 @@ import { SecretariaFacturacionTab } from "@/components/secretaria/SecretariaFact
 import { SecretariaChatTab } from "@/components/secretaria/SecretariaChatTab";
 import { SecretariaCorreosTab } from "@/components/secretaria/SecretariaCorreosTab";
 import { SecretariaClientesTab } from "@/components/secretaria/SecretariaClientesTab";
+import { SecretariaRutasTab } from "@/components/secretaria/SecretariaRutasTab";
 import { SolicitudesAlmacenTab } from "@/components/facturas/SolicitudesAlmacenTab";
 
 const SecretariaPanel = () => {
@@ -167,6 +168,8 @@ const SecretariaPanel = () => {
         return <SecretariaCorreosTab />;
       case "clientes":
         return <SecretariaClientesTab />;
+      case "rutas":
+        return <SecretariaRutasTab />;
       default:
         return <SecretariaPedidosTab />;
     }
