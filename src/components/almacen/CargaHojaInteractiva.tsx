@@ -91,6 +91,10 @@ export const CargaHojaInteractiva = ({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
+  // Current user info (almacenista)
+  const [currentUserName, setCurrentUserName] = useState<string>("");
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+
   // Ayudantes editing
   const [ayudantesEditNombres, setAyudantesEditNombres] = useState<string[]>(personal?.ayudantesNombres || []);
   const [ayudantesEditIds, setAyudantesEditIds] = useState<string[]>([]);
@@ -107,7 +111,22 @@ export const CargaHojaInteractiva = ({
   const [llevaSellos, setLlevaSellos] = useState(true);
   const [numerosSello, setNumerosSello] = useState<string[]>([""]);
   const [showFirma, setShowFirma] = useState(false);
+  const [showFirmaAlmacenista, setShowFirmaAlmacenista] = useState(false);
   const [firmaLoading, setFirmaLoading] = useState(false);
+  const [firmaChoferBase64, setFirmaChoferBase64] = useState<string | null>(null);
+
+  // Load current user info
+  useEffect(() => {
+    const loadUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+        const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+        setCurrentUserName(profile?.full_name || "Almacenista");
+      }
+    };
+    loadUser();
+  }, []);
 
   // Load current ayudantes_ids from ruta when popover opens
   const handleOpenAyudantesEdit = async () => {
@@ -397,15 +416,26 @@ export const CargaHojaInteractiva = ({
     setFase("firma");
   };
 
-  // Handle firma and finalize
-  const handleFirmaConfirmada = async (firmaBase64: string) => {
+  // Handle firma chofer → then firma almacenista
+  const handleFirmaChoferConfirmada = async (firmaBase64: string) => {
+    setFirmaChoferBase64(firmaBase64);
+    setShowFirma(false);
+    // Now ask for almacenista signature
+    setShowFirmaAlmacenista(true);
+  };
+
+  // Handle firma almacenista and finalize
+  const handleFirmaAlmacenistaConfirmada = async (firmaBase64: string) => {
     setFirmaLoading(true);
     try {
       await supabase.from("rutas").update({
-        firma_chofer_carga: firmaBase64,
+        firma_chofer_carga: firmaChoferBase64,
+        firma_almacenista_carga: firmaBase64,
+        cargado_por: currentUserId || null,
+        cargado_por_nombre: currentUserName || null,
       }).eq("id", rutaId);
 
-      setShowFirma(false);
+      setShowFirmaAlmacenista(false);
       await onFinalizar();
     } catch (err: any) {
       toast.error("Error al guardar firma: " + (err?.message || ""));
@@ -493,7 +523,7 @@ export const CargaHojaInteractiva = ({
         </div>
 
         {/* Info grid: Chofer, Ayudantes, Vehículo, Pedidos, Pesos */}
-        <div className="grid grid-cols-3 md:grid-cols-7 text-sm divide-x divide-y divide-border">
+          <div className="grid grid-cols-4 md:grid-cols-8 text-sm divide-x divide-y divide-border">
           <div className="px-3 py-2">
             <p className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
               <User className="h-3 w-3" />Chofer
@@ -531,6 +561,12 @@ export const CargaHojaInteractiva = ({
             ) : (
               <p className="text-muted-foreground text-xs">Sin ayudantes</p>
             )}
+           </div>
+          <div className="px-3 py-2">
+            <p className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
+              <User className="h-3 w-3" />Cargó
+            </p>
+            <p className="font-semibold truncate">{currentUserName || "—"}</p>
           </div>
           <div className="px-3 py-2">
             <p className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
@@ -885,12 +921,12 @@ export const CargaHojaInteractiva = ({
 
           <Button onClick={handleIrAFirma} size="lg" className="w-full h-14 text-lg font-bold">
             <PenTool className="h-5 w-5 mr-2" />
-            Continuar a Firma del Chofer
+            Continuar a Firmas
           </Button>
         </div>
       )}
 
-      {/* ═══ FASE 3: Firma del chofer ═══ */}
+      {/* ═══ FASE 3: Firmas (Chofer + Almacenista) ═══ */}
       {fase === "firma" && (
         <div className="space-y-4">
           <Card>
@@ -903,25 +939,54 @@ export const CargaHojaInteractiva = ({
                 </p>
               </div>
               <p className="text-sm text-muted-foreground">
-                Solo falta la firma del chofer para completar la carga
+                Faltan las firmas del chofer y almacenista para completar
               </p>
-              <Button onClick={() => setShowFirma(true)} size="lg" className="w-full h-14 text-lg font-bold">
-                <PenTool className="h-5 w-5 mr-2" />
-                Firma del Chofer — {personal?.choferNombre || "Chofer"}
-              </Button>
+
+              {/* Step 1: Firma chofer */}
+              {!firmaChoferBase64 ? (
+                <Button onClick={() => setShowFirma(true)} size="lg" className="w-full h-14 text-lg font-bold">
+                  <PenTool className="h-5 w-5 mr-2" />
+                  1. Firma del Chofer — {personal?.choferNombre || "Chofer"}
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2 border rounded-lg px-4 py-3 bg-muted/50">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+                  <span className="text-sm font-medium">Firma chofer capturada</span>
+                </div>
+              )}
+
+              {/* Step 2: Firma almacenista */}
+              {firmaChoferBase64 && (
+                <Button onClick={() => setShowFirmaAlmacenista(true)} size="lg" className="w-full h-14 text-lg font-bold">
+                  <PenTool className="h-5 w-5 mr-2" />
+                  2. Firma del Almacenista — {currentUserName || "Almacenista"}
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Firma dialog */}
+      {/* Firma chofer dialog */}
       <FirmaChoferDialog
         open={showFirma}
         onOpenChange={setShowFirma}
-        onConfirm={handleFirmaConfirmada}
+        onConfirm={handleFirmaChoferConfirmada}
         choferNombre={personal?.choferNombre || "Chofer"}
         rutaFolio={rutaFolio}
+        loading={false}
+      />
+
+      {/* Firma almacenista dialog */}
+      <FirmaChoferDialog
+        open={showFirmaAlmacenista}
+        onOpenChange={setShowFirmaAlmacenista}
+        onConfirm={handleFirmaAlmacenistaConfirmada}
+        choferNombre={currentUserName || "Almacenista"}
+        rutaFolio={rutaFolio}
         loading={firmaLoading}
+        titulo="Firma del Almacenista"
+        descripcion={`Confirmo carga de ruta ${rutaFolio}`}
       />
         </div>
       </ScrollArea>

@@ -10,6 +10,8 @@ interface FirmaChoferDialogProps {
   choferNombre: string;
   rutaFolio: string;
   loading?: boolean;
+  titulo?: string;
+  descripcion?: string;
 }
 
 export function FirmaChoferDialog({
@@ -19,6 +21,8 @@ export function FirmaChoferDialog({
   choferNombre,
   rutaFolio,
   loading = false,
+  titulo,
+  descripcion,
 }: FirmaChoferDialogProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -181,9 +185,9 @@ export function FirmaChoferDialog({
           <div className="flex items-center gap-3">
             <Truck className="h-6 w-6 text-primary" />
             <div>
-              <h2 className="text-lg font-semibold">Firma del Chofer</h2>
+              <h2 className="text-lg font-semibold">{titulo || "Firma del Chofer"}</h2>
               <p className="text-sm text-muted-foreground">
-                Conformidad de carga - {rutaFolio}
+                {descripcion || `Conformidad de carga - ${rutaFolio}`}
               </p>
             </div>
           </div>
