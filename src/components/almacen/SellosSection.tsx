@@ -98,7 +98,7 @@ export function SellosSection({
 
         if (dbError) throw dbError;
 
-        toast.success(`Foto de sello ${selloIdx + 1} guardada`);
+        toast.success(`Foto de sello guardada`);
         onEvidenciaAdded();
       } catch (error) {
         console.error("Error uploading seal evidence:", error);
@@ -145,7 +145,7 @@ export function SellosSection({
       .createSignedUrl(evidencia.ruta_storage, 300);
 
     if (data?.signedUrl) {
-      setPreviewTitle(`Sello ${idx + 1}`);
+      setPreviewTitle(`Sello`);
       setPreviewUrl(data.signedUrl);
     }
   };
@@ -207,7 +207,7 @@ export function SellosSection({
                 <div key={idx} className="border rounded-lg p-3 space-y-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-sm font-medium">
-                      Sello {idx + 1}
+                      Sello
                       {idx === 0 && esDirecto && <span className="text-destructive ml-1">*</span>}
                     </Label>
                     {idx > 0 && !evidencia && (
