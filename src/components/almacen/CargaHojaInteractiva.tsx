@@ -12,9 +12,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   CheckCircle2, Loader2, Scale, Trash2, Timer, Package, ArrowDown, ArrowUp, Truck, User,
-  Camera, PenTool, ArrowRight, AlertTriangle, X,
+  Camera, PenTool, ArrowRight, AlertTriangle, X, Pencil,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getCompactDisplayName } from "@/lib/productUtils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -85,6 +86,13 @@ export const CargaHojaInteractiva = ({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
+  // Ayudantes editing
+  const [ayudantesEditNombres, setAyudantesEditNombres] = useState<string[]>(personal?.ayudantesNombres || []);
+  const [ayudantesEditIds, setAyudantesEditIds] = useState<string[]>([]);
+  const [allAyudantes, setAllAyudantes] = useState<{ id: string; nombre_completo: string }[]>([]);
+  const [ayudantesPopoverOpen, setAyudantesPopoverOpen] = useState(false);
+  const [loadingAyudantes, setLoadingAyudantes] = useState(false);
+
   // Post-carga flow phases: checklist → evidencias → firma
   const [fase, setFase] = useState<"checklist" | "evidencias" | "firma">("checklist");
   const [evidencias, setEvidencias] = useState<any[]>([]);
@@ -92,6 +100,38 @@ export const CargaHojaInteractiva = ({
   const [numeroSello, setNumeroSello] = useState("");
   const [showFirma, setShowFirma] = useState(false);
   const [firmaLoading, setFirmaLoading] = useState(false);
+
+  // Load current ayudantes_ids from ruta when popover opens
+  const handleOpenAyudantesEdit = async () => {
+    setAyudantesPopoverOpen(true);
+    setLoadingAyudantes(true);
+    try {
+      const [rutaRes, empRes] = await Promise.all([
+        supabase.from("rutas").select("ayudantes_ids").eq("id", rutaId).single(),
+        supabase.from("empleados").select("id, nombre_completo").eq("puesto", "Ayudante de Chofer").eq("activo", true),
+      ]);
+      const currentIds: string[] = rutaRes.data?.ayudantes_ids || [];
+      setAyudantesEditIds(currentIds);
+      setAllAyudantes(empRes.data || []);
+    } catch { }
+    setLoadingAyudantes(false);
+  };
+
+  const handleToggleAyudante = (id: string) => {
+    setAyudantesEditIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleGuardarAyudantes = async () => {
+    try {
+      await supabase.from("rutas").update({ ayudantes_ids: ayudantesEditIds.length > 0 ? ayudantesEditIds : null }).eq("id", rutaId);
+      const nombres = ayudantesEditIds.map(id => allAyudantes.find(a => a.id === id)?.nombre_completo || "").filter(Boolean);
+      setAyudantesEditNombres(nombres);
+      setAyudantesPopoverOpen(false);
+      toast.success("Ayudantes actualizados");
+    } catch {
+      toast.error("Error al guardar ayudantes");
+    }
+  };
 
   // Load all products for all pedidos
   useEffect(() => {
@@ -362,9 +402,31 @@ export const CargaHojaInteractiva = ({
           <div className="px-3 py-2">
             <p className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
               <User className="h-3 w-3" />Ayudantes
+              <Popover open={ayudantesPopoverOpen} onOpenChange={(open) => { if (open) handleOpenAyudantesEdit(); else setAyudantesPopoverOpen(false); }}>
+                <PopoverTrigger asChild>
+                  <button className="ml-1 p-0.5 rounded hover:bg-muted"><Pencil className="h-3 w-3" /></button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-3" align="start">
+                  <p className="text-xs font-semibold mb-2">Editar ayudantes</p>
+                  {loadingAyudantes ? (
+                    <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                  ) : (
+                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                      {allAyudantes.map(a => (
+                        <label key={a.id} className="flex items-center gap-2 text-sm py-1 px-1 rounded hover:bg-muted cursor-pointer">
+                          <Checkbox checked={ayudantesEditIds.includes(a.id)} onCheckedChange={() => handleToggleAyudante(a.id)} className="h-4 w-4" />
+                          {a.nombre_completo}
+                        </label>
+                      ))}
+                      {allAyudantes.length === 0 && <p className="text-xs text-muted-foreground">No hay ayudantes disponibles</p>}
+                    </div>
+                  )}
+                  <Button size="sm" className="w-full mt-2" onClick={handleGuardarAyudantes}>Guardar</Button>
+                </PopoverContent>
+              </Popover>
             </p>
-            {personal?.ayudantesNombres && personal.ayudantesNombres.length > 0 ? (
-              <div className="font-semibold text-xs leading-snug">{personal.ayudantesNombres.join(", ")}</div>
+            {ayudantesEditNombres.length > 0 ? (
+              <div className="font-semibold text-xs leading-snug">{ayudantesEditNombres.join(", ")}</div>
             ) : (
               <p className="text-muted-foreground text-xs">Sin ayudantes</p>
             )}
