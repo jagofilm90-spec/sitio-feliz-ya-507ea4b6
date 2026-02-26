@@ -14,6 +14,7 @@ import { formatCurrency, cn } from "@/lib/utils";
 import { VendedorMisClientesTab } from "@/components/vendedor/VendedorMisClientesTab";
 import { VendedorNuevoPedidoTab } from "@/components/vendedor/VendedorNuevoPedidoTab";
 import { VendedorMisVentasTab } from "@/components/vendedor/VendedorMisVentasTab";
+import { VendedorPedidosTab } from "@/components/vendedor/VendedorPedidosTab";
 import { VendedorComisionesTab } from "@/components/vendedor/VendedorComisionesTab";
 import { VendedorSaldosTab } from "@/components/vendedor/VendedorSaldosTab";
 import { VendedorListaPreciosTab } from "@/components/vendedor/VendedorListaPreciosTab";
@@ -279,7 +280,8 @@ export default function VendedorPanel() {
   const navItems = [
     { id: "clientes", label: "Clientes", icon: Users },
     { id: "nuevo", label: "Nuevo Pedido", icon: ShoppingCart },
-    { id: "ventas", label: "Mis Ventas", icon: CreditCard },
+    { id: "pedidos", label: "Pedidos", icon: CreditCard },
+    { id: "ventas", label: "Mis Ventas", icon: BarChart3 },
     { id: "novedades", label: "Novedades", icon: Sparkles, badge: novedadesCount },
     { id: "precios", label: "Precios", icon: List },
     { id: "saldos", label: "Saldos", icon: Wallet },
@@ -435,7 +437,8 @@ export default function VendedorPanel() {
               <Card>
                 <CardContent className="p-6">
               {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} onNavigateNuevoPedido={handleNavigateNuevoPedido} />}
-                  {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={() => { fetchDashboardData(); fetchBorradoresCount(); }} onNavigateToVentas={() => setActiveTab("ventas")} preSelectedClienteId={preSelectedClienteId} onHasActiveOrder={(v) => { hasActiveOrder.current = v; }} saveDraftRef={saveDraftRef} />}
+              {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={() => { fetchDashboardData(); fetchBorradoresCount(); }} onNavigateToVentas={() => setActiveTab("pedidos")} preSelectedClienteId={preSelectedClienteId} onHasActiveOrder={(v) => { hasActiveOrder.current = v; }} saveDraftRef={saveDraftRef} />}
+                  {activeTab === "pedidos" && <VendedorPedidosTab onDashboardRefresh={fetchDashboardData} />}
                   {activeTab === "ventas" && <VendedorMisVentasTab onDashboardRefresh={fetchDashboardData} />}
                   {activeTab === "novedades" && <VendedorNovedadesTab />}
                   {activeTab === "precios" && <VendedorListaPreciosTab />}
@@ -449,7 +452,8 @@ export default function VendedorPanel() {
             {/* Mobile Content */}
             <div className="md:hidden">
               {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} onNavigateNuevoPedido={handleNavigateNuevoPedido} />}
-              {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={() => { fetchDashboardData(); fetchBorradoresCount(); }} onNavigateToVentas={() => setActiveTab("ventas")} preSelectedClienteId={preSelectedClienteId} onHasActiveOrder={(v) => { hasActiveOrder.current = v; }} saveDraftRef={saveDraftRef} />}
+              {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={() => { fetchDashboardData(); fetchBorradoresCount(); }} onNavigateToVentas={() => setActiveTab("pedidos")} preSelectedClienteId={preSelectedClienteId} onHasActiveOrder={(v) => { hasActiveOrder.current = v; }} saveDraftRef={saveDraftRef} />}
+              {activeTab === "pedidos" && <VendedorPedidosTab onDashboardRefresh={fetchDashboardData} />}
               {activeTab === "ventas" && <VendedorMisVentasTab onDashboardRefresh={fetchDashboardData} />}
               {activeTab === "novedades" && <VendedorNovedadesTab />}
               {activeTab === "precios" && <VendedorListaPreciosTab />}

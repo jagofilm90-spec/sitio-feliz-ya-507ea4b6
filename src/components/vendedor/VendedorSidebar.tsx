@@ -69,7 +69,8 @@ export const VendedorSidebar = ({
   const navItems: NavItem[] = [
     { id: "clientes", label: "Clientes", icon: Users },
     { id: "nuevo", label: "Nuevo Pedido", icon: ShoppingCart },
-    { id: "ventas", label: "Mis Ventas", icon: ClipboardList },
+    { id: "pedidos", label: "Pedidos", icon: ClipboardList },
+    { id: "ventas", label: "Mis Ventas", icon: BarChart3 },
     { id: "novedades", label: "Novedades", icon: Sparkles, badge: novedadesCount },
     { id: "precios", label: "Precios", icon: List },
     { id: "saldos", label: "Saldos", icon: Wallet },
