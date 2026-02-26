@@ -351,8 +351,8 @@ export const CargaHojaInteractiva = ({
           </div>
         </div>
 
-        {/* Info grid: Chofer, Ayudantes, Vehículo, Pedidos */}
-        <div className="grid grid-cols-2 md:grid-cols-4 text-sm divide-x divide-y divide-border">
+        {/* Info grid: Chofer, Ayudantes, Vehículo, Pedidos, Pesos */}
+        <div className="grid grid-cols-3 md:grid-cols-7 text-sm divide-x divide-y divide-border">
           <div className="px-3 py-2">
             <p className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
               <User className="h-3 w-3" />Chofer
@@ -373,22 +373,56 @@ export const CargaHojaInteractiva = ({
             <p className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
               <Truck className="h-3 w-3" />Vehículo
             </p>
-            <p className="font-semibold">
-              Unidad {personal?.vehiculoNombre || "—"}
+            <p className="font-semibold truncate">
+              {personal?.vehiculoNombre || "—"}
               {personal?.vehiculoPlaca && <span className="text-muted-foreground ml-1">({personal.vehiculoPlaca})</span>}
             </p>
           </div>
           <div className="px-3 py-2">
             <p className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
-              <Package className="h-3 w-3" />Resumen
+              <Package className="h-3 w-3" />Productos
             </p>
-            <p className="font-semibold">{productosActivos.length} productos · {pedidos.length} pedido{pedidos.length > 1 ? "s" : ""}</p>
+            <p className="font-semibold">{productosActivos.length} · {pedidos.length} ped.</p>
+          </div>
+          <div className="px-3 py-2">
+            <p className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
+              <Scale className="h-3 w-3" />P. Teórico
+            </p>
+            <p className="font-semibold">{pesoTeorico.toFixed(1)} kg</p>
+          </div>
+          <div className="px-3 py-2">
+            <p className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
+              <Scale className="h-3 w-3" />P. Real
+            </p>
+            <p className="font-semibold">{pesoReal.toFixed(1)} kg</p>
+          </div>
+          <div className="px-3 py-2">
+            <p className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
+              {diferenciaPeso > 0 ? <ArrowUp className="h-3 w-3" /> : diferenciaPeso < 0 ? <ArrowDown className="h-3 w-3" /> : <Scale className="h-3 w-3" />}
+              Diferencia
+            </p>
+            <p className={`font-semibold ${diferenciaPeso > 0 ? "text-green-600" : diferenciaPeso < 0 ? "text-destructive" : ""}`}>
+              {diferenciaPeso > 0 ? "+" : ""}{diferenciaPeso.toFixed(1)} kg
+            </p>
           </div>
         </div>
       </div>
 
       {/* Cancel button */}
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm">
+          <Badge variant={fase === "checklist" ? "default" : "secondary"} className="gap-1">
+            <Package className="h-3 w-3" />1. Checklist
+          </Badge>
+          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+          <Badge variant={fase === "evidencias" ? "default" : "secondary"} className="gap-1">
+            <Camera className="h-3 w-3" />2. Evidencias
+          </Badge>
+          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+          <Badge variant={fase === "firma" ? "default" : "secondary"} className="gap-1">
+            <PenTool className="h-3 w-3" />3. Firma
+          </Badge>
+        </div>
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="destructive" size="sm" disabled={cancelling}>
@@ -409,53 +443,9 @@ export const CargaHojaInteractiva = ({
         </AlertDialog>
       </div>
 
-      {/* ─── Phase indicator ─── */}
-      <div className="flex items-center gap-2 text-sm">
-        <Badge variant={fase === "checklist" ? "default" : "secondary"} className="gap-1">
-          <Package className="h-3 w-3" />1. Checklist
-        </Badge>
-        <ArrowRight className="h-3 w-3 text-muted-foreground" />
-        <Badge variant={fase === "evidencias" ? "default" : "secondary"} className="gap-1">
-          <Camera className="h-3 w-3" />2. Evidencias
-        </Badge>
-        <ArrowRight className="h-3 w-3 text-muted-foreground" />
-        <Badge variant={fase === "firma" ? "default" : "secondary"} className="gap-1">
-          <PenTool className="h-3 w-3" />3. Firma
-        </Badge>
-      </div>
-
       {/* ═══ FASE 1: Checklist de productos ═══ */}
       {fase === "checklist" && (
         <>
-          {/* Weight summary */}
-          <div className="grid grid-cols-3 gap-3">
-            <Card>
-              <CardContent className="py-3 text-center">
-                <p className="text-xs text-muted-foreground">Peso Teórico</p>
-                <p className="text-2xl font-bold">{pesoTeorico.toFixed(1)}</p>
-                <p className="text-xs text-muted-foreground">kg</p>
-              </CardContent>
-            </Card>
-            <Card className={diferenciaPeso === 0 ? "border-green-500/50" : Math.abs(diferenciaPeso) < pesoTeorico * 0.05 ? "border-amber-500/50" : "border-destructive/50"}>
-              <CardContent className="py-3 text-center">
-                <p className="text-xs text-muted-foreground">Peso Real</p>
-                <p className="text-2xl font-bold">{pesoReal.toFixed(1)}</p>
-                <p className="text-xs text-muted-foreground">kg</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="py-3 text-center">
-                <p className="text-xs text-muted-foreground">Diferencia</p>
-                <p className={`text-2xl font-bold flex items-center justify-center gap-1 ${diferenciaPeso > 0 ? "text-green-600" : diferenciaPeso < 0 ? "text-destructive" : ""}`}>
-                  {diferenciaPeso > 0 && <ArrowUp className="h-4 w-4" />}
-                  {diferenciaPeso < 0 && <ArrowDown className="h-4 w-4" />}
-                  {Math.abs(diferenciaPeso).toFixed(1)}
-                </p>
-                <p className="text-xs text-muted-foreground">kg</p>
-              </CardContent>
-            </Card>
-          </div>
-
           {/* Product tables by pedido */}
           <div>
             <div className="space-y-6">
