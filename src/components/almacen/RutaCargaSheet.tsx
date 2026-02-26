@@ -175,7 +175,14 @@ export const RutaCargaSheet = ({
   
   // Estado para sellos
   const [llevaSellos, setLlevaSellos] = useState(ruta.lleva_sellos ?? true);
-  const [numeroSello, setNumeroSello] = useState(ruta.numero_sello_salida || "");
+  const [numerosSello, setNumerosSello] = useState<string[]>(() => {
+    try {
+      const parsed = JSON.parse(ruta.numero_sello_salida || "[]");
+      return Array.isArray(parsed) ? parsed : [ruta.numero_sello_salida || ""];
+    } catch {
+      return ruta.numero_sello_salida ? [ruta.numero_sello_salida] : [""];
+    }
+  });
   
   
   // Estado para firma del chofer
@@ -411,7 +418,12 @@ export const RutaCargaSheet = ({
     
     // Cargar estado de sellos y firma
     setLlevaSellos(data?.lleva_sellos ?? true);
-    setNumeroSello(data?.numero_sello_salida || "");
+    try {
+      const parsed = JSON.parse(data?.numero_sello_salida || "[]");
+      setNumerosSello(Array.isArray(parsed) ? parsed : [data?.numero_sello_salida || ""]);
+    } catch {
+      setNumerosSello(data?.numero_sello_salida ? [data.numero_sello_salida] : [""]);
+    }
     setFirmaChoferBase64(data?.firma_chofer_carga || null);
   };
 
@@ -754,8 +766,8 @@ export const RutaCargaSheet = ({
   // Debounce para no guardar en cada tecla y evitar que realtime recargue todo
   const selloDebounceRef = useRef<NodeJS.Timeout | null>(null);
   
-  const handleNumeroSelloChange = useCallback((value: string) => {
-    setNumeroSello(value);
+  const handleNumerosSelloChange = useCallback((values: string[]) => {
+    setNumerosSello(values);
     
     if (selloDebounceRef.current) {
       clearTimeout(selloDebounceRef.current);
@@ -764,7 +776,7 @@ export const RutaCargaSheet = ({
     selloDebounceRef.current = setTimeout(async () => {
       await supabase
         .from("rutas")
-        .update({ numero_sello_salida: value })
+        .update({ numero_sello_salida: JSON.stringify(values.filter(n => n.trim())) })
         .eq("id", ruta.id);
     }, 800);
   }, [ruta.id]);
@@ -778,7 +790,7 @@ export const RutaCargaSheet = ({
     ? todosLosProdutosCargados 
     : entregas.every(e => e.carga_confirmada);
   
-  const selloEvidencia = evidencias.find(e => e.tipo_evidencia === "sello_salida_1");
+  const selloEvidencia = evidencias.some(e => e.tipo_evidencia.startsWith("sello_salida_"));
   // Si es 1 sola entrega, los sellos son obligatorios; si son 2+, son opcionales
   const sellosObligatorios = entregas.length <= 1;
   const sellosValidos = !sellosObligatorios || !llevaSellos || (llevaSellos && selloEvidencia);
@@ -1152,8 +1164,9 @@ export const RutaCargaSheet = ({
                       disabled={ruta.carga_completada || false}
                       llevaSellos={llevaSellos}
                       onLlevaSellosChange={handleLlevaSellosChange}
-                      numeroSello={numeroSello}
-                      onNumeroSelloChange={handleNumeroSelloChange}
+                      numerosSello={numerosSello}
+                      onNumerosSelloChange={handleNumerosSelloChange}
+                      totalPedidos={entregas.length}
                     />
                   )}
 
@@ -1249,7 +1262,7 @@ export const RutaCargaSheet = ({
                 {todasEntregasConfirmadas && !firmaChoferBase64 && (
                   <p className="text-amber-600">⚠️ Falta la firma del chofer</p>
                 )}
-                {llevaSellos && !selloEvidencia && (
+                {llevaSellos && !selloEvidencia && sellosObligatorios && (
                   <p className="text-amber-600">⚠️ Falta foto del sello de salida</p>
                 )}
               </div>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Camera, Lock, LockOpen, Loader2, X, Eye, Check } from "lucide-react";
+import { Camera, Lock, LockOpen, Loader2, X, Eye, Check, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -31,8 +31,9 @@ interface SellosSectionProps {
   disabled?: boolean;
   llevaSellos: boolean;
   onLlevaSellosChange: (value: boolean) => void;
-  numeroSello: string;
-  onNumeroSelloChange: (value: string) => void;
+  numerosSello: string[];
+  onNumerosSelloChange: (value: string[]) => void;
+  totalPedidos: number;
 }
 
 export function SellosSection({
@@ -42,21 +43,26 @@ export function SellosSection({
   disabled = false,
   llevaSellos,
   onLlevaSellosChange,
-  numeroSello,
-  onNumeroSelloChange,
+  numerosSello,
+  onNumerosSelloChange,
+  totalPedidos,
 }: SellosSectionProps) {
   const [uploading, setUploading] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewTitle, setPreviewTitle] = useState<string>("");
 
-  const selloEvidencias = evidencias.filter(
-    (e) => e.tipo_evidencia === "sello_salida_1" || e.tipo_evidencia === "sello_salida_2"
-  );
-  
-  const sello1 = evidencias.find(e => e.tipo_evidencia === "sello_salida_1");
-  const sello2 = evidencias.find(e => e.tipo_evidencia === "sello_salida_2");
+  const esDirecto = totalPedidos === 1;
 
-  const handleCapture = async (tipo: string, label: string) => {
+  // Get seal evidences sorted by tipo_evidencia
+  const selloEvidencias = evidencias
+    .filter((e) => e.tipo_evidencia.startsWith("sello_salida_"))
+    .sort((a, b) => a.tipo_evidencia.localeCompare(b.tipo_evidencia));
+
+  // Determine how many seal slots we have (at least match evidencias count)
+  const selloCount = Math.max(numerosSello.length, selloEvidencias.length, llevaSellos ? 1 : 0);
+
+  const handleCapture = async (selloIdx: number) => {
+    const tipo = `sello_salida_${selloIdx + 1}`;
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
@@ -78,9 +84,7 @@ export function SellosSection({
 
         if (uploadError) throw uploadError;
 
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        const { data: { user } } = await supabase.auth.getUser();
 
         const { error: dbError } = await supabase
           .from("carga_evidencias")
@@ -94,7 +98,7 @@ export function SellosSection({
 
         if (dbError) throw dbError;
 
-        toast.success(`Foto de ${label} guardada`);
+        toast.success(`Foto de sello ${selloIdx + 1} guardada`);
         onEvidenciaAdded();
       } catch (error) {
         console.error("Error uploading seal evidence:", error);
@@ -107,7 +111,7 @@ export function SellosSection({
     input.click();
   };
 
-  const handleRemove = async (evidencia: CargaEvidencia) => {
+  const handleRemove = async (evidencia: CargaEvidencia, selloIdx: number) => {
     try {
       await supabase.storage
         .from("cargas-evidencias")
@@ -120,25 +124,40 @@ export function SellosSection({
 
       if (error) throw error;
 
-      toast.success("Foto eliminada");
+      // Also remove the number for this seal
+      const newNumeros = [...numerosSello];
+      if (selloIdx < newNumeros.length) {
+        newNumeros.splice(selloIdx, 1);
+        onNumerosSelloChange(newNumeros);
+      }
+
+      toast.success("Sello eliminado");
       onEvidenciaAdded();
     } catch (error) {
       console.error("Error removing evidence:", error);
-      toast.error("Error al eliminar foto");
+      toast.error("Error al eliminar");
     }
   };
 
-  const handlePreview = async (evidencia: CargaEvidencia) => {
+  const handlePreview = async (evidencia: CargaEvidencia, idx: number) => {
     const { data } = await supabase.storage
       .from("cargas-evidencias")
       .createSignedUrl(evidencia.ruta_storage, 300);
 
     if (data?.signedUrl) {
-      setPreviewTitle(
-        evidencia.tipo_evidencia === "sello_salida_1" ? "Sello Puerta 1" : "Sello Puerta 2"
-      );
+      setPreviewTitle(`Sello ${idx + 1}`);
       setPreviewUrl(data.signedUrl);
     }
+  };
+
+  const handleAddSello = () => {
+    onNumerosSelloChange([...numerosSello, ""]);
+  };
+
+  const handleNumeroChange = (idx: number, value: string) => {
+    const newNumeros = [...numerosSello];
+    newNumeros[idx] = value;
+    onNumerosSelloChange(newNumeros);
   };
 
   return (
@@ -153,148 +172,143 @@ export function SellosSection({
                 <LockOpen className="h-4 w-4 text-muted-foreground" />
               )}
               Sellos de Salida
+              {esDirecto && llevaSellos && (
+                <Badge variant="outline" className="text-xs">Obligatorio (directo)</Badge>
+              )}
             </CardTitle>
             <div className="flex items-center gap-2">
               <Checkbox
                 id="no-sellos"
                 checked={!llevaSellos}
                 onCheckedChange={(checked) => onLlevaSellosChange(!checked)}
-                disabled={disabled}
+                disabled={disabled || esDirecto}
               />
               <Label htmlFor="no-sellos" className="text-sm cursor-pointer">
                 Sin sellos
               </Label>
             </div>
           </div>
+          {esDirecto && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Pedido directo (1/1) — al menos 1 sello obligatorio
+            </p>
+          )}
         </CardHeader>
 
         {llevaSellos && (
           <CardContent className="space-y-4">
-            {/* Número de sello */}
-            <div className="space-y-2">
-              <Label htmlFor="numero-sello">Número de sello</Label>
-              <Input
-                id="numero-sello"
-                placeholder="Ej: 123456"
-                value={numeroSello}
-                onChange={(e) => onNumeroSelloChange(e.target.value)}
-                disabled={disabled}
-                className="h-12"
-              />
-            </div>
+            {/* Dynamic seal entries */}
+            {Array.from({ length: selloCount }).map((_, idx) => {
+              const tipo = `sello_salida_${idx + 1}`;
+              const evidencia = evidencias.find(e => e.tipo_evidencia === tipo);
+              const numero = numerosSello[idx] || "";
 
-            {/* Botones para capturar fotos de sellos */}
-            <div className="grid grid-cols-2 gap-3">
-              {/* Sello Puerta 1 - Obligatorio */}
-              <div className="space-y-2">
-                <Label className="text-sm">
-                  Sello Puerta 1 <span className="text-destructive">*</span>
-                </Label>
-                {sello1 ? (
-                  <div className="relative aspect-video rounded-lg border overflow-hidden group">
-                    <SelloThumbnail
-                      rutaStorage={sello1.ruta_storage}
-                      onClick={() => handlePreview(sello1)}
-                    />
-                    <div className="absolute top-2 right-2 flex gap-1">
+              return (
+                <div key={idx} className="border rounded-lg p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">
+                      Sello {idx + 1}
+                      {idx === 0 && esDirecto && <span className="text-destructive ml-1">*</span>}
+                    </Label>
+                    {idx > 0 && !evidencia && (
                       <Button
-                        variant="secondary"
+                        variant="ghost"
                         size="icon"
-                        className="h-7 w-7 bg-background/80"
-                        onClick={() => handlePreview(sello1)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleRemove(sello1)}
+                        className="h-6 w-6"
+                        onClick={() => {
+                          const newNumeros = [...numerosSello];
+                          newNumeros.splice(idx, 1);
+                          onNumerosSelloChange(newNumeros);
+                        }}
                         disabled={disabled}
                       >
                         <X className="h-4 w-4" />
                       </Button>
-                    </div>
-                    <Badge className="absolute bottom-2 left-2 bg-green-600">
-                      <Check className="h-3 w-3 mr-1" />
-                      Capturado
-                    </Badge>
-                  </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    className="w-full h-20 flex flex-col gap-1"
-                    onClick={() => handleCapture("sello_salida_1", "Sello Puerta 1")}
-                    disabled={disabled || uploading === "sello_salida_1"}
-                  >
-                    {uploading === "sello_salida_1" ? (
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                    ) : (
-                      <Camera className="h-6 w-6" />
                     )}
-                    <span className="text-xs">Capturar</span>
-                  </Button>
-                )}
-              </div>
+                  </div>
 
-              {/* Sello Puerta 2 - Opcional */}
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">
-                  Sello Puerta 2 (opcional)
-                </Label>
-                {sello2 ? (
-                  <div className="relative aspect-video rounded-lg border overflow-hidden group">
-                    <SelloThumbnail
-                      rutaStorage={sello2.ruta_storage}
-                      onClick={() => handlePreview(sello2)}
-                    />
-                    <div className="absolute top-2 right-2 flex gap-1">
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        className="h-7 w-7 bg-background/80"
-                        onClick={() => handlePreview(sello2)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleRemove(sello2)}
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Photo */}
+                    <div>
+                      {evidencia ? (
+                        <div className="relative aspect-video rounded-lg border overflow-hidden group">
+                          <SelloThumbnail
+                            rutaStorage={evidencia.ruta_storage}
+                            onClick={() => handlePreview(evidencia, idx)}
+                          />
+                          <div className="absolute top-1 right-1 flex gap-1">
+                            <Button
+                              variant="secondary"
+                              size="icon"
+                              className="h-6 w-6 bg-background/80"
+                              onClick={() => handlePreview(evidencia, idx)}
+                            >
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => handleRemove(evidencia, idx)}
+                              disabled={disabled}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <Badge className="absolute bottom-1 left-1 bg-green-600 text-xs">
+                            <Check className="h-3 w-3 mr-1" />
+                            Foto
+                          </Badge>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          className="w-full h-20 flex flex-col gap-1"
+                          onClick={() => handleCapture(idx)}
+                          disabled={disabled || uploading === tipo}
+                        >
+                          {uploading === tipo ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                          ) : (
+                            <Camera className="h-5 w-5" />
+                          )}
+                          <span className="text-xs">Foto sello</span>
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Number */}
+                    <div className="flex flex-col justify-center">
+                      <Label className="text-xs mb-1 text-muted-foreground">Nº de sello</Label>
+                      <Input
+                        placeholder="Ej: 123456"
+                        value={numero}
+                        onChange={(e) => handleNumeroChange(idx, e.target.value)}
                         disabled={disabled}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                        className="h-10"
+                      />
                     </div>
-                    <Badge className="absolute bottom-2 left-2 bg-green-600">
-                      <Check className="h-3 w-3 mr-1" />
-                      Capturado
-                    </Badge>
                   </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    className="w-full h-20 flex flex-col gap-1"
-                    onClick={() => handleCapture("sello_salida_2", "Sello Puerta 2")}
-                    disabled={disabled || uploading === "sello_salida_2"}
-                  >
-                    {uploading === "sello_salida_2" ? (
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                    ) : (
-                      <Camera className="h-6 w-6" />
-                    )}
-                    <span className="text-xs">Capturar</span>
-                  </Button>
-                )}
-              </div>
-            </div>
+                </div>
+              );
+            })}
 
-            {/* Validación */}
-            {!sello1 && (
+            {/* Add seal button */}
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              onClick={handleAddSello}
+              disabled={disabled}
+            >
+              <Plus className="h-4 w-4" />
+              Agregar sello
+            </Button>
+
+            {/* Validation for direct orders */}
+            {esDirecto && selloEvidencias.length === 0 && (
               <p className="text-sm text-destructive flex items-center gap-1">
                 <Camera className="h-4 w-4" />
-                Foto del sello obligatoria para completar carga
+                Al menos 1 sello con foto obligatorio (pedido directo)
               </p>
             )}
           </CardContent>
@@ -320,7 +334,6 @@ export function SellosSection({
   );
 }
 
-// Thumbnail component
 function SelloThumbnail({
   rutaStorage,
   onClick,
