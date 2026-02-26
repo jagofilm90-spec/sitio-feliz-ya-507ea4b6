@@ -518,10 +518,17 @@ export const RutaCargaSheet = ({
 
       // MARCAR COMO CARGADO
       if (cargado && loteId) {
-        if (productoActual.cargado) {
+        // Guard: check DB to prevent double-decrement
+        const { data: cargaActual } = await supabase
+          .from("carga_productos")
+          .select("cargado, movimiento_inventario_id")
+          .eq("id", cargaId)
+          .single();
+
+        if (cargaActual?.cargado && cargaActual?.movimiento_inventario_id) {
           toast({
             title: "Producto ya cargado",
-            description: "Desmarque primero para modificar",
+            description: "Este producto ya fue descontado del inventario",
           });
           return;
         }
