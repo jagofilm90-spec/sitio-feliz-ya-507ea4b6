@@ -454,9 +454,21 @@ export default function AlmacenCargaScan() {
         const prod = productos.find((p) => p.id === cargaId);
         if (!prod) return;
 
+        // Guard: check DB to prevent double-decrement
+        const { data: cargaActual } = await supabase
+          .from("carga_productos")
+          .select("cargado, movimiento_inventario_id")
+          .eq("id", cargaId)
+          .single();
+
+        if (cargaActual?.cargado && cargaActual?.movimiento_inventario_id) {
+          toast.info("Producto ya fue descontado del inventario");
+          return;
+        }
+
         await supabase.rpc("decrementar_lote", { p_lote_id: loteId, p_cantidad: cantidadCargada });
 
-        await supabase.from("inventario_movimientos").insert({
+        const { data: movimiento } = await supabase.from("inventario_movimientos").insert({
           producto_id: prod.producto.id,
           tipo_movimiento: "salida",
           cantidad: cantidadCargada,
@@ -464,7 +476,7 @@ export default function AlmacenCargaScan() {
           lote_id: loteId,
           referencia_id: entregaId,
           usuario_id: user?.id,
-        });
+        }).select("id").single();
 
         await supabase.from("carga_productos").update({
           cargado: true,
@@ -472,6 +484,7 @@ export default function AlmacenCargaScan() {
           lote_id: loteId,
           cargado_en: new Date().toISOString(),
           cargado_por: user?.id,
+          movimiento_inventario_id: movimiento?.id || null,
         }).eq("id", cargaId);
       } else if (!cargado) {
         const prod = productos.find((p) => p.id === cargaId);
