@@ -212,7 +212,7 @@ export const useMonitoreoRutas = () => {
     try {
       const hoy = format(new Date(), 'yyyy-MM-dd');
 
-      // Cargar rutas sin JOIN de chofer/ayudante (IDs son de empleados, no profiles)
+      // Cargar rutas de hoy + rutas incompletas de cualquier fecha
       const { data: rutasData, error: rutasError } = await supabase
         .from('rutas')
         .select(`
@@ -221,7 +221,7 @@ export const useMonitoreoRutas = () => {
           chofer_id, ayudante_id,
           vehiculo:vehiculos!rutas_vehiculo_id_fkey (id, nombre)
         `)
-        .eq('fecha_ruta', hoy)
+        .or(`fecha_ruta.eq.${hoy},and(status.in.(programada,en_carga,cargada,en_curso),carga_completada.is.null)`)
         .neq('status', 'cancelada')
         .order('created_at', { ascending: true });
 
