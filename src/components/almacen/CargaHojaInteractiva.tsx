@@ -57,6 +57,7 @@ interface ProductoHoja {
   }[];
   eliminado: boolean;
   confirmado: boolean;
+  _yaCargadoEnDB: boolean;
 }
 
 interface PersonalInfo {
@@ -217,12 +218,27 @@ export const CargaHojaInteractiva = ({
               bodega_nombre: (l.bodega as any)?.nombre || null,
             })),
             eliminado: false,
-            confirmado: false,
+            confirmado: cp.cargado || false,
+            // Track if it was already cargado from DB (inventory already decremented)
+            _yaCargadoEnDB: cp.cargado || false,
           });
         }
       }
 
       setProductos(allProducts);
+
+      // Restore fase if carga was already confirmed
+      if (allProducts.length > 0 && allProducts.every(p => p._yaCargadoEnDB)) {
+        // Check if we should go to evidencias or firma
+        const { data: rutaData } = await supabase.from("rutas").select("lleva_sellos, numero_sello_salida").eq("id", rutaId).single();
+        // If already confirmed, go to evidencias phase
+        setFase("evidencias");
+        if (rutaData) {
+          setLlevaSellos(rutaData.lleva_sellos ?? true);
+          setNumeroSello(rutaData.numero_sello_salida || "");
+        }
+      }
+
       setLoading(false);
     };
     load();
@@ -242,7 +258,19 @@ export const CargaHojaInteractiva = ({
   const diferenciaPeso = pesoReal - pesoTeorico;
 
   const updateProducto = (idx: number, updates: Partial<ProductoHoja>) => {
-    setProductos(prev => prev.map((p, i) => i === idx ? { ...p, ...updates } : p));
+    setProductos(prev => {
+      const updated = prev.map((p, i) => i === idx ? { ...p, ...updates } : p);
+      // Auto-save non-confirmado fields to DB so progress persists
+      const item = updated[idx];
+      const dbUpdates: Record<string, any> = {};
+      if ('cantidadACargar' in updates) dbUpdates.cantidad_cargada = updates.cantidadACargar;
+      if ('pesoRealKg' in updates) dbUpdates.peso_real_kg = updates.pesoRealKg;
+      if ('loteId' in updates) dbUpdates.lote_id = updates.loteId;
+      if (Object.keys(dbUpdates).length > 0) {
+        supabase.from("carga_productos").update(dbUpdates).eq("id", item.cargaProductoId).then();
+      }
+      return updated;
+    });
   };
 
   // Load evidencias
@@ -271,17 +299,20 @@ export const CargaHojaInteractiva = ({
           return;
         }
 
-        await supabase.rpc("decrementar_lote", { p_lote_id: prod.loteId, p_cantidad: prod.cantidadACargar });
+        // Skip inventory decrement if already processed in a previous session
+        if (!prod._yaCargadoEnDB) {
+          await supabase.rpc("decrementar_lote", { p_lote_id: prod.loteId, p_cantidad: prod.cantidadACargar });
 
-        await supabase.from("inventario_movimientos").insert({
-          producto_id: prod.productoId,
-          tipo_movimiento: "salida",
-          cantidad: prod.cantidadACargar,
-          motivo: "Carga de pedido",
-          lote_id: prod.loteId,
-          referencia_id: prod.entregaId,
-          usuario_id: user?.id,
-        });
+          await supabase.from("inventario_movimientos").insert({
+            producto_id: prod.productoId,
+            tipo_movimiento: "salida",
+            cantidad: prod.cantidadACargar,
+            motivo: "Carga de pedido",
+            lote_id: prod.loteId,
+            referencia_id: prod.entregaId,
+            usuario_id: user?.id,
+          });
+        }
 
         await supabase.from("carga_productos").update({
           cargado: true,
