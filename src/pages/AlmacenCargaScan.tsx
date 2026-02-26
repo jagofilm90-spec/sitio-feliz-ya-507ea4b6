@@ -457,12 +457,40 @@ export default function AlmacenCargaScan() {
         // Guard: check DB to prevent double-decrement
         const { data: cargaActual } = await supabase
           .from("carga_productos")
-          .select("cargado, movimiento_inventario_id")
+          .select("cargado, movimiento_inventario_id, cantidad_cargada")
           .eq("id", cargaId)
           .single();
 
         if (cargaActual?.cargado && cargaActual?.movimiento_inventario_id) {
-          toast.info("Producto ya fue descontado del inventario");
+          // Already loaded — adjust difference if quantity changed
+          const cantidadPrevia = cargaActual.cantidad_cargada || 0;
+          const diferencia = cantidadCargada - cantidadPrevia;
+
+          if (diferencia === 0) {
+            toast.info("Sin cambios en la cantidad");
+            return;
+          }
+
+          if (diferencia > 0) {
+            await supabase.rpc("decrementar_lote", { p_lote_id: loteId, p_cantidad: diferencia });
+          } else {
+            await supabase.rpc("incrementar_lote", { p_lote_id: loteId, p_cantidad: Math.abs(diferencia) });
+          }
+
+          await supabase.from("inventario_movimientos").update({
+            cantidad: cantidadCargada,
+          }).eq("id", cargaActual.movimiento_inventario_id);
+
+          await supabase.from("carga_productos").update({
+            cantidad_cargada: cantidadCargada,
+            corregido_en: new Date().toISOString(),
+          }).eq("id", cargaId);
+
+          setProductos((prev) =>
+            prev.map((p) => p.id === cargaId ? { ...p, cantidad_cargada: cantidadCargada } : p)
+          );
+
+          toast.success(`Cantidad corregida: ${cantidadPrevia} → ${cantidadCargada}`);
           return;
         }
 
