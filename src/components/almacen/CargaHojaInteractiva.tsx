@@ -97,6 +97,8 @@ export const CargaHojaInteractiva = ({
   // Post-carga flow phases: checklist → evidencias → firma
   const [fase, setFase] = useState<"checklist" | "evidencias" | "firma">("checklist");
   const [pedidoActualIdx, setPedidoActualIdx] = useState(0);
+  const [pedidoOrder, setPedidoOrder] = useState<string[]>([]); // ordered pedidoIds for tabs
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [evidencias, setEvidencias] = useState<any[]>([]);
   const [llevaSellos, setLlevaSellos] = useState(true);
   const [numeroSello, setNumeroSello] = useState("");
@@ -382,6 +384,13 @@ export const CargaHojaInteractiva = ({
     }
   };
 
+  // Initialize pedidoOrder in reverse (last delivery = loaded first)
+  useEffect(() => {
+    if (!loading && pedidos.length > 0 && pedidoOrder.length === 0) {
+      setPedidoOrder([...pedidos].reverse().map(p => p.pedidoId));
+    }
+  }, [loading, pedidos, pedidoOrder.length]);
+
   if (loading) {
     return (
       <div className="fixed inset-0 z-50 bg-background flex items-center justify-center">
@@ -390,8 +399,12 @@ export const CargaHojaInteractiva = ({
     );
   }
 
-  // Group by pedido
-  const pedidoGroups = pedidos.map(ped => ({
+  // Group by pedido, ordered by pedidoOrder
+  const orderedPedidos = pedidoOrder.length > 0
+    ? pedidoOrder.map(id => pedidos.find(p => p.pedidoId === id)).filter(Boolean) as PedidoEnCola[]
+    : [...pedidos].reverse();
+
+  const pedidoGroups = orderedPedidos.map(ped => ({
     ...ped,
     items: productos.map((p, idx) => ({ ...p, originalIdx: idx })).filter(p => p.pedidoFolio === ped.folio),
   }));
@@ -559,13 +572,42 @@ export const CargaHojaInteractiva = ({
                 return (
                   <button
                     key={group.pedidoId}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.setData("text/plain", String(idx));
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                      setDragOverIdx(idx);
+                    }}
+                    onDragLeave={() => setDragOverIdx(null)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOverIdx(null);
+                      const fromIdx = parseInt(e.dataTransfer.getData("text/plain"));
+                      if (isNaN(fromIdx) || fromIdx === idx) return;
+                      setPedidoOrder(prev => {
+                        const arr = [...prev];
+                        const [moved] = arr.splice(fromIdx, 1);
+                        arr.splice(idx, 0, moved);
+                        return arr;
+                      });
+                      // Adjust active tab
+                      if (pedidoActualIdx === fromIdx) setPedidoActualIdx(idx);
+                      else if (fromIdx < pedidoActualIdx && idx >= pedidoActualIdx) setPedidoActualIdx(prev => prev - 1);
+                      else if (fromIdx > pedidoActualIdx && idx <= pedidoActualIdx) setPedidoActualIdx(prev => prev + 1);
+                    }}
                     onClick={() => setPedidoActualIdx(idx)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap border transition-colors ${
-                      isActive
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : todosCheck
-                          ? "bg-green-100 dark:bg-green-950/30 border-green-500 text-green-700 dark:text-green-400"
-                          : "bg-muted/50 border-border text-muted-foreground hover:bg-muted"
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap border transition-colors cursor-grab active:cursor-grabbing ${
+                      dragOverIdx === idx
+                        ? "border-primary border-2 bg-primary/10"
+                        : isActive
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : todosCheck
+                            ? "bg-green-100 dark:bg-green-950/30 border-green-500 text-green-700 dark:text-green-400"
+                            : "bg-muted/50 border-border text-muted-foreground hover:bg-muted"
                     }`}
                   >
                     {todosCheck && <CheckCircle2 className="h-3.5 w-3.5" />}
