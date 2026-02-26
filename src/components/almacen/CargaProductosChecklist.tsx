@@ -185,12 +185,6 @@ const ProductoRow = ({
                 {loteActual.bodega_nombre}
               </span>
             )}
-            {loteFIFO?.fecha_caducidad && (
-              <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-                <Calendar className="w-3 h-3" />
-                {format(new Date(loteFIFO.fecha_caducidad), "dd/MMM/yy", { locale: es })}
-              </span>
-            )}
           </div>
         </div>
       </div>
@@ -244,10 +238,10 @@ const ProductoRow = ({
           </div>
         )}
 
-        {/* Lote */}
-        <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-          <label className="text-[10px] text-muted-foreground font-medium uppercase text-center">Lote</label>
-          {producto.lotes_disponibles.length > 0 ? (
+        {/* Lote - solo si hay más de 1 */}
+        {producto.lotes_disponibles.length > 1 && (
+          <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+            <label className="text-[10px] text-muted-foreground font-medium uppercase text-center">Lote</label>
             <Select
               value={loteSeleccionado || ""}
               onValueChange={setLoteSeleccionado}
@@ -268,13 +262,27 @@ const ProductoRow = ({
                 ))}
               </SelectContent>
             </Select>
-          ) : (
-            <span className="text-xs text-destructive flex items-center justify-center gap-1 h-9">
-              <AlertTriangle className="w-3 h-3" />
-              Sin lotes
+          </div>
+        )}
+
+        {/* Fecha caducidad - siempre visible si existe */}
+        {loteActual?.fecha_caducidad && (
+          <div className="flex flex-col items-center gap-0.5">
+            <label className="text-[10px] text-muted-foreground font-medium uppercase">Caduc.</label>
+            <span className="text-xs font-medium flex items-center gap-1 h-9">
+              <Calendar className="w-3 h-3 text-muted-foreground" />
+              {format(new Date(loteActual.fecha_caducidad), "dd/MMM/yy", { locale: es })}
             </span>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Sin lotes */}
+        {producto.lotes_disponibles.length === 0 && (
+          <span className="text-xs text-destructive flex items-center gap-1 h-9">
+            <AlertTriangle className="w-3 h-3" />
+            Sin lotes
+          </span>
+        )}
       </div>
     </div>
   );
