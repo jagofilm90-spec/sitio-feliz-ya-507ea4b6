@@ -239,14 +239,29 @@ const RutasContent = () => {
           .in("id", pedidoIds);
       }
 
-      // 2. Eliminar carga_productos
-      await supabase
-        .from("carga_productos")
-        .delete()
-        .in("entrega_id", (await supabase
-          .from("entregas")
-          .select("id")
-          .in("ruta_id", selectedRutas)).data?.map(e => e.id) || []);
+      // 2. Revert inventory for loaded products, then delete carga_productos
+      const entregaIdsForCarga = (await supabase
+        .from("entregas")
+        .select("id")
+        .in("ruta_id", selectedRutas)).data?.map(e => e.id) || [];
+
+      if (entregaIdsForCarga.length > 0) {
+        const { data: cargaProds } = await supabase
+          .from("carga_productos")
+          .select("id, cargado, lote_id, cantidad_cargada")
+          .in("entrega_id", entregaIdsForCarga);
+
+        for (const cp of cargaProds || []) {
+          if (cp.cargado && cp.lote_id && cp.cantidad_cargada) {
+            await supabase.rpc("incrementar_lote", {
+              p_lote_id: cp.lote_id,
+              p_cantidad: cp.cantidad_cargada,
+            });
+          }
+        }
+
+        await supabase.from("carga_productos").delete().in("entrega_id", entregaIdsForCarga);
+      }
 
       // 3. Eliminar entregas
       await supabase

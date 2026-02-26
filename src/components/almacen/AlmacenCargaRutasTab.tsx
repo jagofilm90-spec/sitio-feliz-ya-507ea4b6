@@ -109,8 +109,23 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
         await supabase.from("carga_productos").delete().in("entrega_id", entregaIds);
       }
 
-      // 2. Delete entregas
+      // 2. Get pedido IDs to reset before deleting entregas
+      const { data: entregasPedidos } = await supabase
+        .from("entregas")
+        .select("pedido_id")
+        .eq("ruta_id", rutaId);
+
+      // 3. Delete entregas
       await supabase.from("entregas").delete().eq("ruta_id", rutaId);
+
+      // 4. Reset pedidos to pendiente
+      if (entregasPedidos && entregasPedidos.length > 0) {
+        const pedidoIds = entregasPedidos.map(e => e.pedido_id);
+        await supabase.from("pedidos").update({ 
+          status: "pendiente" as any, 
+          updated_at: new Date().toISOString() 
+        }).in("id", pedidoIds);
+      }
 
       // 3. Reset vehicle
       if (vehiculoId) {
