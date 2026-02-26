@@ -157,7 +157,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
           firma_chofer_carga,
           vehiculo:vehiculos(id, nombre, placa),
           chofer:empleados!rutas_chofer_id_fkey(id, nombre_completo),
-          entregas(id, pedido_id, pedido:pedidos(folio, cliente:clientes(nombre)))
+          entregas(id, pedido_id, orden_entrega, pedido:pedidos(folio, cliente:clientes(nombre)))
         `)
         .eq("fecha_ruta", fechaHoy)
         .order("hora_salida_sugerida", { ascending: true, nullsFirst: false });
@@ -477,8 +477,11 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
                   tiempoStr = hrs > 0 ? `${hrs}h ${mins % 60}m` : `${mins}m ${segs % 60}s`;
                 }
 
-                // Client names from entregas
-                const clienteNames = ruta.entregas
+                // Client names from entregas, sorted by orden_entrega (delivery order: 1 first)
+                const sortedEntregas = [...ruta.entregas].sort((a, b) => 
+                  ((a as any).orden_entrega || 0) - ((b as any).orden_entrega || 0)
+                );
+                const clienteNames = sortedEntregas
                   .map(e => (e as any).pedido?.cliente?.nombre)
                   .filter(Boolean) as string[];
                 const uniqueClientes = [...new Set(clienteNames)];
