@@ -185,6 +185,7 @@ export const RutaCargaInlineView = ({ ruta, onClose, onCargaCompletada }: RutaCa
       formatTiempo={formatTiempo}
       onFinalizar={handleFinalizar}
       onCancelar={handleCancelar}
+      onClose={onClose}
       cancelling={cancelling}
       personal={{
         choferNombre: ruta.chofer?.nombre_completo || "",
