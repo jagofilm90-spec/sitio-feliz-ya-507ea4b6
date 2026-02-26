@@ -508,6 +508,7 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
         formatTiempo={formatTiempo}
         onFinalizar={handleFinalizarCarga}
         onCancelar={handleCancelarRuta}
+        onClose={onClose}
         cancelling={cancelling}
         personal={{
           choferNombre: choferObj?.nombre_completo || "",

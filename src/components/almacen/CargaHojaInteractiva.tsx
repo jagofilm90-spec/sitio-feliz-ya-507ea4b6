@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   CheckCircle2, Loader2, Scale, Trash2, Timer, Package, ArrowDown, ArrowUp, Truck, User,
-  Camera, PenTool, ArrowRight, AlertTriangle,
+  Camera, PenTool, ArrowRight, AlertTriangle, X,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getCompactDisplayName } from "@/lib/productUtils";
@@ -73,12 +73,13 @@ interface CargaHojaInteractivaProps {
   formatTiempo: (s: number) => string;
   onFinalizar: () => void;
   onCancelar: () => void;
+  onClose?: () => void;
   cancelling: boolean;
   personal?: PersonalInfo;
 }
 
 export const CargaHojaInteractiva = ({
-  rutaId, rutaFolio, pedidos, tiempoSeg, formatTiempo, onFinalizar, onCancelar, cancelling, personal,
+  rutaId, rutaFolio, pedidos, tiempoSeg, formatTiempo, onFinalizar, onCancelar, onClose, cancelling, personal,
 }: CargaHojaInteractivaProps) => {
   const [productos, setProductos] = useState<ProductoHoja[]>([]);
   const [loading, setLoading] = useState(true);
@@ -302,7 +303,7 @@ export const CargaHojaInteractiva = ({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
+      <div className="fixed inset-0 z-50 bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -315,7 +316,21 @@ export const CargaHojaInteractiva = ({
   }));
 
   return (
-    <div className="space-y-4">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden">
+      {/* ─── Close (X) button ─── */}
+      {onClose && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-2 right-2 z-[60] h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-md"
+          onClick={onClose}
+        >
+          <X className="h-5 w-5" />
+        </Button>
+      )}
+
+      <ScrollArea className="flex-1">
+        <div className="space-y-4 p-4">
       {/* ─── Document-style Header ─── */}
       <div className="border border-border rounded-lg overflow-hidden bg-card">
         {/* Top bar: Logo + Title + Folio */}
@@ -664,6 +679,8 @@ export const CargaHojaInteractiva = ({
         rutaFolio={rutaFolio}
         loading={firmaLoading}
       />
+        </div>
+      </ScrollArea>
     </div>
   );
 };
