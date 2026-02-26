@@ -587,21 +587,29 @@ export const CargaHojaInteractiva = ({
                       setDragOverIdx(idx);
                     }}
                     onDragLeave={() => setDragOverIdx(null)}
-                    onDrop={(e) => {
+                    onDrop={async (e) => {
                       e.preventDefault();
                       setDragOverIdx(null);
                       const fromIdx = parseInt(e.dataTransfer.getData("text/plain"));
                       if (isNaN(fromIdx) || fromIdx === idx) return;
-                      setPedidoOrder(prev => {
-                        const arr = [...prev];
-                        const [moved] = arr.splice(fromIdx, 1);
-                        arr.splice(idx, 0, moved);
-                        return arr;
-                      });
+                      const newOrder = [...pedidoOrder];
+                      const [moved] = newOrder.splice(fromIdx, 1);
+                      newOrder.splice(idx, 0, moved);
+                      setPedidoOrder(newOrder);
                       // Adjust active tab
                       if (pedidoActualIdx === fromIdx) setPedidoActualIdx(idx);
                       else if (fromIdx < pedidoActualIdx && idx >= pedidoActualIdx) setPedidoActualIdx(prev => prev - 1);
                       else if (fromIdx > pedidoActualIdx && idx <= pedidoActualIdx) setPedidoActualIdx(prev => prev + 1);
+                      // Persist orden_entrega to DB
+                      for (let i = 0; i < newOrder.length; i++) {
+                        const ped = pedidos.find(p => p.pedidoId === newOrder[i]);
+                        if (ped) {
+                          await supabase.from("entregas")
+                            .update({ orden_entrega: newOrder.length - i })
+                            .eq("ruta_id", rutaId)
+                            .eq("pedido_id", ped.pedidoId);
+                        }
+                      }
                     }}
                     onClick={() => setPedidoActualIdx(idx)}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap border transition-colors cursor-grab active:cursor-grabbing ${
