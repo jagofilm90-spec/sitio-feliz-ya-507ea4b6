@@ -9,6 +9,10 @@ interface PedidoEnCola {
   folio: string;
   clienteNombre: string;
   clienteId: string;
+  sucursalNombre: string | null;
+  direccion: string | null;
+  latitud: number | null;
+  longitud: number | null;
 }
 
 interface RutaBasica {
@@ -46,16 +50,22 @@ export const RutaCargaInlineView = ({ ruta, onClose, onCargaCompletada }: RutaCa
       for (const entrega of ruta.entregas) {
         const { data } = await supabase
           .from("pedidos")
-          .select("id, folio, cliente_id, cliente:clientes(nombre)")
+          .select("id, folio, cliente_id, cliente:clientes(nombre, direccion), sucursal:cliente_sucursales(nombre, direccion, latitud, longitud)")
           .eq("id", entrega.pedido_id)
           .single();
 
         if (data) {
+          const suc = data.sucursal as any;
+          const cli = data.cliente as any;
           pedidosData.push({
             pedidoId: data.id,
             folio: data.folio,
-            clienteNombre: (data.cliente as any)?.nombre || "Sin cliente",
+            clienteNombre: cli?.nombre || "Sin cliente",
             clienteId: data.cliente_id,
+            sucursalNombre: suc?.nombre || null,
+            direccion: suc?.direccion || cli?.direccion || null,
+            latitud: suc?.latitud || null,
+            longitud: suc?.longitud || null,
           });
         }
       }

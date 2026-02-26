@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   CheckCircle2, Loader2, Scale, Trash2, Timer, Package, ArrowDown, ArrowUp, Truck, User,
-  Camera, PenTool, ArrowRight, AlertTriangle, X, Pencil,
+  Camera, PenTool, ArrowRight, AlertTriangle, X, Pencil, MapPin, Navigation,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -28,6 +28,10 @@ interface PedidoEnCola {
   folio: string;
   clienteNombre: string;
   clienteId: string;
+  sucursalNombre: string | null;
+  direccion: string | null;
+  latitud: number | null;
+  longitud: number | null;
 }
 
 interface ProductoHoja {
@@ -633,12 +637,36 @@ export const CargaHojaInteractiva = ({
             return (
               <div>
                 {/* Pedido header */}
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="outline" className="text-sm font-bold">{group.folio}</Badge>
-                  <span className="text-sm font-semibold">{group.clienteNombre}</span>
-                  <span className="text-xs text-muted-foreground ml-auto">
-                    {pedidoActualIdx + 1}/{pedidoGroups.length} · {confirmadosGrupo}/{itemsActivos.length} productos
-                  </span>
+                <div className="mb-3 rounded-lg border border-border bg-muted/30 p-2.5">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-sm font-bold shrink-0">{group.folio}</Badge>
+                    <span className="text-sm font-bold uppercase truncate">{group.clienteNombre}</span>
+                    <span className="text-xs text-muted-foreground ml-auto shrink-0">
+                      {pedidoActualIdx + 1}/{pedidoGroups.length} · {confirmadosGrupo}/{itemsActivos.length}
+                    </span>
+                  </div>
+                  {group.sucursalNombre && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      <span className="font-medium">Sucursal:</span> {group.sucursalNombre}
+                    </p>
+                  )}
+                  {group.direccion && (
+                    <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                      <MapPin className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{group.direccion}</span>
+                    </p>
+                  )}
+                  {group.latitud && group.longitud && (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${group.latitud},${group.longitud}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+                    >
+                      <Navigation className="h-3 w-3" />
+                      Ver ubicación de entrega
+                    </a>
+                  )}
                 </div>
 
                 {/* Table header */}

@@ -23,6 +23,10 @@ interface PedidoEnCola {
   folio: string;
   clienteNombre: string;
   clienteId: string;
+  sucursalNombre: string | null;
+  direccion: string | null;
+  latitud: number | null;
+  longitud: number | null;
 }
 
 interface ChoferOption {
@@ -188,14 +192,22 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
 
     try {
       const { data, error } = await supabase
-        .from("pedidos").select("id, folio, cliente_id, cliente:clientes(nombre)").eq("id", id).single();
+        .from("pedidos")
+        .select("id, folio, cliente_id, cliente:clientes(nombre, direccion), sucursal:cliente_sucursales(nombre, direccion, latitud, longitud)")
+        .eq("id", id).single();
       if (error || !data) { toast.error("Pedido no encontrado"); return; }
 
-      const newItem = {
+      const suc = data.sucursal as any;
+      const cli = data.cliente as any;
+      const newItem: PedidoEnCola = {
         pedidoId: data.id,
         folio: data.folio,
-        clienteNombre: (data.cliente as any)?.nombre || "Sin cliente",
+        clienteNombre: cli?.nombre || "Sin cliente",
         clienteId: data.cliente_id,
+        sucursalNombre: suc?.nombre || null,
+        direccion: suc?.direccion || cli?.direccion || null,
+        latitud: suc?.latitud || null,
+        longitud: suc?.longitud || null,
       };
 
       setCola(prev => [...prev, newItem]);
