@@ -445,11 +445,24 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
             onClick={() => setCameraActive(!cameraActive)}>
             <Camera className="h-5 w-5" />
           </Button>
-          <Input placeholder="O pega el folio aquí (PED-V-...)..." value={scanInput}
-            onChange={e => setScanInput(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter" && scanInput.trim()) { processScanInput(scanInput.trim()); setScanInput(""); } }}
-            className="h-12 text-base" />
-          <Button onClick={() => { if (scanInput.trim()) { processScanInput(scanInput.trim()); setScanInput(""); } }} size="lg" className="h-12 px-4"
+          <div className="flex-1 flex items-center h-12 border rounded-md bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+            <span className="pl-3 text-base font-semibold text-muted-foreground select-none whitespace-nowrap">PED-V-</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="número..."
+              value={scanInput}
+              onChange={e => setScanInput(e.target.value.replace(/[^0-9]/g, ""))}
+              onKeyDown={e => {
+                if (e.key === "Enter" && scanInput.trim()) {
+                  processScanInput(`PED-V-${scanInput.trim()}`);
+                  setScanInput("");
+                }
+              }}
+              className="flex-1 h-full bg-transparent text-base font-semibold outline-none px-1"
+            />
+          </div>
+          <Button onClick={() => { if (scanInput.trim()) { processScanInput(`PED-V-${scanInput.trim()}`); setScanInput(""); } }} size="lg" className="h-12 px-4"
             disabled={!scanInput.trim()}>
             <QrCode className="h-5 w-5 mr-1" />Agregar
           </Button>
