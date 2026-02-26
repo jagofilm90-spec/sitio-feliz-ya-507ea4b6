@@ -129,12 +129,10 @@ export const CargaHojaInteractiva = ({
   }, []);
 
   // Auto-save sellos to DB whenever they change (debounced)
-  const sellosInitializedRef = useRef(false);
+  const sellosLoadedRef = useRef(false);
   useEffect(() => {
-    if (loading || !sellosInitializedRef.current) {
-      if (!loading) sellosInitializedRef.current = true;
-      return;
-    }
+    // Don't save until data has been loaded from DB first
+    if (!sellosLoadedRef.current) return;
     const timeout = setTimeout(() => {
       supabase.from("rutas").update({
         lleva_sellos: llevaSellos,
@@ -142,7 +140,14 @@ export const CargaHojaInteractiva = ({
       }).eq("id", rutaId);
     }, 500);
     return () => clearTimeout(timeout);
-  }, [numerosSello, llevaSellos, rutaId, loading]);
+  }, [numerosSello, llevaSellos, rutaId]);
+
+  // Auto-save fase to DB whenever it changes
+  const faseLoadedRef = useRef(false);
+  useEffect(() => {
+    if (!faseLoadedRef.current) return;
+    supabase.from("rutas").update({ fase_carga: fase }).eq("id", rutaId);
+  }, [fase, rutaId]);
 
   // Load current ayudantes_ids from ruta when popover opens
   const handleOpenAyudantesEdit = async () => {
@@ -270,10 +275,18 @@ export const CargaHojaInteractiva = ({
 
       // Restore fase if carga was already confirmed
       if (allProducts.length > 0 && allProducts.every(p => !!p.movimientoInventarioId)) {
-        // Check if we should go to evidencias or firma
-        const { data: rutaData } = await supabase.from("rutas").select("lleva_sellos, numero_sello_salida").eq("id", rutaId).single();
-        // If already confirmed, go to evidencias phase
-        setFase("evidencias");
+        const { data: rutaData } = await supabase.from("rutas")
+          .select("lleva_sellos, numero_sello_salida, fase_carga")
+          .eq("id", rutaId).single();
+        
+        // Restore fase from DB (default to evidencias if carga confirmed)
+        const savedFase = rutaData?.fase_carga;
+        if (savedFase === "firma" || savedFase === "evidencias") {
+          setFase(savedFase);
+        } else {
+          setFase("evidencias");
+        }
+
         if (rutaData) {
           setLlevaSellos(rutaData.lleva_sellos ?? true);
           try {
@@ -284,6 +297,18 @@ export const CargaHojaInteractiva = ({
             setNumerosSello(rutaData.numero_sello_salida ? [rutaData.numero_sello_salida] : [""]);
           }
         }
+
+        // Mark refs as loaded AFTER state is set so auto-save doesn't overwrite
+        setTimeout(() => {
+          sellosLoadedRef.current = true;
+          faseLoadedRef.current = true;
+        }, 100);
+      } else {
+        // Fresh route in checklist phase - enable refs
+        setTimeout(() => {
+          sellosLoadedRef.current = true;
+          faseLoadedRef.current = true;
+        }, 100);
       }
 
       setLoading(false);
