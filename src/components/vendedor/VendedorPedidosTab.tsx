@@ -338,6 +338,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                     <TableHead className="w-[80px]">Crédito</TableHead>
                     <TableHead className="text-right w-[100px]">Total</TableHead>
                     <TableHead className="text-center w-[50px]">PDF</TableHead>
+                    <TableHead className="text-center w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -389,6 +390,19 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                             }}
                           >
                             <FileText className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              abrirEliminar(p);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>
                       </TableRow>
