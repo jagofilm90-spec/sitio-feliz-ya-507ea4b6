@@ -509,8 +509,8 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
                   )}
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">{i + 1}</div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold">{c.folio}</p>
-                    <p className="text-sm text-muted-foreground">{c.clienteNombre}</p>
+                    <p className="font-bold text-base uppercase truncate">{c.clienteNombre}</p>
+                    <p className="text-xs text-muted-foreground">{c.folio}</p>
                   </div>
                   <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"
                     onClick={() => setCola(prev => prev.filter(x => x.pedidoId !== c.pedidoId))}>
