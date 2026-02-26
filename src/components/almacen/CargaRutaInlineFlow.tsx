@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   QrCode, Truck, User, Loader2, Camera, X, ArrowLeft, CheckCircle2, Timer, Trash2, Package,
+  ChevronUp, ChevronDown,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -465,11 +466,34 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
         ) : (
           <div className="space-y-2">
             <p className="text-sm font-medium text-muted-foreground">{cola.length} pedido{cola.length > 1 ? "s" : ""} escaneado{cola.length > 1 ? "s" : ""}:</p>
+            {cola.length > 1 && (
+              <p className="text-xs text-muted-foreground italic">Usa las flechas para definir el orden de entrega (arriba = se carga primero)</p>
+            )}
             {cola.map((c, i) => (
               <Card key={c.pedidoId}>
-                <CardContent className="py-3 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">{i + 1}</div>
-                  <div className="flex-1">
+                <CardContent className="py-3 flex items-center gap-2">
+                  {cola.length > 1 && (
+                    <div className="flex flex-col gap-0.5">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" disabled={i === 0}
+                        onClick={() => setCola(prev => {
+                          const arr = [...prev];
+                          [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
+                          return arr;
+                        })}>
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" disabled={i === cola.length - 1}
+                        onClick={() => setCola(prev => {
+                          const arr = [...prev];
+                          [arr[i], arr[i + 1]] = [arr[i + 1], arr[i]];
+                          return arr;
+                        })}>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">{i + 1}</div>
+                  <div className="flex-1 min-w-0">
                     <p className="font-semibold">{c.folio}</p>
                     <p className="text-sm text-muted-foreground">{c.clienteNombre}</p>
                   </div>
