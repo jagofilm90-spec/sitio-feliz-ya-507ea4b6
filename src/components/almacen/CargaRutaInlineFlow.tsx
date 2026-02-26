@@ -154,10 +154,12 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
     if (!id && folioMatch) {
       const { data } = await supabase.from("pedidos").select("id").eq("folio", folioMatch[1].toUpperCase()).maybeSingle();
       if (data) id = data.id;
+      else { toast.error(`Pedido ${folioMatch[1].toUpperCase()} no encontrado`); return; }
     }
     if (!id && input.toUpperCase().startsWith("PED")) {
       const { data } = await supabase.from("pedidos").select("id").eq("folio", input.toUpperCase().trim()).maybeSingle();
       if (data) id = data.id;
+      else { toast.error(`Pedido ${input.toUpperCase().trim()} no encontrado`); return; }
     }
 
     if (id) {
