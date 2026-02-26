@@ -57,7 +57,7 @@ interface ProductoHoja {
   }[];
   eliminado: boolean;
   confirmado: boolean;
-  _yaCargadoEnDB: boolean;
+  movimientoInventarioId: string | null;
 }
 
 interface PersonalInfo {
@@ -160,7 +160,7 @@ export const CargaHojaInteractiva = ({
         // Get or create carga_productos
         let { data: cargaProds } = await supabase
           .from("carga_productos")
-          .select("id, pedido_detalle_id, cantidad_solicitada, cantidad_cargada, cargado, lote_id, peso_real_kg")
+          .select("id, pedido_detalle_id, cantidad_solicitada, cantidad_cargada, cargado, lote_id, peso_real_kg, movimiento_inventario_id")
           .eq("entrega_id", entrega.id);
 
         if (!cargaProds || cargaProds.length === 0) {
@@ -173,7 +173,7 @@ export const CargaHojaInteractiva = ({
                 entrega_id: entrega!.id, pedido_detalle_id: d.id,
                 cantidad_solicitada: d.cantidad, cantidad_cargada: 0, cargado: false,
               })))
-              .select("id, pedido_detalle_id, cantidad_solicitada, cantidad_cargada, cargado, lote_id, peso_real_kg");
+              .select("id, pedido_detalle_id, cantidad_solicitada, cantidad_cargada, cargado, lote_id, peso_real_kg, movimiento_inventario_id");
             cargaProds = insertados;
           }
         }
@@ -219,8 +219,7 @@ export const CargaHojaInteractiva = ({
             })),
             eliminado: false,
             confirmado: cp.cargado || false,
-            // Track if it was already cargado from DB (inventory already decremented)
-            _yaCargadoEnDB: cp.cargado || false,
+            movimientoInventarioId: cp.movimiento_inventario_id || null,
           });
         }
       }
@@ -228,7 +227,7 @@ export const CargaHojaInteractiva = ({
       setProductos(allProducts);
 
       // Restore fase if carga was already confirmed
-      if (allProducts.length > 0 && allProducts.every(p => p._yaCargadoEnDB)) {
+      if (allProducts.length > 0 && allProducts.every(p => !!p.movimientoInventarioId)) {
         // Check if we should go to evidencias or firma
         const { data: rutaData } = await supabase.from("rutas").select("lleva_sellos, numero_sello_salida").eq("id", rutaId).single();
         // If already confirmed, go to evidencias phase
@@ -260,9 +259,10 @@ export const CargaHojaInteractiva = ({
   const updateProducto = (idx: number, updates: Partial<ProductoHoja>) => {
     setProductos(prev => {
       const updated = prev.map((p, i) => i === idx ? { ...p, ...updates } : p);
-      // Auto-save non-confirmado fields to DB so progress persists
+      // Auto-save to DB so progress persists
       const item = updated[idx];
       const dbUpdates: Record<string, any> = {};
+      if ('confirmado' in updates) dbUpdates.cargado = updates.confirmado;
       if ('cantidadACargar' in updates) dbUpdates.cantidad_cargada = updates.cantidadACargar;
       if ('pesoRealKg' in updates) dbUpdates.peso_real_kg = updates.pesoRealKg;
       if ('loteId' in updates) dbUpdates.lote_id = updates.loteId;
@@ -299,11 +299,11 @@ export const CargaHojaInteractiva = ({
           return;
         }
 
-        // Skip inventory decrement if already processed in a previous session
-        if (!prod._yaCargadoEnDB) {
+        // Skip inventory decrement if already processed (has movimiento_inventario_id)
+        if (!prod.movimientoInventarioId) {
           await supabase.rpc("decrementar_lote", { p_lote_id: prod.loteId, p_cantidad: prod.cantidadACargar });
 
-          await supabase.from("inventario_movimientos").insert({
+          const { data: movimiento } = await supabase.from("inventario_movimientos").insert({
             producto_id: prod.productoId,
             tipo_movimiento: "salida",
             cantidad: prod.cantidadACargar,
@@ -311,7 +311,12 @@ export const CargaHojaInteractiva = ({
             lote_id: prod.loteId,
             referencia_id: prod.entregaId,
             usuario_id: user?.id,
-          });
+          }).select("id").single();
+
+          // Link movimiento to carga_producto to prevent double-decrement
+          if (movimiento) {
+            await supabase.from("carga_productos").update({ movimiento_inventario_id: movimiento.id }).eq("id", prod.cargaProductoId);
+          }
         }
 
         await supabase.from("carga_productos").update({
