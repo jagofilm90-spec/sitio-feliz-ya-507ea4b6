@@ -331,44 +331,63 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[120px]">Pedido</TableHead>
+                    <TableHead className="w-[110px]">Pedido</TableHead>
                     <TableHead>Cliente</TableHead>
-                    <TableHead className="text-right w-[120px]">Total</TableHead>
-                    <TableHead className="text-center w-[80px]">PDF</TableHead>
+                    <TableHead className="w-[90px]">Fecha</TableHead>
+                    <TableHead className="w-[80px]">Crédito</TableHead>
+                    <TableHead className="text-right w-[100px]">Total</TableHead>
+                    <TableHead className="text-center w-[50px]">PDF</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pedidosPendientes.map(p => (
-                    <TableRow key={p.id} className="cursor-pointer" onClick={() => abrirDetalle(p)}>
-                      <TableCell>
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-bold text-sm">{p.folio}</span>
-                          {p.status === "por_autorizar" && <Badge variant="secondary" className="text-[10px] w-fit">Por autorizar</Badge>}
-                          {p.status === "pendiente" && <Badge variant="default" className="text-[10px] w-fit">Pendiente</Badge>}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">{p.cliente.nombre}</span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className="font-bold text-sm">{formatCurrency(p.total)}</span>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPdfPedidoId(p.id);
-                            setShowPDFPreview(true);
-                          }}
-                        >
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {pedidosPendientes.map(p => {
+                    const creditoLabels: Record<string, string> = {
+                      contado: "Contado",
+                      "8_dias": "8 días",
+                      "15_dias": "15 días",
+                      "30_dias": "30 días",
+                      "60_dias": "60 días",
+                    };
+                    return (
+                      <TableRow key={p.id} className="cursor-pointer" onClick={() => abrirDetalle(p)}>
+                        <TableCell>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-bold text-sm">{p.folio}</span>
+                            {p.status === "por_autorizar" && <Badge variant="secondary" className="text-[10px] w-fit">Por autorizar</Badge>}
+                            {p.status === "pendiente" && <Badge variant="default" className="text-[10px] w-fit">Pendiente</Badge>}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">{p.cliente.nombre}</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(p.fecha_pedido), "d MMM yy", { locale: es })}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs">{creditoLabels[p.termino_credito] || p.termino_credito}</span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className="font-bold text-sm">{formatCurrency(p.total)}</span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPdfPedidoId(p.id);
+                              setShowPDFPreview(true);
+                            }}
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
