@@ -525,8 +525,8 @@ export const RutaCargaSheet = ({
           .eq("id", cargaId)
           .single();
 
-        if (cargaActual?.cargado && cargaActual?.movimiento_inventario_id) {
-          // Already loaded — adjust difference if quantity changed
+        if (cargaActual?.cargado) {
+          // Already loaded — adjust difference
           const cantidadPrevia = cargaActual.cantidad_cargada || 0;
           const diferencia = cantidadCargada - cantidadPrevia;
 
@@ -535,19 +535,34 @@ export const RutaCargaSheet = ({
             return;
           }
 
-          // Adjust lot: positive diff = decrement more, negative = increment back
           if (diferencia > 0) {
             await supabase.rpc("decrementar_lote", { p_lote_id: loteId, p_cantidad: diferencia });
           } else {
             await supabase.rpc("incrementar_lote", { p_lote_id: loteId, p_cantidad: Math.abs(diferencia) });
           }
 
-          // Update the inventory movement quantity
-          await supabase.from("inventario_movimientos").update({
-            cantidad: cantidadCargada,
-          }).eq("id", cargaActual.movimiento_inventario_id);
+          if (cargaActual.movimiento_inventario_id) {
+            await supabase.from("inventario_movimientos").update({
+              cantidad: cantidadCargada,
+            }).eq("id", cargaActual.movimiento_inventario_id);
+          } else {
+            const { data: movimiento } = await supabase.from("inventario_movimientos").insert({
+              producto_id: productoActual.producto.id,
+              tipo_movimiento: "salida",
+              cantidad: cantidadCargada,
+              referencia: `CARGA-${ruta.folio}`,
+              notas: `Cargado para ruta ${ruta.folio} (corrección)`,
+              usuario_id: user?.id,
+              lote: loteId,
+            }).select("id").single();
 
-          // Update carga_productos with new quantity
+            if (movimiento) {
+              await supabase.from("carga_productos").update({
+                movimiento_inventario_id: movimiento.id,
+              }).eq("id", cargaId);
+            }
+          }
+
           await supabase.from("carga_productos").update({
             cantidad_cargada: cantidadCargada,
             corregido_en: new Date().toISOString(),

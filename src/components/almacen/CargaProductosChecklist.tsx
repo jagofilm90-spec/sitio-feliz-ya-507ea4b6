@@ -139,6 +139,13 @@ const ProductoRow = ({
     }
   };
 
+  const handleCantidadBlur = () => {
+    // If product is already loaded and quantity changed, trigger adjustment
+    if (producto.cargado && cantidadCargada !== producto.cantidad_cargada && cantidadCargada > 0) {
+      onToggle(producto.id, true, cantidadCargada, loteSeleccionado);
+    }
+  };
+
   const handlePesoChange = (value: string) => {
     const peso = parseFloat(value) || 0;
     setPesoReal(peso);
@@ -199,10 +206,11 @@ const ProductoRow = ({
             inputMode="numeric"
             value={cantidadCargada}
             onChange={(e) => handleCantidadChange(e.target.value)}
+            onBlur={handleCantidadBlur}
             className={`h-9 w-20 text-center text-sm font-semibold ${
               cantidadDifiere ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : ""
             }`}
-            disabled={disabled || producto.cargado}
+            disabled={disabled}
           />
           {cantidadDifiere && (
             <span className="text-[10px] text-amber-600 flex items-center gap-0.5">
