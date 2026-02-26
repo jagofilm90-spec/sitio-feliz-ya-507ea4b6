@@ -238,33 +238,6 @@ const ProductoRow = ({
           </div>
         )}
 
-        {/* Lote - solo si hay más de 1 */}
-        {producto.lotes_disponibles.length > 1 && (
-          <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-            <label className="text-[10px] text-muted-foreground font-medium uppercase text-center">Lote</label>
-            <Select
-              value={loteSeleccionado || ""}
-              onValueChange={setLoteSeleccionado}
-              disabled={disabled || producto.cargado}
-            >
-              <SelectTrigger className="h-9 text-xs">
-                <SelectValue placeholder="Lote" />
-              </SelectTrigger>
-              <SelectContent>
-                {producto.lotes_disponibles.map((lote, index) => (
-                  <SelectItem key={lote.id} value={lote.id} className="py-2">
-                    <div className="flex items-center gap-1 flex-wrap">
-                      {index === 0 && <Badge variant="secondary" className="text-[9px] px-1 py-0">FIFO</Badge>}
-                      <span className="text-xs">{lote.lote_referencia || "Sin ref."}</span>
-                      <span className="text-[10px] text-muted-foreground">({lote.cantidad_disponible})</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
         {/* Fecha caducidad - siempre visible si existe */}
         {loteActual?.fecha_caducidad && (
           <div className="flex flex-col items-center gap-0.5">
