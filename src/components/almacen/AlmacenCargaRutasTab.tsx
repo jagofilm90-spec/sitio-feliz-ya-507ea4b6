@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { format, differenceInMinutes, parseISO, set } from "date-fns";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { format, differenceInMinutes, differenceInSeconds, parseISO, set } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { 
   Package, Truck, User, ChevronRight, CheckCircle2, Clock, AlertCircle,
-  Timer, QrCode, ArrowRight, Trash2, Loader2,
+  Timer, QrCode, ArrowRight, Trash2, Loader2, Users, MapPin,
 } from "lucide-react";
 import { RutaCargaInlineView } from "@/components/almacen/RutaCargaInlineView";
 import { CargaRutaInlineFlow } from "@/components/almacen/CargaRutaInlineFlow";
@@ -44,7 +44,12 @@ interface Ruta {
   entregas: {
     id: string;
     pedido_id: string;
+    pedido?: {
+      folio: string;
+      cliente?: { nombre: string } | null;
+    } | null;
   }[];
+  ayudantes_nombres?: string[];
 }
 
 interface AlmacenCargaRutasTabProps {
@@ -61,6 +66,15 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
   const { toast } = useToast();
   const [deletingRutaId, setDeletingRutaId] = useState<string | null>(null);
   const [showInlineFlow, setShowInlineFlow] = useState(false);
+  const [now, setNow] = useState(new Date());
+
+  // Live timer for in-progress routes
+  useEffect(() => {
+    const hasInProgress = rutas.some(r => r.carga_iniciada_en && !r.carga_completada);
+    if (!hasInProgress) return;
+    const interval = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, [rutas]);
 
   const fechaHoy = format(new Date(), "yyyy-MM-dd");
 
@@ -143,7 +157,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
           firma_chofer_carga,
           vehiculo:vehiculos(id, nombre, placa),
           chofer:empleados!rutas_chofer_id_fkey(id, nombre_completo),
-          entregas(id, pedido_id)
+          entregas(id, pedido_id, pedido:pedidos(folio, cliente:clientes(nombre)))
         `)
         .eq("fecha_ruta", fechaHoy)
         .order("hora_salida_sugerida", { ascending: true, nullsFirst: false });
@@ -198,7 +212,23 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
         return 0;
       });
 
-      setRutas(sortedRutas);
+      // Resolve ayudantes names
+      const allAyudanteIds = [...new Set(sortedRutas.flatMap(r => r.ayudantes_ids || []).filter(Boolean))];
+      let ayudantesMap: Record<string, string> = {};
+      if (allAyudanteIds.length > 0) {
+        const { data: ayNames } = await supabase
+          .from("empleados")
+          .select("id, nombre_completo")
+          .in("id", allAyudanteIds);
+        ayudantesMap = Object.fromEntries((ayNames || []).map(a => [a.id, a.nombre_completo]));
+      }
+
+      const enrichedRutas = sortedRutas.map(r => ({
+        ...r,
+        ayudantes_nombres: (r.ayudantes_ids || []).map(id => ayudantesMap[id]).filter(Boolean),
+      }));
+
+      setRutas(enrichedRutas);
       
       const pendientes = sortedRutas.filter(r => !r.carga_completada);
       const completadas = sortedRutas.filter(r => r.carga_completada);
@@ -436,58 +466,94 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
                 const estado = getEstadoCarga(ruta);
                 const EstadoIcon = estado.icon;
                 const urgencia = !ruta.carga_completada ? getUrgencia(ruta.hora_salida_sugerida) : null;
+                const enProgreso = !!ruta.carga_iniciada_en && !ruta.carga_completada;
+                
+                // Live timer
+                let tiempoStr = "";
+                if (enProgreso && ruta.carga_iniciada_en) {
+                  const segs = differenceInSeconds(now, parseISO(ruta.carga_iniciada_en));
+                  const mins = Math.floor(segs / 60);
+                  const hrs = Math.floor(mins / 60);
+                  tiempoStr = hrs > 0 ? `${hrs}h ${mins % 60}m` : `${mins}m ${segs % 60}s`;
+                }
+
+                // Client names from entregas
+                const clienteNames = ruta.entregas
+                  .map(e => (e as any).pedido?.cliente?.nombre)
+                  .filter(Boolean) as string[];
+                const uniqueClientes = [...new Set(clienteNames)];
                 
                 return (
                   <div
                     key={ruta.id}
-                    className={`w-full p-4 hover:bg-muted/50 transition-colors text-left flex items-center gap-4 ${
+                    className={`w-full p-4 hover:bg-muted/50 transition-colors text-left ${
                       urgencia?.nivel === 'urgente' || urgencia?.nivel === 'atrasada' ? 'bg-destructive/5' : ''
                     }`}
                   >
-                    <div className={`w-3 h-3 rounded-full ${urgencia ? urgencia.color : estado.color}`} />
-                    
-                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => ruta.entregas.length > 0 ? handleSelectRuta(ruta) : null}>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-lg">{ruta.folio}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {ruta.entregas.length} entregas
-                        </Badge>
-                        {ruta.entregas.length === 0 && (
-                          <Badge variant="outline" className="text-xs border-destructive/30 text-destructive">
-                            Vacía
+                    <div className="flex items-center gap-4">
+                      <div className={`w-3 h-3 rounded-full shrink-0 ${urgencia ? urgencia.color : estado.color}`} />
+                      
+                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => ruta.entregas.length > 0 ? handleSelectRuta(ruta) : null}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-lg">{ruta.folio}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {ruta.entregas.length} entregas
                           </Badge>
-                        )}
-                        {urgencia && !ruta.carga_completada && (
-                          <Badge className={`${urgencia.color} text-white text-xs`}>
-                            <Timer className="w-3 h-3 mr-1" />
-                            {urgencia.texto}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Truck className="w-4 h-4" />
-                          {ruta.vehiculo?.nombre || "Sin vehículo"}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <User className="w-4 h-4" />
-                          {ruta.chofer?.nombre_completo || "Sin chofer"}
-                        </span>
-                        {ruta.hora_salida_sugerida && (
+                          {ruta.entregas.length === 0 && (
+                            <Badge variant="outline" className="text-xs border-destructive/30 text-destructive">
+                              Vacía
+                            </Badge>
+                          )}
+                          {urgencia && !ruta.carga_completada && (
+                            <Badge className={`${urgencia.color} text-white text-xs`}>
+                              <Timer className="w-3 h-3 mr-1" />
+                              {urgencia.texto}
+                            </Badge>
+                          )}
+                          {enProgreso && tiempoStr && (
+                            <Badge variant="secondary" className="text-xs font-mono animate-pulse">
+                              <Clock className="w-3 h-3 mr-1" />
+                              {tiempoStr}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
-                            <Clock className="w-4 h-4" />
-                            Sale {ruta.hora_salida_sugerida.slice(0, 5)}
+                            <Truck className="w-4 h-4" />
+                            {ruta.vehiculo?.nombre || "Sin vehículo"}
                           </span>
-                        )}
-                        {ruta.carga_iniciada_en && !ruta.carga_completada && (
-                          <span className="text-blue-600 text-xs">
-                            Iniciada {format(parseISO(ruta.carga_iniciada_en), 'HH:mm')}
+                          <span className="flex items-center gap-1">
+                            <User className="w-4 h-4" />
+                            {ruta.chofer?.nombre_completo || "Sin chofer"}
                           </span>
+                          {ruta.hora_salida_sugerida && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              Sale {ruta.hora_salida_sugerida.slice(0, 5)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Extra info: ayudantes + clientes */}
+                        {(uniqueClientes.length > 0 || (ruta.ayudantes_nombres && ruta.ayudantes_nombres.length > 0)) && (
+                          <div className="mt-1.5 space-y-0.5">
+                            {ruta.ayudantes_nombres && ruta.ayudantes_nombres.length > 0 && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Users className="w-3 h-3 shrink-0" />
+                                <span className="truncate">Ayudantes: {ruta.ayudantes_nombres.join(", ")}</span>
+                              </p>
+                            )}
+                            {uniqueClientes.length > 0 && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <MapPin className="w-3 h-3 shrink-0" />
+                                <span className="truncate">{uniqueClientes.join(" → ")}</span>
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 shrink-0">
                       {!ruta.carga_completada && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
@@ -533,6 +599,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
                       {ruta.entregas.length > 0 && (
                         <ChevronRight className="w-5 h-5 text-muted-foreground cursor-pointer" onClick={() => handleSelectRuta(ruta)} />
                       )}
+                    </div>
                     </div>
                   </div>
                 );
