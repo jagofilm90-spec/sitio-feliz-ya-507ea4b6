@@ -138,6 +138,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
       // Si no hay ninguna, mostrar todas las rutas del día
       
       // Cargar TODAS las rutas del día primero
+      // Mostrar rutas de hoy + rutas incompletas de cualquier fecha
       const { data: todasLasRutas, error } = await supabase
         .from("rutas")
         .select(`
@@ -159,7 +160,8 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
           chofer:empleados!rutas_chofer_id_fkey(id, nombre_completo),
           entregas(id, pedido_id, orden_entrega, pedido:pedidos(folio, cliente:clientes(nombre)))
         `)
-        .eq("fecha_ruta", fechaHoy)
+        .or(`fecha_ruta.eq.${fechaHoy},and(status.in.(programada,en_carga,cargada,en_curso),carga_completada.is.null)`)
+        .order("fecha_ruta", { ascending: false })
         .order("hora_salida_sugerida", { ascending: true, nullsFirst: false });
 
       if (error) {
@@ -275,10 +277,8 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
         async (payload) => {
           console.log('Nueva ruta detectada via Realtime:', payload);
           const newRuta = payload.new as any;
-          
-          // Verificar si la ruta es para hoy
+          await loadRutas();
           if (newRuta.fecha_ruta === fechaHoy) {
-            await loadRutas();
             toast({
               title: "🚛 Nueva ruta asignada",
               description: `Ruta ${newRuta.folio} agregada a tu lista`,
@@ -295,12 +295,9 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
         },
         async (payload) => {
           const updatedRuta = payload.new as any;
-          // No recargar si el sheet de carga está abierto (evita refrescos al editar sellos, etc.)
+          // No recargar si el sheet de carga está abierto
           if (sheetOpenRef.current) return;
-          // Solo recargar si es una ruta de hoy
-          if (updatedRuta.fecha_ruta === fechaHoy) {
-            await loadRutas();
-          }
+          await loadRutas();
         }
       )
       .subscribe();
