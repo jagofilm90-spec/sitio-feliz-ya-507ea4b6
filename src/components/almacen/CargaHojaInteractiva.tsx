@@ -364,7 +364,7 @@ export const CargaHojaInteractiva = ({
               <User className="h-3 w-3" />Ayudantes
             </p>
             {personal?.ayudantesNombres && personal.ayudantesNombres.length > 0 ? (
-              <p className="font-semibold truncate">{personal.ayudantesNombres.join(", ")}</p>
+              <div className="font-semibold text-xs leading-snug">{personal.ayudantesNombres.join(", ")}</div>
             ) : (
               <p className="text-muted-foreground text-xs">Sin ayudantes</p>
             )}
@@ -459,12 +459,11 @@ export const CargaHojaInteractiva = ({
                     </span>
                   </div>
                   {/* Table header */}
-                  <div className="grid grid-cols-[auto_70px_1fr_90px_minmax(120px,1fr)_36px] gap-1 px-2 py-1.5 bg-muted/60 rounded-t-md text-[10px] font-bold uppercase text-muted-foreground items-center">
+                  <div className="grid grid-cols-[auto_70px_1fr_90px_36px] gap-1 px-2 py-1.5 bg-muted/60 rounded-t-md text-[10px] font-bold uppercase text-muted-foreground items-center">
                     <span className="w-6"></span>
                     <span className="text-center">Cant.</span>
                     <span>Descripción</span>
                     <span className="text-center">Peso kg</span>
-                    <span className="text-center">Lote</span>
                     <span></span>
                   </div>
                   {/* Rows */}
@@ -495,7 +494,7 @@ export const CargaHojaInteractiva = ({
 
                       return (
                         <div key={item.cargaProductoId}
-                          className={`grid grid-cols-[auto_70px_1fr_90px_minmax(120px,1fr)_36px] gap-1 px-2 py-2 items-center ${
+                          className={`grid grid-cols-[auto_70px_1fr_90px_36px] gap-1 px-2 py-2 items-center ${
                             item.confirmado ? "bg-green-50/50 dark:bg-green-950/20" : ""
                           }`}>
                           {/* Col 1: Checkbox */}
@@ -562,24 +561,6 @@ export const CargaHojaInteractiva = ({
                             <span className="text-center text-xs text-muted-foreground">—</span>
                           )}
 
-                          {/* Col 5: Lote */}
-                          {item.lotesDisponibles.length > 0 ? (
-                            <select value={item.loteId || ""}
-                              onChange={e => updateProducto(item.originalIdx, { loteId: e.target.value })}
-                              disabled={item.confirmado}
-                              className="w-full h-8 rounded-md border bg-background px-1.5 text-xs">
-                              {item.lotesDisponibles.map(l => (
-                                <option key={l.id} value={l.id}>
-                                  {l.lote_referencia || "Sin ref"} ({l.cantidad_disponible})
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <span className="text-[10px] text-destructive flex items-center justify-center gap-0.5">
-                              <AlertTriangle className="w-3 h-3" />
-                              Sin lotes
-                            </span>
-                          )}
 
                           {/* Col 6: Delete */}
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
