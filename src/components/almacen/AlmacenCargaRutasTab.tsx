@@ -160,7 +160,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
           chofer:empleados!rutas_chofer_id_fkey(id, nombre_completo),
           entregas(id, pedido_id, orden_entrega, pedido:pedidos(folio, cliente:clientes(nombre)))
         `)
-        .or(`fecha_ruta.eq.${fechaHoy},and(status.in.(programada,en_carga,cargada,en_curso),carga_completada.is.null)`)
+        .or(`fecha_ruta.eq.${fechaHoy},and(status.in.(programada,en_carga,cargada,en_curso),carga_completada.neq.true)`)
         .order("fecha_ruta", { ascending: false })
         .order("hora_salida_sugerida", { ascending: true, nullsFirst: false });
 
