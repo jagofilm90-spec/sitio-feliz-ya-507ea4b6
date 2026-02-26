@@ -9,8 +9,9 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
   Package, Calendar, TrendingUp, DollarSign, Receipt, Eye, X, Trash2,
-  Clock, Truck, CheckCircle2, CreditCard, MapPin, Weight, ChevronRight
+  Clock, Truck, CheckCircle2, CreditCard, MapPin, Weight, ChevronRight, Loader2
 } from "lucide-react";
+import { VendedorEnCargaTab } from "./VendedorEnCargaTab";
 import { formatCurrency } from "@/lib/utils";
 import { format, differenceInDays, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
@@ -115,6 +116,7 @@ export function VendedorMisVentasTab({ onDashboardRefresh }: { onDashboardRefres
   const [showEliminar, setShowEliminar] = useState(false);
   const [showCobro, setShowCobro] = useState(false);
   const [pedidoParaCobro, setPedidoParaCobro] = useState<any>(null);
+  const [enCargaCount, setEnCargaCount] = useState(0);
 
   useEffect(() => {
     fetchPedidos();
@@ -225,10 +227,32 @@ export function VendedorMisVentasTab({ onDashboardRefresh }: { onDashboardRefres
   };
 
   // Clasificación por tab
-  const pendientes = pedidos.filter(p => p.status === "por_autorizar" || p.status === "pendiente");
+  const pedidosPendientes = pedidos.filter(p => p.status === "por_autorizar" || p.status === "pendiente");
   const enRuta = pedidos.filter(p => p.status === "en_ruta");
   const entregadosAll = pedidos.filter(p => p.status === "entregado");
   const porCobrar = pedidos.filter(p => p.status === "entregado" && !p.pagado);
+
+  // Count for "En Carga" badge - pedidos in rutas being loaded
+  useEffect(() => {
+    const fetchCargaCount = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { count } = await supabase
+        .from("entregas")
+        .select("id, pedido:pedidos!inner(vendedor_id), ruta:rutas!inner(status, carga_completada)", { count: "exact", head: true })
+        .eq("pedido.vendedor_id", user.id)
+        .eq("ruta.status", "programada")
+        .eq("ruta.carga_completada", false);
+      setEnCargaCount(count || 0);
+    };
+    fetchCargaCount();
+
+    const ch = supabase.channel("vendedor-carga-count")
+      .on("postgres_changes", { event: "*", schema: "public", table: "carga_productos" }, fetchCargaCount)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rutas" }, fetchCargaCount)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
 
   // Agrupación por zona para "En Ruta"
   const gruposZona: GrupoZona[] = enRuta.reduce((acc: GrupoZona[], p) => {
@@ -380,14 +404,23 @@ export function VendedorMisVentasTab({ onDashboardRefresh }: { onDashboardRefres
       )}
 
       {/* Tabs por estado */}
-      <Tabs defaultValue="pendientes">
-        <TabsList className="grid grid-cols-4 w-full h-12">
-          <TabsTrigger value="pendientes" className="text-xs gap-1 relative">
-            <Clock className="h-3.5 w-3.5" />
-            Pendientes
-            {pendientes.length > 0 && (
+      <Tabs defaultValue="pedidos">
+        <TabsList className="grid grid-cols-5 w-full h-12">
+          <TabsTrigger value="pedidos" className="text-xs gap-1 relative">
+            <Package className="h-3.5 w-3.5" />
+            Pedidos
+            {pedidosPendientes.length > 0 && (
               <Badge className="absolute -top-1.5 -right-1.5 h-4 w-4 p-0 flex items-center justify-center text-[10px]">
-                {pendientes.length}
+                {pedidosPendientes.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="en_carga" className="text-xs gap-1 relative">
+            <Loader2 className="h-3.5 w-3.5" />
+            En Carga
+            {enCargaCount > 0 && (
+              <Badge className="absolute -top-1.5 -right-1.5 h-4 w-4 p-0 flex items-center justify-center text-[10px] bg-amber-500">
+                {enCargaCount}
               </Badge>
             )}
           </TabsTrigger>
@@ -415,16 +448,23 @@ export function VendedorMisVentasTab({ onDashboardRefresh }: { onDashboardRefres
           </TabsTrigger>
         </TabsList>
 
-        {/* Pendientes */}
-        <TabsContent value="pendientes">
+        {/* Pedidos */}
+        <TabsContent value="pedidos">
           <ScrollArea className="h-[calc(100vh-680px)] min-h-[200px]">
             <div className="space-y-3 pt-1">
-              {pendientes.length === 0 ? (
-                <EmptyState icono={Clock} titulo="Sin pedidos pendientes" descripcion="Tus pedidos aparecerán aquí hasta que sean autorizados" />
+              {pedidosPendientes.length === 0 ? (
+                <EmptyState icono={Package} titulo="Sin pedidos pendientes" descripcion="Tus pedidos aparecerán aquí hasta que sean autorizados" />
               ) : (
-                pendientes.map(p => <PedidoCard key={p.id} pedido={p} />)
+                pedidosPendientes.map(p => <PedidoCard key={p.id} pedido={p} />)
               )}
             </div>
+          </ScrollArea>
+        </TabsContent>
+
+        {/* En Carga */}
+        <TabsContent value="en_carga">
+          <ScrollArea className="h-[calc(100vh-680px)] min-h-[200px]">
+            <VendedorEnCargaTab />
           </ScrollArea>
         </TabsContent>
 
