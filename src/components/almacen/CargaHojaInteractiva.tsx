@@ -388,12 +388,29 @@ export const CargaHojaInteractiva = ({
     }
   };
 
-  // Initialize pedidoOrder in reverse (last delivery = loaded first)
+  // Initialize pedidoOrder from saved orden_entrega in DB
   useEffect(() => {
     if (!loading && pedidos.length > 0 && pedidoOrder.length === 0) {
-      setPedidoOrder([...pedidos].reverse().map(p => p.pedidoId));
+      const loadOrder = async () => {
+        const { data: entregas } = await supabase
+          .from("entregas")
+          .select("pedido_id, orden_entrega")
+          .eq("ruta_id", rutaId);
+        
+        if (entregas && entregas.length > 0) {
+          // Sort by orden_entrega descending (highest = first tab = loaded first)
+          const sorted = [...entregas].sort((a, b) => (b.orden_entrega || 0) - (a.orden_entrega || 0));
+          const orderedIds = sorted.map(e => e.pedido_id).filter(id => pedidos.some(p => p.pedidoId === id));
+          // Add any pedidos not in entregas at the end
+          const remaining = pedidos.filter(p => !orderedIds.includes(p.pedidoId)).map(p => p.pedidoId);
+          setPedidoOrder([...orderedIds, ...remaining]);
+        } else {
+          setPedidoOrder([...pedidos].reverse().map(p => p.pedidoId));
+        }
+      };
+      loadOrder();
     }
-  }, [loading, pedidos, pedidoOrder.length]);
+  }, [loading, pedidos, pedidoOrder.length, rutaId]);
 
   if (loading) {
     return (
