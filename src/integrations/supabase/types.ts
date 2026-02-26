@@ -4834,6 +4834,8 @@ export type Database = {
           carga_completada_por: string | null
           carga_iniciada_en: string | null
           carga_iniciada_por: string | null
+          cargado_por: string | null
+          cargado_por_nombre: string | null
           chofer_id: string
           costo_ayudante_externo: number | null
           created_at: string
@@ -4841,6 +4843,7 @@ export type Database = {
           fecha_hora_fin: string | null
           fecha_hora_inicio: string | null
           fecha_ruta: string
+          firma_almacenista_carga: string | null
           firma_chofer_carga: string | null
           firma_chofer_carga_fecha: string | null
           folio: string
@@ -4869,6 +4872,8 @@ export type Database = {
           carga_completada_por?: string | null
           carga_iniciada_en?: string | null
           carga_iniciada_por?: string | null
+          cargado_por?: string | null
+          cargado_por_nombre?: string | null
           chofer_id: string
           costo_ayudante_externo?: number | null
           created_at?: string
@@ -4876,6 +4881,7 @@ export type Database = {
           fecha_hora_fin?: string | null
           fecha_hora_inicio?: string | null
           fecha_ruta: string
+          firma_almacenista_carga?: string | null
           firma_chofer_carga?: string | null
           firma_chofer_carga_fecha?: string | null
           folio: string
@@ -4904,6 +4910,8 @@ export type Database = {
           carga_completada_por?: string | null
           carga_iniciada_en?: string | null
           carga_iniciada_por?: string | null
+          cargado_por?: string | null
+          cargado_por_nombre?: string | null
           chofer_id?: string
           costo_ayudante_externo?: number | null
           created_at?: string
@@ -4911,6 +4919,7 @@ export type Database = {
           fecha_hora_fin?: string | null
           fecha_hora_inicio?: string | null
           fecha_ruta?: string
+          firma_almacenista_carga?: string | null
           firma_chofer_carga?: string | null
           firma_chofer_carga_fecha?: string | null
           folio?: string
