@@ -4840,6 +4840,7 @@ export type Database = {
           costo_ayudante_externo: number | null
           created_at: string
           distancia_total_km: number | null
+          fase_carga: string | null
           fecha_hora_fin: string | null
           fecha_hora_inicio: string | null
           fecha_ruta: string
@@ -4878,6 +4879,7 @@ export type Database = {
           costo_ayudante_externo?: number | null
           created_at?: string
           distancia_total_km?: number | null
+          fase_carga?: string | null
           fecha_hora_fin?: string | null
           fecha_hora_inicio?: string | null
           fecha_ruta: string
@@ -4916,6 +4918,7 @@ export type Database = {
           costo_ayudante_externo?: number | null
           created_at?: string
           distancia_total_km?: number | null
+          fase_carga?: string | null
           fecha_hora_fin?: string | null
           fecha_hora_inicio?: string | null
           fecha_ruta?: string

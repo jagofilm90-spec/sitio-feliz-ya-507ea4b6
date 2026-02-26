@@ -1,0 +1,1 @@
+ALTER TABLE public.rutas ADD COLUMN IF NOT EXISTS fase_carga text DEFAULT 'checklist';
