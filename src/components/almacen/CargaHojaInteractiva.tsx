@@ -397,6 +397,28 @@ export const CargaHojaInteractiva = ({
           if (movimiento) {
             await supabase.from("carga_productos").update({ movimiento_inventario_id: movimiento.id }).eq("id", prod.cargaProductoId);
           }
+        } else {
+          // Already processed — adjust difference if quantity changed
+          const { data: cargaPrevia } = await supabase
+            .from("carga_productos")
+            .select("cantidad_cargada")
+            .eq("id", prod.cargaProductoId)
+            .single();
+
+          const cantidadPrevia = cargaPrevia?.cantidad_cargada || 0;
+          const diferencia = prod.cantidadACargar - cantidadPrevia;
+
+          if (diferencia !== 0) {
+            if (diferencia > 0) {
+              await supabase.rpc("decrementar_lote", { p_lote_id: prod.loteId, p_cantidad: diferencia });
+            } else {
+              await supabase.rpc("incrementar_lote", { p_lote_id: prod.loteId, p_cantidad: Math.abs(diferencia) });
+            }
+
+            await supabase.from("inventario_movimientos").update({
+              cantidad: prod.cantidadACargar,
+            }).eq("id", prod.movimientoInventarioId);
+          }
         }
 
         await supabase.from("carga_productos").update({
