@@ -128,26 +128,32 @@ export const CargaHojaInteractiva = ({
     loadUser();
   }, []);
 
-  // Auto-save sellos to DB whenever they change (debounced)
-  const sellosLoadedRef = useRef(false);
+  // Persist draft state (fase + sellos)
+  const draftLoadedRef = useRef(false);
+  const saveRutaDraft = useCallback(async (overrides?: {
+    fase?: "checklist" | "evidencias" | "firma";
+    llevaSellos?: boolean;
+    numerosSello?: string[];
+  }) => {
+    const faseToSave = overrides?.fase ?? fase;
+    const llevaSellosToSave = overrides?.llevaSellos ?? llevaSellos;
+    const numerosToSave = overrides?.numerosSello ?? numerosSello;
+
+    await supabase.from("rutas").update({
+      fase_carga: faseToSave,
+      lleva_sellos: llevaSellosToSave,
+      numero_sello_salida: llevaSellosToSave ? JSON.stringify(numerosToSave) : null,
+    }).eq("id", rutaId);
+  }, [rutaId, fase, llevaSellos, numerosSello]);
+
+  // Auto-save draft whenever phase/seals change (debounced)
   useEffect(() => {
-    // Don't save until data has been loaded from DB first
-    if (!sellosLoadedRef.current) return;
+    if (!draftLoadedRef.current) return;
     const timeout = setTimeout(() => {
-      supabase.from("rutas").update({
-        lleva_sellos: llevaSellos,
-        numero_sello_salida: llevaSellos ? JSON.stringify(numerosSello) : null,
-      }).eq("id", rutaId);
+      saveRutaDraft().catch(() => {});
     }, 500);
     return () => clearTimeout(timeout);
-  }, [numerosSello, llevaSellos, rutaId]);
-
-  // Auto-save fase to DB whenever it changes
-  const faseLoadedRef = useRef(false);
-  useEffect(() => {
-    if (!faseLoadedRef.current) return;
-    supabase.from("rutas").update({ fase_carga: fase }).eq("id", rutaId);
-  }, [fase, rutaId]);
+  }, [saveRutaDraft]);
 
   // Load current ayudantes_ids from ruta when popover opens
   const handleOpenAyudantesEdit = async () => {
@@ -273,48 +279,49 @@ export const CargaHojaInteractiva = ({
 
       setProductos(allProducts);
 
-      // Restore fase if carga was already confirmed
-      if (allProducts.length > 0 && allProducts.every(p => !!p.movimientoInventarioId)) {
-        const { data: rutaData } = await supabase.from("rutas")
-          .select("lleva_sellos, numero_sello_salida, fase_carga")
-          .eq("id", rutaId).single();
-        
-        // Restore fase from DB (default to evidencias if carga confirmed)
-        const savedFase = rutaData?.fase_carga;
-        if (savedFase === "firma" || savedFase === "evidencias") {
-          setFase(savedFase);
-        } else {
+      // Restore persisted draft data from ruta
+      const { data: rutaData } = await supabase.from("rutas")
+        .select("lleva_sellos, numero_sello_salida, fase_carga")
+        .eq("id", rutaId)
+        .maybeSingle();
+
+      if (rutaData) {
+        setLlevaSellos(rutaData.lleva_sellos ?? true);
+
+        try {
+          const parsed = JSON.parse(rutaData.numero_sello_salida || "[]");
+          const arr = Array.isArray(parsed) ? parsed : [rutaData.numero_sello_salida || ""];
+          setNumerosSello(arr.length > 0 ? arr : [""]);
+        } catch {
+          setNumerosSello(rutaData.numero_sello_salida ? [rutaData.numero_sello_salida] : [""]);
+        }
+
+        if (rutaData.fase_carga === "checklist" || rutaData.fase_carga === "evidencias" || rutaData.fase_carga === "firma") {
+          setFase(rutaData.fase_carga);
+        } else if (allProducts.length > 0 && allProducts.every((p) => p.confirmado)) {
           setFase("evidencias");
         }
-
-        if (rutaData) {
-          setLlevaSellos(rutaData.lleva_sellos ?? true);
-          try {
-            const parsed = JSON.parse(rutaData.numero_sello_salida || "[]");
-            const arr = Array.isArray(parsed) ? parsed : [rutaData.numero_sello_salida || ""];
-            setNumerosSello(arr.length > 0 ? arr : [""]);
-          } catch {
-            setNumerosSello(rutaData.numero_sello_salida ? [rutaData.numero_sello_salida] : [""]);
-          }
-        }
-
-        // Mark refs as loaded AFTER state is set so auto-save doesn't overwrite
-        setTimeout(() => {
-          sellosLoadedRef.current = true;
-          faseLoadedRef.current = true;
-        }, 100);
-      } else {
-        // Fresh route in checklist phase - enable refs
-        setTimeout(() => {
-          sellosLoadedRef.current = true;
-          faseLoadedRef.current = true;
-        }, 100);
       }
+
+      // Enable autosave only after initial restoration is done
+      setTimeout(() => {
+        draftLoadedRef.current = true;
+      }, 100);
 
       setLoading(false);
     };
     load();
   }, [rutaId, pedidos]);
+
+  const handleCloseHoja = async () => {
+    if (!onClose) return;
+    try {
+      await saveRutaDraft();
+    } catch {
+      // no-op: close should still proceed
+    }
+    onClose();
+  };
 
   // Weight calculations
   const productosActivos = productos.filter(p => !p.eliminado);
@@ -536,7 +543,7 @@ export const CargaHojaInteractiva = ({
           variant="ghost"
           size="icon"
           className="absolute top-2 right-2 z-[60] h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-md"
-          onClick={onClose}
+          onClick={handleCloseHoja}
         >
           <X className="h-5 w-5" />
         </Button>
