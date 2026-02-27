@@ -24,7 +24,18 @@ export function PedidoPDFPreviewDialog({ open, onOpenChange, pedidoId }: Props) 
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (open && pedidoId) fetchData();
+    if (open && pedidoId) {
+      fetchData();
+
+      // Realtime: refresh when this pedido or its details change
+      const channel = supabase
+        .channel(`pdf-preview-rt-${pedidoId}`)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pedidos', filter: `id=eq.${pedidoId}` }, () => fetchData())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos_detalles', filter: `pedido_id=eq.${pedidoId}` }, () => fetchData())
+        .subscribe();
+
+      return () => { supabase.removeChannel(channel); };
+    }
   }, [open, pedidoId]);
 
   const fetchData = async () => {

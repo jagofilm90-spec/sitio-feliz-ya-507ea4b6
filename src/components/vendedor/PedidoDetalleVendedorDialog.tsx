@@ -95,6 +95,15 @@ export function PedidoDetalleVendedorDialog({ open, onOpenChange, pedidoId }: Pr
   useEffect(() => {
     if (open && pedidoId) {
       fetchPedido();
+
+      // Realtime: refresh when this pedido or its details change
+      const channel = supabase
+        .channel(`pedido-detalle-rt-${pedidoId}`)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pedidos', filter: `id=eq.${pedidoId}` }, () => fetchPedido())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos_detalles', filter: `pedido_id=eq.${pedidoId}` }, () => fetchPedido())
+        .subscribe();
+
+      return () => { supabase.removeChannel(channel); };
     }
   }, [open, pedidoId]);
 

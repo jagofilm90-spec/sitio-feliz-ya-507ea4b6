@@ -99,13 +99,9 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
     const channel = supabase
       .channel('vendedor-pedidos-tab-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos' },
-        (payload) => {
-          const isStatusChange = payload.eventType === 'UPDATE' && payload.new && payload.old && payload.new.status !== payload.old.status;
-          const isDeleteOrInsert = payload.eventType === 'DELETE' || payload.eventType === 'INSERT';
-          if (isStatusChange || isDeleteOrInsert) {
-            fetchPedidos();
-            onDashboardRefresh?.();
-          }
+        () => {
+          fetchPedidos();
+          onDashboardRefresh?.();
         }
       )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rutas' }, () => fetchPedidos())
