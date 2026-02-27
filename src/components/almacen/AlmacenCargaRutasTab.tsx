@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { 
   Package, Truck, User, ChevronRight, CheckCircle2, Clock, AlertCircle,
-  Timer, QrCode, ArrowRight, Trash2, Loader2, Users, MapPin,
+  Timer, QrCode, ArrowRight, Trash2, Loader2, Users, MapPin, Send,
 } from "lucide-react";
 import { RutaCargaInlineView } from "@/components/almacen/RutaCargaInlineView";
 import { CargaRutaInlineFlow } from "@/components/almacen/CargaRutaInlineFlow";
@@ -67,6 +67,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
   const [deletingRutaId, setDeletingRutaId] = useState<string | null>(null);
   const [showInlineFlow, setShowInlineFlow] = useState(false);
   const [now, setNow] = useState(new Date());
+  const [sendingRutaId, setSendingRutaId] = useState<string | null>(null);
 
   // Live timer for in-progress routes
   useEffect(() => {
@@ -344,6 +345,9 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
   };
 
   const getEstadoCarga = (ruta: Ruta) => {
+    if (ruta.status === "cargada" && ruta.carga_completada) {
+      return { label: "Lista para enviar", color: "bg-blue-500", icon: Send };
+    }
     if (ruta.carga_completada) {
       return { label: "Completada", color: "bg-green-500", icon: CheckCircle2 };
     }
@@ -356,6 +360,55 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
   const handleSelectRuta = (ruta: Ruta) => {
     setSelectedRuta(ruta);
     sheetOpenRef.current = true;
+  };
+
+  const handleEnviarARuta = async (ruta: Ruta) => {
+    setSendingRutaId(ruta.id);
+    try {
+      // Update route status to en_curso
+      await supabase.from("rutas").update({
+        status: "en_curso",
+        fecha_hora_inicio: new Date().toISOString(),
+      }).eq("id", ruta.id);
+
+      // Update each pedido to en_ruta and notify clients
+      for (const entrega of ruta.entregas) {
+        const pedidoId = entrega.pedido_id;
+        await supabase.from("pedidos").update({
+          status: "en_ruta" as any,
+          updated_at: new Date().toISOString(),
+        }).eq("id", pedidoId);
+
+        // Get client info for notification
+        const { data: pedido } = await supabase
+          .from("pedidos")
+          .select("folio, cliente_id")
+          .eq("id", pedidoId)
+          .single();
+
+        if (pedido) {
+          try {
+            await supabase.functions.invoke("send-client-notification", {
+              body: {
+                clienteId: pedido.cliente_id,
+                tipo: "en_ruta",
+                data: {
+                  pedidoFolio: pedido.folio,
+                  choferNombre: ruta.chofer?.nombre_completo || "Chofer",
+                },
+              },
+            });
+          } catch {}
+        }
+      }
+
+      toast({ title: "🚛 Ruta enviada", description: `La ruta ${ruta.folio} está en camino. Se notificó a los clientes.` });
+      loadRutas();
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "No se pudo enviar la ruta", variant: "destructive" });
+    } finally {
+      setSendingRutaId(null);
+    }
   };
 
   // Show inline flow for new route (scan)
@@ -604,13 +657,30 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
                           </AlertDialogContent>
                         </AlertDialog>
                       )}
-                      <Badge
-                        variant={ruta.carga_completada ? "default" : "secondary"}
-                        className="flex items-center gap-1"
-                      >
-                        <EstadoIcon className="w-3 h-3" />
-                        {estado.label}
-                      </Badge>
+                      {ruta.carga_completada && ruta.status === "cargada" && (
+                        <Button
+                          size="sm"
+                          className="gap-1.5 font-bold"
+                          onClick={(e) => { e.stopPropagation(); handleEnviarARuta(ruta); }}
+                          disabled={sendingRutaId === ruta.id}
+                        >
+                          {sendingRutaId === ruta.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
+                          Enviar a Ruta
+                        </Button>
+                      )}
+                      {ruta.status !== "cargada" && (
+                        <Badge
+                          variant={ruta.carga_completada ? "default" : "secondary"}
+                          className="flex items-center gap-1"
+                        >
+                          <EstadoIcon className="w-3 h-3" />
+                          {estado.label}
+                        </Badge>
+                      )}
                       {ruta.entregas.length > 0 && (
                         <ChevronRight className="w-5 h-5 text-muted-foreground cursor-pointer" onClick={() => handleSelectRuta(ruta)} />
                       )}

@@ -120,24 +120,7 @@ export const RutaCargaInlineView = ({ ruta, onClose, onCargaCompletada }: RutaCa
         status: "cargada",
       }).eq("id", ruta.id);
 
-      for (const item of pedidos) {
-        await supabase.from("pedidos").update({
-          status: "en_ruta",
-          updated_at: new Date().toISOString(),
-        }).eq("id", item.pedidoId);
-
-        try {
-          await supabase.functions.invoke("send-client-notification", {
-            body: {
-              clienteId: item.clienteId,
-              tipo: "en_ruta",
-              data: { pedidoFolio: item.folio, choferNombre: ruta.chofer?.nombre_completo || "Chofer" },
-            },
-          });
-        } catch {}
-      }
-
-      toast.success("¡Carga completada!");
+      toast.success("¡Carga completada! Puedes enviar la ruta cuando esté lista.");
       onCargaCompletada();
     } catch (err: any) {
       toast.error("Error al finalizar: " + (err?.message || ""));
