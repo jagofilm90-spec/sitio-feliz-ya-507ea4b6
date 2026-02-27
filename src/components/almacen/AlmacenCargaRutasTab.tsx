@@ -362,9 +362,69 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
     sheetOpenRef.current = true;
   };
 
+  // Sync loaded quantities from carga_productos → pedidos_detalles and recalculate totals
+  const syncCargaToPedidos = async (ruta: Ruta) => {
+    for (const entrega of ruta.entregas) {
+      const pedidoId = entrega.pedido_id;
+
+      // Get all carga_productos for this entrega with their loaded quantities
+      const { data: cargaItems } = await supabase
+        .from("carga_productos")
+        .select("pedido_detalle_id, cantidad_cargada, cargado")
+        .eq("entrega_id", entrega.id);
+
+      if (!cargaItems || cargaItems.length === 0) continue;
+
+      // Update each pedido_detalle with the loaded quantity
+      for (const cp of cargaItems) {
+        if (!cp.cargado || !cp.cantidad_cargada) continue;
+
+        // Get current precio_unitario to recalculate subtotal
+        const { data: detalle } = await supabase
+          .from("pedidos_detalles")
+          .select("precio_unitario, cantidad, producto:productos(peso_kg, precio_por_kilo)")
+          .eq("id", cp.pedido_detalle_id)
+          .single();
+
+        if (!detalle) continue;
+
+        // Only sync if quantity actually changed
+        if (detalle.cantidad === cp.cantidad_cargada) continue;
+
+        const prod = detalle.producto as any;
+        const newSubtotal = prod?.precio_por_kilo && prod?.peso_kg
+          ? cp.cantidad_cargada * prod.peso_kg * detalle.precio_unitario
+          : cp.cantidad_cargada * detalle.precio_unitario;
+
+        await supabase.from("pedidos_detalles").update({
+          cantidad: cp.cantidad_cargada,
+          subtotal: newSubtotal,
+        }).eq("id", cp.pedido_detalle_id);
+      }
+
+      // Recalculate pedido totals
+      const { data: allDetalles } = await supabase
+        .from("pedidos_detalles")
+        .select("subtotal")
+        .eq("pedido_id", pedidoId);
+
+      if (allDetalles) {
+        const newTotal = allDetalles.reduce((s, d) => s + (d.subtotal || 0), 0);
+        await supabase.from("pedidos").update({
+          subtotal: newTotal,
+          total: newTotal,
+          updated_at: new Date().toISOString(),
+        }).eq("id", pedidoId);
+      }
+    }
+  };
+
   const handleEnviarARuta = async (ruta: Ruta) => {
     setSendingRutaId(ruta.id);
     try {
+      // Sync loaded quantities to pedidos_detalles before dispatching
+      await syncCargaToPedidos(ruta);
+
       // Update route status to en_curso
       await supabase.from("rutas").update({
         status: "en_curso",
