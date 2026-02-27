@@ -21,6 +21,7 @@ import { PedidoPDFPreviewDialog } from "./PedidoPDFPreviewDialog";
 import { RegistrarCobroPedidoDialog } from "./RegistrarCobroPedidoDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VendedorEnCargaTab } from "./VendedorEnCargaTab";
+import { VendedorEnRutaTab } from "./VendedorEnRutaTab";
 
 interface Pedido {
   id: string;
@@ -38,11 +39,6 @@ interface Pedido {
   sucursal?: { nombre: string; direccion?: string | null; zona?: { nombre: string } | null } | null;
 }
 
-interface GrupoZona {
-  zona: string;
-  pedidos: Pedido[];
-  totalKg: number;
-}
 
 function DiasTranscurridos({ fecha }: { fecha: string }) {
   const dias = differenceInDays(new Date(), new Date(fecha));
@@ -183,13 +179,6 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
   const entregadosAll = pedidos.filter(p => p.status === "entregado");
   const porCobrar = pedidos.filter(p => p.status === "entregado" && !p.pagado);
 
-  const gruposZona: GrupoZona[] = enRuta.reduce((acc: GrupoZona[], p) => {
-    const zonaNombre = (p.sucursal as any)?.zona?.nombre || (p.sucursal as any)?.nombre || "Sin zona";
-    const existente = acc.find(g => g.zona === zonaNombre);
-    if (existente) { existente.pedidos.push(p); existente.totalKg += p.peso_total_kg || 0; }
-    else { acc.push({ zona: zonaNombre, pedidos: [p], totalKg: p.peso_total_kg || 0 }); }
-    return acc;
-  }, []);
 
   const abrirDetalle = (p: Pedido) => { setSelectedPedido(p); setShowDetalle(true); };
   const abrirCancelar = (p: Pedido) => { setSelectedPedido(p); setShowCancelar(true); };
@@ -418,30 +407,10 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
 
         <TabsContent value="en_ruta">
           <ScrollArea className="h-[calc(100vh-300px)] min-h-[200px]">
-            <div className="space-y-4 pt-1">
-              {enRuta.length === 0 ? (
-                <EmptyState icono={Truck} titulo="Sin pedidos en ruta" descripcion="Los pedidos asignados a rutas aparecerán aquí" />
-              ) : (
-                gruposZona.map(grupo => (
-                  <div key={grupo.zona}>
-                    <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-2.5 mb-2">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-blue-600" />
-                        <span className="font-semibold text-sm text-blue-800 dark:text-blue-200">{grupo.zona}</span>
-                        <Badge variant="secondary" className="text-xs">{grupo.pedidos.length} pedido{grupo.pedidos.length !== 1 ? "s" : ""}</Badge>
-                      </div>
-                      <div className="flex items-center gap-1 text-blue-700 dark:text-blue-300 font-bold text-sm">
-                        <Weight className="h-3.5 w-3.5" />
-                        {grupo.totalKg.toFixed(1)} kg total
-                      </div>
-                    </div>
-                    <div className="space-y-2 pl-2">
-                      {grupo.pedidos.map(p => <PedidoCard key={p.id} pedido={p} />)}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+            <VendedorEnRutaTab onVerDetalle={(id) => {
+              const p = pedidos.find(x => x.id === id);
+              if (p) abrirDetalle(p);
+            }} />
           </ScrollArea>
         </TabsContent>
 
