@@ -300,7 +300,7 @@ export default function VendedorPanel() {
           onOpenChange={setShowBienvenida}
           vendedorNombre={vendedorNombre}
           onIrCobranza={() => setActiveTab("saldos")}
-          onIrPedidos={() => setActiveTab("nuevo")}
+          onIrPedidos={() => setActiveTab("pedidos")}
         />
         
         {/* Sidebar para desktop/tablet */}
