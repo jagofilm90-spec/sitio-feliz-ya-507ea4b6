@@ -497,6 +497,48 @@ export const CargaHojaInteractiva = ({
     if (fase === "evidencias") loadEvidencias();
   }, [fase, loadEvidencias]);
 
+  // Realtime: update lotesDisponibles when inventario_lotes changes
+  useEffect(() => {
+    const productoIds = [...new Set(productos.map(p => p.productoId))];
+    if (productoIds.length === 0) return;
+
+    const channel = supabase
+      .channel('lotes-carga-realtime-' + rutaId)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'inventario_lotes' },
+        (payload) => {
+          const changed = payload.new as any;
+          const changedOld = payload.old as any;
+          const productoId = changed?.producto_id || changedOld?.producto_id;
+          if (!productoId || !productoIds.includes(productoId)) return;
+
+          // Refresh lotes for all products with this producto_id
+          supabase
+            .from("inventario_lotes")
+            .select("id, lote_referencia, cantidad_disponible, bodega_id, bodega:bodegas(nombre)")
+            .eq("producto_id", productoId)
+            .gte("cantidad_disponible", 0)
+            .order("fecha_caducidad", { ascending: true, nullsFirst: false })
+            .then(({ data: lotes }) => {
+              if (!lotes) return;
+              const mapped = lotes.map(l => ({
+                id: l.id,
+                lote_referencia: l.lote_referencia,
+                cantidad_disponible: l.cantidad_disponible,
+                bodega_nombre: (l.bodega as any)?.nombre || null,
+              }));
+              setProductos(prev => prev.map(p =>
+                p.productoId === productoId ? { ...p, lotesDisponibles: mapped } : p
+              ));
+            });
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [rutaId, productos.length > 0 ? productos.map(p => p.productoId).join(',') : '']);
+
   // Confirm checklist and move to evidencias phase
   const handleConfirmarCarga = async () => {
     setSaving(true);

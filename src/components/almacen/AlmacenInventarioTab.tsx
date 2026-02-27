@@ -37,6 +37,18 @@ export const AlmacenInventarioTab = () => {
 
   useEffect(() => {
     loadInventario();
+
+    // Realtime: refresh when inventario_lotes changes
+    const channel = supabase
+      .channel('inventario-lotes-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'inventario_lotes' },
+        () => { loadInventario(); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const loadInventario = async () => {
