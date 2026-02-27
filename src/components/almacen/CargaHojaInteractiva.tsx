@@ -49,6 +49,7 @@ interface ProductoHoja {
   unidad: string;
   pesoKgUnit: number | null;
   precioPorKilo: boolean;
+  precioUnitario: number;
   cantidadSolicitada: number;
   cantidadACargar: number;
   pesoRealKg: number | null;
@@ -235,7 +236,7 @@ export const CargaHojaInteractiva = ({
         for (const cp of cargaProds || []) {
           const { data: detalle } = await supabase
             .from("pedidos_detalles")
-            .select("producto:productos(id, codigo, nombre, marca, especificaciones, contenido_empaque, peso_kg, unidad, precio_por_kilo)")
+            .select("precio_unitario, producto:productos(id, codigo, nombre, marca, especificaciones, contenido_empaque, peso_kg, unidad, precio_por_kilo)")
             .eq("id", cp.pedido_detalle_id).single();
 
           const prod = (detalle?.producto as any) || { id: "", codigo: "N/A", nombre: "N/A", marca: null, especificaciones: null, contenido_empaque: null, peso_kg: null, unidad: "unidad", precio_por_kilo: false };
@@ -261,6 +262,7 @@ export const CargaHojaInteractiva = ({
             unidad: prod.unidad,
             pesoKgUnit: prod.peso_kg,
             precioPorKilo: prod.precio_por_kilo,
+            precioUnitario: (detalle as any)?.precio_unitario || 0,
             cantidadSolicitada: cp.cantidad_solicitada,
             cantidadACargar: cp.cantidad_cargada || cp.cantidad_solicitada,
             pesoRealKg: cp.peso_real_kg,
@@ -336,6 +338,35 @@ export const CargaHojaInteractiva = ({
   }, 0);
   const diferenciaPeso = pesoReal - pesoTeorico;
 
+  const syncPedidoDetalle = async (item: ProductoHoja, newCantidad: number) => {
+    try {
+      const newSubtotal = item.precioPorKilo && item.pesoKgUnit
+        ? newCantidad * item.pesoKgUnit * item.precioUnitario
+        : newCantidad * item.precioUnitario;
+
+      await supabase.from("pedidos_detalles").update({
+        cantidad: newCantidad,
+        subtotal: newSubtotal,
+      }).eq("id", item.pedidoDetalleId);
+
+      // Recalculate pedido totals
+      const { data: entrega } = await supabase.from("entregas")
+        .select("pedido_id").eq("id", item.entregaId).single();
+      if (!entrega) return;
+
+      const { data: detalles } = await supabase.from("pedidos_detalles")
+        .select("subtotal").eq("pedido_id", entrega.pedido_id);
+      if (!detalles) return;
+
+      const total = detalles.reduce((s, d) => s + (d.subtotal || 0), 0);
+      await supabase.from("pedidos").update({
+        subtotal: total, total, updated_at: new Date().toISOString(),
+      }).eq("id", entrega.pedido_id);
+    } catch (e) {
+      console.error("Error syncing pedido detalle:", e);
+    }
+  };
+
   const updateProducto = (idx: number, updates: Partial<ProductoHoja>) => {
     setProductos(prev => {
       const updated = prev.map((p, i) => i === idx ? { ...p, ...updates } : p);
@@ -343,7 +374,11 @@ export const CargaHojaInteractiva = ({
       const item = updated[idx];
       const dbUpdates: Record<string, any> = {};
       // Don't auto-save confirmado here — handled by handleToggleConfirmado
-      if ('cantidadACargar' in updates) dbUpdates.cantidad_cargada = updates.cantidadACargar;
+      if ('cantidadACargar' in updates) {
+        dbUpdates.cantidad_cargada = updates.cantidadACargar;
+        // Sync quantity change to pedidos_detalles and recalculate pedido totals
+        syncPedidoDetalle(item, updates.cantidadACargar!);
+      }
       if ('pesoRealKg' in updates) dbUpdates.peso_real_kg = updates.pesoRealKg;
       if ('loteId' in updates) dbUpdates.lote_id = updates.loteId;
       if (Object.keys(dbUpdates).length > 0) {
