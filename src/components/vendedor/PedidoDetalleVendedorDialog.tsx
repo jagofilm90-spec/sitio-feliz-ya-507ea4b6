@@ -18,6 +18,8 @@ import { getDisplayName } from "@/lib/productUtils";
 import { CREDITO_LABELS } from "@/lib/creditoUtils";
 import { ImprimirPedidoDialog } from "@/components/pedidos/ImprimirPedidoDialog";
 import { DatosPedidoPrint } from "@/components/pedidos/PedidoPrintTemplate";
+import { CargaEvidenciasVendedorSection } from "./CargaEvidenciasVendedorSection";
+import { ComprobanteCargaPDFDialog } from "./ComprobanteCargaPDFDialog";
 
 interface Props {
   open: boolean;
@@ -91,6 +93,8 @@ export function PedidoDetalleVendedorDialog({ open, onOpenChange, pedidoId }: Pr
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPrint, setShowPrint] = useState(false);
+  const [showComprobante, setShowComprobante] = useState(false);
+  const [comprobanteRutaId, setComprobanteRutaId] = useState<string>("");
 
   useEffect(() => {
     if (open && pedidoId) {
@@ -323,6 +327,17 @@ export function PedidoDetalleVendedorDialog({ open, onOpenChange, pedidoId }: Pr
                 </div>
               )}
 
+              {/* Carga evidencias - only for en_ruta, entregado, facturado */}
+              {["en_ruta", "entregado", "facturado", "en_carga", "cargada"].includes(pedido.status) && (
+                <CargaEvidenciasVendedorSection
+                  pedidoId={pedido.id}
+                  onDescargarComprobante={(rutaId) => {
+                    setComprobanteRutaId(rutaId);
+                    setShowComprobante(true);
+                  }}
+                />
+              )}
+
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -350,6 +365,15 @@ export function PedidoDetalleVendedorDialog({ open, onOpenChange, pedidoId }: Pr
         onOpenChange={setShowPrint}
         datos={buildPrintData()}
       />
+
+      {comprobanteRutaId && pedido && (
+        <ComprobanteCargaPDFDialog
+          open={showComprobante}
+          onOpenChange={setShowComprobante}
+          rutaId={comprobanteRutaId}
+          pedidoId={pedido.id}
+        />
+      )}
     </>
   );
 }
