@@ -17,11 +17,13 @@ import {
   MapPin,
   User,
   CalendarDays,
+  Edit,
 } from "lucide-react";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ConciliacionDetalleDialog } from "./ConciliacionDetalleDialog";
 
 interface RutaConDetalles {
   id: string;
@@ -388,78 +390,106 @@ function EntregaRow({
   onMarcarPapeles: (recibido: boolean, notas?: string) => void;
 }) {
   const [notasConciliacion, setNotasConciliacion] = useState(entrega.notas_conciliacion || "");
+  const [conciliacionOpen, setConciliacionOpen] = useState(false);
   const esEntregado =
     entrega.status_entrega === "entregado" || entrega.status_entrega === "completo";
 
   return (
-    <div
-      className={cn(
-        "border rounded-lg p-3 text-sm",
-        entrega.papeles_recibidos && "border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/10",
-        !entrega.papeles_recibidos && esEntregado && showConciliacion && "border-amber-300 bg-amber-50/50 dark:bg-amber-950/10"
-      )}
-    >
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs text-muted-foreground font-mono">#{entrega.orden_entrega}</span>
-          <span className="font-medium truncate">
-            {entrega.pedido?.cliente?.nombre || "—"}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            ({entrega.pedido?.folio})
-          </span>
+    <>
+      <div
+        className={cn(
+          "border rounded-lg p-3 text-sm",
+          entrega.papeles_recibidos && "border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/10",
+          !entrega.papeles_recibidos && esEntregado && showConciliacion && "border-amber-300 bg-amber-50/50 dark:bg-amber-950/10"
+        )}
+      >
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs text-muted-foreground font-mono">#{entrega.orden_entrega}</span>
+            <span className="font-medium truncate">
+              {entrega.pedido?.cliente?.nombre || "—"}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              ({entrega.pedido?.folio})
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {getEntregaStatusBadgeStatic(entrega.status_entrega)}
+            {entrega.papeles_recibidos && (
+              <Badge className="bg-emerald-600 text-white text-[10px]">
+                <FileCheck className="h-3 w-3 mr-0.5" />
+                Papeles ✓
+              </Badge>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {getEntregaStatusBadgeStatic(entrega.status_entrega)}
-          {entrega.papeles_recibidos && (
-            <Badge className="bg-emerald-600 text-white text-[10px]">
-              <FileCheck className="h-3 w-3 mr-0.5" />
-              Papeles ✓
-            </Badge>
-          )}
-        </div>
+
+        {entrega.hora_entrega_real && (
+          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            Entregado: {entrega.hora_entrega_real}
+            {entrega.nombre_receptor && ` — Recibió: ${entrega.nombre_receptor}`}
+          </p>
+        )}
+
+        {entrega.firma_recibido && (
+          <p className="text-xs text-emerald-600 mt-0.5 flex items-center gap-1">
+            <CheckCircle2 className="h-3 w-3" />
+            Firma digital capturada
+          </p>
+        )}
+
+        {showConciliacion && esEntregado && !entrega.papeles_recibidos && (
+          <div className="mt-2 pt-2 border-t space-y-2">
+            {/* Button to register returns */}
+            {entrega.pedido?.id && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setConciliacionOpen(true)}
+                className="w-full"
+              >
+                <Edit className="h-4 w-4 mr-1.5" />
+                Registrar Devoluciones / Faltantes
+              </Button>
+            )}
+
+            <Textarea
+              placeholder="Notas de conciliación (opcional)"
+              value={notasConciliacion}
+              onChange={(e) => setNotasConciliacion(e.target.value)}
+              className="text-xs h-16"
+            />
+            <Button
+              size="sm"
+              onClick={() => onMarcarPapeles(true, notasConciliacion)}
+              className="w-full"
+            >
+              <FileCheck className="h-4 w-4 mr-1.5" />
+              Marcar papeles recibidos (firma y sello)
+            </Button>
+          </div>
+        )}
+
+        {showConciliacion && entrega.papeles_recibidos && entrega.notas_conciliacion && (
+          <p className="text-xs text-muted-foreground mt-1 italic">
+            Nota: {entrega.notas_conciliacion}
+          </p>
+        )}
       </div>
 
-      {entrega.hora_entrega_real && (
-        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          Entregado: {entrega.hora_entrega_real}
-          {entrega.nombre_receptor && ` — Recibió: ${entrega.nombre_receptor}`}
-        </p>
+      {/* Conciliation dialog */}
+      {entrega.pedido?.id && (
+        <ConciliacionDetalleDialog
+          open={conciliacionOpen}
+          onClose={() => setConciliacionOpen(false)}
+          pedidoId={entrega.pedido.id}
+          pedidoFolio={entrega.pedido.folio}
+          clienteNombre={entrega.pedido.cliente?.nombre || "—"}
+          entregaId={entrega.id}
+        />
       )}
-
-      {entrega.firma_recibido && (
-        <p className="text-xs text-emerald-600 mt-0.5 flex items-center gap-1">
-          <CheckCircle2 className="h-3 w-3" />
-          Firma digital capturada
-        </p>
-      )}
-
-      {showConciliacion && esEntregado && !entrega.papeles_recibidos && (
-        <div className="mt-2 pt-2 border-t space-y-2">
-          <Textarea
-            placeholder="Notas de conciliación (opcional)"
-            value={notasConciliacion}
-            onChange={(e) => setNotasConciliacion(e.target.value)}
-            className="text-xs h-16"
-          />
-          <Button
-            size="sm"
-            onClick={() => onMarcarPapeles(true, notasConciliacion)}
-            className="w-full"
-          >
-            <FileCheck className="h-4 w-4 mr-1.5" />
-            Marcar papeles recibidos (firma y sello)
-          </Button>
-        </div>
-      )}
-
-      {showConciliacion && entrega.papeles_recibidos && entrega.notas_conciliacion && (
-        <p className="text-xs text-muted-foreground mt-1 italic">
-          Nota: {entrega.notas_conciliacion}
-        </p>
-      )}
-    </div>
+    </>
   );
 }
 
