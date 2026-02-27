@@ -354,6 +354,9 @@ export const CargaHojaInteractiva = ({
   };
 
   // Toggle checkbox with immediate inventory adjustment
+  // IMPORTANT: Only uses decrementar_lote/incrementar_lote (which trigger sync_stock_from_lotes).
+  // Do NOT insert into inventario_movimientos here — its trigger (update_product_stock)
+  // would cause a DOUBLE stock deduction.
   const handleToggleConfirmado = async (idx: number, checked: boolean) => {
     const item = productos[idx];
     if (!item || !item.loteId) {
@@ -365,52 +368,26 @@ export const CargaHojaInteractiva = ({
       const { data: { user } } = await supabase.auth.getUser();
 
       if (checked) {
-        // MARKING AS LOADED — check if already had inventory deducted
+        // MARKING AS LOADED
         const { data: cargaActual } = await supabase
           .from("carga_productos")
-          .select("cargado, movimiento_inventario_id, cantidad_cargada")
+          .select("cargado, cantidad_cargada")
           .eq("id", item.cargaProductoId)
           .single();
 
-        if (cargaActual?.movimiento_inventario_id) {
-          // Already has movement — adjust difference only
-          const cantidadPrevia = cargaActual.cantidad_cargada || 0;
-          const diferencia = item.cantidadACargar - cantidadPrevia;
-
+        if (cargaActual?.cargado && cargaActual?.cantidad_cargada) {
+          // Was previously marked — adjust difference only
+          const diferencia = item.cantidadACargar - cargaActual.cantidad_cargada;
           if (diferencia !== 0) {
             if (diferencia > 0) {
               await supabase.rpc("decrementar_lote", { p_lote_id: item.loteId, p_cantidad: diferencia });
             } else {
               await supabase.rpc("incrementar_lote", { p_lote_id: item.loteId, p_cantidad: Math.abs(diferencia) });
             }
-            await supabase.from("inventario_movimientos").update({
-              cantidad: item.cantidadACargar,
-            }).eq("id", cargaActual.movimiento_inventario_id);
           }
         } else {
-          // First time — full decrement
+          // First time or was unchecked — full decrement
           await supabase.rpc("decrementar_lote", { p_lote_id: item.loteId, p_cantidad: item.cantidadACargar });
-
-          const { data: movimiento } = await supabase.from("inventario_movimientos").insert({
-            producto_id: item.productoId,
-            tipo_movimiento: "salida",
-            cantidad: item.cantidadACargar,
-            motivo: "Carga de pedido",
-            lote_id: item.loteId,
-            referencia_id: item.entregaId,
-            usuario_id: user?.id,
-          }).select("id").single();
-
-          if (movimiento) {
-            await supabase.from("carga_productos").update({
-              movimiento_inventario_id: movimiento.id,
-            }).eq("id", item.cargaProductoId);
-
-            // Update local state with movimiento ID
-            setProductos(prev => prev.map((p, i) =>
-              i === idx ? { ...p, movimientoInventarioId: movimiento.id } : p
-            ));
-          }
         }
 
         // Save cargado state
@@ -425,10 +402,10 @@ export const CargaHojaInteractiva = ({
 
         toast.success(`${item.codigo} cargado — inventario actualizado`);
       } else {
-        // UNCHECKING — revert inventory
+        // UNCHECKING — revert inventory using DB values (not local state)
         const { data: cargaActual } = await supabase
           .from("carga_productos")
-          .select("movimiento_inventario_id, cantidad_cargada, lote_id")
+          .select("cantidad_cargada, lote_id")
           .eq("id", item.cargaProductoId)
           .single();
 
@@ -437,23 +414,13 @@ export const CargaHojaInteractiva = ({
             p_lote_id: cargaActual.lote_id,
             p_cantidad: cargaActual.cantidad_cargada,
           });
-
-          if (cargaActual.movimiento_inventario_id) {
-            await supabase.from("inventario_movimientos").delete()
-              .eq("id", cargaActual.movimiento_inventario_id);
-          }
         }
 
         await supabase.from("carga_productos").update({
           cargado: false,
           cargado_en: null,
           cargado_por: null,
-          movimiento_inventario_id: null,
         }).eq("id", item.cargaProductoId);
-
-        setProductos(prev => prev.map((p, i) =>
-          i === idx ? { ...p, movimientoInventarioId: null } : p
-        ));
 
         toast.info(`${item.codigo} desmarcado — inventario restaurado`);
       }
