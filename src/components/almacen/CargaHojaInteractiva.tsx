@@ -353,6 +353,48 @@ export const CargaHojaInteractiva = ({
     });
   };
 
+  // Refresh stock for a specific product's lote from DB (for concurrency)
+  const refreshLoteStock = async (idx: number) => {
+    const item = productos[idx];
+    if (!item || !item.loteId) return;
+
+    const { data: lotes } = await supabase
+      .from("inventario_lotes")
+      .select("id, lote_referencia, cantidad_disponible, bodega_id, bodega:bodegas(nombre)")
+      .eq("producto_id", item.productoId)
+      .gt("cantidad_disponible", 0)
+      .order("fecha_caducidad", { ascending: true, nullsFirst: false });
+
+    // Also include the currently selected lote even if stock is 0 (it might be loaded by us)
+    const allLoteIds = (lotes || []).map(l => l.id);
+    let lotesFinales = (lotes || []).map(l => ({
+      id: l.id,
+      lote_referencia: l.lote_referencia,
+      cantidad_disponible: l.cantidad_disponible,
+      bodega_nombre: (l.bodega as any)?.nombre || null,
+    }));
+
+    if (item.loteId && !allLoteIds.includes(item.loteId)) {
+      const { data: loteActual } = await supabase
+        .from("inventario_lotes")
+        .select("id, lote_referencia, cantidad_disponible, bodega_id, bodega:bodegas(nombre)")
+        .eq("id", item.loteId)
+        .single();
+      if (loteActual) {
+        lotesFinales.push({
+          id: loteActual.id,
+          lote_referencia: loteActual.lote_referencia,
+          cantidad_disponible: loteActual.cantidad_disponible,
+          bodega_nombre: (loteActual.bodega as any)?.nombre || null,
+        });
+      }
+    }
+
+    setProductos(prev => prev.map((p, i) =>
+      i === idx ? { ...p, lotesDisponibles: lotesFinales } : p
+    ));
+  };
+
   // Toggle checkbox with immediate inventory adjustment
   // IMPORTANT: Only uses decrementar_lote/incrementar_lote (which trigger sync_stock_from_lotes).
   // Do NOT insert into inventario_movimientos here — its trigger (update_product_stock)
@@ -431,7 +473,14 @@ export const CargaHojaInteractiva = ({
       ));
     } catch (err: any) {
       console.error(err);
-      toast.error("Error al actualizar inventario: " + (err?.message || ""));
+      // Refresh stock to show current availability
+      refreshLoteStock(idx);
+      const msg = err?.message || "";
+      if (msg.includes("Stock insuficiente")) {
+        toast.error("Stock insuficiente — otro almacenista ya cargó de este lote. Se actualizó el disponible.");
+      } else {
+        toast.error("Error al actualizar inventario: " + msg);
+      }
     }
   };
 
@@ -959,30 +1008,56 @@ export const CargaHojaInteractiva = ({
                           className="h-5 w-5 rounded border-2 shrink-0"
                         />
                         <div className="flex flex-col items-center">
-                          <Input
-                            type="number" inputMode="numeric"
-                            value={item.cantidadACargar || ""}
-                            onChange={e => {
-                              const raw = e.target.value;
-                              const newCant = raw === "" ? 0 : parseFloat(raw);
-                              if (isNaN(newCant)) return;
-                              const updates: Partial<ProductoHoja> = { cantidadACargar: newCant };
-                              if (tienePeso && !esVentaPorKg) {
-                                updates.pesoRealKg = newCant * (item.pesoKgUnit || 0);
-                              }
-                              updateProducto(item.originalIdx, updates);
-                            }}
-                            className={`h-8 w-full text-center text-sm font-semibold ${
-                              cantidadDifiere ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : ""
-                            }`}
-                            disabled={item.confirmado}
-                          />
-                          {cantidadDifiere && (
-                            <span className="text-[9px] text-amber-600 flex items-center gap-0.5 mt-0.5">
-                              <AlertTriangle className="w-2.5 h-2.5" />
-                              ≠{item.cantidadSolicitada}
-                            </span>
-                          )}
+                          {(() => {
+                            const loteSeleccionado = item.lotesDisponibles.find(l => l.id === item.loteId);
+                            const stockDisponible = loteSeleccionado?.cantidad_disponible ?? 0;
+                            // Max = stock disponible + lo que ya tiene cargado este item (ya descontado del lote)
+                            const yaCargado = item.confirmado ? (item.cantidadACargar || 0) : 0;
+                            const maxPermitido = stockDisponible + yaCargado;
+                            const excede = !item.confirmado && item.cantidadACargar > maxPermitido && maxPermitido > 0;
+                            return (
+                              <>
+                                <Input
+                                  type="number" inputMode="numeric"
+                                  value={item.cantidadACargar || ""}
+                                  onFocus={() => refreshLoteStock(item.originalIdx)}
+                                  onChange={e => {
+                                    const raw = e.target.value;
+                                    const newCant = raw === "" ? 0 : parseFloat(raw);
+                                    if (isNaN(newCant)) return;
+                                    // Cap to max available
+                                    const cappedCant = maxPermitido > 0 ? Math.min(newCant, maxPermitido) : newCant;
+                                    const updates: Partial<ProductoHoja> = { cantidadACargar: cappedCant };
+                                    if (tienePeso && !esVentaPorKg) {
+                                      updates.pesoRealKg = cappedCant * (item.pesoKgUnit || 0);
+                                    }
+                                    updateProducto(item.originalIdx, updates);
+                                    if (newCant > maxPermitido && maxPermitido > 0) {
+                                      toast.info(`Stock máximo disponible: ${maxPermitido}`);
+                                    }
+                                  }}
+                                  className={`h-8 w-full text-center text-sm font-semibold ${
+                                    excede ? "border-destructive bg-destructive/10" :
+                                    cantidadDifiere ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : ""
+                                  }`}
+                                  disabled={item.confirmado}
+                                />
+                                {!item.confirmado && loteSeleccionado && (
+                                  <span className={`text-[9px] mt-0.5 font-medium ${
+                                    maxPermitido < item.cantidadSolicitada ? "text-amber-600" : "text-muted-foreground"
+                                  }`}>
+                                    Disp: {maxPermitido}
+                                  </span>
+                                )}
+                                {cantidadDifiere && (
+                                  <span className="text-[9px] text-amber-600 flex items-center gap-0.5 mt-0.5">
+                                    <AlertTriangle className="w-2.5 h-2.5" />
+                                    ≠{item.cantidadSolicitada}
+                                  </span>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium leading-snug">{displayName}</p>
