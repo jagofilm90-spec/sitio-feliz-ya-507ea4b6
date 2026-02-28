@@ -114,65 +114,64 @@ const handler = async (req: Request): Promise<Response> => {
       </table>
     `;
 
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #B22234 0%, #8B0000 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">ALMASA</h1>
-          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Abarrotes La Manita, S.A. de C.V.</p>
-        </div>
-        
-        <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
-          <div style="background: #ECFDF5; border: 1px solid #10B981; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-            <p style="margin: 0; color: #047857; font-weight: 600; font-size: 18px;">
-              ✓ Pedido Programado
-            </p>
-          </div>
+    const LOGO_URL = "https://vrcyjmfpteoccqdmdmqn.supabase.co/storage/v1/object/public/email-assets/logo-almasa.png";
 
-          <p style="font-size: 16px;">Estimado/a <strong>${clienteNombre}</strong>,</p>
-          
-          <p>Su pedido ha sido autorizado y programado para entrega:</p>
-          
+    const emailHtml = `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;">
+    <tr><td align="center" style="padding:30px 15px;">
+      <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+        <!-- Logo Header -->
+        <tr><td style="background:linear-gradient(135deg,#B22234 0%,#8B0000 100%);padding:28px 30px;text-align:center;">
+          <img src="${LOGO_URL}" alt="ALMASA" width="180" style="display:block;margin:0 auto;max-width:180px;height:auto;" />
+          <p style="color:rgba(255,255,255,0.85);margin:10px 0 0;font-size:13px;letter-spacing:0.5px;">Abarrotes La Manita, S.A. de C.V.</p>
+        </td></tr>
+        <!-- Title -->
+        <tr><td style="background:#1f2937;padding:14px 30px;text-align:center;">
+          <p style="color:#ffffff;margin:0;font-size:16px;font-weight:600;">✓ Pedido Programado</p>
+        </td></tr>
+        <!-- Body -->
+        <tr><td style="padding:30px;">
           ${alertBanner}
-
-          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <table style="width: 100%;">
-              <tr>
-                <td style="padding: 8px 0;"><strong>Folio:</strong></td>
-                <td style="padding: 8px 0; text-align: right;">${pedidoFolio}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0;"><strong>Fecha de entrega:</strong></td>
-                <td style="padding: 8px 0; text-align: right;">${formattedDate}</td>
-              </tr>
-              <tr style="border-top: 2px solid #B22234;">
-                <td style="padding: 12px 0;"><strong style="font-size: 18px;">Total:</strong></td>
-                <td style="padding: 12px 0; text-align: right;"><strong style="font-size: 18px; color: #B22234;">${formattedTotal}</strong></td>
-              </tr>
-            </table>
-          </div>
+          <p style="font-size:15px;color:#333;margin:0 0 16px;">Estimado/a <strong>${clienteNombre}</strong>,</p>
+          <p style="font-size:14px;color:#555;margin:0 0 20px;">Su pedido ha sido autorizado y programado para entrega:</p>
+          
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8f9fa;border-radius:8px;margin:0 0 20px;">
+            <tr><td style="padding:16px 20px;">
+              <table width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="padding:6px 0;font-size:14px;"><strong>Folio:</strong></td>
+                  <td style="padding:6px 0;font-size:14px;text-align:right;">${pedidoFolio}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;font-size:14px;"><strong>Fecha de entrega:</strong></td>
+                  <td style="padding:6px 0;font-size:14px;text-align:right;">${formattedDate}</td>
+                </tr>
+                <tr style="border-top:2px solid #B22234;">
+                  <td style="padding:10px 0;font-size:18px;font-weight:700;">Total:</td>
+                  <td style="padding:10px 0;font-size:18px;font-weight:700;text-align:right;color:#B22234;">${formattedTotal}</td>
+                </tr>
+              </table>
+            </td></tr>
+          </table>
 
           ${productosHtml}
-          
-          <p style="color: #666; font-size: 14px; margin-top: 30px;">
-            Si tiene alguna pregunta sobre su pedido, no dude en contactarnos.
+
+          <p style="color:#888;font-size:13px;margin-top:24px;">Si tiene alguna pregunta sobre su pedido, no dude en contactarnos.</p>
+        </td></tr>
+        <!-- Footer -->
+        <tr><td style="background:#f9fafb;padding:20px 30px;border-top:1px solid #e5e7eb;">
+          <p style="margin:0;color:#9ca3af;font-size:11px;text-align:center;line-height:1.5;">
+            Este correo fue enviado automáticamente por ALMASA.<br>
+            Por favor no responda directamente a este mensaje.
           </p>
-          
-          <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
-          
-          <p style="color: #999; font-size: 12px; text-align: center;">
-            Este correo fue enviado automáticamente por el sistema de ALMASA.<br>
-            Por favor no responda a este correo.
-          </p>
-        </div>
-      </body>
-      </html>
-    `;
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
 
     const emailResponse = await resend.emails.send({
       from: "ALMASA <onboarding@resend.dev>",
