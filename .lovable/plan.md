@@ -1,127 +1,88 @@
 
-# Plan: Completar Flujo de Carga End-to-End
+
+# Plan: GPS en Tiempo Real para Choferes + Mejoras en Pestanas de Almacen
 
 ## Resumen
 
-Este plan cubre las 6 funcionalidades faltantes para completar el ciclo operativo desde la carga en almacen hasta la entrega confirmada por el chofer.
+Implementar rastreo GPS tipo "Encontrar" para choferes visible desde almacen, con horario de operacion (L-V 8am-8pm, Sab 8am-6pm), mapa en tiempo real, y mejoras a las pestanas "En Ruta" y "Pedidos Entregados" con sistema de pedidos individuales y auto-completado de rutas.
 
 ---
 
-## 1. PDF de 3 Hojas para Pedidos Internos (pedidos@almasa.com.mx)
+## 1. Mapa en Tiempo Real del Chofer (tipo "Encontrar")
 
-Actualmente el sistema genera un PDF de 1 hoja (remision). Se necesita generar un bundle de 3 hojas al crear el pedido.
+Crear un componente de mapa que muestre la ubicacion en vivo del chofer usando Google Maps.
 
-**Hojas a generar:**
-- **Hoja 1 - Remision Comercial**: Igual al PDF del cliente (PedidoPrintTemplate existente)
-- **Hoja 2 - Hoja de Carga Almacen**: Incluye QR (`almasa:carga:{pedidoId}`), tabla de productos con columnas para marcar cantidades, espacio para pesos
-- **Hoja 3 - Hoja de Carga Cliente**: Sin QR, con campos de firma de recepcion, pagare, dias de credito, peso total
-
-**Cambios:**
-- Crear `src/components/pedidos/HojaCargaAlmacenTemplate.tsx` - template con QR y tabla de chequeo
-- Crear `src/components/pedidos/HojaCargaClienteTemplate.tsx` - template con firmas, pagare, credito
-- Modificar `src/components/vendedor/VendedorNuevoPedidoTab.tsx` - generar PDF de 3 paginas al enviar a pedidos@almasa.com.mx
-- Modificar la Edge Function `send-order-authorized-email` para adjuntar el PDF de 3 hojas
+- Crear `src/components/almacen/ChoferMapDialog.tsx`: dialogo con Google Maps embebido mostrando un marcador animado con la posicion del chofer en tiempo real
+- Usa el hook existente `useChoferUbicacionRealtime` para obtener latitud/longitud con actualizacion automatica via Realtime
+- Muestra: nombre del chofer, velocidad, precision, ultima actualizacion
+- Indicador visual si la senal esta "stale" (mas de 5 min sin actualizar)
+- Boton de localizacion (icono de pin) junto al nombre del chofer en cada tarjeta de ruta
 
 ---
 
-## 2. Pestanas "En Ruta" y "Pedidos Entregados" en Almacen
+## 2. Horario de Tracking GPS
 
-Actualmente `AlmacenCargaRutasTab` solo muestra rutas para cargar. Se necesitan 2 pestanas adicionales.
+Agregar logica de horario al servicio de geolocalizacion para que solo envie posicion dentro del horario laboral.
 
-**Cambios:**
-- Modificar `src/components/almacen/AlmacenCargaRutasTab.tsx` - agregar un sistema de tabs interno con 3 vistas:
-  - **Carga de Rutas** (vista actual)
-  - **En Ruta** - rutas con status `en_curso`, mostrando progreso de entregas en tiempo real (cuantas entregadas/total)
-  - **Pedidos Entregados** - rutas con status `completada`, con resumen de entregas del dia
-- Suscripcion Realtime a cambios en `entregas` para actualizar progreso en tiempo real
-- Modificar `src/components/almacen/AlmacenSidebar.tsx` y `AlmacenMobileNav.tsx` si se requiere ajuste en los contadores
-
----
-
-## 3. Reimpresion Obligatoria al Modificar Cantidades
-
-Cuando el almacen modifica cantidades en la hoja interactiva, antes de enviar a ruta debe:
-1. Generar un nuevo PDF con las cantidades actualizadas (2 hojas: Hoja de Carga Original con QR para chofer + Hoja de Carga Cliente)
-2. Forzar la impresion/descarga antes de permitir el envio
-
-**Datos adicionales en las hojas:**
-- Chofer, ayudantes, almacenista que cargo
-- Hora de salida
-- Espacio para firmas de recepcion del cliente
-- Pagare, dias de credito
-- Peso total por pedido (desglosado si son mas de 2 pedidos)
-
-**Cambios:**
-- Crear `src/components/almacen/HojaCargaDespachoTemplate.tsx` - template post-carga con datos operativos completos
-- Modificar `src/components/almacen/AlmacenCargaRutasTab.tsx` - en `handleEnviarARuta`:
-  - Detectar si hubo cambios de cantidad (comparar `carga_productos.cantidad_cargada` vs `pedidos_detalles.cantidad` original)
-  - Si hubo cambios: generar PDF de 2 hojas, abrir dialogo de impresion obligatoria, bloquear envio hasta confirmar impresion
-  - Si no hubo cambios: permitir envio directo
+- Modificar `src/services/backgroundGeolocation.ts`: agregar funcion `isWithinTrackingSchedule()` que valide:
+  - Lunes a Viernes: 8:00 AM - 8:00 PM
+  - Sabado: 8:00 AM - 6:00 PM
+  - Domingo: No tracking
+- En `updateLocationInDB`, verificar el horario antes de hacer el upsert a la base de datos
+- Si esta fuera de horario, no enviar la ubicacion (el watcher sigue activo para no perder permisos, pero no se guarda)
 
 ---
 
-## 4. Email al Chofer al Enviar a Ruta
+## 3. Redisenar Pestana "En Ruta"
 
-Al hacer click en "Enviar a Ruta", enviar email al chofer con su ruta y hojas de carga.
+Actualizar `RutasEnRutaTab.tsx` para incluir:
 
-**Cambios:**
-- Crear Edge Function `supabase/functions/send-chofer-route-email/index.ts`:
-  - Recibe `rutaId`, busca datos de ruta, chofer, entregas
-  - Genera email HTML con template profesional (logo Almasa, misma estetica que emails a clientes)
-  - Incluye resumen de entregas, clientes, direcciones, peso total
-  - Usa Resend API (secret ya configurada)
-- Modificar `src/components/almacen/AlmacenCargaRutasTab.tsx` - en `handleEnviarARuta`, invocar `send-chofer-route-email` despues de actualizar estados
-
----
-
-## 5. Escaneo QR del Chofer para Confirmar Entregas
-
-El chofer debe poder escanear el QR de la hoja de carga del cliente para confirmar la entrega automaticamente.
-
-**Cambios:**
-- Modificar `src/components/chofer/EntregaCard.tsx`:
-  - Agregar boton "Escanear QR" junto al boton "Entregar"
-  - Al escanear, parsear URI `almasa:carga:{pedidoId}`, validar que coincida con el pedido de esa entrega
-  - Marcar entrega como completada automaticamente
-- Crear `src/components/chofer/QRScannerEntrega.tsx` - componente de scanner usando `html5-qrcode` (ya instalado)
-- Usar el componente existente `CameraQrScanner` como referencia de implementacion
+- **Boton de localizacion** junto al nombre del chofer que abre `ChoferMapDialog`
+- **Unidad (vehiculo)** visible: placa y nombre
+- **Sistema de pedidos individuales**: cuando hay mas de 1 pedido, mostrar "Pedido 1", "Pedido 2", "Pedido 3" con tabs o acordeon
+  - Cada pedido muestra: cliente, folio, productos, peso
+  - Palomita verde si ya fue entregado, pendiente si no
+  - Contador visible: "1/3 entregados", "2/2 entregados"
+- **Auto-completado**: cuando todas las entregas de una ruta estan marcadas como entregadas (ej. 2/2), la ruta se mueve automaticamente a "Pedidos Entregados" (cambiar status a 'completada')
 
 ---
 
-## 6. Notificaciones Automaticas al Escanear QR
+## 4. Redisenar Pestana "Pedidos Entregados"
 
-Cuando el chofer escanea el QR y confirma la entrega, notificar automaticamente a:
-- Vendedor del pedido
-- Almacenista que cargo
-- Secretarias y administradores
+Actualizar `RutasEntregadasTab.tsx` para:
 
-**Cambios:**
-- Crear Edge Function `supabase/functions/send-delivery-confirmation/index.ts`:
-  - Recibe `entregaId`, `pedidoId`, `rutaId`
-  - Busca vendedor (via `pedidos.vendedor_id`), almacenista (`rutas.almacenista_id`), secretarias y admins (via `user_roles`)
-  - Envia push notification via FCM (ya configurado) y email
-  - Incluye: cliente, folio, hora de entrega, chofer
-- Modificar `src/components/chofer/EntregaCard.tsx` o el flujo post-scan:
-  - Despues de marcar entrega como completada, invocar `send-delivery-confirmation`
-- Actualizar la Edge Function `send-client-notification` para soportar tipo `entrega_confirmada_qr` si se quiere notificar tambien al cliente
+- Mostrar rutas completadas del **mes completo** (no solo del dia) para auditorias
+- Filtro por fecha (rango de fechas) con selector
+- Cada ruta muestra: chofer, unidad, hora inicio/fin, pedidos con detalle
+- Misma estructura de pedidos individuales con palomitas verdes
+- Conservar datos minimo 1 mes (ya se guardan en la tabla `rutas` y `entregas`)
 
 ---
 
-## Migracion de Base de Datos
+## 5. Auto-completar Ruta al Entregar Todos los Pedidos
 
-Se necesita una migracion SQL para:
-- Agregar campo `cantidad_original` a `pedidos_detalles` para trackear si hubo cambios durante la carga (necesario para la reimpresion obligatoria)
-- Agregar campo `impresion_requerida` (boolean) a `rutas` para bloquear envio hasta imprimir
+Cuando el chofer confirma la ultima entrega de una ruta:
+
+- Modificar la logica post-entrega en `EntregaCard.tsx` / `RegistrarEntregaSheet`:
+  - Despues de marcar una entrega, verificar si TODAS las entregas de esa ruta estan completadas
+  - Si todas estan completadas, automaticamente actualizar la ruta a status `completada` con `fecha_hora_fin = now()`
+  - Esto hace que desaparezca de "En Ruta" y aparezca en "Pedidos Entregados" en tiempo real
 
 ---
 
-## Secuencia de Implementacion
+## Detalle Tecnico
 
-1. Migracion DB (campo `cantidad_original`)
-2. Templates de Hojas de Carga (almacen + cliente + despacho)
-3. PDF de 3 hojas en creacion de pedido
-4. Pestanas En Ruta / Entregados en almacen
-5. Reimpresion obligatoria al modificar
-6. Edge Function email al chofer
-7. QR Scanner en panel del chofer
-8. Edge Function notificaciones de entrega
+### Archivos nuevos:
+- `src/components/almacen/ChoferMapDialog.tsx` - Mapa Google Maps con marcador en vivo
+
+### Archivos a modificar:
+- `src/components/almacen/RutasEnRutaTab.tsx` - Agregar boton GPS, sistema de pedidos, auto-completado
+- `src/components/almacen/RutasEntregadasTab.tsx` - Mostrar mes completo con filtros
+- `src/services/backgroundGeolocation.ts` - Agregar validacion de horario laboral
+- `src/components/chofer/EntregaCard.tsx` o flujo de entrega - Auto-completar ruta
+
+### No se requieren cambios de base de datos:
+- La tabla `chofer_ubicaciones` ya existe con los campos necesarios
+- Las tablas `rutas` y `entregas` ya tienen los campos de status y timestamps
+- Los datos se mantienen en BD indefinidamente (auditoria cubierta)
+
