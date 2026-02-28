@@ -123,3 +123,9 @@ verify_jwt = false
 
 [functions.parse-cfdi-xml]
 verify_jwt = true
+
+[functions.send-delivery-confirmation]
+verify_jwt = false
+
+[functions.send-chofer-route-email]
+verify_jwt = false
