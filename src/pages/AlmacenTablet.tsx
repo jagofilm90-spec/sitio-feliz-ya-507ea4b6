@@ -76,44 +76,54 @@ const AlmacenTablet = () => {
   }, []);
 
   // Obtener el empleado_id y datos del usuario actual
+  const loadEmpleadoData = async (userId: string, userEmail?: string) => {
+    // Buscar en empleados primero
+    const { data: empleado } = await supabase
+      .from("empleados")
+      .select("id, nombre, primer_apellido, puesto, email, foto_url")
+      .eq("user_id", userId)
+      .maybeSingle();
+    
+    let displayName = "";
+    
+    if (empleado) {
+      setEmpleadoId(empleado.id);
+      displayName = [empleado.nombre, empleado.primer_apellido]
+        .filter(Boolean)
+        .join(" ");
+      setEmpleadoPuesto(empleado.puesto || "");
+      setEmpleadoEmail(empleado.email || userEmail || "");
+      setEmpleadoFotoUrl(empleado.foto_url || null);
+    }
+    
+    // Si no hay nombre de empleado, buscar en profiles como fallback
+    if (!displayName) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", userId)
+        .maybeSingle();
+      
+      displayName = profile?.full_name || "Usuario";
+    }
+    
+    setEmpleadoNombre(displayName);
+  };
+
   useEffect(() => {
-    const loadEmpleadoData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        // Buscar en empleados primero
-        const { data: empleado } = await supabase
-          .from("empleados")
-          .select("id, nombre, primer_apellido, puesto, email, foto_url")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        
-        let displayName = "";
-        
-        if (empleado) {
-          setEmpleadoId(empleado.id);
-          displayName = [empleado.nombre, empleado.primer_apellido]
-            .filter(Boolean)
-            .join(" ");
-          setEmpleadoPuesto(empleado.puesto || "");
-          setEmpleadoEmail(empleado.email || user.email || "");
-          setEmpleadoFotoUrl(empleado.foto_url || null);
-        }
-        
-        // Si no hay nombre de empleado, buscar en profiles como fallback
-        if (!displayName) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("full_name")
-            .eq("id", user.id)
-            .maybeSingle();
-          
-          displayName = profile?.full_name || "Usuario";
-        }
-        
-        setEmpleadoNombre(displayName);
+    // Load on mount
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) loadEmpleadoData(user.id, user.email ?? undefined);
+    });
+
+    // Re-load when auth state changes (session refresh, token restore)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+        loadEmpleadoData(session.user.id, session.user.email ?? undefined);
       }
-    };
-    loadEmpleadoData();
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   // Cargar stats de recepción
