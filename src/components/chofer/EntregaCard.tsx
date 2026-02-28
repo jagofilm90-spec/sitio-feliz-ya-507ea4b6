@@ -17,6 +17,7 @@ import {
   Gift
 } from "lucide-react";
 import { RegistrarEntregaSheet } from "./RegistrarEntregaSheet";
+import { QRScannerEntrega } from "./QRScannerEntrega";
 import { getCompactDisplayName } from "@/lib/productUtils";
 
 interface EntregaCardProps {
@@ -255,6 +256,15 @@ export function EntregaCard({ entrega, onEntregaActualizada }: EntregaCardProps)
               <Navigation className="h-4 w-4 mr-2" />
               Navegar
             </Button>
+            {!isCompletada && (
+              <QRScannerEntrega
+                entregaId={entrega.id}
+                pedidoId={pedido.id}
+                pedidoFolio={pedido.folio}
+                clienteNombre={pedido.cliente.nombre}
+                onEntregaConfirmada={onEntregaActualizada}
+              />
+            )}
             <Button 
               size="sm" 
               className="flex-1"

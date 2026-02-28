@@ -3748,6 +3748,7 @@ export type Database = {
       pedidos_detalles: {
         Row: {
           cantidad: number
+          cantidad_original: number | null
           created_at: string
           es_cortesia: boolean | null
           fecha_ajuste_precio: string | null
@@ -3765,6 +3766,7 @@ export type Database = {
         }
         Insert: {
           cantidad: number
+          cantidad_original?: number | null
           created_at?: string
           es_cortesia?: boolean | null
           fecha_ajuste_precio?: string | null
@@ -3782,6 +3784,7 @@ export type Database = {
         }
         Update: {
           cantidad?: number
+          cantidad_original?: number | null
           created_at?: string
           es_cortesia?: boolean | null
           fecha_ajuste_precio?: string | null
@@ -4862,6 +4865,7 @@ export type Database = {
           folio: string
           hora_salida_sugerida: string | null
           id: string
+          impresion_requerida: boolean | null
           kilometraje_final: number | null
           kilometraje_inicial: number | null
           kilometros_recorridos: number | null
@@ -4901,6 +4905,7 @@ export type Database = {
           folio: string
           hora_salida_sugerida?: string | null
           id?: string
+          impresion_requerida?: boolean | null
           kilometraje_final?: number | null
           kilometraje_inicial?: number | null
           kilometros_recorridos?: number | null
@@ -4940,6 +4945,7 @@ export type Database = {
           folio?: string
           hora_salida_sugerida?: string | null
           id?: string
+          impresion_requerida?: boolean | null
           kilometraje_final?: number | null
           kilometraje_inicial?: number | null
           kilometros_recorridos?: number | null

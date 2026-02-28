@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -17,6 +18,8 @@ import {
 } from "lucide-react";
 import { RutaCargaInlineView } from "@/components/almacen/RutaCargaInlineView";
 import { CargaRutaInlineFlow } from "@/components/almacen/CargaRutaInlineFlow";
+import { RutasEnRutaTab } from "@/components/almacen/RutasEnRutaTab";
+import { RutasEntregadasTab } from "@/components/almacen/RutasEntregadasTab";
 
 interface Ruta {
   id: string;
@@ -462,7 +465,17 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
         }
       }
 
-      toast({ title: "🚛 Ruta enviada", description: `La ruta ${ruta.folio} está en camino. Se notificó a los clientes.` });
+      // Send route email to chofer
+      try {
+        await supabase.functions.invoke("send-chofer-route-email", {
+          body: { rutaId: ruta.id },
+        });
+      } catch (emailErr) {
+        console.error("Error sending chofer email:", emailErr);
+        // Non-blocking
+      }
+
+      toast({ title: "🚛 Ruta enviada", description: `La ruta ${ruta.folio} está en camino. Se notificó a los clientes y al chofer.` });
       loadRutas();
     } catch (err: any) {
       toast({ title: "Error", description: err?.message || "No se pudo enviar la ruta", variant: "destructive" });
@@ -504,44 +517,87 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
 
   if (rutas.length === 0) {
     return (
-      <div className="space-y-6">
-        {/* Banner Empezar a Cargar - siempre visible */}
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="py-4">
-            <div className="flex items-center gap-4">
-              <div className="bg-primary/10 rounded-xl p-3 shrink-0">
-                <QrCode className="h-8 w-8 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-lg text-foreground">Empezar a cargar</h3>
-                <p className="text-sm text-muted-foreground">
-                  Selecciona personal, escanea pedidos y confirma la carga
-                </p>
-              </div>
-              <Button 
-                onClick={() => setShowInlineFlow(true)}
-                size="lg"
-                className="h-14 px-6 text-base font-bold gap-2 shrink-0"
-              >
-                <QrCode className="h-5 w-5" />
-                Nueva Carga
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="carga" className="w-full">
+        <TabsList className="w-full grid grid-cols-3 mb-4">
+          <TabsTrigger value="carga" className="gap-1.5">
+            <Package className="w-4 h-4" />
+            Carga de Rutas
+          </TabsTrigger>
+          <TabsTrigger value="enruta" className="gap-1.5">
+            <Truck className="w-4 h-4" />
+            En Ruta
+          </TabsTrigger>
+          <TabsTrigger value="entregados" className="gap-1.5">
+            <CheckCircle2 className="w-4 h-4" />
+            Entregados
+          </TabsTrigger>
+        </TabsList>
 
-        <div className="p-8 text-center text-muted-foreground">
-          <Truck className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p>No hay rutas programadas para hoy</p>
-          <p className="text-xs mt-1">Presiona "Nueva Carga" para crear una ruta</p>
-        </div>
-      </div>
+        <TabsContent value="carga">
+          <div className="space-y-6">
+            {/* Banner Empezar a Cargar - siempre visible */}
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="py-4">
+                <div className="flex items-center gap-4">
+                  <div className="bg-primary/10 rounded-xl p-3 shrink-0">
+                    <QrCode className="h-8 w-8 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-lg text-foreground">Empezar a cargar</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Selecciona personal, escanea pedidos y confirma la carga
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => setShowInlineFlow(true)}
+                    size="lg"
+                    className="h-14 px-6 text-base font-bold gap-2 shrink-0"
+                  >
+                    <QrCode className="h-5 w-5" />
+                    Nueva Carga
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="p-8 text-center text-muted-foreground">
+              <Truck className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>No hay rutas programadas para hoy</p>
+              <p className="text-xs mt-1">Presiona "Nueva Carga" para crear una ruta</p>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="enruta">
+          <RutasEnRutaTab />
+        </TabsContent>
+
+        <TabsContent value="entregados">
+          <RutasEntregadasTab />
+        </TabsContent>
+      </Tabs>
     );
   }
 
   return (
-    <>
+    <Tabs defaultValue="carga" className="w-full">
+      <TabsList className="w-full grid grid-cols-3 mb-4">
+        <TabsTrigger value="carga" className="gap-1.5">
+          <Package className="w-4 h-4" />
+          Carga de Rutas
+        </TabsTrigger>
+        <TabsTrigger value="enruta" className="gap-1.5">
+          <Truck className="w-4 h-4" />
+          En Ruta
+        </TabsTrigger>
+        <TabsTrigger value="entregados" className="gap-1.5">
+          <CheckCircle2 className="w-4 h-4" />
+          Entregados
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="carga">
       {/* Banner Empezar a Cargar */}
       <Card className="border-primary/30 bg-primary/5">
         <CardContent className="py-4">
@@ -585,7 +641,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <ScrollArea className="h-[calc(100vh-320px)] min-h-[300px]">
+          <ScrollArea className="h-[calc(100vh-420px)] min-h-[300px]">
             <div className="divide-y divide-border">
               {rutas.map((ruta) => {
                 const estado = getEstadoCarga(ruta);
@@ -753,7 +809,15 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
           </ScrollArea>
         </CardContent>
       </Card>
+      </TabsContent>
 
-    </>
+      <TabsContent value="enruta">
+        <RutasEnRutaTab />
+      </TabsContent>
+
+      <TabsContent value="entregados">
+        <RutasEntregadasTab />
+      </TabsContent>
+    </Tabs>
   );
 };

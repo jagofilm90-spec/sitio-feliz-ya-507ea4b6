@@ -222,6 +222,11 @@ export const CargaHojaInteractiva = ({
             .from("pedidos_detalles").select("id, cantidad").eq("pedido_id", ped.pedidoId);
 
           if (detalles && detalles.length > 0) {
+            // Save cantidad_original for reprint detection
+            for (const d of detalles) {
+              await supabase.from("pedidos_detalles").update({ cantidad_original: d.cantidad }).eq("id", d.id);
+            }
+
             const { data: insertados } = await supabase.from("carga_productos")
               .insert(detalles.map(d => ({
                 entrega_id: entrega!.id, pedido_detalle_id: d.id,
