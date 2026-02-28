@@ -1,99 +1,71 @@
 
 
-# Plan: Notificaciones Inteligentes — Correo + WhatsApp
+# Plan: WhatsApp en todo el ciclo de vida del pedido
 
 ## Resumen
 
-Implementar un sistema de notificacion dual que envie automaticamente por correo y/o WhatsApp segun los datos del cliente:
-- **Tiene correo y celular**: se envia a ambos
-- **Solo correo**: se envia solo por correo
-- **Solo celular (sin correo)**: se envia solo por WhatsApp
+Actualmente la Edge Function `send-client-notification` ya genera los datos de WhatsApp (telefono + mensaje) en la respuesta, pero solo los puntos de **entrega (chofer)** y **conciliacion masiva (secretaria)** los aprovechan. Falta que los demas momentos del ciclo tambien abran WhatsApp cuando el cliente no tiene correo (o tiene ambos).
 
-WhatsApp se enviara de forma **semi-automatica** usando la API de `wa.me` (abre WhatsApp Web/App con el mensaje ya escrito y listo para enviar con un clic). Esto no tiene costo y no requiere cuenta de WhatsApp Business API.
+Los 4 momentos clave son:
+1. **Pedido creado** -- vendedor crea el pedido
+2. **En ruta** -- almacen despacha la ruta
+3. **Entregado** -- chofer escanea QR o registra manual (ya implementado)
+4. **Conciliado** -- secretaria envia pedido conciliado (ya implementado)
 
----
+## Cambios necesarios
 
-## 1. Modificar Edge Function `send-client-notification`
+### 1. Creacion de pedido (Vendedor)
 
-Actualmente la funcion solo envia correo. Se modificara para:
+**Archivo:** `src/components/vendedor/VendedorNuevoPedidoTab.tsx`
 
-- Buscar tambien los telefonos del cliente en `cliente_telefonos`
-- Si no hay correos configurados pero si hay telefono, retornar en la respuesta `whatsappPending: true` con el numero y mensaje pre-armado
-- Si hay ambos, enviar correo normalmente y retornar `whatsappPending: true` para que el frontend abra el link
-- Generar el texto del mensaje de WhatsApp segun el tipo de notificacion (version texto plano, sin HTML)
+En la seccion donde se invoca `send-client-notification` con tipo `pedido_confirmado` (linea ~928), actualmente se hace `.catch()` y se ignora la respuesta. Se modificara para:
+- Capturar la respuesta (`data: notifResponse`)
+- Si `notifResponse?.whatsapp?.pending` es true, llamar `openWhatsApp()` para abrir el link de wa.me con el mensaje pre-armado
+- Mostrar un toast informativo: "Abriendo WhatsApp para notificar al cliente"
 
-La respuesta incluira un nuevo campo:
-```text
-{
-  success: true,
-  emailsSent: 2,
-  whatsapp: {
-    pending: true,
-    phones: ["+521234567890"],
-    message: "Estimado cliente, su pedido PED-202602-0001 ha sido entregado..."
-  }
-}
-```
+Esto cubre el caso donde el vendedor crea un pedido para un cliente sin correo.
 
----
+### 2. Despacho a ruta (Almacen)
 
-## 2. Crear funcion utilitaria para generar links de WhatsApp
+Hay dos archivos donde se despachan rutas y se envia notificacion `en_ruta`:
 
-Archivo: `src/lib/whatsappUtils.ts`
+**Archivo:** `src/components/almacen/CargaRutaInlineFlow.tsx` (linea ~348)
+**Archivo:** `src/pages/AlmacenCargaScan.tsx` (linea ~640)
 
-- `generateWhatsAppUrl(phone, message)`: genera URL `https://wa.me/{phone}?text={encodedMessage}`
-- `formatPhoneForWhatsApp(phone)`: limpia el numero (quita espacios, guiones, agrega codigo de pais 52 si no lo tiene)
-- `generateWhatsAppMessage(tipo, data)`: genera el texto del mensaje segun el tipo de notificacion
+En ambos se itera sobre los pedidos de la cola y se invoca `send-client-notification`. Se modificaran para:
+- Capturar la respuesta de cada invocacion
+- Acumular los pedidos que tengan `whatsapp.pending` en una lista
+- Al finalizar el loop, si hay pedidos pendientes de WhatsApp, mostrar un dialogo o abrir los links secuencialmente (con un toast por cada uno)
 
----
+Como el almacenista puede despachar multiples pedidos a la vez, se mostrara un resumen tipo lista con botones "Enviar WhatsApp" por cada cliente que lo necesite, similar al dialogo que ya existe en `ConciliacionMasivaEnvio.tsx`.
 
-## 3. Modificar `ConciliacionMasivaEnvio.tsx` (Secretaria)
+### 3. Otros puntos ya cubiertos
 
-Al enviar pedidos conciliados:
-- Despues de enviar correo, verificar si la respuesta incluye `whatsapp.pending`
-- Si hay WhatsApp pendiente, mostrar un dialogo/lista con botones "Enviar por WhatsApp" que abren `wa.me` con el mensaje pre-armado
-- Si el pedido solo tiene WhatsApp (sin correo), mostrarlo con un icono diferente (icono de WhatsApp verde)
-- Agregar indicador visual en cada pedido: icono de correo, icono de WhatsApp, o ambos
-
----
-
-## 4. Modificar notificaciones del Chofer (QR Scanner y Entrega Manual)
-
-En `QRScannerEntrega.tsx` y `RegistrarEntregaSheet.tsx`:
-- Al recibir respuesta de `send-client-notification`, si hay `whatsapp.pending`, abrir automaticamente el link de WhatsApp para que el chofer envie el mensaje con un tap
-- Mostrar toast indicando "Abrir WhatsApp para notificar al cliente"
-
----
-
-## 5. Indicadores visuales en lista de pedidos
-
-En las tarjetas de pedido de la conciliacion masiva, mostrar iconos:
-- Icono de sobre (correo) si el cliente tiene email
-- Icono de WhatsApp (verde) si tiene celular
-- Ambos si tiene los dos
-- Alerta si no tiene ni correo ni celular
-
----
+- **QRScannerEntrega.tsx** -- ya abre WhatsApp tras confirmar entrega
+- **RegistrarEntregaSheet.tsx** -- ya abre WhatsApp tras registrar entrega manual
+- **ConciliacionMasivaEnvio.tsx** -- ya muestra dialogo post-envio con botones WhatsApp
 
 ## Detalle Tecnico
 
-### Archivos nuevos:
-- `src/lib/whatsappUtils.ts` — utilidades para generar URLs y mensajes de WhatsApp
-
 ### Archivos a modificar:
-- `supabase/functions/send-client-notification/index.ts` — buscar telefonos del cliente, incluir datos de WhatsApp en respuesta, generar mensaje texto plano
-- `src/components/secretaria/ConciliacionMasivaEnvio.tsx` — mostrar indicadores correo/WhatsApp, abrir links de WhatsApp post-envio
-- `src/components/chofer/QRScannerEntrega.tsx` — abrir WhatsApp tras confirmar entrega si aplica
-- `src/components/chofer/RegistrarEntregaSheet.tsx` — mismo comportamiento que QR scanner
+- `src/components/vendedor/VendedorNuevoPedidoTab.tsx` -- capturar respuesta de `send-client-notification` y abrir WhatsApp si aplica
+- `src/components/almacen/CargaRutaInlineFlow.tsx` -- acumular respuestas WhatsApp y mostrar dialogo/botones post-despacho
+- `src/pages/AlmacenCargaScan.tsx` -- mismo tratamiento que CargaRutaInlineFlow
 
-### Sin cambios de base de datos:
-- La tabla `cliente_telefonos` ya existe con los campos necesarios (`telefono`, `es_principal`, `cliente_id`)
-- La tabla `cliente_correos` ya se usa para los correos
+### Patron de implementacion:
 
-### Flujo completo:
-1. Se invoca `send-client-notification` con `clienteId` y `tipo`
-2. La funcion busca correos Y telefonos del cliente
-3. Si hay correos, envia por Gmail como ya lo hace
-4. En la respuesta, incluye los telefonos disponibles y el mensaje de WhatsApp pre-generado
-5. El frontend recibe la respuesta y, si hay telefonos, abre `wa.me` o muestra boton para hacerlo
+En cada punto se seguira el mismo patron que ya funciona en `QRScannerEntrega.tsx`:
+
+```text
+const { data: notifResponse } = await supabase.functions.invoke("send-client-notification", { body: {...} });
+if (notifResponse?.whatsapp?.pending && notifResponse.whatsapp.phones?.length) {
+  openWhatsApp(notifResponse.whatsapp.phones, notifResponse.whatsapp.message);
+  toast.info("Abriendo WhatsApp para notificar al cliente");
+}
+```
+
+Para los casos de multiples pedidos (almacen), se acumularan los datos WhatsApp pendientes y se mostrara un dialogo con la lista de clientes y un boton por cada uno para abrir wa.me.
+
+### Sin cambios en Edge Function ni base de datos
+La funcion `send-client-notification` ya retorna los datos de WhatsApp correctamente para todos los tipos de notificacion. Solo falta que el frontend los use en los puntos faltantes.
 
