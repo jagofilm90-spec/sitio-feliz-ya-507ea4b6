@@ -474,18 +474,18 @@ serve(async (req) => {
       const twilioConfigured = !!(Deno.env.get("TWILIO_ACCOUNT_SID") && Deno.env.get("TWILIO_AUTH_TOKEN") && Deno.env.get("TWILIO_WHATSAPP_NUMBER"));
 
       if (twilioConfigured) {
-        const waResults = [];
-        for (const phone of phones) {
+        // Send WhatsApp messages in parallel for efficiency
+        const waPromises = phones.map(async (phone) => {
           const result = await sendTwilioWhatsApp(phone, waMessage);
-          waResults.push({ phone, ...result });
           console.log(`WhatsApp to ${phone}: ${result.success ? "sent" : result.error}`);
-        }
+          return { phone, ...result };
+        });
+        const waResults = await Promise.all(waPromises);
         whatsappData = {
           sent: true,
           results: waResults,
         };
       } else {
-        // Fallback: return pending for frontend to handle
         whatsappData = {
           pending: true,
           phones,
