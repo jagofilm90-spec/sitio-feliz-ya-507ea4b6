@@ -26,7 +26,6 @@ interface PasoProductosInlineProps {
   onSolicitarAutorizacion: (linea: LineaPedido) => void;
   onMarcarParaRevision: (productoId: string) => void;
   totales: TotalesCalculados;
-  // Credit/notes
   terminoCredito: string;
   notas: string;
   clienteDefaultCredito: string;
@@ -47,7 +46,7 @@ const CREDIT_OPTIONS = [
 
 function getPrecioLista(producto: Producto): number {
   if (producto.precio_por_kilo) {
-    return producto.precio_venta; // raw $/kg
+    return producto.precio_venta;
   }
   return obtenerPrecioUnitarioVenta({
     precio_venta: producto.precio_venta,
@@ -62,7 +61,6 @@ function getPrecioMinimo(producto: Producto): number {
   return precioLista - descMax;
 }
 
-// Editable price input with local state to avoid toFixed fighting user input
 function PrecioInput({ precio, productoId, requiereAutorizacion, onActualizarPrecio }: {
   precio: number;
   productoId: string;
@@ -72,7 +70,6 @@ function PrecioInput({ precio, productoId, requiereAutorizacion, onActualizarPre
   const [localValue, setLocalValue] = useState(precio ? precio.toFixed(2) : "");
   const [editing, setEditing] = useState(false);
 
-  // Sync from parent when not editing
   const displayValue = editing ? localValue : (precio ? precio.toFixed(2) : "");
 
   return (
@@ -132,7 +129,6 @@ function FilaProducto({
   const excedeLimite = linea?.requiereAutorizacion || false;
   const enCarrito = cantidad > 0;
 
-  // Status styling
   let rowBg = "";
   if (linea?.autorizacionStatus === 'aprobado') {
     rowBg = "bg-green-50 dark:bg-green-950/20";
@@ -147,13 +143,11 @@ function FilaProducto({
   if (isMobile) {
     return (
       <div className={cn("p-3 border-b last:border-b-0 space-y-2", rowBg)}>
-        {/* Row 1: Name + frecuente badge */}
         <div className="flex items-start gap-2">
           {isFrecuente && <Star className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />}
           <p className="font-medium text-sm leading-snug flex-1">{getDisplayName(producto)}</p>
         </div>
         
-        {/* Row 2: Prices info */}
         <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
           <span>{producto.marca || "—"}</span>
           <span>Lista: <span className="font-medium text-foreground">{formatCurrency(precioLista)}{esPorKilo && '/kg'}</span></span>
@@ -163,7 +157,6 @@ function FilaProducto({
           <span className="text-xs">Desc: {descMax > 0 ? formatCurrency(descMax) : "—"}</span>
         </div>
 
-        {/* Row 3: Quantity + Price inputs */}
         <div className="flex items-center gap-2">
           <div className="flex-1">
             <Input
@@ -216,7 +209,6 @@ function FilaProducto({
           )}
         </div>
 
-        {/* Authorization row */}
         {excedeLimite && linea && linea.autorizacionStatus !== 'aprobado' && (
           <div className="flex items-center gap-2 pt-1">
             <AlertTriangle className="h-3.5 w-3.5 text-red-500 shrink-0" />
@@ -359,9 +351,8 @@ export function PasoProductosInline({
   const [notasOpen, setNotasOpen] = useState(false);
   const isMobile = useIsMobile();
 
-  const canContinue = lineas.length > 0;
+  const canContinue = lineas.length > 0 && terminoCredito !== "";
 
-  // Build combined list: frecuentes first (marked), then rest
   const frecuenteIds = new Set(productosFrecuentes.map(p => p.id));
   
   const productosFiltrados = productos.filter(p => {
@@ -372,7 +363,6 @@ export function PasoProductosInline({
       (p.marca?.toLowerCase() || "").includes(term);
   });
 
-  // Sort: frecuentes first, then alphabetical
   const productosOrdenados = [...productosFiltrados].sort((a, b) => {
     const aFrec = frecuenteIds.has(a.id) ? 0 : 1;
     const bFrec = frecuenteIds.has(b.id) ? 0 : 1;
@@ -401,130 +391,7 @@ export function PasoProductosInline({
         />
       </div>
 
-      {/* Product Table */}
-      <Card>
-        <ScrollArea className={isMobile ? "h-[calc(100vh-380px)]" : "h-[500px] lg:h-[600px]"}>
-          {isMobile ? (
-            <div>
-              {productosOrdenados.map((producto) => (
-                <FilaProducto
-                  key={producto.id}
-                  producto={producto}
-                  linea={lineas.find(l => l.producto.id === producto.id)}
-                  isFrecuente={frecuenteIds.has(producto.id)}
-                  onAgregarProducto={onAgregarProducto}
-                  onActualizarCantidad={onActualizarCantidad}
-                  onActualizarPrecio={onActualizarPrecio}
-                  onSolicitarAutorizacion={onSolicitarAutorizacion}
-                  onMarcarParaRevision={onMarcarParaRevision}
-                  isMobile
-                />
-              ))}
-              {productosOrdenados.length === 0 && (
-                <p className="text-center text-muted-foreground py-8">No se encontraron productos</p>
-              )}
-            </div>
-          ) : (
-              <table className="w-full table-fixed">
-                <colgroup>
-                  <col style={{ width: '28%' }} />
-                  <col style={{ width: '8%' }} />
-                  <col style={{ width: '5%' }} />
-                  <col style={{ width: '9%' }} />
-                  <col style={{ width: '8%' }} />
-                  <col style={{ width: '9%' }} />
-                  <col style={{ width: '8%' }} />
-                  <col style={{ width: '9%' }} />
-                  <col style={{ width: '12%' }} />
-                  <col style={{ width: '4%' }} />
-                </colgroup>
-                <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
-                  <tr className="text-xs text-muted-foreground uppercase tracking-wider">
-                    <th className="py-2 px-2 text-left font-medium">Producto</th>
-                    <th className="py-2 px-2 text-left font-medium">Marca</th>
-                    <th className="py-2 px-2 text-center font-medium">Stock</th>
-                    <th className="py-2 px-2 text-right font-medium">P. Lista</th>
-                    <th className="py-2 px-2 text-right font-medium">Desc. Máx</th>
-                    <th className="py-2 px-2 text-right font-medium">P. Mínimo</th>
-                    <th className="py-2 px-2 text-center font-medium">Cant.</th>
-                    <th className="py-2 px-2 text-center font-medium">P. Pactado</th>
-                    <th className="py-2 px-2 text-right font-medium">Subtotal</th>
-                    <th className="py-2 px-1"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {productosOrdenados.map((producto) => (
-                    <FilaProducto
-                      key={producto.id}
-                      producto={producto}
-                      linea={lineas.find(l => l.producto.id === producto.id)}
-                      isFrecuente={frecuenteIds.has(producto.id)}
-                      onAgregarProducto={onAgregarProducto}
-                      onActualizarCantidad={onActualizarCantidad}
-                      onActualizarPrecio={onActualizarPrecio}
-                      onSolicitarAutorizacion={onSolicitarAutorizacion}
-                      onMarcarParaRevision={onMarcarParaRevision}
-                      isMobile={false}
-                    />
-                  ))}
-                  {productosOrdenados.length === 0 && (
-                    <tr>
-                      <td colSpan={10} className="text-center text-muted-foreground py-8">
-                        No se encontraron productos
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-          )}
-        </ScrollArea>
-      </Card>
-
-      {/* Credit + Notes collapsible */}
-      <Collapsible open={notasOpen} onOpenChange={setNotasOpen}>
-        <CollapsibleTrigger asChild>
-          <Button variant="outline" className="w-full justify-between h-10">
-            <span className="flex items-center gap-2 text-sm">
-              <CreditCard className="h-4 w-4" />
-              Crédito: {CREDIT_OPTIONS.find(o => o.value === terminoCredito)?.label || terminoCredito.replace('_', ' ')}
-              {notas && <Badge variant="secondary" className="text-xs ml-2">Con notas</Badge>}
-            </span>
-            <ChevronDown className={cn("h-4 w-4 transition-transform", notasOpen && "rotate-180")} />
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-3 pt-3">
-          <div className="flex flex-wrap gap-2">
-            {CREDIT_OPTIONS.map((opt) => (
-              <Button
-                key={opt.value}
-                variant={terminoCredito === opt.value ? "default" : "outline"}
-                size="sm"
-                className="h-8"
-                onClick={() => onTerminoCreditoChange(opt.value)}
-              >
-                {opt.label}
-                {clienteDefaultCredito === opt.value && (
-                  <Badge variant="secondary" className="text-xs ml-1 scale-75">Default</Badge>
-                )}
-              </Button>
-            ))}
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm flex items-center gap-1.5">
-              <FileText className="h-3.5 w-3.5" />
-              Notas de entrega
-            </Label>
-            <Textarea
-              placeholder="Instrucciones especiales..."
-              value={notas}
-              onChange={(e) => onNotasChange(e.target.value)}
-              className="min-h-[60px] resize-none text-sm"
-            />
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-
-      {/* Resumen de productos agregados */}
+      {/* Productos en pedido (arriba del catálogo) */}
       {lineas.length > 0 && (
         <Card className="border-primary/20">
           <CardHeader className="py-3 px-4">
@@ -661,6 +528,129 @@ export function PasoProductosInline({
         </Card>
       )}
 
+      {/* Credit + Notes collapsible */}
+      <Collapsible open={notasOpen} onOpenChange={setNotasOpen}>
+        <CollapsibleTrigger asChild>
+          <Button variant="outline" className={cn("w-full justify-between h-10", !terminoCredito && "border-destructive/50")}>
+            <span className="flex items-center gap-2 text-sm">
+              <CreditCard className="h-4 w-4" />
+              Crédito: {terminoCredito ? (CREDIT_OPTIONS.find(o => o.value === terminoCredito)?.label || terminoCredito.replace('_', ' ')) : <span className="text-destructive font-medium">Sin seleccionar ⚠</span>}
+              {notas && <Badge variant="secondary" className="text-xs ml-2">Con notas</Badge>}
+            </span>
+            <ChevronDown className={cn("h-4 w-4 transition-transform", notasOpen && "rotate-180")} />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-3 pt-3">
+          <div className="flex flex-wrap gap-2">
+            {CREDIT_OPTIONS.map((opt) => (
+              <Button
+                key={opt.value}
+                variant={terminoCredito === opt.value ? "default" : "outline"}
+                size="sm"
+                className="h-8"
+                onClick={() => onTerminoCreditoChange(opt.value)}
+              >
+                {opt.label}
+                {clienteDefaultCredito === opt.value && (
+                  <Badge variant="secondary" className="text-xs ml-1 scale-75">Default</Badge>
+                )}
+              </Button>
+            ))}
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm flex items-center gap-1.5">
+              <FileText className="h-3.5 w-3.5" />
+              Notas de entrega
+            </Label>
+            <Textarea
+              placeholder="Instrucciones especiales..."
+              value={notas}
+              onChange={(e) => onNotasChange(e.target.value)}
+              className="min-h-[60px] resize-none text-sm"
+            />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Product Catalog Table */}
+      <Card>
+        <ScrollArea className={isMobile ? "h-[calc(100vh-380px)]" : "h-[500px] lg:h-[600px]"}>
+          {isMobile ? (
+            <div>
+              {productosOrdenados.map((producto) => (
+                <FilaProducto
+                  key={producto.id}
+                  producto={producto}
+                  linea={lineas.find(l => l.producto.id === producto.id)}
+                  isFrecuente={frecuenteIds.has(producto.id)}
+                  onAgregarProducto={onAgregarProducto}
+                  onActualizarCantidad={onActualizarCantidad}
+                  onActualizarPrecio={onActualizarPrecio}
+                  onSolicitarAutorizacion={onSolicitarAutorizacion}
+                  onMarcarParaRevision={onMarcarParaRevision}
+                  isMobile
+                />
+              ))}
+              {productosOrdenados.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">No se encontraron productos</p>
+              )}
+            </div>
+          ) : (
+              <table className="w-full table-fixed">
+                <colgroup>
+                  <col style={{ width: '28%' }} />
+                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '5%' }} />
+                  <col style={{ width: '9%' }} />
+                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '9%' }} />
+                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '9%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '4%' }} />
+                </colgroup>
+                <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
+                  <tr className="text-xs text-muted-foreground uppercase tracking-wider">
+                    <th className="py-2 px-2 text-left font-medium">Producto</th>
+                    <th className="py-2 px-2 text-left font-medium">Marca</th>
+                    <th className="py-2 px-2 text-center font-medium">Stock</th>
+                    <th className="py-2 px-2 text-right font-medium">P. Lista</th>
+                    <th className="py-2 px-2 text-right font-medium">Desc. Máx</th>
+                    <th className="py-2 px-2 text-right font-medium">P. Mínimo</th>
+                    <th className="py-2 px-2 text-center font-medium">Cant.</th>
+                    <th className="py-2 px-2 text-center font-medium">P. Pactado</th>
+                    <th className="py-2 px-2 text-right font-medium">Subtotal</th>
+                    <th className="py-2 px-1"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productosOrdenados.map((producto) => (
+                    <FilaProducto
+                      key={producto.id}
+                      producto={producto}
+                      linea={lineas.find(l => l.producto.id === producto.id)}
+                      isFrecuente={frecuenteIds.has(producto.id)}
+                      onAgregarProducto={onAgregarProducto}
+                      onActualizarCantidad={onActualizarCantidad}
+                      onActualizarPrecio={onActualizarPrecio}
+                      onSolicitarAutorizacion={onSolicitarAutorizacion}
+                      onMarcarParaRevision={onMarcarParaRevision}
+                      isMobile={false}
+                    />
+                  ))}
+                  {productosOrdenados.length === 0 && (
+                    <tr>
+                      <td colSpan={10} className="text-center text-muted-foreground py-8">
+                        No se encontraron productos
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+          )}
+        </ScrollArea>
+      </Card>
+
       {/* Navigation */}
       <div className="flex gap-3 pt-1">
         <Button variant="outline" onClick={onBack} size="lg" className="h-12">
@@ -673,7 +663,7 @@ export function PasoProductosInline({
           size="lg"
           className="flex-1 h-12 font-semibold"
         >
-          Revisar Pedido
+          {lineas.length > 0 && !terminoCredito ? "Selecciona un plazo de crédito" : "Revisar Pedido"}
           <ChevronRight className="h-4 w-4 ml-2" />
         </Button>
       </div>
