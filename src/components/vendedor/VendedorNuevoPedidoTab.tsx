@@ -858,7 +858,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
             notas: notas || undefined,
           };
 
-          const renderToCanvas = async (element: React.ReactElement): Promise<HTMLCanvasElement> => {
+          const renderToCanvas = async (element: React.ReactElement, scale = 3): Promise<HTMLCanvasElement> => {
             const container = document.createElement('div');
             container.style.position = 'absolute';
             container.style.left = '-9999px';
@@ -872,7 +872,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
             await new Promise(resolve => setTimeout(resolve, 500));
 
             const canvas = await html2canvas(container, {
-              scale: 3, useCORS: true, logging: false, backgroundColor: '#ffffff'
+              scale, useCORS: true, logging: false, backgroundColor: '#ffffff'
             });
 
             root.unmount();
@@ -880,23 +880,28 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
             return canvas;
           };
 
-          const canvasToPage = (pdf: jsPDF, canvas: HTMLCanvasElement) => {
+          const canvasToPage = (pdf: jsPDF, canvas: HTMLCanvasElement, useJpeg = false) => {
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
             const ratio = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
             const imgX = (pdfWidth - canvas.width * ratio) / 2;
-            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', imgX, 5, canvas.width * ratio, canvas.height * ratio);
+            const format = useJpeg ? 'JPEG' : 'PNG';
+            const imgData = useJpeg ? canvas.toDataURL('image/jpeg', 0.85) : canvas.toDataURL('image/png');
+            pdf.addImage(imgData, format, imgX, 5, canvas.width * ratio, canvas.height * ratio);
           };
 
           const generatePdfFromTemplate = async (hideQR: boolean): Promise<string> => {
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+            // Internal PDF uses scale 2 + JPEG to keep file size small (~1-2MB vs ~10MB)
+            const isInternal = !hideQR;
+            const scale = isInternal ? 2 : 3;
 
             // Page 1: Remisión
-            const canvas1 = await renderToCanvas(<PedidoPrintTemplate datos={datosPrintFinal} hideQR={hideQR} />);
-            canvasToPage(pdf, canvas1);
+            const canvas1 = await renderToCanvas(<PedidoPrintTemplate datos={datosPrintFinal} hideQR={hideQR} />, scale);
+            canvasToPage(pdf, canvas1, isInternal);
 
             // For internal PDF (hideQR=false): add pages 2 & 3
-            if (!hideQR) {
+            if (isInternal) {
               // Build data for HojaCargaAlmacen
               const datosAlmacen: DatosHojaCargaAlmacen = {
                 pedidoId: pedido.id,
@@ -949,23 +954,24 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
               };
 
               // Page 2: Hoja de Carga Almacén
-              const canvas2 = await renderToCanvas(<HojaCargaAlmacenTemplate datos={datosAlmacen} />);
+              const canvas2 = await renderToCanvas(<HojaCargaAlmacenTemplate datos={datosAlmacen} />, scale);
               pdf.addPage();
-              canvasToPage(pdf, canvas2);
+              canvasToPage(pdf, canvas2, true);
 
               // Page 3: Hoja de Carga Cliente
-              const canvas3 = await renderToCanvas(<HojaCargaClienteTemplate datos={datosCliente} />);
+              const canvas3 = await renderToCanvas(<HojaCargaClienteTemplate datos={datosCliente} />, scale);
               pdf.addPage();
-              canvasToPage(pdf, canvas3);
+              canvasToPage(pdf, canvas3, true);
             }
 
             return pdf.output('datauristring').split(',')[1];
           };
 
           // Generar ambos PDFs en paralelo
+          console.log("[PDF] Generating internal (3-page) and client PDFs...");
           const pdfPromise = Promise.all([
-            generatePdfFromTemplate(false),
-            generatePdfFromTemplate(true),
+            generatePdfFromTemplate(false).then(b64 => { console.log(`[PDF] Internal PDF size: ${(b64.length / 1024 / 1024).toFixed(2)}MB`); return b64; }),
+            generatePdfFromTemplate(true).then(b64 => { console.log(`[PDF] Client PDF size: ${(b64.length / 1024 / 1024).toFixed(2)}MB`); return b64; }),
           ]).catch(e => { console.error("PDF gen error:", e); return [null, null] as (string | null)[]; });
 
           // Esperar notificaciones y PDFs en paralelo
@@ -983,6 +989,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
           const emailPromises: Promise<any>[] = [];
 
           // Email interno siempre
+          console.log(`[Email] Sending internal email, PDF attached: ${!!pdfBase64}, size: ${pdfBase64 ? (pdfBase64.length / 1024 / 1024).toFixed(2) + 'MB' : 'none'}`);
           emailPromises.push(
             supabase.functions.invoke("enviar-pedido-interno", {
               body: {
@@ -996,6 +1003,9 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
                 pdfBase64: pdfBase64 || undefined,
                 pdfFilename: `Pedido_${folio}.pdf`,
               }
+            }).then(res => {
+              if (res.error) console.error("Internal email invoke error:", res.error);
+              else console.log("[Email] Internal email sent successfully");
             }).catch(e => console.error("Internal email error:", e))
           );
 
