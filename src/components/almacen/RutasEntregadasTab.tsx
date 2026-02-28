@@ -62,6 +62,20 @@ export const RutasEntregadasTab = () => {
 
   useEffect(() => { loadRutas(); }, [loadRutas]);
 
+  // Realtime: auto-refresh when routes complete or deliveries update
+  useEffect(() => {
+    const channel = supabase
+      .channel("entregas-entregadas-realtime")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "rutas" }, () => {
+        loadRutas();
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "entregas" }, () => {
+        loadRutas();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [loadRutas]);
+
   return (
     <div className="space-y-4 p-4">
       {/* Date filter */}
