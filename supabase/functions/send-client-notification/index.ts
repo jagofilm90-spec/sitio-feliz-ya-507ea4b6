@@ -358,6 +358,8 @@ async function sendTwilioWhatsApp(phone: string, message: string): Promise<{ suc
 
   try {
     const to = `whatsapp:+${formatPhoneForWhatsApp(phone)}`;
+    // Ensure FROM has whatsapp: prefix
+    const fromNumber = FROM.startsWith("whatsapp:") ? FROM : `whatsapp:${FROM}`;
     const response = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${SID}/Messages.json`,
       {
@@ -366,7 +368,7 @@ async function sendTwilioWhatsApp(phone: string, message: string): Promise<{ suc
           Authorization: "Basic " + btoa(`${SID}:${TOKEN}`),
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: new URLSearchParams({ From: FROM, To: to, Body: message }),
+        body: new URLSearchParams({ From: fromNumber, To: to, Body: message }),
       }
     );
     const result = await response.json();
