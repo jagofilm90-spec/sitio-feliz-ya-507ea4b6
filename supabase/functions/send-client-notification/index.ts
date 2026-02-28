@@ -143,139 +143,120 @@ function buildRawEmail(from: string, to: string, subject: string, htmlBody: stri
   return btoa(email).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-function generateEmailContent(tipo: NotificationType, data: NotificationRequest["data"], clienteNombre: string): { subject: string; html: string } {
-  const baseStyles = `
-    <style>
-      body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
-      .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-      .header { background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-      .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; }
-      .footer { background: #1f2937; color: #9ca3af; padding: 20px; text-align: center; font-size: 12px; border-radius: 0 0 8px 8px; }
-      .highlight { background: #fef3c7; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f59e0b; }
-      .success { background: #d1fae5; border-left-color: #10b981; }
-      .warning { background: #fee2e2; border-left-color: #ef4444; }
-      .btn { display: inline-block; background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px; }
-    </style>
-  `;
+const LOGO_URL = "https://vrcyjmfpteoccqdmdmqn.supabase.co/storage/v1/object/public/email-assets/logo-almasa.png";
 
+function wrapEmailTemplate(title: string, bodyContent: string): string {
+  return `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;">
+    <tr><td align="center" style="padding:30px 15px;">
+      <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+        <!-- Logo Header -->
+        <tr><td style="background:linear-gradient(135deg,#B22234 0%,#8B0000 100%);padding:28px 30px;text-align:center;">
+          <img src="${LOGO_URL}" alt="ALMASA" width="180" style="display:block;margin:0 auto;max-width:180px;height:auto;" />
+          <p style="color:rgba(255,255,255,0.85);margin:10px 0 0;font-size:13px;letter-spacing:0.5px;">Abarrotes La Manita, S.A. de C.V.</p>
+        </td></tr>
+        <!-- Title bar -->
+        <tr><td style="background:#1f2937;padding:14px 30px;text-align:center;">
+          <p style="color:#ffffff;margin:0;font-size:16px;font-weight:600;letter-spacing:0.3px;">${title}</p>
+        </td></tr>
+        <!-- Body -->
+        <tr><td style="padding:30px;">
+          ${bodyContent}
+        </td></tr>
+        <!-- Footer -->
+        <tr><td style="background:#f9fafb;padding:20px 30px;border-top:1px solid #e5e7eb;">
+          <p style="margin:0;color:#9ca3af;font-size:11px;text-align:center;line-height:1.5;">
+            Este correo fue enviado automáticamente por ALMASA.<br>
+            Por favor no responda directamente a este mensaje.
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+
+function generateEmailContent(tipo: NotificationType, data: NotificationRequest["data"], clienteNombre: string): { subject: string; html: string } {
   switch (tipo) {
     case "pedido_confirmado":
       return {
-        subject: `✅ Pedido ${data.pedidoFolio} confirmado - Almasa`,
-        html: `
-          ${baseStyles}
-          <div class="container">
-            <div class="header">
-              <h1>🛒 Pedido Confirmado</h1>
-            </div>
-            <div class="content">
-              <p>Estimado/a <strong>${clienteNombre}</strong>,</p>
-              <p>Su pedido ha sido confirmado exitosamente.</p>
-              <div class="highlight success">
-                <strong>Folio:</strong> ${data.pedidoFolio}<br>
-                ${data.total ? `<strong>Total:</strong> $${data.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : ''}
-              </div>
-              <p>Le notificaremos cuando su pedido esté en camino.</p>
-              <p>¡Gracias por su preferencia!</p>
-            </div>
-            <div class="footer">
-              <p>Almasa - Distribuidora de Alimentos</p>
-              <p>Este es un correo automático, por favor no responda directamente.</p>
-            </div>
-          </div>
-        `,
+        subject: `✅ Pedido ${data.pedidoFolio} confirmado — ALMASA`,
+        html: wrapEmailTemplate("🛒 Pedido Confirmado", `
+          <p style="font-size:15px;color:#333;margin:0 0 16px;">Estimado/a <strong>${clienteNombre}</strong>,</p>
+          <p style="font-size:14px;color:#555;margin:0 0 20px;">Su pedido ha sido confirmado exitosamente y está siendo preparado.</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ecfdf5;border-radius:8px;border-left:4px solid #10b981;margin:0 0 20px;">
+            <tr><td style="padding:16px 20px;">
+              <p style="margin:0 0 6px;font-size:14px;"><strong>Folio:</strong> ${data.pedidoFolio}</p>
+              ${data.total ? `<p style="margin:0;font-size:14px;"><strong>Total:</strong> $${data.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>` : ''}
+            </td></tr>
+          </table>
+          <p style="font-size:14px;color:#555;margin:0 0 8px;">Le notificaremos cuando su pedido esté en camino.</p>
+          <p style="font-size:14px;color:#555;margin:0;">¡Gracias por su preferencia!</p>
+        `),
       };
 
     case "en_ruta":
       return {
-        subject: `🚚 Tu pedido ${data.pedidoFolio} está en camino - Almasa`,
-        html: `
-          ${baseStyles}
-          <div class="container">
-            <div class="header">
-              <h1>🚚 ¡Tu Pedido Está en Camino!</h1>
-            </div>
-            <div class="content">
-              <p>Estimado/a <strong>${clienteNombre}</strong>,</p>
-              <p>¡Buenas noticias! Su pedido ya salió de nuestro almacén y va en camino.</p>
-              <div class="highlight">
-                <strong>Folio:</strong> ${data.pedidoFolio}<br>
-                ${data.choferNombre ? `<strong>Chofer:</strong> ${data.choferNombre}<br>` : ''}
-                ${data.horaEstimada ? `<strong>Hora estimada de llegada:</strong> ${data.horaEstimada}` : ''}
-              </div>
-              <p>Por favor asegúrese de tener a alguien disponible para recibir el pedido.</p>
-              <p>¡Gracias por su preferencia!</p>
-            </div>
-            <div class="footer">
-              <p>Almasa - Distribuidora de Alimentos</p>
-              <p>Este es un correo automático, por favor no responda directamente.</p>
-            </div>
-          </div>
-        `,
+        subject: `🚚 Pedido ${data.pedidoFolio} en camino — ALMASA`,
+        html: wrapEmailTemplate("🚚 ¡Su Pedido Está en Camino!", `
+          <p style="font-size:15px;color:#333;margin:0 0 16px;">Estimado/a <strong>${clienteNombre}</strong>,</p>
+          <p style="font-size:14px;color:#555;margin:0 0 20px;">¡Buenas noticias! Su pedido ya salió de nuestro almacén y va en camino hacia usted.</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fef3c7;border-radius:8px;border-left:4px solid #f59e0b;margin:0 0 20px;">
+            <tr><td style="padding:16px 20px;">
+              <p style="margin:0 0 6px;font-size:14px;"><strong>Folio:</strong> ${data.pedidoFolio}</p>
+              ${data.choferNombre ? `<p style="margin:0 0 6px;font-size:14px;"><strong>Chofer:</strong> ${data.choferNombre}</p>` : ''}
+              ${data.horaEstimada ? `<p style="margin:0;font-size:14px;"><strong>Hora estimada:</strong> ${data.horaEstimada}</p>` : ''}
+            </td></tr>
+          </table>
+          <p style="font-size:14px;color:#555;margin:0 0 8px;">Por favor asegúrese de tener a alguien disponible para recibir el pedido.</p>
+          <p style="font-size:14px;color:#555;margin:0;">¡Gracias por su preferencia!</p>
+        `),
       };
 
     case "entregado":
       return {
-        subject: `✓ Pedido ${data.pedidoFolio} entregado - Almasa`,
-        html: `
-          ${baseStyles}
-          <div class="container">
-            <div class="header">
-              <h1>✓ Pedido Entregado</h1>
-            </div>
-            <div class="content">
-              <p>Estimado/a <strong>${clienteNombre}</strong>,</p>
-              <p>Confirmamos que su pedido ha sido entregado exitosamente.</p>
-              <div class="highlight success">
-                <strong>Folio:</strong> ${data.pedidoFolio}<br>
-                ${data.nombreReceptor ? `<strong>Recibió:</strong> ${data.nombreReceptor}<br>` : ''}
-                ${data.horaEntrega ? `<strong>Hora de entrega:</strong> ${new Date(data.horaEntrega).toLocaleString('es-MX')}` : ''}
-              </div>
-              <p>Si tiene alguna duda o comentario sobre su pedido, no dude en contactarnos.</p>
-              <p>¡Gracias por su preferencia!</p>
-            </div>
-            <div class="footer">
-              <p>Almasa - Distribuidora de Alimentos</p>
-              <p>Este es un correo automático, por favor no responda directamente.</p>
-            </div>
-          </div>
-        `,
+        subject: `✓ Pedido ${data.pedidoFolio} entregado — ALMASA`,
+        html: wrapEmailTemplate("✓ Pedido Entregado", `
+          <p style="font-size:15px;color:#333;margin:0 0 16px;">Estimado/a <strong>${clienteNombre}</strong>,</p>
+          <p style="font-size:14px;color:#555;margin:0 0 20px;">Confirmamos que su pedido ha sido entregado exitosamente.</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ecfdf5;border-radius:8px;border-left:4px solid #10b981;margin:0 0 20px;">
+            <tr><td style="padding:16px 20px;">
+              <p style="margin:0 0 6px;font-size:14px;"><strong>Folio:</strong> ${data.pedidoFolio}</p>
+              ${data.nombreReceptor ? `<p style="margin:0 0 6px;font-size:14px;"><strong>Recibió:</strong> ${data.nombreReceptor}</p>` : ''}
+              ${data.horaEntrega ? `<p style="margin:0;font-size:14px;"><strong>Hora:</strong> ${new Date(data.horaEntrega).toLocaleString('es-MX')}</p>` : ''}
+            </td></tr>
+          </table>
+          <p style="font-size:14px;color:#555;margin:0 0 8px;">Si tiene alguna duda o comentario sobre su pedido, no dude en contactarnos.</p>
+          <p style="font-size:14px;color:#555;margin:0;">¡Gracias por su preferencia!</p>
+        `),
       };
 
     case "vencimiento_proximo":
       return {
-        subject: `⚠️ Factura ${data.facturaFolio} vence en ${data.diasRestantes} días - Almasa`,
-        html: `
-          ${baseStyles}
-          <div class="container">
-            <div class="header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
-              <h1>⚠️ Recordatorio de Pago</h1>
-            </div>
-            <div class="content">
-              <p>Estimado/a <strong>${clienteNombre}</strong>,</p>
-              <p>Le recordamos que su factura está próxima a vencer.</p>
-              <div class="highlight warning">
-                <strong>Factura:</strong> ${data.facturaFolio}<br>
-                <strong>Monto:</strong> $${data.total?.toLocaleString('es-MX', { minimumFractionDigits: 2 }) || '0.00'}<br>
-                <strong>Fecha de vencimiento:</strong> ${data.fechaVencimiento}<br>
-                <strong>Días restantes:</strong> ${data.diasRestantes}
-              </div>
-              <p>Le invitamos a realizar su pago antes de la fecha de vencimiento para evitar cargos adicionales.</p>
-              <p>Si ya realizó su pago, por favor ignore este mensaje.</p>
-              <p>¡Gracias por su preferencia!</p>
-            </div>
-            <div class="footer">
-              <p>Almasa - Distribuidora de Alimentos</p>
-              <p>Este es un correo automático, por favor no responda directamente.</p>
-            </div>
-          </div>
-        `,
+        subject: `⚠️ Factura ${data.facturaFolio} vence en ${data.diasRestantes} días — ALMASA`,
+        html: wrapEmailTemplate("⚠️ Recordatorio de Pago", `
+          <p style="font-size:15px;color:#333;margin:0 0 16px;">Estimado/a <strong>${clienteNombre}</strong>,</p>
+          <p style="font-size:14px;color:#555;margin:0 0 20px;">Le recordamos que su factura está próxima a vencer.</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fee2e2;border-radius:8px;border-left:4px solid #ef4444;margin:0 0 20px;">
+            <tr><td style="padding:16px 20px;">
+              <p style="margin:0 0 6px;font-size:14px;"><strong>Factura:</strong> ${data.facturaFolio}</p>
+              <p style="margin:0 0 6px;font-size:14px;"><strong>Monto:</strong> $${data.total?.toLocaleString('es-MX', { minimumFractionDigits: 2 }) || '0.00'}</p>
+              <p style="margin:0 0 6px;font-size:14px;"><strong>Vencimiento:</strong> ${data.fechaVencimiento}</p>
+              <p style="margin:0;font-size:14px;font-weight:600;color:#dc2626;"><strong>Días restantes:</strong> ${data.diasRestantes}</p>
+            </td></tr>
+          </table>
+          <p style="font-size:14px;color:#555;margin:0 0 8px;">Le invitamos a realizar su pago antes de la fecha de vencimiento.</p>
+          <p style="font-size:13px;color:#999;margin:0;">Si ya realizó su pago, por favor ignore este mensaje.</p>
+        `),
       };
 
     default:
       return {
-        subject: "Notificación de Almasa",
-        html: `<p>Notificación del sistema</p>`,
+        subject: "Notificación de ALMASA",
+        html: wrapEmailTemplate("Notificación", `<p style="font-size:14px;color:#555;">Notificación del sistema</p>`),
       };
   }
 }
