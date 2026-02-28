@@ -337,6 +337,50 @@ function generateEmailContent(tipo: NotificationType, data: NotificationRequest[
   }
 }
 
+// Format phone for WhatsApp (Mexican numbers)
+function formatPhoneForWhatsApp(phone: string): string {
+  let cleaned = phone.replace(/\D/g, "");
+  if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
+  if (cleaned.length === 10) cleaned = "52" + cleaned;
+  if (cleaned.startsWith("521") && cleaned.length === 13) cleaned = "52" + cleaned.slice(3);
+  return cleaned;
+}
+
+// Send WhatsApp via Twilio API
+async function sendTwilioWhatsApp(phone: string, message: string): Promise<{ success: boolean; sid?: string; error?: string }> {
+  const SID = Deno.env.get("TWILIO_ACCOUNT_SID");
+  const TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
+  const FROM = Deno.env.get("TWILIO_WHATSAPP_NUMBER");
+
+  if (!SID || !TOKEN || !FROM) {
+    return { success: false, error: "Twilio not configured" };
+  }
+
+  try {
+    const to = `whatsapp:+${formatPhoneForWhatsApp(phone)}`;
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${SID}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Basic " + btoa(`${SID}:${TOKEN}`),
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ From: FROM, To: to, Body: message }),
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) {
+      console.error("Twilio error:", result);
+      return { success: false, error: result.message || "Twilio API error" };
+    }
+    return { success: true, sid: result.sid };
+  } catch (err: any) {
+    console.error("Twilio fetch error:", err);
+    return { success: false, error: err.message };
+  }
+}
+
 function generateWhatsAppPlainMessage(tipo: NotificationType, data: NotificationRequest["data"], clienteNombre: string): string {
   const saludo = `Estimado/a ${clienteNombre}`;
   const firma = "\n\n— ALMASA (Abarrotes La Manita, S.A. de C.V.)";
@@ -421,14 +465,31 @@ serve(async (req) => {
 
     const phones = (telefonos || []).map((t: any) => t.telefono).filter(Boolean);
 
-    // Generate WhatsApp plain-text message
-    let whatsappData: { pending: boolean; phones: string[]; message: string } | null = null;
+    // Send WhatsApp via Twilio (automatic) or fallback to pending
+    let whatsappData: { sent?: boolean; pending?: boolean; phones?: string[]; message?: string; results?: any[] } | null = null;
     if (phones.length > 0) {
-      whatsappData = {
-        pending: true,
-        phones,
-        message: generateWhatsAppPlainMessage(tipo, data, cliente.nombre),
-      };
+      const waMessage = generateWhatsAppPlainMessage(tipo, data, cliente.nombre);
+      const twilioConfigured = !!(Deno.env.get("TWILIO_ACCOUNT_SID") && Deno.env.get("TWILIO_AUTH_TOKEN") && Deno.env.get("TWILIO_WHATSAPP_NUMBER"));
+
+      if (twilioConfigured) {
+        const waResults = [];
+        for (const phone of phones) {
+          const result = await sendTwilioWhatsApp(phone, waMessage);
+          waResults.push({ phone, ...result });
+          console.log(`WhatsApp to ${phone}: ${result.success ? "sent" : result.error}`);
+        }
+        whatsappData = {
+          sent: true,
+          results: waResults,
+        };
+      } else {
+        // Fallback: return pending for frontend to handle
+        whatsappData = {
+          pending: true,
+          phones,
+          message: waMessage,
+        };
+      }
     }
 
     // Get client emails that match the notification purpose
