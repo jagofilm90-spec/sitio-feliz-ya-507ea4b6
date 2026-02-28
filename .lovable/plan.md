@@ -1,22 +1,36 @@
 
 
-# Plan: WhatsApp en todo el ciclo de vida del pedido
+# Plan: Crédito obligatorio y reordenar tabla de productos en pedido
 
-## Resumen
+## Cambios
 
-Actualmente la Edge Function `send-client-notification` ya genera los datos de WhatsApp (telefono + mensaje) en la respuesta, pero solo los puntos de **entrega (chofer)** y **conciliacion masiva (secretaria)** los aprovechan. Falta que los demas momentos del ciclo tambien abran WhatsApp cuando el cliente no tiene correo (o tiene ambos).
+### 1. Hacer obligatorio seleccionar crédito antes de avanzar
 
-Los 4 momentos clave son:
-1. **Pedido creado** -- vendedor crea el pedido ✅ IMPLEMENTADO
-2. **En ruta** -- almacen despacha la ruta ✅ IMPLEMENTADO
-3. **Entregado** -- chofer escanea QR o registra manual ✅ YA EXISTÍA
-4. **Conciliado** -- secretaria envia pedido conciliado ✅ YA EXISTÍA
+En `PasoProductosInline.tsx`:
+- Cambiar la condicion `canContinue` para que tambien requiera que `terminoCredito` no este vacio: `const canContinue = lineas.length > 0 && terminoCredito !== ""`
+- Actualizar el texto del boton cuando no hay credito seleccionado para que diga algo como "Selecciona un plazo de crédito"
+- En el collapsible de credito, si no hay credito seleccionado mostrar el texto "Sin seleccionar" en lugar del valor actual (que mostraria algo raro con string vacio)
 
-## Estado: COMPLETADO
+### 2. Reordenar: tabla de "Productos en pedido" arriba, catalogo abajo
 
-Todos los puntos del ciclo de vida ahora capturan la respuesta de `send-client-notification` y abren WhatsApp automáticamente si el cliente tiene teléfono registrado.
+En `PasoProductosInline.tsx`, mover la seccion de "Productos en pedido" (actualmente lineas ~527-661) para que aparezca **antes** de la tabla del catalogo de productos (lineas ~404-481). El orden quedaria:
 
-### Archivos modificados:
-- `src/components/vendedor/VendedorNuevoPedidoTab.tsx` -- captura respuesta y abre WhatsApp al crear pedido
-- `src/components/almacen/CargaRutaInlineFlow.tsx` -- acumula y abre WhatsApp al despachar ruta
-- `src/pages/AlmacenCargaScan.tsx` -- mismo tratamiento al despachar ruta por scan
+1. Indicador de cliente
+2. Buscador
+3. **Productos en pedido** (la tabla con los productos ya agregados al carrito) -- solo si hay lineas
+4. Credito + Notas (collapsible)
+5. **Catalogo de productos** (la tabla grande donde se buscan y agregan productos)
+6. Botones de navegacion
+
+Esto permite al vendedor ver primero lo que ya tiene en el pedido antes de seguir buscando.
+
+## Detalle Tecnico
+
+### Archivo a modificar:
+- `src/components/vendedor/pedido-wizard/PasoProductosInline.tsx`
+
+### Cambios especificos:
+1. Linea 362: cambiar `canContinue` para incluir validacion de credito
+2. Lineas 670-678: actualizar texto del boton segun estado de credito
+3. Linea 489: manejar caso de `terminoCredito` vacio en el label del collapsible
+4. Mover el bloque JSX de "Productos en pedido" (lineas ~527-661) para que aparezca despues del buscador y antes del catalogo
