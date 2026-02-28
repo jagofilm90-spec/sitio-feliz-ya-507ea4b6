@@ -10,6 +10,8 @@ type NotificationType =
   | "pedido_confirmado" 
   | "en_ruta" 
   | "entregado" 
+  | "pedido_conciliado"
+  | "pedido_conciliado_ajustado"
   | "vencimiento_proximo";
 
 interface NotificationRequest {
@@ -25,6 +27,9 @@ interface NotificationRequest {
     horaEstimada?: string;
     horaEntrega?: string;
     nombreReceptor?: string;
+    fechaEntrega?: string;
+    diasCredito?: string;
+    mensaje?: string;
   };
   pdfBase64?: string;
   pdfFilename?: string;
@@ -35,6 +40,8 @@ const TIPO_TO_PROPOSITOS: Record<NotificationType, string[]> = {
   pedido_confirmado: ["todo", "pedidos"],
   en_ruta: ["todo", "en_ruta", "entregas"],
   entregado: ["todo", "entregado", "entregas"],
+  pedido_conciliado: ["todo", "entregas", "entregado"],
+  pedido_conciliado_ajustado: ["todo", "entregas", "entregado"],
   vencimiento_proximo: ["todo", "cobranza"],
 };
 
@@ -43,6 +50,8 @@ const TIPO_TO_REMITENTE: Record<NotificationType, string> = {
   pedido_confirmado: "pedidos@almasa.com.mx",
   en_ruta: "pedidos@almasa.com.mx",
   entregado: "pedidos@almasa.com.mx",
+  pedido_conciliado: "pedidos@almasa.com.mx",
+  pedido_conciliado_ajustado: "pedidos@almasa.com.mx",
   vencimiento_proximo: "pagos@almasa.com.mx",
 };
 
@@ -221,7 +230,7 @@ function generateEmailContent(tipo: NotificationType, data: NotificationRequest[
         subject: `✓ Pedido ${data.pedidoFolio} entregado — ALMASA`,
         html: wrapEmailTemplate("✓ Pedido Entregado", `
           <p style="font-size:15px;color:#333;margin:0 0 16px;">Estimado/a <strong>${clienteNombre}</strong>,</p>
-          <p style="font-size:14px;color:#555;margin:0 0 20px;">Confirmamos que su pedido ha sido entregado exitosamente.</p>
+          <p style="font-size:14px;color:#555;margin:0 0 20px;">Confirmamos que su pedido ha sido entregado exitosamente. ¡Gracias por confiar en Almasa!</p>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ecfdf5;border-radius:8px;border-left:4px solid #10b981;margin:0 0 20px;">
             <tr><td style="padding:16px 20px;">
               <p style="margin:0 0 6px;font-size:14px;"><strong>Folio:</strong> ${data.pedidoFolio}</p>
@@ -229,8 +238,75 @@ function generateEmailContent(tipo: NotificationType, data: NotificationRequest[
               ${data.horaEntrega ? `<p style="margin:0;font-size:14px;"><strong>Hora:</strong> ${new Date(data.horaEntrega).toLocaleString('es-MX')}</p>` : ''}
             </td></tr>
           </table>
-          <p style="font-size:14px;color:#555;margin:0 0 8px;">Si tiene alguna duda o comentario sobre su pedido, no dude en contactarnos.</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0f9ff;border-radius:8px;border-left:4px solid #3b82f6;margin:0 0 20px;">
+            <tr><td style="padding:16px 20px;">
+              <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#1e40af;">Datos Bancarios para Pago</p>
+              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>Beneficiario:</strong> ABARROTES LA MANITA, S.A. DE C.V.</p>
+              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>Banco:</strong> BBVA BANCOMER, S.A.</p>
+              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>Cuenta:</strong> 0442413388</p>
+              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>CLABE:</strong> 012180004424133881</p>
+              <p style="margin:0;font-size:11px;color:#888;">Enviar comprobante a: pagos@almasa.com.mx</p>
+            </td></tr>
+          </table>
           <p style="font-size:14px;color:#555;margin:0;">¡Gracias por su preferencia!</p>
+        `),
+      };
+
+    case "pedido_conciliado":
+      return {
+        subject: `📄 Su pedido ${data.pedidoFolio} ha sido entregado — ALMASA`,
+        html: wrapEmailTemplate("📄 Pedido Entregado y Conciliado", `
+          <p style="font-size:15px;color:#333;margin:0 0 16px;">Estimado/a <strong>${clienteNombre}</strong>,</p>
+          <p style="font-size:14px;color:#555;margin:0 0 20px;">Su pedido ya fue entregado. Adjuntamos su documento final con precios, cantidades y el total definitivo.</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ecfdf5;border-radius:8px;border-left:4px solid #10b981;margin:0 0 20px;">
+            <tr><td style="padding:16px 20px;">
+              <p style="margin:0 0 6px;font-size:14px;"><strong>Folio:</strong> ${data.pedidoFolio}</p>
+              ${data.total ? `<p style="margin:0 0 6px;font-size:14px;"><strong>Total:</strong> $${data.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>` : ''}
+              ${data.fechaEntrega ? `<p style="margin:0 0 6px;font-size:14px;"><strong>Fecha de entrega:</strong> ${data.fechaEntrega}</p>` : ''}
+              ${data.diasCredito ? `<p style="margin:0;font-size:14px;"><strong>Días de crédito:</strong> ${data.diasCredito}</p>` : ''}
+            </td></tr>
+          </table>
+          <p style="font-size:13px;color:#555;margin:0 0 16px;">A partir de la fecha de entrega comienzan a contar los días de crédito acordados.</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0f9ff;border-radius:8px;border-left:4px solid #3b82f6;margin:0 0 20px;">
+            <tr><td style="padding:16px 20px;">
+              <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#1e40af;">Datos Bancarios para Pago</p>
+              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>Beneficiario:</strong> ABARROTES LA MANITA, S.A. DE C.V.</p>
+              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>Banco:</strong> BBVA BANCOMER, S.A.</p>
+              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>Cuenta:</strong> 0442413388</p>
+              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>CLABE:</strong> 012180004424133881</p>
+              <p style="margin:0;font-size:11px;color:#888;">Enviar comprobante a: pagos@almasa.com.mx</p>
+            </td></tr>
+          </table>
+          <p style="font-size:14px;color:#555;margin:0;">¡Gracias por confiar en Almasa!</p>
+        `),
+      };
+
+    case "pedido_conciliado_ajustado":
+      return {
+        subject: `📄 Su pedido ${data.pedidoFolio} ha sido ajustado — ALMASA`,
+        html: wrapEmailTemplate("📄 Pedido Ajustado tras Entrega", `
+          <p style="font-size:15px;color:#333;margin:0 0 16px;">Estimado/a <strong>${clienteNombre}</strong>,</p>
+          <p style="font-size:14px;color:#555;margin:0 0 20px;">Su pedido fue ajustado de acuerdo a la devolución o faltante registrado durante la entrega. El total global ya está calculado y es el definitivo.</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fef3c7;border-radius:8px;border-left:4px solid #f59e0b;margin:0 0 20px;">
+            <tr><td style="padding:16px 20px;">
+              <p style="margin:0 0 6px;font-size:14px;"><strong>Folio:</strong> ${data.pedidoFolio}</p>
+              ${data.total ? `<p style="margin:0 0 6px;font-size:14px;"><strong>Total ajustado:</strong> $${data.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>` : ''}
+              ${data.fechaEntrega ? `<p style="margin:0 0 6px;font-size:14px;"><strong>Fecha de entrega:</strong> ${data.fechaEntrega}</p>` : ''}
+              ${data.diasCredito ? `<p style="margin:0;font-size:14px;"><strong>Días de crédito:</strong> ${data.diasCredito}</p>` : ''}
+            </td></tr>
+          </table>
+          <p style="font-size:13px;color:#555;margin:0 0 16px;">A partir de la fecha de entrega comienzan a contar los días de crédito acordados. Adjuntamos el documento con el detalle actualizado.</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0f9ff;border-radius:8px;border-left:4px solid #3b82f6;margin:0 0 20px;">
+            <tr><td style="padding:16px 20px;">
+              <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#1e40af;">Datos Bancarios para Pago</p>
+              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>Beneficiario:</strong> ABARROTES LA MANITA, S.A. DE C.V.</p>
+              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>Banco:</strong> BBVA BANCOMER, S.A.</p>
+              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>Cuenta:</strong> 0442413388</p>
+              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>CLABE:</strong> 012180004424133881</p>
+              <p style="margin:0;font-size:11px;color:#888;">Enviar comprobante a: pagos@almasa.com.mx</p>
+            </td></tr>
+          </table>
+          <p style="font-size:14px;color:#555;margin:0;">¡Gracias por confiar en Almasa!</p>
         `),
       };
 

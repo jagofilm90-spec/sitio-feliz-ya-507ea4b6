@@ -6085,6 +6085,7 @@ export type Database = {
         | "en_ruta"
         | "entregado"
         | "cancelado"
+        | "por_cobrar"
       preferencia_facturacion:
         | "siempre_factura"
         | "siempre_remision"
@@ -6271,6 +6272,7 @@ export const Constants = {
         "en_ruta",
         "entregado",
         "cancelado",
+        "por_cobrar",
       ],
       preferencia_facturacion: [
         "siempre_factura",

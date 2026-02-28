@@ -18,12 +18,14 @@ import {
   User,
   CalendarDays,
   Edit,
+  Send,
 } from "lucide-react";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ConciliacionDetalleDialog } from "./ConciliacionDetalleDialog";
+import { ConciliacionMasivaEnvio } from "./ConciliacionMasivaEnvio";
 
 interface RutaConDetalles {
   id: string;
@@ -301,7 +303,7 @@ export const SecretariaRutasTab = () => {
       </div>
 
       <Tabs value={subTab} onValueChange={setSubTab}>
-        <TabsList className="w-full grid grid-cols-3">
+        <TabsList className="w-full grid grid-cols-4">
           <TabsTrigger value="en_camino" className="text-xs sm:text-sm">
             <Truck className="h-4 w-4 mr-1.5" />
             En Camino
@@ -323,6 +325,10 @@ export const SecretariaRutasTab = () => {
                 {totalPorConciliar}
               </Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="conciliar_enviar" className="text-xs sm:text-sm">
+            <Send className="h-4 w-4 mr-1.5" />
+            Enviar
           </TabsTrigger>
         </TabsList>
 
@@ -373,6 +379,10 @@ export const SecretariaRutasTab = () => {
               <RutaCard key={ruta.id} ruta={ruta} showConciliacion />
             ))
           )}
+        </TabsContent>
+
+        <TabsContent value="conciliar_enviar" className="mt-4">
+          <ConciliacionMasivaEnvio />
         </TabsContent>
       </Tabs>
     </div>
