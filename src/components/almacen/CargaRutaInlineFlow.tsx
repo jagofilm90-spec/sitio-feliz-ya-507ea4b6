@@ -17,6 +17,7 @@ import {
   ChevronUp, ChevronDown,
 } from "lucide-react";
 import { format } from "date-fns";
+import { openWhatsApp } from "@/lib/whatsappUtils";
 
 interface PedidoEnCola {
   pedidoId: string;
@@ -342,13 +343,25 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
         }).eq("id", rutaId);
       }
 
+      const whatsappPendientes: { folio: string; clienteNombre: string; phones: string[]; message: string }[] = [];
       for (const item of cola) {
         await supabase.from("pedidos").update({ status: "en_ruta", updated_at: new Date().toISOString() }).eq("id", item.pedidoId);
         try {
-          await supabase.functions.invoke("send-client-notification", {
+          const { data: notifResponse } = await supabase.functions.invoke("send-client-notification", {
             body: { clienteId: item.clienteId, tipo: "en_ruta", data: { pedidoFolio: item.folio, choferNombre: chofer?.nombre_completo || "Chofer" } },
           });
+          if (notifResponse?.whatsapp?.pending && notifResponse.whatsapp.phones?.length) {
+            whatsappPendientes.push({ folio: item.folio, clienteNombre: item.clienteNombre, phones: notifResponse.whatsapp.phones, message: notifResponse.whatsapp.message });
+          }
         } catch {}
+      }
+
+      // Open WhatsApp links sequentially for pending notifications
+      if (whatsappPendientes.length > 0) {
+        for (const wp of whatsappPendientes) {
+          openWhatsApp(wp.phones, wp.message);
+          toast.info(`📱 WhatsApp pendiente: ${wp.clienteNombre} (${wp.folio})`);
+        }
       }
 
       setPaso("finalizado");

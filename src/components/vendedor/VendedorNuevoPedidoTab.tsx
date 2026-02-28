@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { calcularDesgloseImpuestos, redondear, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
 import { captureDeviceInfo, getPublicIP } from "@/lib/auditoria-pedidos";
+import { openWhatsApp } from "@/lib/whatsappUtils";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { CheckCircle2, ExternalLink, FileEdit, Trash2, ArrowRight, Store, Clock } from "lucide-react";
@@ -932,6 +933,11 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
                   data: { pedidoFolio: folio, total: totales.total },
                   pdfBase64: clientPdfBase64 || undefined,
                   pdfFilename: `Pedido_${folio}.pdf`,
+                }
+              }).then(({ data: notifResponse }) => {
+                if (notifResponse?.whatsapp?.pending && notifResponse.whatsapp.phones?.length) {
+                  openWhatsApp(notifResponse.whatsapp.phones, notifResponse.whatsapp.message);
+                  toast.info("📱 Abriendo WhatsApp para notificar al cliente");
                 }
               }).catch(e => console.error("Client email error:", e))
             );
