@@ -41,6 +41,7 @@ import { CargaProductosChecklist } from "@/components/almacen/CargaProductosChec
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { format } from "date-fns";
+import { openWhatsApp } from "@/lib/whatsappUtils";
 
 // ─── Types ────────────────────────────────────────────────
 interface PedidoEnCola {
@@ -628,6 +629,7 @@ export default function AlmacenCargaScan() {
       }
 
       // Update each pedido to "en_ruta" and send notification
+      const whatsappPendientes: { folio: string; clienteNombre: string; phones: string[]; message: string }[] = [];
       for (const item of cola) {
         // Update pedido status
         await supabase
@@ -637,7 +639,7 @@ export default function AlmacenCargaScan() {
 
         // Send "en_ruta" notification email to client
         try {
-          await supabase.functions.invoke("send-client-notification", {
+          const { data: notifResponse } = await supabase.functions.invoke("send-client-notification", {
             body: {
               clienteId: item.clienteId,
               tipo: "en_ruta",
@@ -648,8 +650,19 @@ export default function AlmacenCargaScan() {
             },
           });
           console.log(`Email en_ruta enviado para pedido ${item.folio}`);
+          if (notifResponse?.whatsapp?.pending && notifResponse.whatsapp.phones?.length) {
+            whatsappPendientes.push({ folio: item.folio, clienteNombre: item.clienteNombre, phones: notifResponse.whatsapp.phones, message: notifResponse.whatsapp.message });
+          }
         } catch (emailErr) {
           console.error(`Error enviando email para ${item.folio}:`, emailErr);
+        }
+      }
+
+      // Open WhatsApp links for pending notifications
+      if (whatsappPendientes.length > 0) {
+        for (const wp of whatsappPendientes) {
+          openWhatsApp(wp.phones, wp.message);
+          toast.info(`📱 WhatsApp pendiente: ${wp.clienteNombre} (${wp.folio})`);
         }
       }
     } catch (err) {
