@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,8 @@ import { PasoProductosInline } from "./pedido-wizard/PasoProductosInline";
 import { PasoConfirmar } from "./pedido-wizard/PasoConfirmar";
 import { SolicitudDescuentoDialog } from "./SolicitudDescuentoDialog";
 import { PedidoPrintTemplate, DatosPedidoPrint } from "@/components/pedidos/PedidoPrintTemplate";
+import { HojaCargaAlmacenTemplate, DatosHojaCargaAlmacen } from "@/components/pedidos/HojaCargaAlmacenTemplate";
+import { HojaCargaClienteTemplate, DatosHojaCargaCliente } from "@/components/pedidos/HojaCargaClienteTemplate";
 import { getDisplayName } from "@/lib/productUtils";
 import type { Cliente, Sucursal, Producto, LineaPedido, TotalesCalculados } from "./pedido-wizard/types";
 
@@ -855,33 +858,107 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
             notas: notas || undefined,
           };
 
-          const generatePdfFromTemplate = async (hideQR: boolean): Promise<string> => {
-            const tempContainer = document.createElement('div');
-            tempContainer.style.position = 'absolute';
-            tempContainer.style.left = '-9999px';
-            tempContainer.style.top = '0';
-            tempContainer.style.width = '8.5in';
-            tempContainer.style.backgroundColor = '#ffffff';
-            document.body.appendChild(tempContainer);
+          const renderToCanvas = async (element: React.ReactElement): Promise<HTMLCanvasElement> => {
+            const container = document.createElement('div');
+            container.style.position = 'absolute';
+            container.style.left = '-9999px';
+            container.style.top = '0';
+            container.style.width = '8.5in';
+            container.style.backgroundColor = '#ffffff';
+            document.body.appendChild(container);
 
-            const root = createRoot(tempContainer);
-            root.render(<PedidoPrintTemplate datos={datosPrintFinal} hideQR={hideQR} />);
+            const root = createRoot(container);
+            flushSync(() => { root.render(element); });
             await new Promise(resolve => setTimeout(resolve, 500));
 
-            const canvas = await html2canvas(tempContainer, {
+            const canvas = await html2canvas(container, {
               scale: 3, useCORS: true, logging: false, backgroundColor: '#ffffff'
             });
 
             root.unmount();
-            document.body.removeChild(tempContainer);
+            document.body.removeChild(container);
+            return canvas;
+          };
 
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+          const canvasToPage = (pdf: jsPDF, canvas: HTMLCanvasElement) => {
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
             const ratio = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
             const imgX = (pdfWidth - canvas.width * ratio) / 2;
-            pdf.addImage(imgData, 'PNG', imgX, 5, canvas.width * ratio, canvas.height * ratio);
+            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', imgX, 5, canvas.width * ratio, canvas.height * ratio);
+          };
+
+          const generatePdfFromTemplate = async (hideQR: boolean): Promise<string> => {
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+
+            // Page 1: Remisión
+            const canvas1 = await renderToCanvas(<PedidoPrintTemplate datos={datosPrintFinal} hideQR={hideQR} />);
+            canvasToPage(pdf, canvas1);
+
+            // For internal PDF (hideQR=false): add pages 2 & 3
+            if (!hideQR) {
+              // Build data for HojaCargaAlmacen
+              const datosAlmacen: DatosHojaCargaAlmacen = {
+                pedidoId: pedido.id,
+                folio,
+                fecha: new Date().toISOString(),
+                cliente: { nombre: selectedCliente?.nombre || "" },
+                sucursal: (() => {
+                  const suc = sucursales.find(s => s.id === selectedSucursalId);
+                  return suc ? { nombre: suc.nombre, direccion: suc.direccion || undefined } : undefined;
+                })(),
+                productos: lineas.map(l => ({
+                  cantidad: l.cantidad,
+                  descripcion: getDisplayName(l.producto),
+                  pesoTotal: (l.producto.peso_kg || 0) > 0 ? l.cantidad * (l.producto.peso_kg || 0) : null,
+                  unidad: l.producto.unidad || 'PZA',
+                })),
+                pesoTotalKg: totales.pesoTotalKg,
+                notas: notas || undefined,
+              };
+
+              // Build data for HojaCargaCliente
+              const datosCliente: DatosHojaCargaCliente = {
+                folio,
+                fecha: new Date().toISOString(),
+                vendedor: vendedorNombre,
+                terminoCredito: terminoCredito === 'contado' ? 'Contado' : terminoCredito.replace('_', ' '),
+                cliente: {
+                  nombre: selectedCliente?.nombre || "",
+                  telefono: (selectedCliente as any)?.telefono || undefined,
+                },
+                sucursal: (() => {
+                  const suc = sucursales.find(s => s.id === selectedSucursalId);
+                  return suc ? { nombre: suc.nombre, direccion: suc.direccion || undefined } : undefined;
+                })(),
+                productos: lineas.map(l => ({
+                  cantidad: l.cantidad,
+                  descripcion: getDisplayName(l.producto),
+                  pesoTotal: (l.producto.peso_kg || 0) > 0 ? l.cantidad * (l.producto.peso_kg || 0) : null,
+                  precioUnitario: l.precioUnitario,
+                  importe: l.subtotal,
+                  unidad: l.producto.unidad || 'PZA',
+                  precioPorKilo: !!l.producto.precio_por_kilo,
+                })),
+                subtotal: totales.subtotal,
+                iva: totales.iva,
+                ieps: totales.ieps,
+                total: totales.total,
+                pesoTotalKg: totales.pesoTotalKg,
+                notas: notas || undefined,
+              };
+
+              // Page 2: Hoja de Carga Almacén
+              const canvas2 = await renderToCanvas(<HojaCargaAlmacenTemplate datos={datosAlmacen} />);
+              pdf.addPage();
+              canvasToPage(pdf, canvas2);
+
+              // Page 3: Hoja de Carga Cliente
+              const canvas3 = await renderToCanvas(<HojaCargaClienteTemplate datos={datosCliente} />);
+              pdf.addPage();
+              canvasToPage(pdf, canvas3);
+            }
+
             return pdf.output('datauristring').split(',')[1];
           };
 
