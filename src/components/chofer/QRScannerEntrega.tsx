@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { CameraQrScanner } from "@/components/almacen/CameraQrScanner";
 import { supabase } from "@/integrations/supabase/client";
+import { checkAndCompleteRoute } from "@/services/autoCompleteRoute";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { QrCode, Loader2 } from "lucide-react";
@@ -82,7 +83,13 @@ export function QRScannerEntrega({ entregaId, pedidoId, pedidoFolio, clienteNomb
         // Non-blocking
       }
 
+      // Auto-complete route if all deliveries are done
+      const routeCompleted = await checkAndCompleteRoute(entregaId);
+
       toast.success("✅ Entrega confirmada", { description: `${clienteNombre} — ${pedidoFolio}` });
+      if (routeCompleted) {
+        toast.info("🏁 Ruta completada — todas las entregas fueron registradas");
+      }
       onEntregaConfirmada();
     } catch (err: any) {
       toast.error("Error al confirmar entrega", { description: err?.message });

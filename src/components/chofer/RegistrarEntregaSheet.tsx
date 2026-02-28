@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
+import { checkAndCompleteRoute } from "@/services/autoCompleteRoute";
 import { toast } from "sonner";
 import { 
   CheckCircle2, 
@@ -238,6 +239,9 @@ export function RegistrarEntregaSheet({
         }
       }
 
+      // Auto-complete route if all deliveries are done
+      const routeCompleted = await checkAndCompleteRoute(entrega.id);
+      
       toast.success(
         status === "entregado" 
           ? "¡Entrega registrada exitosamente!" 
@@ -245,6 +249,10 @@ export function RegistrarEntregaSheet({
             ? "Entrega parcial registrada"
             : "Rechazo registrado"
       );
+
+      if (routeCompleted) {
+        toast.info("🏁 Ruta completada — todas las entregas fueron registradas");
+      }
       
       // Limpiar y cerrar
       resetForm();

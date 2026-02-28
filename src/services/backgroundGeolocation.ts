@@ -24,9 +24,28 @@ let stateCallback: StateCallback | null = null;
 
 const UPDATE_INTERVAL_MS = 30000; // 30 seconds minimum between DB updates
 
+/**
+ * Check if current time is within the allowed tracking schedule:
+ * - Monday to Friday: 8:00 AM - 8:00 PM
+ * - Saturday: 8:00 AM - 6:00 PM
+ * - Sunday: No tracking
+ */
+export const isWithinTrackingSchedule = (): boolean => {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+  const hour = now.getHours();
+
+  if (day === 0) return false; // Sunday
+  if (day === 6) return hour >= 8 && hour < 18; // Saturday 8am-6pm
+  return hour >= 8 && hour < 20; // Mon-Fri 8am-8pm
+};
+
 // Update location in Supabase
 const updateLocationInDB = async (location: Location): Promise<void> => {
   if (!currentRutaId || !currentChoferId) return;
+
+  // Only save location during work hours
+  if (!isWithinTrackingSchedule()) return;
 
   const now = Date.now();
   if (now - lastUpdateTime < UPDATE_INTERVAL_MS) return;
