@@ -1,88 +1,132 @@
 
-
-# Plan: GPS en Tiempo Real para Choferes + Mejoras en Pestanas de Almacen
+# Plan: Conciliacion de Entregas, Correos al Cliente y Seccion de Cobranza del Vendedor
 
 ## Resumen
 
-Implementar rastreo GPS tipo "Encontrar" para choferes visible desde almacen, con horario de operacion (L-V 8am-8pm, Sab 8am-6pm), mapa en tiempo real, y mejoras a las pestanas "En Ruta" y "Pedidos Entregados" con sistema de pedidos individuales y auto-completado de rutas.
+Completar el flujo post-entrega: registrar hora exacta al escanear QR, enviar correo de entrega al cliente, implementar conciliacion masiva por la secretaria con checkbox y edicion de pedidos, envio de correo final al cliente con PDF y datos bancarios, y crear una seccion de Cobranza dedicada en el sidebar del vendedor con vista de pedidos por estado de pago.
 
 ---
 
-## 1. Mapa en Tiempo Real del Chofer (tipo "Encontrar")
+## 1. Registrar Hora de Entrega al Escanear QR
 
-Crear un componente de mapa que muestre la ubicacion en vivo del chofer usando Google Maps.
+**Estado actual**: Ya se guarda `hora_entrega_real` en `QRScannerEntrega.tsx` al momento del escaneo. Ya esta implementado correctamente.
 
-- Crear `src/components/almacen/ChoferMapDialog.tsx`: dialogo con Google Maps embebido mostrando un marcador animado con la posicion del chofer en tiempo real
-- Usa el hook existente `useChoferUbicacionRealtime` para obtener latitud/longitud con actualizacion automatica via Realtime
-- Muestra: nombre del chofer, velocidad, precision, ultima actualizacion
-- Indicador visual si la senal esta "stale" (mas de 5 min sin actualizar)
-- Boton de localizacion (icono de pin) junto al nombre del chofer en cada tarjeta de ruta
+**Ajuste necesario**: Asegurar que en `RegistrarEntregaSheet.tsx` tambien se guarde la hora exacta del momento de registro (ya lo hace). No se requieren cambios en este punto.
 
 ---
 
-## 2. Horario de Tracking GPS
+## 2. Correo Automatico al Cliente al Confirmar Entrega (QR o Manual)
 
-Agregar logica de horario al servicio de geolocalizacion para que solo envie posicion dentro del horario laboral.
+Al confirmar entrega, enviar correo al cliente con: "Pedido entregado, gracias por confiar en Almasa".
 
-- Modificar `src/services/backgroundGeolocation.ts`: agregar funcion `isWithinTrackingSchedule()` que valide:
-  - Lunes a Viernes: 8:00 AM - 8:00 PM
-  - Sabado: 8:00 AM - 6:00 PM
-  - Domingo: No tracking
-- En `updateLocationInDB`, verificar el horario antes de hacer el upsert a la base de datos
-- Si esta fuera de horario, no enviar la ubicacion (el watcher sigue activo para no perder permisos, pero no se guarda)
-
----
-
-## 3. Redisenar Pestana "En Ruta"
-
-Actualizar `RutasEnRutaTab.tsx` para incluir:
-
-- **Boton de localizacion** junto al nombre del chofer que abre `ChoferMapDialog`
-- **Unidad (vehiculo)** visible: placa y nombre
-- **Sistema de pedidos individuales**: cuando hay mas de 1 pedido, mostrar "Pedido 1", "Pedido 2", "Pedido 3" con tabs o acordeon
-  - Cada pedido muestra: cliente, folio, productos, peso
-  - Palomita verde si ya fue entregado, pendiente si no
-  - Contador visible: "1/3 entregados", "2/2 entregados"
-- **Auto-completado**: cuando todas las entregas de una ruta estan marcadas como entregadas (ej. 2/2), la ruta se mueve automaticamente a "Pedidos Entregados" (cambiar status a 'completada')
+**Cambios:**
+- Modificar `supabase/functions/send-client-notification/index.ts`:
+  - Agregar tipo `"entregado"` al template de correo con mensaje profesional: folio, hora de entrega, quien recibio, y agradecimiento "Gracias por confiar en Almasa"
+  - Incluir datos bancarios de la empresa (BBVA, CLABE, cuenta) en el correo para referencia de pago
+- Verificar que `QRScannerEntrega.tsx` y `RegistrarEntregaSheet.tsx` ya invocan `send-client-notification` con tipo `"entregado"` (ya lo hacen)
 
 ---
 
-## 4. Redisenar Pestana "Pedidos Entregados"
+## 3. Redisenar Conciliacion de Secretaria (Flujo Masivo con Checkbox)
 
-Actualizar `RutasEntregadasTab.tsx` para:
+**Problema actual**: La conciliacion es por entrega individual (boton "Registrar Devoluciones / Faltantes" y luego "Marcar papeles recibidos"). Se necesita un flujo masivo donde la secretaria vea todos los pedidos del dia y pueda:
+1. Marcar con checkbox los pedidos que estan correctos (sin modificar)
+2. Editar los que tuvieron devolucion/faltante
+3. Al confirmar, enviar correo a cada cliente
 
-- Mostrar rutas completadas del **mes completo** (no solo del dia) para auditorias
-- Filtro por fecha (rango de fechas) con selector
-- Cada ruta muestra: chofer, unidad, hora inicio/fin, pedidos con detalle
-- Misma estructura de pedidos individuales con palomitas verdes
-- Conservar datos minimo 1 mes (ya se guardan en la tabla `rutas` y `entregas`)
+**Cambios en `SecretariaRutasTab.tsx`:**
+- Agregar pestana **"Conciliar y Enviar"** que muestre todos los pedidos de rutas completadas del dia anterior pendientes de envio
+- Cada pedido muestra: folio, cliente, total, productos (resumen)
+- **Checkbox** por pedido: al marcar indica "correcto, listo para enviar"
+- **Boton "Editar"** por pedido: abre `ConciliacionDetalleDialog` para registrar devoluciones/faltantes
+- Los pedidos editados se marcan automaticamente como "editado" (icono diferente al checkbox)
+- **Boton global "Enviar Todo"** con dialogo de confirmacion: "Se van a enviar X pedidos a sus clientes. Todo esta en orden?"
+  - Si -> procesa cada pedido (genera PDF + envia correo)
+  - No -> regresa a la vista
+
+**Cambios en `ConciliacionDetalleDialog.tsx`:**
+- Separar el flujo: guardar devoluciones vs enviar correo
+- Al guardar devoluciones, solo guardar los datos y recalcular totales
+- El envio del correo se hace desde el flujo masivo, no desde este dialogo
+- Agregar boton "Guardar y cerrar" que guarde sin enviar
 
 ---
 
-## 5. Auto-completar Ruta al Entregar Todos los Pedidos
+## 4. Correo Final al Cliente con PDF y Datos Bancarios
 
-Cuando el chofer confirma la ultima entrega de una ruta:
+Dos variantes de correo segun si hubo modificaciones:
 
-- Modificar la logica post-entrega en `EntregaCard.tsx` / `RegistrarEntregaSheet`:
-  - Despues de marcar una entrega, verificar si TODAS las entregas de esa ruta estan completadas
-  - Si todas estan completadas, automaticamente actualizar la ruta a status `completada` con `fecha_hora_fin = now()`
-  - Esto hace que desaparezca de "En Ruta" y aparezca en "Pedidos Entregados" en tiempo real
+**Pedido sin modificacion:**
+- Asunto: "Su pedido [FOLIO] ha sido entregado - Almasa"
+- Cuerpo: "Estimado cliente, su pedido ya fue entregado. A partir de la fecha de entrega ([fecha]) cuentan los dias de credito ([X dias]). Adjuntamos su documento final."
+- PDF adjunto: Remision con precios, cantidades, pesos, total global + datos bancarios de Almasa
+
+**Pedido con modificacion (devolucion/faltante):**
+- Asunto: "Su pedido [FOLIO] ha sido ajustado - Almasa"
+- Cuerpo: "Estimado cliente, su pedido fue ajustado de acuerdo a la devolucion/faltante de la entrega. El total global ya esta calculado y es el definitivo. A partir de la fecha de entrega cuentan los dias de credito."
+- PDF adjunto: Remision corregida con total ajustado + datos bancarios
+
+**Cambios:**
+- Crear `src/components/secretaria/ConciliacionMasivaEnvio.tsx`: componente principal del flujo masivo
+- Modificar generacion de PDF (`PedidoPrintTemplate` o crear variante) para incluir datos bancarios de Almasa al pie (usando `getBankInfoHTML` de `companyData.ts`)
+- Crear Edge Function helper o reutilizar `send-client-notification` con tipo `"pedido_conciliado"` y `"pedido_conciliado_ajustado"`
+
+---
+
+## 5. Mover Pedido a "Por Cobrar" del Vendedor tras Conciliacion
+
+Una vez que la secretaria concilia y envia el correo:
+- Actualizar el status del pedido a `"por_cobrar"` en la base de datos
+- Esto hace que aparezca automaticamente en la pestana "Por Cobrar" del vendedor
+
+**Cambios:**
+- En el flujo masivo de envio, despues de enviar correo exitosamente, hacer `UPDATE pedidos SET status = 'por_cobrar'`
+
+---
+
+## 6. Seccion de Cobranza Dedicada en Vendedor
+
+Actualmente "Por Cobrar" es una pestana dentro de "Pedidos". Se propone crear una seccion independiente en el sidebar del vendedor.
+
+**Nueva seccion "Cobranza" en el sidebar del vendedor con:**
+- Vista de pedidos organizados por estado de pago:
+  - **Vigentes** (verde): pedidos dentro del plazo de credito
+  - **Proximos a vencer** (amarillo): pedidos a 3 dias o menos de vencer
+  - **Vencidos** (rojo): pedidos que ya pasaron el plazo de credito, mostrando cuantos dias de atraso
+- Cada pedido muestra: folio, cliente, total, saldo pendiente, fecha entrega, dias de credito, dias restantes/atraso
+- Boton para registrar cobro (ya existe `RegistrarCobroPedidoDialog`)
+- KPIs en la parte superior: Total vigente, Total proximo a vencer, Total vencido
+
+**Cambios:**
+- Crear `src/components/vendedor/VendedorCobranzaTab.tsx` con la vista organizada por estados
+- Modificar `src/components/vendedor/VendedorSidebar.tsx` para agregar item "Cobranza" con icono y badge
+- Modificar `src/pages/VendedorPanel.tsx` para agregar la nueva pestana
+- Mantener "Por Cobrar" en la pestana de pedidos como acceso rapido (no eliminar)
 
 ---
 
 ## Detalle Tecnico
 
 ### Archivos nuevos:
-- `src/components/almacen/ChoferMapDialog.tsx` - Mapa Google Maps con marcador en vivo
+- `src/components/secretaria/ConciliacionMasivaEnvio.tsx` - Flujo masivo de conciliacion con checkboxes
+- `src/components/vendedor/VendedorCobranzaTab.tsx` - Seccion de cobranza con estados de pago
 
 ### Archivos a modificar:
-- `src/components/almacen/RutasEnRutaTab.tsx` - Agregar boton GPS, sistema de pedidos, auto-completado
-- `src/components/almacen/RutasEntregadasTab.tsx` - Mostrar mes completo con filtros
-- `src/services/backgroundGeolocation.ts` - Agregar validacion de horario laboral
-- `src/components/chofer/EntregaCard.tsx` o flujo de entrega - Auto-completar ruta
+- `supabase/functions/send-client-notification/index.ts` - Agregar tipos `pedido_conciliado` y `pedido_conciliado_ajustado` con templates que incluyan datos bancarios
+- `src/components/secretaria/SecretariaRutasTab.tsx` - Agregar pestana "Conciliar y Enviar"
+- `src/components/secretaria/ConciliacionDetalleDialog.tsx` - Separar guardar vs enviar
+- `src/components/vendedor/VendedorSidebar.tsx` - Agregar seccion Cobranza
+- `src/pages/VendedorPanel.tsx` - Registrar tab de cobranza
+- `src/components/pedidos/PedidoPrintTemplate.tsx` - Incluir datos bancarios en PDF
 
 ### No se requieren cambios de base de datos:
-- La tabla `chofer_ubicaciones` ya existe con los campos necesarios
-- Las tablas `rutas` y `entregas` ya tienen los campos de status y timestamps
-- Los datos se mantienen en BD indefinidamente (auditoria cubierta)
+- Los campos necesarios (`hora_entrega_real`, `status`, `saldo_pendiente`, `termino_credito`, `fecha_entrega_real`) ya existen
+- La tabla `devoluciones` ya existe para el registro de faltantes
 
+### Secuencia de implementacion:
+1. Actualizar template de correo de entrega al cliente (send-client-notification)
+2. Crear flujo masivo de conciliacion (ConciliacionMasivaEnvio)
+3. Integrar en SecretariaRutasTab
+4. Ajustar PDF para incluir datos bancarios
+5. Crear seccion de Cobranza del vendedor
+6. Integrar en sidebar y panel del vendedor
