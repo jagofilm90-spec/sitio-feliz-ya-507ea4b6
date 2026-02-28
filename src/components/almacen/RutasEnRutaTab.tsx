@@ -37,7 +37,7 @@ export const RutasEnRutaTab = () => {
   const [mapRuta, setMapRuta] = useState<{ rutaId: string; choferNombre: string } | null>(null);
 
   const loadRutas = useCallback(async () => {
-    const fechaHoy = format(new Date(), "yyyy-MM-dd");
+    // Include all en_curso routes (not just today) so past incomplete routes remain visible
     const { data, error } = await supabase
       .from("rutas")
       .select(`
@@ -47,7 +47,6 @@ export const RutasEnRutaTab = () => {
         entregas(id, status_entrega, orden_entrega, pedido:pedidos(folio, cliente:clientes(nombre)))
       `)
       .eq("status", "en_curso")
-      .gte("fecha_ruta", fechaHoy)
       .order("fecha_hora_inicio", { ascending: true });
 
     if (!error) setRutas((data as any[]) || []);
