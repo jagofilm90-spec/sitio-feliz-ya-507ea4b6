@@ -41,7 +41,7 @@ import { CargaProductosChecklist } from "@/components/almacen/CargaProductosChec
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { format } from "date-fns";
-import { openWhatsApp } from "@/lib/whatsappUtils";
+
 
 // ─── Types ────────────────────────────────────────────────
 interface PedidoEnCola {
@@ -658,12 +658,9 @@ export default function AlmacenCargaScan() {
         }
       }
 
-      // Open WhatsApp links for pending notifications
+      // WhatsApp is now sent automatically by the backend via Twilio
       if (whatsappPendientes.length > 0) {
-        for (const wp of whatsappPendientes) {
-          openWhatsApp(wp.phones, wp.message);
-          toast.info(`📱 WhatsApp pendiente: ${wp.clienteNombre} (${wp.folio})`);
-        }
+        toast.success(`📱 WhatsApp enviado a ${whatsappPendientes.length} cliente(s)`);
       }
     } catch (err) {
       console.error("Error al finalizar carga:", err);

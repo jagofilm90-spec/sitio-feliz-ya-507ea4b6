@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { checkAndCompleteRoute } from "@/services/autoCompleteRoute";
-import { openWhatsApp } from "@/lib/whatsappUtils";
+
 import { toast } from "sonner";
 import { 
   CheckCircle2, 
@@ -222,10 +222,9 @@ export function RegistrarEntregaSheet({
               },
             });
 
-            // Open WhatsApp if pending
-            if (notifResponse?.whatsapp?.pending && notifResponse.whatsapp.phones?.length) {
-              openWhatsApp(notifResponse.whatsapp.phones, notifResponse.whatsapp.message);
-              toast.info("📱 Abriendo WhatsApp para notificar al cliente");
+            // WhatsApp sent automatically by backend via Twilio
+            if (notifResponse?.whatsapp?.sent) {
+              toast.success("📱 WhatsApp enviado al cliente");
             }
           }
         } catch (notifError) {

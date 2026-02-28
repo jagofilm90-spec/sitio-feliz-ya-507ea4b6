@@ -17,7 +17,7 @@ import {
   ChevronUp, ChevronDown,
 } from "lucide-react";
 import { format } from "date-fns";
-import { openWhatsApp } from "@/lib/whatsappUtils";
+
 
 interface PedidoEnCola {
   pedidoId: string;
@@ -356,12 +356,9 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
         } catch {}
       }
 
-      // Open WhatsApp links sequentially for pending notifications
+      // WhatsApp is now sent automatically by the backend via Twilio
       if (whatsappPendientes.length > 0) {
-        for (const wp of whatsappPendientes) {
-          openWhatsApp(wp.phones, wp.message);
-          toast.info(`📱 WhatsApp pendiente: ${wp.clienteNombre} (${wp.folio})`);
-        }
+        toast.success(`📱 WhatsApp enviado a ${whatsappPendientes.length} cliente(s)`);
       }
 
       setPaso("finalizado");
