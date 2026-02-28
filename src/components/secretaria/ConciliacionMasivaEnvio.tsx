@@ -21,6 +21,9 @@ import {
   Package,
   FileCheck,
   AlertTriangle,
+  Mail,
+  Phone,
+  MessageCircle,
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -29,9 +32,17 @@ import { cn } from "@/lib/utils";
 import { ConciliacionDetalleDialog } from "./ConciliacionDetalleDialog";
 import { PedidoPrintTemplate, DatosPedidoPrint } from "@/components/pedidos/PedidoPrintTemplate";
 import { getDisplayName } from "@/lib/productUtils";
+import { generateWhatsAppUrl, formatPhoneForWhatsApp } from "@/lib/whatsappUtils";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { createRoot } from "react-dom/client";
+
+interface WhatsAppPending {
+  pedidoFolio: string;
+  clienteNombre: string;
+  phones: string[];
+  message: string;
+}
 
 interface PedidoConciliacion {
   pedidoId: string;
@@ -45,6 +56,8 @@ interface PedidoConciliacion {
   terminoCredito: string;
   tieneDevolucion: boolean;
   productosResumen: string;
+  tieneCorreo: boolean;
+  tieneTelefono: boolean;
 }
 
 type EstadoPedido = "pendiente" | "listo" | "editado";
@@ -55,6 +68,8 @@ export function ConciliacionMasivaEnvio() {
   const [enviando, setEnviando] = useState(false);
   const [confirmarOpen, setConfirmarOpen] = useState(false);
   const [editandoPedido, setEditandoPedido] = useState<PedidoConciliacion | null>(null);
+  const [whatsappPendientes, setWhatsappPendientes] = useState<WhatsAppPending[]>([]);
+  const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
 
   // Query pedidos pendientes de conciliación (entregas completadas sin envío masivo)
   const { data: pedidosPendientes = [], isLoading } = useQuery({
@@ -91,6 +106,24 @@ export function ConciliacionMasivaEnvio() {
           .select("id", { count: "exact", head: true })
           .eq("entrega_id", e.id);
 
+        // Check if client has email
+        const clienteId = pedido.cliente?.id;
+        const { count: emailCount } = await supabase
+          .from("cliente_correos")
+          .select("id", { count: "exact", head: true })
+          .eq("cliente_id", clienteId)
+          .eq("activo", true);
+
+        // Check if client has phone
+        const { count: phoneCount } = await supabase
+          .from("cliente_telefonos")
+          .select("id", { count: "exact", head: true })
+          .eq("cliente_id", clienteId)
+          .eq("activo", true);
+
+        // Fallback: check email in clientes table
+        const tieneCorreo = (emailCount || 0) > 0 || !!pedido.cliente?.email;
+
         const detalles = pedido.pedidos_detalles || [];
         const resumen = detalles
           .slice(0, 3)
@@ -109,6 +142,8 @@ export function ConciliacionMasivaEnvio() {
           terminoCredito: pedido.termino_credito || "30_dias",
           tieneDevolucion: (count || 0) > 0,
           productosResumen: resumen + (detalles.length > 3 ? ` (+${detalles.length - 3} más)` : ""),
+          tieneCorreo,
+          tieneTelefono: (phoneCount || 0) > 0,
         });
       }
 
@@ -153,6 +188,7 @@ export function ConciliacionMasivaEnvio() {
     setEnviando(true);
     let enviados = 0;
     let errores = 0;
+    const whatsappList: WhatsAppPending[] = [];
 
     for (const pedido of pedidosListos) {
       try {
@@ -163,8 +199,8 @@ export function ConciliacionMasivaEnvio() {
           ? "pedido_conciliado_ajustado"
           : "pedido_conciliado";
 
-        // Send email
-        await supabase.functions.invoke("send-client-notification", {
+        // Send email + get WhatsApp info
+        const { data: notifResponse } = await supabase.functions.invoke("send-client-notification", {
           body: {
             clienteId: pedido.clienteId,
             tipo,
@@ -180,6 +216,16 @@ export function ConciliacionMasivaEnvio() {
             pdfFilename: `Remision_${pedido.pedidoFolio}.pdf`,
           },
         });
+
+        // Collect WhatsApp pending
+        if (notifResponse?.whatsapp?.pending && notifResponse.whatsapp.phones?.length) {
+          whatsappList.push({
+            pedidoFolio: pedido.pedidoFolio,
+            clienteNombre: pedido.clienteNombre,
+            phones: notifResponse.whatsapp.phones,
+            message: notifResponse.whatsapp.message,
+          });
+        }
 
         // Update status to por_cobrar
         await supabase
@@ -203,6 +249,12 @@ export function ConciliacionMasivaEnvio() {
       toast.warning(`${enviados} enviados, ${errores} con error`);
     }
     
+    // Show WhatsApp dialog if any pending
+    if (whatsappList.length > 0) {
+      setWhatsappPendientes(whatsappList);
+      setWhatsappDialogOpen(true);
+    }
+
     // Reset states
     setEstados({});
   };
@@ -294,6 +346,18 @@ export function ConciliacionMasivaEnvio() {
                             Editado
                           </Badge>
                         )}
+                        {/* Notification channel indicators */}
+                        <div className="flex items-center gap-1">
+                          {pedido.tieneCorreo && (
+                            <span title="Tiene correo"><Mail className="h-3 w-3 text-muted-foreground" /></span>
+                          )}
+                          {pedido.tieneTelefono && (
+                            <span title="Tiene WhatsApp"><MessageCircle className="h-3 w-3 text-emerald-600" /></span>
+                          )}
+                          {!pedido.tieneCorreo && !pedido.tieneTelefono && (
+                            <span className="text-[10px] text-destructive" title="Sin correo ni teléfono">⚠️</span>
+                          )}
+                        </div>
                       </div>
                       <span className="font-bold text-sm">
                         ${pedido.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
@@ -378,6 +442,48 @@ export function ConciliacionMasivaEnvio() {
           entregaId={editandoPedido.entregaId}
         />
       )}
+
+      {/* WhatsApp pending dialog */}
+      <Dialog open={whatsappDialogOpen} onOpenChange={setWhatsappDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-emerald-600" />
+              Enviar por WhatsApp
+            </DialogTitle>
+            <DialogDescription>
+              Los siguientes clientes tienen teléfono registrado. Haz clic para abrir WhatsApp con el mensaje listo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-60 overflow-y-auto space-y-2">
+            {whatsappPendientes.map((wp, idx) => (
+              <div key={idx} className="flex items-center justify-between py-2 px-3 border rounded-lg">
+                <div>
+                  <p className="text-sm font-medium">{wp.pedidoFolio}</p>
+                  <p className="text-xs text-muted-foreground">{wp.clienteNombre}</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                  onClick={() => {
+                    const url = generateWhatsAppUrl(wp.phones[0], wp.message);
+                    window.open(url, "_blank");
+                  }}
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  Enviar
+                </Button>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWhatsappDialogOpen(false)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

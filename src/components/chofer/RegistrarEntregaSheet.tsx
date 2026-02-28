@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { checkAndCompleteRoute } from "@/services/autoCompleteRoute";
+import { openWhatsApp } from "@/lib/whatsappUtils";
 import { toast } from "sonner";
 import { 
   CheckCircle2, 
@@ -209,7 +210,7 @@ export function RegistrarEntregaSheet({
             .single();
 
           if (pedidoData?.cliente_id) {
-            await supabase.functions.invoke("send-client-notification", {
+            const { data: notifResponse } = await supabase.functions.invoke("send-client-notification", {
               body: {
                 clienteId: pedidoData.cliente_id,
                 tipo: "entregado",
@@ -220,7 +221,13 @@ export function RegistrarEntregaSheet({
                 },
               },
             });
-        }
+
+            // Open WhatsApp if pending
+            if (notifResponse?.whatsapp?.pending && notifResponse.whatsapp.phones?.length) {
+              openWhatsApp(notifResponse.whatsapp.phones, notifResponse.whatsapp.message);
+              toast.info("📱 Abriendo WhatsApp para notificar al cliente");
+            }
+          }
         } catch (notifError) {
           console.error("Error sending delivery notification:", notifError);
           // No interrumpir el flujo si falla la notificación

@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { CameraQrScanner } from "@/components/almacen/CameraQrScanner";
 import { supabase } from "@/integrations/supabase/client";
 import { checkAndCompleteRoute } from "@/services/autoCompleteRoute";
+import { openWhatsApp } from "@/lib/whatsappUtils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { QrCode, Loader2 } from "lucide-react";
@@ -67,7 +68,7 @@ export function QRScannerEntrega({ entregaId, pedidoId, pedidoFolio, clienteNomb
           .single();
 
         if (pedido?.cliente_id) {
-          await supabase.functions.invoke("send-client-notification", {
+          const { data: notifResponse } = await supabase.functions.invoke("send-client-notification", {
             body: {
               clienteId: pedido.cliente_id,
               tipo: "entregado",
@@ -78,6 +79,12 @@ export function QRScannerEntrega({ entregaId, pedidoId, pedidoFolio, clienteNomb
               },
             },
           });
+
+          // Open WhatsApp if pending
+          if (notifResponse?.whatsapp?.pending && notifResponse.whatsapp.phones?.length) {
+            openWhatsApp(notifResponse.whatsapp.phones, notifResponse.whatsapp.message);
+            toast.info("📱 Abriendo WhatsApp para notificar al cliente");
+          }
         }
       } catch {
         // Non-blocking

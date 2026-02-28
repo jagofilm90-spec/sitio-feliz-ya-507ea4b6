@@ -337,6 +337,31 @@ function generateEmailContent(tipo: NotificationType, data: NotificationRequest[
   }
 }
 
+function generateWhatsAppPlainMessage(tipo: NotificationType, data: NotificationRequest["data"], clienteNombre: string): string {
+  const saludo = `Estimado/a ${clienteNombre}`;
+  const firma = "\n\n— ALMASA (Abarrotes La Manita, S.A. de C.V.)";
+  const banco = `\n\n📌 *Datos Bancarios*\nBeneficiario: ABARROTES LA MANITA, S.A. DE C.V.\nBanco: BBVA BANCOMER\nCuenta: 0442413388\nCLABE: 012180004424133881\nComprobante a: pagos@almasa.com.mx`;
+
+  const formatMoney = (n?: number) => n ? `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2 })}` : "";
+
+  switch (tipo) {
+    case "pedido_confirmado":
+      return `${saludo},\n\n✅ Su pedido *${data.pedidoFolio}* ha sido confirmado y está siendo preparado.${data.total ? `\nTotal: ${formatMoney(data.total)}` : ""}\n\nLe notificaremos cuando esté en camino.${firma}`;
+    case "en_ruta":
+      return `${saludo},\n\n🚚 ¡Su pedido *${data.pedidoFolio}* va en camino!${data.choferNombre ? `\nChofer: ${data.choferNombre}` : ""}${data.horaEstimada ? `\nHora estimada: ${data.horaEstimada}` : ""}\n\nPor favor tenga a alguien disponible para recibirlo.${firma}`;
+    case "entregado":
+      return `${saludo},\n\n✓ Su pedido *${data.pedidoFolio}* ha sido entregado.${data.nombreReceptor ? `\nRecibió: ${data.nombreReceptor}` : ""}${data.horaEntrega ? `\nHora: ${data.horaEntrega}` : ""}${banco}${firma}`;
+    case "pedido_conciliado":
+      return `${saludo},\n\n📄 Su pedido *${data.pedidoFolio}* ha sido entregado y conciliado.${data.total ? `\nTotal: ${formatMoney(data.total)}` : ""}${data.fechaEntrega ? `\nFecha de entrega: ${data.fechaEntrega}` : ""}${data.diasCredito ? `\nDías de crédito: ${data.diasCredito}` : ""}${banco}${firma}`;
+    case "pedido_conciliado_ajustado":
+      return `${saludo},\n\n📄 Su pedido *${data.pedidoFolio}* fue ajustado (devolución/faltante).${data.total ? `\nTotal ajustado: ${formatMoney(data.total)}` : ""}${data.fechaEntrega ? `\nFecha de entrega: ${data.fechaEntrega}` : ""}${data.diasCredito ? `\nDías de crédito: ${data.diasCredito}` : ""}${banco}${firma}`;
+    case "vencimiento_proximo":
+      return `${saludo},\n\n⚠️ Recordatorio de pago:\nFactura: *${data.facturaFolio}*${data.total ? `\nMonto: ${formatMoney(data.total)}` : ""}${data.fechaVencimiento ? `\nVencimiento: ${data.fechaVencimiento}` : ""}${data.diasRestantes !== undefined ? `\nDías restantes: ${data.diasRestantes}` : ""}${banco}${firma}`;
+    default:
+      return `${saludo}, tiene una nueva notificación de ALMASA.${firma}`;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -387,6 +412,25 @@ serve(async (req) => {
       throw new Error("Client not found");
     }
 
+    // Get client phones for WhatsApp
+    const { data: telefonos } = await supabase
+      .from("cliente_telefonos")
+      .select("telefono")
+      .eq("cliente_id", clienteId)
+      .eq("activo", true);
+
+    const phones = (telefonos || []).map((t: any) => t.telefono).filter(Boolean);
+
+    // Generate WhatsApp plain-text message
+    let whatsappData: { pending: boolean; phones: string[]; message: string } | null = null;
+    if (phones.length > 0) {
+      whatsappData = {
+        pending: true,
+        phones,
+        message: generateWhatsAppPlainMessage(tipo, data, cliente.nombre),
+      };
+    }
+
     // Get client emails that match the notification purpose
     const propositos = TIPO_TO_PROPOSITOS[tipo];
     let { data: correos, error: correosError } = await supabase
@@ -415,11 +459,13 @@ serve(async (req) => {
         correos = [{ email: clienteEmail.email, nombre_contacto: null }];
       } else {
         console.log(`No fallback email found for client ${clienteId}`);
+        // If no emails but we have WhatsApp phones, return success with whatsapp data
         return new Response(
           JSON.stringify({ 
             success: true, 
             message: "No emails configured for this notification type",
-            emailsSent: 0 
+            emailsSent: 0,
+            whatsapp: whatsappData,
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -495,7 +541,8 @@ serve(async (req) => {
         success: true, 
         sender: senderEmail,
         emailsSent: results.filter(r => r.success).length,
-        results 
+        results,
+        whatsapp: whatsappData,
       }),
       { 
         status: 200, 
