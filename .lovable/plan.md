@@ -1,56 +1,108 @@
 
 
-# PDF de 3 Paginas para Email Interno de Pedido
+# Plan: Sistema de 4 Hojas en PDF Interno
 
-## Problema Actual
+## Situación Actual
 
-Cuando se crea un pedido, el email interno a `pedidos@almasa.com.mx` solo adjunta **1 pagina** (la Remision/Pedido). Segun el plan original, el PDF deberia contener **3 paginas**:
+Actualmente el PDF interno (a `pedidos@almasa.com.mx`) genera **3 páginas**:
+1. Remisión (PedidoPrintTemplate)
+2. Hoja de Carga Almacén (con QR, sin precios)
+3. Hoja de Carga Cliente (con precios, firmas, pagaré)
 
-1. **Pagina 1 - Remision de Oficina** (`PedidoPrintTemplate`) -- con QR interno
-2. **Pagina 2 - Hoja de Carga Almacen** (`HojaCargaAlmacenTemplate`) -- para el almacenista, con checkboxes y QR
-3. **Pagina 3 - Hoja de Carga Cliente** (`HojaCargaClienteTemplate`) -- para el chofer/cliente, con firmas, pagare, datos bancarios
+El PDF al cliente es **1 página** (solo remisión sin QR).
 
-## Cambios Necesarios
+## Lo que se necesita (4 hojas internas)
 
-### 1. Modificar la generacion de PDF en `VendedorNuevoPedidoTab.tsx`
-
-Cambiar la funcion `generatePdfFromTemplate` para que el PDF interno (el que NO tiene `hideQR`) genere un documento de **3 paginas**:
-
-- Renderizar las 3 plantillas (`PedidoPrintTemplate`, `HojaCargaAlmacenTemplate`, `HojaCargaClienteTemplate`) en contenedores ocultos
-- Capturar cada una con `html2canvas` (scale 3x)
-- Combinarlas en un unico PDF de 3 paginas usando `jsPDF.addPage()`
-
-Para esto se necesita:
-- Importar `HojaCargaAlmacenTemplate` y `HojaCargaClienteTemplate`
-- Preparar los datos para cada plantilla (la mayoria ya estan disponibles en `datosPrintFinal`)
-- Para `HojaCargaAlmacenTemplate` se necesita agregar la `unidad` de cada producto (ya disponible en `l.producto.unidad`)
-- Para `HojaCargaClienteTemplate` se necesita agregar `unidad` y campos operacionales (chofer, etc.) que estaran vacios en esta etapa inicial
-
-### 2. Estructura del nuevo generador
+Según tu descripción, el PDF interno debe tener **4 hojas**, cada una con logo Almasa:
 
 ```text
-generatePdfFromTemplate(hideQR):
-  Si hideQR = true (PDF para cliente):
-    -> Solo 1 pagina: PedidoPrintTemplate con hideQR=true (igual que ahora)
-  
-  Si hideQR = false (PDF interno):
-    -> 3 paginas en un solo PDF:
-       Pagina 1: PedidoPrintTemplate (con QR)
-       Pagina 2: HojaCargaAlmacenTemplate
-       Pagina 3: HojaCargaClienteTemplate
+HOJA 1: PEDIDO (igual que la del cliente)
+  → Remisión comercial con precios, totales, impuestos
+  → Para control de oficinas (se junta con las demás al final)
+
+HOJA 2: ORIGINAL (Hoja de Carga con QR)
+  → Dice "ORIGINAL" visible
+  → Con código QR para escanear en tablet de almacén
+  → Sin precios (solo cantidades y productos)
+  → Con espacios para firmas (Entregó/Recibió)
+  → Con espacio para observaciones (devoluciones/faltantes)
+  → El chofer la lleva, el cliente la firma, el chofer la trae de vuelta
+
+HOJA 3: CLIENTE (Hoja de Carga sin QR)
+  → Dice "CLIENTE" visible
+  → Misma info que ORIGINAL pero sin QR
+  → Sin precios
+  → Se la queda el cliente
+
+HOJA 4: ALMACÉN (Hoja de Carga sin QR)
+  → Dice "ALMACÉN" visible
+  → Misma info que ORIGINAL pero sin QR
+  → Sin precios
+  → Se queda en almacén para emparejar con la ORIGINAL firmada al día siguiente
 ```
 
-### 3. Datos adicionales necesarios
+## Flujo operativo
 
-- Para `HojaCargaAlmacenTemplate`: necesita `pedidoId`, `productos[].unidad` -- ambos disponibles
-- Para `HojaCargaClienteTemplate`: necesita `productos[].unidad` -- disponible en `l.producto.unidad`
+```text
+Creación del pedido:
+  → Email cliente: 1 PDF (Hoja 1 sola, sin QR)
+  → Email pedidos@almasa.com.mx: 1 PDF de 4 hojas
 
-### Archivos a modificar
+Día de entrega:
+  → Secretaria imprime las 4 hojas
+  → Chofer lleva: ORIGINAL + CLIENTE
+  → Se queda en almacén: ALMACÉN
+  → Se queda en oficina: PEDIDO (Hoja 4/control)
 
-| Archivo | Cambio |
+Regreso del chofer:
+  → Trae la ORIGINAL firmada con observaciones
+  → Almacenista empareja ORIGINAL + ALMACÉN
+  → Oficinas juntan: ORIGINAL + ALMACÉN + PEDIDO (control)
+
+Si hay devolución/faltante:
+  → Secretaria busca pedido, modifica cantidades
+  → Se reimprime, se junta con ORIGINAL firmada
+  → Cambios se reflejan en pedido original para cobro correcto
+```
+
+## Cambios Técnicos
+
+### 1. Crear nueva plantilla: `HojaCargaUnificadaTemplate`
+
+Una sola plantilla reutilizable con props para controlar variante:
+- `variante`: `"ORIGINAL"` | `"CLIENTE"` | `"ALMACÉN"`
+- `showQR`: solo true para ORIGINAL
+- Sin precios en ninguna variante
+- Con espacios para firmas (Entregó/Recibió) y observaciones
+- Logo Almasa, nombre cliente, dirección entrega, cantidades, productos
+
+### 2. Modificar `generatePdfFromTemplate` en `VendedorNuevoPedidoTab.tsx`
+
+El PDF interno pasa de 3 a 4 páginas:
+- Página 1: `PedidoPrintTemplate` (remisión con precios, igual que la del cliente)
+- Página 2: `HojaCargaUnificadaTemplate` variante ORIGINAL (con QR)
+- Página 3: `HojaCargaUnificadaTemplate` variante CLIENTE (sin QR)
+- Página 4: `HojaCargaUnificadaTemplate` variante ALMACÉN (sin QR)
+
+### 3. Eliminar templates redundantes
+
+`HojaCargaAlmacenTemplate` y `HojaCargaClienteTemplate` se reemplazan por la nueva `HojaCargaUnificadaTemplate`.
+
+### 4. Modificar email interno
+
+Actualizar el cuerpo del email en la Edge Function `enviar-pedido-interno` para incluir la frase: *"Favor de imprimir PDF para su entrega"*.
+
+### 5. La modificación de pedidos por secretarias/almacén
+
+Esto **ya existe** en el sistema: las secretarias pueden editar pedidos en estado `pendiente` o `por_autorizar`, y los cambios se sincronizan al pedido original. La reimpresión de hojas de carga actualizadas también ya está implementada en el flujo de carga.
+
+### Archivos a crear/modificar
+
+| Archivo | Acción |
 |---------|--------|
-| `src/components/vendedor/VendedorNuevoPedidoTab.tsx` | Modificar `generatePdfFromTemplate` para renderizar 3 plantillas y combinarlas en PDF de 3 paginas cuando es el PDF interno |
+| `src/components/pedidos/HojaCargaUnificadaTemplate.tsx` | **Crear** — plantilla unificada con variantes ORIGINAL/CLIENTE/ALMACÉN |
+| `src/components/vendedor/VendedorNuevoPedidoTab.tsx` | **Modificar** — PDF interno de 3→4 páginas usando nueva plantilla |
+| `supabase/functions/enviar-pedido-interno/index.ts` | **Modificar** — agregar frase "favor de imprimir PDF para su entrega" |
+| `src/components/pedidos/HojaCargaAlmacenTemplate.tsx` | **Eliminar** (reemplazada) |
+| `src/components/pedidos/HojaCargaClienteTemplate.tsx` | **Eliminar** (reemplazada) |
 
-### Resultado
-
-El email a `pedidos@almasa.com.mx` incluira un PDF de 3 paginas listo para imprimir: la remision para oficina, la hoja de carga para almacen, y la hoja de entrega para el cliente.
