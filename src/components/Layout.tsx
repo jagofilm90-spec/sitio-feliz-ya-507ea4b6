@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useState, useMemo } from "react";
 import { useNavigate, Link, useLocation, Navigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +64,7 @@ const Layout = ({ children }: LayoutProps) => {
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [emailMenuOpen, setEmailMenuOpen] = useState(false);
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -96,6 +98,11 @@ const Layout = ({ children }: LayoutProps) => {
         navigate("/auth");
       } else if (session) {
         setUser(session.user);
+        // Cuando el token se refresca, invalidar todas las queries para recargar datos
+        if (event === "TOKEN_REFRESHED") {
+          console.log("[Layout] Token refreshed — invalidating all queries");
+          queryClient.invalidateQueries();
+        }
       }
       // No redirigir en TOKEN_REFRESHED, INITIAL_SESSION, etc.
     });
