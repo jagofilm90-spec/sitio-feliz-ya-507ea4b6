@@ -1,25 +1,35 @@
 
 
-# Plan: Fix Folio Search and Remove Auto-Navigate on QR Scan
+# Plan: Rediseño Compacto de Hoja de Carga
 
-## Issues
+## Problema
 
-1. **Folio partial match**: The input hardcodes prefix `PED-V-` and only accepts numbers. When searching, it does an exact match (`eq("folio", ...)`). If the user types only the last 4 digits, it fails. Need to support partial/suffix matching using `ilike`.
+La hoja de carga actual ocupa demasiado espacio vertical: siempre muestra 6 filas de productos (vacías si hay pocos), secciones con padding excesivo, y observaciones con 3 líneas fijas. Para un pedido de 1 producto se ve vacía y poco profesional.
 
-2. **Auto-navigate to loading sheet**: Lines 99-107 have a `useEffect` that auto-proceeds to create the route and go to "hoja_carga" after 800ms when exactly 1 pedido is scanned. This must be removed so the user can scan multiple pedidos before choosing to proceed.
+## Cambios en `HojaCargaUnificadaTemplate.tsx`
 
-## Changes (single file)
+### Header compacto
+- Combinar el header y la barra de variante en una sola franja: logo a la izquierda, "HOJA DE CARGA" centrado, QR a la derecha, y la banda de color de variante como borde inferior en lugar de bloque separado.
 
-**`src/components/almacen/CargaRutaInlineFlow.tsx`**
+### Info del pedido en línea
+- Fusionar folio, cliente, peso total y dirección en un solo bloque de 2 filas con grid, eliminando la sección separada de dirección.
 
-### Fix 1: Remove auto-proceed effect
-- Delete the `useEffect` at lines 99-107 that calls `handleCrearRutaYCargar()` when `cola.length === 1`
+### Tabla de productos adaptativa
+- Eliminar las filas vacías de relleno fijo. En su lugar, mostrar solo las filas reales.
+- Agregar un mínimo de 2 filas vacías (en vez de 6) solo si hay menos de 3 productos, para que haya espacio para anotaciones manuales.
+- Reducir padding de celdas de `p-1.5` a `py-1 px-2`.
 
-### Fix 2: Support partial folio matching
-- Change the manual input search logic (lines 165-187) to use `ilike` with suffix matching when the input is just digits (e.g., `%1234` matches `PED-V-1234`)
-- Also remove the hardcoded `PED-V-` prefix from the input UI (lines 571, 583, 587) — instead accept any text and try matching flexibly
-- When multiple results match, show an error asking for more digits
+### Observaciones y firmas más compactas
+- Reducir observaciones de 3 líneas a 2.
+- Reducir altura de firma de `h-12` a `h-8`.
 
-### Fix 3: Update button label
-- The "Empezar a Cargar" button (line 643-650) text is fine as-is — it already says "Empezar a Cargar (N pedidos)" which serves as the "ir a carga" action
+### Resultado
+- Un pedido de 1 producto ocupará aproximadamente la mitad de la hoja, luciendo limpio y proporcional.
+- Pedidos con muchos productos seguirán funcionando igual, simplemente la tabla crece de forma natural.
+
+## Archivo a modificar
+
+| Archivo | Cambio |
+|---------|--------|
+| `src/components/pedidos/HojaCargaUnificadaTemplate.tsx` | Rediseño compacto del layout completo |
 
