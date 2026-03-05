@@ -157,7 +157,7 @@ export const HojaCargaUnificadaTemplate = ({ datos, variante }: Props) => {
       </div>
 
       {/* Pagaré - solo variante CLIENTE */}
-      {variante === "CLIENTE" && datos.total && (
+      {(variante === "CLIENTE" || variante === "ORIGINAL") && datos.total && (
         <div className="border-2 border-gray-400 p-2 text-[9px] leading-tight mt-2">
           <p className="text-center font-bold mb-1 text-[10px]">PAGARÉ</p>
           <p className="text-justify">
