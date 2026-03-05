@@ -14,6 +14,12 @@ type NotificationType =
   | "pedido_conciliado_ajustado"
   | "vencimiento_proximo";
 
+interface ModificacionProducto {
+  producto: string;
+  cantidadOriginal: number;
+  cantidadNueva: number;
+}
+
 interface NotificationRequest {
   clienteId: string;
   tipo: NotificationType;
@@ -30,6 +36,9 @@ interface NotificationRequest {
     fechaEntrega?: string;
     diasCredito?: string;
     mensaje?: string;
+    modificaciones?: ModificacionProducto[];
+    totalAnterior?: number;
+    totalNuevo?: number;
   };
   pdfBase64?: string;
   pdfFilename?: string;
@@ -207,9 +216,53 @@ function generateEmailContent(tipo: NotificationType, data: NotificationRequest[
         `),
       };
 
-    case "en_ruta":
+    case "en_ruta": {
+      const hasModificaciones = data.modificaciones && data.modificaciones.length > 0;
+      const formatMoney = (n?: number) => n ? `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2 })}` : "";
+
+      let modificacionesHtml = "";
+      if (hasModificaciones) {
+        const rows = data.modificaciones!.map(m =>
+          `<tr>
+            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#333;">${m.producto}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#333;text-align:center;">${m.cantidadOriginal}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#333;text-align:center;font-weight:600;">${m.cantidadNueva}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;color:${m.cantidadNueva < m.cantidadOriginal ? '#dc2626' : '#16a34a'};text-align:center;font-weight:600;">${m.cantidadNueva - m.cantidadOriginal}</td>
+          </tr>`
+        ).join("");
+
+        modificacionesHtml = `
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fef9c3;border-radius:8px;border-left:4px solid #eab308;margin:0 0 16px;">
+            <tr><td style="padding:14px 16px;">
+              <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#92400e;">⚠️ Ajustes en su pedido</p>
+              <p style="margin:0;font-size:13px;color:#78350f;">Durante la preparación se realizaron los siguientes cambios:</p>
+            </td></tr>
+          </table>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e5e7eb;border-radius:8px;margin:0 0 16px;overflow:hidden;">
+            <thead>
+              <tr style="background:#f3f4f6;">
+                <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#374151;border-bottom:2px solid #d1d5db;">Producto</th>
+                <th style="padding:10px 12px;text-align:center;font-size:12px;font-weight:600;color:#374151;border-bottom:2px solid #d1d5db;">Original</th>
+                <th style="padding:10px 12px;text-align:center;font-size:12px;font-weight:600;color:#374151;border-bottom:2px solid #d1d5db;">Enviado</th>
+                <th style="padding:10px 12px;text-align:center;font-size:12px;font-weight:600;color:#374151;border-bottom:2px solid #d1d5db;">Dif.</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+          ${data.totalAnterior && data.totalNuevo ? `
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0f9ff;border-radius:8px;border-left:4px solid #3b82f6;margin:0 0 16px;">
+            <tr><td style="padding:14px 16px;">
+              <p style="margin:0 0 4px;font-size:13px;color:#555;"><strong>Total anterior:</strong> <span style="text-decoration:line-through;">${formatMoney(data.totalAnterior)}</span></p>
+              <p style="margin:0;font-size:15px;color:#1e40af;font-weight:700;"><strong>Nuevo total:</strong> ${formatMoney(data.totalNuevo)}</p>
+            </td></tr>
+          </table>` : ""}
+        `;
+      }
+
       return {
-        subject: `🚚 Pedido ${data.pedidoFolio} en camino — ALMASA`,
+        subject: hasModificaciones
+          ? `🚚 Pedido ${data.pedidoFolio} en camino (con ajustes) — ALMASA`
+          : `🚚 Pedido ${data.pedidoFolio} en camino — ALMASA`,
         html: wrapEmailTemplate("🚚 ¡Su Pedido Está en Camino!", `
           <p style="font-size:15px;color:#333;margin:0 0 16px;">Estimado/a <strong>${clienteNombre}</strong>,</p>
           <p style="font-size:14px;color:#555;margin:0 0 20px;">¡Buenas noticias! Su pedido ya salió de nuestro almacén y va en camino hacia usted.</p>
@@ -220,10 +273,12 @@ function generateEmailContent(tipo: NotificationType, data: NotificationRequest[
               ${data.horaEstimada ? `<p style="margin:0;font-size:14px;"><strong>Hora estimada:</strong> ${data.horaEstimada}</p>` : ''}
             </td></tr>
           </table>
+          ${modificacionesHtml}
           <p style="font-size:14px;color:#555;margin:0 0 8px;">Por favor asegúrese de tener a alguien disponible para recibir el pedido.</p>
           <p style="font-size:14px;color:#555;margin:0;">¡Gracias por su preferencia!</p>
         `),
       };
+    }
 
     case "entregado":
       return {
@@ -393,8 +448,21 @@ function generateWhatsAppPlainMessage(tipo: NotificationType, data: Notification
   switch (tipo) {
     case "pedido_confirmado":
       return `${saludo},\n\n✅ Su pedido *${data.pedidoFolio}* ha sido confirmado y está siendo preparado.${data.total ? `\nTotal: ${formatMoney(data.total)}` : ""}\n\nLe notificaremos cuando esté en camino.${firma}`;
-    case "en_ruta":
-      return `${saludo},\n\n🚚 ¡Su pedido *${data.pedidoFolio}* va en camino!${data.choferNombre ? `\nChofer: ${data.choferNombre}` : ""}${data.horaEstimada ? `\nHora estimada: ${data.horaEstimada}` : ""}\n\nPor favor tenga a alguien disponible para recibirlo.${firma}`;
+    case "en_ruta": {
+      let msg = `${saludo},\n\n🚚 ¡Su pedido *${data.pedidoFolio}* va en camino!${data.choferNombre ? `\nChofer: ${data.choferNombre}` : ""}${data.horaEstimada ? `\nHora estimada: ${data.horaEstimada}` : ""}`;
+      if (data.modificaciones && data.modificaciones.length > 0) {
+        msg += `\n\n⚠️ *Ajustes en su pedido:*`;
+        for (const m of data.modificaciones) {
+          const diff = m.cantidadNueva - m.cantidadOriginal;
+          msg += `\n• ${m.producto}: ${m.cantidadOriginal} → ${m.cantidadNueva} (${diff > 0 ? "+" : ""}${diff})`;
+        }
+        if (data.totalAnterior && data.totalNuevo) {
+          msg += `\n\nTotal anterior: ~${formatMoney(data.totalAnterior)}~\n*Nuevo total: ${formatMoney(data.totalNuevo)}*`;
+        }
+      }
+      msg += `\n\nPor favor tenga a alguien disponible para recibirlo.${firma}`;
+      return msg;
+    }
     case "entregado":
       return `${saludo},\n\n✓ Su pedido *${data.pedidoFolio}* ha sido entregado.${data.nombreReceptor ? `\nRecibió: ${data.nombreReceptor}` : ""}${data.horaEntrega ? `\nHora: ${data.horaEntrega}` : ""}${banco}${firma}`;
     case "pedido_conciliado":

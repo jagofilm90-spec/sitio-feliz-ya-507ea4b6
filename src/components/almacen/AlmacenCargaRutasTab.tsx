@@ -366,9 +366,21 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
   };
 
   // Sync loaded quantities from carga_productos → pedidos_detalles and recalculate totals
-  const syncCargaToPedidos = async (ruta: Ruta) => {
+  // Returns a map of pedidoId → { modificaciones, totalAnterior, totalNuevo }
+  const syncCargaToPedidos = async (ruta: Ruta): Promise<Record<string, { modificaciones: { producto: string; cantidadOriginal: number; cantidadNueva: number }[]; totalAnterior: number; totalNuevo: number }>> => {
+    const cambiosPorPedido: Record<string, { modificaciones: { producto: string; cantidadOriginal: number; cantidadNueva: number }[]; totalAnterior: number; totalNuevo: number }> = {};
+
     for (const entrega of ruta.entregas) {
       const pedidoId = entrega.pedido_id;
+      const modificaciones: { producto: string; cantidadOriginal: number; cantidadNueva: number }[] = [];
+
+      // Get current pedido total before sync
+      const { data: pedidoAnterior } = await supabase
+        .from("pedidos")
+        .select("total")
+        .eq("id", pedidoId)
+        .single();
+      const totalAnterior = pedidoAnterior?.total || 0;
 
       // Get all carga_productos for this entrega with their loaded quantities
       const { data: cargaItems } = await supabase
@@ -385,24 +397,31 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
         // Get current precio_unitario to recalculate subtotal
         const { data: detalle } = await supabase
           .from("pedidos_detalles")
-          .select("precio_unitario, cantidad, producto:productos(peso_kg, precio_por_kilo)")
+          .select("precio_unitario, cantidad, producto:productos(peso_kg, precio_por_kilo, nombre)")
           .eq("id", cp.pedido_detalle_id)
           .single();
 
         if (!detalle) continue;
 
-        // Only sync if quantity actually changed
-        if (detalle.cantidad === cp.cantidad_cargada) continue;
-
         const prod = detalle.producto as any;
-        const newSubtotal = prod?.precio_por_kilo && prod?.peso_kg
-          ? cp.cantidad_cargada * prod.peso_kg * detalle.precio_unitario
-          : cp.cantidad_cargada * detalle.precio_unitario;
 
-        await supabase.from("pedidos_detalles").update({
-          cantidad: cp.cantidad_cargada,
-          subtotal: newSubtotal,
-        }).eq("id", cp.pedido_detalle_id);
+        // Track modification if quantity changed
+        if (detalle.cantidad !== cp.cantidad_cargada) {
+          modificaciones.push({
+            producto: prod?.nombre || "Producto",
+            cantidadOriginal: detalle.cantidad,
+            cantidadNueva: cp.cantidad_cargada,
+          });
+
+          const newSubtotal = prod?.precio_por_kilo && prod?.peso_kg
+            ? cp.cantidad_cargada * prod.peso_kg * detalle.precio_unitario
+            : cp.cantidad_cargada * detalle.precio_unitario;
+
+          await supabase.from("pedidos_detalles").update({
+            cantidad: cp.cantidad_cargada,
+            subtotal: newSubtotal,
+          }).eq("id", cp.pedido_detalle_id);
+        }
       }
 
       // Recalculate pedido totals
@@ -418,15 +437,26 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
           total: newTotal,
           updated_at: new Date().toISOString(),
         }).eq("id", pedidoId);
+
+        // Store changes if any modifications were detected
+        if (modificaciones.length > 0) {
+          cambiosPorPedido[pedidoId] = {
+            modificaciones,
+            totalAnterior,
+            totalNuevo: newTotal,
+          };
+        }
       }
     }
+
+    return cambiosPorPedido;
   };
 
   const handleEnviarARuta = async (ruta: Ruta) => {
     setSendingRutaId(ruta.id);
     try {
-      // Sync loaded quantities to pedidos_detalles before dispatching
-      await syncCargaToPedidos(ruta);
+      // Sync loaded quantities to pedidos_detalles before dispatching and detect changes
+      const cambiosPorPedido = await syncCargaToPedidos(ruta);
 
       // Update route status to en_curso
       await supabase.from("rutas").update({
@@ -451,6 +481,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
 
         if (pedido) {
           try {
+            const cambios = cambiosPorPedido[pedidoId];
             await supabase.functions.invoke("send-client-notification", {
               body: {
                 clienteId: pedido.cliente_id,
@@ -458,6 +489,11 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
                 data: {
                   pedidoFolio: pedido.folio,
                   choferNombre: ruta.chofer?.nombre_completo || "Chofer",
+                  ...(cambios ? {
+                    modificaciones: cambios.modificaciones,
+                    totalAnterior: cambios.totalAnterior,
+                    totalNuevo: cambios.totalNuevo,
+                  } : {}),
                 },
               },
             });
