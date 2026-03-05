@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { format, differenceInMinutes, differenceInSeconds, parseISO, set } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { recalcularTotalesPedido } from "@/lib/recalcularTotalesPedido";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -424,28 +425,21 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
         }
       }
 
-      // Recalculate pedido totals
-      const { data: allDetalles } = await supabase
-        .from("pedidos_detalles")
-        .select("subtotal")
-        .eq("pedido_id", pedidoId);
+      // Recalculate pedido totals with proper tax breakdown
+      const { data: { user } } = await supabase.auth.getUser();
+      const result = await recalcularTotalesPedido(pedidoId, modificaciones.length > 0 ? {
+        tipoCambio: "almacen_carga",
+        cambiosJson: { modificaciones },
+        totalAnterior,
+        usuarioId: user?.id,
+      } : undefined);
 
-      if (allDetalles) {
-        const newTotal = allDetalles.reduce((s, d) => s + (d.subtotal || 0), 0);
-        await supabase.from("pedidos").update({
-          subtotal: newTotal,
-          total: newTotal,
-          updated_at: new Date().toISOString(),
-        }).eq("id", pedidoId);
-
-        // Store changes if any modifications were detected
-        if (modificaciones.length > 0) {
-          cambiosPorPedido[pedidoId] = {
-            modificaciones,
-            totalAnterior,
-            totalNuevo: newTotal,
-          };
-        }
+      if (modificaciones.length > 0) {
+        cambiosPorPedido[pedidoId] = {
+          modificaciones,
+          totalAnterior,
+          totalNuevo: result.total,
+        };
       }
     }
 

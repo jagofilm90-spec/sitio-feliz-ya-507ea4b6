@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { CameraQrScanner } from "@/components/almacen/CameraQrScanner";
 import { CargaHojaInteractiva } from "@/components/almacen/CargaHojaInteractiva";
 import { supabase } from "@/integrations/supabase/client";
+import { recalcularTotalesPedido } from "@/lib/recalcularTotalesPedido";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -399,23 +400,17 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
             }
           }
 
-          // Recalculate pedido totals
-          const { data: allDetalles } = await supabase
-            .from("pedidos_detalles")
-            .select("subtotal")
-            .eq("pedido_id", pedidoId);
+          // Recalculate pedido totals with proper tax breakdown
+          const { data: { user } } = await supabase.auth.getUser();
+          const result = await recalcularTotalesPedido(pedidoId, modificaciones.length > 0 ? {
+            tipoCambio: "almacen_carga",
+            cambiosJson: { modificaciones },
+            totalAnterior,
+            usuarioId: user?.id,
+          } : undefined);
 
-          if (allDetalles) {
-            const newTotal = allDetalles.reduce((s, d) => s + (d.subtotal || 0), 0);
-            await supabase.from("pedidos").update({
-              subtotal: newTotal,
-              total: newTotal,
-              updated_at: new Date().toISOString(),
-            }).eq("id", pedidoId);
-
-            if (modificaciones.length > 0) {
-              cambiosPorPedido[pedidoId] = { modificaciones, totalAnterior, totalNuevo: newTotal };
-            }
+          if (modificaciones.length > 0) {
+            cambiosPorPedido[pedidoId] = { modificaciones, totalAnterior, totalNuevo: result.total };
           }
         }
       }
