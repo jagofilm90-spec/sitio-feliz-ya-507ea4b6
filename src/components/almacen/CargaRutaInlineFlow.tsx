@@ -96,15 +96,6 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
     }
   }, [paso]);
 
-  // Auto-proceed when exactly 1 pedido is scanned (single-order shortcut)
-  useEffect(() => {
-    if (paso === "escaneo" && cola.length === 1 && !creatingRoute) {
-      autoStartRef.current = setTimeout(() => {
-        handleCrearRutaYCargar();
-      }, 800);
-    }
-    return () => { if (autoStartRef.current) clearTimeout(autoStartRef.current); };
-  }, [cola.length, paso]);
 
   const formatTiempo = (s: number) => {
     const m = Math.floor(s / 60);
@@ -172,6 +163,19 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
       const { data } = await supabase.from("pedidos").select("id").eq("folio", folioMatch[1].toUpperCase()).maybeSingle();
       if (data) id = data.id;
       else { toast.error(`Pedido ${folioMatch[1].toUpperCase()} no encontrado`); return; }
+    }
+    // Partial match: if input is just digits, search as suffix (e.g. "1234" matches "PED-V-1234")
+    if (!id && /^\d+$/.test(input.trim())) {
+      const { data } = await supabase.from("pedidos").select("id, folio").ilike("folio", `%${input.trim()}`).eq("status", "pendiente" as any).limit(5);
+      if (data && data.length === 1) {
+        id = data[0].id;
+      } else if (data && data.length > 1) {
+        toast.error(`Varios pedidos coinciden (${data.map(d => d.folio).join(", ")}). Escribe más dígitos.`);
+        return;
+      } else {
+        toast.error(`No se encontró pedido terminado en ${input.trim()}`);
+        return;
+      }
     }
     if (!id && input.toUpperCase().startsWith("PED")) {
       const { data } = await supabase.from("pedidos").select("id").eq("folio", input.toUpperCase().trim()).maybeSingle();
@@ -568,23 +572,21 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
             <Camera className="h-5 w-5" />
           </Button>
           <div className="flex-1 flex items-center h-12 border rounded-md bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-            <span className="pl-3 text-base font-semibold text-muted-foreground select-none whitespace-nowrap">PED-V-</span>
             <input
               type="text"
-              inputMode="numeric"
-              placeholder="número..."
+              placeholder="Folio o últimos dígitos..."
               value={scanInput}
-              onChange={e => setScanInput(e.target.value.replace(/[^0-9]/g, ""))}
+              onChange={e => setScanInput(e.target.value)}
               onKeyDown={e => {
                 if (e.key === "Enter" && scanInput.trim()) {
-                  processScanInput(`PED-V-${scanInput.trim()}`);
+                  processScanInput(scanInput.trim());
                   setScanInput("");
                 }
               }}
-              className="flex-1 h-full bg-transparent text-base font-semibold outline-none px-1"
+              className="flex-1 h-full bg-transparent text-base font-semibold outline-none px-3"
             />
           </div>
-          <Button onClick={() => { if (scanInput.trim()) { processScanInput(`PED-V-${scanInput.trim()}`); setScanInput(""); } }} size="lg" className="h-12 px-4"
+          <Button onClick={() => { if (scanInput.trim()) { processScanInput(scanInput.trim()); setScanInput(""); } }} size="lg" className="h-12 px-4"
             disabled={!scanInput.trim()}>
             <QrCode className="h-5 w-5 mr-1" />Agregar
           </Button>
