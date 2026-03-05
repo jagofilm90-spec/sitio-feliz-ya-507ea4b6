@@ -54,32 +54,36 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false }: PedidoPrintTempla
   return (
     <div className="p-6 bg-white text-black min-h-[11in] w-[8.5in] mx-auto font-sans text-[11px] print:p-4 flex flex-col">
       {/* ═══════ HEADER ═══════ */}
-      <div className="text-center border-b-2 border-black pb-2 mb-3">
-        <div className="flex items-center justify-center gap-3 mb-1">
-          <img src="/logo-almasa-header.png" alt="ALMASA" className="h-10 w-auto object-contain" />
-          <h1 className="text-xl font-black uppercase tracking-tight">{COMPANY_DATA.razonSocial}</h1>
+      <div className="flex items-center justify-between border-b-2 border-black pb-2 mb-3">
+        <img src="/logo-almasa-header.png" alt="ALMASA" className="h-12 w-auto object-contain flex-shrink-0" />
+        <div className="text-center flex-1 px-3">
+          <h1 className="text-base font-black uppercase tracking-tight leading-tight">{COMPANY_DATA.razonSocial}</h1>
+          <p className="text-[8px] text-gray-600 mt-0.5">
+            RFC: {COMPANY_DATA.rfc} | Tel: {COMPANY_DATA.telefonosFormateados}
+          </p>
+          <p className="text-[8px] text-gray-600">{COMPANY_DATA.direccionCompletaMayusculas}</p>
         </div>
-        <p className="text-[9px] text-gray-600">
-          RFC: {COMPANY_DATA.rfc} | Tel: {COMPANY_DATA.telefonosFormateados}
-        </p>
-        <p className="text-[9px] text-gray-600">{COMPANY_DATA.direccionCompletaMayusculas}</p>
+        <div className="text-right flex-shrink-0">
+          <p className="text-[10px] font-bold uppercase text-gray-500">Pedido / Remisión</p>
+          <p className="text-lg font-black leading-tight">{datos.folio}</p>
+        </div>
       </div>
 
       {/* ═══════ DATOS CLIENTE (protagonista) ═══════ */}
       <div className="border border-gray-400 rounded mb-2">
         <div className="grid grid-cols-[1fr_auto] gap-0">
-          {/* Fila 1: Nombre + Folio */}
-          <div className="border-b border-r border-gray-300 px-2 py-1.5">
-            <span className="text-[9px] font-bold text-gray-500 uppercase">Nombre:</span>
+          {/* Fila 1: Nombre + Fecha */}
+          <div className="border-b border-r border-gray-300 px-2 py-1">
+            <span className="text-[9px] font-bold text-gray-500 uppercase">Cliente:</span>
             <span className="ml-1 font-bold text-sm">{datos.cliente.nombre}</span>
           </div>
-          <div className="border-b border-gray-300 px-2 py-1.5 text-center min-w-[100px]">
-            <span className="text-[9px] font-bold text-gray-500 uppercase">Folio:</span>
-            <span className="ml-1 font-bold text-sm">{datos.folio}</span>
+          <div className="border-b border-gray-300 px-2 py-1 text-center min-w-[100px]">
+            <span className="text-[9px] font-bold text-gray-500 uppercase">Fecha:</span>
+            <span className="ml-1 text-[10px]">{fechaFormateada}</span>
           </div>
 
-          {/* Fila 2: Domicilio + Fecha */}
-          <div className="border-b border-r border-gray-300 px-2 py-1.5">
+          {/* Fila 2: Domicilio + Vendedor */}
+          <div className="border-b border-r border-gray-300 px-2 py-1">
             <span className="text-[9px] font-bold text-gray-500 uppercase">Domicilio:</span>
             <span className="ml-1 text-[10px]">
               {datos.sucursal ? (
@@ -87,13 +91,13 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false }: PedidoPrintTempla
               ) : direccionEntrega || <span className="italic text-gray-400">Misma dirección fiscal</span>}
             </span>
           </div>
-          <div className="border-b border-gray-300 px-2 py-1.5 text-center">
-            <span className="text-[9px] font-bold text-gray-500 uppercase">Fecha:</span>
-            <span className="ml-1 text-[10px]">{fechaFormateada}</span>
+          <div className="border-b border-gray-300 px-2 py-1 text-center">
+            <span className="text-[9px] font-bold text-gray-500 uppercase">Vendedor:</span>
+            <span className="ml-1 font-bold text-[10px]">{datos.vendedor}</span>
           </div>
 
-          {/* Fila 3: RFC / Razón Social + Vendedor + Crédito */}
-          <div className="border-r border-gray-300 px-2 py-1.5">
+          {/* Fila 3: RFC / Razón Social / Tel */}
+          <div className="border-r border-gray-300 px-2 py-1" style={{ gridColumn: "1 / -1" }}>
             {datos.cliente.rfc && (
               <span className="text-[10px]"><span className="font-bold text-gray-500 text-[9px] uppercase">RFC:</span> {datos.cliente.rfc}</span>
             )}
@@ -103,10 +107,6 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false }: PedidoPrintTempla
             {datos.cliente.telefono && (
               <span className="text-[10px] ml-3"><span className="font-bold text-gray-500 text-[9px] uppercase">Tel:</span> {datos.cliente.telefono}</span>
             )}
-          </div>
-          <div className="px-2 py-1.5 text-center">
-            <span className="text-[9px] font-bold text-gray-500 uppercase">Vendedor:</span>
-            <p className="font-bold text-[10px] mt-0.5">{datos.vendedor}</p>
           </div>
         </div>
       </div>
@@ -152,7 +152,7 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false }: PedidoPrintTempla
             </tr>
           ))}
           {/* Filas vacías para mínimo visual */}
-          {Array.from({ length: Math.max(0, 6 - datos.productos.length) }).map((_, i) => (
+          {Array.from({ length: Math.max(0, 2 - datos.productos.length) }).map((_, i) => (
             <tr key={`e-${i}`}>
               <td className="p-1 border border-gray-300">&nbsp;</td>
               <td className="p-1 border border-gray-300" />
