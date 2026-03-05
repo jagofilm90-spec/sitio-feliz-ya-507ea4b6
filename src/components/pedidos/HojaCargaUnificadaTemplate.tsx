@@ -103,7 +103,6 @@ export const HojaCargaUnificadaTemplate = ({ datos, variante }: Props) => {
       <table className="w-full mb-3 border-collapse flex-grow">
         <thead>
           <tr className="bg-gray-800 text-white text-[10px]">
-            <th className="p-1.5 text-center w-10 border border-gray-700">✓</th>
             <th className="p-1.5 text-center w-16 border border-gray-700">CANT.</th>
             <th className="p-1.5 text-left border border-gray-700">PRODUCTO</th>
             <th className="p-1.5 text-center w-16 border border-gray-700">UNIDAD</th>
@@ -113,9 +112,6 @@ export const HojaCargaUnificadaTemplate = ({ datos, variante }: Props) => {
         <tbody>
           {datos.productos.map((prod, i) => (
             <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-              <td className="p-1.5 border border-gray-300 text-center">
-                <div className="w-5 h-5 border-2 border-gray-400 rounded mx-auto" />
-              </td>
               <td className="p-1.5 border border-gray-300 text-center font-bold text-sm">{prod.cantidad}</td>
               <td className="p-1.5 border border-gray-300 text-[10px]">{prod.descripcion}</td>
               <td className="p-1.5 border border-gray-300 text-center text-[10px]">{prod.unidad}</td>
@@ -128,7 +124,6 @@ export const HojaCargaUnificadaTemplate = ({ datos, variante }: Props) => {
           {Array.from({ length: Math.max(0, 6 - datos.productos.length) }).map((_, i) => (
             <tr key={`e-${i}`}>
               <td className="p-1.5 border border-gray-300">&nbsp;</td>
-              <td className="p-1.5 border border-gray-300" />
               <td className="p-1.5 border border-gray-300" />
               <td className="p-1.5 border border-gray-300" />
               <td className="p-1.5 border border-gray-300" />
