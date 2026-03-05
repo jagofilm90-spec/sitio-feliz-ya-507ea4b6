@@ -12,6 +12,7 @@ import ClienteNuevoPedido from "@/components/cliente/ClienteNuevoPedido";
 import ClienteEntregas from "@/components/cliente/ClienteEntregas";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { COMPANY_DATA } from "@/constants/companyData";
 
 interface VendedorInfo {
   full_name: string;
@@ -225,6 +226,7 @@ const PortalCliente = () => {
                     </span>
                   )}
                 </div>
+                <p className="text-xs italic text-muted-foreground/70 mt-0.5">"{COMPANY_DATA.slogan}"</p>
               </div>
             </div>
             <div className="flex items-center gap-4">

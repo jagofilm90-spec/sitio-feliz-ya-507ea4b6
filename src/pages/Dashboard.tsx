@@ -18,6 +18,7 @@ import { CreditoExcedidoAlert } from "@/components/dashboard/CreditoExcedidoAler
 import { VendedoresResumen } from "@/components/dashboard/VendedoresResumen";
 import { EntregasHoyPanel } from "@/components/dashboard/EntregasHoyPanel";
 import { InventarioResumen } from "@/components/dashboard/InventarioResumen";
+import { COMPANY_DATA } from "@/constants/companyData";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -70,6 +71,7 @@ const Dashboard = () => {
         <div>
           <h1 className={`font-bold ${isMobile ? 'text-xl' : 'text-3xl'}`}>Dashboard Ejecutivo</h1>
           <p className="text-muted-foreground text-sm">Control total del negocio</p>
+          <p className="text-xs italic text-muted-foreground/70">"{COMPANY_DATA.slogan}"</p>
         </div>
 
         <NotificacionesSistema />

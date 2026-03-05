@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import logoAlmasa from "@/assets/logo-almasa.png";
+import { COMPANY_DATA } from "@/constants/companyData";
 
 const authSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
@@ -178,6 +179,7 @@ const Auth = () => {
           <img src={logoAlmasa} alt="ALMASA" className="h-16 mx-auto mb-4" />
           <p className="text-lg font-medium text-foreground">Abarrotes la Manita SA de CV</p>
           <p className="text-sm text-muted-foreground">Sistema de Gestión Empresarial</p>
+          <p className="text-xs italic text-muted-foreground mt-1">"{COMPANY_DATA.slogan}"</p>
         </div>
         <Card className="w-full">
           <CardHeader className="space-y-1">
