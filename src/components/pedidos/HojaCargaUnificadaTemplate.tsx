@@ -51,7 +51,10 @@ export const HojaCargaUnificadaTemplate = ({ datos, variante }: Props) => {
     <div className="p-5 bg-white text-black min-h-[11in] w-[8.5in] mx-auto font-sans text-[11px] print:p-4 flex flex-col">
       {/* Header + Variante combined */}
       <div className={`flex items-center justify-between pb-2 mb-2 border-b-[3px] ${colors.border}`}>
-        <img src="/logo-almasa-header.png" alt="ALMASA" className="h-9 w-auto object-contain" />
+        <div className="flex flex-col items-center">
+          <span className="text-[7px] font-bold tracking-[0.15em] text-gray-500 uppercase">DESDE 1904</span>
+          <img src="/logo-almasa-header.png" alt="ALMASA" className="h-9 w-auto object-contain" />
+        </div>
         <div className="text-center flex-1 px-2">
           <h1 className="text-base font-black uppercase tracking-tight leading-tight">HOJA DE CARGA</h1>
           <p className="text-[8px] text-gray-400">{COMPANY_DATA.razonSocial}</p>
@@ -94,7 +97,7 @@ export const HojaCargaUnificadaTemplate = ({ datos, variante }: Props) => {
       )}
 
       {/* Tabla de productos - adaptativa */}
-      <table className="w-full mb-2 border-collapse">
+      <table className="w-full mb-1 border-collapse">
         <thead>
           <tr className="bg-gray-800 text-white text-[9px]">
             <th className="py-1 px-2 text-center w-14 border border-gray-700">CANT.</th>
@@ -125,6 +128,10 @@ export const HojaCargaUnificadaTemplate = ({ datos, variante }: Props) => {
         </tbody>
       </table>
 
+      <p className="text-[8px] font-black text-center uppercase tracking-wide mb-2">
+        UNA VEZ RECIBIDA LA MERCANCÍA NO SE ADMITEN RECLAMACIONES NI CAMBIOS
+      </p>
+
       {/* Notas */}
       {datos.notas && (
         <div className="border border-gray-300 rounded px-2 py-1 mb-2 text-[10px]">
@@ -140,6 +147,13 @@ export const HojaCargaUnificadaTemplate = ({ datos, variante }: Props) => {
           <div className="border-b border-gray-300 h-4" />
           <div className="border-b border-gray-300 h-4" />
         </div>
+      </div>
+
+      {/* Aviso importante */}
+      <div className="border border-gray-400 rounded px-2 py-1.5 mb-2 text-center text-[9px]">
+        <p className="font-black uppercase text-[10px] mb-0.5">AVISO IMPORTANTE:</p>
+        <p className="font-semibold">FAVOR DE REVISAR QUE SU PEDIDO LLEGUE COMPLETO, SI TIENE ALGUNA DUDA O QUEJA</p>
+        <p className="font-semibold">FAVOR DE COMUNICARSE AL TELÉFONO <strong className="text-[11px]">{COMPANY_DATA.telefonos.principal}</strong></p>
       </div>
 
       {/* Firmas */}
@@ -186,7 +200,7 @@ export const HojaCargaUnificadaTemplate = ({ datos, variante }: Props) => {
       {/* Footer */}
       <div className="mt-2 border-t border-gray-200 pt-1 text-[7px] text-gray-300 text-center">
         <p>{COMPANY_DATA.razonSocial} — Hoja de Carga ({variante}) — {datos.folio}</p>
-        <p className="italic text-gray-400 mt-0.5">"{COMPANY_DATA.slogan}"</p>
+        <p className="font-bold text-gray-500 mt-0.5 tracking-wide text-[8px]">"{COMPANY_DATA.slogan.toUpperCase()}"</p>
       </div>
     </div>
   );
