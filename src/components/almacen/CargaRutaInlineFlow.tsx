@@ -343,12 +343,102 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
         }).eq("id", rutaId);
       }
 
+      // Sync carga → pedidos and detect modifications before notifying
+      const cambiosPorPedido: Record<string, { modificaciones: { producto: string; cantidadOriginal: number; cantidadNueva: number }[]; totalAnterior: number; totalNuevo: number }> = {};
+
+      if (rutaId) {
+        // Get entregas for this ruta
+        const { data: entregasRuta } = await supabase
+          .from("entregas")
+          .select("id, pedido_id")
+          .eq("ruta_id", rutaId);
+
+        for (const entrega of entregasRuta || []) {
+          const pedidoId = entrega.pedido_id;
+          const modificaciones: { producto: string; cantidadOriginal: number; cantidadNueva: number }[] = [];
+
+          const { data: pedidoAnterior } = await supabase
+            .from("pedidos")
+            .select("total")
+            .eq("id", pedidoId)
+            .single();
+          const totalAnterior = pedidoAnterior?.total || 0;
+
+          const { data: cargaItems } = await supabase
+            .from("carga_productos")
+            .select("pedido_detalle_id, cantidad_cargada, cargado")
+            .eq("entrega_id", entrega.id);
+
+          for (const cp of cargaItems || []) {
+            if (!cp.cargado || !cp.cantidad_cargada) continue;
+
+            const { data: detalle } = await supabase
+              .from("pedidos_detalles")
+              .select("precio_unitario, cantidad, producto:productos(peso_kg, precio_por_kilo, nombre)")
+              .eq("id", cp.pedido_detalle_id)
+              .single();
+
+            if (!detalle) continue;
+            const prod = detalle.producto as any;
+
+            if (detalle.cantidad !== cp.cantidad_cargada) {
+              modificaciones.push({
+                producto: prod?.nombre || "Producto",
+                cantidadOriginal: detalle.cantidad,
+                cantidadNueva: cp.cantidad_cargada,
+              });
+
+              const newSubtotal = prod?.precio_por_kilo && prod?.peso_kg
+                ? cp.cantidad_cargada * prod.peso_kg * detalle.precio_unitario
+                : cp.cantidad_cargada * detalle.precio_unitario;
+
+              await supabase.from("pedidos_detalles").update({
+                cantidad: cp.cantidad_cargada,
+                subtotal: newSubtotal,
+              }).eq("id", cp.pedido_detalle_id);
+            }
+          }
+
+          // Recalculate pedido totals
+          const { data: allDetalles } = await supabase
+            .from("pedidos_detalles")
+            .select("subtotal")
+            .eq("pedido_id", pedidoId);
+
+          if (allDetalles) {
+            const newTotal = allDetalles.reduce((s, d) => s + (d.subtotal || 0), 0);
+            await supabase.from("pedidos").update({
+              subtotal: newTotal,
+              total: newTotal,
+              updated_at: new Date().toISOString(),
+            }).eq("id", pedidoId);
+
+            if (modificaciones.length > 0) {
+              cambiosPorPedido[pedidoId] = { modificaciones, totalAnterior, totalNuevo: newTotal };
+            }
+          }
+        }
+      }
+
       const whatsappPendientes: { folio: string; clienteNombre: string; phones: string[]; message: string }[] = [];
       for (const item of cola) {
         await supabase.from("pedidos").update({ status: "en_ruta", updated_at: new Date().toISOString() }).eq("id", item.pedidoId);
         try {
+          const cambios = cambiosPorPedido[item.pedidoId];
           const { data: notifResponse } = await supabase.functions.invoke("send-client-notification", {
-            body: { clienteId: item.clienteId, tipo: "en_ruta", data: { pedidoFolio: item.folio, choferNombre: chofer?.nombre_completo || "Chofer" } },
+            body: {
+              clienteId: item.clienteId,
+              tipo: "en_ruta",
+              data: {
+                pedidoFolio: item.folio,
+                choferNombre: chofer?.nombre_completo || "Chofer",
+                ...(cambios ? {
+                  modificaciones: cambios.modificaciones,
+                  totalAnterior: cambios.totalAnterior,
+                  totalNuevo: cambios.totalNuevo,
+                } : {}),
+              },
+            },
           });
           if (notifResponse?.whatsapp?.pending && notifResponse.whatsapp.phones?.length) {
             whatsappPendientes.push({ folio: item.folio, clienteNombre: item.clienteNombre, phones: notifResponse.whatsapp.phones, message: notifResponse.whatsapp.message });
