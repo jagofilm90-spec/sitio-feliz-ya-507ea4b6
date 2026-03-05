@@ -1,34 +1,26 @@
 
 
-# Plan: Agregar Slogan en Login y Paneles por Rol
+# Plan: Agregar Pagaré a variante ORIGINAL
 
-## Ubicaciones donde agregar el slogan
+## Cambio
 
-| Página | Ubicación exacta | Estilo |
-|--------|------------------|--------|
-| **Auth.tsx** (Login) | Debajo de "Sistema de Gestión Empresarial" | Texto itálico pequeño, `text-muted-foreground` |
-| **ChoferPanel.tsx** | En el header, debajo de la fecha | Texto `text-xs opacity-70 italic` |
-| **AlmacenTablet.tsx** | En el header/sidebar del panel | Texto pequeño itálico |
-| **VendedorPanel.tsx** | Debajo de "Bienvenido, {nombre}" | Texto pequeño itálico |
-| **SecretariaPanel.tsx** | En el header del sidebar | Texto pequeño itálico |
-| **Dashboard.tsx** | En el header o bienvenida | Texto pequeño itálico |
-| **PortalCliente.tsx** | Debajo de "¡Bienvenido, {cliente}!" | Texto pequeño itálico |
+En `HojaCargaUnificadaTemplate.tsx`, línea 160, cambiar la condición del pagaré de:
 
-## Enfoque
+```tsx
+{variante === "CLIENTE" && datos.total && (
+```
 
-- Usar `COMPANY_DATA.slogan` del archivo centralizado en todos los casos (ya existe).
-- Mantener el slogan sutil y profesional: siempre en itálica, tamaño pequeño, con comillas.
-- No alterar la estructura de los layouts existentes, solo insertar una línea de texto adicional.
+a:
 
-## Archivos a modificar
+```tsx
+{(variante === "CLIENTE" || variante === "ORIGINAL") && datos.total && (
+```
+
+Esto hará que el pagaré aparezca en **ORIGINAL** (la que firma el cliente y regresa a oficinas) y **CLIENTE** (la que se queda el cliente). No aparecerá en ALMACÉN ni en PEDIDO.
+
+## Archivo a modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/pages/Auth.tsx` | Slogan debajo del subtítulo |
-| `src/pages/ChoferPanel.tsx` | Slogan en header |
-| `src/pages/AlmacenTablet.tsx` | Slogan en header |
-| `src/pages/VendedorPanel.tsx` | Slogan en header |
-| `src/pages/SecretariaPanel.tsx` | Slogan en header |
-| `src/pages/Dashboard.tsx` | Slogan en área de bienvenida |
-| `src/pages/PortalCliente.tsx` | Slogan en header |
+| `src/components/pedidos/HojaCargaUnificadaTemplate.tsx` | Ampliar condición del pagaré a incluir ORIGINAL |
 
