@@ -1,35 +1,30 @@
 
 
-# Plan: Rediseño Compacto de Hoja de Carga
+# Plan: Rediseño Profesional del Encabezado del Pedido (PedidoPrintTemplate)
 
-## Problema
+## Problemas detectados
 
-La hoja de carga actual ocupa demasiado espacio vertical: siempre muestra 6 filas de productos (vacías si hay pocos), secciones con padding excesivo, y observaciones con 3 líneas fijas. Para un pedido de 1 producto se ve vacía y poco profesional.
+1. El header usa `text-center` con `flex justify-center` pero el logo y el título no quedan visualmente balanceados — el logo queda pegado al texto.
+2. No hay título "PEDIDO / REMISIÓN" como documento, solo el nombre de la empresa.
+3. Las filas vacías de relleno (6 filas) hacen que pedidos pequeños se vean desproporcionados, igual que pasaba en la hoja de carga.
 
-## Cambios en `HojaCargaUnificadaTemplate.tsx`
+## Cambios en `PedidoPrintTemplate.tsx`
 
-### Header compacto
-- Combinar el header y la barra de variante en una sola franja: logo a la izquierda, "HOJA DE CARGA" centrado, QR a la derecha, y la banda de color de variante como borde inferior en lugar de bloque separado.
+### Header profesional
+- Layout de 3 columnas: logo a la izquierda (centrado verticalmente), datos de empresa al centro (razón social, RFC, teléfonos, dirección), y título "PEDIDO / REMISIÓN" a la derecha con el folio debajo.
+- Borde inferior limpio de 2px.
+- Logo con altura fija `h-12` para que se vea nítido y proporcionado.
 
-### Info del pedido en línea
-- Fusionar folio, cliente, peso total y dirección en un solo bloque de 2 filas con grid, eliminando la sección separada de dirección.
+### Mover folio al header
+- El folio pasa al header (esquina derecha) para darle prominencia y liberar espacio en la sección de datos del cliente.
+- La sección de cliente pierde la columna de folio, quedando más limpia a ancho completo.
 
-### Tabla de productos adaptativa
-- Eliminar las filas vacías de relleno fijo. En su lugar, mostrar solo las filas reales.
-- Agregar un mínimo de 2 filas vacías (en vez de 6) solo si hay menos de 3 productos, para que haya espacio para anotaciones manuales.
-- Reducir padding de celdas de `p-1.5` a `py-1 px-2`.
-
-### Observaciones y firmas más compactas
-- Reducir observaciones de 3 líneas a 2.
-- Reducir altura de firma de `h-12` a `h-8`.
-
-### Resultado
-- Un pedido de 1 producto ocupará aproximadamente la mitad de la hoja, luciendo limpio y proporcional.
-- Pedidos con muchos productos seguirán funcionando igual, simplemente la tabla crece de forma natural.
+### Tabla adaptativa
+- Reducir filas vacías de relleno de 6 a 2 (igual que se hizo en hoja de carga): `Math.max(0, 2 - datos.productos.length)`.
 
 ## Archivo a modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/components/pedidos/HojaCargaUnificadaTemplate.tsx` | Rediseño compacto del layout completo |
+| `src/components/pedidos/PedidoPrintTemplate.tsx` | Rediseño del header y tabla adaptativa |
 
