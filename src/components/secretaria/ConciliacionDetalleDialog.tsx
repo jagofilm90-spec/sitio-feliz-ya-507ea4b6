@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { recalcularTotalesPedido } from "@/lib/recalcularTotalesPedido";
 import {
   Dialog,
   DialogContent,
@@ -148,32 +149,28 @@ export function ConciliacionDetalleDialog({
       const { error: devError } = await supabase.from("devoluciones").insert(inserts);
       if (devError) throw devError;
 
-      // Recalculate order totals
-      const nuevoSubtotal = detalles.reduce((sum, d) => {
-        const devolucion = devoluciones[d.id];
-        const cantidadReal = d.cantidad - (devolucion?.cantidadDevuelta || 0);
-        const producto = d.productos as any;
-        if (producto?.precio_por_kilo) {
-          return sum + cantidadReal * (producto.peso_kg || 0) * d.precio_unitario;
-        }
-        return sum + cantidadReal * d.precio_unitario;
-      }, 0);
+      // Update each pedido_detalle with the adjusted quantity
+      for (const dev of devolucionesActivas) {
+        const detalle = detalles.find(d => d.id === dev.pedidoDetalleId);
+        if (!detalle) continue;
+        const cantidadReal = detalle.cantidad - dev.cantidadDevuelta;
+        const producto = detalle.productos as any;
+        const newSubtotal = producto?.precio_por_kilo
+          ? cantidadReal * (producto.peso_kg || 0) * detalle.precio_unitario
+          : cantidadReal * detalle.precio_unitario;
+        await supabase.from("pedidos_detalles").update({
+          cantidad: cantidadReal,
+          subtotal: Math.round(newSubtotal * 100) / 100,
+          notas_ajuste: `Devolución: -${dev.cantidadDevuelta} (${dev.motivo})`,
+        }).eq("id", dev.pedidoDetalleId);
+      }
 
-      const nuevoIva = nuevoSubtotal * 0.16;
-      const nuevoTotal = nuevoSubtotal + nuevoIva;
-
-      // Update pedido totals
-      const { error: pedError } = await supabase
-        .from("pedidos")
-        .update({
-          subtotal: Math.round(nuevoSubtotal * 100) / 100,
-          impuestos: Math.round(nuevoIva * 100) / 100,
-          total: Math.round(nuevoTotal * 100) / 100,
-          saldo_pendiente: Math.round(nuevoTotal * 100) / 100,
-          notas_internas: `Conciliado por secretaría. Devoluciones: ${devolucionesActivas.length} líneas.`,
-        })
-        .eq("id", pedidoId);
-      if (pedError) throw pedError;
+      // Recalculate totals with proper per-product tax breakdown
+      const result = await recalcularTotalesPedido(pedidoId, {
+        tipoCambio: "conciliacion_secretaria",
+        cambiosJson: { devoluciones: devolucionesActivas.map(d => ({ detalleId: d.pedidoDetalleId, cantidadDevuelta: d.cantidadDevuelta, motivo: d.motivo })) },
+        usuarioId: user.id,
+      });
 
       queryClient.invalidateQueries({ queryKey: ["conciliacion-detalles", pedidoId] });
       queryClient.invalidateQueries({ queryKey: ["devoluciones-existentes", entregaId] });

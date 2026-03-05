@@ -3845,6 +3845,47 @@ export type Database = {
           },
         ]
       }
+      pedidos_historial_cambios: {
+        Row: {
+          cambios: Json
+          created_at: string
+          id: string
+          pedido_id: string
+          tipo_cambio: string
+          total_anterior: number | null
+          total_nuevo: number | null
+          usuario_id: string | null
+        }
+        Insert: {
+          cambios?: Json
+          created_at?: string
+          id?: string
+          pedido_id: string
+          tipo_cambio: string
+          total_anterior?: number | null
+          total_nuevo?: number | null
+          usuario_id?: string | null
+        }
+        Update: {
+          cambios?: Json
+          created_at?: string
+          id?: string
+          pedido_id?: string
+          tipo_cambio?: string
+          total_anterior?: number | null
+          total_nuevo?: number | null
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_historial_cambios_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       productos: {
         Row: {
           activo: boolean | null
