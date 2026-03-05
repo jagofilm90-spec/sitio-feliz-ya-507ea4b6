@@ -1,26 +1,36 @@
 
 
-# Plan: Agregar Pagaré a variante ORIGINAL
+# Plan: Mejoras de Branding y Avisos Legales en Hoja de Carga
 
-## Cambio
+## Cambios en `HojaCargaUnificadaTemplate.tsx`
 
-En `HojaCargaUnificadaTemplate.tsx`, línea 160, cambiar la condición del pagaré de:
+### 1. Header — "DESDE 1904" arriba del logo
+Agregar texto "DESDE 1904" en tamaño pequeño arriba de la imagen del logo.
 
-```tsx
-{variante === "CLIENTE" && datos.total && (
+### 2. Slogan en mayúsculas y centrado
+Cambiar el footer para que el slogan aparezca en **MAYÚSCULAS**, centrado y sin itálica (más prominente):
+```
+"TRABAJANDO POR UN MÉXICO MEJOR"
+```
+Usar `COMPANY_DATA.slogan.toUpperCase()`.
+
+### 3. Aviso "No se admiten reclamaciones"
+Después de la tabla de productos, agregar un texto en negritas:
+```
+UNA VEZ RECIBIDA LA MERCANCÍA NO SE ADMITEN RECLAMACIONES NI CAMBIOS
 ```
 
-a:
-
-```tsx
-{(variante === "CLIENTE" || variante === "ORIGINAL") && datos.total && (
+### 4. Aviso Importante con teléfono
+Agregar bloque visible antes de las firmas:
 ```
-
-Esto hará que el pagaré aparezca en **ORIGINAL** (la que firma el cliente y regresa a oficinas) y **CLIENTE** (la que se queda el cliente). No aparecerá en ALMACÉN ni en PEDIDO.
+AVISO IMPORTANTE:
+FAVOR DE REVISAR QUE SU PEDIDO LLEGUE COMPLETO, SI TIENE ALGUNA DUDA O QUEJA
+FAVOR DE COMUNICARSE AL TELÉFONO 55 5552-0168
+```
 
 ## Archivo a modificar
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/components/pedidos/HojaCargaUnificadaTemplate.tsx` | Ampliar condición del pagaré a incluir ORIGINAL |
+| Archivo | Cambios |
+|---------|---------|
+| `HojaCargaUnificadaTemplate.tsx` | (1) "DESDE 1904" sobre logo, (2) slogan en mayúsculas, (3) frase de no reclamaciones post-tabla, (4) aviso importante con teléfono pre-firmas |
 
