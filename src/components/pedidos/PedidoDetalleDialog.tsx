@@ -20,6 +20,7 @@ import { esProductoBolsas5kg, redondearABolsasCompletas, calcularNumeroBolsas, K
 import { Loader2 } from "lucide-react";
 import { getDisplayName } from "@/lib/productUtils";
 import { CreditoStatusBadge } from "./CreditoStatusBadge";
+import { PedidoHistorialCambios } from "./PedidoHistorialCambios";
 import { CREDITO_LABELS } from "@/lib/creditoUtils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PedidoDetalleProductCards } from "./PedidoDetalleProductCards";
@@ -302,6 +303,9 @@ export default function PedidoDetalleDialog({
                 </div>
               </div>
             </div>
+
+            {/* Historial de modificaciones */}
+            <PedidoHistorialCambios pedidoId={pedidoId} />
           </div>
         ) : (
           <p className="text-center text-muted-foreground py-8">No se encontró el pedido</p>
