@@ -3517,6 +3517,7 @@ export type Database = {
           id: string
           impuestos: number | null
           notas: string | null
+          numero_dia: number | null
           pagado: boolean
           peso_total_kg: number | null
           prioridad_entrega:
@@ -3549,6 +3550,7 @@ export type Database = {
           id?: string
           impuestos?: number | null
           notas?: string | null
+          numero_dia?: number | null
           pagado?: boolean
           peso_total_kg?: number | null
           prioridad_entrega?:
@@ -3581,6 +3583,7 @@ export type Database = {
           id?: string
           impuestos?: number | null
           notas?: string | null
+          numero_dia?: number | null
           pagado?: boolean
           peso_total_kg?: number | null
           prioridad_entrega?:

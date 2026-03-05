@@ -826,6 +826,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
           const datosPrintFinal: DatosPedidoPrint = {
             pedidoId: pedido.id,
             folio,
+            numeroDia: pedido.numero_dia,
             fecha: new Date().toISOString(),
             vendedor: vendedorNombre,
             terminoCredito: terminoCredito === 'contado' ? 'Contado' : terminoCredito.replace('_', ' '),
@@ -904,6 +905,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
               const datosHojaCarga: DatosHojaCargaUnificada = {
                 pedidoId: pedido.id,
                 folio,
+                numeroDia: pedido.numero_dia,
                 fecha: new Date().toISOString(),
                 cliente: { nombre: selectedCliente?.nombre || "" },
                 sucursal: (() => {

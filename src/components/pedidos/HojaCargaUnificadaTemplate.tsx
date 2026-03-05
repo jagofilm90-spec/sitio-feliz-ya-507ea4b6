@@ -13,6 +13,7 @@ interface ProductoHojaCarga {
 export interface DatosHojaCargaUnificada {
   pedidoId: string;
   folio: string;
+  numeroDia?: number | null;
   fecha: string;
   cliente: {
     nombre: string;
@@ -60,6 +61,9 @@ export const HojaCargaUnificadaTemplate = ({ datos, variante }: Props) => {
         </div>
         <div className="text-center flex-1 px-2">
           <h1 className="text-sm font-bold uppercase tracking-tight leading-tight">HOJA DE CARGA</h1>
+          {datos.numeroDia && (
+            <p className="text-base font-black leading-tight">NOTA #{datos.numeroDia}</p>
+          )}
           <p className="text-[8px] text-gray-400 font-normal">{COMPANY_DATA.razonSocial}</p>
           <span className={`text-[9px] font-bold tracking-[0.2em] uppercase ${colors.text}`}>{variante}</span>
         </div>
