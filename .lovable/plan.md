@@ -1,30 +1,32 @@
 
 
-# Plan: Rediseño Profesional del Encabezado del Pedido (PedidoPrintTemplate)
+# Plan: Agregar Pagaré a Hoja de Carga + Slogan en todos los documentos
 
-## Problemas detectados
+## Contexto
 
-1. El header usa `text-center` con `flex justify-center` pero el logo y el título no quedan visualmente balanceados — el logo queda pegado al texto.
-2. No hay título "PEDIDO / REMISIÓN" como documento, solo el nombre de la empresa.
-3. Las filas vacías de relleno (6 filas) hacen que pedidos pequeños se vean desproporcionados, igual que pasaba en la hoja de carga.
+El pagaré ya existe en `RemisionPrintTemplate.tsx` pero falta en la **Hoja de Carga** (`HojaCargaUnificadaTemplate.tsx`). El slogan "Trabajando por un México mejor" no aparece en ningún documento.
 
-## Cambios en `PedidoPrintTemplate.tsx`
+## Cambios
 
-### Header profesional
-- Layout de 3 columnas: logo a la izquierda (centrado verticalmente), datos de empresa al centro (razón social, RFC, teléfonos, dirección), y título "PEDIDO / REMISIÓN" a la derecha con el folio debajo.
-- Borde inferior limpio de 2px.
-- Logo con altura fija `h-12` para que se vea nítido y proporcionado.
+### 1. Agregar slogan a `companyData.ts`
+- Agregar campo `slogan: "Trabajando por un México mejor"` al objeto `COMPANY_DATA` para centralizarlo.
 
-### Mover folio al header
-- El folio pasa al header (esquina derecha) para darle prominencia y liberar espacio en la sección de datos del cliente.
-- La sección de cliente pierde la columna de folio, quedando más limpia a ancho completo.
+### 2. Agregar pagaré a `HojaCargaUnificadaTemplate.tsx`
+- Insertar la sección de pagaré (tomada de `RemisionPrintTemplate`) entre las firmas y el footer.
+- Solo mostrar en variante **CLIENTE** (es el documento que firma el cliente al recibir mercancía).
+- Texto legal idéntico al de la remisión, con el monto dinámico (requiere agregar `total` al tipo `DatosHojaCargaUnificada`).
 
-### Tabla adaptativa
-- Reducir filas vacías de relleno de 6 a 2 (igual que se hizo en hoja de carga): `Math.max(0, 2 - datos.productos.length)`.
+### 3. Agregar slogan a los 3 templates de documentos
+- **PedidoPrintTemplate**: Debajo del header, centrado, en itálica.
+- **HojaCargaUnificadaTemplate**: En el footer.
+- **RemisionPrintTemplate**: En el footer.
 
-## Archivo a modificar
+## Archivos a modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/components/pedidos/PedidoPrintTemplate.tsx` | Rediseño del header y tabla adaptativa |
+| `src/constants/companyData.ts` | Agregar `slogan` |
+| `src/components/pedidos/HojaCargaUnificadaTemplate.tsx` | Pagaré (variante CLIENTE) + slogan en footer |
+| `src/components/pedidos/PedidoPrintTemplate.tsx` | Slogan en header |
+| `src/components/remisiones/RemisionPrintTemplate.tsx` | Slogan en footer |
 
