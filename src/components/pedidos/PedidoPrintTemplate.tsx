@@ -15,6 +15,7 @@ interface ProductoPedido {
 export interface DatosPedidoPrint {
   pedidoId?: string;
   folio: string;
+  numeroDia?: number | null;
   fecha: string;
   vendedor: string;
   terminoCredito: string;
@@ -64,6 +65,9 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false }: PedidoPrintTempla
           <p className="text-[8px] text-gray-600">{COMPANY_DATA.direccionCompletaMayusculas}</p>
         </div>
         <div className="text-right flex-shrink-0">
+          {datos.numeroDia && (
+            <p className="text-[10px] font-bold text-gray-500 uppercase">NOTA #{datos.numeroDia}</p>
+          )}
           <p className="text-[10px] font-bold uppercase text-gray-500">Pedido / Remisión</p>
           <p className="text-lg font-black leading-tight">{datos.folio}</p>
         </div>

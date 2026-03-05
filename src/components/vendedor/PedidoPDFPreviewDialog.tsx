@@ -44,7 +44,7 @@ export function PedidoPDFPreviewDialog({ open, onOpenChange, pedidoId }: Props) 
       const { data, error } = await supabase
         .from("pedidos")
         .select(`
-          id, folio, fecha_pedido, subtotal, impuestos, total, status, notas, termino_credito,
+          id, folio, fecha_pedido, subtotal, impuestos, total, status, notas, termino_credito, numero_dia,
           cliente:clientes(nombre, razon_social, rfc, direccion, telefono, nombre_vialidad, numero_exterior, numero_interior, nombre_colonia, nombre_municipio, codigo_postal, nombre_entidad_federativa),
           sucursal:cliente_sucursales(nombre, direccion),
           vendedor:profiles!pedidos_vendedor_id_fkey(full_name),
@@ -100,7 +100,7 @@ export function PedidoPDFPreviewDialog({ open, onOpenChange, pedidoId }: Props) 
       };
 
       setDatos({
-        pedidoId: data.id, folio: data.folio, fecha: data.fecha_pedido,
+        pedidoId: data.id, folio: data.folio, numeroDia: data.numero_dia, fecha: data.fecha_pedido,
         vendedor: (data.vendedor as any)?.full_name || "Sin asignar",
         terminoCredito: CREDITO_LABELS[data.termino_credito] || data.termino_credito,
         cliente: { nombre: cliente.nombre, razonSocial: cliente.razon_social || undefined, rfc: cliente.rfc || undefined, direccionFiscal: formatDir(cliente), telefono: cliente.telefono || undefined },
