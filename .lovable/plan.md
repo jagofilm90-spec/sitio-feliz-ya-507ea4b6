@@ -1,108 +1,79 @@
 
 
-# Plan: Sistema de 4 Hojas en PDF Interno
+# Plan: Notificar al Cliente de Modificaciones al Enviar a Ruta
 
-## Situación Actual
+## Problema Actual
 
-Actualmente el PDF interno (a `pedidos@almasa.com.mx`) genera **3 páginas**:
-1. Remisión (PedidoPrintTemplate)
-2. Hoja de Carga Almacén (con QR, sin precios)
-3. Hoja de Carga Cliente (con precios, firmas, pagaré)
+Cuando el almacenista modifica cantidades durante la carga (ej: de 80 a 70 unidades de azúcar), el sistema:
+- Sincroniza las cantidades al pedido (`syncCargaToPedidos`) 
+- Envía notificación "en_ruta" al cliente **pero sin PDF actualizado y sin mencionar las modificaciones**
 
-El PDF al cliente es **1 página** (solo remisión sin QR).
+El cliente recibe un correo genérico de "su pedido va en camino" sin saber que su pedido cambió.
 
-## Lo que se necesita (4 hojas internas)
+## Solución
 
-Según tu descripción, el PDF interno debe tener **4 hojas**, cada una con logo Almasa:
+### 1. Detectar modificaciones al momento de sincronizar
 
-```text
-HOJA 1: PEDIDO (igual que la del cliente)
-  → Remisión comercial con precios, totales, impuestos
-  → Para control de oficinas (se junta con las demás al final)
-
-HOJA 2: ORIGINAL (Hoja de Carga con QR)
-  → Dice "ORIGINAL" visible
-  → Con código QR para escanear en tablet de almacén
-  → Sin precios (solo cantidades y productos)
-  → Con espacios para firmas (Entregó/Recibió)
-  → Con espacio para observaciones (devoluciones/faltantes)
-  → El chofer la lleva, el cliente la firma, el chofer la trae de vuelta
-
-HOJA 3: CLIENTE (Hoja de Carga sin QR)
-  → Dice "CLIENTE" visible
-  → Misma info que ORIGINAL pero sin QR
-  → Sin precios
-  → Se la queda el cliente
-
-HOJA 4: ALMACÉN (Hoja de Carga sin QR)
-  → Dice "ALMACÉN" visible
-  → Misma info que ORIGINAL pero sin QR
-  → Sin precios
-  → Se queda en almacén para emparejar con la ORIGINAL firmada al día siguiente
-```
-
-## Flujo operativo
+En `syncCargaToPedidos` (dentro de `AlmacenCargaRutasTab.tsx`), recopilar las diferencias entre `cantidad original` y `cantidad_cargada` para cada producto modificado. Retornar un mapa de `pedidoId → cambios[]`.
 
 ```text
-Creación del pedido:
-  → Email cliente: 1 PDF (Hoja 1 sola, sin QR)
-  → Email pedidos@almasa.com.mx: 1 PDF de 4 hojas
-
-Día de entrega:
-  → Secretaria imprime las 4 hojas
-  → Chofer lleva: ORIGINAL + CLIENTE
-  → Se queda en almacén: ALMACÉN
-  → Se queda en oficina: PEDIDO (Hoja 4/control)
-
-Regreso del chofer:
-  → Trae la ORIGINAL firmada con observaciones
-  → Almacenista empareja ORIGINAL + ALMACÉN
-  → Oficinas juntan: ORIGINAL + ALMACÉN + PEDIDO (control)
-
-Si hay devolución/faltante:
-  → Secretaria busca pedido, modifica cantidades
-  → Se reimprime, se junta con ORIGINAL firmada
-  → Cambios se reflejan en pedido original para cobro correcto
+Ejemplo de cambios detectados:
+  Azúcar Estándar: 80 → 70 (-10)
+  Aceite 1L: 50 → 50 (sin cambio, no se incluye)
 ```
 
-## Cambios Técnicos
+### 2. Generar PDF actualizado del pedido del cliente
 
-### 1. Crear nueva plantilla: `HojaCargaUnificadaTemplate`
+Después de sincronizar las cantidades, generar un nuevo PDF de remisión (1 página, tipo cliente) con las cantidades ya actualizadas. Esto se hace en el frontend con el mismo `PedidoPrintTemplate` que ya existe.
 
-Una sola plantilla reutilizable con props para controlar variante:
-- `variante`: `"ORIGINAL"` | `"CLIENTE"` | `"ALMACÉN"`
-- `showQR`: solo true para ORIGINAL
-- Sin precios en ninguna variante
-- Con espacios para firmas (Entregó/Recibió) y observaciones
-- Logo Almasa, nombre cliente, dirección entrega, cantidades, productos
+### 3. Modificar el email "en_ruta" en la Edge Function
 
-### 2. Modificar `generatePdfFromTemplate` en `VendedorNuevoPedidoTab.tsx`
+Agregar un nuevo campo opcional `modificaciones` al tipo de notificación `en_ruta`:
 
-El PDF interno pasa de 3 a 4 páginas:
-- Página 1: `PedidoPrintTemplate` (remisión con precios, igual que la del cliente)
-- Página 2: `HojaCargaUnificadaTemplate` variante ORIGINAL (con QR)
-- Página 3: `HojaCargaUnificadaTemplate` variante CLIENTE (sin QR)
-- Página 4: `HojaCargaUnificadaTemplate` variante ALMACÉN (sin QR)
+```text
+data: {
+  pedidoFolio, choferNombre,
+  modificaciones?: [
+    { producto: "Azúcar Estándar", cantidadOriginal: 80, cantidadNueva: 70 },
+  ],
+  totalAnterior?: number,
+  totalNuevo?: number,
+}
+```
 
-### 3. Eliminar templates redundantes
+Si hay modificaciones, el email cambia de:
+- "¡Su pedido va en camino!" 
+  
+A:
+- "¡Su pedido va en camino! Le informamos que hubo ajustes en su pedido:"
+- Tabla con producto, cantidad original, cantidad nueva
+- Total anterior vs total nuevo
+- PDF actualizado adjunto
 
-`HojaCargaAlmacenTemplate` y `HojaCargaClienteTemplate` se reemplazan por la nueva `HojaCargaUnificadaTemplate`.
+Si NO hay modificaciones, el email queda igual que ahora (sin PDF, sin mención de cambios).
 
-### 4. Modificar email interno
+### 4. Archivos a modificar
 
-Actualizar el cuerpo del email en la Edge Function `enviar-pedido-interno` para incluir la frase: *"Favor de imprimir PDF para su entrega"*.
-
-### 5. La modificación de pedidos por secretarias/almacén
-
-Esto **ya existe** en el sistema: las secretarias pueden editar pedidos en estado `pendiente` o `por_autorizar`, y los cambios se sincronizan al pedido original. La reimpresión de hojas de carga actualizadas también ya está implementada en el flujo de carga.
-
-### Archivos a crear/modificar
-
-| Archivo | Acción |
+| Archivo | Cambio |
 |---------|--------|
-| `src/components/pedidos/HojaCargaUnificadaTemplate.tsx` | **Crear** — plantilla unificada con variantes ORIGINAL/CLIENTE/ALMACÉN |
-| `src/components/vendedor/VendedorNuevoPedidoTab.tsx` | **Modificar** — PDF interno de 3→4 páginas usando nueva plantilla |
-| `supabase/functions/enviar-pedido-interno/index.ts` | **Modificar** — agregar frase "favor de imprimir PDF para su entrega" |
-| `src/components/pedidos/HojaCargaAlmacenTemplate.tsx` | **Eliminar** (reemplazada) |
-| `src/components/pedidos/HojaCargaClienteTemplate.tsx` | **Eliminar** (reemplazada) |
+| `src/components/almacen/AlmacenCargaRutasTab.tsx` | `syncCargaToPedidos` retorna cambios detectados; `handleEnviarARuta` genera PDF y lo envía con las modificaciones |
+| `src/components/almacen/CargaRutaInlineFlow.tsx` | Mismo ajuste en `handleFinalizarCarga` (flujo inline) |
+| `supabase/functions/send-client-notification/index.ts` | Template "en_ruta" condicional: si hay `modificaciones`, mostrar tabla de cambios y adjuntar PDF |
+
+### 5. Flujo resultante
+
+```text
+Almacenista cambia 80→70 en azúcar
+  ↓
+"Enviar a Ruta"
+  ↓
+syncCargaToPedidos: actualiza pedido, detecta cambios
+  ↓
+Si hay cambios:
+  → Genera PDF cliente actualizado (1 página remisión)
+  → Envía "en_ruta" con modificaciones[] + PDF adjunto
+  → WhatsApp: "Su pedido va en camino. Nota: hubo ajustes..."
+Si NO hay cambios:
+  → Envía "en_ruta" normal sin PDF
+```
 
