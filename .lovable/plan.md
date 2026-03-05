@@ -1,79 +1,90 @@
 
 
-# Plan: Notificar al Cliente de Modificaciones al Enviar a Ruta
+# Analisis: Proceso Completo Vendedor → Secretaria
 
-## Problema Actual
-
-Cuando el almacenista modifica cantidades durante la carga (ej: de 80 a 70 unidades de azúcar), el sistema:
-- Sincroniza las cantidades al pedido (`syncCargaToPedidos`) 
-- Envía notificación "en_ruta" al cliente **pero sin PDF actualizado y sin mencionar las modificaciones**
-
-El cliente recibe un correo genérico de "su pedido va en camino" sin saber que su pedido cambió.
-
-## Solución
-
-### 1. Detectar modificaciones al momento de sincronizar
-
-En `syncCargaToPedidos` (dentro de `AlmacenCargaRutasTab.tsx`), recopilar las diferencias entre `cantidad original` y `cantidad_cargada` para cada producto modificado. Retornar un mapa de `pedidoId → cambios[]`.
+## Flujo Actual (10 pasos)
 
 ```text
-Ejemplo de cambios detectados:
-  Azúcar Estándar: 80 → 70 (-10)
-  Aceite 1L: 50 → 50 (sin cambio, no se incluye)
+VENDEDOR                    SECRETARIA                 ALMACÉN                    CHOFER                     SECRETARIA (día sig.)
+─────────                   ──────────                 ───────                    ──────                     ─────────────────────
+1. Crea pedido              2. Autoriza pedido         6. Carga interactiva       9. Entrega con firma       10. Concilia papeles
+   → status: pendiente/        → status: pendiente        → checklist, fotos,        → QR scan                  → Registra devoluciones
+     por_autorizar                                          firma chofer+almacen      → status: entregado         → Recalcula totales
+   → PDF 4 pags             3. Envía email vendedor                                                              → Envía PDF final (por_cobrar)
+   → Notifica secretaría                               7. Enviar a Ruta
+   → Notifica cliente                                     → syncCargaToPedidos
+                             4. Crea OC si aplica          → status: en_ruta
+                                                           → Notifica cliente
+                             5. Asigna ruta                → Notifica chofer
+                                (admin/secretaría)
+                                                        8. Monitoreo en tiempo real
 ```
 
-### 2. Generar PDF actualizado del pedido del cliente
+## Problemas Detectados
 
-Después de sincronizar las cantidades, generar un nuevo PDF de remisión (1 página, tipo cliente) con las cantidades ya actualizadas. Esto se hace en el frontend con el mismo `PedidoPrintTemplate` que ya existe.
+### BUG CRITICO 1: IVA/IEPS se pierde en syncCargaToPedidos
 
-### 3. Modificar el email "en_ruta" en la Edge Function
-
-Agregar un nuevo campo opcional `modificaciones` al tipo de notificación `en_ruta`:
-
-```text
-data: {
-  pedidoFolio, choferNombre,
-  modificaciones?: [
-    { producto: "Azúcar Estándar", cantidadOriginal: 80, cantidadNueva: 70 },
-  ],
-  totalAnterior?: number,
-  totalNuevo?: number,
-}
+En `AlmacenCargaRutasTab.tsx` líneas 434-439:
+```typescript
+const newTotal = allDetalles.reduce((s, d) => s + (d.subtotal || 0), 0);
+await supabase.from("pedidos").update({
+  subtotal: newTotal,
+  total: newTotal,  // ← BUG: total = subtotal, ignora impuestos
+}).eq("id", pedidoId);
 ```
 
-Si hay modificaciones, el email cambia de:
-- "¡Su pedido va en camino!" 
-  
-A:
-- "¡Su pedido va en camino! Le informamos que hubo ajustes en su pedido:"
-- Tabla con producto, cantidad original, cantidad nueva
-- Total anterior vs total nuevo
-- PDF actualizado adjunto
+El pedido original tiene `total = subtotal + impuestos`. Después de la sync, los impuestos desaparecen. Un pedido de $10,000 + $1,600 IVA = $11,600 pasaría a mostrar $10,000 como total.
 
-Si NO hay modificaciones, el email queda igual que ahora (sin PDF, sin mención de cambios).
+**Mismo bug** existe en `CargaRutaInlineFlow.tsx` (tiene su propia copia de syncCargaToPedidos).
 
-### 4. Archivos a modificar
+### BUG CRITICO 2: Conciliación secretaria hardcodea IVA 16%
+
+En `ConciliacionDetalleDialog.tsx` línea 162:
+```typescript
+const nuevoIva = nuevoSubtotal * 0.16; // ← Ignora aplica_iva por producto, ignora IEPS
+```
+
+El sistema tiene productos que no aplican IVA y productos con IEPS. Este cálculo es incorrecto para ambos casos.
+
+### BUG 3: No hay historial de cambios del pedido
+
+Cuando el almacén o la secretaria modifican cantidades, no se guarda un registro de qué cambió, quién lo cambió, y cuándo. Solo se sobrescriben los valores. El campo `notas_internas` se sobrescribe con texto genérico.
+
+### BUG 4: saldo_pendiente no se actualiza en sync
+
+`syncCargaToPedidos` actualiza `total` pero no `saldo_pendiente`, que es el campo que usa el módulo de cobranza. Esto causa que el vendedor vea un saldo incorrecto en "Por Cobrar".
+
+### Observación: El PDF actualizado no se genera en syncCargaToPedidos
+
+Se mencionó en el plan anterior que se generaría un PDF actualizado al despachar con cambios, pero el código actual de `handleEnviarARuta` solo envía las `modificaciones` como texto al email. No genera ni adjunta un PDF con las cantidades corregidas.
+
+## Plan de Corrección
+
+### 1. Corregir syncCargaToPedidos (ambos archivos)
+
+Recalcular impuestos correctamente usando la función `calcularDesgloseImpuestos` existente. Necesita consultar `aplica_iva` y `aplica_ieps` de cada producto para calcular IVA e IEPS línea por línea. Actualizar `subtotal`, `impuestos` y `total` correctamente. También actualizar `saldo_pendiente`.
+
+### 2. Corregir ConciliacionDetalleDialog
+
+Reemplazar el cálculo hardcodeado de IVA. Consultar `aplica_iva` y `aplica_ieps` de cada producto y usar `calcularDesgloseImpuestos` para recalcular correctamente.
+
+### 3. Agregar tabla de historial de cambios al pedido (migración DB)
+
+Crear tabla `pedidos_historial_cambios` para auditoría:
+- `pedido_id`, `tipo_cambio` (almacen_carga, conciliacion_secretaria), `cambios` (JSONB), `usuario_id`, `created_at`
+
+Registrar cada modificación de cantidad/total en ambos flujos.
+
+### 4. Generar PDF actualizado en handleEnviarARuta
+
+Si hay modificaciones detectadas, generar el PDF de remisión con cantidades actualizadas y enviarlo como adjunto en la notificación `en_ruta`.
+
+### Archivos a modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/components/almacen/AlmacenCargaRutasTab.tsx` | `syncCargaToPedidos` retorna cambios detectados; `handleEnviarARuta` genera PDF y lo envía con las modificaciones |
-| `src/components/almacen/CargaRutaInlineFlow.tsx` | Mismo ajuste en `handleFinalizarCarga` (flujo inline) |
-| `supabase/functions/send-client-notification/index.ts` | Template "en_ruta" condicional: si hay `modificaciones`, mostrar tabla de cambios y adjuntar PDF |
-
-### 5. Flujo resultante
-
-```text
-Almacenista cambia 80→70 en azúcar
-  ↓
-"Enviar a Ruta"
-  ↓
-syncCargaToPedidos: actualiza pedido, detecta cambios
-  ↓
-Si hay cambios:
-  → Genera PDF cliente actualizado (1 página remisión)
-  → Envía "en_ruta" con modificaciones[] + PDF adjunto
-  → WhatsApp: "Su pedido va en camino. Nota: hubo ajustes..."
-Si NO hay cambios:
-  → Envía "en_ruta" normal sin PDF
-```
+| `src/components/almacen/AlmacenCargaRutasTab.tsx` | Corregir cálculo de impuestos en syncCargaToPedidos, actualizar saldo_pendiente, registrar historial |
+| `src/components/almacen/CargaRutaInlineFlow.tsx` | Mismo fix de impuestos (tiene copia de syncCargaToPedidos) |
+| `src/components/secretaria/ConciliacionDetalleDialog.tsx` | Usar calcularDesgloseImpuestos por producto en vez de hardcodear 16% |
+| Migración SQL | Crear tabla `pedidos_historial_cambios` |
 
