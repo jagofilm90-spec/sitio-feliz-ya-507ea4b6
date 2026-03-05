@@ -26,8 +26,7 @@ import { PasoProductosInline } from "./pedido-wizard/PasoProductosInline";
 import { PasoConfirmar } from "./pedido-wizard/PasoConfirmar";
 import { SolicitudDescuentoDialog } from "./SolicitudDescuentoDialog";
 import { PedidoPrintTemplate, DatosPedidoPrint } from "@/components/pedidos/PedidoPrintTemplate";
-import { HojaCargaAlmacenTemplate, DatosHojaCargaAlmacen } from "@/components/pedidos/HojaCargaAlmacenTemplate";
-import { HojaCargaClienteTemplate, DatosHojaCargaCliente } from "@/components/pedidos/HojaCargaClienteTemplate";
+import { HojaCargaUnificadaTemplate, DatosHojaCargaUnificada } from "@/components/pedidos/HojaCargaUnificadaTemplate";
 import { getDisplayName } from "@/lib/productUtils";
 import type { Cliente, Sucursal, Producto, LineaPedido, TotalesCalculados } from "./pedido-wizard/types";
 
@@ -900,10 +899,9 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
             const canvas1 = await renderToCanvas(<PedidoPrintTemplate datos={datosPrintFinal} hideQR={hideQR} />, scale);
             canvasToPage(pdf, canvas1, isInternal);
 
-            // For internal PDF (hideQR=false): add pages 2 & 3
+            // For internal PDF (hideQR=false): add pages 2, 3, 4
             if (isInternal) {
-              // Build data for HojaCargaAlmacen
-              const datosAlmacen: DatosHojaCargaAlmacen = {
+              const datosHojaCarga: DatosHojaCargaUnificada = {
                 pedidoId: pedido.id,
                 folio,
                 fecha: new Date().toISOString(),
@@ -912,63 +910,41 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
                   const suc = sucursales.find(s => s.id === selectedSucursalId);
                   return suc ? { nombre: suc.nombre, direccion: suc.direccion || undefined } : undefined;
                 })(),
-                productos: lineas.map(l => ({
-                  cantidad: l.cantidad,
-                  descripcion: getDisplayName(l.producto),
-                  pesoTotal: (l.producto.peso_kg || 0) > 0 ? l.cantidad * (l.producto.peso_kg || 0) : null,
-                  unidad: l.producto.unidad || 'PZA',
-                })),
-                pesoTotalKg: totales.pesoTotalKg,
-                notas: notas || undefined,
-              };
-
-              // Build data for HojaCargaCliente
-              const datosCliente: DatosHojaCargaCliente = {
-                folio,
-                fecha: new Date().toISOString(),
-                vendedor: vendedorNombre,
-                terminoCredito: terminoCredito === 'contado' ? 'Contado' : terminoCredito.replace('_', ' '),
-                cliente: {
-                  nombre: selectedCliente?.nombre || "",
-                  telefono: (selectedCliente as any)?.telefono || undefined,
-                },
-                sucursal: (() => {
+                direccionEntrega: (() => {
                   const suc = sucursales.find(s => s.id === selectedSucursalId);
-                  return suc ? { nombre: suc.nombre, direccion: suc.direccion || undefined } : undefined;
+                  return suc?.direccion || (selectedCliente as any)?.direccion || undefined;
                 })(),
                 productos: lineas.map(l => ({
                   cantidad: l.cantidad,
                   descripcion: getDisplayName(l.producto),
                   pesoTotal: (l.producto.peso_kg || 0) > 0 ? l.cantidad * (l.producto.peso_kg || 0) : null,
-                  precioUnitario: l.precioUnitario,
-                  importe: l.subtotal,
                   unidad: l.producto.unidad || 'PZA',
-                  precioPorKilo: !!l.producto.precio_por_kilo,
                 })),
-                subtotal: totales.subtotal,
-                iva: totales.iva,
-                ieps: totales.ieps,
-                total: totales.total,
                 pesoTotalKg: totales.pesoTotalKg,
                 notas: notas || undefined,
               };
 
-              // Page 2: Hoja de Carga Almacén
-              const canvas2 = await renderToCanvas(<HojaCargaAlmacenTemplate datos={datosAlmacen} />, scale);
+              // Page 2: ORIGINAL (con QR)
+              const canvas2 = await renderToCanvas(<HojaCargaUnificadaTemplate datos={datosHojaCarga} variante="ORIGINAL" />, scale);
               pdf.addPage();
               canvasToPage(pdf, canvas2, true);
 
-              // Page 3: Hoja de Carga Cliente
-              const canvas3 = await renderToCanvas(<HojaCargaClienteTemplate datos={datosCliente} />, scale);
+              // Page 3: CLIENTE (sin QR)
+              const canvas3 = await renderToCanvas(<HojaCargaUnificadaTemplate datos={datosHojaCarga} variante="CLIENTE" />, scale);
               pdf.addPage();
               canvasToPage(pdf, canvas3, true);
+
+              // Page 4: ALMACÉN (sin QR)
+              const canvas4 = await renderToCanvas(<HojaCargaUnificadaTemplate datos={datosHojaCarga} variante="ALMACÉN" />, scale);
+              pdf.addPage();
+              canvasToPage(pdf, canvas4, true);
             }
 
             return pdf.output('datauristring').split(',')[1];
           };
 
           // Generar ambos PDFs en paralelo
-          console.log("[PDF] Generating internal (3-page) and client PDFs...");
+          console.log("[PDF] Generating internal (4-page) and client PDFs...");
           const pdfPromise = Promise.all([
             generatePdfFromTemplate(false).then(b64 => { console.log(`[PDF] Internal PDF size: ${(b64.length / 1024 / 1024).toFixed(2)}MB`); return b64; }),
             generatePdfFromTemplate(true).then(b64 => { console.log(`[PDF] Client PDF size: ${(b64.length / 1024 / 1024).toFixed(2)}MB`); return b64; }),

@@ -112,7 +112,7 @@ function buildEmailHtml(data: PedidoInternoPayload): string {
     <p style="margin-top:12px;padding:14px;background:#fef3c7;border-radius:8px;border-left:4px solid #f59e0b;font-weight:600;">
       Total del pedido: ${formatCurrency(data.total)}
     </p>
-    <p style="margin-top:16px;font-weight:600;">Favor de imprimir el PDF adjunto.</p>
+    <p style="margin-top:16px;font-weight:600;">Favor de imprimir PDF para su entrega.</p>
   </div>
   <div style="background:#f3f4f6;padding:16px 32px;text-align:center;">
     <p style="margin:0;font-size:12px;color:#9ca3af;">Este mensaje fue generado automáticamente por el sistema de pedidos ALMASA</p>
