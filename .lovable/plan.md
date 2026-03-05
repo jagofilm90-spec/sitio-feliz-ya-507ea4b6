@@ -1,32 +1,34 @@
 
 
-# Plan: Agregar Pagaré a Hoja de Carga + Slogan en todos los documentos
+# Plan: Agregar Slogan en Login y Paneles por Rol
 
-## Contexto
+## Ubicaciones donde agregar el slogan
 
-El pagaré ya existe en `RemisionPrintTemplate.tsx` pero falta en la **Hoja de Carga** (`HojaCargaUnificadaTemplate.tsx`). El slogan "Trabajando por un México mejor" no aparece en ningún documento.
+| Página | Ubicación exacta | Estilo |
+|--------|------------------|--------|
+| **Auth.tsx** (Login) | Debajo de "Sistema de Gestión Empresarial" | Texto itálico pequeño, `text-muted-foreground` |
+| **ChoferPanel.tsx** | En el header, debajo de la fecha | Texto `text-xs opacity-70 italic` |
+| **AlmacenTablet.tsx** | En el header/sidebar del panel | Texto pequeño itálico |
+| **VendedorPanel.tsx** | Debajo de "Bienvenido, {nombre}" | Texto pequeño itálico |
+| **SecretariaPanel.tsx** | En el header del sidebar | Texto pequeño itálico |
+| **Dashboard.tsx** | En el header o bienvenida | Texto pequeño itálico |
+| **PortalCliente.tsx** | Debajo de "¡Bienvenido, {cliente}!" | Texto pequeño itálico |
 
-## Cambios
+## Enfoque
 
-### 1. Agregar slogan a `companyData.ts`
-- Agregar campo `slogan: "Trabajando por un México mejor"` al objeto `COMPANY_DATA` para centralizarlo.
-
-### 2. Agregar pagaré a `HojaCargaUnificadaTemplate.tsx`
-- Insertar la sección de pagaré (tomada de `RemisionPrintTemplate`) entre las firmas y el footer.
-- Solo mostrar en variante **CLIENTE** (es el documento que firma el cliente al recibir mercancía).
-- Texto legal idéntico al de la remisión, con el monto dinámico (requiere agregar `total` al tipo `DatosHojaCargaUnificada`).
-
-### 3. Agregar slogan a los 3 templates de documentos
-- **PedidoPrintTemplate**: Debajo del header, centrado, en itálica.
-- **HojaCargaUnificadaTemplate**: En el footer.
-- **RemisionPrintTemplate**: En el footer.
+- Usar `COMPANY_DATA.slogan` del archivo centralizado en todos los casos (ya existe).
+- Mantener el slogan sutil y profesional: siempre en itálica, tamaño pequeño, con comillas.
+- No alterar la estructura de los layouts existentes, solo insertar una línea de texto adicional.
 
 ## Archivos a modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/constants/companyData.ts` | Agregar `slogan` |
-| `src/components/pedidos/HojaCargaUnificadaTemplate.tsx` | Pagaré (variante CLIENTE) + slogan en footer |
-| `src/components/pedidos/PedidoPrintTemplate.tsx` | Slogan en header |
-| `src/components/remisiones/RemisionPrintTemplate.tsx` | Slogan en footer |
+| `src/pages/Auth.tsx` | Slogan debajo del subtítulo |
+| `src/pages/ChoferPanel.tsx` | Slogan en header |
+| `src/pages/AlmacenTablet.tsx` | Slogan en header |
+| `src/pages/VendedorPanel.tsx` | Slogan en header |
+| `src/pages/SecretariaPanel.tsx` | Slogan en header |
+| `src/pages/Dashboard.tsx` | Slogan en área de bienvenida |
+| `src/pages/PortalCliente.tsx` | Slogan en header |
 
