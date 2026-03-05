@@ -97,6 +97,7 @@ export const COMPANY_DATA = {
   // Datos para documentos
   nombreComercial: "ALMASA",
   sitioWeb: "https://almasa.com.mx",
+  slogan: "Trabajando por un México mejor",
   
   // Rutas de logos
   logos: {

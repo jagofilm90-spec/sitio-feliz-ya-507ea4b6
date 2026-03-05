@@ -68,6 +68,7 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false }: PedidoPrintTempla
           <p className="text-lg font-black leading-tight">{datos.folio}</p>
         </div>
       </div>
+      <p className="text-center text-[9px] italic text-gray-500 -mt-1 mb-2">"{COMPANY_DATA.slogan}"</p>
 
       {/* ═══════ DATOS CLIENTE (protagonista) ═══════ */}
       <div className="border border-gray-400 rounded mb-2">
