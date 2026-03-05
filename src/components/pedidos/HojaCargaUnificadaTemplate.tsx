@@ -41,24 +41,27 @@ const varianteColors: Record<VarianteHojaCarga, { border: string; text: string }
   "ALMACÉN": { border: "border-amber-600", text: "text-amber-600" },
 };
 
+const isAlmacen = (v: VarianteHojaCarga) => v === "ALMACÉN";
+
 export const HojaCargaUnificadaTemplate = ({ datos, variante }: Props) => {
   const showQR = variante === "ORIGINAL";
+  const almacen = isAlmacen(variante);
   const colors = varianteColors[variante];
   const direccion = datos.sucursal?.direccion || datos.direccionEntrega || "—";
   const emptyRows = Math.max(0, 2 - datos.productos.length);
 
   return (
-    <div className="p-5 bg-white text-black min-h-[11in] w-[8.5in] mx-auto font-sans text-[11px] print:p-4 flex flex-col">
-      {/* Header + Variante combined */}
-      <div className={`flex items-center justify-between pb-2 mb-2 border-b-[3px] ${colors.border}`}>
+    <div className="p-5 bg-white text-black min-h-[11in] w-[8.5in] mx-auto font-sans text-[10px] print:p-4 flex flex-col">
+      {/* Header */}
+      <div className={`flex items-center justify-between pb-2 mb-2 border-b-2 ${colors.border}`}>
         <div className="flex flex-col items-center">
-          <span className="text-[7px] font-bold tracking-[0.15em] text-gray-500 uppercase">DESDE 1904</span>
+          <span className="text-[7px] font-semibold tracking-[0.15em] text-gray-500 uppercase">DESDE 1904</span>
           <img src="/logo-almasa-header.png" alt="ALMASA" className="h-9 w-auto object-contain" />
         </div>
         <div className="text-center flex-1 px-2">
-          <h1 className="text-base font-black uppercase tracking-tight leading-tight">HOJA DE CARGA</h1>
-          <p className="text-[8px] text-gray-400">{COMPANY_DATA.razonSocial}</p>
-          <span className={`text-[10px] font-black tracking-[0.2em] uppercase ${colors.text}`}>{variante}</span>
+          <h1 className="text-sm font-bold uppercase tracking-tight leading-tight">HOJA DE CARGA</h1>
+          <p className="text-[8px] text-gray-400 font-normal">{COMPANY_DATA.razonSocial}</p>
+          <span className={`text-[9px] font-bold tracking-[0.2em] uppercase ${colors.text}`}>{variante}</span>
         </div>
         {showQR ? (
           <QRCodeSVG value={`almasa:carga:${datos.pedidoId}`} size={56} level="M" />
@@ -67,23 +70,23 @@ export const HojaCargaUnificadaTemplate = ({ datos, variante }: Props) => {
         )}
       </div>
 
-      {/* Info del pedido - 2 rows compact */}
-      <div className="grid grid-cols-4 gap-0 border border-gray-300 rounded mb-2 text-[10px]">
+      {/* Info del pedido */}
+      <div className="grid grid-cols-4 gap-0 border border-gray-300 rounded mb-2">
         <div className="border-r border-gray-200 px-2 py-1">
-          <span className="font-bold text-[8px] text-gray-400 uppercase block">Folio</span>
-          <span className="font-bold text-sm leading-tight">{datos.folio}</span>
+          <span className="text-[8px] font-semibold text-gray-500 uppercase block">Folio</span>
+          <span className="text-[10px] font-medium leading-tight">{datos.folio}</span>
         </div>
         <div className="border-r border-gray-200 px-2 py-1">
-          <span className="font-bold text-[8px] text-gray-400 uppercase block">Cliente</span>
-          <span className="font-semibold leading-tight">{datos.cliente.nombre}</span>
+          <span className="text-[8px] font-semibold text-gray-500 uppercase block">Cliente</span>
+          <span className="text-[10px] font-medium leading-tight">{datos.cliente.nombre}</span>
         </div>
         <div className="border-r border-gray-200 px-2 py-1">
-          <span className="font-bold text-[8px] text-gray-400 uppercase block">Peso Total</span>
-          <span className="font-semibold leading-tight">{fmtKg(datos.pesoTotalKg)}</span>
+          <span className="text-[8px] font-semibold text-gray-500 uppercase block">Peso Total</span>
+          <span className="text-[10px] font-medium leading-tight">{fmtKg(datos.pesoTotalKg)}</span>
         </div>
         <div className="px-2 py-1">
-          <span className="font-bold text-[8px] text-gray-400 uppercase block">Dirección</span>
-          <span className="font-semibold leading-tight text-[9px]">
+          <span className="text-[8px] font-semibold text-gray-500 uppercase block">Dirección</span>
+          <span className="text-[9px] font-medium leading-tight">
             {direccion}
             {datos.sucursal && <span className="text-gray-500"> ({datos.sucursal.nombre})</span>}
           </span>
@@ -92,27 +95,27 @@ export const HojaCargaUnificadaTemplate = ({ datos, variante }: Props) => {
 
       {showQR && (
         <div className="text-[8px] text-gray-400 text-center mb-2">
-          Últimos dígitos del folio: <strong className="text-black text-xs">{datos.folio.slice(-4)}</strong>
+          Últimos dígitos del folio: <strong className="text-black text-[10px]">{datos.folio.slice(-4)}</strong>
         </div>
       )}
 
-      {/* Tabla de productos - adaptativa */}
+      {/* Tabla de productos */}
       <table className="w-full mb-1 border-collapse">
         <thead>
-          <tr className="bg-gray-800 text-white text-[9px]">
-            <th className="py-1 px-2 text-center w-14 border border-gray-700">CANT.</th>
-            <th className="py-1 px-2 text-left border border-gray-700">PRODUCTO</th>
-            <th className="py-1 px-2 text-center w-14 border border-gray-700">UNIDAD</th>
-            <th className="py-1 px-2 text-right w-18 border border-gray-700">PESO</th>
+          <tr className="bg-gray-800 text-white text-[8px]">
+            <th className="py-1 px-2 text-center w-14 border border-gray-700 font-semibold">CANT.</th>
+            <th className="py-1 px-2 text-left border border-gray-700 font-semibold">PRODUCTO</th>
+            <th className="py-1 px-2 text-center w-14 border border-gray-700 font-semibold">UNIDAD</th>
+            <th className="py-1 px-2 text-right w-18 border border-gray-700 font-semibold">PESO</th>
           </tr>
         </thead>
         <tbody>
           {datos.productos.map((prod, i) => (
             <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-              <td className="py-1 px-2 border border-gray-300 text-center font-bold text-sm">{prod.cantidad}</td>
-              <td className="py-1 px-2 border border-gray-300 text-[10px]">{prod.descripcion}</td>
-              <td className="py-1 px-2 border border-gray-300 text-center text-[10px]">{prod.unidad}</td>
-              <td className="py-1 px-2 border border-gray-300 text-right text-[10px]">
+              <td className="py-1 px-2 border border-gray-300 text-center text-[9px] font-medium">{prod.cantidad}</td>
+              <td className="py-1 px-2 border border-gray-300 text-[9px]">{prod.descripcion}</td>
+              <td className="py-1 px-2 border border-gray-300 text-center text-[9px]">{prod.unidad}</td>
+              <td className="py-1 px-2 border border-gray-300 text-right text-[9px]">
                 {prod.pesoTotal ? fmtKg(prod.pesoTotal) : "-"}
               </td>
             </tr>
@@ -128,71 +131,91 @@ export const HojaCargaUnificadaTemplate = ({ datos, variante }: Props) => {
         </tbody>
       </table>
 
-      <p className="text-[8px] font-black text-center uppercase tracking-wide mb-2">
-        UNA VEZ RECIBIDA LA MERCANCÍA NO SE ADMITEN RECLAMACIONES NI CAMBIOS
-      </p>
+      {/* No reclamaciones — solo ORIGINAL y CLIENTE */}
+      {!almacen && (
+        <p className="text-[8px] font-semibold text-center uppercase tracking-wide mb-2">
+          UNA VEZ RECIBIDA LA MERCANCÍA NO SE ADMITEN RECLAMACIONES NI CAMBIOS
+        </p>
+      )}
 
-      {/* Notas */}
+      {/* Notas — todas las variantes */}
       {datos.notas && (
-        <div className="border border-gray-300 rounded px-2 py-1 mb-2 text-[10px]">
-          <p className="font-bold text-[8px] uppercase text-gray-400 mb-0.5">Notas</p>
-          <p>{datos.notas}</p>
+        <div className="border border-gray-300 rounded px-2 py-1 mb-2">
+          <p className="text-[8px] font-semibold uppercase text-gray-500 mb-0.5">Notas</p>
+          <p className="text-[9px] font-normal">{datos.notas}</p>
         </div>
       )}
 
-      {/* Observaciones - 2 líneas */}
-      <div className="border border-gray-300 rounded p-2 mb-2">
-        <p className="text-[8px] font-bold uppercase text-gray-400 mb-1">Observaciones / Devoluciones / Faltantes</p>
-        <div className="space-y-2">
-          <div className="border-b border-gray-300 h-4" />
-          <div className="border-b border-gray-300 h-4" />
+      {/* Observaciones — solo ORIGINAL y CLIENTE */}
+      {!almacen && (
+        <div className="border border-gray-300 rounded p-2 mb-2">
+          <p className="text-[8px] font-semibold uppercase text-gray-500 mb-1">Observaciones / Devoluciones / Faltantes</p>
+          <div className="space-y-2">
+            <div className="border-b border-gray-300 h-4" />
+            <div className="border-b border-gray-300 h-4" />
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Aviso importante */}
-      <div className="border border-gray-400 rounded px-2 py-1.5 mb-2 text-center text-[9px]">
-        <p className="font-black uppercase text-[10px] mb-0.5">AVISO IMPORTANTE:</p>
-        <p className="font-semibold">FAVOR DE REVISAR QUE SU PEDIDO LLEGUE COMPLETO, SI TIENE ALGUNA DUDA O QUEJA</p>
-        <p className="font-semibold">FAVOR DE COMUNICARSE AL TELÉFONO <strong className="text-[11px]">{COMPANY_DATA.telefonos.principal}</strong></p>
-      </div>
-
-      {/* Firmas */}
-      <div className="grid grid-cols-2 gap-4 mt-auto">
-        <div className="text-center">
-          <div className="border-b-2 border-black h-8 mb-0.5" />
-          <p className="text-[9px] font-bold">Entregó</p>
-          <p className="text-[7px] text-gray-400">Nombre y firma</p>
+      {/* Aviso importante — solo ORIGINAL y CLIENTE */}
+      {!almacen && (
+        <div className="border border-gray-400 rounded px-2 py-1.5 mb-2 text-center">
+          <p className="text-[9px] font-bold uppercase mb-0.5">AVISO IMPORTANTE:</p>
+          <p className="text-[8px] font-semibold">FAVOR DE REVISAR QUE SU PEDIDO LLEGUE COMPLETO, SI TIENE ALGUNA DUDA O QUEJA</p>
+          <p className="text-[8px] font-semibold">FAVOR DE COMUNICARSE AL TELÉFONO <strong className="text-[9px]">{COMPANY_DATA.telefonos.principal}</strong></p>
         </div>
-        <div className="text-center">
-          <div className="border-b-2 border-black h-8 mb-0.5" />
-          <p className="text-[9px] font-bold">Recibió</p>
-          <p className="text-[7px] text-gray-400">Nombre, firma y sello</p>
-        </div>
-      </div>
+      )}
 
-      {/* Pagaré - solo variante CLIENTE */}
-      {(variante === "CLIENTE" || variante === "ORIGINAL") && datos.total && (
+      {/* Firmas Entregó/Recibió — solo ORIGINAL y CLIENTE */}
+      {!almacen && (
+        <div className="grid grid-cols-2 gap-4 mt-auto">
+          <div className="text-center">
+            <div className="border-b-2 border-black h-8 mb-0.5" />
+            <p className="text-[8px] font-medium">Entregó</p>
+            <p className="text-[7px] text-gray-400">Nombre y firma</p>
+          </div>
+          <div className="text-center">
+            <div className="border-b-2 border-black h-8 mb-0.5" />
+            <p className="text-[8px] font-medium">Recibió</p>
+            <p className="text-[7px] text-gray-400">Nombre, firma y sello</p>
+          </div>
+        </div>
+      )}
+
+      {/* Pagaré — solo ORIGINAL y CLIENTE */}
+      {!almacen && (variante === "CLIENTE" || variante === "ORIGINAL") && datos.total && (
         <div className="border-2 border-gray-400 p-2 text-[9px] leading-tight mt-2">
-          <p className="text-center font-bold mb-1 text-[10px]">PAGARÉ</p>
-          <p className="text-justify">
+          <p className="text-center font-bold mb-1">PAGARÉ</p>
+          <p className="text-justify text-[8px]">
             &quot;Por el presente pagaré, reconozco deber y me comprometo incondicionalmente a pagar a la orden de
             <strong> ABARROTES LA MANITA S.A. DE C.V.</strong> la cantidad de <strong>${datos.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })} PESOS MEXICANOS</strong>,
             en la Ciudad de México, por haber recibido a mi entera satisfacción la mercancía descrita.
           </p>
-          <p className="text-justify mt-1">
+          <p className="text-justify text-[8px] mt-1">
             &quot;Acepto pagar en caso de mora el 10% (diez por ciento) mensual durante el tiempo que se encuentre insoluto sin perjuicio al pago principal y sin que por esto se entienda
             prorrogado el plazo, este pagaré es mercantil y se encuentra regido por la Ley General de Títulos y Operaciones de Créditos según Artículos 170, 171, 174 y demás artículos
             aplicables al presente caso.
           </p>
           <div className="grid grid-cols-2 gap-6 mt-3">
             <div className="text-center">
-              <div className="border-b border-black mb-0.5 h-6"></div>
-              <p className="text-[8px]">Nombre y Firma de quien recibe</p>
+              <div className="border-b border-black mb-0.5 h-6" />
+              <p className="text-[8px] font-medium">Nombre y Firma de quien recibe</p>
             </div>
             <div className="text-center">
-              <div className="border-b border-black mb-0.5 h-6"></div>
-              <p className="text-[8px]">Fecha de recepción</p>
+              <div className="border-b border-black mb-0.5 h-6" />
+              <p className="text-[8px] font-medium">Fecha de recepción</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Acepto Conformidad — solo ALMACÉN */}
+      {almacen && (
+        <div className="mt-auto text-center">
+          <p className="text-[9px] font-bold uppercase tracking-wide mb-4">ACEPTO CONFORMIDAD</p>
+          <div className="mx-auto w-60">
+            <div className="border-b-2 border-black h-10 mb-1" />
+            <p className="text-[8px] font-medium text-gray-600">Nombre, firma y sello</p>
           </div>
         </div>
       )}
