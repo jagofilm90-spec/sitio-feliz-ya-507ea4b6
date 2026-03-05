@@ -21,6 +21,7 @@ import { LiveIndicator } from "@/components/ui/live-indicator";
 import { AvatarEmpleadoPopover } from "@/components/almacen/AvatarEmpleadoPopover";
 import { LocationPermissionRequest } from "@/components/chofer/LocationPermissionRequest";
 import { isNativePlatform } from "@/services/backgroundGeolocation";
+import { COMPANY_DATA } from "@/constants/companyData";
 
 export default function ChoferPanel() {
   const navigate = useNavigate();
@@ -162,6 +163,7 @@ export default function ChoferPanel() {
               <div>
                 <h1 className="text-base md:text-lg font-bold">Panel del Chofer</h1>
                 <p className="text-xs md:text-sm opacity-90">{format(new Date(), "EEEE d 'de' MMMM", { locale: es })}</p>
+                <p className="text-[10px] opacity-70 italic hidden md:block">"{COMPANY_DATA.slogan}"</p>
               </div>
             </div>
             <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate("/auth"); }} className="md:hidden text-primary-foreground hover:bg-primary-foreground/20">

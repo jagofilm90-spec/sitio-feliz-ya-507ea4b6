@@ -15,6 +15,7 @@ import { Loader2, LogOut, Home } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import logoAlmasa from "@/assets/logo-almasa.png";
+import { COMPANY_DATA } from "@/constants/companyData";
 
 // Sidebar & Navigation
 import { SecretariaSidebar } from "@/components/secretaria/SecretariaSidebar";
@@ -197,6 +198,7 @@ const SecretariaPanel = () => {
               <div className="border-l border-primary-foreground/30 pl-3">
                 <p className="text-sm font-medium truncate max-w-[120px]">{userName}</p>
                 <p className="text-[10px] opacity-70">Secretaria</p>
+                <p className="text-[9px] opacity-60 italic hidden sm:block">"{COMPANY_DATA.slogan}"</p>
               </div>
             </div>
             <div className="flex items-center gap-1">

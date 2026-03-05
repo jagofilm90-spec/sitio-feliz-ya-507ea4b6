@@ -24,6 +24,7 @@ import { VendedorCobranzaTab } from "@/components/vendedor/VendedorCobranzaTab";
 import { VendedorSidebar } from "@/components/vendedor/VendedorSidebar";
 import { VendedorBienvenidaDialog } from "@/components/vendedor/VendedorBienvenidaDialog";
 import logoBlanco from "@/assets/logos/logo-blanco.png";
+import { COMPANY_DATA } from "@/constants/companyData";
 
 export default function VendedorPanel() {
   const navigate = useNavigate();
@@ -357,6 +358,7 @@ export default function VendedorPanel() {
               <div>
                 <h1 className="text-xl font-semibold">Panel de Ventas</h1>
                 <p className="text-sm text-muted-foreground">Bienvenido, {vendedorNombre}</p>
+                <p className="text-xs italic text-muted-foreground/70">"{COMPANY_DATA.slogan}"</p>
               </div>
             </div>
 

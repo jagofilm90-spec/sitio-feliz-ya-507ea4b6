@@ -36,6 +36,7 @@ import { UserPreferencesPopover } from "@/components/UserPreferencesPopover";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useSystemPresence } from "@/hooks/useSystemPresence";
 import { useShowMobileNav, useIsMobile, useIsTablet, useHasPointer, useIsTabletWithMouse } from "@/hooks/use-mobile";
+import { COMPANY_DATA } from "@/constants/companyData";
 
 const AlmacenTablet = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -336,6 +337,7 @@ const AlmacenTablet = () => {
                   <Calendar className="w-5 h-5" />
                   {format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es })}
                 </p>
+                <p className="text-xs italic text-muted-foreground/70 mt-0.5">"{COMPANY_DATA.slogan}"</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
