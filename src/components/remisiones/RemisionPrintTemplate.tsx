@@ -282,6 +282,7 @@ export const RemisionPrintTemplate = ({ datos }: RemisionPrintTemplateProps) => 
       {/* Footer */}
       <div className="text-center text-xs text-gray-600 border-t pt-2">
         <p className="font-bold">UNA VEZ RECIBIDA LA MERCANCÍA NO SE ACEPTAN DEVOLUCIONES</p>
+        <p className="italic text-[10px] mt-1">"{COMPANY_DATA.slogan}"</p>
         {datos.notas && <p className="mt-1 italic">Notas: {datos.notas}</p>}
       </div>
     </div>

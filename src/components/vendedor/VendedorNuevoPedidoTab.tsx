@@ -921,6 +921,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
                   unidad: l.producto.unidad || 'PZA',
                 })),
                 pesoTotalKg: totales.pesoTotalKg,
+                total: totales.total,
                 notas: notas || undefined,
               };
 

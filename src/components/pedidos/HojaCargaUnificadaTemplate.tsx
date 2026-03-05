@@ -24,6 +24,7 @@ export interface DatosHojaCargaUnificada {
   direccionEntrega?: string;
   productos: ProductoHojaCarga[];
   pesoTotalKg: number;
+  total?: number;
   notas?: string;
 }
 
@@ -155,9 +156,37 @@ export const HojaCargaUnificadaTemplate = ({ datos, variante }: Props) => {
         </div>
       </div>
 
+      {/* Pagaré - solo variante CLIENTE */}
+      {variante === "CLIENTE" && datos.total && (
+        <div className="border-2 border-gray-400 p-2 text-[9px] leading-tight mt-2">
+          <p className="text-center font-bold mb-1 text-[10px]">PAGARÉ</p>
+          <p className="text-justify">
+            &quot;Por el presente pagaré, reconozco deber y me comprometo incondicionalmente a pagar a la orden de
+            <strong> ABARROTES LA MANITA S.A. DE C.V.</strong> la cantidad de <strong>${datos.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })} PESOS MEXICANOS</strong>,
+            en la Ciudad de México, por haber recibido a mi entera satisfacción la mercancía descrita.
+          </p>
+          <p className="text-justify mt-1">
+            &quot;Acepto pagar en caso de mora el 10% (diez por ciento) mensual durante el tiempo que se encuentre insoluto sin perjuicio al pago principal y sin que por esto se entienda
+            prorrogado el plazo, este pagaré es mercantil y se encuentra regido por la Ley General de Títulos y Operaciones de Créditos según Artículos 170, 171, 174 y demás artículos
+            aplicables al presente caso.
+          </p>
+          <div className="grid grid-cols-2 gap-6 mt-3">
+            <div className="text-center">
+              <div className="border-b border-black mb-0.5 h-6"></div>
+              <p className="text-[8px]">Nombre y Firma de quien recibe</p>
+            </div>
+            <div className="text-center">
+              <div className="border-b border-black mb-0.5 h-6"></div>
+              <p className="text-[8px]">Fecha de recepción</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <div className="mt-2 border-t border-gray-200 pt-1 text-[7px] text-gray-300 text-center">
         <p>{COMPANY_DATA.razonSocial} — Hoja de Carga ({variante}) — {datos.folio}</p>
+        <p className="italic text-gray-400 mt-0.5">"{COMPANY_DATA.slogan}"</p>
       </div>
     </div>
   );
