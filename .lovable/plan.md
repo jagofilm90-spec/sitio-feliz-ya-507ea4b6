@@ -1,39 +1,25 @@
 
 
-# Plan: Historial de Modificaciones Visible en Detalle de Pedido
+# Plan: Fix Folio Search and Remove Auto-Navigate on QR Scan
 
-## Resumen
+## Issues
 
-Crear un componente reutilizable `PedidoHistorialCambios` que consulte la tabla `pedidos_historial_cambios` y muestre una línea de tiempo con cada modificación. Integrarlo en los dos diálogos de detalle existentes: `PedidoDetalleDialog` (admin/secretaria) y `PedidoDetalleVendedorDialog` (vendedor).
+1. **Folio partial match**: The input hardcodes prefix `PED-V-` and only accepts numbers. When searching, it does an exact match (`eq("folio", ...)`). If the user types only the last 4 digits, it fails. Need to support partial/suffix matching using `ilike`.
 
-## Componente nuevo: `PedidoHistorialCambios.tsx`
+2. **Auto-navigate to loading sheet**: Lines 99-107 have a `useEffect` that auto-proceeds to create the route and go to "hoja_carga" after 800ms when exactly 1 pedido is scanned. This must be removed so the user can scan multiple pedidos before choosing to proceed.
 
-- Recibe `pedidoId` como prop
-- Consulta `pedidos_historial_cambios` filtrado por `pedido_id`, ordenado por `created_at` desc
-- Join con `profiles` vía `usuario_id` para mostrar el nombre de quien hizo el cambio
-- Muestra una timeline vertical con:
-  - **Icono/badge** según `tipo_cambio`: "almacen_carga" (icono Warehouse) vs "conciliacion_secretaria" (icono ClipboardCheck)
-  - **Fecha/hora** formateada
-  - **Quien** hizo el cambio (nombre del usuario)
-  - **Detalle de cambios** parseado del JSONB `cambios`: lista de productos con cantidad original → cantidad nueva
-  - **Total anterior → Total nuevo** si cambió
-- Si no hay historial, no se renderiza nada (sin sección vacía)
+## Changes (single file)
 
-## Integración en diálogos existentes
+**`src/components/almacen/CargaRutaInlineFlow.tsx`**
 
-### `PedidoDetalleDialog.tsx` (admin/secretaria)
-- Agregar `<PedidoHistorialCambios pedidoId={pedidoId} />` después de la sección de totales, antes del cierre del dialog
+### Fix 1: Remove auto-proceed effect
+- Delete the `useEffect` at lines 99-107 that calls `handleCrearRutaYCargar()` when `cola.length === 1`
 
-### `PedidoDetalleVendedorDialog.tsx` (vendedor)
-- Agregar el mismo componente después de la sección de notas, antes de los botones de acción
+### Fix 2: Support partial folio matching
+- Change the manual input search logic (lines 165-187) to use `ilike` with suffix matching when the input is just digits (e.g., `%1234` matches `PED-V-1234`)
+- Also remove the hardcoded `PED-V-` prefix from the input UI (lines 571, 583, 587) — instead accept any text and try matching flexibly
+- When multiple results match, show an error asking for more digits
 
-## Archivos a crear/modificar
-
-| Archivo | Cambio |
-|---------|--------|
-| `src/components/pedidos/PedidoHistorialCambios.tsx` | **Nuevo** - Componente de timeline de cambios |
-| `src/components/pedidos/PedidoDetalleDialog.tsx` | Importar y renderizar el componente |
-| `src/components/vendedor/PedidoDetalleVendedorDialog.tsx` | Importar y renderizar el componente |
-
-No se requieren migraciones de base de datos (la tabla ya existe).
+### Fix 3: Update button label
+- The "Empezar a Cargar" button (line 643-650) text is fine as-is — it already says "Empezar a Cargar (N pedidos)" which serves as the "ir a carga" action
 
