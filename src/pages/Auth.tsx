@@ -178,7 +178,7 @@ const Auth = () => {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4 overflow-hidden">
       <div className="w-full max-w-md space-y-4">
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 animate-fade-in">
           <img src={logoAlmasa} alt="ALMASA" className="h-16 mx-auto mb-4" />
           <p className="text-lg font-medium text-foreground">Abarrotes la Manita SA de CV</p>
           <p className="text-sm text-muted-foreground">Sistema de Gestión Empresarial</p>
