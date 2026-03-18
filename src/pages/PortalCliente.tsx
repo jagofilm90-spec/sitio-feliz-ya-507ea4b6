@@ -104,63 +104,71 @@ const PortalCliente = () => {
   };
 
   const loadEstadisticas = async (clienteId: string) => {
-    const inicioMes = new Date();
-    inicioMes.setDate(1);
-    inicioMes.setHours(0, 0, 0, 0);
+    try {
+      const inicioMes = new Date();
+      inicioMes.setDate(1);
+      inicioMes.setHours(0, 0, 0, 0);
 
-    // Orders this month
-    const { data: pedidosMes } = await supabase
-      .from("pedidos")
-      .select("id, total, fecha_pedido")
-      .eq("cliente_id", clienteId)
-      .gte("fecha_pedido", inicioMes.toISOString());
+      // Orders this month
+      const { data: pedidosMes } = await supabase
+        .from("pedidos")
+        .select("id, total, fecha_pedido")
+        .eq("cliente_id", clienteId)
+        .gte("fecha_pedido", inicioMes.toISOString());
 
-    const totalMes = pedidosMes?.reduce((sum, p) => sum + (p.total || 0), 0) || 0;
+      const totalMes = pedidosMes?.reduce((sum, p) => sum + (p.total || 0), 0) || 0;
 
-    // Last purchase
-    const { data: ultimoPedido } = await supabase
-      .from("pedidos")
-      .select("fecha_pedido")
-      .eq("cliente_id", clienteId)
-      .order("fecha_pedido", { ascending: false })
-      .limit(1)
-      .single();
+      // Last purchase
+      const { data: ultimoPedido } = await supabase
+        .from("pedidos")
+        .select("fecha_pedido")
+        .eq("cliente_id", clienteId)
+        .order("fecha_pedido", { ascending: false })
+        .limit(1)
+        .single();
 
-    // Next scheduled delivery
-    const { data: proximaEntrega } = await supabase
-      .from("entregas")
-      .select("ruta_id, rutas!inner(fecha_ruta)")
-      .eq("pedido_id", (await supabase.from("pedidos").select("id").eq("cliente_id", clienteId).limit(1).single())?.data?.id || "")
-      .eq("entregado", false)
-      .order("created_at", { ascending: true })
-      .limit(1);
+      // Next scheduled delivery
+      const { data: proximaEntrega } = await supabase
+        .from("entregas")
+        .select("ruta_id, rutas!inner(fecha_ruta)")
+        .eq("pedido_id", (await supabase.from("pedidos").select("id").eq("cliente_id", clienteId).limit(1).single())?.data?.id || "")
+        .eq("entregado", false)
+        .order("created_at", { ascending: true })
+        .limit(1);
 
-    // Favorite product (most ordered)
-    const { data: productosOrdenados } = await supabase
-      .from("pedidos_detalles")
-      .select("producto_id, productos!inner(nombre), cantidad")
-      .in("pedido_id", pedidosMes?.map(p => p.id) || []);
+      // Favorite product (most ordered)
+      const { data: productosOrdenados } = await supabase
+        .from("pedidos_detalles")
+        .select("producto_id, productos!inner(nombre), cantidad")
+        .in("pedido_id", pedidosMes?.map(p => p.id) || []);
 
-    let productoFavorito: string | null = null;
-    if (productosOrdenados && productosOrdenados.length > 0) {
-      const conteo: Record<string, { nombre: string; cantidad: number }> = {};
-      productosOrdenados.forEach((p: any) => {
-        if (!conteo[p.producto_id]) {
-          conteo[p.producto_id] = { nombre: p.productos?.nombre || "", cantidad: 0 };
-        }
-        conteo[p.producto_id].cantidad += p.cantidad;
+      let productoFavorito: string | null = null;
+      if (productosOrdenados && productosOrdenados.length > 0) {
+        const conteo: Record<string, { nombre: string; cantidad: number }> = {};
+        productosOrdenados.forEach((p: any) => {
+          if (!conteo[p.producto_id]) {
+            conteo[p.producto_id] = { nombre: p.productos?.nombre || "", cantidad: 0 };
+          }
+          conteo[p.producto_id].cantidad += p.cantidad;
+        });
+        const sorted = Object.values(conteo).sort((a, b) => b.cantidad - a.cantidad);
+        productoFavorito = sorted[0]?.nombre || null;
+      }
+
+      setEstadisticas({
+        pedidosMes: pedidosMes?.length || 0,
+        totalMes,
+        productoFavorito,
+        ultimaCompra: ultimoPedido?.fecha_pedido || null,
+        proximaEntrega: (proximaEntrega?.[0] as any)?.rutas?.fecha_ruta || null,
       });
-      const sorted = Object.values(conteo).sort((a, b) => b.cantidad - a.cantidad);
-      productoFavorito = sorted[0]?.nombre || null;
+    } catch (error) {
+      console.error("Error loading estadísticas:", error);
+      toast({
+        title: "Advertencia",
+        description: "No se pudieron cargar todas las estadísticas",
+      });
     }
-
-    setEstadisticas({
-      pedidosMes: pedidosMes?.length || 0,
-      totalMes,
-      productoFavorito,
-      ultimaCompra: ultimoPedido?.fecha_pedido || null,
-      proximaEntrega: (proximaEntrega?.[0] as any)?.rutas?.fecha_ruta || null,
-    });
   };
 
   const handleSignOut = async () => {
