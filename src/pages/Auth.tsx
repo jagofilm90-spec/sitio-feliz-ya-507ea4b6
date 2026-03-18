@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import { COMPANY_DATA } from "@/constants/companyData";
 
