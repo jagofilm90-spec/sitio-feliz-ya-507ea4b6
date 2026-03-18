@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { VendedorVentasChart } from "@/components/vendedor/VendedorVentasChart";
-import logoAlmasa from "@/assets/logos/logo-principal.png";
+import logoAlmasa from "@/assets/logo-almasa.png";
 
 const VendedorAnalisisVentas = () => {
   const navigate = useNavigate();
