@@ -13,6 +13,17 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Truck, MapPin, Package, User, LogOut, Navigation, RefreshCw } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { buttonVariants } from "@/components/ui/button";
 import { NoRutaCard } from "@/components/chofer/NoRutaCard";
 import { EntregaCard } from "@/components/chofer/EntregaCard";
 import { ResumenRuta } from "@/components/chofer/ResumenRuta";
@@ -41,6 +52,7 @@ export default function ChoferPanel() {
   const [showResumen, setShowResumen] = useState(false);
   const [showPermissionRequest, setShowPermissionRequest] = useState(false);
   const [permissionGranted, setPermissionGranted] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   // GPS Tracking - only enabled when route is in progress and permissions granted
   const isRutaActiva = ruta && ['en_ruta', 'cargada'].includes(ruta.status);
@@ -167,7 +179,7 @@ export default function ChoferPanel() {
                 <p className="text-[10px] opacity-70 italic hidden md:block">"{COMPANY_DATA.slogan}"</p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate("/auth"); }} className="md:hidden text-primary-foreground hover:bg-primary-foreground/20">
+            <Button variant="ghost" size="icon" onClick={() => setShowLogoutDialog(true)} className="md:hidden text-primary-foreground hover:bg-primary-foreground/20">
               <LogOut className="h-5 w-5" />
             </Button>
           </div>
@@ -190,7 +202,7 @@ export default function ChoferPanel() {
               <GpsTrackingIndicator isTracking={isTracking} accuracy={accuracy} error={gpsError} />
             )}
             <LiveIndicator label="En vivo" className="text-primary-foreground/90" />
-            <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate("/auth"); }} className="hidden md:flex text-primary-foreground hover:bg-primary-foreground/20">
+            <Button variant="ghost" size="icon" onClick={() => setShowLogoutDialog(true)} className="hidden md:flex text-primary-foreground hover:bg-primary-foreground/20">
               <LogOut className="h-5 w-5" />
             </Button>
           </div>
@@ -246,6 +258,21 @@ export default function ChoferPanel() {
         }}
         onDismiss={() => setShowPermissionRequest(false)}
       />
+
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cerrar sesión?</AlertDialogTitle>
+            <AlertDialogDescription>Se cerrará tu sesión en el sistema</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className={buttonVariants({ variant: "destructive" })} onClick={() => { supabase.auth.signOut(); navigate("/auth"); }}>
+              Sí, cerrar sesión
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

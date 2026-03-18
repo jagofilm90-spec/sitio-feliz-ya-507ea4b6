@@ -13,6 +13,17 @@ import { CentroNotificaciones } from "@/components/CentroNotificaciones";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Loader2, LogOut, Home } from "lucide-react";
 import { format } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { buttonVariants } from "@/components/ui/button";
 import { es } from "date-fns/locale";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import { COMPANY_DATA } from "@/constants/companyData";
@@ -42,6 +53,7 @@ const SecretariaPanel = () => {
   const [userName, setUserName] = useState("");
   const [showBienvenida, setShowBienvenida] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const navigate = useNavigate();
   const { roles, isLoading: rolesLoading, hasRole } = useUserRoles();
   
@@ -183,7 +195,7 @@ const SecretariaPanel = () => {
         <SecretariaSidebar
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          onLogout={handleLogout}
+          onLogout={() => setShowLogoutDialog(true)}
           onNavigateDashboard={() => navigate("/dashboard")}
           userName={userName}
           counters={counters}
@@ -218,7 +230,7 @@ const SecretariaPanel = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleLogout}
+                onClick={() => setShowLogoutDialog(true)}
                 className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full"
               >
                 <LogOut className="h-5 w-5" />
@@ -255,7 +267,7 @@ const SecretariaPanel = () => {
           activeTab={activeTab}
           onTabChange={setActiveTab}
           counters={counters}
-          onLogout={handleLogout}
+          onLogout={() => setShowLogoutDialog(true)}
         />
 
         {/* Welcome Dialog */}
@@ -266,6 +278,21 @@ const SecretariaPanel = () => {
           onNavigate={setActiveTab}
         />
       </div>
+
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cerrar sesión?</AlertDialogTitle>
+            <AlertDialogDescription>Se cerrará tu sesión en el sistema</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className={buttonVariants({ variant: "destructive" })} onClick={handleLogout}>
+              Sí, cerrar sesión
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SidebarProvider>
   );
 };
