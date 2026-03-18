@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Loader2 } from "lucide-react";
 import { NotificacionesSistema } from "@/components/NotificacionesSistema";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from "@/components/ui/card";
 
 import { UsuariosConectadosPanel } from "@/components/admin/UsuariosConectadosPanel";
 import { useUserRoles } from "@/hooks/useUserRoles";
