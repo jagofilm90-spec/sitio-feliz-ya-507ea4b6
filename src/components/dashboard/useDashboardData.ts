@@ -162,9 +162,11 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         });
       });
 
+      const cobrosHoy = cobrosHoyRes.data?.reduce((s: number, p: any) => s + (Number(p.monto_total) || 0), 0) || 0;
+
       const kpis: DashboardKPIs = {
         ventasDia, ventasMes, ventasMesAnterior, variacionMes,
-        porCobrar, totalVencido,
+        porCobrar, totalVencido, cobrosHoy,
         pedidosEnCalle: pedidosEnCalleRes.count || 0,
         entregasCompletadasHoy, entregasPendientesHoy,
         pedidosPorSurtir: pedidosPorSurtirRes.count || 0,
@@ -172,6 +174,7 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         stockBajo: stockBajoRes.count || 0,
         pedidosSinAutorizar24h: pedidosSinAutRes.count || 0,
         facturasVencenSemana: facturasVencenSemanaRes.count || 0,
+        pagosPorValidar: pagosPorValidarRes.count || 0,
       };
 
       // Alertas urgentes
