@@ -88,7 +88,9 @@ interface Pago {
   fecha_registro: string;
   monto_total: number;
   forma_pago: string;
+  referencia: string | null;
   status: string;
+  registrado_por_nombre: string;
 }
 
 interface NotificacionEnviada {
@@ -264,15 +266,29 @@ export function ClienteDetalleSheet({
       });
       setFacturas(facturasFormateadas);
 
-      // Fetch pagos
+      // Fetch pagos with registrado_por name
       const { data: pagosData } = await supabase
         .from("pagos_cliente")
-        .select("id, fecha_registro, monto_total, forma_pago, status")
+        .select("id, fecha_registro, monto_total, forma_pago, referencia, status, registrado_por")
         .eq("cliente_id", clienteId)
         .order("fecha_registro", { ascending: false })
-        .limit(20);
+        .limit(50);
 
-      setPagos(pagosData || []);
+      // Get profile names for registrado_por
+      const regIds = [...new Set((pagosData || []).map(p => p.registrado_por).filter(Boolean))];
+      let regMap = new Map<string, string>();
+      if (regIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", regIds as string[]);
+        regMap = new Map((profiles || []).map(p => [p.id, p.full_name || "Usuario"]));
+      }
+
+      setPagos((pagosData || []).map(p => ({
+        ...p,
+        registrado_por_nombre: p.registrado_por ? (regMap.get(p.registrado_por) || "Usuario") : "Sistema",
+      })));
 
       // Fetch emails del cliente para buscar notificaciones
       const { data: emailsCliente } = await supabase
@@ -689,7 +705,7 @@ export function ClienteDetalleSheet({
                 )}
               </TabsContent>
 
-              {/* Pagos Tab */}
+              {/* Pagos Tab - Enhanced with history */}
               <TabsContent value="pagos" className="mt-4">
                 {pagos.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
@@ -697,29 +713,56 @@ export function ClienteDetalleSheet({
                     <p>Sin pagos registrados</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {pagos.map((pago) => (
-                      <Card key={pago.id} className="hover:bg-muted/50 transition-colors">
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium capitalize">{pago.forma_pago}</span>
-                                <Badge variant={pago.status === "validado" ? "outline" : "secondary"}>
-                                  {pago.status === "validado" ? "Validado" : "Pendiente"}
-                                </Badge>
-                              </div>
-                              <span className="text-sm text-muted-foreground">
-                                {format(new Date(pago.fecha_registro), "d MMM yyyy HH:mm", { locale: es })}
-                              </span>
-                            </div>
-                            <p className="font-semibold text-green-600">
-                              +{formatCurrency(pago.monto_total)}
-                            </p>
-                          </div>
+                  <div className="space-y-4">
+                    {/* Summary stats */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <Card>
+                        <CardContent className="p-3 text-center">
+                          <p className="text-xs text-muted-foreground">Total pagado</p>
+                          <p className="font-bold text-lg text-emerald-600 dark:text-emerald-400">
+                            {formatCurrency(pagos.filter(p => p.status === 'validado').reduce((s, p) => s + p.monto_total, 0))}
+                          </p>
                         </CardContent>
                       </Card>
-                    ))}
+                      <Card>
+                        <CardContent className="p-3 text-center">
+                          <p className="text-xs text-muted-foreground">Pagos registrados</p>
+                          <p className="font-bold text-lg">{pagos.length}</p>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Payment list */}
+                    <div className="space-y-2">
+                      {pagos.map((pago) => (
+                        <Card key={pago.id} className="hover:bg-muted/50 transition-colors">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium capitalize">{pago.forma_pago}</span>
+                                <Badge variant={
+                                  pago.status === "validado" ? "outline" : 
+                                  pago.status === "rechazado" ? "destructive" : "secondary"
+                                }>
+                                  {pago.status === "validado" ? "✓ Validado" : 
+                                   pago.status === "rechazado" ? "Rechazado" : "Pendiente"}
+                                </Badge>
+                              </div>
+                              <p className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                +{formatCurrency(pago.monto_total)}
+                              </p>
+                            </div>
+                            <div className="flex items-center justify-between text-sm text-muted-foreground">
+                              <span>
+                                {format(new Date(pago.fecha_registro), "d MMM yyyy HH:mm", { locale: es })}
+                                {pago.referencia && ` · Ref: ${pago.referencia}`}
+                              </span>
+                              <span className="text-xs">{pago.registrado_por_nombre}</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   </div>
                 )}
               </TabsContent>

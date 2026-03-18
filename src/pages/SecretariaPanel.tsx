@@ -45,6 +45,7 @@ import { SecretariaChatTab } from "@/components/secretaria/SecretariaChatTab";
 import { SecretariaCorreosTab } from "@/components/secretaria/SecretariaCorreosTab";
 import { SecretariaClientesTab } from "@/components/secretaria/SecretariaClientesTab";
 import { SecretariaRutasTab } from "@/components/secretaria/SecretariaRutasTab";
+import { SecretariaPagosValidarTab } from "@/components/secretaria/SecretariaPagosValidarTab";
 import { SolicitudesAlmacenTab } from "@/components/facturas/SolicitudesAlmacenTab";
 
 const SecretariaPanel = () => {
@@ -132,6 +133,20 @@ const SecretariaPanel = () => {
     refetchInterval: 30000,
   });
 
+  // KPIs Query - Pagos por validar
+  const { data: pagosValidar = 0 } = useQuery({
+    queryKey: ["kpi-pagos-validar"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("pagos_cliente")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pendiente")
+        .eq("requiere_validacion", true);
+      return count || 0;
+    },
+    refetchInterval: 30000,
+  });
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
@@ -152,6 +167,7 @@ const SecretariaPanel = () => {
     chat: chatUnreadCount,
     correos: totalUnreadEmails,
     compras: comprasPendientes,
+    pagosValidar: pagosValidar,
   };
 
   const hasMultipleRoles = hasRole("admin") || roles.length > 1;
@@ -183,6 +199,8 @@ const SecretariaPanel = () => {
         return <SecretariaClientesTab />;
       case "rutas":
         return <SecretariaRutasTab />;
+      case "pagos_validar":
+        return <SecretariaPagosValidarTab />;
       default:
         return <SecretariaPedidosTab />;
     }

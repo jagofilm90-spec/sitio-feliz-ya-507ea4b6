@@ -11,6 +11,7 @@ export interface DashboardKPIs {
   variacionMes: number;
   porCobrar: number;
   totalVencido: number;
+  cobrosHoy: number;
   // Fila 2 - Operación
   pedidosEnCalle: number;
   entregasCompletadasHoy: number;
@@ -21,10 +22,11 @@ export interface DashboardKPIs {
   stockBajo: number;
   pedidosSinAutorizar24h: number;
   facturasVencenSemana: number;
+  pagosPorValidar: number;
 }
 
 export interface AlertaUrgente {
-  tipo: 'pedidos_sin_autorizar' | 'chofer_sin_gps' | 'stock_cero' | 'credito_excedido';
+  tipo: 'pedidos_sin_autorizar' | 'chofer_sin_gps' | 'stock_cero' | 'credito_excedido' | 'pagos_por_validar';
   cantidad: number;
   detalle?: string;
   ruta: string;
@@ -62,9 +64,9 @@ export interface DashboardData {
 
 const EMPTY_KPIS: DashboardKPIs = {
   ventasDia: 0, ventasMes: 0, ventasMesAnterior: 0, variacionMes: 0,
-  porCobrar: 0, totalVencido: 0, pedidosEnCalle: 0,
+  porCobrar: 0, totalVencido: 0, cobrosHoy: 0, pedidosEnCalle: 0,
   entregasCompletadasHoy: 0, entregasPendientesHoy: 0, pedidosPorSurtir: 0,
-  creditoExcedido: 0, stockBajo: 0, pedidosSinAutorizar24h: 0, facturasVencenSemana: 0,
+  creditoExcedido: 0, stockBajo: 0, pedidosSinAutorizar24h: 0, facturasVencenSemana: 0, pagosPorValidar: 0,
 };
 
 export function useDashboardData(periodo: Periodo = 'mes') {
@@ -99,6 +101,8 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         topProductosRes,
         topClientesRes,
         entregasHoyRes,
+        cobrosHoyRes,
+        pagosPorValidarRes,
       ] = await Promise.all([
         // Ventas del día
         supabase.from("pedidos").select("total").gte("created_at", inicioHoy).in("status", ["entregado", "en_ruta"]),
@@ -130,6 +134,10 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         supabase.from("pedidos").select("cliente_id, total, clientes(nombre)").gte("created_at", inicioMes).in("status", ["entregado", "en_ruta"]),
         // Entregas de hoy
         supabase.from("rutas").select("id, status, entregas(id, status_entrega)").eq("fecha_ruta", hoy),
+        // Cobros de hoy
+        supabase.from("pagos_cliente").select("monto_total").gte("fecha_registro", inicioHoy).neq("status", "rechazado"),
+        // Pagos por validar
+        supabase.from("pagos_cliente").select("id", { count: "exact", head: true }).eq("status", "pendiente").eq("requiere_validacion", true),
       ]);
 
       // KPIs calculations
@@ -154,9 +162,11 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         });
       });
 
+      const cobrosHoy = cobrosHoyRes.data?.reduce((s: number, p: any) => s + (Number(p.monto_total) || 0), 0) || 0;
+
       const kpis: DashboardKPIs = {
         ventasDia, ventasMes, ventasMesAnterior, variacionMes,
-        porCobrar, totalVencido,
+        porCobrar, totalVencido, cobrosHoy,
         pedidosEnCalle: pedidosEnCalleRes.count || 0,
         entregasCompletadasHoy, entregasPendientesHoy,
         pedidosPorSurtir: pedidosPorSurtirRes.count || 0,
@@ -164,6 +174,7 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         stockBajo: stockBajoRes.count || 0,
         pedidosSinAutorizar24h: pedidosSinAutRes.count || 0,
         facturasVencenSemana: facturasVencenSemanaRes.count || 0,
+        pagosPorValidar: pagosPorValidarRes.count || 0,
       };
 
       // Alertas urgentes
@@ -176,6 +187,9 @@ export function useDashboardData(periodo: Periodo = 'mes') {
       }
       if (creditoExcedido > 0) {
         alertas.push({ tipo: 'credito_excedido', cantidad: creditoExcedido, ruta: '/clientes', botonTexto: 'Ver cobranza' });
+      }
+      if ((pagosPorValidarRes.count || 0) > 0) {
+        alertas.push({ tipo: 'pagos_por_validar', cantidad: pagosPorValidarRes.count || 0, ruta: '/secretaria', botonTexto: 'Validar pagos' });
       }
 
       // Top productos aggregation
