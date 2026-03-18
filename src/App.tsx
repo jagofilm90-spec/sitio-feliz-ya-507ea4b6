@@ -126,32 +126,113 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
-              <Route path="/productos" element={<Productos />} />
-              <Route path="/clientes" element={<Clientes />} />
-              <Route path="/pedidos" element={<Pedidos />} />
-              <Route path="/inventario" element={<Inventario />} />
-              <Route path="/rutas" element={<Rutas />} />
-              <Route path="/facturas" element={<Facturas />} />
+              <Route path="/productos" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor', 'contadora']} redirectTo="/auth">
+                  <Productos />
+                </ProtectedRoute>
+              } />
+              <Route path="/clientes" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor']} redirectTo="/auth">
+                  <Clientes />
+                </ProtectedRoute>
+              } />
+              <Route path="/pedidos" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor']} redirectTo="/auth">
+                  <Pedidos />
+                </ProtectedRoute>
+              } />
+              <Route path="/inventario" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'gerente_almacen', 'almacen']} redirectTo="/auth">
+                  <Inventario />
+                </ProtectedRoute>
+              } />
+              <Route path="/rutas" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria']} redirectTo="/auth">
+                  <Rutas />
+                </ProtectedRoute>
+              } />
+              <Route path="/facturas" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'contadora']} redirectTo="/auth">
+                  <Facturas />
+                </ProtectedRoute>
+              } />
               <Route path="/portal-cliente" element={<PortalCliente />} />
-              <Route path="/empleados" element={<Empleados />} />
-              <Route path="/usuarios" element={<Usuarios />} />
-              <Route path="/chat" element={<Chat />} />
-              <Route path="/compras" element={<Compras />} />
-              <Route path="/rentabilidad" element={<Rentabilidad />} />
-              <Route path="/fumigaciones" element={<Fumigaciones />} />
+              <Route path="/empleados" element={
+                <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
+                  <Empleados />
+                </ProtectedRoute>
+              } />
+              <Route path="/usuarios" element={
+                <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
+                  <Usuarios />
+                </ProtectedRoute>
+              } />
+              <Route path="/chat" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor', 'contadora']} redirectTo="/auth">
+                  <Chat />
+                </ProtectedRoute>
+              } />
+              <Route path="/compras" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'contadora']} redirectTo="/auth">
+                  <Compras />
+                </ProtectedRoute>
+              } />
+              <Route path="/rentabilidad" element={
+                <ProtectedRoute allowedRoles={['admin', 'contadora']} redirectTo="/auth">
+                  <Rentabilidad />
+                </ProtectedRoute>
+              } />
+              <Route path="/fumigaciones" element={
+                <ProtectedRoute allowedRoles={['admin', 'gerente_almacen']} redirectTo="/auth">
+                  <Fumigaciones />
+                </ProtectedRoute>
+              } />
               <Route path="/correos" element={<CorreosCorporativos />} />
               <Route path="/generate-assets" element={<GenerateAssets />} />
               <Route path="/tarjeta" element={<TarjetaDigital />} />
               <Route path="/privacidad" element={<Privacidad />} />
               <Route path="/soporte" element={<Soporte />} />
               <Route path="/disenos-camioneta" element={<DisenosCamioneta />} />
-              <Route path="/permisos" element={<Permisos />} />
-              <Route path="/respaldos" element={<Respaldos />} />
-              <Route path="/almacen-tablet" element={<AlmacenTablet />} />
-              <Route path="/almacen-tablet/carga-scan/:pedidoId?" element={<AlmacenCargaScan />} />
-              <Route path="/chofer" element={<ChoferPanel />} />
-              <Route path="/vendedor" element={<VendedorPanel />} />
-              <Route path="/vendedor/analisis" element={<VendedorAnalisisVentas />} />
+              <Route path="/permisos" element={
+                <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
+                  <Permisos />
+                </ProtectedRoute>
+              } />
+              <Route path="/respaldos" element={
+                <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
+                  <Respaldos />
+                </ProtectedRoute>
+              } />
+              <Route path="/almacen-tablet" element={
+                <ProtectedRoute allowedRoles={['admin', 'almacen', 'gerente_almacen']} redirectTo="/auth">
+                  <AlmacenTablet />
+                </ProtectedRoute>
+              } />
+              <Route path="/almacen-tablet/carga-scan/:pedidoId?" element={
+                <ProtectedRoute allowedRoles={['admin', 'almacen', 'gerente_almacen']} redirectTo="/auth">
+                  <AlmacenCargaScan />
+                </ProtectedRoute>
+              } />
+              <Route path="/chofer" element={
+                <ProtectedRoute allowedRoles={['admin', 'chofer']} redirectTo="/auth">
+                  <ChoferPanel />
+                </ProtectedRoute>
+              } />
+              <Route path="/vendedor" element={
+                <ProtectedRoute allowedRoles={['admin', 'vendedor']} redirectTo="/auth">
+                  <VendedorPanel />
+                </ProtectedRoute>
+              } />
+              <Route path="/vendedor/analisis" element={
+                <ProtectedRoute allowedRoles={['admin', 'vendedor']} redirectTo="/auth">
+                  <VendedorAnalisisVentas />
+                </ProtectedRoute>
+              } />
+              <Route path="/precios" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor']} redirectTo="/auth">
+                  <Precios />
+                </ProtectedRoute>
+              } />
               <Route path="/secretaria" element={
                 <ProtectedRoute allowedRoles={['admin', 'secretaria']} redirectTo="/auth">
                   <SecretariaPanel />
