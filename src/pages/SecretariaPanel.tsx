@@ -53,6 +53,7 @@ const SecretariaPanel = () => {
   const [userName, setUserName] = useState("");
   const [showBienvenida, setShowBienvenida] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const navigate = useNavigate();
   const { roles, isLoading: rolesLoading, hasRole } = useUserRoles();
   
