@@ -52,6 +52,7 @@ export default function ChoferPanel() {
   const [showResumen, setShowResumen] = useState(false);
   const [showPermissionRequest, setShowPermissionRequest] = useState(false);
   const [permissionGranted, setPermissionGranted] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   // GPS Tracking - only enabled when route is in progress and permissions granted
   const isRutaActiva = ruta && ['en_ruta', 'cargada'].includes(ruta.status);
