@@ -138,7 +138,7 @@ export const CreditoExcedidoAlert = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Límite:</span>
-                    <span>{formatCurrency(cliente.limiteCredito)}</span>
+                    <span>{fmtCurrency(cliente.limiteCredito)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Saldo:</span>
