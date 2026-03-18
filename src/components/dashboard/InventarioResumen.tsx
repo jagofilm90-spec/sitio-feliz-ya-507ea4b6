@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { Package, TrendingUp, TrendingDown, ArrowRightLeft } from "lucide-react";
+import { formatCurrencyCompact } from "@/lib/formatDashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   BarChart, 
