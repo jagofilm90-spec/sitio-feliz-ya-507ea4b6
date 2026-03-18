@@ -133,6 +133,20 @@ const SecretariaPanel = () => {
     refetchInterval: 30000,
   });
 
+  // KPIs Query - Pagos por validar
+  const { data: pagosValidar = 0 } = useQuery({
+    queryKey: ["kpi-pagos-validar"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("pagos_cliente")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pendiente")
+        .eq("requiere_validacion", true);
+      return count || 0;
+    },
+    refetchInterval: 30000,
+  });
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/auth");

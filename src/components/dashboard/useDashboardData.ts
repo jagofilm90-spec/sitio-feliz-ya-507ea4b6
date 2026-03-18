@@ -132,6 +132,10 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         supabase.from("pedidos").select("cliente_id, total, clientes(nombre)").gte("created_at", inicioMes).in("status", ["entregado", "en_ruta"]),
         // Entregas de hoy
         supabase.from("rutas").select("id, status, entregas(id, status_entrega)").eq("fecha_ruta", hoy),
+        // Cobros de hoy
+        supabase.from("pagos_cliente").select("monto_total").gte("fecha_registro", inicioHoy).neq("status", "rechazado"),
+        // Pagos por validar
+        supabase.from("pagos_cliente").select("id", { count: "exact", head: true }).eq("status", "pendiente").eq("requiere_validacion", true),
       ]);
 
       // KPIs calculations
