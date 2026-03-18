@@ -36,6 +36,7 @@ import {
   Coins,
   User,
   Truck,
+  CreditCard,
 } from "lucide-react";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import { LiveIndicator } from "@/components/ui/live-indicator";
