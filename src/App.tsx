@@ -249,8 +249,11 @@ const App = () => (
                   <Configuracion />
                 </ProtectedRoute>
               } />
-              {/* TEMPORAL: Sin protección para debug de Capacitor en iOS */}
-              <Route path="/push-diagnostics" element={<PushDiagnosticsPage />} />
+              <Route path="/push-diagnostics" element={
+                <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
+                  <PushDiagnosticsPage />
+                </ProtectedRoute>
+              } />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
