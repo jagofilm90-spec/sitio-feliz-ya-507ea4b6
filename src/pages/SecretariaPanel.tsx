@@ -153,6 +153,7 @@ const SecretariaPanel = () => {
     chat: chatUnreadCount,
     correos: totalUnreadEmails,
     compras: comprasPendientes,
+    pagosValidar: pagosValidar,
   };
 
   const hasMultipleRoles = hasRole("admin") || roles.length > 1;
