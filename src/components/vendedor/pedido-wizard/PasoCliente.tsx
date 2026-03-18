@@ -1,4 +1,5 @@
-import { Store, ChevronRight, Users, MapPin, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Store, ChevronRight, Users, MapPin, Loader2, AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { formatCurrency } from "@/lib/utils";
 import { Cliente, Sucursal } from "./types";
 
 // Regions that belong to Valle de México (metropolitan area)
@@ -21,7 +24,6 @@ const VALLE_MEXICO_REGIONS = [
   'edomex_norte', 'edomex_oriente'
 ];
 
-// Foráneas region labels for grouping
 const REGION_LABELS: Record<string, string> = {
   'valle_mexico': 'Valle de México',
   'toluca': 'Toluca',
@@ -32,6 +34,19 @@ const REGION_LABELS: Record<string, string> = {
   'tlaxcala': 'Tlaxcala',
   'sin_zona': 'Sin zona asignada',
 };
+
+type SemaforoColor = 'verde' | 'amarillo' | 'rojo';
+
+interface SemaforoData {
+  color: SemaforoColor;
+  label: string;
+  mensaje: string;
+  saldoPendiente: number;
+  limiteCredito: number | null;
+  creditoDisponible: number | null;
+  facturasVencidas: number;
+  facturasPorVencer: number;
+}
 
 interface PasoClienteProps {
   clientes: Cliente[];
@@ -57,6 +72,83 @@ export function PasoCliente({
   const selectedCliente = clientes.find(c => c.id === selectedClienteId);
   const canContinue = selectedClienteId && (sucursales.length === 0 || selectedSucursalId);
 
+  const [semaforo, setSemaforo] = useState<SemaforoData | null>(null);
+  const [loadingSemaforo, setLoadingSemaforo] = useState(false);
+
+  // Fetch semaphore data when client changes
+  useEffect(() => {
+    if (!selectedClienteId) {
+      setSemaforo(null);
+      return;
+    }
+    
+    const fetchSemaforo = async () => {
+      setLoadingSemaforo(true);
+      try {
+        const hoy = new Date().toISOString().split('T')[0];
+        const en7Dias = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+        // Parallel queries
+        const [clienteRes, vencidasRes, porVencerRes] = await Promise.all([
+          supabase
+            .from("clientes")
+            .select("saldo_pendiente, limite_credito")
+            .eq("id", selectedClienteId)
+            .single(),
+          supabase
+            .from("facturas")
+            .select("id", { count: "exact", head: true })
+            .eq("cliente_id", selectedClienteId)
+            .eq("pagada", false)
+            .lt("fecha_vencimiento", hoy),
+          supabase
+            .from("facturas")
+            .select("id", { count: "exact", head: true })
+            .eq("cliente_id", selectedClienteId)
+            .eq("pagada", false)
+            .gte("fecha_vencimiento", hoy)
+            .lte("fecha_vencimiento", en7Dias),
+        ]);
+
+        const saldoPendiente = clienteRes.data?.saldo_pendiente || 0;
+        const limiteCredito = clienteRes.data?.limite_credito || null;
+        const facturasVencidas = vencidasRes.count || 0;
+        const facturasPorVencer = porVencerRes.count || 0;
+
+        let color: SemaforoColor = 'verde';
+        let label = 'Buen pagador';
+        let mensaje = 'Todos sus pagos al corriente';
+
+        if (facturasVencidas > 0) {
+          color = 'rojo';
+          label = 'Saldo vencido';
+          mensaje = `${facturasVencidas} factura${facturasVencidas > 1 ? 's' : ''} vencida${facturasVencidas > 1 ? 's' : ''}`;
+        } else if (facturasPorVencer > 0) {
+          color = 'amarillo';
+          label = 'Revisar';
+          mensaje = `${facturasPorVencer} factura${facturasPorVencer > 1 ? 's' : ''} por vencer en 7 días`;
+        }
+
+        setSemaforo({
+          color,
+          label,
+          mensaje,
+          saldoPendiente,
+          limiteCredito,
+          creditoDisponible: limiteCredito ? Math.max(0, limiteCredito - saldoPendiente) : null,
+          facturasVencidas,
+          facturasPorVencer,
+        });
+      } catch (err) {
+        console.error("Error fetching semaforo:", err);
+      } finally {
+        setLoadingSemaforo(false);
+      }
+    };
+
+    fetchSemaforo();
+  }, [selectedClienteId]);
+
   // Group clients by region
   const clientesPorRegion: Record<string, Cliente[]> = {};
   clientes.forEach(cliente => {
@@ -77,7 +169,6 @@ export function PasoCliente({
     clientesPorRegion[groupKey].push(cliente);
   });
   
-  // Define order for regions
   const regionOrder = ['valle_mexico', 'toluca', 'morelos', 'puebla', 'hidalgo', 'queretaro', 'tlaxcala', 'sin_zona'];
   const sortedRegions = Object.keys(clientesPorRegion).sort((a, b) => {
     const indexA = regionOrder.indexOf(a);
@@ -85,9 +176,33 @@ export function PasoCliente({
     return (indexA === -1 ? 100 : indexA) - (indexB === -1 ? 100 : indexB);
   });
 
-  const formatCreditTerm = (term: string) => {
-    if (term === 'contado') return 'Contado';
-    return term.replace('_', ' ');
+  const getSemaforoStyles = (color: SemaforoColor) => {
+    switch (color) {
+      case 'verde':
+        return {
+          bg: 'bg-emerald-50 dark:bg-emerald-950/30',
+          border: 'border-emerald-200 dark:border-emerald-800',
+          text: 'text-emerald-700 dark:text-emerald-400',
+          icon: <CheckCircle className="h-5 w-5" />,
+          dot: '🟢',
+        };
+      case 'amarillo':
+        return {
+          bg: 'bg-amber-50 dark:bg-amber-950/30',
+          border: 'border-amber-200 dark:border-amber-800',
+          text: 'text-amber-700 dark:text-amber-400',
+          icon: <Clock className="h-5 w-5" />,
+          dot: '🟡',
+        };
+      case 'rojo':
+        return {
+          bg: 'bg-red-50 dark:bg-red-950/30',
+          border: 'border-red-200 dark:border-red-800',
+          text: 'text-red-700 dark:text-red-400',
+          icon: <AlertTriangle className="h-5 w-5" />,
+          dot: '🔴',
+        };
+    }
   };
 
   return (
@@ -138,13 +253,57 @@ export function PasoCliente({
             </Select>
           </div>
 
-          {/* Selected Client Info */}
+          {/* Selected Client Info + Semaphore */}
           {selectedCliente && (
-            <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
-              <Users className="h-5 w-5 text-primary shrink-0" />
-              <div className="flex-1">
-                <p className="font-medium">{selectedCliente.nombre}</p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                <Users className="h-5 w-5 text-primary shrink-0" />
+                <div className="flex-1">
+                  <p className="font-medium">{selectedCliente.nombre}</p>
+                </div>
               </div>
+
+              {/* Payment Semaphore */}
+              {loadingSemaforo ? (
+                <div className="flex items-center justify-center py-3">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mr-2" />
+                  <span className="text-sm text-muted-foreground">Consultando estado de pago...</span>
+                </div>
+              ) : semaforo && (
+                <div className={`p-4 rounded-lg border ${getSemaforoStyles(semaforo.color).bg} ${getSemaforoStyles(semaforo.color).border}`}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-lg">{getSemaforoStyles(semaforo.color).dot}</span>
+                    <div className={`flex-1 ${getSemaforoStyles(semaforo.color).text}`}>
+                      <p className="font-semibold">{semaforo.label}</p>
+                      <p className="text-sm">{semaforo.mensaje}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-muted-foreground text-xs">Saldo pendiente</p>
+                      <p className={`font-semibold ${semaforo.saldoPendiente > 0 ? getSemaforoStyles(semaforo.color).text : ''}`}>
+                        {formatCurrency(semaforo.saldoPendiente)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Crédito disponible</p>
+                      <p className="font-semibold">
+                        {semaforo.creditoDisponible !== null 
+                          ? formatCurrency(semaforo.creditoDisponible)
+                          : "Sin límite"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {semaforo.color === 'rojo' && (
+                    <div className="mt-3 p-2 rounded bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 text-sm flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span>Este cliente tiene saldo vencido. Considera solicitar pago antes de continuar.</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -163,7 +322,6 @@ export function PasoCliente({
                 Sucursal de entrega
               </Label>
               {sucursales.length === 1 ? (
-                // Auto-select and show prominently when only one branch
                 <div className="p-4 rounded-lg border-2 border-primary/30 bg-primary/5">
                   <p className="font-semibold text-lg">{sucursales[0].nombre}</p>
                   {sucursales[0].direccion && (

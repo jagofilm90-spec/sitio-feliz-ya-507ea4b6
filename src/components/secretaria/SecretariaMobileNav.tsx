@@ -49,6 +49,7 @@ export const SecretariaMobileNav = ({
   const navItems2 = [
     { id: "productos", label: "Productos", icon: Package },
     { id: "precios", label: "Precios", icon: DollarSign },
+    { id: "pagos_validar", label: "Pagos", icon: CreditCard, badge: counters.pagosValidar },
     { id: "compras", label: "Compras", icon: ShoppingCart, badge: counters.compras },
     { id: "inventario", label: "Inventario", icon: Warehouse },
     { id: "mostrador", label: "Mostrador", icon: Store, badge: counters.mostrador },

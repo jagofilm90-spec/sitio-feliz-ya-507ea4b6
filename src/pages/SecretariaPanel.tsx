@@ -185,6 +185,8 @@ const SecretariaPanel = () => {
         return <SecretariaClientesTab />;
       case "rutas":
         return <SecretariaRutasTab />;
+      case "pagos_validar":
+        return <SecretariaPagosValidarTab />;
       default:
         return <SecretariaPedidosTab />;
     }
