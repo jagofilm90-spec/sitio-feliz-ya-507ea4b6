@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogOut, ShoppingCart, FileText, TrendingUp, Truck, MapPin, User, Package, Calendar } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import ClientePedidos from "@/components/cliente/ClientePedidos";
 import ClienteEstadoCuenta from "@/components/cliente/ClienteEstadoCuenta";
 import ClienteNuevoPedido from "@/components/cliente/ClienteNuevoPedido";
