@@ -45,6 +45,7 @@ import { SecretariaChatTab } from "@/components/secretaria/SecretariaChatTab";
 import { SecretariaCorreosTab } from "@/components/secretaria/SecretariaCorreosTab";
 import { SecretariaClientesTab } from "@/components/secretaria/SecretariaClientesTab";
 import { SecretariaRutasTab } from "@/components/secretaria/SecretariaRutasTab";
+import { SecretariaPagosValidarTab } from "@/components/secretaria/SecretariaPagosValidarTab";
 import { SolicitudesAlmacenTab } from "@/components/facturas/SolicitudesAlmacenTab";
 
 const SecretariaPanel = () => {
