@@ -26,7 +26,7 @@ export interface DashboardKPIs {
 }
 
 export interface AlertaUrgente {
-  tipo: 'pedidos_sin_autorizar' | 'chofer_sin_gps' | 'stock_cero' | 'credito_excedido';
+  tipo: 'pedidos_sin_autorizar' | 'chofer_sin_gps' | 'stock_cero' | 'credito_excedido' | 'pagos_por_validar';
   cantidad: number;
   detalle?: string;
   ruta: string;
