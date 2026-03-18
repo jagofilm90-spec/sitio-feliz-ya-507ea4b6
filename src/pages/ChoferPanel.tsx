@@ -199,11 +199,7 @@ export default function ChoferPanel() {
 
       <main className="p-4 pb-8 md:pb-8 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         {!ruta ? (
-          <Card className="border-dashed max-w-lg mx-auto md:mt-8"><CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Truck className="h-16 w-16 text-muted-foreground mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Sin ruta asignada</h2>
-            <p className="text-muted-foreground">No tienes rutas programadas para hoy</p>
-          </CardContent></Card>
+          <NoRutaCard onRefresh={fetchRutaDelDia} />
         ) : (
           <div className="max-w-4xl mx-auto">
             <Card className="mb-4">
