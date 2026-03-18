@@ -677,7 +677,11 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       totalUnidades += l.cantidad;
       
       if (l.descuento > 0) {
-        ahorroDescuentos += l.descuento * l.cantidad;
+        if (l.producto.precio_por_kilo && l.producto.peso_kg) {
+          ahorroDescuentos += l.descuento * l.cantidad * l.producto.peso_kg;
+        } else {
+          ahorroDescuentos += l.descuento * l.cantidad;
+        }
       }
     });
 
