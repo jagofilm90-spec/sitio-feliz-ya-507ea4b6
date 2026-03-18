@@ -26,6 +26,7 @@ interface SecretariaMobileNavProps {
     chat: number;
     correos: number;
     compras: number;
+    pagosValidar: number;
   };
   onLogout: () => void;
 }
