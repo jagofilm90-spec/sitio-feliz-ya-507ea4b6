@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { CreditCard, Phone, Calendar, AlertTriangle, CheckCircle, Clock, MessageCircle, Truck } from "lucide-react";
+import { CreditCard, Phone, Calendar, AlertTriangle, CheckCircle, Clock, MessageCircle, Truck, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { calcularEstadoCredito, CREDITO_LABELS, getCreditoColorClasses } from "@/lib/creditoUtils";
+import { RegistrarPagoDialog } from "./RegistrarPagoDialog";
 import {
   Select,
   SelectContent,
@@ -38,6 +39,7 @@ export function VendedorCobranzaTab() {
   const [pedidos, setPedidos] = useState<PedidoPendiente[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState("todas");
+  const [cobrosHoy, setCobrosHoy] = useState(0);
   const [stats, setStats] = useState({
     total: 0,
     vencido: 0,
@@ -46,9 +48,35 @@ export function VendedorCobranzaTab() {
     alCorriente: 0
   });
 
+  // Dialog state for registrar pago
+  const [showPagoDialog, setShowPagoDialog] = useState(false);
+  const [selectedCliente, setSelectedCliente] = useState<{ id: string; nombre: string } | null>(null);
+
   useEffect(() => {
     fetchPedidos();
+    fetchCobrosHoy();
   }, []);
+
+  const fetchCobrosHoy = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const hoy = new Date();
+      const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).toISOString();
+
+      const { data } = await supabase
+        .from("pagos_cliente")
+        .select("monto_total")
+        .eq("registrado_por", user.id)
+        .gte("fecha_registro", inicioHoy)
+        .neq("status", "rechazado");
+
+      setCobrosHoy((data || []).reduce((sum, p) => sum + Number(p.monto_total), 0));
+    } catch (err) {
+      console.error("Error fetching cobros hoy:", err);
+    }
+  };
 
   const fetchPedidos = async () => {
     try {
@@ -56,7 +84,6 @@ export function VendedorCobranzaTab() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get my clients
       const clientesResult = await supabase
         .from("clientes")
         .select("id, nombre, telefono")
@@ -72,14 +99,12 @@ export function VendedorCobranzaTab() {
       const clienteIds = clientesData.map(c => c.id);
       const clientesMap = new Map(clientesData.map(c => [c.id, c]));
 
-      // Get orders - using raw query to avoid type depth issues
       const pedidosResult = await supabase
         .from("pedidos")
         .select("id, folio, total, fecha_pedido, termino_credito, cliente_id, status");
 
       if (pedidosResult.error) throw pedidosResult.error;
 
-      // Filter client-side for my clients and non-cancelled orders
       const pedidosFiltradosPorCliente = (pedidosResult.data || []).filter(
         (p) => clienteIds.includes(p.cliente_id) && p.status !== 'cancelado'
       );
@@ -92,7 +117,6 @@ export function VendedorCobranzaTab() {
           total: p.total,
           fecha_pedido: p.fecha_pedido,
           termino_credito: p.termino_credito,
-          // These fields are new or may not be in types yet
           fecha_entrega_real: (p as any).fecha_entrega_real || null,
           pagado: (p as any).pagado || false,
           cliente: cliente || { id: "", nombre: "Sin cliente", telefono: null }
@@ -101,12 +125,10 @@ export function VendedorCobranzaTab() {
 
       setPedidos(pedidosConCliente);
 
-      // Calculate stats based on credit status
       let total = 0, vencido = 0, porVencer = 0, sinEntregar = 0, alCorriente = 0;
       
       pedidosConCliente.forEach(p => {
         total += p.total;
-        
         const estado = calcularEstadoCredito({
           terminoCredito: p.termino_credito,
           fechaCreacion: new Date(p.fecha_pedido),
@@ -114,15 +136,10 @@ export function VendedorCobranzaTab() {
           pagado: p.pagado
         });
 
-        if (estado.tipo === 'no_entregado') {
-          sinEntregar += p.total;
-        } else if (estado.tipo === 'vencido') {
-          vencido += p.total;
-        } else if (estado.tipo === 'por_vencer' || estado.tipo === 'contado') {
-          porVencer += p.total;
-        } else {
-          alCorriente += p.total;
-        }
+        if (estado.tipo === 'no_entregado') sinEntregar += p.total;
+        else if (estado.tipo === 'vencido') vencido += p.total;
+        else if (estado.tipo === 'por_vencer' || estado.tipo === 'contado') porVencer += p.total;
+        else alCorriente += p.total;
       });
 
       setStats({ total, vencido, porVencer, sinEntregar, alCorriente });
@@ -134,6 +151,16 @@ export function VendedorCobranzaTab() {
     }
   };
 
+  const handleRegistrarCobro = (clienteId: string, clienteNombre: string) => {
+    setSelectedCliente({ id: clienteId, nombre: clienteNombre });
+    setShowPagoDialog(true);
+  };
+
+  const handlePagoRegistrado = () => {
+    fetchPedidos();
+    fetchCobrosHoy();
+  };
+
   const pedidosFiltrados = pedidos.filter(p => {
     const estado = calcularEstadoCredito({
       terminoCredito: p.termino_credito,
@@ -143,16 +170,11 @@ export function VendedorCobranzaTab() {
     });
 
     switch (filtro) {
-      case "vencidos":
-        return estado.tipo === 'vencido';
-      case "por_vencer":
-        return estado.tipo === 'por_vencer' || estado.tipo === 'contado';
-      case "sin_entregar":
-        return estado.tipo === 'no_entregado';
-      case "al_corriente":
-        return estado.tipo === 'vigente';
-      default:
-        return true;
+      case "vencidos": return estado.tipo === 'vencido';
+      case "por_vencer": return estado.tipo === 'por_vencer' || estado.tipo === 'contado';
+      case "sin_entregar": return estado.tipo === 'no_entregado';
+      case "al_corriente": return estado.tipo === 'vigente';
+      default: return true;
     }
   });
 
@@ -174,10 +196,7 @@ export function VendedorCobranzaTab() {
     };
 
     return (
-      <Badge 
-        variant="outline" 
-        className={`${getCreditoColorClasses(estado.color)} flex items-center gap-1`}
-      >
+      <Badge variant="outline" className={`${getCreditoColorClasses(estado.color)} flex items-center gap-1`}>
         {iconMap[estado.tipo]}
         {estado.mensaje}
       </Badge>
@@ -188,10 +207,7 @@ export function VendedorCobranzaTab() {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
+          {[1,2,3,4].map(i => <Skeleton key={i} className="h-28" />)}
         </div>
         <Skeleton className="h-14 w-full" />
         <Skeleton className="h-32 w-full" />
@@ -201,8 +217,8 @@ export function VendedorCobranzaTab() {
 
   return (
     <div className="space-y-6">
-      {/* Stats - Larger Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <Card className="hover:shadow-md transition-shadow">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
@@ -272,9 +288,24 @@ export function VendedorCobranzaTab() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Cobros de hoy KPI */}
+        <Card className="border-emerald-500/50 hover:shadow-md transition-shadow bg-emerald-50/50 dark:bg-emerald-950/20">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                <DollarSign className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Cobros hoy</p>
+                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(cobrosHoy)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Filter - Larger */}
+      {/* Filter */}
       <Select value={filtro} onValueChange={setFiltro}>
         <SelectTrigger className="h-14 text-lg">
           <SelectValue />
@@ -288,7 +319,7 @@ export function VendedorCobranzaTab() {
         </SelectContent>
       </Select>
 
-      {/* Pedidos List - Larger Items */}
+      {/* Pedidos List */}
       <ScrollArea className="h-[calc(100vh-580px)] lg:h-[calc(100vh-540px)]">
         <div className="space-y-4">
           {pedidosFiltrados.length === 0 ? (
@@ -297,9 +328,7 @@ export function VendedorCobranzaTab() {
                 <CreditCard className="h-16 w-16 text-muted-foreground mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Sin pedidos pendientes</h3>
                 <p className="text-muted-foreground">
-                  {filtro === "todas" 
-                    ? "No tienes pedidos pendientes de cobro" 
-                    : "No hay pedidos con este filtro"}
+                  {filtro === "todas" ? "No tienes pedidos pendientes de cobro" : "No hay pedidos con este filtro"}
                 </p>
               </CardContent>
             </Card>
@@ -352,9 +381,7 @@ export function VendedorCobranzaTab() {
                               size="default"
                               variant="outline"
                               className="h-11 gap-2"
-                              onClick={() => {
-                                window.open(`tel:${pedido.cliente.telefono}`, '_blank');
-                              }}
+                              onClick={() => window.open(`tel:${pedido.cliente.telefono}`, '_blank')}
                             >
                               <Phone className="h-4 w-4" />
                               <span className="hidden sm:inline">Llamar</span>
@@ -374,6 +401,15 @@ export function VendedorCobranzaTab() {
                             </Button>
                           </>
                         )}
+                        <Button
+                          size="default"
+                          variant="secondary"
+                          className="h-11 gap-2"
+                          onClick={() => handleRegistrarCobro(pedido.cliente.id, pedido.cliente.nombre)}
+                        >
+                          <DollarSign className="h-4 w-4" />
+                          <span className="hidden sm:inline">Registrar cobro</span>
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -383,6 +419,17 @@ export function VendedorCobranzaTab() {
           )}
         </div>
       </ScrollArea>
+
+      {/* Registrar Pago Dialog */}
+      {selectedCliente && (
+        <RegistrarPagoDialog
+          open={showPagoDialog}
+          onOpenChange={setShowPagoDialog}
+          clienteId={selectedCliente.id}
+          clienteNombre={selectedCliente.nombre}
+          onPagoRegistrado={handlePagoRegistrado}
+        />
+      )}
     </div>
   );
 }
