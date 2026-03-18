@@ -183,6 +183,9 @@ const Auth = () => {
           <p className="text-lg font-medium text-foreground">Abarrotes la Manita SA de CV</p>
           <p className="text-sm text-muted-foreground">Sistema de Gestión Empresarial</p>
           <p className="text-xs italic text-muted-foreground mt-1">"{COMPANY_DATA.slogan}"</p>
+          <p className="text-sm text-muted-foreground mt-3 capitalize">
+            Bienvenido, {format(new Date(), "EEEE d 'de' MMMM 'de' yyyy", { locale: es })}
+          </p>
         </div>
         <Card className="w-full">
           <CardHeader className="space-y-1">
