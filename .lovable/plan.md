@@ -1,47 +1,71 @@
 
 
-## Plan: Replace spinner with skeleton layout during role loading
+# Plan: Folio Diario Consecutivo para Pedidos
 
-**File**: `src/pages/Dashboard.tsx`
+## Problema actual
+Los folios se generan con timestamps (`PED-V-123456`) o secuencias mensuales (`PED-202603-0001`). No hay forma de saber cuántos pedidos salieron en un día ni detectar faltantes al juntar las hojas firmadas.
 
-**Changes**:
+## Solución
 
-1. Add `Skeleton` import from `@/components/ui/skeleton` and `Card` from `@/components/ui/card`.
+Agregar un campo `numero_dia` (integer) a la tabla `pedidos` que se auto-incrementa por día, empezando en 1 cada día. Este número aparecerá prominente en las hojas de carga.
 
-2. Replace the `rolesLoading` block (lines 49-54) with a skeleton layout wrapped in `<Layout>`:
+### 1. Migración de base de datos
 
-```tsx
-if (rolesLoading) {
-  return (
-    <Layout>
-      <div className="space-y-4 md:space-y-6">
-        {/* Header skeleton */}
-        <div>
-          <Skeleton className="h-8 w-48 mb-2" />
-          <Skeleton className="h-4 w-32" />
-        </div>
-        {/* KPI cards skeleton - 4 cards matching real grid */}
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i} className="p-4 space-y-3">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-8 w-20" />
-              <Skeleton className="h-3 w-16" />
-            </Card>
-          ))}
-        </div>
-        {/* Large chart skeleton */}
-        <Skeleton className="h-[300px] w-full rounded-lg" />
-        {/* Two side-by-side cards */}
-        <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-          <Skeleton className="h-[200px] w-full rounded-lg" />
-          <Skeleton className="h-[200px] w-full rounded-lg" />
-        </div>
-      </div>
-    </Layout>
-  );
-}
+- Agregar columna `numero_dia` (integer, nullable) a `pedidos`
+- Crear función `asignar_numero_dia()` como trigger BEFORE INSERT que:
+  - Cuenta cuántos pedidos existen para la misma `fecha_pedido::date` (excluyendo borradores)
+  - Asigna `numero_dia = count + 1`
+  - Solo lo asigna si el status NO es `borrador`
+- Crear trigger en `pedidos` BEFORE INSERT que ejecute la función
+
+```sql
+-- Pseudológica del trigger:
+IF NEW.status != 'borrador' THEN
+  SELECT COALESCE(MAX(numero_dia), 0) + 1 INTO NEW.numero_dia
+  FROM pedidos
+  WHERE fecha_pedido::date = NEW.fecha_pedido::date
+    AND status != 'borrador'
+    AND numero_dia IS NOT NULL;
+END IF;
 ```
 
-3. Add `Card` to imports and `Skeleton` import. Remove `Loader2` if no longer used (it's still used in the almacen/chofer redirect block, so keep it).
+### 2. Actualizar folio a incluir número del día
+
+Cambiar el formato del folio en los 5 lugares donde se genera:
+- `VendedorNuevoPedidoTab.tsx` (vendedor crea pedido)
+- `ProcesarPedidoDialog.tsx` (correos)
+- `PedidosAcumulativosManager.tsx` (acumulativos, 2 lugares)
+- `CotizacionDetalleDialog.tsx` (cotización → pedido)
+- `NuevoPedidoDialog.tsx` (secretaria)
+- `ClienteNuevoPedido.tsx` (cliente)
+
+El folio **mantiene** el formato actual (`PED-YYYYMM-XXXX`) para identificación única. El `numero_dia` es un dato **adicional** que se muestra en las hojas.
+
+### 3. Mostrar número del día en hojas de carga
+
+En `HojaCargaUnificadaTemplate.tsx`, mostrar prominente:
+```
+NOTA #3
+```
+Usando el campo `numero_dia` del pedido. Se mostrará grande y visible en el header de la hoja para fácil identificación al juntar las hojas firmadas.
+
+### 4. Mostrar en el template de pedido (PedidoPrintTemplate)
+
+También agregar el número del día en `PedidoPrintTemplate.tsx` para la vista previa del vendedor.
+
+## Archivos a modificar
+
+| Archivo | Cambio |
+|---------|--------|
+| **Migración SQL** | Agregar `numero_dia`, función trigger, trigger |
+| `HojaCargaUnificadaTemplate.tsx` | Mostrar `NOTA #X` prominente en header |
+| `PedidoPrintTemplate.tsx` | Mostrar número del día |
+| `PedidoPDFPreviewDialog.tsx` | Pasar `numero_dia` a los datos |
+| `VendedorNuevoPedidoTab.tsx` | Leer `numero_dia` del pedido creado para mostrar |
+| Interfaces de datos print | Agregar campo `numeroDia` opcional |
+
+## Ventajas sobre el foliador físico
+- Se asigna automáticamente, sin error humano
+- Si se cancela un pedido, el número queda registrado (se puede ver el hueco)
+- Se puede consultar digitalmente cuántos pedidos salieron por día
 

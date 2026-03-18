@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Loader2 } from "lucide-react";
 import { NotificacionesSistema } from "@/components/NotificacionesSistema";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from "@/components/ui/card";
 
 import { UsuariosConectadosPanel } from "@/components/admin/UsuariosConectadosPanel";
 import { useUserRoles } from "@/hooks/useUserRoles";
@@ -48,9 +50,28 @@ const Dashboard = () => {
   // Mostrar loader mientras verifica roles
   if (rolesLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <Layout>
+        <div className="space-y-4 md:space-y-6">
+          <div>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i} className="p-4 space-y-3">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-3 w-16" />
+              </Card>
+            ))}
+          </div>
+          <Skeleton className="h-[300px] w-full rounded-lg" />
+          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+            <Skeleton className="h-[200px] w-full rounded-lg" />
+            <Skeleton className="h-[200px] w-full rounded-lg" />
+          </div>
+        </div>
+      </Layout>
     );
   }
 
