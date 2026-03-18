@@ -187,7 +187,7 @@ const Auth = () => {
             Bienvenido, {format(new Date(), "EEEE d 'de' MMMM 'de' yyyy", { locale: es })}
           </p>
         </div>
-        <Card className="w-full">
+        <Card className="w-full opacity-0 animate-fade-in-scale" style={{ animationDelay: "150ms" }}>
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold text-center">
               Iniciar Sesión
