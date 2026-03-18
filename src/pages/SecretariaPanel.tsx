@@ -195,7 +195,7 @@ const SecretariaPanel = () => {
         <SecretariaSidebar
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          onLogout={handleLogout}
+          onLogout={() => setShowLogoutDialog(true)}
           onNavigateDashboard={() => navigate("/dashboard")}
           userName={userName}
           counters={counters}
