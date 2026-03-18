@@ -13,6 +13,17 @@ import { CentroNotificaciones } from "@/components/CentroNotificaciones";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Loader2, LogOut, Home } from "lucide-react";
 import { format } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { buttonVariants } from "@/components/ui/button";
 import { es } from "date-fns/locale";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import { COMPANY_DATA } from "@/constants/companyData";
