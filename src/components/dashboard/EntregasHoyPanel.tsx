@@ -86,9 +86,7 @@ export const EntregasHoyPanel = () => {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return `$${value.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-  };
+  const fmtCurrency = (value: number) => `$${value.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
   if (loading) {
     return (
@@ -179,7 +177,7 @@ export const EntregasHoyPanel = () => {
           </div>
           <div className="flex justify-between items-center mt-1">
             <span className="text-sm text-muted-foreground">Valor a entregar</span>
-            <span className="font-bold text-primary">{formatCurrency(stats.valorTotal)}</span>
+            <span className="font-bold text-primary">{fmtCurrency(stats.valorTotal)}</span>
           </div>
         </div>
       </CardContent>

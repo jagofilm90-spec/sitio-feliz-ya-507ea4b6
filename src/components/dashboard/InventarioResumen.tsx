@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { Package, TrendingUp, TrendingDown, ArrowRightLeft } from "lucide-react";
+import { formatCurrencyCompact } from "@/lib/formatDashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   BarChart, 
@@ -112,15 +113,7 @@ export const InventarioResumen = () => {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    if (value >= 1000000) {
-      return `$${(value / 1000000).toFixed(1)}M`;
-    }
-    if (value >= 1000) {
-      return `$${(value / 1000).toFixed(0)}K`;
-    }
-    return `$${value.toLocaleString()}`;
-  };
+  // formatCurrency removed - using formatCurrencyCompact from shared lib
 
   if (loading) {
     return (
@@ -152,7 +145,7 @@ export const InventarioResumen = () => {
         <div className="text-center p-4 bg-muted/50 rounded-lg">
           <span className="text-sm text-muted-foreground">Valor del Inventario</span>
           <div className="text-3xl font-bold text-primary mt-1">
-            {formatCurrency(stats?.valorInventario || 0)}
+            {formatCurrencyCompact(stats?.valorInventario || 0)}
           </div>
         </div>
 

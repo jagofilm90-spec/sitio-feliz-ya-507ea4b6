@@ -60,9 +60,7 @@ export const CreditoExcedidoAlert = () => {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return `$${value.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-  };
+  const fmtCurrency = (value: number) => `$${value.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
   if (loading) {
     return (
@@ -140,11 +138,11 @@ export const CreditoExcedidoAlert = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Límite:</span>
-                    <span>{formatCurrency(cliente.limiteCredito)}</span>
+                    <span>{fmtCurrency(cliente.limiteCredito)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Saldo:</span>
-                    <span className="font-semibold">{formatCurrency(cliente.saldoPendiente)}</span>
+                    <span className="font-semibold">{fmtCurrency(cliente.saldoPendiente)}</span>
                   </div>
                   
                   <Progress 
@@ -155,7 +153,7 @@ export const CreditoExcedidoAlert = () => {
                   
                   <div className="flex justify-between items-center">
                     <Badge variant="destructive" className="text-xs">
-                      Excede: {formatCurrency(cliente.exceso)}
+                      Excede: {fmtCurrency(cliente.exceso)}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
                       {cliente.porcentaje}% del límite

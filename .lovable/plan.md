@@ -1,143 +1,71 @@
 
 
-## Plan: Dashboard Ejecutivo Complete Overhaul
+# Plan: Folio Diario Consecutivo para Pedidos
 
-This is a large overhaul touching ~12 files. I'll break it into logical implementation steps.
+## Problema actual
+Los folios se generan con timestamps (`PED-V-123456`) o secuencias mensuales (`PED-202603-0001`). No hay forma de saber cuántos pedidos salieron en un día ni detectar faltantes al juntar las hojas firmadas.
 
----
+## Solución
 
-### Step 1: Create shared dashboard utilities
+Agregar un campo `numero_dia` (integer) a la tabla `pedidos` que se auto-incrementa por día, empezando en 1 cada día. Este número aparecerá prominente en las hojas de carga.
 
-**New file: `src/components/dashboard/useDashboardData.ts`**
-- Custom hook that centralizes all dashboard data fetching
-- Accepts a `periodo` parameter (hoy/semana/mes/anio)
-- Auto-refreshes every 60 seconds via `setInterval`
-- Returns all KPI data, alerts, top products, top clients, financial summary
-- Single set of optimized queries instead of each component querying independently
-- Exposes a `refresh()` function for manual refresh button
+### 1. Migración de base de datos
 
-**Key queries consolidated:**
-- Ventas del dia/mes/mes anterior (for % variation)
-- Pedidos en_ruta, entregas completadas/pendientes hoy, pedidos por surtir
-- Credito excedido count, stock bajo count, pedidos sin autorizar >24h, facturas vencen esta semana
-- Top 10 productos (pedidos_detalles JOIN productos, grouped)
-- Top 10 clientes (pedidos grouped by cliente)
-- Financial summary (ticket promedio, clientes nuevos, clientes inactivos, tasa entregas)
+- Agregar columna `numero_dia` (integer, nullable) a `pedidos`
+- Crear función `asignar_numero_dia()` como trigger BEFORE INSERT que:
+  - Cuenta cuántos pedidos existen para la misma `fecha_pedido::date` (excluyendo borradores)
+  - Asigna `numero_dia = count + 1`
+  - Solo lo asigna si el status NO es `borrador`
+- Crear trigger en `pedidos` BEFORE INSERT que ejecute la función
 
-### Step 2: Rewrite KPICards with 3 rows + clickable + auto-refresh
+```sql
+-- Pseudológica del trigger:
+IF NEW.status != 'borrador' THEN
+  SELECT COALESCE(MAX(numero_dia), 0) + 1 INTO NEW.numero_dia
+  FROM pedidos
+  WHERE fecha_pedido::date = NEW.fecha_pedido::date
+    AND status != 'borrador'
+    AND numero_dia IS NOT NULL;
+END IF;
+```
 
-**Edit: `src/components/dashboard/KPICards.tsx`**
-- Accept `data` and `loading` as props from parent (from useDashboardData hook)
-- Remove local `formatCurrency`, import from `@/lib/utils`
-- 3 labeled sections: "Dinero", "Operacion de Hoy", "Alertas"
-- Each card: clickable (wraps in div with `onClick` + `cursor-pointer`), navigates to corresponding module
-- Grid: `grid-cols-2 lg:grid-cols-4` per row
-- Alert row cards: conditional red/orange/yellow coloring when value > 0
-- New KPIs added: ventas del dia, % variacion mes, pedidos en calle, entregas completadas hoy, entregas pendientes, pedidos por surtir, pedidos sin autorizar >24h, facturas vencen esta semana
+### 2. Actualizar folio a incluir número del día
 
-**Navigation mapping:**
-- Ventas dia/mes → `/pedidos`
-- Por cobrar / Vencido → `/facturas`
-- Pedidos en calle → `/rutas?tab=monitoreo`
-- Entregas completadas/pendientes → `/rutas`
-- Pedidos por surtir → `/almacen-tablet`
-- Credito excedido → `/clientes`
-- Stock bajo → `/inventario`
-- Pedidos sin autorizar → `/pedidos?tab=por-autorizar`
-- Facturas por vencer → `/facturas`
+Cambiar el formato del folio en los 5 lugares donde se genera:
+- `VendedorNuevoPedidoTab.tsx` (vendedor crea pedido)
+- `ProcesarPedidoDialog.tsx` (correos)
+- `PedidosAcumulativosManager.tsx` (acumulativos, 2 lugares)
+- `CotizacionDetalleDialog.tsx` (cotización → pedido)
+- `NuevoPedidoDialog.tsx` (secretaria)
+- `ClienteNuevoPedido.tsx` (cliente)
 
-### Step 3: Create AlertasUrgentes component
+El folio **mantiene** el formato actual (`PED-YYYYMM-XXXX`) para identificación única. El `numero_dia` es un dato **adicional** que se muestra en las hojas.
 
-**New file: `src/components/dashboard/AlertasUrgentes.tsx`**
-- Receives alert data from parent hook
-- Conditionally renders only if there are urgent items
-- Horizontal badges/chips layout on desktop, stacked on mobile
-- Each alert: icon + count + action button
-- 4 alert types: pedidos sin autorizar >24h, choferes sin GPS >30min, productos stock=0, credito excedido
-- Uses existing theme colors (destructive, warning variants)
+### 3. Mostrar número del día en hojas de carga
 
-### Step 4: Show MapaRutasWidget on mobile
+En `HojaCargaUnificadaTemplate.tsx`, mostrar prominente:
+```
+NOTA #3
+```
+Usando el campo `numero_dia` del pedido. Se mostrará grande y visible en el header de la hoja para fácil identificación al juntar las hojas firmadas.
 
-**Edit: `src/pages/Dashboard.tsx`**
-- Remove `{!isMobile && ...}` condition from MapaRutasWidget
-- On mobile, the existing fallback list in MapaRutasWidget already renders when map can't load
-- Add a simplified mobile-specific rendering path inside MapaRutasWidget that shows a list of chofers with status + last GPS update time + red alert if >30 min stale
+### 4. Mostrar en el template de pedido (PedidoPrintTemplate)
 
-**Edit: `src/components/dashboard/MapaRutasWidget.tsx`**
-- Accept `isMobile` prop
-- When mobile: render list view (driver name, status badge, "last update X min ago", red highlight if stale >30 min)
-- When desktop: existing map behavior unchanged
+También agregar el número del día en `PedidoPrintTemplate.tsx` para la vista previa del vendedor.
 
-### Step 5: Improve VendedoresResumen
+## Archivos a modificar
 
-**Edit: `src/components/dashboard/VendedoresResumen.tsx`**
-- Fix N+1 query: single query fetching empleados + pedidos aggregated via two queries max (not per-vendedor)
-- Add medal emojis for top 3
-- Make each vendedor row clickable (navigate to `/empleados?id=...` or similar)
-- Remove local `formatCurrency`, import from `@/lib/utils`
-- Keep existing progress bar and layout
+| Archivo | Cambio |
+|---------|--------|
+| **Migración SQL** | Agregar `numero_dia`, función trigger, trigger |
+| `HojaCargaUnificadaTemplate.tsx` | Mostrar `NOTA #X` prominente en header |
+| `PedidoPrintTemplate.tsx` | Mostrar número del día |
+| `PedidoPDFPreviewDialog.tsx` | Pasar `numero_dia` a los datos |
+| `VendedorNuevoPedidoTab.tsx` | Leer `numero_dia` del pedido creado para mostrar |
+| Interfaces de datos print | Agregar campo `numeroDia` opcional |
 
-### Step 6: Create TopProductosClientes component
-
-**New file: `src/components/dashboard/TopProductosClientesPanel.tsx`**
-- Two cards side by side (stacked on mobile)
-- Top 10 Productos: position, name, qty sold, total amount. Show first 5, "ver mas" expands
-- Top 10 Clientes: position, name, total $, # pedidos. Show first 5, "ver mas" expands
-- Data comes from useDashboardData hook
-- Uses Collapsible or simple state toggle for expand
-
-### Step 7: Create ResumenFinanciero component
-
-**New file: `src/components/dashboard/ResumenFinancieroPanel.tsx`**
-- 4 mini-stats in a single card: ticket promedio, clientes nuevos mes, clientes inactivos (30d), tasa entregas %
-- Data from useDashboardData hook
-- Simple grid of 4 stat boxes inside one card
-
-### Step 8: Add period selector + refresh button + assemble Dashboard
-
-**Edit: `src/pages/Dashboard.tsx`**
-- Add period selector (Hoy/Semana/Mes/Anio) as Tabs or ToggleGroup at top
-- Add RefreshCw button next to title (visible on all devices, prominent on mobile)
-- Wire useDashboardData hook with selected period
-- Insert AlertasUrgentes after NotificacionesSistema
-- Keep existing component order, add new sections:
-  - After VentasMensualesChart + CobranzaCriticaPanel row: TopProductosClientesPanel
-  - After that: ResumenFinancieroPanel
-  - Bottom row (CreditoExcedido, Vendedores, Entregas, Inventario): make each card clickable via wrapper
-- Mobile: reduce padding with `p-2` on outer container
-- Keep UsuariosConectadosPanel desktop-only as it already is
-
-### Step 9: Remove duplicate formatCurrency
-
-**Edit 6 files** in `src/components/dashboard/`:
-- KPICards, VentasMensualesChart, InventarioResumen, VendedoresResumen, CreditoExcedidoAlert, CobranzaCriticaPanel
-- Remove local `formatCurrency` definitions
-- Import `formatCurrency` from `@/lib/utils` (already exists there)
-- Note: the utils version outputs `$1,234.00` format which is the Mexican format requested
-
----
-
-### Technical Details
-
-**Files created (4):**
-- `src/components/dashboard/useDashboardData.ts`
-- `src/components/dashboard/AlertasUrgentes.tsx`
-- `src/components/dashboard/TopProductosClientesPanel.tsx`
-- `src/components/dashboard/ResumenFinancieroPanel.tsx`
-
-**Files modified (8):**
-- `src/pages/Dashboard.tsx` — layout, period selector, refresh, new sections
-- `src/components/dashboard/KPICards.tsx` — 3 rows, clickable, props-based
-- `src/components/dashboard/MapaRutasWidget.tsx` — mobile list view
-- `src/components/dashboard/VendedoresResumen.tsx` — fix N+1, medals, clickable
-- `src/components/dashboard/VentasMensualesChart.tsx` — remove local formatCurrency
-- `src/components/dashboard/InventarioResumen.tsx` — remove local formatCurrency
-- `src/components/dashboard/CreditoExcedidoAlert.tsx` — remove local formatCurrency
-- `src/components/dashboard/CobranzaCriticaPanel.tsx` — remove local formatCurrency
-
-**No database changes needed** — all data already exists in current tables.
-
-**Auto-refresh**: 60-second `setInterval` in `useDashboardData` hook, cleared on unmount.
-
-**Mobile parity**: All new sections render responsively. KPIs use `grid-cols-2` on mobile. New panels stack vertically. Map shows list view.
+## Ventajas sobre el foliador físico
+- Se asigna automáticamente, sin error humano
+- Si se cancela un pedido, el número queda registrado (se puede ver el hueco)
+- Se puede consultar digitalmente cuántos pedidos salieron por día
 
