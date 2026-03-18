@@ -221,7 +221,7 @@ const Auth = () => {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Cargando..." : "Iniciar Sesión"}
+                {loading ? <><Loader2 className="animate-spin" /> Iniciando sesión...</> : "Iniciar Sesión"}
               </Button>
             </form>
             <p className="mt-4 text-center text-xs text-muted-foreground">
