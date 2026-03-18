@@ -240,11 +240,6 @@ const App = () => (
               } />
               <Route path="/app-mobile" element={<AppMobileGuide />} />
               <Route path="/test-firma" element={<TestFirma />} />
-              <Route path="/precios" element={
-                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor']} redirectTo="/auth">
-                  <Precios />
-                </ProtectedRoute>
-              } />
               <Route path="/configuracion" element={
                 <ProtectedRoute allowedRoles={['admin', 'contadora', 'gerente_almacen']} redirectTo="/auth">
                   <Configuracion />
