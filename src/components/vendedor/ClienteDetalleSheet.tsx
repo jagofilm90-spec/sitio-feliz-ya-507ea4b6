@@ -88,7 +88,9 @@ interface Pago {
   fecha_registro: string;
   monto_total: number;
   forma_pago: string;
+  referencia: string | null;
   status: string;
+  registrado_por_nombre: string;
 }
 
 interface NotificacionEnviada {
