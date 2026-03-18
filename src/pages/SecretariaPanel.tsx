@@ -230,7 +230,7 @@ const SecretariaPanel = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleLogout}
+                onClick={() => setShowLogoutDialog(true)}
                 className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full"
               >
                 <LogOut className="h-5 w-5" />
