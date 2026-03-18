@@ -64,9 +64,9 @@ export interface DashboardData {
 
 const EMPTY_KPIS: DashboardKPIs = {
   ventasDia: 0, ventasMes: 0, ventasMesAnterior: 0, variacionMes: 0,
-  porCobrar: 0, totalVencido: 0, pedidosEnCalle: 0,
+  porCobrar: 0, totalVencido: 0, cobrosHoy: 0, pedidosEnCalle: 0,
   entregasCompletadasHoy: 0, entregasPendientesHoy: 0, pedidosPorSurtir: 0,
-  creditoExcedido: 0, stockBajo: 0, pedidosSinAutorizar24h: 0, facturasVencenSemana: 0,
+  creditoExcedido: 0, stockBajo: 0, pedidosSinAutorizar24h: 0, facturasVencenSemana: 0, pagosPorValidar: 0,
 };
 
 export function useDashboardData(periodo: Periodo = 'mes') {
