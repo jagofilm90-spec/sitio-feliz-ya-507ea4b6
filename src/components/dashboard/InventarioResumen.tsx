@@ -145,7 +145,7 @@ export const InventarioResumen = () => {
         <div className="text-center p-4 bg-muted/50 rounded-lg">
           <span className="text-sm text-muted-foreground">Valor del Inventario</span>
           <div className="text-3xl font-bold text-primary mt-1">
-            {formatCurrency(stats?.valorInventario || 0)}
+            {formatCurrencyCompact(stats?.valorInventario || 0)}
           </div>
         </div>
 

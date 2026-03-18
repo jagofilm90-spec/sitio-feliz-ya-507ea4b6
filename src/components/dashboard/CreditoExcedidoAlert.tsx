@@ -153,7 +153,7 @@ export const CreditoExcedidoAlert = () => {
                   
                   <div className="flex justify-between items-center">
                     <Badge variant="destructive" className="text-xs">
-                      Excede: {formatCurrency(cliente.exceso)}
+                      Excede: {fmtCurrency(cliente.exceso)}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
                       {cliente.porcentaje}% del límite
