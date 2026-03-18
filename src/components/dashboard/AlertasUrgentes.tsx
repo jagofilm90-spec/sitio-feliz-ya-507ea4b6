@@ -9,6 +9,7 @@ const iconMap = {
   chofer_sin_gps: Radio,
   stock_cero: Package,
   credito_excedido: CreditCard,
+  pagos_por_validar: CreditCard,
 };
 
 const colorMap = {
@@ -16,6 +17,7 @@ const colorMap = {
   chofer_sin_gps: 'bg-orange-500/10 border-orange-500/30 text-orange-700 dark:text-orange-400',
   stock_cero: 'bg-destructive/10 border-destructive/30 text-destructive',
   credito_excedido: 'bg-destructive/10 border-destructive/30 text-destructive',
+  pagos_por_validar: 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400',
 };
 
 interface Props {
