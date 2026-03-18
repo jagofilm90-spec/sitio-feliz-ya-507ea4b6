@@ -221,13 +221,6 @@ const Auth = () => {
             <p className="mt-4 text-center text-xs text-muted-foreground">
               ¿Necesitas acceso? Contacta al administrador del sistema
             </p>
-            <button
-              type="button"
-              onClick={() => navigate("/push-diagnostics")}
-              className="mt-6 w-full text-center text-xs text-muted-foreground/60 hover:text-muted-foreground underline"
-            >
-              Diagnóstico Push (Admin)
-            </button>
           </CardContent>
         </Card>
       </div>
