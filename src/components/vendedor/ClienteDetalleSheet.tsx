@@ -705,7 +705,7 @@ export function ClienteDetalleSheet({
                 )}
               </TabsContent>
 
-              {/* Pagos Tab */}
+              {/* Pagos Tab - Enhanced with history */}
               <TabsContent value="pagos" className="mt-4">
                 {pagos.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
@@ -713,29 +713,56 @@ export function ClienteDetalleSheet({
                     <p>Sin pagos registrados</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {pagos.map((pago) => (
-                      <Card key={pago.id} className="hover:bg-muted/50 transition-colors">
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium capitalize">{pago.forma_pago}</span>
-                                <Badge variant={pago.status === "validado" ? "outline" : "secondary"}>
-                                  {pago.status === "validado" ? "Validado" : "Pendiente"}
-                                </Badge>
-                              </div>
-                              <span className="text-sm text-muted-foreground">
-                                {format(new Date(pago.fecha_registro), "d MMM yyyy HH:mm", { locale: es })}
-                              </span>
-                            </div>
-                            <p className="font-semibold text-green-600">
-                              +{formatCurrency(pago.monto_total)}
-                            </p>
-                          </div>
+                  <div className="space-y-4">
+                    {/* Summary stats */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <Card>
+                        <CardContent className="p-3 text-center">
+                          <p className="text-xs text-muted-foreground">Total pagado</p>
+                          <p className="font-bold text-lg text-emerald-600 dark:text-emerald-400">
+                            {formatCurrency(pagos.filter(p => p.status === 'validado').reduce((s, p) => s + p.monto_total, 0))}
+                          </p>
                         </CardContent>
                       </Card>
-                    ))}
+                      <Card>
+                        <CardContent className="p-3 text-center">
+                          <p className="text-xs text-muted-foreground">Pagos registrados</p>
+                          <p className="font-bold text-lg">{pagos.length}</p>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Payment list */}
+                    <div className="space-y-2">
+                      {pagos.map((pago) => (
+                        <Card key={pago.id} className="hover:bg-muted/50 transition-colors">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium capitalize">{pago.forma_pago}</span>
+                                <Badge variant={
+                                  pago.status === "validado" ? "outline" : 
+                                  pago.status === "rechazado" ? "destructive" : "secondary"
+                                }>
+                                  {pago.status === "validado" ? "✓ Validado" : 
+                                   pago.status === "rechazado" ? "Rechazado" : "Pendiente"}
+                                </Badge>
+                              </div>
+                              <p className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                +{formatCurrency(pago.monto_total)}
+                              </p>
+                            </div>
+                            <div className="flex items-center justify-between text-sm text-muted-foreground">
+                              <span>
+                                {format(new Date(pago.fecha_registro), "d MMM yyyy HH:mm", { locale: es })}
+                                {pago.referencia && ` · Ref: ${pago.referencia}`}
+                              </span>
+                              <span className="text-xs">{pago.registrado_por_nombre}</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   </div>
                 )}
               </TabsContent>
