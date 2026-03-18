@@ -11,6 +11,7 @@ export interface DashboardKPIs {
   variacionMes: number;
   porCobrar: number;
   totalVencido: number;
+  cobrosHoy: number;
   // Fila 2 - Operación
   pedidosEnCalle: number;
   entregasCompletadasHoy: number;
@@ -21,6 +22,7 @@ export interface DashboardKPIs {
   stockBajo: number;
   pedidosSinAutorizar24h: number;
   facturasVencenSemana: number;
+  pagosPorValidar: number;
 }
 
 export interface AlertaUrgente {
