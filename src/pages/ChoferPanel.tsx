@@ -179,7 +179,7 @@ export default function ChoferPanel() {
                 <p className="text-[10px] opacity-70 italic hidden md:block">"{COMPANY_DATA.slogan}"</p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate("/auth"); }} className="md:hidden text-primary-foreground hover:bg-primary-foreground/20">
+            <Button variant="ghost" size="icon" onClick={() => setShowLogoutDialog(true)} className="md:hidden text-primary-foreground hover:bg-primary-foreground/20">
               <LogOut className="h-5 w-5" />
             </Button>
           </div>
