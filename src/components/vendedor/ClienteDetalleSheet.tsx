@@ -266,15 +266,29 @@ export function ClienteDetalleSheet({
       });
       setFacturas(facturasFormateadas);
 
-      // Fetch pagos
+      // Fetch pagos with registrado_por name
       const { data: pagosData } = await supabase
         .from("pagos_cliente")
-        .select("id, fecha_registro, monto_total, forma_pago, status")
+        .select("id, fecha_registro, monto_total, forma_pago, referencia, status, registrado_por")
         .eq("cliente_id", clienteId)
         .order("fecha_registro", { ascending: false })
-        .limit(20);
+        .limit(50);
 
-      setPagos(pagosData || []);
+      // Get profile names for registrado_por
+      const regIds = [...new Set((pagosData || []).map(p => p.registrado_por).filter(Boolean))];
+      let regMap = new Map<string, string>();
+      if (regIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", regIds as string[]);
+        regMap = new Map((profiles || []).map(p => [p.id, p.full_name || "Usuario"]));
+      }
+
+      setPagos((pagosData || []).map(p => ({
+        ...p,
+        registrado_por_nombre: p.registrado_por ? (regMap.get(p.registrado_por) || "Usuario") : "Sistema",
+      })));
 
       // Fetch emails del cliente para buscar notificaciones
       const { data: emailsCliente } = await supabase
