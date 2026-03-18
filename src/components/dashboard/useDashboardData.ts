@@ -113,7 +113,7 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         // Pedidos en calle
         supabase.from("pedidos").select("id", { count: "exact", head: true }).eq("status", "en_ruta"),
         // Pedidos por surtir
-        supabase.from("pedidos").select("id", { count: "exact", head: true }).in("status", ["pendiente", "cargando"]),
+        supabase.from("pedidos").select("id", { count: "exact", head: true }).eq("status", "pendiente"),
         // Pedidos sin autorizar > 24h
         supabase.from("pedidos").select("id", { count: "exact", head: true }).eq("status", "por_autorizar").lt("created_at", hace24h),
         // Stock bajo
