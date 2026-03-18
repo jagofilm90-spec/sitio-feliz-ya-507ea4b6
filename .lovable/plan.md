@@ -1,126 +1,71 @@
 
 
-## Plan: Productos Module Overhaul
+# Plan: Folio Diario Consecutivo para Pedidos
 
-8 fixes across ~4 files. No DB changes needed — all columns already exist.
+## Problema actual
+Los folios se generan con timestamps (`PED-V-123456`) o secuencias mensuales (`PED-202603-0001`). No hay forma de saber cuántos pedidos salieron en un día ni detectar faltantes al juntar las hojas firmadas.
 
----
+## Solución
 
-### FIX 1 — Route Protection
+Agregar un campo `numero_dia` (integer) a la tabla `pedidos` que se auto-incrementa por día, empezando en 1 cada día. Este número aparecerá prominente en las hojas de carga.
 
-**File: `src/App.tsx` (line 130)**
-- Change `allowedRoles` from `['admin', 'secretaria', 'vendedor', 'contadora']` to `['admin', 'secretaria', 'contadora']` (remove `vendedor`).
+### 1. Migración de base de datos
 
----
+- Agregar columna `numero_dia` (integer, nullable) a `pedidos`
+- Crear función `asignar_numero_dia()` como trigger BEFORE INSERT que:
+  - Cuenta cuántos pedidos existen para la misma `fecha_pedido::date` (excluyendo borradores)
+  - Asigna `numero_dia = count + 1`
+  - Solo lo asigna si el status NO es `borrador`
+- Crear trigger en `pedidos` BEFORE INSERT que ejecute la función
 
-### FIX 2+3+4+6 — Form Overhaul in Productos.tsx
-
-**File: `src/pages/Productos.tsx`**
-
-**FormData state** — Add missing fields:
-- `precio_venta`, `precio_por_kilo`, `descuento_maximo`, `es_promocion`, `descripcion_promocion`, `bloqueado_venta`
-
-**handleEdit** — Load these fields from product.
-
-**handleSave** — Include all new fields in `productData`. Add validations:
-- `precio_venta` required, > 0
-- If `precio_por_kilo && !peso_kg` → error
-- `descuento_maximo < precio_venta`
-- `stock_minimo >= 0`
-- Check unique `codigo` before save (query DB)
-
-**handleDelete** — Replace `.delete()` with `.update({ activo: false })`. Replace `confirm()` with `AlertDialog` ("¿Desactivar [nombre]?"). Add `handleReactivate` for inactive tab (`.update({ activo: true })`).
-
-**Form JSX** — Reorganize into sections:
-
-1. **Existing fields** (código, unidad, nombre, marca, etc.) — keep as-is.
-
-2. **New section "Precios y Ventas"** after marca/categoría row:
-   - `precio_por_kilo` Switch with conditional explanation text
-   - `precio_venta` Input with `$` prefix, label changes based on toggle
-   - Preview: if `precio_por_kilo`, show calculated unit-equivalent price
-   - Warning if `precio_venta < precio_compra` (yellow, non-blocking)
-   - `descuento_maximo` Input with `$` prefix and contextual tooltip
-   - `contenido_empaque` and `piezas_por_unidad` inputs
-
-3. **Collapsible "Facturación SAT"**: `unidad_sat` Select (from UNIDADES_SAT) + `codigo_sat`
-
-4. **Collapsible "Promoción"**: `es_promocion` Switch → conditional `descripcion_promocion`, `bloqueado_venta` Switch with red badge
-
-**Stock info card** (FIX 6) — When `editingProduct`, show read-only card above form:
-- Stock actual, stock status, costo compra, CPP, precio venta, margen %
-- If `precio_por_kilo`: show price/kg → price/unit calculation, total kg in stock
-
-**resetForm** — Reset all new fields.
-
----
-
-### FIX 5 — Mobile Card View
-
-**New file: `src/components/productos/ProductoCardMobile.tsx`**
-
-Card component showing:
-- Code badge + bold name
-- Brand + specs in gray
-- Price display: `$X/kg • Ykg/unidad` with blue "Por kilo" badge, or `$X/unidad`
-- Stock with color coding (red ≤ min, green > min)
-- IVA/IEPS/Promo badges
-- Edit + Deactivate/Reactivate buttons
-
-**Edit `src/pages/Productos.tsx`**:
-- Import `useIsMobile` from `@/hooks/use-mobile`
-- Import `ProductoCardMobile`
-- Desktop: existing table
-- Mobile: grid of `ProductoCardMobile` cards
-
----
-
-### FIX 7 — Ahorro Descuentos Bug
-
-**File: `src/components/vendedor/VendedorNuevoPedidoTab.tsx` (line 680)**
-
-Change:
-```ts
-ahorroDescuentos += l.descuento * l.cantidad;
-```
-To:
-```ts
-if (l.producto.precio_por_kilo && l.producto.peso_kg) {
-  ahorroDescuentos += l.descuento * l.cantidad * l.producto.peso_kg;
-} else {
-  ahorroDescuentos += l.descuento * l.cantidad;
-}
+```sql
+-- Pseudológica del trigger:
+IF NEW.status != 'borrador' THEN
+  SELECT COALESCE(MAX(numero_dia), 0) + 1 INTO NEW.numero_dia
+  FROM pedidos
+  WHERE fecha_pedido::date = NEW.fecha_pedido::date
+    AND status != 'borrador'
+    AND numero_dia IS NOT NULL;
+END IF;
 ```
 
----
+### 2. Actualizar folio a incluir número del día
 
-### FIX 8 — Advanced Filters
+Cambiar el formato del folio en los 5 lugares donde se genera:
+- `VendedorNuevoPedidoTab.tsx` (vendedor crea pedido)
+- `ProcesarPedidoDialog.tsx` (correos)
+- `PedidosAcumulativosManager.tsx` (acumulativos, 2 lugares)
+- `CotizacionDetalleDialog.tsx` (cotización → pedido)
+- `NuevoPedidoDialog.tsx` (secretaria)
+- `ClienteNuevoPedido.tsx` (cliente)
 
-**In `src/pages/Productos.tsx`**:
+El folio **mantiene** el formato actual (`PED-YYYYMM-XXXX`) para identificación única. El `numero_dia` es un dato **adicional** que se muestra en las hojas.
 
-Add filter state variables: `filterMarca`, `filterCategoria`, `filterImpuestos`, `filterTipoPrecio`, `filterStock`.
+### 3. Mostrar número del día en hojas de carga
 
-Desktop: inline row of Select dropdowns below search bar.
-Mobile: "Filtros" button opening a Sheet with same filters.
+En `HojaCargaUnificadaTemplate.tsx`, mostrar prominente:
+```
+NOTA #3
+```
+Usando el campo `numero_dia` del pedido. Se mostrará grande y visible en el header de la hoja para fácil identificación al juntar las hojas firmadas.
 
-Show counter: "Mostrando X de Y productos" + "Limpiar filtros" button when active.
+### 4. Mostrar en el template de pedido (PedidoPrintTemplate)
 
-Update `filteredProductos` to apply all filters.
+También agregar el número del día en `PedidoPrintTemplate.tsx` para la vista previa del vendedor.
 
----
+## Archivos a modificar
 
-### Technical Summary
+| Archivo | Cambio |
+|---------|--------|
+| **Migración SQL** | Agregar `numero_dia`, función trigger, trigger |
+| `HojaCargaUnificadaTemplate.tsx` | Mostrar `NOTA #X` prominente en header |
+| `PedidoPrintTemplate.tsx` | Mostrar número del día |
+| `PedidoPDFPreviewDialog.tsx` | Pasar `numero_dia` a los datos |
+| `VendedorNuevoPedidoTab.tsx` | Leer `numero_dia` del pedido creado para mostrar |
+| Interfaces de datos print | Agregar campo `numeroDia` opcional |
 
-**Files created (1):**
-- `src/components/productos/ProductoCardMobile.tsx`
-
-**Files modified (3):**
-- `src/App.tsx` — route protection change
-- `src/pages/Productos.tsx` — form fields, validations, soft delete, filters, mobile view, stock info card
-- `src/components/vendedor/VendedorNuevoPedidoTab.tsx` — ahorro descuentos bug fix
-
-**Imports added to Productos.tsx:**
-- `Switch` from shadcn, `AlertDialog` components, `useIsMobile`, `formatCurrency` from `@/lib/utils`, `Collapsible` components, `RotateCcw` icon, `Sheet` components, `ProductoCardMobile`
-
-**No DB migrations needed** — all columns (`precio_venta`, `precio_por_kilo`, `descuento_maximo`, `es_promocion`, `descripcion_promocion`, `bloqueado_venta`) already exist in the `productos` table.
+## Ventajas sobre el foliador físico
+- Se asigna automáticamente, sin error humano
+- Si se cancela un pedido, el número queda registrado (se puede ver el hueco)
+- Se puede consultar digitalmente cuántos pedidos salieron por día
 

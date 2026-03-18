@@ -127,7 +127,7 @@ const App = () => (
               } />
               
               <Route path="/productos" element={
-                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor', 'contadora']} redirectTo="/auth">
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'contadora']} redirectTo="/auth">
                   <Productos />
                 </ProtectedRoute>
               } />
