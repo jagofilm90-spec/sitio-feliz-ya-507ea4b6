@@ -13,6 +13,7 @@ import {
   Store,
   LogOut,
   Truck,
+  CreditCard,
 } from "lucide-react";
 
 interface SecretariaMobileNavProps {
