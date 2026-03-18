@@ -270,6 +270,14 @@ const Rentabilidad = () => {
               </div>
             </div>
 
+            <p className="text-sm text-muted-foreground mb-4">
+              Mostrando{" "}
+              <span className={searchTerm ? "text-primary font-medium" : ""}>
+                {filteredProductos.length}
+              </span>{" "}
+              de {productos.length} productos
+            </p>
+
             {/* Vista Mobile o Tabla */}
             {isMobile ? (
               <div className="space-y-3">
