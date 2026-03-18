@@ -267,7 +267,7 @@ const SecretariaPanel = () => {
           activeTab={activeTab}
           onTabChange={setActiveTab}
           counters={counters}
-          onLogout={handleLogout}
+          onLogout={() => setShowLogoutDialog(true)}
         />
 
         {/* Welcome Dialog */}
