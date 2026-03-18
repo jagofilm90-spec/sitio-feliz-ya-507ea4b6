@@ -41,6 +41,15 @@ export const KPICards = ({ data, loading }: Props) => {
           descColor: data && data.variacionMes >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive",
         },
         {
+          title: "Cobros de Hoy",
+          value: data ? formatCurrencyCompact(data.cobrosHoy) : "$0",
+          icon: CheckCircle2,
+          color: "text-emerald-600 dark:text-emerald-400",
+          bgColor: "bg-emerald-50 dark:bg-emerald-950/30",
+          route: "/facturas",
+          description: "Recibidos hoy",
+        },
+        {
           title: "Por Cobrar",
           value: data ? formatCurrencyCompact(data.porCobrar) : "$0",
           icon: CreditCard,
