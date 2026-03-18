@@ -47,6 +47,7 @@ export const AlertasUrgentes = ({ alertas }: Props) => {
                 {alerta.tipo === 'chofer_sin_gps' && `Choferes sin señal GPS (>30 min)`}
                 {alerta.tipo === 'stock_cero' && 'Productos con stock en cero'}
                 {alerta.tipo === 'credito_excedido' && 'Clientes con crédito excedido'}
+                {alerta.tipo === 'pagos_por_validar' && 'Pagos pendientes de validación'}
               </span>
               {alerta.detalle && <span className="text-xs truncate opacity-75">{alerta.detalle}</span>}
             </div>

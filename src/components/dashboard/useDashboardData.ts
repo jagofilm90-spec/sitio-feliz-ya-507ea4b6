@@ -188,6 +188,9 @@ export function useDashboardData(periodo: Periodo = 'mes') {
       if (creditoExcedido > 0) {
         alertas.push({ tipo: 'credito_excedido', cantidad: creditoExcedido, ruta: '/clientes', botonTexto: 'Ver cobranza' });
       }
+      if ((pagosPorValidarRes.count || 0) > 0) {
+        alertas.push({ tipo: 'pagos_por_validar', cantidad: pagosPorValidarRes.count || 0, ruta: '/secretaria', botonTexto: 'Validar pagos' });
+      }
 
       // Top productos aggregation
       const prodMap = new Map<string, TopProducto>();
