@@ -202,7 +202,7 @@ export default function ChoferPanel() {
               <GpsTrackingIndicator isTracking={isTracking} accuracy={accuracy} error={gpsError} />
             )}
             <LiveIndicator label="En vivo" className="text-primary-foreground/90" />
-            <Button variant="ghost" size="icon" onClick={() => { supabase.auth.signOut(); navigate("/auth"); }} className="hidden md:flex text-primary-foreground hover:bg-primary-foreground/20">
+            <Button variant="ghost" size="icon" onClick={() => setShowLogoutDialog(true)} className="hidden md:flex text-primary-foreground hover:bg-primary-foreground/20">
               <LogOut className="h-5 w-5" />
             </Button>
           </div>
