@@ -61,6 +61,7 @@ interface SecretariaSidebarProps {
     chat: number;
     correos: number;
     compras: number;
+    pagosValidar: number;
   };
   hasMultipleRoles?: boolean;
 }
