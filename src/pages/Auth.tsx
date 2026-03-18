@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import { COMPANY_DATA } from "@/constants/companyData";
 
@@ -175,13 +178,16 @@ const Auth = () => {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4 overflow-hidden">
       <div className="w-full max-w-md space-y-4">
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 animate-fade-in">
           <img src={logoAlmasa} alt="ALMASA" className="h-16 mx-auto mb-4" />
           <p className="text-lg font-medium text-foreground">Abarrotes la Manita SA de CV</p>
           <p className="text-sm text-muted-foreground">Sistema de Gestión Empresarial</p>
           <p className="text-xs italic text-muted-foreground mt-1">"{COMPANY_DATA.slogan}"</p>
+          <p className="text-sm text-muted-foreground mt-3 capitalize">
+            Bienvenido, {format(new Date(), "EEEE d 'de' MMMM 'de' yyyy", { locale: es })}
+          </p>
         </div>
-        <Card className="w-full">
+        <Card className="w-full opacity-0 animate-fade-in-scale" style={{ animationDelay: "150ms" }}>
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold text-center">
               Iniciar Sesión
@@ -215,7 +221,7 @@ const Auth = () => {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Cargando..." : "Iniciar Sesión"}
+                {loading ? <><Loader2 className="animate-spin" /> Iniciando sesión...</> : "Iniciar Sesión"}
               </Button>
             </form>
             <p className="mt-4 text-center text-xs text-muted-foreground">
