@@ -86,9 +86,7 @@ export const EntregasHoyPanel = () => {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return `$${value.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-  };
+  const fmtCurrency = (value: number) => `$${value.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
   if (loading) {
     return (
