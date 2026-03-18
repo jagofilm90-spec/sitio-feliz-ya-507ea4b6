@@ -101,6 +101,8 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         topProductosRes,
         topClientesRes,
         entregasHoyRes,
+        cobrosHoyRes,
+        pagosPorValidarRes,
       ] = await Promise.all([
         // Ventas del día
         supabase.from("pedidos").select("total").gte("created_at", inicioHoy).in("status", ["entregado", "en_ruta"]),
