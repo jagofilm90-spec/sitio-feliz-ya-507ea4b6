@@ -13,6 +13,17 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Truck, MapPin, Package, User, LogOut, Navigation, RefreshCw } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { buttonVariants } from "@/components/ui/button";
 import { NoRutaCard } from "@/components/chofer/NoRutaCard";
 import { EntregaCard } from "@/components/chofer/EntregaCard";
 import { ResumenRuta } from "@/components/chofer/ResumenRuta";
