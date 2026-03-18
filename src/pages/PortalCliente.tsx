@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogOut, ShoppingCart, FileText, TrendingUp, Truck, MapPin, User, Package, Calendar } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import ClientePedidos from "@/components/cliente/ClientePedidos";
 import ClienteEstadoCuenta from "@/components/cliente/ClienteEstadoCuenta";
 import ClienteNuevoPedido from "@/components/cliente/ClienteNuevoPedido";
@@ -265,6 +266,20 @@ const PortalCliente = () => {
               <p className="text-xs text-muted-foreground">
                 de ${(cliente.limite_credito || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </p>
+              {(cliente.limite_credito || 0) > 0 && (() => {
+                const porcentajeUsado = ((cliente.saldo_pendiente || 0) / cliente.limite_credito) * 100;
+                const colorClass = porcentajeUsado > 90
+                  ? "[&>div]:bg-red-500"
+                  : porcentajeUsado >= 70
+                    ? "[&>div]:bg-yellow-500"
+                    : "[&>div]:bg-green-500";
+                return (
+                  <div className="mt-2 space-y-1">
+                    <Progress value={porcentajeUsado} className={`h-2 ${colorClass}`} />
+                    <p className="text-xs text-muted-foreground">{porcentajeUsado.toFixed(0)}% utilizado</p>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
 
