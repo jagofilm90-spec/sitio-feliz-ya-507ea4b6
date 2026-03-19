@@ -1026,7 +1026,19 @@ export const AdminListaPreciosTab = () => {
                     </span>
                   </TableCell>
                   <TableCell className="py-1 px-1.5 text-right">
-                    <span className="text-xs font-semibold">
+                    <span className="text-xs font-semibold flex items-center justify-end gap-1">
+                      {analisis.estado_margen === 'perdida' && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertTriangle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">Precio de venta menor al costo</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                       {formatCurrency(producto.precio_venta)}
                     </span>
                   </TableCell>
