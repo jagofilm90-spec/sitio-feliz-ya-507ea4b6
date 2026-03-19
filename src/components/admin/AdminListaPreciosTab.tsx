@@ -674,24 +674,6 @@ export const AdminListaPreciosTab = () => {
           </div>
         </div>
 
-        {/* Lista de cards */}
-        <div className="flex-1 overflow-auto space-y-3 py-2">
-          {filteredProductos.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No se encontraron productos
-            </div>
-          ) : (
-            filteredProductos.map((producto) => (
-              <ProductoPrecioCardMobile
-                key={producto.id}
-                producto={producto}
-                onSimular={openSimulador}
-                onEditar={openEditor}
-              />
-            ))
-          )}
-        </div>
-
         {renderReviewPanel()}
 
         {/* Lista de cards */}
