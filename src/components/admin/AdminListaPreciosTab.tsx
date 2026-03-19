@@ -32,10 +32,14 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   Loader2, Search, TrendingUp, TrendingDown, DollarSign, 
   AlertTriangle, CheckCircle2, XCircle, Calculator, Pencil,
-  ArrowUpDown
+  ArrowUpDown, ChevronDown, ChevronUp, Check, Clock, ListChecks
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Separator } from "@/components/ui/separator";
 import { analizarMargen, simularPrecioPropuesto, calcularPrecioSugerido, redondear } from "@/lib/calculos";
 import { ProductoPrecioCardMobile } from "./ProductoPrecioCardMobile";
 
