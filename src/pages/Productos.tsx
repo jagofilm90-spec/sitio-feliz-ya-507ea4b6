@@ -652,7 +652,7 @@ const Productos = () => {
   return (
     <Layout>
       <TooltipProvider>
-        <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden p-4 sm:p-6 pb-0 sm:pb-0">
+        <div className="flex flex-col h-full overflow-hidden -m-6">
           <NotificacionesSistema />
           
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
