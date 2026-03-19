@@ -49,9 +49,9 @@ const getEstadoBadge = (estado: 'perdida' | 'critico' | 'bajo' | 'saludable') =>
   switch (estado) {
     case 'perdida':
       return (
-        <Badge variant="destructive" className="text-[10px] px-1.5 py-0 flex items-center gap-0.5">
-          <XCircle className="h-3 w-3" />
-          Pérdida
+        <Badge variant="destructive" className="text-[10px] px-2 py-0.5 flex items-center gap-1 font-bold animate-pulse">
+          <XCircle className="h-3.5 w-3.5" />
+          PÉRDIDA
         </Badge>
       );
     case 'critico':

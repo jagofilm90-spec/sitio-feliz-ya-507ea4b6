@@ -782,6 +782,21 @@ export const AdminListaPreciosTab = () => {
           </div>
         </div>
 
+        {/* Mobile loss warning */}
+        {stats.perdida > 0 && estadoFilter !== 'perdida' && (
+          <div className="flex items-center justify-between p-2.5 mb-2 rounded-lg bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800">
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 animate-pulse" />
+              <span className="text-xs font-semibold text-red-800 dark:text-red-300">
+                ⚠️ {stats.perdida} a pérdida
+              </span>
+            </div>
+            <Button size="sm" variant="destructive" className="h-6 text-[10px] px-2" onClick={() => setEstadoFilter('perdida')}>
+              Ver pérdidas
+            </Button>
+          </div>
+        )}
+
         {renderReviewPanel()}
 
         {/* Lista de cards */}
