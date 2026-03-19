@@ -87,8 +87,8 @@ export const ProductoPrecioCardMobile = ({
   
   const cardClass = cn(
     "border-l-4",
-    analisis.estado_margen === 'perdida' && "border-l-red-500 bg-red-50/50 dark:bg-red-950/20",
-    analisis.estado_margen === 'critico' && "border-l-orange-500 bg-orange-50/50 dark:bg-orange-950/20",
+    analisis.estado_margen === 'perdida' && "border-l-red-500 bg-red-100/80 dark:bg-red-950/40 ring-1 ring-red-300 dark:ring-red-800",
+    analisis.estado_margen === 'critico' && "border-l-orange-500 bg-orange-100/60 dark:bg-orange-950/30",
     analisis.estado_margen === 'bajo' && "border-l-amber-500 bg-amber-50/30 dark:bg-amber-950/10",
     analisis.estado_margen === 'saludable' && "border-l-green-500"
   );
