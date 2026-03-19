@@ -798,6 +798,9 @@ export const AdminListaPreciosTab = () => {
         </div>
       </div>
 
+      {/* Review Panel */}
+      {renderReviewPanel()}
+
       {/* Table */}
       <div className="flex-1 overflow-auto">
         <Table className="table-fixed w-full">
