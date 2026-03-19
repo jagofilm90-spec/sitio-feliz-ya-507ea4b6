@@ -214,7 +214,7 @@ export const AdminListaPreciosTab = () => {
           // Notify vendedores
           const review = revisionesPendientes.find((r: any) => r.id === reviewId);
           const productoNombre = review?.productos?.nombre || "";
-          notificarCambioPrecio({ productoNombre, precioAnterior, precioNuevo: nuevoPrecio });
+          notificarCambioPrecio({ productoNombre, precioAnterior, precioNuevo: nuevoPrecio, roles: ['secretaria', 'vendedor'] });
         }
       }
 
