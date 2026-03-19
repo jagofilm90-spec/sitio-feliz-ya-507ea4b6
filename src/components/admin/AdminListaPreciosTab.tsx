@@ -729,6 +729,9 @@ export const AdminListaPreciosTab = () => {
             <DollarSign className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Análisis de Precios y Márgenes</h2>
           </div>
+          <Button size="sm" variant="outline" onClick={() => setBulkSheetOpen(true)}>
+            <ListChecks className="h-4 w-4 mr-1" /> Actualizar en masa
+          </Button>
         </div>
         
         {/* Stats badges */}
