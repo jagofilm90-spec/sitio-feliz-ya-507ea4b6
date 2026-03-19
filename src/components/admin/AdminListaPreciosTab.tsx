@@ -930,7 +930,7 @@ export const AdminListaPreciosTab = () => {
                   {sortField === 'estado' && <ArrowUpDown className="h-3 w-3" />}
                 </div>
               </TableHead>
-              <TableHead className="w-[55px] py-2 px-1 text-[10px] text-center">
+              <TableHead className="w-[75px] py-2 px-1 text-[10px] text-center">
                 Acciones
               </TableHead>
             </TableRow>
