@@ -21,7 +21,7 @@ const STORAGE_KEY = "dismissed-notifications";
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 export const CentroNotificaciones = () => {
-  const { alertasCaducidad, notificacionesStock, alertasLicencias, autorizacionesOC, autorizacionesCotizacion, confirmacionesProveedor, totalCount, loading, marcarComoLeida, isAdmin } = useNotificaciones();
+  const { alertasCaducidad, notificacionesStock, alertasLicencias, autorizacionesOC, autorizacionesCotizacion, confirmacionesProveedor, notificacionesPrecios, notificacionesPedidos, totalCount, loading, marcarComoLeida, isAdmin } = useNotificaciones();
   const navigate = useNavigate();
   const [dismissedLicencias, setDismissedLicencias] = useState<string[]>([]);
   const [dismissedCaducidad, setDismissedCaducidad] = useState<string[]>([]);
