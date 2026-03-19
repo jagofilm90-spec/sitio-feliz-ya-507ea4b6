@@ -168,7 +168,7 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/chat" element={
-                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor', 'contadora']} redirectTo="/auth">
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor', 'contadora', 'almacen', 'gerente_almacen']} redirectTo="/auth">
                   <Chat />
                 </ProtectedRoute>
               } />
