@@ -522,7 +522,46 @@ export const useNotificaciones = () => {
     } catch { return []; }
   };
 
-  useEffect(() => {
+  const cargarNotificacionesVendedorPrecios = async (): Promise<NotificacionGeneral[]> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+      const isVendedor = roles?.some(r => r.role === 'vendedor') || false;
+      if (!isVendedor) return [];
+
+      const { data, error } = await supabase
+        .from("notificaciones")
+        .select("id, tipo, titulo, descripcion, created_at")
+        .eq("tipo", "precio_actualizado")
+        .eq("leida", false)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) return [];
+      return (data || []) as NotificacionGeneral[];
+    } catch { return []; }
+  };
+
+  const cargarNotificacionesProductoNuevo = async (): Promise<NotificacionGeneral[]> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+      const isVendedor = roles?.some(r => r.role === 'vendedor') || false;
+      if (!isVendedor) return [];
+
+      const { data, error } = await supabase
+        .from("notificaciones")
+        .select("id, tipo, titulo, descripcion, created_at")
+        .eq("tipo", "producto_nuevo")
+        .eq("leida", false)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) return [];
+      return (data || []) as NotificacionGeneral[];
+    } catch { return []; }
+  };
+
     cargarNotificaciones();
 
     // Recargar cada 2 minutos
