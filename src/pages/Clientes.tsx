@@ -31,9 +31,19 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, MapPin, X, Mail, BarChart3, Loader2, Sparkles, User, Package, Map, ClipboardList, FileSpreadsheet, Users, Building2, Gift, CalendarDays, Home } from "lucide-react";
+import { Plus, Search, Edit, Trash2, MapPin, X, Mail, BarChart3, Loader2, Sparkles, User, Package, Map, ClipboardList, FileSpreadsheet, Users, Building2, Gift, CalendarDays, Home, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AuditoriaFiscalSheet } from "@/components/clientes/AuditoriaFiscalSheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import ClienteSucursalesDialog from "@/components/clientes/ClienteSucursalesDialog";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
 import ClienteHistorialAnalytics from "@/components/analytics/ClienteHistorialAnalytics";
@@ -88,14 +98,6 @@ interface Vendedor {
   nombre_corto: string;
 }
 
-// Lista de vendedores con sus user_ids
-const VENDEDORES: Vendedor[] = [
-  { user_id: "1e19d492-2dff-4798-942d-a2fe99ff1389", nombre: "Carlos Giron Intzin", nombre_corto: "Carlos" },
-  { user_id: "b8eef389-1ea1-4e84-81af-5d2d805e198f", nombre: "Venancio Gregorio", nombre_corto: "Venancio" },
-  { user_id: "07400eb2-f9a3-42dc-9a49-5d1126530f23", nombre: "Salvador Rojas Joaquin", nombre_corto: "Salvador" },
-  { user_id: "001ed4a3-44d3-4bbc-a362-4b78c4d52dd2", nombre: "Martin Castro Albarran", nombre_corto: "Martin" },
-];
-
 const Clientes = () => {
   const isMobile = useIsMobile();
   const [clientes, setClientes] = useState<any[]>([]);
@@ -117,6 +119,8 @@ const Clientes = () => {
   const [importSucursalesDialogOpen, setImportSucursalesDialogOpen] = useState(false);
   const [sucursalesConRfcCount, setSucursalesConRfcCount] = useState(0);
   const [activeVendedorTab, setActiveVendedorTab] = useState("casa");
+  const [vendedores, setVendedores] = useState<Vendedor[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const { toast } = useToast();
   const { isAdmin } = useUserRoles();
 
@@ -199,7 +203,35 @@ const Clientes = () => {
     loadClientes();
     loadZonas();
     loadSucursalesConRfcCount();
+    loadVendedores();
   }, []);
+
+  const loadVendedores = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select(`
+          user_id,
+          profiles:user_id (
+            id,
+            full_name
+          )
+        `)
+        .eq("role", "vendedor");
+
+      if (error) throw error;
+      const mapped: Vendedor[] = (data || [])
+        .filter((d: any) => d.profiles?.full_name)
+        .map((d: any) => ({
+          user_id: d.user_id,
+          nombre: d.profiles.full_name,
+          nombre_corto: d.profiles.full_name.split(" ")[0],
+        }));
+      setVendedores(mapped);
+    } catch (error) {
+      console.error("Error loading vendedores:", error);
+    }
+  };
 
   const loadSucursalesConRfcCount = async () => {
     try {
@@ -648,36 +680,41 @@ const Clientes = () => {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("¿Estás seguro de eliminar este cliente?")) return;
-
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
       const { error } = await supabase
         .from("clientes")
-        .delete()
-        .eq("id", id);
+        .update({ activo: false })
+        .eq("id", deleteTarget.id);
 
-      if (error) {
-        if (error.message.includes("violates foreign key constraint")) {
-          if (error.message.includes("cotizaciones")) {
-            throw new Error("No se puede eliminar el cliente porque tiene cotizaciones asociadas.");
-          } else if (error.message.includes("pedidos")) {
-            throw new Error("No se puede eliminar el cliente porque tiene pedidos asociados.");
-          } else if (error.message.includes("facturas")) {
-            throw new Error("No se puede eliminar el cliente porque tiene facturas asociadas.");
-          } else if (error.message.includes("cliente_sucursales")) {
-            throw new Error("No se puede eliminar el cliente porque tiene sucursales asociadas.");
-          } else {
-            throw new Error("No se puede eliminar el cliente porque tiene registros asociados.");
-          }
-        }
-        throw error;
-      }
-      toast({ title: "Cliente eliminado" });
+      if (error) throw error;
+      toast({ title: `"${deleteTarget.nombre}" desactivado` });
       loadClientes();
     } catch (error: any) {
       toast({
-        title: "Error al eliminar",
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleReactivar = async (cliente: any) => {
+    try {
+      const { error } = await supabase
+        .from("clientes")
+        .update({ activo: true })
+        .eq("id", cliente.id);
+
+      if (error) throw error;
+      toast({ title: `"${cliente.nombre}" reactivado` });
+      loadClientes();
+    } catch (error: any) {
+      toast({
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
@@ -714,7 +751,7 @@ const Clientes = () => {
       prioridad_entrega_default: "flexible",
       deadline_dias_habiles_default: "",
       es_grupo: false,
-      vendedor_asignado: activeVendedorTab === "casa" ? "" : VENDEDORES.find(v => v.nombre_corto.toLowerCase() === activeVendedorTab)?.user_id || "",
+      vendedor_asignado: activeVendedorTab === "casa" ? "" : vendedores.find(v => v.nombre_corto.toLowerCase() === activeVendedorTab)?.user_id || "",
     });
     setEntregarMismaDireccion(true);
     setSucursales([]);
@@ -737,7 +774,7 @@ const Clientes = () => {
     if (activeVendedorTab === "casa") {
       return searchFiltered.filter(c => !c.vendedor_asignado);
     }
-    const vendedor = VENDEDORES.find(v => v.nombre_corto.toLowerCase() === activeVendedorTab);
+    const vendedor = vendedores.find(v => v.nombre_corto.toLowerCase() === activeVendedorTab);
     if (vendedor) {
       return searchFiltered.filter(c => c.vendedor_asignado === vendedor.user_id);
     }
@@ -751,7 +788,7 @@ const Clientes = () => {
     if (tab === "casa") {
       return clientes.filter(c => !c.vendedor_asignado).length;
     }
-    const vendedor = VENDEDORES.find(v => v.nombre_corto.toLowerCase() === tab);
+    const vendedor = vendedores.find(v => v.nombre_corto.toLowerCase() === tab);
     if (vendedor) {
       return clientes.filter(c => c.vendedor_asignado === vendedor.user_id).length;
     }
@@ -770,7 +807,7 @@ const Clientes = () => {
 
   const getVendedorName = (vendedor_asignado: string | null) => {
     if (!vendedor_asignado) return null;
-    const vendedor = VENDEDORES.find(v => v.user_id === vendedor_asignado);
+    const vendedor = vendedores.find(v => v.user_id === vendedor_asignado);
     return vendedor?.nombre_corto || null;
   };
 
@@ -801,7 +838,7 @@ const Clientes = () => {
                   setSelectedClienteForProductos(c);
                   setProductosDialogOpen(true);
                 }}
-                onDelete={handleDelete}
+                onDelete={(id) => setDeleteTarget(clientes.find(c => c.id === id))}
                 getVendedorNombre={getVendedorName}
                 getCreditLabel={getCreditLabel}
               />
@@ -937,13 +974,25 @@ const Clientes = () => {
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(cliente.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    {cliente.activo ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeleteTarget(cliente)}
+                        title="Desactivar cliente"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleReactivar(cliente)}
+                        title="Reactivar cliente"
+                      >
+                        <RotateCcw className="h-4 w-4 text-green-500" />
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
@@ -986,7 +1035,7 @@ const Clientes = () => {
                 Casa (sin comisión)
               </div>
             </SelectItem>
-            {VENDEDORES.map((v) => (
+            {vendedores.map((v) => (
               <SelectItem key={v.user_id} value={v.user_id}>
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4" />
@@ -1294,65 +1343,38 @@ const Clientes = () => {
                   Casa
                   <Badge variant="secondary" className="text-xs px-1.5">{getClientCount("casa")}</Badge>
                 </TabsTrigger>
-                <TabsTrigger value="carlos" className="flex items-center gap-1.5 px-3">
-                  Carlos
-                  <Badge variant="secondary" className="text-xs px-1.5">{getClientCount("carlos")}</Badge>
-                </TabsTrigger>
-                <TabsTrigger value="venancio" className="flex items-center gap-1.5 px-3">
-                  Venancio
-                  <Badge variant="secondary" className="text-xs px-1.5">{getClientCount("venancio")}</Badge>
-                </TabsTrigger>
-                <TabsTrigger value="salvador" className="flex items-center gap-1.5 px-3">
-                  Salvador
-                  <Badge variant="secondary" className="text-xs px-1.5">{getClientCount("salvador")}</Badge>
-                </TabsTrigger>
-                <TabsTrigger value="martin" className="flex items-center gap-1.5 px-3">
-                  Martin
-                  <Badge variant="secondary" className="text-xs px-1.5">{getClientCount("martin")}</Badge>
-                </TabsTrigger>
+                {vendedores.map((v) => (
+                  <TabsTrigger key={v.user_id} value={v.nombre_corto.toLowerCase()} className="flex items-center gap-1.5 px-3">
+                    {v.nombre_corto}
+                    <Badge variant="secondary" className="text-xs px-1.5">{getClientCount(v.nombre_corto.toLowerCase())}</Badge>
+                  </TabsTrigger>
+                ))}
               </TabsList>
             </div>
           ) : (
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className={`grid w-full`} style={{ gridTemplateColumns: `repeat(${vendedores.length + 1}, minmax(0, 1fr))` }}>
               <TabsTrigger value="casa" className="flex items-center gap-2">
                 <Home className="h-4 w-4" />
                 Casa
                 <Badge variant="secondary" className="ml-1">{getClientCount("casa")}</Badge>
               </TabsTrigger>
-              <TabsTrigger value="carlos" className="flex items-center gap-2">
-                Carlos
-                <Badge variant="secondary" className="ml-1">{getClientCount("carlos")}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="venancio" className="flex items-center gap-2">
-                Venancio
-                <Badge variant="secondary" className="ml-1">{getClientCount("venancio")}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="salvador" className="flex items-center gap-2">
-                Salvador
-                <Badge variant="secondary" className="ml-1">{getClientCount("salvador")}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="martin" className="flex items-center gap-2">
-                Martin
-                <Badge variant="secondary" className="ml-1">{getClientCount("martin")}</Badge>
-              </TabsTrigger>
+              {vendedores.map((v) => (
+                <TabsTrigger key={v.user_id} value={v.nombre_corto.toLowerCase()} className="flex items-center gap-2">
+                  {v.nombre_corto}
+                  <Badge variant="secondary" className="ml-1">{getClientCount(v.nombre_corto.toLowerCase())}</Badge>
+                </TabsTrigger>
+              ))}
             </TabsList>
           )}
 
           <TabsContent value="casa" className="mt-4">
             {renderClienteTable()}
           </TabsContent>
-          <TabsContent value="carlos" className="mt-4">
-            {renderClienteTable()}
-          </TabsContent>
-          <TabsContent value="venancio" className="mt-4">
-            {renderClienteTable()}
-          </TabsContent>
-          <TabsContent value="salvador" className="mt-4">
-            {renderClienteTable()}
-          </TabsContent>
-          <TabsContent value="martin" className="mt-4">
-            {renderClienteTable()}
-          </TabsContent>
+          {vendedores.map((v) => (
+            <TabsContent key={v.user_id} value={v.nombre_corto.toLowerCase()} className="mt-4">
+              {renderClienteTable()}
+            </TabsContent>
+          ))}
         </Tabs>
       </div>
 
@@ -1435,6 +1457,28 @@ const Clientes = () => {
         }))}
         onSuccess={loadClientes}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              ¿Desactivar "{deleteTarget?.nombre}"?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              El cliente dejará de aparecer en ventas pero se conservará su historial de pedidos y pagos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground"
+              onClick={confirmDelete}
+            >
+              Sí, desactivar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };
