@@ -223,8 +223,23 @@ export const AdminListaPreciosTab = () => {
     mutationFn: async (items: Array<{ id: string; precioNuevo: number }>) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No autenticado");
+
+      // Get current prices for history
+      const currentPrices = new Map<string, number>();
+      productos?.forEach(p => currentPrices.set(p.id, p.precio_venta));
+
       for (const item of items) {
         await supabase.from("productos").update({ precio_venta: item.precioNuevo }).eq("id", item.id);
+
+        const precioAnterior = currentPrices.get(item.id) ?? 0;
+        if (precioAnterior !== item.precioNuevo) {
+          await supabase.from("productos_historial_precios").insert({
+            producto_id: item.id,
+            precio_anterior: precioAnterior,
+            precio_nuevo: item.precioNuevo,
+            usuario_id: user.id,
+          });
+        }
       }
       return items.length;
     },
