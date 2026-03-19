@@ -333,7 +333,7 @@ export const AdminListaPreciosTab = () => {
       
       if (error) throw error;
 
-      // Record price history
+      // Record price history + notify vendedores
       if (precioAnterior !== precio_venta) {
         await supabase.from("productos_historial_precios").insert({
           producto_id: id,
@@ -341,6 +341,9 @@ export const AdminListaPreciosTab = () => {
           precio_nuevo: precio_venta,
           usuario_id: user?.id ?? null,
         });
+        // Notify vendedores
+        const productoNombre = editingProduct?.nombre || "";
+        notificarCambioPrecio({ productoNombre, precioAnterior, precioNuevo: precio_venta });
       }
     },
     onSuccess: () => {
