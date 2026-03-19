@@ -4179,6 +4179,106 @@ export type Database = {
           },
         ]
       }
+      productos_revision_precio: {
+        Row: {
+          ajuste_aplicado: number | null
+          costo_anterior: number
+          costo_nuevo: number
+          creado_por: string | null
+          created_at: string | null
+          id: string
+          margen_actual_porcentaje: number | null
+          margen_sugerido_porcentaje: number | null
+          notas: string | null
+          pendiente_ajuste: number | null
+          precio_venta_actual: number
+          precio_venta_sugerido: number
+          producto_id: string
+          resuelto_at: string | null
+          resuelto_por: string | null
+          status: string | null
+        }
+        Insert: {
+          ajuste_aplicado?: number | null
+          costo_anterior: number
+          costo_nuevo: number
+          creado_por?: string | null
+          created_at?: string | null
+          id?: string
+          margen_actual_porcentaje?: number | null
+          margen_sugerido_porcentaje?: number | null
+          notas?: string | null
+          pendiente_ajuste?: number | null
+          precio_venta_actual: number
+          precio_venta_sugerido: number
+          producto_id: string
+          resuelto_at?: string | null
+          resuelto_por?: string | null
+          status?: string | null
+        }
+        Update: {
+          ajuste_aplicado?: number | null
+          costo_anterior?: number
+          costo_nuevo?: number
+          creado_por?: string | null
+          created_at?: string | null
+          id?: string
+          margen_actual_porcentaje?: number | null
+          margen_sugerido_porcentaje?: number | null
+          notas?: string | null
+          pendiente_ajuste?: number | null
+          precio_venta_actual?: number
+          precio_venta_sugerido?: number
+          producto_id?: string
+          resuelto_at?: string | null
+          resuelto_por?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "productos_revision_precio_creado_por_fkey"
+            columns: ["creado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_revision_precio_creado_por_fkey"
+            columns: ["creado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_revision_precio_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_revision_precio_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_revision_precio_resuelto_por_fkey"
+            columns: ["resuelto_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_revision_precio_resuelto_por_fkey"
+            columns: ["resuelto_por"]
+            isOneToOne: false
+            referencedRelation: "profiles_chat"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
