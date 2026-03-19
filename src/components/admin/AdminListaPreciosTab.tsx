@@ -1031,6 +1031,18 @@ export const AdminListaPreciosTab = () => {
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => {
+                          setSelectedProductForHistory(producto);
+                          setHistorialDialogOpen(true);
+                        }}
+                        title="Ver historial de precios"
+                      >
+                        <History className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
