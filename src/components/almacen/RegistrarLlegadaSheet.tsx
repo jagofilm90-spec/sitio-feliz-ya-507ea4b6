@@ -369,9 +369,190 @@ export const RegistrarLlegadaSheet = ({
           }
         }
 
+        // ============================
+        // NOTIFICACIONES DE RECHAZO TOTAL
+        // ============================
+        const motivoLabel = MOTIVOS_RECHAZO_TOTAL.find(m => m.value === motivoRechazo)?.label || motivoRechazo;
+        const proveedorId = entrega.orden_compra?.proveedor?.id;
+        const nombreProveedorRechazo = entrega.orden_compra?.proveedor?.nombre 
+          || entrega.orden_compra?.proveedor_nombre_manual 
+          || "Proveedor";
+
+        // Obtener nombre del almacenista
+        let almacenistaNombre = "Almacenista";
+        try {
+          const { data: perfil } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", user.id)
+            .single();
+          if (perfil?.full_name) almacenistaNombre = perfil.full_name;
+        } catch {}
+
+        // 1. Enviar email al proveedor
+        try {
+          if (proveedorId) {
+            // Contacto logística (destinatario principal)
+            const { data: contactoLogistica } = await supabase
+              .from("proveedor_contactos")
+              .select("nombre, email")
+              .eq("proveedor_id", proveedorId)
+              .eq("recibe_logistica", true)
+              .not("email", "is", null)
+              .limit(1)
+              .single();
+
+            // Contacto devoluciones (CC)
+            let ccEmails: string[] = [];
+            const { data: contactoDevol } = await supabase
+              .from("proveedor_contactos")
+              .select("email")
+              .eq("proveedor_id", proveedorId)
+              .eq("recibe_devoluciones", true)
+              .not("email", "is", null)
+              .limit(1)
+              .single();
+            if (contactoDevol?.email && contactoDevol.email !== contactoLogistica?.email) {
+              ccEmails.push(contactoDevol.email);
+            }
+
+            if (contactoLogistica?.email) {
+              const fechaRechazo = format(new Date(), "dd/MM/yyyy 'a las' HH:mm", { locale: es });
+
+              // Obtener evidencias de rechazo con URLs firmadas para adjuntar
+              const { data: evidenciasRechazo } = await supabase
+                .from("ordenes_compra_entregas_evidencias" as any)
+                .select("ruta_storage, tipo_evidencia")
+                .eq("entrega_id", entrega.id)
+                .eq("fase", "rechazo");
+
+              const attachments: { filename: string; content: string; mimeType: string }[] = [];
+              for (const ev of (evidenciasRechazo as any[]) || []) {
+                try {
+                  const { data: fileData } = await supabase.storage
+                    .from("recepciones-evidencias")
+                    .download(ev.ruta_storage);
+                  if (fileData) {
+                    const buffer = await fileData.arrayBuffer();
+                    const base64 = btoa(
+                      new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+                    );
+                    attachments.push({
+                      filename: `evidencia-${ev.tipo_evidencia}.jpg`,
+                      content: base64,
+                      mimeType: "image/jpeg"
+                    });
+                  }
+                } catch (e) {
+                  console.warn("No se pudo adjuntar evidencia:", ev.ruta_storage);
+                }
+              }
+
+              const asuntoRechazo = `🚫 Rechazo de entrega — OC ${entrega.orden_compra.folio}`;
+              const htmlBodyRechazo = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #dc2626;">🚫 Rechazo de Entrega</h2>
+                  <p>Estimado(a) ${contactoLogistica.nombre},</p>
+                  <p>Le informamos que la entrega correspondiente a la siguiente orden de compra ha sido <strong>rechazada en su totalidad</strong>.</p>
+                  <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                    <tr style="background: #fef2f2;">
+                      <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Orden de Compra:</strong></td>
+                      <td style="padding: 8px; border: 1px solid #e5e7eb;">${entrega.orden_compra.folio}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Fecha y hora del rechazo:</strong></td>
+                      <td style="padding: 8px; border: 1px solid #e5e7eb;">${fechaRechazo}</td>
+                    </tr>
+                    <tr style="background: #fef2f2;">
+                      <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Motivo del rechazo:</strong></td>
+                      <td style="padding: 8px; border: 1px solid #e5e7eb; color: #dc2626; font-weight: bold;">${motivoLabel}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Almacenista:</strong></td>
+                      <td style="padding: 8px; border: 1px solid #e5e7eb;">${almacenistaNombre}</td>
+                    </tr>
+                    <tr style="background: #fef2f2;">
+                      <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Chofer del proveedor:</strong></td>
+                      <td style="padding: 8px; border: 1px solid #e5e7eb;">${nombreChofer.trim()}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Placas del vehículo:</strong></td>
+                      <td style="padding: 8px; border: 1px solid #e5e7eb;">${placas.trim()}</td>
+                    </tr>
+                  </table>
+                  <p style="color: #dc2626; font-weight: bold;">Se adjuntan evidencias fotográficas del rechazo.</p>
+                  <p>Favor de comunicarse con nuestro departamento de compras para coordinar la reposición.</p>
+                  <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+                    Este es un correo automático del sistema de ALMASA.
+                  </p>
+                </div>
+              `;
+
+              const { data: emailData, error: emailError } = await supabase.functions.invoke("gmail-api", {
+                body: {
+                  action: "send",
+                  email: "compras@almasa.com.mx",
+                  to: contactoLogistica.email,
+                  cc: ccEmails.length > 0 ? ccEmails.join(",") : undefined,
+                  subject: asuntoRechazo,
+                  body: htmlBodyRechazo,
+                  attachments: attachments.length > 0 ? attachments : undefined
+                }
+              });
+
+              await registrarCorreoEnviado({
+                tipo: "rechazo_entrega_total",
+                referencia_id: entrega.orden_compra.id,
+                destinatario: [contactoLogistica.email, ...ccEmails].join(", "),
+                asunto: asuntoRechazo,
+                gmail_message_id: emailData?.messageId || null,
+                error: emailError?.message || null
+              });
+
+              // Enviar copia interna
+              const emailsInternos = await getEmailsInternos();
+              if (emailsInternos.length > 0) {
+                await enviarCopiaInterna({
+                  asunto: asuntoRechazo,
+                  htmlBody: htmlBodyRechazo,
+                  emailsDestinatarios: emailsInternos,
+                  attachments: attachments.length > 0 ? attachments : undefined
+                });
+              }
+            }
+          }
+        } catch (emailErr) {
+          console.error("Error enviando email de rechazo:", emailErr);
+        }
+
+        // 2. Crear notificación in-app
+        try {
+          await supabase.from("notificaciones").insert({
+            tipo: "rechazo_entrega_total",
+            titulo: `🚫 Entrega rechazada — ${entrega.orden_compra.folio}`,
+            descripcion: `Almacén rechazó entrega de ${nombreProveedorRechazo}. Motivo: ${motivoLabel}. Proveedor notificado.`,
+            leida: false
+          });
+        } catch (notifErr) {
+          console.error("Error creando notificación de rechazo:", notifErr);
+        }
+
+        // 3. Push notification
+        try {
+          await supabase.functions.invoke("send-push-notification", {
+            body: {
+              roles: ['admin', 'secretaria'],
+              title: '🚫 Entrega rechazada',
+              body: `OC ${entrega.orden_compra.folio} de ${nombreProveedorRechazo} fue rechazada por ${motivoLabel}`,
+            }
+          });
+        } catch (pushErr) {
+          console.error("Error enviando push notification de rechazo:", pushErr);
+        }
+
         toast({
           title: "Entrega rechazada",
-          description: "Se registró el rechazo total de la entrega. El proveedor debe ser notificado."
+          description: "Se registró el rechazo y se notificó al proveedor automáticamente."
         });
 
         // Limpiar estado
