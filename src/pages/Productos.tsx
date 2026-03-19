@@ -718,7 +718,7 @@ const Productos = () => {
                 <form onSubmit={handleSave} className="space-y-5">
                   {/* ===== SECCIÓN 1: Información básica ===== */}
                   <div className="space-y-3">
-                    <span className="text-sm font-semibold text-foreground">📦 Información básica</span>
+                    <span className="text-sm font-semibold text-foreground flex items-center gap-1.5"><Package className="h-4 w-4 text-muted-foreground" /> Información básica</span>
                     <div className="space-y-2">
                       <Label htmlFor="nombre">Nombre del producto *</Label>
                       <Input
