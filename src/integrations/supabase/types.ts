@@ -3171,6 +3171,7 @@ export type Database = {
           cancelacion_firma_chofer: string | null
           cancelacion_tipo: string | null
           cantidad_bultos: number
+          comprobante_recepcion_url: string | null
           conciliado_en: string | null
           conciliado_por: string | null
           created_at: string
@@ -3219,6 +3220,7 @@ export type Database = {
           cancelacion_firma_chofer?: string | null
           cancelacion_tipo?: string | null
           cantidad_bultos: number
+          comprobante_recepcion_url?: string | null
           conciliado_en?: string | null
           conciliado_por?: string | null
           created_at?: string
@@ -3267,6 +3269,7 @@ export type Database = {
           cancelacion_firma_chofer?: string | null
           cancelacion_tipo?: string | null
           cantidad_bultos?: number
+          comprobante_recepcion_url?: string | null
           conciliado_en?: string | null
           conciliado_por?: string | null
           created_at?: string

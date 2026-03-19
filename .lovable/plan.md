@@ -1,105 +1,71 @@
 
 
-## Plan: 3 Critical Fixes for Warehouse Reception Module
+# Plan: Folio Diario Consecutivo para Pedidos
 
-### FIX 1 — Auto-notify Supplier on Total Rejection
+## Problema actual
+Los folios se generan con timestamps (`PED-V-123456`) o secuencias mensuales (`PED-202603-0001`). No hay forma de saber cuántos pedidos salieron en un día ni detectar faltantes al juntar las hojas firmadas.
 
-**DB Migration:**
-- Add `comprobante_recepcion_url` column to `ordenes_compra_entregas` (text, nullable) — needed for FIX 2
+## Solución
 
-**File: `src/components/almacen/RegistrarLlegadaSheet.tsx`**
+Agregar un campo `numero_dia` (integer) a la tabla `pedidos` que se auto-incrementa por día, empezando en 1 cada día. Este número aparecerá prominente en las hojas de carga.
 
-After the rechazo total flow completes (after uploading photos/firma, around line 371), add:
+### 1. Migración de base de datos
 
-1. Fetch supplier contacts (`recibe_logistica` and `recibe_devoluciones`) from `proveedor_contactos`
-2. Get rejection evidence signed URLs from storage
-3. Build rejection email HTML with: folio, date/time, motivo label, almacenista name, chofer name, placas, evidence note
-4. Send via Gmail API (`gmail-api` edge function) with evidence photos as attachments, to logistica contact, CC devoluciones contact
-5. Register in `correos_enviados` via `registrarCorreoEnviado`
-6. Send internal copies via `enviarCopiaInterna`
-7. Insert in-app notification: `tipo: 'rechazo_entrega_total'`
-8. Send push notification via `send-push-notification` to admin/secretaria roles
+- Agregar columna `numero_dia` (integer, nullable) a `pedidos`
+- Crear función `asignar_numero_dia()` como trigger BEFORE INSERT que:
+  - Cuenta cuántos pedidos existen para la misma `fecha_pedido::date` (excluyendo borradores)
+  - Asigna `numero_dia = count + 1`
+  - Solo lo asigna si el status NO es `borrador`
+- Crear trigger en `pedidos` BEFORE INSERT que ejecute la función
 
-**File: `src/hooks/useNotificaciones.ts`**
+```sql
+-- Pseudológica del trigger:
+IF NEW.status != 'borrador' THEN
+  SELECT COALESCE(MAX(numero_dia), 0) + 1 INTO NEW.numero_dia
+  FROM pedidos
+  WHERE fecha_pedido::date = NEW.fecha_pedido::date
+    AND status != 'borrador'
+    AND numero_dia IS NOT NULL;
+END IF;
+```
 
-- Add `notificacionesRechazo` to `NotificacionesData` interface
-- Add `cargarNotificacionesRechazo()`: queries `notificaciones` WHERE `tipo = 'rechazo_entrega_total'` AND `leida = false`, admin+secretaria only
-- Include in `cargarNotificaciones` Promise.all and totalCount
+### 2. Actualizar folio a incluir número del día
 
-**File: `src/components/CentroNotificaciones.tsx`**
+Cambiar el formato del folio en los 5 lugares donde se genera:
+- `VendedorNuevoPedidoTab.tsx` (vendedor crea pedido)
+- `ProcesarPedidoDialog.tsx` (correos)
+- `PedidosAcumulativosManager.tsx` (acumulativos, 2 lugares)
+- `CotizacionDetalleDialog.tsx` (cotización → pedido)
+- `NuevoPedidoDialog.tsx` (secretaria)
+- `ClienteNuevoPedido.tsx` (cliente)
 
-- Add `notificacionesRechazo` to destructured data
-- Add to `computedCount`
-- Add red-background section with `Ban` icon, click → `/compras?tab=devoluciones-faltantes`
+El folio **mantiene** el formato actual (`PED-YYYYMM-XXXX`) para identificación única. El `numero_dia` es un dato **adicional** que se muestra en las hojas.
 
----
+### 3. Mostrar número del día en hojas de carga
 
-### FIX 2 — Save Reception PDF Permanently
+En `HojaCargaUnificadaTemplate.tsx`, mostrar prominente:
+```
+NOTA #3
+```
+Usando el campo `numero_dia` del pedido. Se mostrará grande y visible en el header de la hoja para fácil identificación al juntar las hojas firmadas.
 
-**File: `src/components/almacen/AlmacenRecepcionSheet.tsx`**
+### 4. Mostrar en el template de pedido (PedidoPrintTemplate)
 
-After PDF generation (line ~1481, after `pdfBase64Data` is ready), before sending email:
+También agregar el número del día en `PedidoPrintTemplate.tsx` para la vista previa del vendedor.
 
-1. Convert base64 to Blob
-2. Upload to storage: `recepciones-evidencias/comprobantes/{oc_id}/{entrega_id}/comprobante-recepcion-{folio}-{date}.pdf`
-3. Get public/signed URL
-4. Update `ordenes_compra_entregas` SET `comprobante_recepcion_url = url`
+## Archivos a modificar
 
-**File: `src/components/almacen/AlmacenRecepcionTab.tsx`**
+| Archivo | Cambio |
+|---------|--------|
+| **Migración SQL** | Agregar `numero_dia`, función trigger, trigger |
+| `HojaCargaUnificadaTemplate.tsx` | Mostrar `NOTA #X` prominente en header |
+| `PedidoPrintTemplate.tsx` | Mostrar número del día |
+| `PedidoPDFPreviewDialog.tsx` | Pasar `numero_dia` a los datos |
+| `VendedorNuevoPedidoTab.tsx` | Leer `numero_dia` del pedido creado para mostrar |
+| Interfaces de datos print | Agregar campo `numeroDia` opcional |
 
-- Add `comprobante_recepcion_url` to the query select
-- In `EntregaCard`, add "Ver comprobante" button (FileText icon) when `comprobante_recepcion_url` exists, opens in new tab
-- Only visible for completed receptions shown in the "completadas" section
-
-**File: `src/components/compras/OrdenesCompraTab.tsx`** (or wherever OC detail is shown)
-
-- Add "Ver comprobante" and "Regenerar PDF" buttons when viewing a completed OC's delivery detail
-- "Regenerar PDF" calls `generarRecepcionPDFBase64` with data from DB, triggers direct download (admin/secretaria only)
-
----
-
-### FIX 3 — Clearer Warehouse Panel
-
-**File: `src/components/almacen/AlmacenRecepcionTab.tsx`**
-
-Redesign the "Hoy" tab with three clearly separated sections:
-
-**Section 1 — "Recepciones de hoy"** (always on top):
-- Restyle `EntregaCard` to show status badges prominently: 🟡 ESPERANDO / 🟢 EN PROCESO / ✅ LISTA
-- Show provider name + OC folio as card header
-- Show "Entrega X de Y" + tipo_pago info
-- Products list with quantities and units (already exists via `ProductosEntregaList`, keep it)
-- Estimated totals: sum of bultos and estimated kg
-- OC anticipada sin pagar: red badge "⚠️ OC anticipada sin pagar", disable "Registrar Llegada" button, show "Esperar autorización de secretaría" text
-- Habilitada por secretaría: green badge "✅ Habilitada por secretaría"
-- In-progress reception: show progress bar "X de Y productos recibidos", button text → "Continuar recepción"
-
-**Section 2 — "Mañana — Prepararse"** (below):
-- Query tomorrow's deliveries from `ordenes_compra_entregas` WHERE `fecha_programada = tomorrow`
-- Compact collapsible list: provider name, OC folio, # products, estimated bultos
-- Click expands to show product list (reuse `ProductosEntregaList`)
-- No action buttons — read-only
-
-**Section 3 — "Recepciones completadas hoy"** (collapsible at bottom):
-- Query deliveries WHERE `status = 'recibida'` AND `fecha_entrega_real = today`
-- Show: provider, folio, completion time
-- Green "Completada" badge
-- "Ver comprobante" button if `comprobante_recepcion_url` exists
-
-The existing `ProximasEntregasTab` stays as a separate tab — unchanged.
-
----
-
-### Technical Summary
-
-**Migration (1):** Add `comprobante_recepcion_url` column to `ordenes_compra_entregas`
-
-**Files modified (~5):**
-- `RegistrarLlegadaSheet.tsx` — rejection email + notifications
-- `AlmacenRecepcionSheet.tsx` — save PDF to storage after generation
-- `AlmacenRecepcionTab.tsx` — redesigned panel with 3 sections + comprobante button
-- `useNotificaciones.ts` — add `rechazo_entrega_total` type
-- `CentroNotificaciones.tsx` — render rejection notifications
-
-**No existing functionality removed.** All changes are additive or visual improvements to the existing layout.
+## Ventajas sobre el foliador físico
+- Se asigna automáticamente, sin error humano
+- Si se cancela un pedido, el número queda registrado (se puede ver el hueco)
+- Se puede consultar digitalmente cuántos pedidos salieron por día
 

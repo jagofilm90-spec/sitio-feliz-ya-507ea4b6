@@ -72,6 +72,7 @@ export interface NotificacionesData {
   confirmacionesProveedor: ConfirmacionProveedor[];
   notificacionesPrecios: NotificacionGeneral[];
   notificacionesPedidos: NotificacionGeneral[];
+  notificacionesRechazo: NotificacionGeneral[];
   totalCount: number;
 }
 
@@ -85,6 +86,7 @@ export const useNotificaciones = () => {
     confirmacionesProveedor: [],
     notificacionesPrecios: [],
     notificacionesPedidos: [],
+    notificacionesRechazo: [],
     totalCount: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -106,7 +108,7 @@ export const useNotificaciones = () => {
 
   const cargarNotificaciones = async () => {
     try {
-      const [caducidad, stock, licencias, autorizaciones, autorizacionesCot, confirmaciones, precios, pedidos] = await Promise.all([
+      const [caducidad, stock, licencias, autorizaciones, autorizacionesCot, confirmaciones, precios, pedidos, rechazos] = await Promise.all([
         cargarAlertasCaducidad(),
         cargarNotificacionesStock(),
         cargarAlertasLicencias(),
@@ -115,9 +117,10 @@ export const useNotificaciones = () => {
         cargarConfirmacionesProveedor(),
         isAdmin ? cargarNotificacionesPrecios() : Promise.resolve([]),
         cargarNotificacionesPedidos(),
+        cargarNotificacionesRechazo(),
       ]);
 
-      const total = caducidad.length + stock.length + licencias.length + autorizaciones.length + autorizacionesCot.length + confirmaciones.length + precios.length + pedidos.length;
+      const total = caducidad.length + stock.length + licencias.length + autorizaciones.length + autorizacionesCot.length + confirmaciones.length + precios.length + pedidos.length + rechazos.length;
       setNotificaciones({
         alertasCaducidad: caducidad,
         notificacionesStock: stock,
@@ -127,6 +130,7 @@ export const useNotificaciones = () => {
         confirmacionesProveedor: confirmaciones,
         notificacionesPrecios: precios,
         notificacionesPedidos: pedidos,
+        notificacionesRechazo: rechazos,
         totalCount: total,
       });
     } catch (error) {
@@ -140,6 +144,34 @@ export const useNotificaciones = () => {
   const cargarConfirmacionesProveedor = async (): Promise<ConfirmacionProveedor[]> => {
     // Confirmation system was removed - always return empty array
     return [];
+  };
+
+  const cargarNotificacionesRechazo = async (): Promise<NotificacionGeneral[]> => {
+    try {
+      // Only load for admin and secretaria
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+      const hasAccess = roles?.some(r => r.role === 'admin' || r.role === 'secretaria') || false;
+      if (!hasAccess) return [];
+
+      const { data, error } = await supabase
+        .from("notificaciones")
+        .select("id, tipo, titulo, descripcion, created_at")
+        .eq("tipo", "rechazo_entrega_total")
+        .eq("leida", false)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error) return [];
+      return (data || []) as NotificacionGeneral[];
+    } catch (error) {
+      console.error("Error cargando notificaciones de rechazo:", error);
+      return [];
+    }
   };
 
   const cargarNotificacionesPrecios = async (): Promise<NotificacionGeneral[]> => {

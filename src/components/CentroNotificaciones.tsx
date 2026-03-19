@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Bell, PackageX, AlertCircle, X, IdCard, FileCheck, CheckCircle2, FileText, TrendingUp, ShoppingCart } from "lucide-react";
+import { Bell, PackageX, AlertCircle, X, IdCard, FileCheck, CheckCircle2, FileText, TrendingUp, ShoppingCart, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -21,7 +21,7 @@ const STORAGE_KEY = "dismissed-notifications";
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 export const CentroNotificaciones = () => {
-  const { alertasCaducidad, notificacionesStock, alertasLicencias, autorizacionesOC, autorizacionesCotizacion, confirmacionesProveedor, notificacionesPrecios, notificacionesPedidos, totalCount, loading, marcarComoLeida, isAdmin } = useNotificaciones();
+  const { alertasCaducidad, notificacionesStock, alertasLicencias, autorizacionesOC, autorizacionesCotizacion, confirmacionesProveedor, notificacionesPrecios, notificacionesPedidos, notificacionesRechazo, totalCount, loading, marcarComoLeida, isAdmin } = useNotificaciones();
   const navigate = useNavigate();
   const [dismissedLicencias, setDismissedLicencias] = useState<string[]>([]);
   const [dismissedCaducidad, setDismissedCaducidad] = useState<string[]>([]);
@@ -85,7 +85,7 @@ export const CentroNotificaciones = () => {
     [confirmacionesProveedor, dismissedConfirmaciones]
   );
 
-  const computedCount = notificacionesStock.length + visibleAlertasLicencias.length + visibleAlertasCaducidad.length + autorizacionesOC.length + autorizacionesCotizacion.length + visibleConfirmaciones.length + notificacionesPrecios.length + notificacionesPedidos.length;
+  const computedCount = notificacionesStock.length + visibleAlertasLicencias.length + visibleAlertasCaducidad.length + autorizacionesOC.length + autorizacionesCotizacion.length + visibleConfirmaciones.length + notificacionesPrecios.length + notificacionesPedidos.length + notificacionesRechazo.length;
 
   const handleLicenciaClick = (puesto: string) => {
     const tabMap: Record<string, string> = {
@@ -218,6 +218,45 @@ export const CentroNotificaciones = () => {
                   {(visibleConfirmaciones.length > 0 || notificacionesStock.length > 0 || visibleAlertasLicencias.length > 0 || visibleAlertasCaducidad.length > 0) && (
                     <Separator className="my-2" />
                   )}
+                </div>
+              )}
+
+              {/* Rechazos de Entrega */}
+              {notificacionesRechazo.length > 0 && (
+                <div className="mb-2">
+                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
+                    Entregas Rechazadas
+                  </div>
+                  {notificacionesRechazo.map((notif) => (
+                    <div
+                      key={notif.id}
+                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 mb-2"
+                      onClick={() => {
+                        marcarComoLeida(notif.id);
+                        navigate('/compras?tab=devoluciones-faltantes');
+                      }}
+                    >
+                      <Ban className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{notif.titulo}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {notif.descripcion}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(notif.created_at).toLocaleDateString("es-MX", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="bg-red-100 text-red-700 border-red-300">
+                        Rechazada
+                      </Badge>
+                    </div>
+                  ))}
+                  <Separator className="my-2" />
                 </div>
               )}
 

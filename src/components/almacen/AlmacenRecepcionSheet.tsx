@@ -1480,6 +1480,39 @@ export const AlmacenRecepcionSheet = ({
         });
         console.log("PDF generado:", pdfBase64Data.fileName);
 
+        // ============================
+        // GUARDAR PDF PERMANENTEMENTE EN STORAGE
+        // ============================
+        try {
+          const pdfBytes = Uint8Array.from(atob(pdfBase64Data.base64), c => c.charCodeAt(0));
+          const pdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
+          const fechaHoy = format(new Date(), "yyyy-MM-dd");
+          const pdfStoragePath = `comprobantes/${entrega.orden_compra.id}/${entrega.id}/comprobante-recepcion-${entrega.orden_compra.folio}-${fechaHoy}.pdf`;
+
+          const { error: uploadPdfError } = await supabase.storage
+            .from("recepciones-evidencias")
+            .upload(pdfStoragePath, pdfBlob, { contentType: "application/pdf", upsert: true });
+
+          if (!uploadPdfError) {
+            const { data: signedUrlData } = await supabase.storage
+              .from("recepciones-evidencias")
+              .createSignedUrl(pdfStoragePath, 60 * 60 * 24 * 365 * 5); // 5 years
+
+            const comprobanteUrl = signedUrlData?.signedUrl || pdfStoragePath;
+
+            await supabase
+              .from("ordenes_compra_entregas")
+              .update({ comprobante_recepcion_url: comprobanteUrl })
+              .eq("id", entrega.id);
+
+            console.log("PDF guardado permanentemente:", pdfStoragePath);
+          } else {
+            console.error("Error subiendo PDF a storage:", uploadPdfError);
+          }
+        } catch (pdfSaveErr) {
+          console.error("Error guardando PDF permanentemente:", pdfSaveErr);
+        }
+
         if (proveedorId && entrega.llegada_registrada_en) {
           // Obtener contacto de logística
           const { data: contactoLogistica } = await supabase

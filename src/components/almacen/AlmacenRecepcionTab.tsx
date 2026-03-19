@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,11 +34,14 @@ import {
   RefreshCw,
   Box,
   XCircle,
+  FileText,
+  AlertTriangle,
 } from "lucide-react";
 import { RegistrarLlegadaSheet } from "./RegistrarLlegadaSheet";
 import { AlmacenRecepcionSheet } from "./AlmacenRecepcionSheet";
 import { CancelarDescargaDialog } from "./CancelarDescargaDialog";
 import { ProximasEntregasTab } from "./ProximasEntregasTab";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { getCompactDisplayName } from "@/lib/productUtils";
 import {
   Tooltip,
@@ -111,6 +115,8 @@ interface AlmacenRecepcionTabProps {
 
 export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps) => {
   const [entregas, setEntregas] = useState<EntregaCompra[]>([]);
+  const [entregasManana, setEntregasManana] = useState<EntregaCompra[]>([]);
+  const [entregasCompletadas, setEntregasCompletadas] = useState<EntregaCompra[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEntrega, setSelectedEntrega] = useState<EntregaCompra | null>(null);
   const [llegadaSheetOpen, setLlegadaSheetOpen] = useState(false);
@@ -120,6 +126,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
   const [tomandoRecepcion, setTomandoRecepcion] = useState(false);
   const [cancelarDescargaEntrega, setCancelarDescargaEntrega] = useState<EntregaCompra | null>(null);
   const [activeTab, setActiveTab] = useState<"hoy" | "proximas">("hoy");
+  const [completadasExpandido, setCompletadasExpandido] = useState(false);
   const { toast } = useToast();
   
   // Refs para saber si hay sheets abiertos (accesible desde realtime callbacks)
@@ -268,6 +275,117 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
       
       setEntregas(entregasData);
       
+      // ============================
+      // CARGAR ENTREGAS DE MAÑANA
+      // ============================
+      const manana = addDays(new Date(), 1);
+      const mananaStr = format(manana, "yyyy-MM-dd");
+      try {
+        const { data: mananaData } = await supabase
+          .from("ordenes_compra_entregas")
+          .select(`
+            id,
+            numero_entrega,
+            cantidad_bultos,
+            fecha_programada,
+            fecha_entrega_real,
+            status,
+            notas,
+            llegada_registrada_en,
+            nombre_chofer_proveedor,
+            placas_vehiculo,
+            numero_sello_llegada,
+            llegada_registrada_por,
+            trabajando_por,
+            trabajando_desde,
+            origen_faltante,
+            productos_faltantes,
+            orden_compra:ordenes_compra!inner(
+              id,
+              folio,
+              status,
+              tipo_pago,
+              proveedor_id,
+              proveedor_nombre_manual,
+              proveedor:proveedores(id, nombre)
+            )
+          `)
+          .eq("status", "programada")
+          .eq("fecha_programada", mananaStr)
+          .order("fecha_programada", { ascending: true });
+        
+        if (mananaData) {
+          // Load products for manana deliveries
+          const mananaOrdenIds = (mananaData as any[]).map(e => e.orden_compra?.id).filter(Boolean);
+          let mananaProductos = new Map<string, ProductoEntrega[]>();
+          if (mananaOrdenIds.length > 0) {
+            const { data: mDet } = await supabase
+              .from("ordenes_compra_detalles")
+              .select(`id, orden_compra_id, cantidad_ordenada, producto:productos(id, nombre, marca, especificaciones, unidad, contenido_empaque, peso_kg)`)
+              .in("orden_compra_id", mananaOrdenIds);
+            (mDet || []).forEach((d: any) => {
+              const list = mananaProductos.get(d.orden_compra_id) || [];
+              list.push(d);
+              mananaProductos.set(d.orden_compra_id, list);
+            });
+          }
+          setEntregasManana((mananaData as any[])
+            .filter(e => !entregasData.some(today => today.id === e.id))
+            .map(e => ({
+              ...e,
+              productos: e.orden_compra?.id ? mananaProductos.get(e.orden_compra.id) || [] : []
+            }))
+          );
+        }
+      } catch (e) {
+        console.error("Error cargando entregas de mañana:", e);
+      }
+
+      // ============================
+      // CARGAR COMPLETADAS DE HOY  
+      // ============================
+      const hoyStr = format(new Date(), "yyyy-MM-dd");
+      try {
+        const { data: completadasData } = await supabase
+          .from("ordenes_compra_entregas")
+          .select(`
+            id,
+            numero_entrega,
+            cantidad_bultos,
+            fecha_programada,
+            fecha_entrega_real,
+            status,
+            notas,
+            llegada_registrada_en,
+            nombre_chofer_proveedor,
+            placas_vehiculo,
+            numero_sello_llegada,
+            llegada_registrada_por,
+            trabajando_por,
+            trabajando_desde,
+            origen_faltante,
+            productos_faltantes,
+            comprobante_recepcion_url,
+            orden_compra:ordenes_compra!inner(
+              id,
+              folio,
+              status,
+              tipo_pago,
+              proveedor_id,
+              proveedor_nombre_manual,
+              proveedor:proveedores(id, nombre)
+            )
+          `)
+          .eq("status", "recibida")
+          .gte("fecha_entrega_real", hoyStr + "T00:00:00")
+          .lte("fecha_entrega_real", hoyStr + "T23:59:59")
+          .order("fecha_entrega_real", { ascending: false });
+        
+        setEntregasCompletadas((completadasData as any[]) || []);
+      } catch (e) {
+        console.error("Error cargando completadas:", e);
+      }
+
       // Estadísticas para el padre
       const pendientes = entregasData.filter(e => e.status === "programada" || e.status === "en_transito");
       const enDescarga = entregasData.filter(e => e.status === "en_descarga");
@@ -480,24 +598,49 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
         </CardHeader>
         <CardContent className="p-0">
           {activeTab === "hoy" ? (
-            entregas.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">
-                <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No hay entregas programadas para hoy</p>
-                <p className="text-sm mt-1">Revisa la pestaña "Próximas entregas"</p>
-              </div>
-            ) : (
-              <ScrollArea className="h-[calc(100vh-380px)] min-h-[300px]">
-                <div className="divide-y divide-border">
-                  {/* Entregas en descarga (prioritarias) */}
-                  {entregasEnDescarga.length > 0 && (
-                    <div className="p-3 bg-amber-50 dark:bg-amber-950/20">
-                      <div className="text-sm font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2 mb-2">
-                        <Clock className="w-4 h-4" />
-                        En descarga ({entregasEnDescarga.length})
+            <ScrollArea className="h-[calc(100vh-380px)] min-h-[300px]">
+              <div className="divide-y divide-border">
+                {/* ============================
+                    SECCIÓN 1: RECEPCIONES DE HOY
+                    ============================ */}
+                {entregas.length === 0 && entregasManana.length === 0 && entregasCompletadas.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>No hay entregas programadas para hoy</p>
+                    <p className="text-sm mt-1">Revisa la pestaña "Próximas entregas"</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Entregas en descarga (prioritarias) */}
+                    {entregasEnDescarga.length > 0 && (
+                      <div className="p-3 bg-amber-50 dark:bg-amber-950/20">
+                        <div className="text-sm font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2 mb-2">
+                          <Clock className="w-4 h-4" />
+                          🟢 En descarga ({entregasEnDescarga.length})
+                        </div>
+                        <div className="space-y-2">
+                          {entregasEnDescarga.map((entrega) => (
+                            <EntregaCard 
+                              key={entrega.id}
+                              entrega={entrega}
+                              currentUserId={currentUserId}
+                              onRegistrarLlegada={handleRegistrarLlegada}
+                              onCompletarRecepcion={handleCompletarRecepcion}
+                              onTomarRecepcion={setTomarRecepcionEntrega}
+                              onCancelarDescarga={setCancelarDescargaEntrega}
+                            />
+                          ))}
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        {entregasEnDescarga.map((entrega) => (
+                    )}
+
+                    {/* Entregas pendientes de hoy */}
+                    {entregasPendientes.length > 0 && (
+                      <div className="p-3">
+                        <div className="text-sm font-medium text-muted-foreground flex items-center gap-2 mb-2">
+                          🟡 Esperando llegada ({entregasPendientes.length})
+                        </div>
+                        {entregasPendientes.map((entrega) => (
                           <EntregaCard 
                             key={entrega.id}
                             entrega={entrega}
@@ -509,24 +652,118 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                           />
                         ))}
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Entregas pendientes */}
-                  {entregasPendientes.map((entrega) => (
-                    <EntregaCard 
-                      key={entrega.id}
-                      entrega={entrega}
-                      currentUserId={currentUserId}
-                      onRegistrarLlegada={handleRegistrarLlegada}
-                      onCompletarRecepcion={handleCompletarRecepcion}
-                      onTomarRecepcion={setTomarRecepcionEntrega}
-                      onCancelarDescarga={setCancelarDescargaEntrega}
-                    />
-                  ))}
-                </div>
-              </ScrollArea>
-            )
+                    {/* ============================
+                        SECCIÓN 2: MAÑANA — PREPARARSE
+                        ============================ */}
+                    {entregasManana.length > 0 && (
+                      <div className="p-3">
+                        <div className="text-sm font-medium text-blue-600 dark:text-blue-400 flex items-center gap-2 mb-3">
+                          📋 Mañana — Prepararse ({entregasManana.length})
+                        </div>
+                        <div className="space-y-2">
+                          {entregasManana.map((entrega) => {
+                            const provNombre = entrega.orden_compra?.proveedor?.nombre 
+                              || entrega.orden_compra?.proveedor_nombre_manual 
+                              || "Proveedor";
+                            const totalProductos = entrega.productos?.length || 0;
+                            const totalBultos = entrega.cantidad_bultos;
+                            return (
+                              <Collapsible key={entrega.id}>
+                                <CollapsibleTrigger className="w-full text-left">
+                                  <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                                    <div className="flex-1 min-w-0">
+                                      <span className="font-medium">{provNombre}</span>
+                                      <span className="text-muted-foreground ml-2">— {entrega.orden_compra?.folio}</span>
+                                      <div className="text-sm text-muted-foreground mt-0.5">
+                                        {totalProductos} productos · ~{totalBultos.toLocaleString()} bultos
+                                      </div>
+                                    </div>
+                                    <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                  </div>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent>
+                                  <div className="pl-4 pt-2 pb-1">
+                                    <ProductosEntregaList 
+                                      productos={entrega.productos}
+                                      origen_faltante={entrega.origen_faltante}
+                                      productos_faltantes={entrega.productos_faltantes as ProductoFaltante[] | undefined}
+                                    />
+                                  </div>
+                                </CollapsibleContent>
+                              </Collapsible>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ============================
+                        SECCIÓN 3: COMPLETADAS HOY
+                        ============================ */}
+                    {entregasCompletadas.length > 0 && (
+                      <div className="p-3">
+                        <Collapsible open={completadasExpandido} onOpenChange={setCompletadasExpandido}>
+                          <CollapsibleTrigger className="w-full text-left">
+                            <div className="flex items-center justify-between">
+                              <div className="text-sm font-medium text-green-600 dark:text-green-400 flex items-center gap-2">
+                                ✅ Completadas hoy ({entregasCompletadas.length})
+                              </div>
+                              {completadasExpandido ? (
+                                <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                              )}
+                            </div>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <div className="mt-2 space-y-2">
+                              {entregasCompletadas.map((entrega) => {
+                                const provNombre = entrega.orden_compra?.proveedor?.nombre 
+                                  || entrega.orden_compra?.proveedor_nombre_manual 
+                                  || "Proveedor";
+                                const horaRecepcion = entrega.fecha_entrega_real 
+                                  ? format(new Date(entrega.fecha_entrega_real), "HH:mm", { locale: es })
+                                  : "";
+                                const comprobanteUrl = (entrega as any).comprobante_recepcion_url;
+                                return (
+                                  <div key={entrega.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-green-50/50 dark:bg-green-950/10">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium truncate">{provNombre}</span>
+                                        <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 gap-1 flex-shrink-0">
+                                          <CheckCircle2 className="w-3 h-3" />
+                                          Completada
+                                        </Badge>
+                                      </div>
+                                      <div className="text-sm text-muted-foreground mt-0.5">
+                                        {entrega.orden_compra?.folio} · Recibida a las {horaRecepcion}
+                                      </div>
+                                    </div>
+                                    {comprobanteUrl && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-1 flex-shrink-0"
+                                        onClick={() => window.open(comprobanteUrl, "_blank")}
+                                      >
+                                        <FileText className="w-4 h-4" />
+                                        Ver comprobante
+                                      </Button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </ScrollArea>
           ) : (
             <ScrollArea className="h-[calc(100vh-380px)] min-h-[300px]">
               <ProximasEntregasTab onEntregaReprogramada={loadEntregas} />
