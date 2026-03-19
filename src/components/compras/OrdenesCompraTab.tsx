@@ -1711,19 +1711,17 @@ const OrdenesCompraTab = () => {
             <TableRow>
               <TableHead>Folio</TableHead>
               <TableHead>Proveedor</TableHead>
-              <TableHead>Fecha</TableHead>
               <TableHead>Total</TableHead>
               <TableHead className="w-32">Recepción</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead>Pago</TableHead>
-              <TableHead>Programación</TableHead>
               <TableHead>Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredOrdenes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground">
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
                   No hay órdenes de compra registradas
                 </TableCell>
               </TableRow>
@@ -1733,7 +1731,12 @@ const OrdenesCompraTab = () => {
 
                 return (
                   <TableRow key={orden.id}>
-                    <TableCell className="font-medium">{orden.folio}</TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{orden.folio}</div>
+                        <div className="text-xs text-muted-foreground">{format(new Date(orden.fecha_orden), "dd/MM/yyyy")}</div>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       {orden.proveedor_id ? (
                         orden.proveedores?.nombre
@@ -1743,9 +1746,6 @@ const OrdenesCompraTab = () => {
                           <Badge variant="outline" className="text-xs">Manual</Badge>
                         </span>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(orden.fecha_orden), "dd/MM/yyyy")}
                     </TableCell>
                     <TableCell>{formatCurrency(orden.total)}</TableCell>
                     <TableCell>
@@ -1865,62 +1865,32 @@ const OrdenesCompraTab = () => {
                         )
                       )}
                     </TableCell>
-                    {/* REMOVED: Confirmation column - confirmation system deprecated */}
-                    <TableCell>
-                      <EntregasPopover 
-                        orden={orden} 
-                        entregas={todasEntregas} 
-                        entregasStatus={entregasStatus}
-                      />
-                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
+                        {(orden.status === "recibida" || orden.status === "parcial" || orden.status === "completada") && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Facturas del proveedor"
+                            onClick={() => {
+                              setOrdenParaFacturas({
+                                id: orden.id,
+                                folio: orden.folio,
+                                proveedor_nombre: orden.proveedor_id ? orden.proveedores?.nombre : orden.proveedor_nombre_manual,
+                                total: orden.total,
+                              });
+                              setFacturasDialogOpen(true);
+                            }}
+                          >
+                            <Receipt className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          title="Facturas del proveedor"
-                          onClick={() => {
-                            setOrdenParaFacturas({
-                              id: orden.id,
-                              folio: orden.folio,
-                              proveedor_nombre: orden.proveedor_id ? orden.proveedores?.nombre : orden.proveedor_nombre_manual,
-                              total: orden.total,
-                            });
-                            setFacturasDialogOpen(true);
-                          }}
-                        >
-                          <Receipt className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          title="Reenviar OC"
-                          onClick={() => {
-                            setOrdenParaReenvio(orden);
-                            setReenviarDialogOpen(true);
-                          }}
-                        >
-                          <Send className="h-4 w-4" />
-                        </Button>
-                        {/* REMOVED: Bell reminder button - confirmation system deprecated */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          title="Eliminar OC"
-                          onClick={() => {
-                            setOrdenParaEliminar(orden);
-                            setConfirmarEliminacionOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
+                          title="Acciones"
                           onClick={() => {
                             setOrdenSeleccionada(orden);
                             setAccionesDialogOpen(true);
