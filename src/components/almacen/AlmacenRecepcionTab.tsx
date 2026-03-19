@@ -275,6 +275,117 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
       
       setEntregas(entregasData);
       
+      // ============================
+      // CARGAR ENTREGAS DE MAÑANA
+      // ============================
+      const manana = addDays(new Date(), 1);
+      const mananaStr = format(manana, "yyyy-MM-dd");
+      try {
+        const { data: mananaData } = await supabase
+          .from("ordenes_compra_entregas")
+          .select(`
+            id,
+            numero_entrega,
+            cantidad_bultos,
+            fecha_programada,
+            fecha_entrega_real,
+            status,
+            notas,
+            llegada_registrada_en,
+            nombre_chofer_proveedor,
+            placas_vehiculo,
+            numero_sello_llegada,
+            llegada_registrada_por,
+            trabajando_por,
+            trabajando_desde,
+            origen_faltante,
+            productos_faltantes,
+            orden_compra:ordenes_compra!inner(
+              id,
+              folio,
+              status,
+              tipo_pago,
+              proveedor_id,
+              proveedor_nombre_manual,
+              proveedor:proveedores(id, nombre)
+            )
+          `)
+          .eq("status", "programada")
+          .eq("fecha_programada", mananaStr)
+          .order("fecha_programada", { ascending: true });
+        
+        if (mananaData) {
+          // Load products for manana deliveries
+          const mananaOrdenIds = (mananaData as any[]).map(e => e.orden_compra?.id).filter(Boolean);
+          let mananaProductos = new Map<string, ProductoEntrega[]>();
+          if (mananaOrdenIds.length > 0) {
+            const { data: mDet } = await supabase
+              .from("ordenes_compra_detalles")
+              .select(`id, orden_compra_id, cantidad_ordenada, producto:productos(id, nombre, marca, especificaciones, unidad, contenido_empaque, peso_kg)`)
+              .in("orden_compra_id", mananaOrdenIds);
+            (mDet || []).forEach((d: any) => {
+              const list = mananaProductos.get(d.orden_compra_id) || [];
+              list.push(d);
+              mananaProductos.set(d.orden_compra_id, list);
+            });
+          }
+          setEntregasManana((mananaData as any[])
+            .filter(e => !entregasData.some(today => today.id === e.id))
+            .map(e => ({
+              ...e,
+              productos: e.orden_compra?.id ? mananaProductos.get(e.orden_compra.id) || [] : []
+            }))
+          );
+        }
+      } catch (e) {
+        console.error("Error cargando entregas de mañana:", e);
+      }
+
+      // ============================
+      // CARGAR COMPLETADAS DE HOY  
+      // ============================
+      const hoyStr = format(new Date(), "yyyy-MM-dd");
+      try {
+        const { data: completadasData } = await supabase
+          .from("ordenes_compra_entregas")
+          .select(`
+            id,
+            numero_entrega,
+            cantidad_bultos,
+            fecha_programada,
+            fecha_entrega_real,
+            status,
+            notas,
+            llegada_registrada_en,
+            nombre_chofer_proveedor,
+            placas_vehiculo,
+            numero_sello_llegada,
+            llegada_registrada_por,
+            trabajando_por,
+            trabajando_desde,
+            origen_faltante,
+            productos_faltantes,
+            comprobante_recepcion_url,
+            orden_compra:ordenes_compra!inner(
+              id,
+              folio,
+              status,
+              tipo_pago,
+              proveedor_id,
+              proveedor_nombre_manual,
+              proveedor:proveedores(id, nombre)
+            )
+          `)
+          .eq("status", "recibida")
+          .gte("fecha_entrega_real", hoyStr + "T00:00:00")
+          .lte("fecha_entrega_real", hoyStr + "T23:59:59")
+          .order("fecha_entrega_real", { ascending: false });
+        
+        setEntregasCompletadas((completadasData as any[]) || []);
+      } catch (e) {
+        console.error("Error cargando completadas:", e);
+      }
+
       // Estadísticas para el padre
       const pendientes = entregasData.filter(e => e.status === "programada" || e.status === "en_transito");
       const enDescarga = entregasData.filter(e => e.status === "en_descarga");
