@@ -474,6 +474,46 @@ export const useNotificaciones = () => {
     }
   };
 
+  const cargarNotificacionesCaducidadPush = async (): Promise<NotificacionGeneral[]> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+      const hasAccess = roles?.some(r => ['admin', 'almacen', 'gerente_almacen'].includes(r.role as string)) || false;
+      if (!hasAccess) return [];
+
+      const { data, error } = await supabase
+        .from("notificaciones")
+        .select("id, tipo, titulo, descripcion, created_at")
+        .in("tipo", ["caducidad_critica", "caducidad_vencida"])
+        .eq("leida", false)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) return [];
+      return (data || []) as NotificacionGeneral[];
+    } catch { return []; }
+  };
+
+  const cargarNotificacionesFumigacionPush = async (): Promise<NotificacionGeneral[]> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+      const hasAccess = roles?.some(r => ['admin', 'almacen', 'gerente_almacen'].includes(r.role as string)) || false;
+      if (!hasAccess) return [];
+
+      const { data, error } = await supabase
+        .from("notificaciones")
+        .select("id, tipo, titulo, descripcion, created_at")
+        .in("tipo", ["fumigacion_proxima", "fumigacion_vencida", "fumigacion_sin_fecha"])
+        .eq("leida", false)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) return [];
+      return (data || []) as NotificacionGeneral[];
+    } catch { return []; }
+  };
+
   useEffect(() => {
     cargarNotificaciones();
 
