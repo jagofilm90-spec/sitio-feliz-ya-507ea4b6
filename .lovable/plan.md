@@ -1,71 +1,55 @@
 
 
-# Plan: Folio Diario Consecutivo para Pedidos
+## Plan: Purge Operational Data (Keep Clients, Products, Providers, Fumigations)
 
-## Problema actual
-Los folios se generan con timestamps (`PED-V-123456`) o secuencias mensuales (`PED-202603-0001`). No hay forma de saber cuántos pedidos salieron en un día ni detectar faltantes al juntar las hojas firmadas.
+This is a **data deletion** task — no code or schema changes needed. We'll run DELETE statements in the correct foreign-key order using the data operations tool.
 
-## Solución
+---
 
-Agregar un campo `numero_dia` (integer) a la tabla `pedidos` que se auto-incrementa por día, empezando en 1 cada día. Este número aparecerá prominente en las hojas de carga.
+### What gets DELETED (all rows):
 
-### 1. Migración de base de datos
+**Order/Delivery chain:**
+- `carga_evidencias`, `carga_productos`
+- `cobros_pedido`, `pagos_cliente_detalle`, `pagos_cliente`
+- `devoluciones`
+- `entregas` → `rutas`
+- `pedidos_detalles`, `pedidos_historial_cambios`, `pedidos_acumulativos_detalles`, `pedidos_acumulativos` → `pedidos`
+- `solicitudes_descuento`, `solicitudes_venta_mostrador`
+- `comisiones_detalle`, `comisiones_vendedor`
 
-- Agregar columna `numero_dia` (integer, nullable) a `pedidos`
-- Crear función `asignar_numero_dia()` como trigger BEFORE INSERT que:
-  - Cuenta cuántos pedidos existen para la misma `fecha_pedido::date` (excluyendo borradores)
-  - Asigna `numero_dia = count + 1`
-  - Solo lo asigna si el status NO es `borrador`
-- Crear trigger en `pedidos` BEFORE INSERT que ejecute la función
+**Purchase Orders chain:**
+- `ordenes_compra_entregas_evidencias` → `ordenes_compra_entregas`
+- `ordenes_compra_detalles` → `ordenes_compra`
+- `recepciones_evidencias`, `recepciones_participantes`
+- `proveedor_factura_detalles`, `proveedor_factura_entregas` → `proveedor_facturas`
+- `devoluciones_proveedor_evidencias` → `devoluciones_proveedor`
+- `proveedor_creditos_pendientes`
 
-```sql
--- Pseudológica del trigger:
-IF NEW.status != 'borrador' THEN
-  SELECT COALESCE(MAX(numero_dia), 0) + 1 INTO NEW.numero_dia
-  FROM pedidos
-  WHERE fecha_pedido::date = NEW.fecha_pedido::date
-    AND status != 'borrador'
-    AND numero_dia IS NOT NULL;
-END IF;
-```
+**Inventory:**
+- `inventario_lotes`, `inventario_movimientos`
 
-### 2. Actualizar folio a incluir número del día
+**History/Notifications:**
+- `productos_historial_costos`, `productos_historial_precios`, `productos_historial_estado`, `productos_revision_precio`
+- `notificaciones`, `correos_enviados`
 
-Cambiar el formato del folio en los 5 lugares donde se genera:
-- `VendedorNuevoPedidoTab.tsx` (vendedor crea pedido)
-- `ProcesarPedidoDialog.tsx` (correos)
-- `PedidosAcumulativosManager.tsx` (acumulativos, 2 lugares)
-- `CotizacionDetalleDialog.tsx` (cotización → pedido)
-- `NuevoPedidoDialog.tsx` (secretaria)
-- `ClienteNuevoPedido.tsx` (cliente)
+**After deletion:** Reset `stock_actual` to 0 and `costo_promedio_ponderado` to 0 on all products (since inventory is gone).
 
-El folio **mantiene** el formato actual (`PED-YYYYMM-XXXX`) para identificación única. El `numero_dia` es un dato **adicional** que se muestra en las hojas.
+---
 
-### 3. Mostrar número del día en hojas de carga
+### What is KEPT (untouched):
+- `clientes` (and all client sub-tables: contactos, correos, cortesias, creditos, sucursales, etc.)
+- `productos` (structure intact, stock reset to 0)
+- `proveedores`, `proveedor_contactos`, `proveedor_correos`, `proveedor_productos`
+- Fumigation data (in productos table fields)
+- `empleados`, `profiles`, `user_roles`
+- `vehiculos` and related
+- `bodegas`, `zonas`, `configuracion_empresa`
+- `conversaciones`, `mensajes`
+- `facturas`, `factura_detalles`
+- `cotizaciones`, `cotizaciones_detalles`
 
-En `HojaCargaUnificadaTemplate.tsx`, mostrar prominente:
-```
-NOTA #3
-```
-Usando el campo `numero_dia` del pedido. Se mostrará grande y visible en el header de la hoja para fácil identificación al juntar las hojas firmadas.
+---
 
-### 4. Mostrar en el template de pedido (PedidoPrintTemplate)
-
-También agregar el número del día en `PedidoPrintTemplate.tsx` para la vista previa del vendedor.
-
-## Archivos a modificar
-
-| Archivo | Cambio |
-|---------|--------|
-| **Migración SQL** | Agregar `numero_dia`, función trigger, trigger |
-| `HojaCargaUnificadaTemplate.tsx` | Mostrar `NOTA #X` prominente en header |
-| `PedidoPrintTemplate.tsx` | Mostrar número del día |
-| `PedidoPDFPreviewDialog.tsx` | Pasar `numero_dia` a los datos |
-| `VendedorNuevoPedidoTab.tsx` | Leer `numero_dia` del pedido creado para mostrar |
-| Interfaces de datos print | Agregar campo `numeroDia` opcional |
-
-## Ventajas sobre el foliador físico
-- Se asigna automáticamente, sin error humano
-- Si se cancela un pedido, el número queda registrado (se puede ver el hueco)
-- Se puede consultar digitalmente cuántos pedidos salieron por día
+### Execution
+~15 DELETE statements run sequentially via the data tool, respecting FK constraints. Then one UPDATE to reset product stock.
 
