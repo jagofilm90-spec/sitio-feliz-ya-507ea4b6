@@ -1341,8 +1341,8 @@ const Productos = () => {
                   )}
                 </div>
               ) : (
-                <div className="border rounded-lg overflow-hidden">
-                  <div className="overflow-y-auto max-h-[calc(100vh-340px)]">
+                <div className="border rounded-lg overflow-hidden h-full flex flex-col">
+                  <div className="overflow-y-auto flex-1">
                     <Table style={{ tableLayout: 'fixed', width: '100%' }}>
                       <colgroup>
                         <col style={{ width: '9%' }} />
