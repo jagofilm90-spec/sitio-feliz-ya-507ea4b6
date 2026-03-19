@@ -788,7 +788,7 @@ const Clientes = () => {
     if (tab === "casa") {
       return clientes.filter(c => !c.vendedor_asignado).length;
     }
-    const vendedor = VENDEDORES.find(v => v.nombre_corto.toLowerCase() === tab);
+    const vendedor = vendedores.find(v => v.nombre_corto.toLowerCase() === tab);
     if (vendedor) {
       return clientes.filter(c => c.vendedor_asignado === vendedor.user_id).length;
     }
