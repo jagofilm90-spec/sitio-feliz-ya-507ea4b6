@@ -61,12 +61,29 @@ interface ContactoProveedor {
 interface Proveedor {
   id: string;
   nombre: string;
+  nombre_comercial?: string | null;
+  categoria?: string | null;
   nombre_contacto: string | null;
   email: string | null;
   telefono: string | null;
   direccion: string | null;
   pais: string;
   rfc: string | null;
+  regimen_fiscal?: string | null;
+  calle?: string | null;
+  numero_exterior?: string | null;
+  numero_interior?: string | null;
+  colonia?: string | null;
+  municipio?: string | null;
+  estado?: string | null;
+  codigo_postal?: string | null;
+  termino_pago?: string | null;
+  dias_visita?: string[] | null;
+  frecuencia_compra?: string | null;
+  banco?: string | null;
+  beneficiario?: string | null;
+  cuenta_bancaria?: string | null;
+  clabe_interbancaria?: string | null;
   notas: string | null;
   activo: boolean;
   created_at: string;
@@ -406,13 +423,12 @@ const ProveedoresTab = () => {
   
   const [newProveedor, setNewProveedor] = useState({
     nombre: "",
+    nombre_comercial: "",
+    categoria: "",
     direccion: "",
     pais: "México",
     rfc: "",
-    notas: "",
-    // Campos fiscales estructurados
     regimen_fiscal: "",
-    nombre_comercial: "",
     calle: "",
     numero_exterior: "",
     numero_interior: "",
@@ -420,6 +436,14 @@ const ProveedoresTab = () => {
     municipio: "",
     estado: "",
     codigo_postal: "",
+    termino_pago: "contado",
+    dias_visita: [] as string[],
+    frecuencia_compra: "",
+    banco: "",
+    beneficiario: "",
+    cuenta_bancaria: "",
+    clabe_interbancaria: "",
+    notas: "",
   });
 
   const { toast } = useToast();
@@ -792,12 +816,12 @@ const ProveedoresTab = () => {
       setIsDialogOpen(false);
       setNewProveedor({
         nombre: "",
+        nombre_comercial: "",
+        categoria: "",
         direccion: "",
         pais: "México",
         rfc: "",
-        notas: "",
         regimen_fiscal: "",
-        nombre_comercial: "",
         calle: "",
         numero_exterior: "",
         numero_interior: "",
@@ -805,6 +829,14 @@ const ProveedoresTab = () => {
         municipio: "",
         estado: "",
         codigo_postal: "",
+        termino_pago: "contado",
+        dias_visita: [] as string[],
+        frecuencia_compra: "",
+        banco: "",
+        beneficiario: "",
+        cuenta_bancaria: "",
+        clabe_interbancaria: "",
+        notas: "",
       });
       setContactosNuevos([]);
       resetNuevoContacto();
@@ -830,12 +862,29 @@ const ProveedoresTab = () => {
         .from("proveedores")
         .update({
           nombre: proveedor.nombre,
+          nombre_comercial: proveedor.nombre_comercial,
+          categoria: proveedor.categoria,
           nombre_contacto: contactoPrincipal.nombre,
           email: contactoPrincipal.email,
           telefono: contactoPrincipal.telefono,
           direccion: proveedor.direccion,
           pais: proveedor.pais,
           rfc: proveedor.rfc,
+          regimen_fiscal: proveedor.regimen_fiscal,
+          calle: proveedor.calle,
+          numero_exterior: proveedor.numero_exterior,
+          numero_interior: proveedor.numero_interior,
+          colonia: proveedor.colonia,
+          municipio: proveedor.municipio,
+          estado: proveedor.estado,
+          codigo_postal: proveedor.codigo_postal,
+          termino_pago: proveedor.termino_pago,
+          dias_visita: proveedor.dias_visita,
+          frecuencia_compra: proveedor.frecuencia_compra,
+          banco: proveedor.banco,
+          beneficiario: proveedor.beneficiario,
+          cuenta_bancaria: proveedor.cuenta_bancaria,
+          clabe_interbancaria: proveedor.clabe_interbancaria,
           notas: proveedor.notas,
           activo: proveedor.activo,
         })
