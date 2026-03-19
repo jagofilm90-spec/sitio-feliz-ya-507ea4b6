@@ -194,11 +194,17 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false }: PedidoPrintTempla
           )}
         </div>
         {/* Totales */}
-        <table className="text-[10px] w-52 border-collapse">
+        <table className="text-[10px] w-56 border-collapse">
           <tbody>
+            {datos.pesoTotalKg > 0 && (
+              <tr>
+                <td className="p-1 font-semibold text-right border border-gray-300">Peso Total:</td>
+                <td className="p-1 text-right border border-gray-300 w-24 font-mono">{fmtKg(datos.pesoTotalKg)}</td>
+              </tr>
+            )}
             <tr>
               <td className="p-1 font-semibold text-right border border-gray-300">Subtotal:</td>
-              <td className="p-1 text-right border border-gray-300 w-24 font-mono">{fmtMoney(datos.subtotal)}</td>
+              <td className="p-1 text-right border border-gray-300 font-mono">{fmtMoney(datos.subtotal)}</td>
             </tr>
             <tr>
               <td className="p-1 font-semibold text-right border border-gray-300">IVA (16%):</td>
@@ -210,7 +216,7 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false }: PedidoPrintTempla
                 <td className="p-1 text-right border border-gray-300 font-mono">{fmtMoney(datos.ieps)}</td>
               </tr>
             )}
-            <tr className="bg-gray-800 text-white">
+            <tr className="bg-black text-white">
               <td className="p-1.5 font-bold text-right">TOTAL:</td>
               <td className="p-1.5 text-right font-bold font-mono text-sm">{fmtMoney(datos.total)}</td>
             </tr>
