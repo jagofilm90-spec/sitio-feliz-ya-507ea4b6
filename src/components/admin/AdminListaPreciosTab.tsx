@@ -248,6 +248,7 @@ export const AdminListaPreciosTab = () => {
       const currentPrices = new Map<string, number>();
       productos?.forEach(p => currentPrices.set(p.id, p.precio_venta));
 
+      let changedCount = 0;
       for (const item of items) {
         await supabase.from("productos").update({ precio_venta: item.precioNuevo }).eq("id", item.id);
 
@@ -259,7 +260,34 @@ export const AdminListaPreciosTab = () => {
             precio_nuevo: item.precioNuevo,
             usuario_id: user.id,
           });
+          changedCount++;
         }
+      }
+      // Send one summary notification for bulk updates
+      if (changedCount > 0) {
+        notificarCambioPrecio({
+          productoNombre: `${changedCount} productos`,
+          precioAnterior: 0,
+          precioNuevo: 0,
+        });
+        // Override with a custom in-app notification for bulk
+        try {
+          await supabase.from("notificaciones").insert({
+            tipo: "precio_actualizado",
+            titulo: "💰 Precios actualizados en masa",
+            descripcion: `Se actualizaron los precios de ${changedCount} productos`,
+            leida: false,
+          });
+        } catch (e) { console.error(e); }
+        try {
+          await supabase.functions.invoke("send-push-notification", {
+            body: {
+              roles: ["vendedor"],
+              title: "💰 Precios actualizados",
+              body: `Se actualizaron los precios de ${changedCount} productos`,
+            },
+          });
+        } catch (e) { console.error(e); }
       }
       return items.length;
     },
