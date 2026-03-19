@@ -1534,10 +1534,8 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  // Flujo simplificado: No se requiere autorización, OCs se envían automáticamente al crear
-  const canRequestAuthorization = false; // Deshabilitado - flujo simplificado
-  const canAuthorize = false; // Deshabilitado - flujo simplificado
-  const canSendToSupplier = orden?.status === "pendiente"; // Permitir envío manual desde pendiente
+  const canSendToSupplier = orden?.status === "pendiente";
+  const canResend = orden?.status === "enviada" || orden?.status === "confirmada" || orden?.status === "parcial";
   const proveedorTieneEmail = !!(orden?.proveedores?.email || orden?.proveedor_email_manual);
 
   // Mark as sent without email (for informal suppliers) - still sends internal copy
@@ -1795,356 +1793,162 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
 
         {!accion ? (
           <div className="space-y-4">
-            {/* ====== ACCIONES PRINCIPALES ====== */}
+            {/* ====== ACCIONES FRECUENTES ====== */}
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Acciones Principales</p>
-              
-              {onEdit && (
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start",
-                    tieneRecepcionesActivas && "opacity-50 cursor-not-allowed"
+              {/* Enviar / Reenviar al Proveedor */}
+              {(canSendToSupplier || canResend) && (
+                <button
+                  className="w-full flex items-center gap-3 p-4 rounded-lg border border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-950/30 text-left transition-colors"
+                  onClick={proveedorTieneEmail ? () => setAccion(canSendToSupplier ? "enviar_email" : "reenviar_email") : handleMarcarComoEnviada}
+                  disabled={enviandoEmail}
+                >
+                  {enviandoEmail ? (
+                    <Loader2 className="h-5 w-5 text-green-600 flex-shrink-0 animate-spin" />
+                  ) : (
+                    <Mail className="h-5 w-5 text-green-600 flex-shrink-0" />
                   )}
-                  disabled={tieneRecepcionesActivas}
-                  onClick={() => {
-                    if (tieneRecepcionesActivas) {
-                      toast({
-                        title: "No se puede editar",
-                        description: "Ya hay recepciones registradas en almacén",
-                        variant: "destructive",
-                      });
-                      return;
-                    }
-                    
-                    // If sent or confirmed, show warning
-                    if (orden?.status === "enviada" || orden?.status === "confirmada") {
-                      setConfirmEditOpen(true);
-                      return;
-                    }
-                    
-                    // Edit directly
-                    onOpenChange(false);
-                    onEdit(orden);
-                  }}
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Editar Orden
-                  {tieneRecepcionesActivas && (
-                    <Badge variant="secondary" className="ml-2 text-xs">
-                      Bloqueado
-                    </Badge>
-                  )}
-                </Button>
+                  <div>
+                    <div className="font-medium text-sm">{canSendToSupplier ? (proveedorTieneEmail ? "Enviar al Proveedor" : "Marcar como Enviada") : "Reenviar al Proveedor"}</div>
+                    <div className="text-xs text-muted-foreground">{proveedorTieneEmail ? "Envía email con PDF de la OC adjunta" : "Sin email — marca como enviada manualmente"}</div>
+                  </div>
+                </button>
               )}
-              
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={handleGenerarPDF}
-              >
-                <FileText className="mr-2 h-4 w-4" />
-                Generar PDF
-              </Button>
-            </div>
 
-            <Separator />
-
-            {/* ====== AUTORIZACIÓN Y ENVÍO ====== */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Autorización y Envío</p>
-              
-              {/* Authorization workflow buttons */}
-            {canRequestAuthorization && (
-              <Button
-                variant="outline"
-                className="w-full justify-start text-amber-600 hover:text-amber-700"
-                onClick={() => setAccion("solicitar_autorizacion")}
-              >
-                <Send className="mr-2 h-4 w-4" />
-                Solicitar Autorización
-              </Button>
-            )}
-
-            {canAuthorize && (
-              <>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-green-600 hover:text-green-700"
-                  onClick={() => setAccion("autorizar")}
-                >
-                  <ShieldCheck className="mr-2 h-4 w-4" />
-                  Autorizar Orden
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-destructive hover:text-destructive"
-                  onClick={() => setAccion("rechazar")}
-                >
-                  <ShieldX className="mr-2 h-4 w-4" />
-                  Rechazar Orden
-                </Button>
-              </>
-            )}
-
-            {/* Unified send button - shown for authorized orders */}
-            {canSendToSupplier && (
-              <Button
-                variant="outline"
-                className="w-full justify-start text-green-600 hover:text-green-700 border-green-200"
-                onClick={proveedorTieneEmail ? () => setAccion("enviar_email") : handleMarcarComoEnviada}
-                disabled={enviandoEmail}
-              >
-                {enviandoEmail ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : proveedorTieneEmail ? (
-                  <Mail className="mr-2 h-4 w-4" />
-                ) : (
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                )}
-                {proveedorTieneEmail ? "Enviar al Proveedor" : "Marcar como Enviada"}
-              </Button>
-            )}
-            </div>
-
-            <Separator />
-
-            {/* ====== SEGUIMIENTO ====== */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Seguimiento</p>
-
-              {orden?.entregas_multiples && (
-                <Button
-                  variant="outline"
-                  className={`w-full justify-start ${entregasPendientes > 0 ? "border-amber-300 text-amber-600 hover:bg-amber-50" : ""}`}
-                  onClick={() => setProgramarEntregasOpen(true)}
-                >
-                  <Truck className="mr-2 h-4 w-4" />
-                  Programar Entregas
-                  {entregasPendientes > 0 && (
-                    <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700">
-                      {entregasPendientes} pendientes
-                    </Badge>
-                  )}
-                </Button>
-              )}
-            
-            {/* Read-only reception status - actual registration is done by warehouse */}
-            {(orden?.status === "enviada" || orden?.status === "confirmada" || orden?.status === "parcial" || orden?.status === "recibida") && (
-              <Button
-                variant="outline"
-                className="w-full justify-start text-muted-foreground"
-                onClick={() => setEvidenciasGalleryOpen(true)}
-              >
-                <Package className="mr-2 h-4 w-4" />
-                Ver Estado de Recepciones
-                {orden?.status === "parcial" && (
-                  <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700">
-                    Parcial
-                  </Badge>
-                )}
-                {orden?.status === "recibida" && (
-                  <Badge variant="default" className="ml-2 bg-green-100 text-green-700">
-                    Completa
-                  </Badge>
-                )}
-              </Button>
-            )}
-            
-            {/* Botón Modificar Productos - antes de recepción */}
-            {(orden?.status === 'borrador' || orden?.status === 'autorizada' || orden?.status === 'enviada' || orden?.status === 'confirmada' || orden?.status === 'parcial') && (
-              <Button
-                variant="outline"
-                className="w-full justify-start text-amber-600 hover:text-amber-700 border-amber-200"
-                onClick={() => setModificarProductosOpen(true)}
-              >
-                <Scissors className="mr-2 h-4 w-4" />
-                Modificar Productos
-                <Badge variant="secondary" className="ml-auto">
-                  {orden?.ordenes_compra_detalles?.length || 0}
-                </Badge>
-              </Button>
-            )}
-            
-            {/* Botón Ajustar Costos - movido aquí para mayor visibilidad */}
-            {(orden?.status === 'recibida' || orden?.status === 'parcial' || orden?.status === 'completada') && (
-              <Button
-                variant="outline"
-                className="w-full justify-start text-blue-600 hover:text-blue-700 border-blue-200"
-                onClick={() => setAjustarCostosOpen(true)}
-              >
-                <DollarSign className="mr-2 h-4 w-4" />
-                Ajustar Costos de Compra
-                <Badge variant="secondary" className="ml-auto">
-                  {orden?.ordenes_compra_detalles?.length || 0} productos
-                </Badge>
-              </Button>
-            )}
-            </div>
-
-            <Separator />
-
-            {/* ====== OTRAS ACCIONES ====== */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Otras Acciones</p>
-              
-              {/* Botón Confirmar Costos - visible cuando status_conciliacion === 'por_conciliar' */}
-              {(orden as any)?.status_conciliacion === 'por_conciliar' && (
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-amber-600 hover:text-amber-700 border-amber-300"
-                  onClick={() => setConciliacionRapidaOpen(true)}
-                >
-                  <FileCheck className="mr-2 h-4 w-4" />
-                  Confirmar Costos
-                  <Badge variant="secondary" className="ml-auto bg-amber-100 text-amber-700">
-                    Por Conciliar
-                  </Badge>
-              </Button>
-              )}
-              
-              
-              {/* View photo evidences button */}
-              {(orden?.status === "recibida" || orden?.status === "parcial") && (
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-emerald-600 hover:text-emerald-700 border-emerald-200"
+              {/* Ver Estado de Recepciones */}
+              {(orden?.status === "enviada" || orden?.status === "confirmada" || orden?.status === "parcial" || orden?.status === "recibida") && (
+                <button
+                  className="w-full flex items-center gap-3 p-4 rounded-lg border hover:bg-muted text-left transition-colors"
                   onClick={() => setEvidenciasGalleryOpen(true)}
                 >
-                  <Camera className="mr-2 h-4 w-4" />
-                  Ver Evidencias Fotográficas
-                  <EvidenciasBadge 
-                    ordenCompraId={orden?.id} 
-                    onClick={() => setEvidenciasGalleryOpen(true)} 
-                  />
-                </Button>
+                  <Package className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">Ver Estado de Recepciones</div>
+                    <div className="text-xs text-muted-foreground">Evidencias fotográficas y detalle de entregas</div>
+                  </div>
+                  {orden?.status === "parcial" && <Badge className="bg-amber-100 text-amber-700 border-0">Parcial</Badge>}
+                  {orden?.status === "recibida" && <Badge className="bg-green-100 text-green-700 border-0">Completa</Badge>}
+                </button>
               )}
-              
-              {/* Historial de correos enviados */}
+
+              {/* Generar PDF */}
+              <button
+                className="w-full flex items-center gap-3 p-4 rounded-lg border hover:bg-muted text-left transition-colors"
+                onClick={handleGenerarPDF}
+              >
+                <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                <div>
+                  <div className="font-medium text-sm">Generar PDF</div>
+                  <div className="text-xs text-muted-foreground">Descarga documento de la orden</div>
+                </div>
+              </button>
+
+              {/* Historial de Correos */}
               <Collapsible className="w-full">
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground">
-                    <History className="mr-2 h-4 w-4" />
-                    Historial de Correos Enviados
-                  </Button>
+                  <button className="w-full flex items-center gap-3 p-4 rounded-lg border hover:bg-muted text-left transition-colors">
+                    <History className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                    <div>
+                      <div className="font-medium text-sm">Historial de Correos</div>
+                      <div className="text-xs text-muted-foreground">Correos enviados al proveedor</div>
+                    </div>
+                  </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-2 border rounded-lg p-3 bg-muted/30">
                   <HistorialCorreosOC ordenId={orden?.id} />
                 </CollapsibleContent>
               </Collapsible>
             </div>
-          </div>
-        ) : accion === "solicitar_autorizacion" ? (
-          <div className="space-y-4">
-            <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg space-y-2">
-              <p className="font-medium text-amber-700 dark:text-amber-400">¿Enviar solicitud de autorización?</p>
-              <p className="text-sm text-muted-foreground">
-                Se enviará un correo a <strong>jagomez@almasa.com.mx</strong> para solicitar la autorización de esta orden.
-              </p>
-              <div className="text-sm text-muted-foreground space-y-1 mt-2">
-                <p><strong>Folio:</strong> {orden?.folio}</p>
-                <p><strong>Proveedor:</strong> {orden?.proveedores?.nombre}</p>
-                <p><strong>Total:</strong> ${orden?.total?.toLocaleString()}</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleSolicitarAutorizacion} 
-                disabled={solicitandoAutorizacion}
-              >
-                {solicitandoAutorizacion ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Enviando...
-                  </>
-                ) : (
-                  "Sí, solicitar"
+
+            <Separator />
+
+            {/* ====== MÁS ACCIONES (Collapsible) ====== */}
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-between text-muted-foreground text-xs uppercase tracking-wide">
+                  Más acciones
+                  <Badge variant="secondary" className="text-[10px]">+</Badge>
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-2 pt-2">
+                {/* Editar Orden */}
+                {onEdit && (
+                  <Button
+                    variant="outline"
+                    className={cn("w-full justify-start", tieneRecepcionesActivas && "opacity-50 cursor-not-allowed")}
+                    disabled={tieneRecepcionesActivas}
+                    onClick={() => {
+                      if (tieneRecepcionesActivas) {
+                        toast({ title: "No se puede editar", description: "Ya hay recepciones registradas en almacén", variant: "destructive" });
+                        return;
+                      }
+                      if (orden?.status === "enviada" || orden?.status === "confirmada") {
+                        setConfirmEditOpen(true);
+                        return;
+                      }
+                      onOpenChange(false);
+                      onEdit(orden);
+                    }}
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Editar Orden
+                    {tieneRecepcionesActivas && <Badge variant="secondary" className="ml-2 text-xs">Bloqueado</Badge>}
+                  </Button>
                 )}
-              </Button>
-              <Button variant="ghost" onClick={() => setAccion(null)}>
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        ) : accion === "autorizar" ? (
-          <div className="space-y-4">
-            <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg space-y-2">
-              <p className="font-medium text-green-700 dark:text-green-400">¿Autorizar esta orden?</p>
-              <p className="text-sm text-muted-foreground">
-                {proveedorTieneEmail 
-                  ? "Al autorizar, tu nombre aparecerá como firma en el PDF. El creador podrá enviarla al proveedor por correo."
-                  : "Al autorizar, tu nombre aparecerá como firma en el PDF. Este proveedor no tiene correo registrado (control interno)."}
-              </p>
-              <div className="text-sm text-muted-foreground space-y-1 mt-2">
-                <p><strong>Folio:</strong> {orden?.folio}</p>
-                <p><strong>Proveedor:</strong> {orden?.proveedores?.nombre}</p>
-                {proveedorTieneEmail ? (
-                  <p><strong>Correo proveedor:</strong> {orden?.proveedores?.email || orden?.proveedor_email_manual}</p>
-                ) : (
-                  <p className="text-amber-600"><strong>⚠ Sin correo:</strong> Control interno</p>
+
+                {/* Modificar Productos */}
+                {(orden?.status === 'borrador' || orden?.status === 'autorizada' || orden?.status === 'enviada' || orden?.status === 'confirmada' || orden?.status === 'parcial') && (
+                  <Button variant="outline" className="w-full justify-start text-amber-600 hover:text-amber-700 border-amber-200" onClick={() => setModificarProductosOpen(true)}>
+                    <Scissors className="mr-2 h-4 w-4" />
+                    Modificar Productos
+                    <Badge variant="secondary" className="ml-auto">{orden?.ordenes_compra_detalles?.length || 0}</Badge>
+                  </Button>
                 )}
-                <p><strong>Total:</strong> ${orden?.total?.toLocaleString()}</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleAutorizar} 
-                disabled={autorizando}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {autorizando ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Autorizando...
-                  </>
-                ) : (
-                  <>
-                    <ShieldCheck className="mr-2 h-4 w-4" />
-                    Autorizar y Enviar
-                  </>
+
+                {/* Ajustar Costos */}
+                {(orden?.status === 'recibida' || orden?.status === 'parcial' || orden?.status === 'completada') && (
+                  <Button variant="outline" className="w-full justify-start text-blue-600 hover:text-blue-700 border-blue-200" onClick={() => setAjustarCostosOpen(true)}>
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    Ajustar Costos de Compra
+                    <Badge variant="secondary" className="ml-auto">{orden?.ordenes_compra_detalles?.length || 0} productos</Badge>
+                  </Button>
                 )}
-              </Button>
-              <Button variant="ghost" onClick={() => setAccion(null)}>
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        ) : accion === "rechazar" ? (
-          <div className="space-y-4">
-            <div className="bg-red-50 dark:bg-red-950/20 p-4 rounded-lg space-y-2">
-              <p className="font-medium text-red-700 dark:text-red-400">Rechazar orden de compra</p>
-              <p className="text-sm text-muted-foreground">
-                Se notificará al creador de la orden sobre el rechazo.
-              </p>
-            </div>
-            <div>
-              <Label>Motivo del rechazo *</Label>
-              <Textarea
-                value={motivoRechazo}
-                onChange={(e) => setMotivoRechazo(e.target.value)}
-                placeholder="Explica por qué se rechaza esta orden..."
-                rows={3}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleRechazar} 
-                disabled={autorizando}
-                variant="destructive"
-              >
-                {autorizando ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Rechazando...
-                  </>
-                ) : (
-                  "Rechazar Orden"
+
+                {/* Confirmar Costos */}
+                {(orden as any)?.status_conciliacion === 'por_conciliar' && (
+                  <Button variant="outline" className="w-full justify-start text-amber-600 hover:text-amber-700 border-amber-300" onClick={() => setConciliacionRapidaOpen(true)}>
+                    <FileCheck className="mr-2 h-4 w-4" />
+                    Confirmar Costos
+                    <Badge variant="secondary" className="ml-auto bg-amber-100 text-amber-700">Por Conciliar</Badge>
+                  </Button>
                 )}
-              </Button>
-              <Button variant="ghost" onClick={() => setAccion(null)}>
-                Cancelar
-              </Button>
-            </div>
+
+                {/* Ver Evidencias */}
+                {(orden?.status === "recibida" || orden?.status === "parcial") && (
+                  <Button variant="outline" className="w-full justify-start text-emerald-600 hover:text-emerald-700 border-emerald-200" onClick={() => setEvidenciasGalleryOpen(true)}>
+                    <Camera className="mr-2 h-4 w-4" />
+                    Ver Evidencias Fotográficas
+                    <EvidenciasBadge ordenCompraId={orden?.id} onClick={() => setEvidenciasGalleryOpen(true)} />
+                  </Button>
+                )}
+
+                {/* Programar Entregas */}
+                {orden?.entregas_multiples && (
+                  <Button variant="outline" className={`w-full justify-start ${entregasPendientes > 0 ? "border-amber-300 text-amber-600" : ""}`} onClick={() => setProgramarEntregasOpen(true)}>
+                    <Truck className="mr-2 h-4 w-4" />
+                    Programar Entregas
+                    {entregasPendientes > 0 && <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700">{entregasPendientes} pendientes</Badge>}
+                  </Button>
+                )}
+
+                <Separator className="my-2" />
+
+                {/* Eliminar */}
+                <Button variant="ghost" className="w-full justify-start text-destructive hover:text-destructive" onClick={() => setAccion("eliminar")}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Eliminar Orden
+                </Button>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         ) : accion === "eliminar" ? (
           <div className="space-y-4">
