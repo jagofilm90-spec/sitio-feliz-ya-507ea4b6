@@ -139,6 +139,8 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         supabase.from("pagos_cliente").select("monto_total").gte("fecha_registro", inicioHoy).neq("status", "rechazado"),
         // Pagos por validar
         supabase.from("pagos_cliente").select("id", { count: "exact", head: true }).eq("status", "pendiente").eq("requiere_validacion", true),
+        // Precios revision pendientes
+        (supabase as any).from("productos_revision_precio").select("id", { count: "exact", head: true }).in("status", ["pendiente", "parcial"]),
       ]);
 
       // KPIs calculations
