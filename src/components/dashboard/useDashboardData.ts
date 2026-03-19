@@ -108,6 +108,8 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         cobrosHoyRes,
         pagosPorValidarRes,
         preciosRevisionRes,
+        lotesVencidosRes,
+        fumigacionesVencidasRes,
       ] = await Promise.all([
         // Ventas del día
         supabase.from("pedidos").select("total").gte("created_at", inicioHoy).in("status", ["entregado", "en_ruta"]),
@@ -145,6 +147,10 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         supabase.from("pagos_cliente").select("id", { count: "exact", head: true }).eq("status", "pendiente").eq("requiere_validacion", true),
         // Precios revision pendientes
         (supabase as any).from("productos_revision_precio").select("id", { count: "exact", head: true }).in("status", ["pendiente", "parcial"]),
+        // Lotes vencidos (caducidad < hoy con stock)
+        supabase.from("inventario_lotes").select("id", { count: "exact", head: true }).lt("fecha_caducidad", hoy).gt("cantidad_disponible", 0),
+        // Fumigaciones vencidas
+        supabase.from("productos").select("id, fecha_ultima_fumigacion").eq("requiere_fumigacion", true).eq("activo", true).gt("stock_actual", 0),
       ]);
 
       // KPIs calculations
