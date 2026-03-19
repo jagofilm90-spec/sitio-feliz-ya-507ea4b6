@@ -63,6 +63,7 @@ const AlmacenTablet = () => {
   const [rutasStats, setRutasStats] = useState({ total: 0, pendientes: 0, completadas: 0, entregas: 0 });
   const [recepcionStats, setRecepcionStats] = useState({ pendientes: 0, recibidas: 0 });
   const [fumigacionStats, setFumigacionStats] = useState({ vencidas: 0, proximas: 0, vigentes: 0 });
+  const [caducidadStats, setCaducidadStats] = useState({ vencidos: 0, criticos: 0 });
   const [ventasStats, setVentasStats] = useState({ pendientes: 0, listas: 0, entregadas: 0 });
   const [alertasCount, setAlertasCount] = useState(0);
 
