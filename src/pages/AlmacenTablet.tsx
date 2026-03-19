@@ -238,6 +238,8 @@ const AlmacenTablet = () => {
         return <AlmacenProductosTab key={`productos-${refreshKey}`} />;
       case "fumigaciones":
         return <AlmacenFumigacionesTab key={`fumigaciones-${refreshKey}`} onStatsUpdate={setFumigacionStats} />;
+      case "caducidad":
+        return <ReporteCaducidadTab key={`caducidad-${refreshKey}`} onStatsUpdate={setCaducidadStats} />;
       case "alertas":
         return showFlotillaTabs ? <AlertasFlotillaPanel key={`alertas-${refreshKey}`} /> : null;
       case "checkups":
