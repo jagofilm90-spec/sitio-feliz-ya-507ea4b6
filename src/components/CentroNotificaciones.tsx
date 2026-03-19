@@ -272,6 +272,81 @@ export const CentroNotificaciones = () => {
                 </div>
               )}
 
+              {/* Notificaciones de Precios */}
+              {notificacionesPrecios.length > 0 && (
+                <div className="mb-2">
+                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
+                    Revisión de Precios
+                  </div>
+                  {notificacionesPrecios.map((notif) => (
+                    <div
+                      key={notif.id}
+                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 mb-2"
+                      onClick={() => {
+                        marcarComoLeida(notif.id);
+                        navigate('/precios');
+                      }}
+                    >
+                      <TrendingUp className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{notif.titulo}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {notif.descripcion}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(notif.created_at).toLocaleDateString("es-MX", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">
+                        Revisar
+                      </Badge>
+                    </div>
+                  ))}
+                  <Separator className="my-2" />
+                </div>
+              )}
+
+              {/* Notificaciones de Nuevos Pedidos */}
+              {notificacionesPedidos.length > 0 && (
+                <div className="mb-2">
+                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
+                    Nuevos Pedidos
+                  </div>
+                  {notificacionesPedidos.map((notif) => (
+                    <div
+                      key={notif.id}
+                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer mb-2"
+                      onClick={() => {
+                        marcarComoLeida(notif.id);
+                        navigate('/pedidos');
+                      }}
+                    >
+                      <ShoppingCart className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{notif.titulo}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {notif.descripcion}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(notif.created_at).toLocaleDateString("es-MX", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  <Separator className="my-2" />
+                </div>
+              )}
+
               {/* Notificaciones de Stock Bajo */}
               {notificacionesStock.length > 0 && (
                 <div className="mb-2">
