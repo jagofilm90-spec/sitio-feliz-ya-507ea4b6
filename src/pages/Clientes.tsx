@@ -807,7 +807,7 @@ const Clientes = () => {
 
   const getVendedorName = (vendedor_asignado: string | null) => {
     if (!vendedor_asignado) return null;
-    const vendedor = VENDEDORES.find(v => v.user_id === vendedor_asignado);
+    const vendedor = vendedores.find(v => v.user_id === vendedor_asignado);
     return vendedor?.nombre_corto || null;
   };
 
