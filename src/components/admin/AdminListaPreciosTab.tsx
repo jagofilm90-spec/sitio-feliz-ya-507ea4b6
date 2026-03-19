@@ -992,8 +992,8 @@ export const AdminListaPreciosTab = () => {
               const { analisis } = producto;
               const rowClass = cn(
                 "h-8",
-                analisis.estado_margen === 'perdida' && "bg-red-50 dark:bg-red-950/20",
-                analisis.estado_margen === 'critico' && "bg-orange-50 dark:bg-orange-950/20"
+                analisis.estado_margen === 'perdida' && "bg-red-100/80 dark:bg-red-950/40 border-l-2 border-l-red-500",
+                analisis.estado_margen === 'critico' && "bg-orange-100/60 dark:bg-orange-950/30 border-l-2 border-l-orange-500"
               );
               
               return (
