@@ -55,6 +55,14 @@ interface ConfirmacionProveedor {
   confirmado_en: string;
 }
 
+interface NotificacionGeneral {
+  id: string;
+  tipo: string;
+  titulo: string;
+  descripcion: string;
+  created_at: string;
+}
+
 export interface NotificacionesData {
   alertasCaducidad: ProductoCaducidad[];
   notificacionesStock: NotificacionStockBajo[];
@@ -62,6 +70,8 @@ export interface NotificacionesData {
   autorizacionesOC: AutorizacionOC[];
   autorizacionesCotizacion: AutorizacionCotizacion[];
   confirmacionesProveedor: ConfirmacionProveedor[];
+  notificacionesPrecios: NotificacionGeneral[];
+  notificacionesPedidos: NotificacionGeneral[];
   totalCount: number;
 }
 
