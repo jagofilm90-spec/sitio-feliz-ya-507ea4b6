@@ -165,7 +165,7 @@ export const AjustarCostosOCDialog = ({
         }
       }
 
-      // If there are cost increases, create a notification for admin
+      // If there are cost increases, create notifications + price reviews
       const productosIncrementados = productosConCambios.filter((p) => {
         const original = productosCostos.find((x) => x.producto_id === p.producto_id);
         return original && p.precio_facturado > original.precio_actual;
@@ -184,6 +184,77 @@ export const AjustarCostosOCDialog = ({
           descripcion: `Se detectó incremento de costo en ${productosIncrementados.length} producto(s). Impacto: +$${impactoTotal.toFixed(2)}`,
           leida: false,
         });
+
+        // Fetch current precio_venta for each product with cost increase
+        const productIds = productosIncrementados.map(p => p.producto_id);
+        const { data: productosDB } = await supabase
+          .from("productos")
+          .select("id, precio_venta")
+          .in("id", productIds);
+
+        const revisionInserts: any[] = [];
+        const notifDescParts: string[] = [];
+
+        for (const prod of productosIncrementados) {
+          const original = productosCostos.find((x) => x.producto_id === prod.producto_id);
+          const productoDB = productosDB?.find((p: any) => p.id === prod.producto_id);
+          if (!original || !productoDB) continue;
+
+          const costoAnterior = original.precio_actual;
+          const costoNuevo = prod.precio_facturado;
+          const precioVentaActual = productoDB.precio_venta || 0;
+
+          // Calculate margin to maintain
+          const margenActual = costoAnterior > 0
+            ? ((precioVentaActual - costoAnterior) / costoAnterior) * 100
+            : 0;
+          const precioSugerido = Math.round(costoNuevo * (1 + margenActual / 100) * 100) / 100;
+          const pendiente = Math.round((precioSugerido - precioVentaActual) * 100) / 100;
+
+          if (pendiente > 0) {
+            revisionInserts.push({
+              producto_id: prod.producto_id,
+              costo_anterior: costoAnterior,
+              costo_nuevo: costoNuevo,
+              precio_venta_actual: precioVentaActual,
+              precio_venta_sugerido: precioSugerido,
+              margen_actual_porcentaje: Math.round(margenActual * 100) / 100,
+              margen_sugerido_porcentaje: Math.round(margenActual * 100) / 100,
+              pendiente_ajuste: pendiente,
+              status: 'pendiente',
+              creado_por: user.id,
+              notas: `Generado desde OC ${ordenCompra.folio}`,
+            });
+            notifDescParts.push(`${original.nombre}: $${costoAnterior}→$${costoNuevo}`);
+          }
+        }
+
+        // Insert price reviews
+        if (revisionInserts.length > 0) {
+          await supabase.from("productos_revision_precio" as any).insert(revisionInserts);
+
+          // Create in-app notification for price review
+          await supabase.from("notificaciones").insert({
+            tipo: "revision_precio_requerida",
+            titulo: `⚠️ Costo subió — revisar precio`,
+            descripcion: `${revisionInserts.length} producto(s) requieren revisión de precio de venta. ${notifDescParts.slice(0, 3).join('; ')}${notifDescParts.length > 3 ? '...' : ''}`,
+            leida: false,
+          });
+
+          // Send push notification to admins
+          try {
+            await supabase.functions.invoke("send-push-notification", {
+              body: {
+                roles: ['admin'],
+                title: `⚠️ Costo subió en ${revisionInserts.length} producto(s)`,
+                body: 'Revisar precios de venta en Lista de Precios',
+                data: { url: '/precios' }
+              }
+            });
+          } catch (pushError) {
+            console.error("Error sending push notification:", pushError);
+          }
+        }
       }
     },
     onSuccess: () => {
