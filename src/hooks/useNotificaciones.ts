@@ -83,6 +83,8 @@ export const useNotificaciones = () => {
     autorizacionesOC: [],
     autorizacionesCotizacion: [],
     confirmacionesProveedor: [],
+    notificacionesPrecios: [],
+    notificacionesPedidos: [],
     totalCount: 0,
   });
   const [loading, setLoading] = useState(true);
