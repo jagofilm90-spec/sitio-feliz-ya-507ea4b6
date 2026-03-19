@@ -121,6 +121,8 @@ export function PedidosPorAutorizarTab() {
           fecha_entrega_estimada,
           total,
           notas,
+          vendedor_id,
+          vendedor:vendedor_id (id, full_name),
           clientes (id, nombre, email),
           cliente_sucursales:sucursal_id (id, nombre),
           pedidos_detalles (
@@ -323,11 +325,35 @@ export function PedidosPorAutorizarTab() {
     mutationFn: async ({ pedidoId, reason }: { pedidoId: string; reason: string }) => {
       await supabase
         .from("pedidos")
-        .update({ 
+        .update({
           status: "cancelado",
           notas: `[RECHAZADO] ${reason}\n${selectedPedido?.notas || ""}`
         })
         .eq("id", pedidoId);
+
+      // Notificación in-app al vendedor
+      if (selectedPedido?.vendedor_id) {
+        try {
+          await supabase.from("notificaciones").insert({
+            tipo: "pedido_rechazado",
+            titulo: `❌ Pedido ${selectedPedido.folio} rechazado`,
+            descripcion: `Tu pedido para ${selectedPedido.clientes?.nombre || "cliente"} fue rechazado. Motivo: ${reason}`,
+            pedido_id: pedidoId,
+            leida: false,
+          });
+        } catch (e) { console.error("Error creando notificación:", e); }
+
+        // Push al vendedor
+        try {
+          await supabase.functions.invoke("send-push-notification", {
+            body: {
+              user_ids: [selectedPedido.vendedor_id],
+              title: "❌ Pedido rechazado",
+              body: `${selectedPedido.folio} — ${selectedPedido.clientes?.nombre || "cliente"}: ${reason}`,
+            }
+          });
+        } catch (e) { console.error("Error enviando push:", e); }
+      }
     },
     onSuccess: () => {
       toast({ title: "Pedido rechazado" });

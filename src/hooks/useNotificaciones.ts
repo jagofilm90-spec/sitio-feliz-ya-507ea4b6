@@ -164,20 +164,27 @@ export const useNotificaciones = () => {
 
   const cargarNotificacionesRechazo = async (): Promise<NotificacionGeneral[]> => {
     try {
-      // Only load for admin and secretaria
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id);
-      const hasAccess = roles?.some(r => r.role === 'admin' || r.role === 'secretaria') || false;
-      if (!hasAccess) return [];
+      const isAdminOrSecretaria = roles?.some(r => r.role === 'admin' || r.role === 'secretaria') || false;
+      const isVendedor = roles?.some(r => r.role === 'vendedor') || false;
+
+      if (!isAdminOrSecretaria && !isVendedor) return [];
+
+      // Admin/Secretaria: ver rechazos de entrega total
+      // Vendedor: ver pedidos rechazados + cancelados
+      const tipos = isAdminOrSecretaria
+        ? ["rechazo_entrega_total", "pedido_rechazado", "pedido_cancelado"]
+        : ["pedido_rechazado", "pedido_cancelado"];
 
       const { data, error } = await supabase
         .from("notificaciones")
         .select("id, tipo, titulo, descripcion, created_at")
-        .eq("tipo", "rechazo_entrega_total")
+        .in("tipo", tipos)
         .eq("leida", false)
         .order("created_at", { ascending: false })
         .limit(20);

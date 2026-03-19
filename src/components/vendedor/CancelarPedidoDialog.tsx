@@ -89,6 +89,41 @@ export function CancelarPedidoDialog({ open, onOpenChange, pedido, onPedidoCance
         console.error("Error sending push:", pushError);
       }
 
+      // Notificar al cliente por email si tiene email
+      try {
+        const { data: pedidoData } = await supabase
+          .from("pedidos")
+          .select("clientes(email, nombre)")
+          .eq("id", pedido.id)
+          .single();
+
+        const clienteEmail = (pedidoData?.clientes as any)?.email;
+        const clienteNombre = (pedidoData?.clientes as any)?.nombre || pedido.cliente.nombre;
+
+        if (clienteEmail) {
+          await supabase.functions.invoke("gmail-api", {
+            body: {
+              action: "send",
+              email: "pedidos@almasa.com.mx",
+              to: clienteEmail,
+              subject: `Pedido ${pedido.folio} cancelado`,
+              body: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #dc2626;">Pedido Cancelado</h2>
+                  <p>Estimado(a) ${clienteNombre},</p>
+                  <p>Le informamos que el pedido <strong>${pedido.folio}</strong> ha sido cancelado.</p>
+                  <p><strong>Motivo:</strong> ${motivo}</p>
+                  <p>Si tiene alguna duda, no dude en contactarnos.</p>
+                  <p>Atentamente,<br><strong>ALMASA — Abarrotes la Manita</strong></p>
+                </div>
+              `
+            }
+          });
+        }
+      } catch (emailError) {
+        console.error("Error sending cancellation email:", emailError);
+      }
+
       toast.success("Pedido cancelado correctamente");
       setMotivo("");
       onPedidoCancelado();

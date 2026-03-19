@@ -204,6 +204,30 @@ export function AutorizacionRapidaSheet({
           notas: `[RECHAZADO] ${rejectReason}\n${pedido.notas || ""}`,
         })
         .eq("id", pedido.id);
+
+      // Notificación in-app al vendedor
+      if ((pedido as any).vendedor_id) {
+        try {
+          await supabase.from("notificaciones").insert({
+            tipo: "pedido_rechazado",
+            titulo: `❌ Pedido ${pedido.folio} rechazado`,
+            descripcion: `Tu pedido para ${pedido.clientes?.nombre || "cliente"} fue rechazado. Motivo: ${rejectReason}`,
+            pedido_id: pedido.id,
+            leida: false,
+          });
+        } catch (e) { console.error("Error creando notificación:", e); }
+
+        // Push al vendedor
+        try {
+          await supabase.functions.invoke("send-push-notification", {
+            body: {
+              user_ids: [(pedido as any).vendedor_id],
+              title: "❌ Pedido rechazado",
+              body: `${pedido.folio} — ${pedido.clientes?.nombre || "cliente"}: ${rejectReason}`,
+            }
+          });
+        } catch (e) { console.error("Error enviando push:", e); }
+      }
     },
     onSuccess: () => {
       toast({ title: "Pedido rechazado" });
