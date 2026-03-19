@@ -34,6 +34,7 @@ import {
   LogOut,
   Settings,
   User,
+  Timer,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
