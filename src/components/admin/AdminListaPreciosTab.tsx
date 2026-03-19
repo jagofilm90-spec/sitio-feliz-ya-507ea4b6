@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { notificarCambioPrecio } from "@/lib/notificarVendedores";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -210,6 +211,10 @@ export const AdminListaPreciosTab = () => {
             precio_nuevo: nuevoPrecio,
             usuario_id: user.id,
           });
+          // Notify vendedores
+          const review = revisionesPendientes.find((r: any) => r.id === reviewId);
+          const productoNombre = review?.productos?.nombre || "";
+          notificarCambioPrecio({ productoNombre, precioAnterior, precioNuevo: nuevoPrecio });
         }
       }
 
@@ -247,6 +252,7 @@ export const AdminListaPreciosTab = () => {
       const currentPrices = new Map<string, number>();
       productos?.forEach(p => currentPrices.set(p.id, p.precio_venta));
 
+      let changedCount = 0;
       for (const item of items) {
         await supabase.from("productos").update({ precio_venta: item.precioNuevo }).eq("id", item.id);
 
@@ -258,7 +264,29 @@ export const AdminListaPreciosTab = () => {
             precio_nuevo: item.precioNuevo,
             usuario_id: user.id,
           });
+          changedCount++;
         }
+      }
+      // Send one summary notification for bulk updates
+      if (changedCount > 0) {
+        // Override with a custom in-app notification for bulk
+        try {
+          await supabase.from("notificaciones").insert({
+            tipo: "precio_actualizado",
+            titulo: "💰 Precios actualizados en masa",
+            descripcion: `Se actualizaron los precios de ${changedCount} productos`,
+            leida: false,
+          });
+        } catch (e) { console.error(e); }
+        try {
+          await supabase.functions.invoke("send-push-notification", {
+            body: {
+              roles: ["vendedor"],
+              title: "💰 Precios actualizados",
+              body: `Se actualizaron los precios de ${changedCount} productos`,
+            },
+          });
+        } catch (e) { console.error(e); }
       }
       return items.length;
     },
@@ -332,7 +360,7 @@ export const AdminListaPreciosTab = () => {
       
       if (error) throw error;
 
-      // Record price history
+      // Record price history + notify vendedores
       if (precioAnterior !== precio_venta) {
         await supabase.from("productos_historial_precios").insert({
           producto_id: id,
@@ -340,6 +368,9 @@ export const AdminListaPreciosTab = () => {
           precio_nuevo: precio_venta,
           usuario_id: user?.id ?? null,
         });
+        // Notify vendedores
+        const productoNombre = editingProduct?.nombre || "";
+        notificarCambioPrecio({ productoNombre, precioAnterior, precioNuevo: precio_venta });
       }
     },
     onSuccess: () => {

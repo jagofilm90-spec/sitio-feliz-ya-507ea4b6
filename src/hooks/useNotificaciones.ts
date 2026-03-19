@@ -75,6 +75,8 @@ export interface NotificacionesData {
   notificacionesRechazo: NotificacionGeneral[];
   notificacionesCaducidadPush: NotificacionGeneral[];
   notificacionesFumigacionPush: NotificacionGeneral[];
+  notificacionesPreciosVendedor: NotificacionGeneral[];
+  notificacionesProductoNuevo: NotificacionGeneral[];
   totalCount: number;
 }
 
@@ -91,6 +93,8 @@ export const useNotificaciones = () => {
     notificacionesRechazo: [],
     notificacionesCaducidadPush: [],
     notificacionesFumigacionPush: [],
+    notificacionesPreciosVendedor: [],
+    notificacionesProductoNuevo: [],
     totalCount: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -112,7 +116,7 @@ export const useNotificaciones = () => {
 
   const cargarNotificaciones = async () => {
     try {
-      const [caducidad, stock, licencias, autorizaciones, autorizacionesCot, confirmaciones, precios, pedidos, rechazos, caducidadPush, fumigacionPush] = await Promise.all([
+      const [caducidad, stock, licencias, autorizaciones, autorizacionesCot, confirmaciones, precios, pedidos, rechazos, caducidadPush, fumigacionPush, preciosVendedor, productoNuevo] = await Promise.all([
         cargarAlertasCaducidad(),
         cargarNotificacionesStock(),
         cargarAlertasLicencias(),
@@ -124,9 +128,11 @@ export const useNotificaciones = () => {
         cargarNotificacionesRechazo(),
         cargarNotificacionesCaducidadPush(),
         cargarNotificacionesFumigacionPush(),
+        cargarNotificacionesVendedorPrecios(),
+        cargarNotificacionesProductoNuevo(),
       ]);
 
-      const total = caducidad.length + stock.length + licencias.length + autorizaciones.length + autorizacionesCot.length + confirmaciones.length + precios.length + pedidos.length + rechazos.length + caducidadPush.length + fumigacionPush.length;
+      const total = caducidad.length + stock.length + licencias.length + autorizaciones.length + autorizacionesCot.length + confirmaciones.length + precios.length + pedidos.length + rechazos.length + caducidadPush.length + fumigacionPush.length + preciosVendedor.length + productoNuevo.length;
       setNotificaciones({
         alertasCaducidad: caducidad,
         notificacionesStock: stock,
@@ -139,6 +145,8 @@ export const useNotificaciones = () => {
         notificacionesRechazo: rechazos,
         notificacionesCaducidadPush: caducidadPush,
         notificacionesFumigacionPush: fumigacionPush,
+        notificacionesPreciosVendedor: preciosVendedor,
+        notificacionesProductoNuevo: productoNuevo,
         totalCount: total,
       });
     } catch (error) {
@@ -506,6 +514,46 @@ export const useNotificaciones = () => {
         .from("notificaciones")
         .select("id, tipo, titulo, descripcion, created_at")
         .in("tipo", ["fumigacion_proxima", "fumigacion_vencida", "fumigacion_sin_fecha"])
+        .eq("leida", false)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) return [];
+      return (data || []) as NotificacionGeneral[];
+    } catch { return []; }
+  };
+
+  const cargarNotificacionesVendedorPrecios = async (): Promise<NotificacionGeneral[]> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+      const isVendedor = roles?.some(r => r.role === 'vendedor') || false;
+      if (!isVendedor) return [];
+
+      const { data, error } = await supabase
+        .from("notificaciones")
+        .select("id, tipo, titulo, descripcion, created_at")
+        .eq("tipo", "precio_actualizado")
+        .eq("leida", false)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) return [];
+      return (data || []) as NotificacionGeneral[];
+    } catch { return []; }
+  };
+
+  const cargarNotificacionesProductoNuevo = async (): Promise<NotificacionGeneral[]> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+      const isVendedor = roles?.some(r => r.role === 'vendedor') || false;
+      if (!isVendedor) return [];
+
+      const { data, error } = await supabase
+        .from("notificaciones")
+        .select("id, tipo, titulo, descripcion, created_at")
+        .eq("tipo", "producto_nuevo")
         .eq("leida", false)
         .order("created_at", { ascending: false })
         .limit(20);

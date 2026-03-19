@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Bell, PackageX, AlertCircle, X, IdCard, FileCheck, CheckCircle2, FileText, TrendingUp, ShoppingCart, Ban, Timer, Bug } from "lucide-react";
+import { Bell, PackageX, AlertCircle, X, IdCard, FileCheck, CheckCircle2, FileText, TrendingUp, ShoppingCart, Ban, Timer, Bug, DollarSign, PackagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -21,7 +21,7 @@ const STORAGE_KEY = "dismissed-notifications";
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 export const CentroNotificaciones = () => {
-  const { alertasCaducidad, notificacionesStock, alertasLicencias, autorizacionesOC, autorizacionesCotizacion, confirmacionesProveedor, notificacionesPrecios, notificacionesPedidos, notificacionesRechazo, notificacionesCaducidadPush, notificacionesFumigacionPush, totalCount, loading, marcarComoLeida, isAdmin } = useNotificaciones();
+  const { alertasCaducidad, notificacionesStock, alertasLicencias, autorizacionesOC, autorizacionesCotizacion, confirmacionesProveedor, notificacionesPrecios, notificacionesPedidos, notificacionesRechazo, notificacionesCaducidadPush, notificacionesFumigacionPush, notificacionesPreciosVendedor, notificacionesProductoNuevo, totalCount, loading, marcarComoLeida, isAdmin } = useNotificaciones();
   const navigate = useNavigate();
   const [dismissedLicencias, setDismissedLicencias] = useState<string[]>([]);
   const [dismissedCaducidad, setDismissedCaducidad] = useState<string[]>([]);
@@ -85,7 +85,7 @@ export const CentroNotificaciones = () => {
     [confirmacionesProveedor, dismissedConfirmaciones]
   );
 
-  const computedCount = notificacionesStock.length + visibleAlertasLicencias.length + visibleAlertasCaducidad.length + autorizacionesOC.length + autorizacionesCotizacion.length + visibleConfirmaciones.length + notificacionesPrecios.length + notificacionesPedidos.length + notificacionesRechazo.length + notificacionesCaducidadPush.length + notificacionesFumigacionPush.length;
+  const computedCount = notificacionesStock.length + visibleAlertasLicencias.length + visibleAlertasCaducidad.length + autorizacionesOC.length + autorizacionesCotizacion.length + visibleConfirmaciones.length + notificacionesPrecios.length + notificacionesPedidos.length + notificacionesRechazo.length + notificacionesCaducidadPush.length + notificacionesFumigacionPush.length + notificacionesPreciosVendedor.length + notificacionesProductoNuevo.length;
 
   const handleLicenciaClick = (puesto: string) => {
     const tabMap: Record<string, string> = {
@@ -380,6 +380,84 @@ export const CentroNotificaciones = () => {
                           })}
                         </p>
                       </div>
+                    </div>
+                  ))}
+                  <Separator className="my-2" />
+                </div>
+              )}
+
+              {/* Precios Actualizados (Vendedor) */}
+              {notificacionesPreciosVendedor.length > 0 && (
+                <div className="mb-2">
+                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
+                    Precios Actualizados
+                  </div>
+                  {notificacionesPreciosVendedor.map((notif) => (
+                    <div
+                      key={notif.id}
+                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 mb-2"
+                      onClick={() => {
+                        marcarComoLeida(notif.id);
+                        navigate('/precios');
+                      }}
+                    >
+                      <DollarSign className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{notif.titulo}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {notif.descripcion}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(notif.created_at).toLocaleDateString("es-MX", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700">
+                        Precio
+                      </Badge>
+                    </div>
+                  ))}
+                  <Separator className="my-2" />
+                </div>
+              )}
+
+              {/* Producto Nuevo (Vendedor) */}
+              {notificacionesProductoNuevo.length > 0 && (
+                <div className="mb-2">
+                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
+                    Nuevos Productos
+                  </div>
+                  {notificacionesProductoNuevo.map((notif) => (
+                    <div
+                      key={notif.id}
+                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 mb-2"
+                      onClick={() => {
+                        marcarComoLeida(notif.id);
+                        navigate('/precios');
+                      }}
+                    >
+                      <PackagePlus className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{notif.titulo}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {notif.descripcion}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(notif.created_at).toLocaleDateString("es-MX", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700">
+                        Nuevo
+                      </Badge>
                     </div>
                   ))}
                   <Separator className="my-2" />
