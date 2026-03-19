@@ -201,6 +201,7 @@ export function PedidoDetalleVendedorDialog({ open, onOpenChange, pedidoId }: Pr
 
       return {
         cantidad: d.cantidad,
+        unidad: prod.unidad || 'pieza',
         descripcion: getDisplayName(prod),
         pesoTotal,
         precioUnitario: d.precio_unitario,
