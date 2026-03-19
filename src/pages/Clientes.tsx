@@ -203,7 +203,35 @@ const Clientes = () => {
     loadClientes();
     loadZonas();
     loadSucursalesConRfcCount();
+    loadVendedores();
   }, []);
+
+  const loadVendedores = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select(`
+          user_id,
+          profiles:user_id (
+            id,
+            full_name
+          )
+        `)
+        .eq("role", "vendedor");
+
+      if (error) throw error;
+      const mapped: Vendedor[] = (data || [])
+        .filter((d: any) => d.profiles?.full_name)
+        .map((d: any) => ({
+          user_id: d.user_id,
+          nombre: d.profiles.full_name,
+          nombre_corto: d.profiles.full_name.split(" ")[0],
+        }));
+      setVendedores(mapped);
+    } catch (error) {
+      console.error("Error loading vendedores:", error);
+    }
+  };
 
   const loadSucursalesConRfcCount = async () => {
     try {
