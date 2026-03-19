@@ -56,10 +56,12 @@ export async function notificarProductoNuevo({
   productoNombre,
   precioVenta,
   unidad,
+  roles = ["vendedor"],
 }: {
   productoNombre: string;
   precioVenta: number;
   unidad: string;
+  roles?: string[];
 }) {
   const titulo = "🆕 Nuevo producto disponible";
   const descripcion = `${productoNombre} — ${formatCurrency(precioVenta)}/${unidad} ya disponible en el catálogo`;
