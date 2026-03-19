@@ -293,7 +293,7 @@ export const RegistrarLlegadaSheet = ({
         if (updateError) throw updateError;
 
         // 2. Registrar en historial
-        const motivoLabel = MOTIVOS_RECHAZO_TOTAL.find(m => m.value === motivoRechazo)?.label || motivoRechazo;
+        const motivoLabelHistorial = MOTIVOS_RECHAZO_TOTAL.find(m => m.value === motivoRechazo)?.label || motivoRechazo;
         await supabase.from("recepciones_participantes").insert({
           entrega_id: entrega.id,
           user_id: user.id,
