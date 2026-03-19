@@ -213,6 +213,7 @@ const CrearOrdenCompraWizard = ({
   
   // Wizard state - now 4 steps
   const [step, setStep] = useState(1);
+  const [pasoCreacion, setPasoCreacion] = useState("");
   
   // Step 1: Proveedor y Pago
   const [tipoProveedor, setTipoProveedor] = useState<'catalogo' | 'manual'>('catalogo');
@@ -962,6 +963,7 @@ const CrearOrdenCompraWizard = ({
   // Create orden mutation
   const createOrden = useMutation({
     mutationFn: async () => {
+      setPasoCreacion("Creando orden...");
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user");
 
@@ -1181,6 +1183,7 @@ const CrearOrdenCompraWizard = ({
       }
       
       // ========== ENVIAR CORREO AUTOMÁTICO AL PROVEEDOR CON PDF ADJUNTO ==========
+      setPasoCreacion("Preparando email al proveedor...");
       try {
         // Determinar email del proveedor
         let emailProveedor: string | null = null;
@@ -1402,6 +1405,7 @@ const CrearOrdenCompraWizard = ({
           `;
 
           // 5. Convertir HTML a PDF real de alta calidad
+          setPasoCreacion("Generando PDF...");
           const pdfBase64 = await htmlToPdfBase64(pdfHtml);
 
           // 6. Construir fechas para el email
@@ -1520,6 +1524,7 @@ const CrearOrdenCompraWizard = ({
           }];
 
           // 10. Enviar correo via gmail-api
+          setPasoCreacion("Enviando email al proveedor...");
           const { data: emailResult, error: emailError } = await supabase.functions.invoke('gmail-api', {
             body: {
               action: 'send',
@@ -1600,11 +1605,13 @@ const CrearOrdenCompraWizard = ({
         // No bloquear - la OC ya se creó exitosamente
       }
       // ========== FIN ENVÍO AUTOMÁTICO ==========
-      
+
+      setPasoCreacion("");
       resetForm();
       onOpenChange(false);
     },
     onError: (error: any) => {
+      setPasoCreacion("");
       toast({
         title: "Error",
         description: error.message,
@@ -2800,28 +2807,33 @@ const CrearOrdenCompraWizard = ({
               )}
             </div>
 
-            <div className="flex justify-between pt-4 border-t">
-              <Button variant="outline" onClick={handlePrevStep} className="gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                Editar
-              </Button>
-              <Button 
-                onClick={handleCreate}
-                disabled={createOrden.isPending}
-                className="gap-2"
-              >
-                {createOrden.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Creando...
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-4 w-4" />
-                    Crear Orden
-                  </>
-                )}
-              </Button>
+            <div className="space-y-2 pt-4 border-t">
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={handlePrevStep} className="gap-2" disabled={createOrden.isPending || !!pasoCreacion}>
+                  <ArrowLeft className="h-4 w-4" />
+                  Editar
+                </Button>
+                <Button
+                  onClick={handleCreate}
+                  disabled={createOrden.isPending || !!pasoCreacion}
+                  className="gap-2"
+                >
+                  {(createOrden.isPending || pasoCreacion) ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {pasoCreacion || "Creando..."}
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Crear Orden
+                    </>
+                  )}
+                </Button>
+              </div>
+              {pasoCreacion && (
+                <p className="text-xs text-center text-muted-foreground animate-pulse">{pasoCreacion}</p>
+              )}
             </div>
           </div>
         )}

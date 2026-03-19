@@ -49,6 +49,7 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [enviando, setEnviando] = useState(false);
+  const [pasoActual, setPasoActual] = useState("");
   const [correoAdicional, setCorreoAdicional] = useState("");
   const [mostrarGuardarContacto, setMostrarGuardarContacto] = useState(false);
   const [guardandoContacto, setGuardandoContacto] = useState(false);
@@ -115,8 +116,13 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
   const emailDestinatario = contactoOrden?.email || orden?.proveedores?.email || orden?.proveedor_email_manual;
   const nombreProveedor = orden?.proveedores?.nombre || orden?.proveedor_nombre_manual || "Proveedor";
 
+  let logoCache: string | null = null;
+
   const generarPDFContent = async () => {
-    const logoBase64 = await getLogoBase64();
+    if (!logoCache) {
+      logoCache = await getLogoBase64();
+    }
+    const logoBase64 = logoCache;
     
     // Fetch scheduled deliveries if order has multiple deliveries
     let entregasProgramadas: any[] = [];
@@ -350,8 +356,10 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
     setEnviando(true);
 
     try {
-      // Generate PDF content
+      setPasoActual("Preparando documento...");
       const pdfContent = await generarPDFContent();
+
+      setPasoActual("Generando PDF...");
       const pdfBase64 = await htmlToPdfBase64(pdfContent);
 
       // NOTE: Confirmation URL generation removed - confirmation system deprecated
@@ -409,6 +417,7 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
       const ccRecipient = destinatarioPrincipal && destinatarioAdicional ? destinatarioAdicional : undefined;
 
       // Send email
+      setPasoActual("Enviando email al proveedor...");
       const { data, error } = await supabase.functions.invoke('gmail-api', {
         body: {
           action: 'send',
@@ -437,6 +446,7 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
       }
 
       // Register successful send
+      setPasoActual("Registrando envío...");
       await registrarCorreoEnviado({
         tipo: "reenvio_oc",
         referencia_id: orden.id,
@@ -481,6 +491,7 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
       });
     } finally {
       setEnviando(false);
+      setPasoActual("");
     }
   };
 
@@ -600,25 +611,30 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
             </p>
           </div>
 
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={enviando}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                handleReenviar();
-              }}
-              disabled={enviando || !puedeEnviar}
-              className="bg-primary hover:bg-primary/90"
-            >
-              {enviando ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                "Confirmar Reenvío"
-              )}
-            </AlertDialogAction>
+          <AlertDialogFooter className="flex-col items-stretch">
+            <div className="flex justify-end gap-2">
+              <AlertDialogCancel disabled={enviando}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleReenviar();
+                }}
+                disabled={enviando || !puedeEnviar}
+                className="bg-primary hover:bg-primary/90"
+              >
+                {enviando ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  "Confirmar Reenvío"
+                )}
+              </AlertDialogAction>
+            </div>
+            {pasoActual && (
+              <p className="text-xs text-center text-muted-foreground animate-pulse mt-2">{pasoActual}</p>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
