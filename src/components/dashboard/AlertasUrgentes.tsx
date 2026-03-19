@@ -55,6 +55,8 @@ export const AlertasUrgentes = ({ alertas }: Props) => {
                 {alerta.tipo === 'credito_excedido' && 'Clientes con crédito excedido'}
                 {alerta.tipo === 'pagos_por_validar' && 'Pagos pendientes de validación'}
                 {alerta.tipo === 'precios_por_revisar' && 'Precios por revisar (costo subió)'}
+                {alerta.tipo === 'lotes_vencidos' && 'Lotes vencidos en inventario'}
+                {alerta.tipo === 'fumigaciones_vencidas' && 'Fumigaciones vencidas'}
               </span>
               {alerta.detalle && <span className="text-xs truncate opacity-75">{alerta.detalle}</span>}
             </div>
