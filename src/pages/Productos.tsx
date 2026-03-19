@@ -326,7 +326,7 @@ const Productos = () => {
         contenido_empaque: formData.contenido_empaque || null,
         unidad_sat: formData.unidad_sat || null,
         peso_kg: formData.peso_kg ? parseFloat(formData.peso_kg) : null,
-        unidad: formData.unidad,
+        unidad: formData.unidad as any,
         piezas_por_unidad: formData.piezas_por_unidad ? parseInt(formData.piezas_por_unidad) : 1,
         precio_compra: parseFloat(formData.precio_compra) || 0,
         precio_venta: precioVenta,
