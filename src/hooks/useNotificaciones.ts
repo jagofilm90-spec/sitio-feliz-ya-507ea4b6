@@ -116,7 +116,7 @@ export const useNotificaciones = () => {
 
   const cargarNotificaciones = async () => {
     try {
-      const [caducidad, stock, licencias, autorizaciones, autorizacionesCot, confirmaciones, precios, pedidos, rechazos, caducidadPush, fumigacionPush] = await Promise.all([
+      const [caducidad, stock, licencias, autorizaciones, autorizacionesCot, confirmaciones, precios, pedidos, rechazos, caducidadPush, fumigacionPush, preciosVendedor, productoNuevo] = await Promise.all([
         cargarAlertasCaducidad(),
         cargarNotificacionesStock(),
         cargarAlertasLicencias(),
@@ -128,9 +128,11 @@ export const useNotificaciones = () => {
         cargarNotificacionesRechazo(),
         cargarNotificacionesCaducidadPush(),
         cargarNotificacionesFumigacionPush(),
+        cargarNotificacionesVendedorPrecios(),
+        cargarNotificacionesProductoNuevo(),
       ]);
 
-      const total = caducidad.length + stock.length + licencias.length + autorizaciones.length + autorizacionesCot.length + confirmaciones.length + precios.length + pedidos.length + rechazos.length + caducidadPush.length + fumigacionPush.length;
+      const total = caducidad.length + stock.length + licencias.length + autorizaciones.length + autorizacionesCot.length + confirmaciones.length + precios.length + pedidos.length + rechazos.length + caducidadPush.length + fumigacionPush.length + preciosVendedor.length + productoNuevo.length;
       setNotificaciones({
         alertasCaducidad: caducidad,
         notificacionesStock: stock,
@@ -143,6 +145,8 @@ export const useNotificaciones = () => {
         notificacionesRechazo: rechazos,
         notificacionesCaducidadPush: caducidadPush,
         notificacionesFumigacionPush: fumigacionPush,
+        notificacionesPreciosVendedor: preciosVendedor,
+        notificacionesProductoNuevo: productoNuevo,
         totalCount: total,
       });
     } catch (error) {
