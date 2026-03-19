@@ -28,12 +28,15 @@ interface ContactoProveedor {
 interface Proveedor {
   id: string;
   nombre: string;
+  nombre_comercial?: string | null;
+  categoria?: string | null;
   nombre_contacto: string | null;
   email: string | null;
   telefono: string | null;
   direccion: string | null;
   pais: string;
   rfc: string | null;
+  termino_pago?: string | null;
   notas: string | null;
   activo: boolean;
   created_at: string;
@@ -48,6 +51,28 @@ interface ProveedorCardMobileProps {
   onDelete: (proveedor: Proveedor) => void;
 }
 
+const CATEGORIA_COLORS: Record<string, string> = {
+  "Azúcares": "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+  "Granos y semillas": "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+  "Lácteos": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
+  "Aceites": "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+  "Abarrotes secos": "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300",
+  "Botanas": "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
+  "Bebidas": "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300",
+  "Limpieza": "bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300",
+  "Mascotas": "bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-300",
+};
+
+const TERMINOS_LABELS: Record<string, string> = {
+  "contado": "Contado",
+  "8_dias": "8 días",
+  "15_dias": "15 días",
+  "30_dias": "30 días",
+  "45_dias": "45 días",
+  "60_dias": "60 días",
+  "anticipado": "Anticipado",
+};
+
 export const ProveedorCardMobile = ({
   proveedor,
   productosCount,
@@ -56,10 +81,17 @@ export const ProveedorCardMobile = ({
   onViewProductos,
   onDelete,
 }: ProveedorCardMobileProps) => {
-  // Usar contacto principal si existe, sino datos legacy del proveedor
   const nombreContacto = contactoPrincipal?.nombre || proveedor.nombre_contacto;
   const telefonoContacto = contactoPrincipal?.telefono || proveedor.telefono;
   const emailContacto = contactoPrincipal?.email || proveedor.email;
+
+  const catColor = proveedor.categoria ? (CATEGORIA_COLORS[proveedor.categoria] || "bg-muted text-muted-foreground") : null;
+
+  const getTerminoBadgeClass = (t: string | null | undefined) => {
+    if (!t || t === "contado") return "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300";
+    if (t === "anticipado") return "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300";
+    return "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300";
+  };
 
   return (
     <Card className={cn(
@@ -68,7 +100,7 @@ export const ProveedorCardMobile = ({
       proveedor.activo && "border-l-primary"
     )}>
       <CardContent className="p-4 space-y-3">
-        {/* Header: Nombre y país */}
+        {/* Header: Nombre y badges */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
@@ -77,6 +109,9 @@ export const ProveedorCardMobile = ({
               )}
               <h3 className="font-semibold text-sm truncate">{proveedor.nombre}</h3>
             </div>
+            {proveedor.nombre_comercial && proveedor.nombre_comercial !== proveedor.nombre && (
+              <p className="text-[10px] text-muted-foreground mb-1">{proveedor.nombre_comercial}</p>
+            )}
             {proveedor.rfc && (
               <p className="text-[10px] text-muted-foreground font-mono">RFC: {proveedor.rfc}</p>
             )}
@@ -86,6 +121,18 @@ export const ProveedorCardMobile = ({
             <Globe className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">{proveedor.pais}</span>
           </div>
+        </div>
+
+        {/* Badges: Categoría y término */}
+        <div className="flex flex-wrap gap-1.5">
+          {proveedor.categoria && catColor && (
+            <Badge variant="outline" className={`${catColor} border-0 text-[10px]`}>
+              {proveedor.categoria}
+            </Badge>
+          )}
+          <Badge variant="outline" className={`${getTerminoBadgeClass(proveedor.termino_pago)} border-0 text-[10px]`}>
+            {TERMINOS_LABELS[proveedor.termino_pago || "contado"] || "Contado"}
+          </Badge>
         </div>
 
         {/* Contacto principal */}
