@@ -6247,6 +6247,7 @@ export type Database = {
         | "churla"
         | "cubeta"
         | "balón"
+        | "paquete"
       zona_region:
         | "cdmx_norte"
         | "cdmx_centro"
@@ -6436,6 +6437,7 @@ export const Constants = {
         "churla",
         "cubeta",
         "balón",
+        "paquete",
       ],
       zona_region: [
         "cdmx_norte",
