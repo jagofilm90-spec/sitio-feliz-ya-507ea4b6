@@ -489,7 +489,7 @@ const Layout = ({ children }: LayoutProps) => {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 p-6 overflow-hidden">{children}</main>
+        <main className="flex-1 p-6 overflow-auto min-h-0">{children}</main>
       </div>
     </div>
   );
