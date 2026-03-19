@@ -437,7 +437,7 @@ export const CentroNotificaciones = () => {
                       className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 mb-2"
                       onClick={() => {
                         marcarComoLeida(notif.id);
-                        navigate('/precios');
+                        navigate('/productos');
                       }}
                     >
                       <PackagePlus className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
