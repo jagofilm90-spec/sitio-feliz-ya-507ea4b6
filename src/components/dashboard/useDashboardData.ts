@@ -178,6 +178,7 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         pedidosSinAutorizar24h: pedidosSinAutRes.count || 0,
         facturasVencenSemana: facturasVencenSemanaRes.count || 0,
         pagosPorValidar: pagosPorValidarRes.count || 0,
+        preciosRevisionPendientes: (preciosRevisionRes as any)?.count || 0,
       };
 
       // Alertas urgentes
