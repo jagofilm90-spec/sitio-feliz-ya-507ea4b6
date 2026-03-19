@@ -974,13 +974,25 @@ const Clientes = () => {
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(cliente.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    {cliente.activo ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeleteTarget(cliente)}
+                        title="Desactivar cliente"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleReactivar(cliente)}
+                        title="Reactivar cliente"
+                      >
+                        <RotateCcw className="h-4 w-4 text-green-500" />
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
