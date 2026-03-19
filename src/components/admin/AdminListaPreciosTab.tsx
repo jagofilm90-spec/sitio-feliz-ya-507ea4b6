@@ -191,7 +191,20 @@ export const AdminListaPreciosTab = () => {
       if (!user) throw new Error("No autenticado");
 
       if (tipo !== 'ignorado') {
+        // Get current price for history
+        const { data: prodData } = await supabase.from("productos").select("precio_venta").eq("id", productoId).single();
+        const precioAnterior = prodData?.precio_venta ?? 0;
+
         await supabase.from("productos").update({ precio_venta: nuevoPrecio }).eq("id", productoId);
+
+        if (precioAnterior !== nuevoPrecio) {
+          await supabase.from("productos_historial_precios").insert({
+            producto_id: productoId,
+            precio_anterior: precioAnterior,
+            precio_nuevo: nuevoPrecio,
+            usuario_id: user.id,
+          });
+        }
       }
 
       const review = revisionesPendientes.find((r: any) => r.id === reviewId);
@@ -223,8 +236,23 @@ export const AdminListaPreciosTab = () => {
     mutationFn: async (items: Array<{ id: string; precioNuevo: number }>) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No autenticado");
+
+      // Get current prices for history
+      const currentPrices = new Map<string, number>();
+      productos?.forEach(p => currentPrices.set(p.id, p.precio_venta));
+
       for (const item of items) {
         await supabase.from("productos").update({ precio_venta: item.precioNuevo }).eq("id", item.id);
+
+        const precioAnterior = currentPrices.get(item.id) ?? 0;
+        if (precioAnterior !== item.precioNuevo) {
+          await supabase.from("productos_historial_precios").insert({
+            producto_id: item.id,
+            precio_anterior: precioAnterior,
+            precio_nuevo: item.precioNuevo,
+            usuario_id: user.id,
+          });
+        }
       }
       return items.length;
     },
@@ -259,12 +287,26 @@ export const AdminListaPreciosTab = () => {
   // Update price mutation
   const updatePriceMutation = useMutation({
     mutationFn: async ({ id, precio_venta, descuento_maximo }: { id: string; precio_venta: number; descuento_maximo: number | null }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      // Get current price before updating
+      const precioAnterior = editingProduct?.precio_venta ?? 0;
+
       const { error } = await supabase
         .from("productos")
         .update({ precio_venta, descuento_maximo })
         .eq("id", id);
       
       if (error) throw error;
+
+      // Record price history
+      if (precioAnterior !== precio_venta) {
+        await supabase.from("productos_historial_precios").insert({
+          producto_id: id,
+          precio_anterior: precioAnterior,
+          precio_nuevo: precio_venta,
+          usuario_id: user?.id ?? null,
+        });
+      }
     },
     onSuccess: () => {
       toast({ title: "Precio actualizado" });
