@@ -655,7 +655,7 @@ const Productos = () => {
         <div className="flex flex-col h-[calc(100vh-4rem-3rem)] overflow-hidden">
           <NotificacionesSistema />
           
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 flex-shrink-0 mb-3">
             <div>
               <h1 className="text-xl sm:text-3xl font-bold">Productos</h1>
               <p className="text-xs sm:text-sm text-muted-foreground">Gestión de catálogo de productos</p>
