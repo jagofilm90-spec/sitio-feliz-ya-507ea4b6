@@ -302,6 +302,14 @@ const Productos = () => {
           if (loteError) console.error("Error creando lote inicial:", loteError);
           await supabase.from("productos").update({ stock_actual: stockInicial }).eq("id", newProduct.id);
         }
+        // Notify vendedores about new product (only if not internal/blocked)
+        if (newProduct && !productData.solo_uso_interno && !productData.bloqueado_venta) {
+          notificarProductoNuevo({
+            productoNombre: productData.nombre,
+            precioVenta: productData.precio_venta,
+            unidad: productData.unidad as string,
+          });
+        }
         toast({ title: "Producto creado correctamente" });
       }
       setDialogOpen(false);
