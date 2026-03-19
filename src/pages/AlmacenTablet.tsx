@@ -23,6 +23,7 @@ import { AlmacenInventarioTab } from "@/components/almacen/AlmacenInventarioTab"
 import { AlmacenProductosTab } from "@/components/almacen/AlmacenProductosTab";
 import { AlmacenVentasMostradorTab } from "@/components/almacen/AlmacenVentasMostradorTab";
 import { ReporteRecepcionesDiaTab } from "@/components/almacen/ReporteRecepcionesDiaTab";
+import { ReporteCaducidadTab } from "@/components/almacen/ReporteCaducidadTab";
 import PersonalFlotillaTab from "@/components/almacen/PersonalFlotillaTab";
 import VehiculosTab from "@/components/rutas/VehiculosTab";
 import DisponibilidadPersonalTab from "@/components/rutas/DisponibilidadPersonalTab";
