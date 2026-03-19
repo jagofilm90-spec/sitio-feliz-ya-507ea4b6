@@ -1394,7 +1394,7 @@ const CrearOrdenCompraWizard = ({
               <div class="footer" style="justify-content: center;">
                 <div class="signature-box">
                   ${nombreCreador ? `<div style="text-align: center; font-size: 12px; margin-bottom: 4px;">${nombreCreador}</div>` : ''}
-                  <div class="signature-line">Elaboró</div>
+                  <div class="signature-line">Departamento de Compras</div>
                 </div>
               </div>
             </body>

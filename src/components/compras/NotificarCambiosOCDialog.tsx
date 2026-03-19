@@ -386,7 +386,7 @@ const NotificarCambiosOCDialog = ({
         ${ordenCompleta.notas ? `<div class="notes"><h4>📝 Notas</h4><p>${ordenCompleta.notas}</p></div>` : ''}
 
         <div class="signature-section">
-          <div class="signature-box">${nombreCreador ? `<div class="signature-name">${nombreCreador}</div>` : ''}<div class="signature-line">Elaboró</div></div>
+          <div class="signature-box">${nombreCreador ? `<div class="signature-name">${nombreCreador}</div>` : ''}<div class="signature-line">Departamento de Compras</div></div>
         </div>
 
         <div class="footer">

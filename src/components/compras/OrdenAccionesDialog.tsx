@@ -1025,7 +1025,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
         <div class="signature-section" style="justify-content: center;">
           <div class="signature-box">
             ${nombreCreador ? `<div class="signature-name">${nombreCreador}</div>` : ''}
-            <div class="signature-line">Elaboró</div>
+            <div class="signature-line">Departamento de Compras</div>
           </div>
         </div>
 
