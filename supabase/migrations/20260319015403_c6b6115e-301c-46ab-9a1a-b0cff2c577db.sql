@@ -1,0 +1,1 @@
+ALTER TABLE public.ordenes_compra_entregas ADD COLUMN IF NOT EXISTS comprobante_recepcion_url text;
