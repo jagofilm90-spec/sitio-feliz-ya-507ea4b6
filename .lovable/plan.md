@@ -1,71 +1,68 @@
 
 
-# Plan: Folio Diario Consecutivo para Pedidos
+## Plan: Full-height table for Productos
 
-## Problema actual
-Los folios se generan con timestamps (`PED-V-123456`) o secuencias mensuales (`PED-202603-0001`). No hay forma de saber cuántos pedidos salieron en un día ni detectar faltantes al juntar las hojas firmadas.
+### Problem
+The table uses `max-h-[calc(100vh-340px)]` which leaves empty space below. Layout's `<main>` uses `p-6` padding and doesn't constrain height properly for flex-grow children.
 
-## Solución
+### Changes
 
-Agregar un campo `numero_dia` (integer) a la tabla `pedidos` que se auto-incrementa por día, empezando en 1 cada día. Este número aparecerá prominente en las hojas de carga.
+**File 1: `src/components/Layout.tsx`** (line 492)
 
-### 1. Migración de base de datos
+Change the main content area to allow children to fill full height:
+```
+// Before:
+<main className="flex-1 p-6 overflow-auto">{children}</main>
 
-- Agregar columna `numero_dia` (integer, nullable) a `pedidos`
-- Crear función `asignar_numero_dia()` como trigger BEFORE INSERT que:
-  - Cuenta cuántos pedidos existen para la misma `fecha_pedido::date` (excluyendo borradores)
-  - Asigna `numero_dia = count + 1`
-  - Solo lo asigna si el status NO es `borrador`
-- Crear trigger en `pedidos` BEFORE INSERT que ejecute la función
+// After:
+<main className="flex-1 overflow-auto">{children}</main>
+```
+Remove `p-6` from Layout's main — pages that need padding already have their own. This allows Productos to control its own full-height layout.
 
-```sql
--- Pseudológica del trigger:
-IF NEW.status != 'borrador' THEN
-  SELECT COALESCE(MAX(numero_dia), 0) + 1 INTO NEW.numero_dia
-  FROM pedidos
-  WHERE fecha_pedido::date = NEW.fecha_pedido::date
-    AND status != 'borrador'
-    AND numero_dia IS NOT NULL;
-END IF;
+**File 2: `src/pages/Productos.tsx`**
+
+1. **Line 655** — Change outer wrapper from `space-y-4 sm:space-y-6` to a flex column that fills available height:
+```tsx
+<div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden p-4 sm:p-6 pb-0 sm:pb-0">
 ```
 
-### 2. Actualizar folio a incluir número del día
-
-Cambiar el formato del folio en los 5 lugares donde se genera:
-- `VendedorNuevoPedidoTab.tsx` (vendedor crea pedido)
-- `ProcesarPedidoDialog.tsx` (correos)
-- `PedidosAcumulativosManager.tsx` (acumulativos, 2 lugares)
-- `CotizacionDetalleDialog.tsx` (cotización → pedido)
-- `NuevoPedidoDialog.tsx` (secretaria)
-- `ClienteNuevoPedido.tsx` (cliente)
-
-El folio **mantiene** el formato actual (`PED-YYYYMM-XXXX`) para identificación única. El `numero_dia` es un dato **adicional** que se muestra en las hojas.
-
-### 3. Mostrar número del día en hojas de carga
-
-En `HojaCargaUnificadaTemplate.tsx`, mostrar prominente:
+2. **Lines 1317-1455** — Make the Tabs section grow to fill remaining space. Change `<Tabs>` wrapper to flex-grow:
+```tsx
+<Tabs value={tabActivo} ... className="flex-1 flex flex-col min-h-0 overflow-hidden">
 ```
-NOTA #3
+
+3. **Line 1323** — Make `TabsContent` fill remaining space:
+```tsx
+<TabsContent value={tabActivo} className="mt-2 flex-1 min-h-0 overflow-hidden">
 ```
-Usando el campo `numero_dia` del pedido. Se mostrará grande y visible en el header de la hoja para fácil identificación al juntar las hojas firmadas.
 
-### 4. Mostrar en el template de pedido (PedidoPrintTemplate)
+4. **Lines 1344-1452** — Replace the fixed-height table container:
+```tsx
+// Before:
+<div className="border rounded-lg overflow-hidden">
+  <div className="overflow-y-auto max-h-[calc(100vh-340px)]">
 
-También agregar el número del día en `PedidoPrintTemplate.tsx` para la vista previa del vendedor.
+// After:
+<div className="border rounded-lg overflow-hidden h-full flex flex-col">
+  <div className="overflow-y-auto flex-1">
+```
 
-## Archivos a modificar
+5. **Search/filters section** (lines 1261-1315) — Add `flex-shrink-0` to prevent compression.
 
-| Archivo | Cambio |
-|---------|--------|
-| **Migración SQL** | Agregar `numero_dia`, función trigger, trigger |
-| `HojaCargaUnificadaTemplate.tsx` | Mostrar `NOTA #X` prominente en header |
-| `PedidoPrintTemplate.tsx` | Mostrar número del día |
-| `PedidoPDFPreviewDialog.tsx` | Pasar `numero_dia` a los datos |
-| `VendedorNuevoPedidoTab.tsx` | Leer `numero_dia` del pedido creado para mostrar |
-| Interfaces de datos print | Agregar campo `numeroDia` opcional |
+6. **Tabs list** (line 1318-1321) — Add `flex-shrink-0`.
 
-## Ventajas sobre el foliador físico
-- Se asigna automáticamente, sin error humano
-- Si se cancela un pedido, el número queda registrado (se puede ver el hueco)
-- Se puede consultar digitalmente cuántos pedidos salieron por día
+### Result
+- Header, filters, tabs = fixed height (`flex-shrink-0`)
+- Table container = fills ALL remaining vertical space (`flex-1 min-h-0`)
+- Table body scrolls vertically within that space
+- Sticky header stays visible
+- No empty space below the table
+- No horizontal scroll
+- Other pages unaffected (they add their own padding)
+
+### Files
+| File | Change |
+|------|--------|
+| `src/components/Layout.tsx` | Remove `p-6` from main |
+| `src/pages/Productos.tsx` | Flex-col full-height layout with growing table |
 
