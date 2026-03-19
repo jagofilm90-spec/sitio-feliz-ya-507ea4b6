@@ -542,12 +542,66 @@ export function ProcesarPagoOCDialog({
         }
       }
 
+      // Notificar al contacto de pagos del proveedor
+      if (orden?.proveedor_id) {
+        try {
+          const { data: contactoPagos } = await supabase
+            .from("proveedor_contactos")
+            .select("nombre, email")
+            .eq("proveedor_id", orden.proveedor_id)
+            .eq("recibe_pagos", true)
+            .not("email", "is", null)
+            .limit(1)
+            .single();
+
+          if (contactoPagos?.email) {
+            const montoFormateado = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(nuevoMontoPagado);
+            await supabase.functions.invoke("gmail-api", {
+              body: {
+                action: "send",
+                email: "pagos@almasa.com.mx",
+                to: contactoPagos.email,
+                subject: `Confirmación de pago — OC ${orden.folio}`,
+                body: `
+                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #16a34a;">💰 Confirmación de Pago</h2>
+                    <p>Estimado(a) ${contactoPagos.nombre},</p>
+                    <p>Le confirmamos que hemos realizado el pago correspondiente a la OC <strong>${orden.folio}</strong>.</p>
+                    <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+                      <tr style="background:#f3f4f6;">
+                        <td style="padding:8px;font-weight:bold;">Monto:</td>
+                        <td style="padding:8px;">${montoFormateado}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:8px;font-weight:bold;">Referencia:</td>
+                        <td style="padding:8px;">${referenciaPago || "Sin referencia"}</td>
+                      </tr>
+                      <tr style="background:#f3f4f6;">
+                        <td style="padding:8px;font-weight:bold;">Fecha:</td>
+                        <td style="padding:8px;">${fechaPago.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:8px;font-weight:bold;">Estado:</td>
+                        <td style="padding:8px;">${todosPagados ? "Pago completo" : "Pago parcial"}</td>
+                      </tr>
+                    </table>
+                    <p>Atentamente,<br><strong>ALMASA — Abarrotes la Manita</strong></p>
+                  </div>
+                `
+              }
+            });
+          }
+        } catch (pagoNotifError) {
+          console.error("Error notificando pago al proveedor:", pagoNotifError);
+        }
+      }
+
       return { todosPagados };
     },
     onSuccess: ({ todosPagados }) => {
       queryClient.invalidateQueries({ queryKey: ["ordenes_compra"] });
       queryClient.invalidateQueries({ queryKey: ["productos-recibidos-pago"] });
-      
+
       if (todosPagados) {
         toast.success("Pago completo registrado exitosamente");
       } else {

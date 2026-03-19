@@ -1712,7 +1712,22 @@ const CrearOrdenCompraWizard = ({
                 </div>
                 
                 {tipoProveedor === 'catalogo' ? (
-                  <Select value={proveedorId} onValueChange={setProveedorId}>
+                  <Select value={proveedorId} onValueChange={async (id) => {
+                    setProveedorId(id);
+                    // Auto-configurar tipo_pago desde termino_pago del proveedor
+                    try {
+                      const { data: prov } = await supabase
+                        .from("proveedores")
+                        .select("termino_pago")
+                        .eq("id", id)
+                        .single();
+                      if (prov?.termino_pago === "anticipado") {
+                        setTipoPago("anticipado");
+                      } else {
+                        setTipoPago("contra_entrega");
+                      }
+                    } catch { /* fallback: keep current */ }
+                  }}>
                     <SelectTrigger className="text-base">
                       <SelectValue placeholder="Selecciona un proveedor" />
                     </SelectTrigger>

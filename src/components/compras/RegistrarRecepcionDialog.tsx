@@ -303,81 +303,115 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
           })
           .eq("id", orden.id);
 
-        // Send confirmation email to supplier
-        if (orden?.proveedores?.email) {
-          try {
-            const productosRecibidos = productos
-              .filter(p => p.cantidad_recibida_ahora > 0)
-              .map(p => `<tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">${p.producto_codigo}</td><td style="padding:4px 8px;border-bottom:1px solid #eee;">${p.producto_nombre}</td><td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${p.cantidad_recibida_ahora}</td></tr>`)
-              .join("");
-            
-            const fechaRecepcion = new Date().toLocaleDateString('es-MX', { 
-              weekday: 'long', 
-              day: 'numeric', 
-              month: 'long', 
-              year: 'numeric' 
-            });
-            
-            const asunto = `Recepción confirmada - ${orden.folio}`;
-            const { data: emailData } = await supabase.functions.invoke("gmail-api", {
-              body: {
-                action: "send",
-                email: "compras@almasa.com.mx",
-                to: orden.proveedores.email,
-                subject: asunto,
-                body: `
-                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #16a34a;">✅ Recepción de Mercancía Confirmada</h2>
-                    <p>Le informamos que hemos recibido satisfactoriamente la mercancía de la orden <strong>${orden.folio}</strong>.</p>
-                    
-                    <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-                      <tr style="background:#f3f4f6;">
-                        <td style="padding:8px;font-weight:bold;">Fecha de recepción:</td>
-                        <td style="padding:8px;">${fechaRecepcion}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding:8px;font-weight:bold;">Entregado por:</td>
-                        <td style="padding:8px;">${nombreEntregador}</td>
-                      </tr>
-                      <tr style="background:#f3f4f6;">
-                        <td style="padding:8px;font-weight:bold;">Sellos de seguridad:</td>
-                        <td style="padding:8px;">${numeroSellos}</td>
-                      </tr>
-                      ${notasRecepcion ? `<tr><td style="padding:8px;font-weight:bold;">Notas:</td><td style="padding:8px;">${notasRecepcion}</td></tr>` : ''}
-                    </table>
-                    
-                    <h3 style="margin-top:24px;">Productos recibidos:</h3>
-                    <table style="width:100%;border-collapse:collapse;margin:8px 0;">
-                      <thead>
-                        <tr style="background:#f3f4f6;">
-                          <th style="padding:8px;text-align:left;border-bottom:2px solid #ddd;">Código</th>
-                          <th style="padding:8px;text-align:left;border-bottom:2px solid #ddd;">Producto</th>
-                          <th style="padding:8px;text-align:right;border-bottom:2px solid #ddd;">Cantidad</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${productosRecibidos}
-                      </tbody>
-                    </table>
-                    
-                    <p style="margin-top:24px;">Gracias por su servicio.</p>
-                    <p style="color:#666;">Saludos cordiales,<br><strong>Almasa - Abarrotes La Manita</strong></p>
-                  </div>
-                `
-              }
-            });
+        // Send confirmation email to supplier (using contact flags)
+        {
+          const proveedorIdEmail = orden?.proveedor_id;
+          let emailLogistica = orden?.proveedores?.email; // fallback
+          let ccDevoluciones: string[] = [];
 
-            // Register sent email in history
-            await registrarCorreoEnviado({
-              tipo: "recepcion_confirmada",
-              referencia_id: orden.id,
-              destinatario: orden.proveedores.email,
-              asunto: asunto,
-              gmail_message_id: emailData?.messageId || null,
-              contenido_preview: `Recepción completa confirmada - ${productos.filter(p => p.cantidad_recibida_ahora > 0).length} productos recibidos`,
-            });
-          } catch (emailError) {
-            console.error("Error sending confirmation email:", emailError);
+          if (proveedorIdEmail) {
+            const { data: contactoLogistica } = await supabase
+              .from("proveedor_contactos")
+              .select("nombre, email")
+              .eq("proveedor_id", proveedorIdEmail)
+              .eq("recibe_logistica", true)
+              .not("email", "is", null)
+              .limit(1)
+              .single();
+
+            if (contactoLogistica?.email) {
+              emailLogistica = contactoLogistica.email;
+            }
+
+            const { data: contactoDevol } = await supabase
+              .from("proveedor_contactos")
+              .select("email")
+              .eq("proveedor_id", proveedorIdEmail)
+              .eq("recibe_devoluciones", true)
+              .not("email", "is", null)
+              .limit(1)
+              .single();
+
+            if (contactoDevol?.email && contactoDevol.email !== emailLogistica) {
+              ccDevoluciones.push(contactoDevol.email);
+            }
+          }
+
+          if (emailLogistica) {
+            try {
+              const productosRecibidos = productos
+                .filter(p => p.cantidad_recibida_ahora > 0)
+                .map(p => `<tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">${p.producto_codigo}</td><td style="padding:4px 8px;border-bottom:1px solid #eee;">${p.producto_nombre}</td><td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${p.cantidad_recibida_ahora}</td></tr>`)
+                .join("");
+
+              const fechaRecepcion = new Date().toLocaleDateString('es-MX', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+              });
+
+              const asunto = `Recepción confirmada - ${orden.folio}`;
+              const { data: emailData } = await supabase.functions.invoke("gmail-api", {
+                body: {
+                  action: "send",
+                  email: "compras@almasa.com.mx",
+                  to: emailLogistica,
+                  cc: ccDevoluciones.length > 0 ? ccDevoluciones.join(",") : undefined,
+                  subject: asunto,
+                  body: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                      <h2 style="color: #16a34a;">✅ Recepción de Mercancía Confirmada</h2>
+                      <p>Le informamos que hemos recibido satisfactoriamente la mercancía de la orden <strong>${orden.folio}</strong>.</p>
+
+                      <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+                        <tr style="background:#f3f4f6;">
+                          <td style="padding:8px;font-weight:bold;">Fecha de recepción:</td>
+                          <td style="padding:8px;">${fechaRecepcion}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding:8px;font-weight:bold;">Entregado por:</td>
+                          <td style="padding:8px;">${nombreEntregador}</td>
+                        </tr>
+                        <tr style="background:#f3f4f6;">
+                          <td style="padding:8px;font-weight:bold;">Sellos de seguridad:</td>
+                          <td style="padding:8px;">${numeroSellos}</td>
+                        </tr>
+                        ${notasRecepcion ? `<tr><td style="padding:8px;font-weight:bold;">Notas:</td><td style="padding:8px;">${notasRecepcion}</td></tr>` : ''}
+                      </table>
+
+                      <h3 style="margin-top:24px;">Productos recibidos:</h3>
+                      <table style="width:100%;border-collapse:collapse;margin:8px 0;">
+                        <thead>
+                          <tr style="background:#f3f4f6;">
+                            <th style="padding:8px;text-align:left;border-bottom:2px solid #ddd;">Código</th>
+                            <th style="padding:8px;text-align:left;border-bottom:2px solid #ddd;">Producto</th>
+                            <th style="padding:8px;text-align:right;border-bottom:2px solid #ddd;">Cantidad</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${productosRecibidos}
+                        </tbody>
+                      </table>
+
+                      <p style="margin-top:24px;">Gracias por su servicio.</p>
+                      <p style="color:#666;">Saludos cordiales,<br><strong>Almasa - Abarrotes La Manita</strong></p>
+                    </div>
+                  `
+                }
+              });
+
+              await registrarCorreoEnviado({
+                tipo: "recepcion_confirmada",
+                referencia_id: orden.id,
+                destinatario: [emailLogistica, ...ccDevoluciones].join(", "),
+                asunto: asunto,
+                gmail_message_id: emailData?.messageId || null,
+                contenido_preview: `Recepción completa confirmada - ${productos.filter(p => p.cantidad_recibida_ahora > 0).length} productos recibidos`,
+              });
+            } catch (emailError) {
+              console.error("Error sending confirmation email:", emailError);
+            }
           }
         }
       } else {
@@ -423,47 +457,65 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
             });
         }
 
-        // Notify supplier about new delivery date
-        if (orden?.proveedores?.email) {
-          const productosInfo = hayProductosConPendiente.map(p => 
-            `${p.producto_nombre}: ${p.cantidad_pendiente - p.cantidad_recibida_ahora} unidades`
-          ).join(", ");
+        // Notify supplier about new delivery date (using contact flags)
+        {
+          const proveedorIdParcial = orden?.proveedor_id;
+          let emailLogisticaParcial = orden?.proveedores?.email; // fallback
 
-          try {
-            // Parse date without timezone conversion
-            const [year, month, day] = fechaNuevaEntrega.split('-').map(Number);
-            const fechaLocal = new Date(year, month - 1, day);
-            const fechaFormateada = fechaLocal.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-            
-            const asunto = `Entrega pendiente reprogramada - ${orden.folio}`;
-            const { data: emailData } = await supabase.functions.invoke("gmail-api", {
-              body: {
-                action: "send",
-                email: "compras@almasa.com.mx",
-                to: orden.proveedores.email,
-                subject: asunto,
-                body: `
-                  <h2>Entrega Parcial Registrada</h2>
-                  <p>Le informamos que hemos recibido una entrega parcial de la orden <strong>${orden.folio}</strong>.</p>
-                  <p><strong>Productos pendientes:</strong> ${productosInfo}</p>
-                  <p><strong>Nueva fecha programada:</strong> ${fechaFormateada}</p>
-                  ${notasRecepcion ? `<p><strong>Notas:</strong> ${notasRecepcion}</p>` : ''}
-                  <p>Saludos cordiales,<br>Abarrotes La Manita</p>
-                `
-              }
-            });
+          if (proveedorIdParcial) {
+            const { data: contactoLog } = await supabase
+              .from("proveedor_contactos")
+              .select("nombre, email")
+              .eq("proveedor_id", proveedorIdParcial)
+              .eq("recibe_logistica", true)
+              .not("email", "is", null)
+              .limit(1)
+              .single();
 
-            // Registrar correo enviado
-            await registrarCorreoEnviado({
-              tipo: "reprogramacion",
-              referencia_id: orden.id,
-              destinatario: orden.proveedores.email,
-              asunto: asunto,
-              gmail_message_id: emailData?.messageId || null,
-              contenido_preview: `Entrega parcial registrada. Nueva fecha: ${fechaFormateada}`,
-            });
-          } catch (emailError) {
-            console.error("Error sending email:", emailError);
+            if (contactoLog?.email) {
+              emailLogisticaParcial = contactoLog.email;
+            }
+          }
+
+          if (emailLogisticaParcial) {
+            const productosInfo = hayProductosConPendiente.map(p =>
+              `${p.producto_nombre}: ${p.cantidad_pendiente - p.cantidad_recibida_ahora} unidades`
+            ).join(", ");
+
+            try {
+              const [year, month, day] = fechaNuevaEntrega.split('-').map(Number);
+              const fechaLocal = new Date(year, month - 1, day);
+              const fechaFormateada = fechaLocal.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+              const asunto = `Entrega pendiente reprogramada - ${orden.folio}`;
+              const { data: emailData } = await supabase.functions.invoke("gmail-api", {
+                body: {
+                  action: "send",
+                  email: "compras@almasa.com.mx",
+                  to: emailLogisticaParcial,
+                  subject: asunto,
+                  body: `
+                    <h2>Entrega Parcial Registrada</h2>
+                    <p>Le informamos que hemos recibido una entrega parcial de la orden <strong>${orden.folio}</strong>.</p>
+                    <p><strong>Productos pendientes:</strong> ${productosInfo}</p>
+                    <p><strong>Nueva fecha programada:</strong> ${fechaFormateada}</p>
+                    ${notasRecepcion ? `<p><strong>Notas:</strong> ${notasRecepcion}</p>` : ''}
+                    <p>Saludos cordiales,<br>Abarrotes La Manita</p>
+                  `
+                }
+              });
+
+              await registrarCorreoEnviado({
+                tipo: "reprogramacion",
+                referencia_id: orden.id,
+                destinatario: emailLogisticaParcial,
+                asunto: asunto,
+                gmail_message_id: emailData?.messageId || null,
+                contenido_preview: `Entrega parcial registrada. Nueva fecha: ${fechaFormateada}`,
+              });
+            } catch (emailError) {
+              console.error("Error sending email:", emailError);
+            }
           }
         }
       }
