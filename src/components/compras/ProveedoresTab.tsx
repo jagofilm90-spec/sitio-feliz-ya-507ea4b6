@@ -28,10 +28,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Globe, Package, Trash2, X, FileText, Upload, Loader2, CheckCircle2, Star, Phone, User, Mail } from "lucide-react";
+import { Plus, Search, Edit, Globe, Package, Trash2, X, FileText, Upload, Loader2, CheckCircle2, Star, Phone, User, Mail, ChevronDown, Building2, Landmark, HandCoins, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ProveedorProductosSelector from "./ProveedorProductosSelector";
 import {
@@ -45,7 +53,70 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Interfaz unificada de Contacto (con email y checkboxes de responsabilidades)
+// =====================================================================
+// CONSTANTS
+// =====================================================================
+
+const CATEGORIAS = [
+  "Azúcares", "Granos y semillas", "Abarrotes secos", "Lácteos",
+  "Aceites", "Botanas", "Bebidas", "Limpieza", "Mascotas", "Otros"
+];
+
+const TERMINOS_PAGO = [
+  { value: "contado", label: "Contado" },
+  { value: "8_dias", label: "8 días" },
+  { value: "15_dias", label: "15 días" },
+  { value: "30_dias", label: "30 días" },
+  { value: "45_dias", label: "45 días" },
+  { value: "60_dias", label: "60 días" },
+  { value: "anticipado", label: "Anticipado" },
+];
+
+const FRECUENCIAS = [
+  { value: "semanal", label: "Semanal" },
+  { value: "quincenal", label: "Quincenal" },
+  { value: "mensual", label: "Mensual" },
+  { value: "segun_necesidad", label: "Según necesidad" },
+];
+
+const DIAS_VISITA = [
+  { value: "lunes", label: "Lun" },
+  { value: "martes", label: "Mar" },
+  { value: "miercoles", label: "Mié" },
+  { value: "jueves", label: "Jue" },
+  { value: "viernes", label: "Vie" },
+  { value: "sabado", label: "Sáb" },
+];
+
+const CATEGORIA_COLORS: Record<string, string> = {
+  "Azúcares": "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+  "Granos y semillas": "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+  "Lácteos": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
+  "Aceites": "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+  "Abarrotes secos": "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300",
+  "Botanas": "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
+  "Bebidas": "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300",
+  "Limpieza": "bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300",
+  "Mascotas": "bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-300",
+};
+
+const getTerminoPagoBadge = (termino: string | null | undefined) => {
+  if (!termino || termino === "contado") return <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 border-0 text-xs">Contado</Badge>;
+  if (termino === "anticipado") return <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border-0 text-xs">Anticipado</Badge>;
+  const label = TERMINOS_PAGO.find(t => t.value === termino)?.label || termino;
+  return <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border-0 text-xs">{label}</Badge>;
+};
+
+const getCategoriaBadge = (cat: string | null | undefined) => {
+  if (!cat) return <span className="text-xs text-muted-foreground">—</span>;
+  const colorClass = CATEGORIA_COLORS[cat] || "bg-muted text-muted-foreground";
+  return <Badge variant="outline" className={`${colorClass} border-0 text-xs`}>{cat}</Badge>;
+};
+
+// =====================================================================
+// INTERFACES
+// =====================================================================
+
 interface ContactoProveedor {
   id?: string;
   nombre: string;
@@ -213,7 +284,6 @@ const ContactosList = ({
     {contactos.map((contacto, index) => (
       <div key={contacto.id || index} className="p-3 border rounded-lg bg-background">
         {editingIndex === index && editingContacto ? (
-          // Modo edición inline
           <div className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
@@ -288,7 +358,6 @@ const ContactosList = ({
             </div>
           </div>
         ) : (
-          // Modo lectura
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0 space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
@@ -369,6 +438,342 @@ const ContactosList = ({
 );
 
 // =====================================================================
+// SECCIÓN DEL FORMULARIO: Reusable section components
+// =====================================================================
+
+interface FormSectionProps {
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
+  subtitle?: string;
+}
+
+const FormSection = ({ title, icon, children, collapsible, defaultOpen = true, subtitle }: FormSectionProps) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  if (!collapsible) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 pb-1 border-b">
+          {icon}
+          <div>
+            <h4 className="text-sm font-semibold">{title}</h4>
+            {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+          </div>
+        </div>
+        {children}
+      </div>
+    );
+  }
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <CollapsibleTrigger asChild>
+        <button type="button" className="flex items-center gap-2 w-full pb-1 border-b hover:bg-muted/30 rounded px-1 -mx-1 transition-colors">
+          {icon}
+          <div className="flex-1 text-left">
+            <h4 className="text-sm font-semibold">{title}</h4>
+            {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+          </div>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-3 pt-3">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
+
+// =====================================================================
+// Supplier Form Content (shared between create and edit)
+// =====================================================================
+
+interface SupplierFormData {
+  nombre: string;
+  nombre_comercial: string;
+  categoria: string;
+  direccion: string;
+  pais: string;
+  rfc: string;
+  regimen_fiscal: string;
+  calle: string;
+  numero_exterior: string;
+  numero_interior: string;
+  colonia: string;
+  municipio: string;
+  estado: string;
+  codigo_postal: string;
+  termino_pago: string;
+  dias_visita: string[];
+  frecuencia_compra: string;
+  banco: string;
+  beneficiario: string;
+  cuenta_bancaria: string;
+  clabe_interbancaria: string;
+  notas: string;
+}
+
+const SupplierFormFields = ({
+  data,
+  setData,
+  prefix,
+  clabeError,
+  setClabeError,
+}: {
+  data: SupplierFormData;
+  setData: (d: SupplierFormData) => void;
+  prefix: string;
+  clabeError: string;
+  setClabeError: (e: string) => void;
+}) => {
+  const handleClabeChange = (val: string) => {
+    const cleaned = val.replace(/\D/g, '').slice(0, 18);
+    setData({ ...data, clabe_interbancaria: cleaned });
+    if (cleaned.length > 0 && cleaned.length !== 18) {
+      setClabeError("La CLABE debe tener exactamente 18 dígitos");
+    } else {
+      setClabeError("");
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* SECCIÓN 1: Información básica */}
+      <FormSection title="Información básica" icon={<Building2 className="h-4 w-4 text-primary" />}>
+        <div className="space-y-2">
+          <Label htmlFor={`${prefix}-nombre`}>Nombre del proveedor *</Label>
+          <Input
+            id={`${prefix}-nombre`}
+            placeholder="Ej: Ingenio El Mante, Nestlé"
+            value={data.nombre}
+            onChange={(e) => setData({ ...data, nombre: e.target.value })}
+            className="text-base font-medium"
+          />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor={`${prefix}-nombre_comercial`}>Nombre comercial</Label>
+            <Input
+              id={`${prefix}-nombre_comercial`}
+              placeholder="Ej: El Mante, Nestlé"
+              value={data.nombre_comercial}
+              onChange={(e) => setData({ ...data, nombre_comercial: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${prefix}-categoria`}>Categoría</Label>
+            <Select value={data.categoria} onValueChange={(v) => setData({ ...data, categoria: v })}>
+              <SelectTrigger id={`${prefix}-categoria`}>
+                <SelectValue placeholder="Seleccionar categoría" />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIAS.map(cat => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`${prefix}-pais`}>País</Label>
+          <Input
+            id={`${prefix}-pais`}
+            placeholder="México"
+            value={data.pais}
+            onChange={(e) => setData({ ...data, pais: e.target.value })}
+          />
+        </div>
+      </FormSection>
+
+      {/* SECCIÓN 2: Datos fiscales */}
+      <FormSection
+        title="Datos fiscales (RFC y dirección)"
+        icon={<FileText className="h-4 w-4 text-primary" />}
+        collapsible
+        defaultOpen={false}
+      >
+        <div className="space-y-2">
+          <Label htmlFor={`${prefix}-rfc`}>RFC</Label>
+          <Input
+            id={`${prefix}-rfc`}
+            placeholder="ABC123456XYZ"
+            value={data.rfc}
+            onChange={(e) => setData({ ...data, rfc: e.target.value.toUpperCase() })}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`${prefix}-regimen_fiscal`}>Régimen fiscal</Label>
+          <Input
+            id={`${prefix}-regimen_fiscal`}
+            placeholder="601 - General de Ley"
+            value={data.regimen_fiscal}
+            onChange={(e) => setData({ ...data, regimen_fiscal: e.target.value })}
+          />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="space-y-1 sm:col-span-2">
+            <Label className="text-xs">Calle</Label>
+            <Input placeholder="Av. Principal" value={data.calle} onChange={(e) => setData({ ...data, calle: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Num. Ext.</Label>
+              <Input placeholder="#123" value={data.numero_exterior} onChange={(e) => setData({ ...data, numero_exterior: e.target.value })} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Num. Int.</Label>
+              <Input placeholder="4A" value={data.numero_interior} onChange={(e) => setData({ ...data, numero_interior: e.target.value })} />
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs">Colonia</Label>
+            <Input placeholder="Col. Centro" value={data.colonia} onChange={(e) => setData({ ...data, colonia: e.target.value })} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Municipio</Label>
+            <Input placeholder="Monterrey" value={data.municipio} onChange={(e) => setData({ ...data, municipio: e.target.value })} />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs">Estado</Label>
+            <Input placeholder="Nuevo León" value={data.estado} onChange={(e) => setData({ ...data, estado: e.target.value })} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Código postal</Label>
+            <Input placeholder="64000" value={data.codigo_postal} onChange={(e) => setData({ ...data, codigo_postal: e.target.value })} />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`${prefix}-direccion`}>Dirección completa (legacy)</Label>
+          <Input
+            id={`${prefix}-direccion`}
+            placeholder="Av. Principal #123, Col. Centro"
+            value={data.direccion}
+            onChange={(e) => setData({ ...data, direccion: e.target.value })}
+          />
+        </div>
+      </FormSection>
+
+      {/* SECCIÓN 3: Condiciones comerciales */}
+      <FormSection
+        title="Condiciones comerciales"
+        icon={<HandCoins className="h-4 w-4 text-primary" />}
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor={`${prefix}-termino_pago`}>Término de pago</Label>
+            <Select value={data.termino_pago} onValueChange={(v) => setData({ ...data, termino_pago: v })}>
+              <SelectTrigger id={`${prefix}-termino_pago`}>
+                <SelectValue placeholder="Seleccionar" />
+              </SelectTrigger>
+              <SelectContent>
+                {TERMINOS_PAGO.map(t => (
+                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${prefix}-frecuencia`}>Frecuencia de compra</Label>
+            <Select value={data.frecuencia_compra} onValueChange={(v) => setData({ ...data, frecuencia_compra: v })}>
+              <SelectTrigger id={`${prefix}-frecuencia`}>
+                <SelectValue placeholder="Seleccionar" />
+              </SelectTrigger>
+              <SelectContent>
+                {FRECUENCIAS.map(f => (
+                  <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Días de visita</Label>
+          <div className="flex flex-wrap gap-3">
+            {DIAS_VISITA.map(dia => (
+              <div key={dia.value} className="flex items-center space-x-1.5">
+                <Checkbox
+                  id={`${prefix}-dia-${dia.value}`}
+                  checked={(data.dias_visita || []).includes(dia.value)}
+                  onCheckedChange={(checked) => {
+                    const current = data.dias_visita || [];
+                    setData({
+                      ...data,
+                      dias_visita: checked
+                        ? [...current, dia.value]
+                        : current.filter(d => d !== dia.value)
+                    });
+                  }}
+                />
+                <Label htmlFor={`${prefix}-dia-${dia.value}`} className="text-sm font-normal cursor-pointer">{dia.label}</Label>
+              </div>
+            ))}
+          </div>
+        </div>
+      </FormSection>
+
+      {/* SECCIÓN 4: Datos bancarios */}
+      <FormSection
+        title="Datos bancarios"
+        subtitle="Para pagos y transferencias"
+        icon={<Landmark className="h-4 w-4 text-primary" />}
+        collapsible
+        defaultOpen={false}
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor={`${prefix}-banco`}>Banco</Label>
+            <Input
+              id={`${prefix}-banco`}
+              placeholder="Ej: BBVA, Banamex, Santander"
+              value={data.banco}
+              onChange={(e) => setData({ ...data, banco: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${prefix}-beneficiario`}>Beneficiario</Label>
+            <Input
+              id={`${prefix}-beneficiario`}
+              placeholder="Nombre del titular"
+              value={data.beneficiario}
+              onChange={(e) => setData({ ...data, beneficiario: e.target.value })}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor={`${prefix}-cuenta`}>Número de cuenta</Label>
+            <Input
+              id={`${prefix}-cuenta`}
+              placeholder="10 dígitos"
+              value={data.cuenta_bancaria}
+              onChange={(e) => setData({ ...data, cuenta_bancaria: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${prefix}-clabe`}>CLABE interbancaria</Label>
+            <Input
+              id={`${prefix}-clabe`}
+              placeholder="18 dígitos"
+              value={data.clabe_interbancaria}
+              onChange={(e) => handleClabeChange(e.target.value)}
+              className={clabeError ? "border-destructive" : ""}
+            />
+            {clabeError && <p className="text-xs text-destructive">{clabeError}</p>}
+          </div>
+        </div>
+      </FormSection>
+    </div>
+  );
+};
+
+// =====================================================================
 // FIN COMPONENTES AUXILIARES
 // =====================================================================
 
@@ -382,6 +787,15 @@ const ProveedoresTab = () => {
   const [productosProveedor, setProductosProveedor] = useState<Proveedor | null>(null);
   const [deletingProveedor, setDeletingProveedor] = useState<Proveedor | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // Filters
+  const [filterCategoria, setFilterCategoria] = useState("todos");
+  const [filterTermino, setFilterTermino] = useState("todos");
+  const [filterEstado, setFilterEstado] = useState("activos");
+  
+  // CLABE validation
+  const [clabeErrorNew, setClabeErrorNew] = useState("");
+  const [clabeErrorEdit, setClabeErrorEdit] = useState("");
   
   // CSF upload state
   const [isParsingCSF, setIsParsingCSF] = useState(false);
@@ -421,7 +835,7 @@ const ProveedoresTab = () => {
   const [editingContactoEditIndex, setEditingContactoEditIndex] = useState<number | null>(null);
   const [editingContactoEdit, setEditingContactoEdit] = useState<ContactoProveedor | null>(null);
   
-  const [newProveedor, setNewProveedor] = useState({
+  const emptyForm: SupplierFormData = {
     nombre: "",
     nombre_comercial: "",
     categoria: "",
@@ -437,14 +851,16 @@ const ProveedoresTab = () => {
     estado: "",
     codigo_postal: "",
     termino_pago: "contado",
-    dias_visita: [] as string[],
+    dias_visita: [],
     frecuencia_compra: "",
     banco: "",
     beneficiario: "",
     cuenta_bancaria: "",
     clabe_interbancaria: "",
     notas: "",
-  });
+  };
+
+  const [newProveedor, setNewProveedor] = useState<SupplierFormData>({ ...emptyForm });
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -479,9 +895,7 @@ const ProveedoresTab = () => {
   // Agregar contacto nuevo (formulario crear)
   const handleAddContactoNuevo = () => {
     if (!nuevoContacto.nombre.trim()) return;
-    
     const esPrincipal = contactosNuevos.length === 0;
-    
     setContactosNuevos([...contactosNuevos, {
       ...nuevoContacto,
       nombre: nuevoContacto.nombre.trim(),
@@ -510,9 +924,7 @@ const ProveedoresTab = () => {
   // Agregar contacto (formulario editar)
   const handleAddContactoEdit = () => {
     if (!editContacto.nombre.trim()) return;
-    
     const esPrincipal = contactosEdit.length === 0;
-    
     setContactosEdit([...contactosEdit, {
       ...editContacto,
       nombre: editContacto.nombre.trim(),
@@ -612,13 +1024,11 @@ const ProveedoresTab = () => {
 
   // Guardar contactos en la tabla proveedor_contactos
   const saveContactosProveedor = async (proveedorId: string, contactos: ContactoProveedor[]) => {
-    // Primero marcar todos los contactos existentes como inactivos
     await supabase
       .from("proveedor_contactos")
       .update({ activo: false })
       .eq("proveedor_id", proveedorId);
     
-    // Insertar/actualizar los nuevos contactos
     for (const contacto of contactos) {
       if (contacto.id) {
         await supabase
@@ -667,42 +1077,22 @@ const ProveedoresTab = () => {
   // Helper function to build complete address from CSF data
   const buildDireccionFromCSF = (data: any): string => {
     const parts = [];
-    
     if (data.tipo_vialidad && data.nombre_vialidad) {
       parts.push(`${data.tipo_vialidad} ${data.nombre_vialidad}`);
     } else if (data.nombre_vialidad) {
       parts.push(data.nombre_vialidad);
     }
-    
-    if (data.numero_exterior) {
-      parts.push(`#${data.numero_exterior}`);
-    }
-    
-    if (data.numero_interior) {
-      parts.push(`Int. ${data.numero_interior}`);
-    }
-    
-    if (data.nombre_colonia) {
-      parts.push(`Col. ${data.nombre_colonia}`);
-    }
-    
+    if (data.numero_exterior) parts.push(`#${data.numero_exterior}`);
+    if (data.numero_interior) parts.push(`Int. ${data.numero_interior}`);
+    if (data.nombre_colonia) parts.push(`Col. ${data.nombre_colonia}`);
     const localidadParts = [];
     if (data.nombre_localidad) localidadParts.push(data.nombre_localidad);
     if (data.nombre_municipio && data.nombre_municipio !== data.nombre_localidad) {
       localidadParts.push(data.nombre_municipio);
     }
-    if (localidadParts.length > 0) {
-      parts.push(localidadParts.join(", "));
-    }
-    
-    if (data.nombre_entidad_federativa) {
-      parts.push(data.nombre_entidad_federativa);
-    }
-    
-    if (data.codigo_postal) {
-      parts.push(`C.P. ${data.codigo_postal}`);
-    }
-    
+    if (localidadParts.length > 0) parts.push(localidadParts.join(", "));
+    if (data.nombre_entidad_federativa) parts.push(data.nombre_entidad_federativa);
+    if (data.codigo_postal) parts.push(`C.P. ${data.codigo_postal}`);
     return parts.join(", ");
   };
 
@@ -756,6 +1146,13 @@ const ProveedoresTab = () => {
           nombre: nombreCompleto.trim(),
           rfc: csfData.rfc || prev.rfc,
           direccion: direccionCompleta || prev.direccion,
+          calle: csfData.nombre_vialidad ? `${csfData.tipo_vialidad || ''} ${csfData.nombre_vialidad}`.trim() : prev.calle,
+          numero_exterior: csfData.numero_exterior || prev.numero_exterior,
+          numero_interior: csfData.numero_interior || prev.numero_interior,
+          colonia: csfData.nombre_colonia || prev.colonia,
+          municipio: csfData.nombre_municipio || prev.municipio,
+          estado: csfData.nombre_entidad_federativa || prev.estado,
+          codigo_postal: csfData.codigo_postal || prev.codigo_postal,
           pais: "México",
         }));
         
@@ -814,33 +1211,11 @@ const ProveedoresTab = () => {
       queryClient.invalidateQueries({ queryKey: ["proveedores"] });
       queryClient.invalidateQueries({ queryKey: ["proveedor-contactos"] });
       setIsDialogOpen(false);
-      setNewProveedor({
-        nombre: "",
-        nombre_comercial: "",
-        categoria: "",
-        direccion: "",
-        pais: "México",
-        rfc: "",
-        regimen_fiscal: "",
-        calle: "",
-        numero_exterior: "",
-        numero_interior: "",
-        colonia: "",
-        municipio: "",
-        estado: "",
-        codigo_postal: "",
-        termino_pago: "contado",
-        dias_visita: [] as string[],
-        frecuencia_compra: "",
-        banco: "",
-        beneficiario: "",
-        cuenta_bancaria: "",
-        clabe_interbancaria: "",
-        notas: "",
-      });
+      setNewProveedor({ ...emptyForm });
       setContactosNuevos([]);
       resetNuevoContacto();
       setCSFParsed(false);
+      setClabeErrorNew("");
       toast({
         title: "Proveedor creado",
         description: "El proveedor ha sido registrado exitosamente",
@@ -901,6 +1276,7 @@ const ProveedoresTab = () => {
       setIsEditDialogOpen(false);
       setEditingProveedor(null);
       setContactosEdit([]);
+      setClabeErrorEdit("");
       toast({
         title: "Proveedor actualizado",
         description: "Los cambios han sido guardados",
@@ -947,219 +1323,269 @@ const ProveedoresTab = () => {
     },
   });
 
-  const filteredProveedores = proveedores.filter(
-    (p) =>
+  // Filtering logic
+  const filteredProveedores = proveedores.filter((p) => {
+    // Search
+    const matchSearch = !searchTerm || 
       p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.pais.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (p.rfc && p.rfc.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+      (p.rfc && p.rfc.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (p.nombre_comercial && p.nombre_comercial.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    // Categoria
+    const matchCategoria = filterCategoria === "todos" || p.categoria === filterCategoria;
+    
+    // Termino
+    const matchTermino = filterTermino === "todos" || 
+      (filterTermino === "contado" && (!p.termino_pago || p.termino_pago === "contado")) ||
+      (filterTermino === "credito" && p.termino_pago && !["contado", "anticipado"].includes(p.termino_pago)) ||
+      (filterTermino === "anticipado" && p.termino_pago === "anticipado");
+    
+    // Estado
+    const matchEstado = filterEstado === "todos" || 
+      (filterEstado === "activos" && p.activo) ||
+      (filterEstado === "inactivos" && !p.activo);
+    
+    return matchSearch && matchCategoria && matchTermino && matchEstado;
+  });
 
-  // Nota: renderResponsabilidades, ContactoForm y ContactosList están definidos
-  // FUERA del componente para evitar re-mount y pérdida de foco en inputs
+  // Edit form data helper
+  const getEditFormData = (): SupplierFormData | null => {
+    if (!editingProveedor) return null;
+    return {
+      nombre: editingProveedor.nombre,
+      nombre_comercial: editingProveedor.nombre_comercial || "",
+      categoria: editingProveedor.categoria || "",
+      direccion: editingProveedor.direccion || "",
+      pais: editingProveedor.pais,
+      rfc: editingProveedor.rfc || "",
+      regimen_fiscal: editingProveedor.regimen_fiscal || "",
+      calle: editingProveedor.calle || "",
+      numero_exterior: editingProveedor.numero_exterior || "",
+      numero_interior: editingProveedor.numero_interior || "",
+      colonia: editingProveedor.colonia || "",
+      municipio: editingProveedor.municipio || "",
+      estado: editingProveedor.estado || "",
+      codigo_postal: editingProveedor.codigo_postal || "",
+      termino_pago: editingProveedor.termino_pago || "contado",
+      dias_visita: editingProveedor.dias_visita || [],
+      frecuencia_compra: editingProveedor.frecuencia_compra || "",
+      banco: editingProveedor.banco || "",
+      beneficiario: editingProveedor.beneficiario || "",
+      cuenta_bancaria: editingProveedor.cuenta_bancaria || "",
+      clabe_interbancaria: editingProveedor.clabe_interbancaria || "",
+      notas: editingProveedor.notas || "",
+    };
+  };
+
+  const updateEditFormData = (formData: SupplierFormData) => {
+    if (!editingProveedor) return;
+    setEditingProveedor({
+      ...editingProveedor,
+      ...formData,
+    });
+  };
 
   return (
     <Card className="p-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Buscar proveedores..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      {/* Search and filters */}
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Buscar proveedores..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Nuevo Proveedor
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
+              <DialogHeader>
+                <DialogTitle>Registrar Nuevo Proveedor</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-5">
+                {/* CSF Upload Section */}
+                <div className="border-2 border-dashed rounded-lg p-4 transition-colors hover:border-primary/50">
+                  <input
+                    ref={csfInputRef}
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleCSFUpload}
+                    className="hidden"
+                    id="csf-upload"
+                  />
+                  <label
+                    htmlFor="csf-upload"
+                    className="flex flex-col items-center gap-2 cursor-pointer py-2"
+                  >
+                    {isParsingCSF ? (
+                      <>
+                        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                        <span className="text-sm font-medium">Analizando CSF...</span>
+                        <span className="text-xs text-muted-foreground">Extrayendo datos fiscales con IA</span>
+                      </>
+                    ) : csfParsed ? (
+                      <>
+                        <CheckCircle2 className="h-8 w-8 text-green-500" />
+                        <span className="text-sm font-medium text-green-600">CSF procesada</span>
+                        <span className="text-xs text-muted-foreground">Los datos se auto-llenaron. Haz clic para subir otra CSF.</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-6 w-6 text-muted-foreground" />
+                          <Upload className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <span className="text-sm font-medium">Subir Constancia de Situación Fiscal (CSF)</span>
+                        <span className="text-xs text-muted-foreground text-center">
+                          Arrastra o haz clic para cargar el PDF. La IA extraerá automáticamente RFC, razón social y dirección.
+                        </span>
+                      </>
+                    )}
+                  </label>
+                </div>
+
+                {/* Form fields */}
+                <SupplierFormFields
+                  data={newProveedor}
+                  setData={setNewProveedor}
+                  prefix="new"
+                  clabeError={clabeErrorNew}
+                  setClabeError={setClabeErrorNew}
+                />
+
+                {/* SECCIÓN 5: Contactos */}
+                <FormSection title="Contactos" icon={<User className="h-4 w-4 text-primary" />}>
+                  <ContactoForm
+                    prefix="nuevo"
+                    contacto={nuevoContacto}
+                    setContacto={setNuevoContacto}
+                    onAdd={handleAddContactoNuevo}
+                    disabled={!nuevoContacto.nombre.trim()}
+                  />
+                  {contactosNuevos.length > 0 && (
+                    <ContactosList
+                      contactos={contactosNuevos}
+                      onRemove={handleRemoveContactoNuevo}
+                      onSetPrincipal={handleSetPrincipalContactoNuevo}
+                      onEdit={handleStartEditContactoNuevo}
+                      editingIndex={editingContactoNuevoIndex}
+                      editingContacto={editingContactoNuevo}
+                      setEditingContacto={setEditingContactoNuevo}
+                      onSaveEdit={handleSaveEditContactoNuevo}
+                      onCancelEdit={handleCancelEditContactoNuevo}
+                    />
+                  )}
+                  {nuevoContacto.nombre.trim() && (
+                    <p className="text-xs text-yellow-600 dark:text-yellow-500">
+                      ⚠️ Tienes un contacto pendiente. Se agregará automáticamente al guardar.
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Agrega contactos con nombre, teléfono, correo y selecciona qué comunicaciones reciben. ⭐ indica el contacto principal.
+                  </p>
+                </FormSection>
+
+                {/* SECCIÓN 6: Notas */}
+                <div className="space-y-2">
+                  <Label htmlFor="new-notas">Notas</Label>
+                  <Textarea
+                    id="new-notas"
+                    placeholder="Información adicional sobre el proveedor"
+                    value={newProveedor.notas}
+                    onChange={(e) => setNewProveedor({ ...newProveedor, notas: e.target.value })}
+                  />
+                </div>
+
+                <Button
+                  onClick={() => {
+                    let contactosFinales = [...contactosNuevos];
+                    if (nuevoContacto.nombre.trim()) {
+                      const esPrincipal = contactosFinales.length === 0;
+                      contactosFinales.push({
+                        ...nuevoContacto,
+                        nombre: nuevoContacto.nombre.trim(),
+                        telefono: nuevoContacto.telefono.trim(),
+                        email: nuevoContacto.email.trim(),
+                        es_principal: esPrincipal,
+                      });
+                      setContactosNuevos(contactosFinales);
+                      setNuevoContacto({
+                        nombre: "",
+                        telefono: "",
+                        email: "",
+                        es_principal: false,
+                        recibe_ordenes: true,
+                        recibe_pagos: false,
+                        recibe_devoluciones: false,
+                        recibe_logistica: false,
+                      });
+                    }
+                    const contactoPrincipal = getContactoPrincipal(contactosFinales);
+                    createProveedor.mutate({ 
+                      ...newProveedor, 
+                      email: contactoPrincipal.email || "",
+                      nombre_contacto: contactoPrincipal.nombre,
+                      telefono: contactoPrincipal.telefono,
+                    });
+                  }}
+                  disabled={!newProveedor.nombre || createProveedor.isPending}
+                  className="w-full"
+                >
+                  Guardar Proveedor
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Nuevo Proveedor
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
-            <DialogHeader>
-              <DialogTitle>Registrar Nuevo Proveedor</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              {/* CSF Upload Section */}
-              <div className="border-2 border-dashed rounded-lg p-4 transition-colors hover:border-primary/50">
-                <input
-                  ref={csfInputRef}
-                  type="file"
-                  accept="application/pdf"
-                  onChange={handleCSFUpload}
-                  className="hidden"
-                  id="csf-upload"
-                  disabled={isParsingCSF}
-                />
-                <label 
-                  htmlFor="csf-upload" 
-                  className="cursor-pointer flex flex-col items-center gap-2"
-                >
-                  {isParsingCSF ? (
-                    <>
-                      <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                      <span className="text-sm font-medium">Analizando CSF...</span>
-                      <span className="text-xs text-muted-foreground">Extrayendo datos fiscales con IA</span>
-                    </>
-                  ) : csfParsed ? (
-                    <>
-                      <CheckCircle2 className="h-8 w-8 text-green-500" />
-                      <span className="text-sm font-medium text-green-600">CSF procesada</span>
-                      <span className="text-xs text-muted-foreground">Los datos se auto-llenaron. Haz clic para subir otra CSF.</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-6 w-6 text-muted-foreground" />
-                        <Upload className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <span className="text-sm font-medium">Subir Constancia de Situación Fiscal (CSF)</span>
-                      <span className="text-xs text-muted-foreground text-center">
-                        Arrastra o haz clic para cargar el PDF. La IA extraerá automáticamente RFC, razón social y dirección.
-                      </span>
-                    </>
-                  )}
-                </label>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nombre">Nombre del Proveedor *</Label>
-                  <Input
-                    id="nombre"
-                    placeholder="Distribuidora ABC"
-                    value={newProveedor.nombre}
-                    onChange={(e) =>
-                      setNewProveedor({ ...newProveedor, nombre: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pais">País *</Label>
-                  <Input
-                    id="pais"
-                    placeholder="México"
-                    value={newProveedor.pais}
-                    onChange={(e) =>
-                      setNewProveedor({ ...newProveedor, pais: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="rfc">RFC</Label>
-                <Input
-                  id="rfc"
-                  placeholder="ABC123456XYZ"
-                  value={newProveedor.rfc}
-                  onChange={(e) =>
-                    setNewProveedor({ ...newProveedor, rfc: e.target.value })
-                  }
-                />
-              </div>
-
-              {/* Sección de Contactos Unificados */}
-              <div className="space-y-3">
-                <Label>Contactos del proveedor</Label>
-                <ContactoForm
-                  prefix="nuevo"
-                  contacto={nuevoContacto}
-                  setContacto={setNuevoContacto}
-                  onAdd={handleAddContactoNuevo}
-                  disabled={!nuevoContacto.nombre.trim()}
-                />
-                {contactosNuevos.length > 0 && (
-                  <ContactosList
-                    contactos={contactosNuevos}
-                    onRemove={handleRemoveContactoNuevo}
-                    onSetPrincipal={handleSetPrincipalContactoNuevo}
-                    onEdit={handleStartEditContactoNuevo}
-                    editingIndex={editingContactoNuevoIndex}
-                    editingContacto={editingContactoNuevo}
-                    setEditingContacto={setEditingContactoNuevo}
-                    onSaveEdit={handleSaveEditContactoNuevo}
-                    onCancelEdit={handleCancelEditContactoNuevo}
-                  />
-                )}
-                {nuevoContacto.nombre.trim() && (
-                  <p className="text-xs text-yellow-600 dark:text-yellow-500">
-                    ⚠️ Tienes un contacto pendiente. Se agregará automáticamente al guardar.
-                  </p>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  Agrega contactos con nombre, teléfono, correo y selecciona qué comunicaciones reciben. ⭐ indica el contacto principal.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="direccion">Dirección</Label>
-                <Input
-                  id="direccion"
-                  placeholder="Av. Principal #123, Col. Centro"
-                  value={newProveedor.direccion}
-                  onChange={(e) =>
-                    setNewProveedor({ ...newProveedor, direccion: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notas">Notas</Label>
-                <Textarea
-                  id="notas"
-                  placeholder="Información adicional sobre el proveedor"
-                  value={newProveedor.notas}
-                  onChange={(e) =>
-                    setNewProveedor({ ...newProveedor, notas: e.target.value })
-                  }
-                />
-              </div>
-
-              <Button
-                onClick={() => {
-                  // Auto-agregar contacto pendiente si tiene nombre
-                  let contactosFinales = [...contactosNuevos];
-                  if (nuevoContacto.nombre.trim()) {
-                    const esPrincipal = contactosFinales.length === 0;
-                    contactosFinales.push({
-                      ...nuevoContacto,
-                      nombre: nuevoContacto.nombre.trim(),
-                      telefono: nuevoContacto.telefono.trim(),
-                      email: nuevoContacto.email.trim(),
-                      es_principal: esPrincipal,
-                    });
-                    // Actualizar el estado para reflejar el cambio
-                    setContactosNuevos(contactosFinales);
-                    setNuevoContacto({
-                      nombre: "",
-                      telefono: "",
-                      email: "",
-                      es_principal: false,
-                      recibe_ordenes: true,
-                      recibe_pagos: false,
-                      recibe_devoluciones: false,
-                      recibe_logistica: false,
-                    });
-                  }
-                  const contactoPrincipal = getContactoPrincipal(contactosFinales);
-                  createProveedor.mutate({ 
-                    ...newProveedor, 
-                    email: contactoPrincipal.email || "",
-                    nombre_contacto: contactoPrincipal.nombre,
-                    telefono: contactoPrincipal.telefono,
-                  });
-                }}
-                disabled={!newProveedor.nombre || createProveedor.isPending}
-                className="w-full"
-              >
-                Guardar Proveedor
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Filters row */}
+        <div className="flex flex-wrap items-center gap-3">
+          <Select value={filterCategoria} onValueChange={setFilterCategoria}>
+            <SelectTrigger className="w-[160px] h-8 text-xs">
+              <SelectValue placeholder="Categoría" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todas las categorías</SelectItem>
+              {CATEGORIAS.map(cat => (
+                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterTermino} onValueChange={setFilterTermino}>
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <SelectValue placeholder="Término" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="contado">Contado</SelectItem>
+              <SelectItem value="credito">Crédito</SelectItem>
+              <SelectItem value="anticipado">Anticipado</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterEstado} onValueChange={setFilterEstado}>
+            <SelectTrigger className="w-[130px] h-8 text-xs">
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="activos">Activos</SelectItem>
+              <SelectItem value="inactivos">Inactivos</SelectItem>
+              <SelectItem value="todos">Todos</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-xs text-muted-foreground ml-auto">
+            Mostrando {filteredProveedores.length} de {proveedores.length} proveedores
+          </span>
+        </div>
       </div>
 
       {isLoading ? (
@@ -1168,19 +1594,18 @@ const ProveedoresTab = () => {
         </div>
       ) : filteredProveedores.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          {searchTerm
-            ? "No se encontraron proveedores con ese criterio"
+          {searchTerm || filterCategoria !== "todos" || filterTermino !== "todos" || filterEstado !== "activos"
+            ? "No se encontraron proveedores con esos filtros"
             : "No hay proveedores registrados"}
         </div>
       ) : isMobile ? (
-        // Vista móvil con cards
         <div className="space-y-3">
           {filteredProveedores.map((proveedor) => (
             <ProveedorCardMobile
               key={proveedor.id}
               proveedor={proveedor}
-              productosCount={0} // TODO: cargar cuenta de productos
-              contactoPrincipal={null} // Usa datos legacy del proveedor
+              productosCount={0}
+              contactoPrincipal={null}
               onEdit={async (p) => {
                 setEditingProveedor(p);
                 await loadContactosProveedor(p.id);
@@ -1203,10 +1628,10 @@ const ProveedoresTab = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
-                <TableHead>País</TableHead>
+                <TableHead>Categoría</TableHead>
+                <TableHead>Término pago</TableHead>
                 <TableHead>Contacto</TableHead>
                 <TableHead>Teléfono</TableHead>
-                <TableHead>Email</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -1214,18 +1639,18 @@ const ProveedoresTab = () => {
             <TableBody>
               {filteredProveedores.map((proveedor) => (
                 <TableRow key={proveedor.id}>
-                  <TableCell className="font-medium">{proveedor.nombre}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Globe className="h-4 w-4 text-muted-foreground" />
-                      {proveedor.pais}
+                  <TableCell className="font-medium">
+                    <div>
+                      {proveedor.nombre}
+                      {proveedor.nombre_comercial && proveedor.nombre_comercial !== proveedor.nombre && (
+                        <span className="block text-xs text-muted-foreground">{proveedor.nombre_comercial}</span>
+                      )}
                     </div>
                   </TableCell>
+                  <TableCell>{getCategoriaBadge(proveedor.categoria)}</TableCell>
+                  <TableCell>{getTerminoPagoBadge(proveedor.termino_pago)}</TableCell>
                   <TableCell>{proveedor.nombre_contacto || "-"}</TableCell>
                   <TableCell>{proveedor.telefono || "-"}</TableCell>
-                  <TableCell>
-                    {proveedor.email || "-"}
-                  </TableCell>
                   <TableCell>
                     <Badge variant={proveedor.activo ? "default" : "secondary"}>
                       {proveedor.activo ? "Activo" : "Inactivo"}
@@ -1277,59 +1702,24 @@ const ProveedoresTab = () => {
         </div>
       )}
 
+      {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>Editar Proveedor</DialogTitle>
           </DialogHeader>
           {editingProveedor && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-nombre">Nombre del Proveedor *</Label>
-                  <Input
-                    id="edit-nombre"
-                    value={editingProveedor.nombre}
-                    onChange={(e) =>
-                      setEditingProveedor({
-                        ...editingProveedor,
-                        nombre: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-pais">País *</Label>
-                  <Input
-                    id="edit-pais"
-                    value={editingProveedor.pais}
-                    onChange={(e) =>
-                      setEditingProveedor({
-                        ...editingProveedor,
-                        pais: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
+            <div className="space-y-5">
+              <SupplierFormFields
+                data={getEditFormData()!}
+                setData={updateEditFormData}
+                prefix="edit"
+                clabeError={clabeErrorEdit}
+                setClabeError={setClabeErrorEdit}
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-rfc">RFC</Label>
-                <Input
-                  id="edit-rfc"
-                  value={editingProveedor.rfc || ""}
-                  onChange={(e) =>
-                    setEditingProveedor({
-                      ...editingProveedor,
-                      rfc: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              {/* Sección de Contactos Unificados - Editar */}
-              <div className="space-y-3">
-                <Label>Contactos del proveedor</Label>
+              {/* Contactos */}
+              <FormSection title="Contactos" icon={<User className="h-4 w-4 text-primary" />}>
                 {isLoadingContactos ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -1367,33 +1757,15 @@ const ProveedoresTab = () => {
                     </p>
                   </>
                 )}
-              </div>
+              </FormSection>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-direccion">Dirección</Label>
-                <Input
-                  id="edit-direccion"
-                  value={editingProveedor.direccion || ""}
-                  onChange={(e) =>
-                    setEditingProveedor({
-                      ...editingProveedor,
-                      direccion: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
+              {/* Notas */}
               <div className="space-y-2">
                 <Label htmlFor="edit-notas">Notas</Label>
                 <Textarea
                   id="edit-notas"
                   value={editingProveedor.notas || ""}
-                  onChange={(e) =>
-                    setEditingProveedor({
-                      ...editingProveedor,
-                      notas: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setEditingProveedor({ ...editingProveedor, notas: e.target.value })}
                 />
               </div>
 
@@ -1416,7 +1788,6 @@ const ProveedoresTab = () => {
               <Button
                 onClick={() => {
                   if (editingProveedor) {
-                    // Auto-agregar contacto pendiente si tiene nombre
                     let contactosFinales = [...contactosEdit];
                     if (editContacto.nombre.trim()) {
                       const esPrincipal = contactosFinales.length === 0;
@@ -1427,7 +1798,6 @@ const ProveedoresTab = () => {
                         email: editContacto.email.trim(),
                         es_principal: esPrincipal,
                       });
-                      // Actualizar el estado para reflejar el cambio
                       setContactosEdit(contactosFinales);
                       setEditContacto({
                         nombre: "",
@@ -1453,6 +1823,7 @@ const ProveedoresTab = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Productos Dialog */}
       <Dialog open={isProductosDialogOpen} onOpenChange={setIsProductosDialogOpen}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col overflow-x-hidden">
           <DialogHeader>
@@ -1468,6 +1839,7 @@ const ProveedoresTab = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Delete Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
