@@ -112,7 +112,7 @@ export const useNotificaciones = () => {
 
   const cargarNotificaciones = async () => {
     try {
-      const [caducidad, stock, licencias, autorizaciones, autorizacionesCot, confirmaciones, precios, pedidos, rechazos] = await Promise.all([
+      const [caducidad, stock, licencias, autorizaciones, autorizacionesCot, confirmaciones, precios, pedidos, rechazos, caducidadPush, fumigacionPush] = await Promise.all([
         cargarAlertasCaducidad(),
         cargarNotificacionesStock(),
         cargarAlertasLicencias(),
@@ -122,9 +122,11 @@ export const useNotificaciones = () => {
         isAdmin ? cargarNotificacionesPrecios() : Promise.resolve([]),
         cargarNotificacionesPedidos(),
         cargarNotificacionesRechazo(),
+        cargarNotificacionesCaducidadPush(),
+        cargarNotificacionesFumigacionPush(),
       ]);
 
-      const total = caducidad.length + stock.length + licencias.length + autorizaciones.length + autorizacionesCot.length + confirmaciones.length + precios.length + pedidos.length + rechazos.length;
+      const total = caducidad.length + stock.length + licencias.length + autorizaciones.length + autorizacionesCot.length + confirmaciones.length + precios.length + pedidos.length + rechazos.length + caducidadPush.length + fumigacionPush.length;
       setNotificaciones({
         alertasCaducidad: caducidad,
         notificacionesStock: stock,
@@ -135,6 +137,8 @@ export const useNotificaciones = () => {
         notificacionesPrecios: precios,
         notificacionesPedidos: pedidos,
         notificacionesRechazo: rechazos,
+        notificacionesCaducidadPush: caducidadPush,
+        notificacionesFumigacionPush: fumigacionPush,
         totalCount: total,
       });
     } catch (error) {
