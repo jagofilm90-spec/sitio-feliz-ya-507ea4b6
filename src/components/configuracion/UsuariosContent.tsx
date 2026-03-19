@@ -482,7 +482,7 @@ export function UsuariosContent() {
   const getRoleBadge = (role: string) => {
     const roleConfig = ROLES.find((r) => r.value === role);
     return (
-      <Badge variant={roleConfig?.color as any} className="text-xs">
+      <Badge variant="outline" className={`text-xs ${roleConfig?.bgClass || ''}`}>
         {roleConfig?.label || role}
       </Badge>
     );
