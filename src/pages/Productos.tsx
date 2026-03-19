@@ -877,6 +877,12 @@ const Productos = () => {
                             {UNIDADES_PRODUCTO.map(u => (
                               <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
                             ))}
+                            {/* Show legacy unit if editing a product with a legacy value */}
+                            {editingProduct && formData.unidad && !UNIDADES_PRODUCTO.find(u => u.value === formData.unidad) && (
+                              <SelectItem value={formData.unidad}>
+                                {UNIDADES_LEGACY.find(u => u.value === formData.unidad)?.label || formData.unidad} (legacy)
+                              </SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
