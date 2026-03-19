@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Bell, PackageX, AlertCircle, X, IdCard, FileCheck, CheckCircle2, FileText } from "lucide-react";
+import { Bell, PackageX, AlertCircle, X, IdCard, FileCheck, CheckCircle2, FileText, TrendingUp, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
