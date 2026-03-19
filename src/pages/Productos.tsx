@@ -990,12 +990,12 @@ const Productos = () => {
 
                     {margenNegativo && canSeeCosts && (
                       <p className="text-xs p-2 rounded bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-                        ⚠️ El precio de venta es menor al costo. Margen negativo.
+                        El precio de venta es menor al costo. Margen negativo.
                       </p>
                     )}
                     {descuentoExcesivo && (
                       <p className="text-xs text-destructive bg-destructive/10 p-2 rounded border border-destructive/20">
-                        ❌ El descuento no puede ser mayor o igual al precio
+                        El descuento no puede ser mayor o igual al precio
                       </p>
                     )}
                   </div>
