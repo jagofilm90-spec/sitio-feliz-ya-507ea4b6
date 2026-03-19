@@ -73,6 +73,8 @@ export interface NotificacionesData {
   notificacionesPrecios: NotificacionGeneral[];
   notificacionesPedidos: NotificacionGeneral[];
   notificacionesRechazo: NotificacionGeneral[];
+  notificacionesCaducidadPush: NotificacionGeneral[];
+  notificacionesFumigacionPush: NotificacionGeneral[];
   totalCount: number;
 }
 
@@ -87,6 +89,8 @@ export const useNotificaciones = () => {
     notificacionesPrecios: [],
     notificacionesPedidos: [],
     notificacionesRechazo: [],
+    notificacionesCaducidadPush: [],
+    notificacionesFumigacionPush: [],
     totalCount: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -108,7 +112,7 @@ export const useNotificaciones = () => {
 
   const cargarNotificaciones = async () => {
     try {
-      const [caducidad, stock, licencias, autorizaciones, autorizacionesCot, confirmaciones, precios, pedidos, rechazos] = await Promise.all([
+      const [caducidad, stock, licencias, autorizaciones, autorizacionesCot, confirmaciones, precios, pedidos, rechazos, caducidadPush, fumigacionPush] = await Promise.all([
         cargarAlertasCaducidad(),
         cargarNotificacionesStock(),
         cargarAlertasLicencias(),
@@ -118,9 +122,11 @@ export const useNotificaciones = () => {
         isAdmin ? cargarNotificacionesPrecios() : Promise.resolve([]),
         cargarNotificacionesPedidos(),
         cargarNotificacionesRechazo(),
+        cargarNotificacionesCaducidadPush(),
+        cargarNotificacionesFumigacionPush(),
       ]);
 
-      const total = caducidad.length + stock.length + licencias.length + autorizaciones.length + autorizacionesCot.length + confirmaciones.length + precios.length + pedidos.length + rechazos.length;
+      const total = caducidad.length + stock.length + licencias.length + autorizaciones.length + autorizacionesCot.length + confirmaciones.length + precios.length + pedidos.length + rechazos.length + caducidadPush.length + fumigacionPush.length;
       setNotificaciones({
         alertasCaducidad: caducidad,
         notificacionesStock: stock,
@@ -131,6 +137,8 @@ export const useNotificaciones = () => {
         notificacionesPrecios: precios,
         notificacionesPedidos: pedidos,
         notificacionesRechazo: rechazos,
+        notificacionesCaducidadPush: caducidadPush,
+        notificacionesFumigacionPush: fumigacionPush,
         totalCount: total,
       });
     } catch (error) {
@@ -464,6 +472,46 @@ export const useNotificaciones = () => {
       console.error("Error cargando alertas de licencias:", error);
       return [];
     }
+  };
+
+  const cargarNotificacionesCaducidadPush = async (): Promise<NotificacionGeneral[]> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+      const hasAccess = roles?.some(r => ['admin', 'almacen', 'gerente_almacen'].includes(r.role as string)) || false;
+      if (!hasAccess) return [];
+
+      const { data, error } = await supabase
+        .from("notificaciones")
+        .select("id, tipo, titulo, descripcion, created_at")
+        .in("tipo", ["caducidad_critica", "caducidad_vencida"])
+        .eq("leida", false)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) return [];
+      return (data || []) as NotificacionGeneral[];
+    } catch { return []; }
+  };
+
+  const cargarNotificacionesFumigacionPush = async (): Promise<NotificacionGeneral[]> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+      const hasAccess = roles?.some(r => ['admin', 'almacen', 'gerente_almacen'].includes(r.role as string)) || false;
+      if (!hasAccess) return [];
+
+      const { data, error } = await supabase
+        .from("notificaciones")
+        .select("id, tipo, titulo, descripcion, created_at")
+        .in("tipo", ["fumigacion_proxima", "fumigacion_vencida", "fumigacion_sin_fecha"])
+        .eq("leida", false)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) return [];
+      return (data || []) as NotificacionGeneral[];
+    } catch { return []; }
   };
 
   useEffect(() => {

@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   Clock,
   AlertTriangle,
+  Timer,
 } from "lucide-react";
 import { AlmacenCargaRutasTab } from "@/components/almacen/AlmacenCargaRutasTab";
 import { AlmacenRecepcionTab } from "@/components/almacen/AlmacenRecepcionTab";
@@ -23,6 +24,7 @@ import { AlmacenInventarioTab } from "@/components/almacen/AlmacenInventarioTab"
 import { AlmacenProductosTab } from "@/components/almacen/AlmacenProductosTab";
 import { AlmacenVentasMostradorTab } from "@/components/almacen/AlmacenVentasMostradorTab";
 import { ReporteRecepcionesDiaTab } from "@/components/almacen/ReporteRecepcionesDiaTab";
+import { ReporteCaducidadTab } from "@/components/almacen/ReporteCaducidadTab";
 import PersonalFlotillaTab from "@/components/almacen/PersonalFlotillaTab";
 import VehiculosTab from "@/components/rutas/VehiculosTab";
 import DisponibilidadPersonalTab from "@/components/rutas/DisponibilidadPersonalTab";
@@ -61,6 +63,7 @@ const AlmacenTablet = () => {
   const [rutasStats, setRutasStats] = useState({ total: 0, pendientes: 0, completadas: 0, entregas: 0 });
   const [recepcionStats, setRecepcionStats] = useState({ pendientes: 0, recibidas: 0 });
   const [fumigacionStats, setFumigacionStats] = useState({ vencidas: 0, proximas: 0, vigentes: 0 });
+  const [caducidadStats, setCaducidadStats] = useState({ vencidos: 0, criticos: 0 });
   const [ventasStats, setVentasStats] = useState({ pendientes: 0, listas: 0, entregadas: 0 });
   const [alertasCount, setAlertasCount] = useState(0);
 
@@ -206,6 +209,13 @@ const AlmacenTablet = () => {
             <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-primary/10"><CheckCircle2 className="w-6 h-6 text-primary" /></div><div><p className="text-2xl font-bold">{fumigacionStats.vigentes}</p><p className="text-sm text-muted-foreground">Vigentes</p></div></CardContent></Card>
           </div>
         );
+      case "caducidad":
+        return (
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <Card className="border-destructive/30"><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-destructive/10"><AlertTriangle className="w-6 h-6 text-destructive" /></div><div><p className="text-2xl font-bold">{caducidadStats.vencidos}</p><p className="text-sm text-muted-foreground">Vencidos</p></div></CardContent></Card>
+            <Card className="border-orange-500/30"><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-orange-500/10"><Timer className="w-6 h-6 text-orange-500" /></div><div><p className="text-2xl font-bold">{caducidadStats.criticos}</p><p className="text-sm text-muted-foreground">Críticos (≤7d)</p></div></CardContent></Card>
+          </div>
+        );
       default:
         return null;
     }
@@ -228,6 +238,8 @@ const AlmacenTablet = () => {
         return <AlmacenProductosTab key={`productos-${refreshKey}`} />;
       case "fumigaciones":
         return <AlmacenFumigacionesTab key={`fumigaciones-${refreshKey}`} onStatsUpdate={setFumigacionStats} />;
+      case "caducidad":
+        return <ReporteCaducidadTab key={`caducidad-${refreshKey}`} onStatsUpdate={setCaducidadStats} />;
       case "alertas":
         return showFlotillaTabs ? <AlertasFlotillaPanel key={`alertas-${refreshKey}`} /> : null;
       case "checkups":
@@ -268,6 +280,7 @@ const AlmacenTablet = () => {
       inventario: "Inventario",
       productos: "Productos",
       fumigaciones: "Fumigaciones",
+      caducidad: "Reporte Caducidad (FEFO)",
       alertas: "Alertas de Flotilla",
       checkups: "Checkups de Vehículos",
       vehiculos: "Vehículos",

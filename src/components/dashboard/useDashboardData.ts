@@ -24,10 +24,12 @@ export interface DashboardKPIs {
   facturasVencenSemana: number;
   pagosPorValidar: number;
   preciosRevisionPendientes: number;
+  lotesVencidos: number;
+  fumigacionesVencidas: number;
 }
 
 export interface AlertaUrgente {
-  tipo: 'pedidos_sin_autorizar' | 'chofer_sin_gps' | 'stock_cero' | 'credito_excedido' | 'pagos_por_validar' | 'precios_por_revisar';
+  tipo: 'pedidos_sin_autorizar' | 'chofer_sin_gps' | 'stock_cero' | 'credito_excedido' | 'pagos_por_validar' | 'precios_por_revisar' | 'lotes_vencidos' | 'fumigaciones_vencidas';
   cantidad: number;
   detalle?: string;
   ruta: string;
@@ -68,6 +70,7 @@ const EMPTY_KPIS: DashboardKPIs = {
   porCobrar: 0, totalVencido: 0, cobrosHoy: 0, pedidosEnCalle: 0,
   entregasCompletadasHoy: 0, entregasPendientesHoy: 0, pedidosPorSurtir: 0,
   creditoExcedido: 0, stockBajo: 0, pedidosSinAutorizar24h: 0, facturasVencenSemana: 0, pagosPorValidar: 0, preciosRevisionPendientes: 0,
+  lotesVencidos: 0, fumigacionesVencidas: 0,
 };
 
 export function useDashboardData(periodo: Periodo = 'mes') {
@@ -105,6 +108,8 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         cobrosHoyRes,
         pagosPorValidarRes,
         preciosRevisionRes,
+        lotesVencidosRes,
+        fumigacionesVencidasRes,
       ] = await Promise.all([
         // Ventas del día
         supabase.from("pedidos").select("total").gte("created_at", inicioHoy).in("status", ["entregado", "en_ruta"]),
@@ -142,6 +147,10 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         supabase.from("pagos_cliente").select("id", { count: "exact", head: true }).eq("status", "pendiente").eq("requiere_validacion", true),
         // Precios revision pendientes
         (supabase as any).from("productos_revision_precio").select("id", { count: "exact", head: true }).in("status", ["pendiente", "parcial"]),
+        // Lotes vencidos (caducidad < hoy con stock)
+        supabase.from("inventario_lotes").select("id", { count: "exact", head: true }).lt("fecha_caducidad", hoy).gt("cantidad_disponible", 0),
+        // Fumigaciones vencidas
+        supabase.from("productos").select("id, fecha_ultima_fumigacion").eq("requiere_fumigacion", true).eq("activo", true).gt("stock_actual", 0),
       ]);
 
       // KPIs calculations
@@ -168,6 +177,15 @@ export function useDashboardData(periodo: Periodo = 'mes') {
 
       const cobrosHoy = cobrosHoyRes.data?.reduce((s: number, p: any) => s + (Number(p.monto_total) || 0), 0) || 0;
 
+      // Compute fumigaciones vencidas count from data
+      const nowDate = new Date();
+      const fumVencidasCount = (fumigacionesVencidasRes.data || []).filter((p: any) => {
+        if (!p.fecha_ultima_fumigacion) return true;
+        const venc = new Date(p.fecha_ultima_fumigacion);
+        venc.setMonth(venc.getMonth() + 6);
+        return venc < nowDate;
+      }).length;
+
       const kpis: DashboardKPIs = {
         ventasDia, ventasMes, ventasMesAnterior, variacionMes,
         porCobrar, totalVencido, cobrosHoy,
@@ -180,6 +198,8 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         facturasVencenSemana: facturasVencenSemanaRes.count || 0,
         pagosPorValidar: pagosPorValidarRes.count || 0,
         preciosRevisionPendientes: (preciosRevisionRes as any)?.count || 0,
+        lotesVencidos: lotesVencidosRes.count || 0,
+        fumigacionesVencidas: fumVencidasCount,
       };
 
       // Alertas urgentes
@@ -199,6 +219,12 @@ export function useDashboardData(periodo: Periodo = 'mes') {
       const preciosCount = (preciosRevisionRes as any)?.count || 0;
       if (preciosCount > 0) {
         alertas.push({ tipo: 'precios_por_revisar', cantidad: preciosCount, ruta: '/precios', botonTexto: 'Revisar ahora' });
+      }
+      if ((lotesVencidosRes.count || 0) > 0) {
+        alertas.push({ tipo: 'lotes_vencidos', cantidad: lotesVencidosRes.count || 0, ruta: '/almacen-tablet', botonTexto: 'Ver en almacén' });
+      }
+      if (fumVencidasCount > 0) {
+        alertas.push({ tipo: 'fumigaciones_vencidas', cantidad: fumVencidasCount, ruta: '/almacen-tablet', botonTexto: 'Ver fumigaciones' });
       }
 
       const prodMap = new Map<string, TopProducto>();

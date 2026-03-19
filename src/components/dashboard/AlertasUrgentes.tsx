@@ -1,25 +1,29 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, ShieldAlert, Package, CreditCard, Radio, TrendingUp } from "lucide-react";
+import { AlertTriangle, ShieldAlert, Package, CreditCard, Radio, TrendingUp, Timer, Bug } from "lucide-react";
 import type { AlertaUrgente } from "./useDashboardData";
 
-const iconMap = {
+const iconMap: Record<string, any> = {
   pedidos_sin_autorizar: ShieldAlert,
   chofer_sin_gps: Radio,
   stock_cero: Package,
   credito_excedido: CreditCard,
   pagos_por_validar: CreditCard,
   precios_por_revisar: TrendingUp,
+  lotes_vencidos: Timer,
+  fumigaciones_vencidas: Bug,
 };
 
-const colorMap = {
+const colorMap: Record<string, string> = {
   pedidos_sin_autorizar: 'bg-destructive/10 border-destructive/30 text-destructive',
   chofer_sin_gps: 'bg-orange-500/10 border-orange-500/30 text-orange-700 dark:text-orange-400',
   stock_cero: 'bg-destructive/10 border-destructive/30 text-destructive',
   credito_excedido: 'bg-destructive/10 border-destructive/30 text-destructive',
   pagos_por_validar: 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400',
   precios_por_revisar: 'bg-orange-500/10 border-orange-500/30 text-orange-700 dark:text-orange-400',
+  lotes_vencidos: 'bg-destructive/10 border-destructive/30 text-destructive',
+  fumigaciones_vencidas: 'bg-destructive/10 border-destructive/30 text-destructive',
 };
 
 interface Props {
@@ -51,6 +55,8 @@ export const AlertasUrgentes = ({ alertas }: Props) => {
                 {alerta.tipo === 'credito_excedido' && 'Clientes con crédito excedido'}
                 {alerta.tipo === 'pagos_por_validar' && 'Pagos pendientes de validación'}
                 {alerta.tipo === 'precios_por_revisar' && 'Precios por revisar (costo subió)'}
+                {alerta.tipo === 'lotes_vencidos' && 'Lotes vencidos en inventario'}
+                {alerta.tipo === 'fumigaciones_vencidas' && 'Fumigaciones vencidas'}
               </span>
               {alerta.detalle && <span className="text-xs truncate opacity-75">{alerta.detalle}</span>}
             </div>

@@ -34,6 +34,7 @@ import {
   LogOut,
   Settings,
   User,
+  Timer,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +96,7 @@ export const AlmacenSidebar = ({
     { id: "inventario", label: "Inventario", icon: Boxes },
     { id: "productos", label: "Productos", icon: Package },
     { id: "fumigaciones", label: "Fumigaciones", icon: Bug },
+    { id: "caducidad", label: "Caducidad", icon: Timer },
   ];
 
   const flotillaItems: NavItem[] = [

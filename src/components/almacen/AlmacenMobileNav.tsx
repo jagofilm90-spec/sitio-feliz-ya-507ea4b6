@@ -11,7 +11,8 @@ import {
   Car,
   Users,
   CalendarCheck,
-  LogOut
+  LogOut,
+  Timer
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -65,6 +66,7 @@ export const AlmacenMobileNav = ({
     { id: "reporte", label: "Reporte", icon: FileText },
     { id: "productos", label: "Productos", icon: Package },
     { id: "fumigaciones", label: "Fumig.", icon: Bug },
+    { id: "caducidad", label: "Caduc.", icon: Timer },
     ...(showFlotillaTabs ? [
       { id: "checkups", label: "Checkups", icon: CheckCircle2 },
       { id: "vehiculos", label: "Vehículos", icon: Car },
