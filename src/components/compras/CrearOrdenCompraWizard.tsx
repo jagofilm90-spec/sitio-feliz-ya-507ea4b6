@@ -103,6 +103,9 @@ interface ProductoEnOrden {
   aplica_ieps: boolean;
   precio_incluye_iva: boolean;
   precio_incluye_ieps: boolean;
+  peso_kg?: number;
+  unidad?: string;
+  precio_por_kilo?: boolean;
 }
 
 interface EntregaProgramada {
@@ -684,6 +687,9 @@ const CrearOrdenCompraWizard = ({
         aplica_ieps: producto.aplica_ieps ?? false,
         precio_incluye_iva: precioIncluyeIva,
         precio_incluye_ieps: precioIncluyeIeps,
+        peso_kg: producto.peso_kg || 0,
+        unidad: producto.unidad || 'bulto',
+        precio_por_kilo: producto.precio_por_kilo || false,
       },
     ]);
 
@@ -2322,6 +2328,7 @@ const CrearOrdenCompraWizard = ({
                       <TableRow>
                         <TableHead>Producto</TableHead>
                         <TableHead className="text-right">Cantidad</TableHead>
+                        <TableHead className="text-right">KG Total</TableHead>
                         <TableHead className="text-right">Precio</TableHead>
                         <TableHead className="text-right">Subtotal</TableHead>
                         <TableHead className="w-10"></TableHead>
@@ -2333,24 +2340,22 @@ const CrearOrdenCompraWizard = ({
                           <TableCell>
                             <div className="flex flex-col gap-1">
                               <span>{p.nombre}</span>
-                              {(p.aplica_iva || p.aplica_ieps) && (
-                                <div className="flex gap-1 flex-wrap">
-                                  {p.aplica_iva && p.precio_incluye_iva && (
-                                    <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                                      IVA incl.
-                                    </Badge>
-                                  )}
-                                  {p.aplica_ieps && p.precio_incluye_ieps && (
-                                    <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                                      IEPS incl.
-                                    </Badge>
-                                  )}
-                                </div>
-                              )}
+                              <div className="flex gap-1 flex-wrap">
+                                {p.aplica_iva && p.precio_incluye_iva && (
+                                  <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">IVA incl.</Badge>
+                                )}
+                                {p.aplica_ieps && p.precio_incluye_ieps && (
+                                  <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">IEPS incl.</Badge>
+                                )}
+                                {p.precio_por_kilo && (
+                                  <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-muted">/kg</Badge>
+                                )}
+                              </div>
                             </div>
                           </TableCell>
-                          <TableCell className="text-right">{p.cantidad.toLocaleString()}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(p.precio_unitario)}</TableCell>
+                          <TableCell className="text-right">{p.cantidad.toLocaleString()} {p.unidad || ''}</TableCell>
+                          <TableCell className="text-right text-muted-foreground">{p.peso_kg && p.peso_kg > 0 ? `${(p.cantidad * p.peso_kg).toLocaleString()} kg` : '-'}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(p.precio_unitario)}{p.precio_por_kilo ? '/kg' : `/${p.unidad || 'u'}`}</TableCell>
                           <TableCell className="text-right">{formatCurrency(p.subtotal)}</TableCell>
                           <TableCell>
                             <Button
@@ -2741,6 +2746,7 @@ const CrearOrdenCompraWizard = ({
                     <TableRow>
                       <TableHead>Producto</TableHead>
                       <TableHead className="text-right">Cantidad</TableHead>
+                      <TableHead className="text-right">KG</TableHead>
                       <TableHead className="text-right">Precio</TableHead>
                       <TableHead className="text-right">Subtotal</TableHead>
                     </TableRow>
@@ -2749,14 +2755,22 @@ const CrearOrdenCompraWizard = ({
                     {productosEnOrden.map((p, index) => (
                       <TableRow key={index}>
                         <TableCell>{p.nombre}</TableCell>
-                        <TableCell className="text-right">{p.cantidad.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(p.precio_unitario)}</TableCell>
+                        <TableCell className="text-right">{p.cantidad.toLocaleString()} {p.unidad || ''}</TableCell>
+                        <TableCell className="text-right text-muted-foreground">{p.peso_kg && p.peso_kg > 0 ? `${(p.cantidad * p.peso_kg).toLocaleString()} kg` : '-'}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(p.precio_unitario)}{p.precio_por_kilo ? '/kg' : ''}</TableCell>
                         <TableCell className="text-right">{formatCurrency(p.subtotal)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </div>
+
+              {/* KG Total */}
+              {productosEnOrden.some(p => p.peso_kg && p.peso_kg > 0) && (
+                <div className="flex justify-end text-sm text-muted-foreground">
+                  Peso total: <strong className="ml-1">{productosEnOrden.reduce((sum, p) => sum + (p.cantidad * (p.peso_kg || 0)), 0).toLocaleString()} kg</strong>
+                </div>
+              )}
 
               {/* Totales */}
               <div className="border rounded-lg p-4 bg-primary/5">

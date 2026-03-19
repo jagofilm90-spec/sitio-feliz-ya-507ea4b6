@@ -206,15 +206,19 @@ const NotificarCambiosOCDialog = ({
     const entregasProgramadas = ordenCompleta.ordenes_compra_entregas || [];
     
     const detalles = ordenCompleta.ordenes_compra_detalles || [];
-    const productosHTML = detalles.map((d: any) => 
-      `<tr>
+    const pesoTotalOC = detalles.reduce((sum: number, d: any) => sum + ((d.cantidad_ordenada || 0) * (d.productos?.peso_kg || 0)), 0);
+    const productosHTML = detalles.map((d: any) => {
+      const kgTotal = (d.cantidad_ordenada || 0) * (d.productos?.peso_kg || 0);
+      const precioLabel = d.productos?.precio_por_kilo ? `$${d.precio_unitario_compra?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}/kg` : `$${d.precio_unitario_compra?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+      return `<tr>
         <td style="padding: 10px; border: 1px solid #333;">${d.productos?.codigo || '-'}</td>
         <td style="padding: 10px; border: 1px solid #333;">${d.productos?.nombre || 'Producto'}</td>
-        <td style="padding: 10px; border: 1px solid #333; text-align: center;">${d.cantidad_ordenada}</td>
-        <td style="padding: 10px; border: 1px solid #333; text-align: right;">$${d.precio_unitario_compra?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+        <td style="padding: 10px; border: 1px solid #333; text-align: center;">${d.cantidad_ordenada} ${d.productos?.unidad || ''}</td>
+        <td style="padding: 10px; border: 1px solid #333; text-align: right; color: #666;">${kgTotal > 0 ? kgTotal.toLocaleString() + ' kg' : '-'}</td>
+        <td style="padding: 10px; border: 1px solid #333; text-align: right;">${precioLabel}</td>
         <td style="padding: 10px; border: 1px solid #333; text-align: right;">$${d.subtotal?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-      </tr>`
-    ).join('');
+      </tr>`;
+    }).join('');
 
     // Build delivery schedule section
     let entregasHTML = '';
@@ -361,17 +365,19 @@ const NotificarCambiosOCDialog = ({
         <table>
           <thead>
             <tr>
-              <th style="width: 80px;">Código</th>
+              <th style="width: 70px;">Código</th>
               <th>Producto</th>
               <th style="width: 80px; text-align: center;">Cantidad</th>
-              <th style="width: 100px; text-align: right;">P. Unit.</th>
-              <th style="width: 100px; text-align: right;">Subtotal</th>
+              <th style="width: 70px; text-align: right;">KG</th>
+              <th style="width: 90px; text-align: right;">Precio</th>
+              <th style="width: 90px; text-align: right;">Subtotal</th>
             </tr>
           </thead>
           <tbody>
             ${productosHTML}
           </tbody>
         </table>
+        ${pesoTotalOC > 0 ? `<p style="text-align: right; font-size: 11px; color: #666; margin-top: 5px;">Peso total: <strong>${pesoTotalOC.toLocaleString()} kg</strong></p>` : ''}
 
         <div class="totals-section">
           <div class="totals-box">

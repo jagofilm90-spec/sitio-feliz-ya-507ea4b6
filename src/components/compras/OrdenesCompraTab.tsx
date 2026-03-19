@@ -438,7 +438,7 @@ const OrdenesCompraTab = () => {
           ),
           ordenes_compra_detalles (
             *,
-            productos (nombre, codigo)
+            productos (nombre, codigo, peso_kg, unidad, precio_por_kilo)
           )
         `)
         .order("created_at", { ascending: false });
