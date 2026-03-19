@@ -196,8 +196,11 @@ export function useDashboardData(periodo: Periodo = 'mes') {
       if ((pagosPorValidarRes.count || 0) > 0) {
         alertas.push({ tipo: 'pagos_por_validar', cantidad: pagosPorValidarRes.count || 0, ruta: '/secretaria', botonTexto: 'Validar pagos' });
       }
+      const preciosCount = (preciosRevisionRes as any)?.count || 0;
+      if (preciosCount > 0) {
+        alertas.push({ tipo: 'precios_por_revisar', cantidad: preciosCount, ruta: '/precios', botonTexto: 'Revisar ahora' });
+      }
 
-      // Top productos aggregation
       const prodMap = new Map<string, TopProducto>();
       topProductosRes.data?.forEach((d: any) => {
         const pid = d.producto_id;
