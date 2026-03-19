@@ -1185,11 +1185,18 @@ const ProveedoresTab = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("proveedores")
-        .select("*")
+        .select(`
+          *,
+          proveedor_productos(count),
+          proveedor_contactos(
+            id, nombre, telefono, email,
+            es_principal, activo
+          )
+        `)
         .order("nombre");
-      
+
       if (error) throw error;
-      return data as Proveedor[];
+      return data as any[];
     },
   });
 
@@ -1604,8 +1611,16 @@ const ProveedoresTab = () => {
             <ProveedorCardMobile
               key={proveedor.id}
               proveedor={proveedor}
-              productosCount={0}
-              contactoPrincipal={null}
+              productosCount={
+                proveedor.proveedor_productos?.[0]?.count || 0
+              }
+              contactoPrincipal={
+                proveedor.proveedor_contactos?.find(
+                  (c: any) => c.es_principal && c.activo
+                ) || proveedor.proveedor_contactos?.find(
+                  (c: any) => c.activo
+                ) || null
+              }
               onEdit={async (p) => {
                 setEditingProveedor(p);
                 await loadContactosProveedor(p.id);
