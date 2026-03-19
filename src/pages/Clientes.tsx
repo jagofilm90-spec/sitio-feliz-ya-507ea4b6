@@ -751,7 +751,7 @@ const Clientes = () => {
       prioridad_entrega_default: "flexible",
       deadline_dias_habiles_default: "",
       es_grupo: false,
-      vendedor_asignado: activeVendedorTab === "casa" ? "" : VENDEDORES.find(v => v.nombre_corto.toLowerCase() === activeVendedorTab)?.user_id || "",
+      vendedor_asignado: activeVendedorTab === "casa" ? "" : vendedores.find(v => v.nombre_corto.toLowerCase() === activeVendedorTab)?.user_id || "",
     });
     setEntregarMismaDireccion(true);
     setSucursales([]);
