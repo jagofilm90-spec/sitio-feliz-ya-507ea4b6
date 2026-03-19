@@ -54,7 +54,7 @@ import {
 } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Power, RotateCcw, ChevronDown, Filter, X, ArrowUpDown, Info } from "lucide-react";
+import { Plus, Search, Edit, Power, RotateCcw, ChevronDown, Filter, X, ArrowUpDown, Info, Package, Tag, Settings2, FileText, Boxes } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { LotesDesglose } from "@/components/productos/LotesDesglose";
 import { NotificacionesSistema } from "@/components/NotificacionesSistema";
