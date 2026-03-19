@@ -221,6 +221,45 @@ export const CentroNotificaciones = () => {
                 </div>
               )}
 
+              {/* Rechazos de Entrega */}
+              {notificacionesRechazo.length > 0 && (
+                <div className="mb-2">
+                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
+                    Entregas Rechazadas
+                  </div>
+                  {notificacionesRechazo.map((notif) => (
+                    <div
+                      key={notif.id}
+                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 mb-2"
+                      onClick={() => {
+                        marcarComoLeida(notif.id);
+                        navigate('/compras?tab=devoluciones-faltantes');
+                      }}
+                    >
+                      <Ban className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{notif.titulo}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {notif.descripcion}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(notif.created_at).toLocaleDateString("es-MX", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="bg-red-100 text-red-700 border-red-300">
+                        Rechazada
+                      </Badge>
+                    </div>
+                  ))}
+                  <Separator className="my-2" />
+                </div>
+              )}
+
               {/* Confirmaciones de Proveedores */}
               {visibleConfirmaciones.length > 0 && (
                 <div className="mb-2">
