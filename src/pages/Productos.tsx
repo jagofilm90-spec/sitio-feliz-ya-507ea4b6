@@ -308,6 +308,7 @@ const Productos = () => {
             productoNombre: productData.nombre,
             precioVenta: productData.precio_venta,
             unidad: productData.unidad as string,
+            roles: ['admin', 'secretaria', 'vendedor'],
           });
         }
         toast({ title: "Producto creado correctamente" });

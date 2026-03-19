@@ -194,7 +194,7 @@ export const SecretariaListaPreciosTab = () => {
 
         // Notify vendedores
         const productoNombre = editingProduct?.nombre || "";
-        notificarCambioPrecio({ productoNombre, precioAnterior: precio_anterior, precioNuevo: precio_venta });
+        notificarCambioPrecio({ productoNombre, precioAnterior: precio_anterior, precioNuevo: precio_venta, roles: ['admin', 'secretaria', 'vendedor'] });
       }
     },
     onSuccess: () => {

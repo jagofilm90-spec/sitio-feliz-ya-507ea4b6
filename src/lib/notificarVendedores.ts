@@ -82,7 +82,7 @@ export async function notificarProductoNuevo({
   try {
     await supabase.functions.invoke("send-push-notification", {
       body: {
-        roles: ["vendedor"],
+        roles,
         title: "🆕 Nuevo producto",
         body: `${productoNombre} ya está disponible — ${formatCurrency(precioVenta)}/${unidad}`,
       },

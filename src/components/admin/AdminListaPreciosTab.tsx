@@ -281,7 +281,7 @@ export const AdminListaPreciosTab = () => {
         try {
           await supabase.functions.invoke("send-push-notification", {
             body: {
-              roles: ["vendedor"],
+              roles: ["secretaria", "vendedor"],
               title: "💰 Precios actualizados",
               body: `Se actualizaron los precios de ${changedCount} productos`,
             },
