@@ -652,10 +652,10 @@ const Productos = () => {
   return (
     <Layout>
       <TooltipProvider>
-        <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col h-[calc(100vh-4rem-3rem)] overflow-hidden">
           <NotificacionesSistema />
           
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 flex-shrink-0 mb-3">
             <div>
               <h1 className="text-xl sm:text-3xl font-bold">Productos</h1>
               <p className="text-xs sm:text-sm text-muted-foreground">Gestión de catálogo de productos</p>
@@ -1259,7 +1259,7 @@ const Productos = () => {
           </div>
 
           {/* Search + Filters */}
-          <div className="space-y-3">
+          <div className="space-y-3 flex-shrink-0 mb-2">
             <div className="flex gap-2 items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -1314,13 +1314,13 @@ const Productos = () => {
             </p>
           </div>
 
-          <Tabs value={tabActivo} onValueChange={(value) => setTabActivo(value as "activos" | "inactivos")}>
-            <TabsList>
+          <Tabs value={tabActivo} onValueChange={(value) => setTabActivo(value as "activos" | "inactivos")} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <TabsList className="flex-shrink-0">
               <TabsTrigger value="activos">Activos ({productosActivos})</TabsTrigger>
               <TabsTrigger value="inactivos">Inactivos ({productosInactivos})</TabsTrigger>
             </TabsList>
 
-            <TabsContent value={tabActivo} className="mt-4">
+            <TabsContent value={tabActivo} className="mt-2 flex-1 min-h-0 overflow-hidden">
               {isMobile ? (
                 <div className="space-y-3">
                   {loading ? (
@@ -1341,8 +1341,8 @@ const Productos = () => {
                   )}
                 </div>
               ) : (
-                <div className="border rounded-lg overflow-hidden">
-                  <div className="overflow-y-auto max-h-[calc(100vh-340px)]">
+                <div className="border rounded-lg overflow-hidden h-full flex flex-col">
+                  <div className="overflow-y-auto flex-1">
                     <Table style={{ tableLayout: 'fixed', width: '100%' }}>
                       <colgroup>
                         <col style={{ width: '9%' }} />
