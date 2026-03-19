@@ -1172,7 +1172,7 @@ const Productos = () => {
                     <CollapsibleTrigger asChild>
                       <Button type="button" variant="ghost" className="w-full justify-between p-3 h-auto bg-muted/30 border rounded-lg">
                         <div className="text-left">
-                          <span className="text-sm font-medium">🏛️ Datos fiscales (CFDI)</span>
+                          <span className="text-sm font-medium flex items-center gap-1.5"><FileText className="h-4 w-4 text-muted-foreground" /> Datos fiscales (CFDI)</span>
                           <p className="text-xs text-muted-foreground font-normal">Necesario para facturación electrónica</p>
                         </div>
                         <ChevronDown className="h-4 w-4 shrink-0" />
