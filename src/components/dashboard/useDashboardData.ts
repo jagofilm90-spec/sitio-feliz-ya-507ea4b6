@@ -24,6 +24,8 @@ export interface DashboardKPIs {
   facturasVencenSemana: number;
   pagosPorValidar: number;
   preciosRevisionPendientes: number;
+  lotesVencidos: number;
+  fumigacionesVencidas: number;
 }
 
 export interface AlertaUrgente {
