@@ -209,6 +209,13 @@ const AlmacenTablet = () => {
             <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-primary/10"><CheckCircle2 className="w-6 h-6 text-primary" /></div><div><p className="text-2xl font-bold">{fumigacionStats.vigentes}</p><p className="text-sm text-muted-foreground">Vigentes</p></div></CardContent></Card>
           </div>
         );
+      case "caducidad":
+        return (
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <Card className="border-destructive/30"><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-destructive/10"><AlertTriangle className="w-6 h-6 text-destructive" /></div><div><p className="text-2xl font-bold">{caducidadStats.vencidos}</p><p className="text-sm text-muted-foreground">Vencidos</p></div></CardContent></Card>
+            <Card className="border-orange-500/30"><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-orange-500/10"><Timer className="w-6 h-6 text-orange-500" /></div><div><p className="text-2xl font-bold">{caducidadStats.criticos}</p><p className="text-sm text-muted-foreground">Críticos (≤7d)</p></div></CardContent></Card>
+          </div>
+        );
       default:
         return null;
     }
