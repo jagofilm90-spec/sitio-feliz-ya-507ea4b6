@@ -40,6 +40,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
@@ -98,9 +99,9 @@ const getEstadoBadge = (estado: 'perdida' | 'critico' | 'bajo' | 'saludable') =>
   switch (estado) {
     case 'perdida':
       return (
-        <Badge variant="destructive" className="text-[10px] px-1.5 py-0 flex items-center gap-0.5">
-          <XCircle className="h-3 w-3" />
-          Pérdida
+        <Badge variant="destructive" className="text-[10px] px-2 py-0.5 flex items-center gap-1 font-bold animate-pulse">
+          <XCircle className="h-3.5 w-3.5" />
+          PÉRDIDA
         </Badge>
       );
     case 'critico':
@@ -781,6 +782,21 @@ export const AdminListaPreciosTab = () => {
           </div>
         </div>
 
+        {/* Mobile loss warning */}
+        {stats.perdida > 0 && estadoFilter !== 'perdida' && (
+          <div className="flex items-center justify-between p-2.5 mb-2 rounded-lg bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800">
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 animate-pulse" />
+              <span className="text-xs font-semibold text-red-800 dark:text-red-300">
+                ⚠️ {stats.perdida} a pérdida
+              </span>
+            </div>
+            <Button size="sm" variant="destructive" className="h-6 text-[10px] px-2" onClick={() => setEstadoFilter('perdida')}>
+              Ver pérdidas
+            </Button>
+          </div>
+        )}
+
         {renderReviewPanel()}
 
         {/* Lista de cards */}
@@ -887,6 +903,26 @@ export const AdminListaPreciosTab = () => {
         </div>
       </div>
 
+      {/* Loss warning banner */}
+      {stats.perdida > 0 && estadoFilter !== 'perdida' && (
+        <div className="flex items-center justify-between p-3 mb-2 rounded-lg bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 animate-pulse" />
+            <span className="text-sm font-semibold text-red-800 dark:text-red-300">
+              ⚠️ {stats.perdida} producto{stats.perdida > 1 ? 's' : ''} vendiendo a pérdida
+            </span>
+          </div>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="h-7 text-xs"
+            onClick={() => setEstadoFilter('perdida')}
+          >
+            Ver solo pérdidas
+          </Button>
+        </div>
+      )}
+
       {/* Review Panel */}
       {renderReviewPanel()}
 
@@ -971,8 +1007,8 @@ export const AdminListaPreciosTab = () => {
               const { analisis } = producto;
               const rowClass = cn(
                 "h-8",
-                analisis.estado_margen === 'perdida' && "bg-red-50 dark:bg-red-950/20",
-                analisis.estado_margen === 'critico' && "bg-orange-50 dark:bg-orange-950/20"
+                analisis.estado_margen === 'perdida' && "bg-red-100/80 dark:bg-red-950/40 border-l-2 border-l-red-500",
+                analisis.estado_margen === 'critico' && "bg-orange-100/60 dark:bg-orange-950/30 border-l-2 border-l-orange-500"
               );
               
               return (
@@ -1005,7 +1041,19 @@ export const AdminListaPreciosTab = () => {
                     </span>
                   </TableCell>
                   <TableCell className="py-1 px-1.5 text-right">
-                    <span className="text-xs font-semibold">
+                    <span className="text-xs font-semibold flex items-center justify-end gap-1">
+                      {analisis.estado_margen === 'perdida' && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertTriangle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">Precio de venta menor al costo</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                       {formatCurrency(producto.precio_venta)}
                     </span>
                   </TableCell>
