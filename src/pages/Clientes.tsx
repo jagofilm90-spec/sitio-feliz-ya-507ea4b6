@@ -1035,7 +1035,7 @@ const Clientes = () => {
                 Casa (sin comisión)
               </div>
             </SelectItem>
-            {VENDEDORES.map((v) => (
+            {vendedores.map((v) => (
               <SelectItem key={v.user_id} value={v.user_id}>
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4" />
