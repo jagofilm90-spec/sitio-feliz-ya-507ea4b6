@@ -1343,65 +1343,38 @@ const Clientes = () => {
                   Casa
                   <Badge variant="secondary" className="text-xs px-1.5">{getClientCount("casa")}</Badge>
                 </TabsTrigger>
-                <TabsTrigger value="carlos" className="flex items-center gap-1.5 px-3">
-                  Carlos
-                  <Badge variant="secondary" className="text-xs px-1.5">{getClientCount("carlos")}</Badge>
-                </TabsTrigger>
-                <TabsTrigger value="venancio" className="flex items-center gap-1.5 px-3">
-                  Venancio
-                  <Badge variant="secondary" className="text-xs px-1.5">{getClientCount("venancio")}</Badge>
-                </TabsTrigger>
-                <TabsTrigger value="salvador" className="flex items-center gap-1.5 px-3">
-                  Salvador
-                  <Badge variant="secondary" className="text-xs px-1.5">{getClientCount("salvador")}</Badge>
-                </TabsTrigger>
-                <TabsTrigger value="martin" className="flex items-center gap-1.5 px-3">
-                  Martin
-                  <Badge variant="secondary" className="text-xs px-1.5">{getClientCount("martin")}</Badge>
-                </TabsTrigger>
+                {vendedores.map((v) => (
+                  <TabsTrigger key={v.user_id} value={v.nombre_corto.toLowerCase()} className="flex items-center gap-1.5 px-3">
+                    {v.nombre_corto}
+                    <Badge variant="secondary" className="text-xs px-1.5">{getClientCount(v.nombre_corto.toLowerCase())}</Badge>
+                  </TabsTrigger>
+                ))}
               </TabsList>
             </div>
           ) : (
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className={`grid w-full`} style={{ gridTemplateColumns: `repeat(${vendedores.length + 1}, minmax(0, 1fr))` }}>
               <TabsTrigger value="casa" className="flex items-center gap-2">
                 <Home className="h-4 w-4" />
                 Casa
                 <Badge variant="secondary" className="ml-1">{getClientCount("casa")}</Badge>
               </TabsTrigger>
-              <TabsTrigger value="carlos" className="flex items-center gap-2">
-                Carlos
-                <Badge variant="secondary" className="ml-1">{getClientCount("carlos")}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="venancio" className="flex items-center gap-2">
-                Venancio
-                <Badge variant="secondary" className="ml-1">{getClientCount("venancio")}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="salvador" className="flex items-center gap-2">
-                Salvador
-                <Badge variant="secondary" className="ml-1">{getClientCount("salvador")}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="martin" className="flex items-center gap-2">
-                Martin
-                <Badge variant="secondary" className="ml-1">{getClientCount("martin")}</Badge>
-              </TabsTrigger>
+              {vendedores.map((v) => (
+                <TabsTrigger key={v.user_id} value={v.nombre_corto.toLowerCase()} className="flex items-center gap-2">
+                  {v.nombre_corto}
+                  <Badge variant="secondary" className="ml-1">{getClientCount(v.nombre_corto.toLowerCase())}</Badge>
+                </TabsTrigger>
+              ))}
             </TabsList>
           )}
 
           <TabsContent value="casa" className="mt-4">
             {renderClienteTable()}
           </TabsContent>
-          <TabsContent value="carlos" className="mt-4">
-            {renderClienteTable()}
-          </TabsContent>
-          <TabsContent value="venancio" className="mt-4">
-            {renderClienteTable()}
-          </TabsContent>
-          <TabsContent value="salvador" className="mt-4">
-            {renderClienteTable()}
-          </TabsContent>
-          <TabsContent value="martin" className="mt-4">
-            {renderClienteTable()}
-          </TabsContent>
+          {vendedores.map((v) => (
+            <TabsContent key={v.user_id} value={v.nombre_corto.toLowerCase()} className="mt-4">
+              {renderClienteTable()}
+            </TabsContent>
+          ))}
         </Tabs>
       </div>
 
