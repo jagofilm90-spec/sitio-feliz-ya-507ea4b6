@@ -1050,29 +1050,10 @@ const Productos = () => {
                         onCheckedChange={(checked) => setFormData({ ...formData, maneja_caducidad: checked })}
                       />
                     </div>
-                    {formData.maneja_caducidad && !editingProduct && (
-                      <div className="space-y-2 ml-2">
-                        <Label htmlFor="fecha_caducidad_inicial">Fecha de caducidad del stock inicial</Label>
-                        <Input
-                          id="fecha_caducidad_inicial"
-                          type="date"
-                          value={formData.fecha_caducidad_inicial}
-                          onChange={(e) => setFormData({ ...formData, fecha_caducidad_inicial: e.target.value })}
-                          autoComplete="off"
-                        />
-                      </div>
-                    )}
-                    {formData.maneja_caducidad && editingProduct && (
-                      <div className="space-y-2 ml-2">
-                        <Label htmlFor="fecha_caducidad_inicial">Fecha de caducidad (para stock que agregues)</Label>
-                        <Input
-                          id="fecha_caducidad_inicial"
-                          type="date"
-                          value={formData.fecha_caducidad_inicial}
-                          onChange={(e) => setFormData({ ...formData, fecha_caducidad_inicial: e.target.value })}
-                          autoComplete="off"
-                        />
-                      </div>
+                    {formData.maneja_caducidad && (
+                      <p className="text-xs text-muted-foreground ml-2 p-2 rounded bg-muted">
+                        Cuando llegue mercancía de este producto, el almacén deberá registrar la fecha de caducidad de cada lote recibido.
+                      </p>
                     )}
                   </div>
 
