@@ -10,6 +10,7 @@ const iconMap = {
   stock_cero: Package,
   credito_excedido: CreditCard,
   pagos_por_validar: CreditCard,
+  precios_por_revisar: TrendingUp,
 };
 
 const colorMap = {
