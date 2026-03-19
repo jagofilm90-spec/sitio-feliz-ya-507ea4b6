@@ -199,10 +199,9 @@ export function RegistrarEntregaSheet({
 
       if (error) throw error;
 
-      // Enviar notificación al cliente si fue entrega exitosa
-      if (status === "entregado") {
+      // Enviar notificación al cliente (entrega completa o parcial)
+      if (status === "entregado" || status === "parcial") {
         try {
-          // Obtener cliente_id del pedido
           const { data: pedidoData } = await supabase
             .from("pedidos")
             .select("cliente_id")
@@ -213,23 +212,46 @@ export function RegistrarEntregaSheet({
             const { data: notifResponse } = await supabase.functions.invoke("send-client-notification", {
               body: {
                 clienteId: pedidoData.cliente_id,
-                tipo: "entregado",
+                tipo: status,
                 data: {
                   pedidoFolio: entrega.pedido.folio,
                   horaEntrega: new Date().toISOString(),
                   nombreReceptor: nombreReceptor.trim(),
+                  mensaje: status === "parcial"
+                    ? `Tu pedido fue entregado parcialmente. ${motivoRechazo || ""}`
+                    : undefined,
                 },
               },
             });
 
-            // WhatsApp sent automatically by backend via Twilio
             if (notifResponse?.whatsapp?.sent) {
               toast.success("📱 WhatsApp enviado al cliente");
             }
           }
         } catch (notifError) {
           console.error("Error sending delivery notification:", notifError);
-          // No interrumpir el flujo si falla la notificación
+        }
+      }
+
+      // Notificar admin y secretaria si fue entrega parcial
+      if (status === "parcial") {
+        try {
+          await supabase.from("notificaciones").insert({
+            tipo: "entrega_parcial",
+            titulo: "⚠️ Entrega parcial",
+            descripcion: `Pedido ${entrega.pedido.folio} entregado parcialmente. Motivo: ${motivoRechazo || "Sin especificar"}`,
+            leida: false,
+          });
+
+          await supabase.functions.invoke("send-push-notification", {
+            body: {
+              roles: ["admin", "secretaria"],
+              title: "⚠️ Entrega parcial",
+              body: `${entrega.pedido.folio}: ${motivoRechazo || "Sin detalle"}`,
+            }
+          });
+        } catch (parcialNotifError) {
+          console.error("Error notificando entrega parcial:", parcialNotifError);
         }
       }
 
@@ -241,7 +263,6 @@ export function RegistrarEntregaSheet({
           });
         } catch (vendedorNotifError) {
           console.error("Error notificando al vendedor:", vendedorNotifError);
-          // No interrumpir el flujo principal
         }
       }
 

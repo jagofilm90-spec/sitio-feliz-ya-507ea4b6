@@ -175,10 +175,10 @@ export const useNotificaciones = () => {
 
       if (!isAdminOrSecretaria && !isVendedor) return [];
 
-      // Admin/Secretaria: ver rechazos de entrega total
+      // Admin/Secretaria: ver rechazos, cancelaciones y entregas parciales
       // Vendedor: ver pedidos rechazados + cancelados
       const tipos = isAdminOrSecretaria
-        ? ["rechazo_entrega_total", "pedido_rechazado", "pedido_cancelado"]
+        ? ["rechazo_entrega_total", "pedido_rechazado", "pedido_cancelado", "entrega_parcial"]
         : ["pedido_rechazado", "pedido_cancelado"];
 
       const { data, error } = await supabase
