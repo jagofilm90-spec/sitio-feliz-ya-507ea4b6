@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -32,7 +34,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   Loader2, Search, TrendingUp, TrendingDown, DollarSign, 
   AlertTriangle, CheckCircle2, XCircle, Calculator, Pencil,
-  ArrowUpDown, ChevronDown, ChevronUp, Check, Clock, ListChecks
+  ArrowUpDown, ChevronDown, ChevronUp, Check, Clock, ListChecks, History, Minus
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -154,6 +156,10 @@ export const AdminListaPreciosTab = () => {
   const [parcialMode, setParcialMode] = useState<Record<string, boolean>>({});
 
   // Bulk update
+  // Historial
+  const [historialDialogOpen, setHistorialDialogOpen] = useState(false);
+  const [selectedProductForHistory, setSelectedProductForHistory] = useState<ProductoConAnalisis | null>(null);
+
   const [bulkSheetOpen, setBulkSheetOpen] = useState(false);
   const [bulkMode, setBulkMode] = useState<'margen' | 'incremento'>('margen');
   const [bulkFilter, setBulkFilter] = useState<string>("all");
@@ -265,6 +271,34 @@ export const AdminListaPreciosTab = () => {
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
+  });
+
+  // Fetch price history
+  const { data: historialPrecios, isLoading: isLoadingHistorial } = useQuery({
+    queryKey: ["admin-historial-precios", selectedProductForHistory?.id],
+    queryFn: async () => {
+      if (!selectedProductForHistory?.id) return [];
+      const { data: historial, error } = await supabase
+        .from("productos_historial_precios")
+        .select("id, precio_anterior, precio_nuevo, created_at, usuario_id")
+        .eq("producto_id", selectedProductForHistory.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      if (!historial || historial.length === 0) return [];
+      const userIds = [...new Set(historial.map(h => h.usuario_id).filter(Boolean))] as string[];
+      let userMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", userIds);
+        if (profiles) {
+          userMap = profiles.reduce((acc, p) => { acc[p.id] = p.full_name || "Usuario"; return acc; }, {} as Record<string, string>);
+        }
+      }
+      return historial.map(h => ({
+        ...h,
+        usuario_nombre: h.usuario_id ? userMap[h.usuario_id] || "Usuario" : null,
+      }));
+    },
+    enabled: !!selectedProductForHistory?.id,
   });
 
   // Fetch products with costs
@@ -896,7 +930,7 @@ export const AdminListaPreciosTab = () => {
                   {sortField === 'estado' && <ArrowUpDown className="h-3 w-3" />}
                 </div>
               </TableHead>
-              <TableHead className="w-[55px] py-2 px-1 text-[10px] text-center">
+              <TableHead className="w-[75px] py-2 px-1 text-[10px] text-center">
                 Acciones
               </TableHead>
             </TableRow>
@@ -996,6 +1030,18 @@ export const AdminListaPreciosTab = () => {
                         title="Editar precio"
                       >
                         <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => {
+                          setSelectedProductForHistory(producto);
+                          setHistorialDialogOpen(true);
+                        }}
+                        title="Ver historial de precios"
+                      >
+                        <History className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </TableCell>
@@ -1203,6 +1249,96 @@ export const AdminListaPreciosTab = () => {
                 </Button>
               </div>
             )}
+        </DialogContent>
+        </Dialog>
+
+        {/* Price History Dialog */}
+        <Dialog open={historialDialogOpen} onOpenChange={setHistorialDialogOpen}>
+          <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg overflow-x-hidden">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Historial de Precios
+              </DialogTitle>
+              <DialogDescription>
+                {selectedProductForHistory && (
+                  <span className="font-medium text-foreground">
+                    {selectedProductForHistory.codigo} - {getDisplayName(selectedProductForHistory)}
+                  </span>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <ScrollArea className="max-h-[400px] pr-4">
+              {isLoadingHistorial ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : historialPrecios && historialPrecios.length > 0 ? (
+                <div className="space-y-3">
+                  {historialPrecios.map((registro) => {
+                    const diferencia = registro.precio_nuevo - registro.precio_anterior;
+                    const esAumento = diferencia > 0;
+                    const esMismo = diferencia === 0;
+                    
+                    return (
+                      <div
+                        key={registro.id}
+                        className="p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <p className="text-sm text-muted-foreground">
+                              {format(new Date(registro.created_at), "d 'de' MMMM yyyy, HH:mm", { locale: es })}
+                            </p>
+                            {registro.usuario_nombre && (
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Por: {registro.usuario_nombre}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <div className="flex items-center gap-2 justify-end">
+                              <span className="text-sm text-muted-foreground font-mono">
+                                {formatCurrency(registro.precio_anterior)}
+                              </span>
+                              <span className="text-muted-foreground">→</span>
+                              <span className="font-semibold font-mono">
+                                {formatCurrency(registro.precio_nuevo)}
+                              </span>
+                            </div>
+                            <div className="mt-1">
+                              {esMismo ? (
+                                <Badge variant="outline" className="text-xs">
+                                  <Minus className="h-3 w-3 mr-1" />
+                                  Sin cambio
+                                </Badge>
+                              ) : esAumento ? (
+                                <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 text-xs">
+                                  <TrendingUp className="h-3 w-3 mr-1" />
+                                  +{formatCurrency(diferencia)}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400 text-xs">
+                                  <TrendingDown className="h-3 w-3 mr-1" />
+                                  {formatCurrency(diferencia)}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <History className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                  <p>Sin cambios registrados aún</p>
+                  <p className="text-xs mt-1">Los cambios de precio se registrarán aquí</p>
+                </div>
+              )}
+            </ScrollArea>
           </DialogContent>
         </Dialog>
       </>
