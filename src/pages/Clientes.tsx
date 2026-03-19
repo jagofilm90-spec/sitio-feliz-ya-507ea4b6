@@ -774,7 +774,7 @@ const Clientes = () => {
     if (activeVendedorTab === "casa") {
       return searchFiltered.filter(c => !c.vendedor_asignado);
     }
-    const vendedor = VENDEDORES.find(v => v.nombre_corto.toLowerCase() === activeVendedorTab);
+    const vendedor = vendedores.find(v => v.nombre_corto.toLowerCase() === activeVendedorTab);
     if (vendedor) {
       return searchFiltered.filter(c => c.vendedor_asignado === vendedor.user_id);
     }
