@@ -217,7 +217,7 @@ const Productos = () => {
     contenido_empaque: "",
     unidad_sat: "",
     peso_kg: "",
-    unidad: "bulto" as "bulto" | "caja" | "churla" | "costal" | "cubeta" | "kg" | "litro" | "pieza" | "balón",
+    unidad: "bulto" as "bulto" | "balon" | "caja" | "churla" | "costal" | "cubeta" | "paquete" | "pieza" | "balón",
     piezas_por_unidad: "1",
     precio_compra: "",
     precio_venta: "",
