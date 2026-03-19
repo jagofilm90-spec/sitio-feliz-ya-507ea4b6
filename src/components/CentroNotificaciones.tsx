@@ -85,7 +85,7 @@ export const CentroNotificaciones = () => {
     [confirmacionesProveedor, dismissedConfirmaciones]
   );
 
-  const computedCount = notificacionesStock.length + visibleAlertasLicencias.length + visibleAlertasCaducidad.length + autorizacionesOC.length + autorizacionesCotizacion.length + visibleConfirmaciones.length + notificacionesPrecios.length + notificacionesPedidos.length + notificacionesRechazo.length;
+  const computedCount = notificacionesStock.length + visibleAlertasLicencias.length + visibleAlertasCaducidad.length + autorizacionesOC.length + autorizacionesCotizacion.length + visibleConfirmaciones.length + notificacionesPrecios.length + notificacionesPedidos.length + notificacionesRechazo.length + notificacionesCaducidadPush.length + notificacionesFumigacionPush.length;
 
   const handleLicenciaClick = (puesto: string) => {
     const tabMap: Record<string, string> = {
