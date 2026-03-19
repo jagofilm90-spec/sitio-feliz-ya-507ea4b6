@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import GoogleMapsAddressAutocomplete from "@/components/GoogleMapsAddressAutocomplete";
 import { Plus, X, Mail, MapPin, Truck, Loader2, Sparkles, Clock } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Zona {
   id: string;
@@ -122,6 +124,21 @@ export function ClienteFormContent({
   handleSetPrincipal,
 }: ClienteFormContentProps) {
   const isMobile = useIsMobile();
+  const [vendedoresList, setVendedoresList] = useState<{ user_id: string; nombre: string }[]>([]);
+
+  useEffect(() => {
+    const loadVendedores = async () => {
+      const { data } = await supabase
+        .from("user_roles")
+        .select(`user_id, profiles:user_id (id, full_name)`)
+        .eq("role", "vendedor");
+      const mapped = (data || [])
+        .filter((d: any) => d.profiles?.full_name)
+        .map((d: any) => ({ user_id: d.user_id, nombre: d.profiles.full_name }));
+      setVendedoresList(mapped);
+    };
+    loadVendedores();
+  }, []);
 
   return (
     <form onSubmit={handleSave} className="space-y-6">
@@ -388,10 +405,9 @@ export function ClienteFormContent({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none__">Casa (sin vendedor)</SelectItem>
-              <SelectItem value="1e19d492-2dff-4798-942d-a2fe99ff1389">Carlos Giron</SelectItem>
-              <SelectItem value="b8eef389-1ea1-4e84-81af-5d2d805e198f">Venancio Gregorio</SelectItem>
-              <SelectItem value="07400eb2-f9a3-42dc-9a49-5d1126530f23">Salvador Rojas</SelectItem>
-              <SelectItem value="001ed4a3-44d3-4bbc-a362-4b78c4d52dd2">Martin Castro</SelectItem>
+              {vendedoresList.map(v => (
+                <SelectItem key={v.user_id} value={v.user_id}>{v.nombre}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">

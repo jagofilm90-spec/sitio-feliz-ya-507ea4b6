@@ -121,6 +121,9 @@ const Clientes = () => {
   const [activeVendedorTab, setActiveVendedorTab] = useState("casa");
   const [vendedores, setVendedores] = useState<Vendedor[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [filterZona, setFilterZona] = useState("todos");
+  const [filterCredito, setFilterCredito] = useState("todos");
+  const [filterEstadoCredito, setFilterEstadoCredito] = useState("todos");
   const { toast } = useToast();
   const { isAdmin } = useUserRoles();
 
@@ -762,12 +765,28 @@ const Clientes = () => {
     setCsfFile(null);
   };
 
-  // Filter by search term
-  const searchFiltered = clientes.filter(
-    (c) =>
+  // Derived filter values
+  const zonasUnicas = [...new Set(clientes.map(c => c.zona?.nombre).filter(Boolean))] as string[];
+
+  // Filter by search term + filters
+  const searchFiltered = clientes.filter((c) => {
+    const matchSearch = !searchTerm ||
       c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.codigo.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      c.codigo.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchZona = filterZona === "todos" || c.zona?.nombre === filterZona;
+    const matchCredito = filterCredito === "todos" || c.termino_credito === filterCredito;
+
+    let matchEstadoCredito = true;
+    if (filterEstadoCredito === "al_corriente") {
+      matchEstadoCredito = !c.saldo_pendiente || c.saldo_pendiente <= 0;
+    } else if (filterEstadoCredito === "con_saldo") {
+      matchEstadoCredito = (c.saldo_pendiente || 0) > 0 && (c.saldo_pendiente || 0) <= (c.limite_credito || 0);
+    } else if (filterEstadoCredito === "excedido") {
+      matchEstadoCredito = (c.saldo_pendiente || 0) > (c.limite_credito || 0) && (c.limite_credito || 0) > 0;
+    }
+
+    return matchSearch && matchZona && matchCredito && matchEstadoCredito;
+  });
 
   // Filter by vendedor tab
   const getFilteredClientes = () => {
@@ -1321,15 +1340,48 @@ const Clientes = () => {
           </div>
         )}
 
-        <div className="flex gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar clientes..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+        <div className="space-y-3">
+          <div className="flex gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar clientes..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Select value={filterZona} onValueChange={setFilterZona}>
+              <SelectTrigger className="w-[160px] h-8 text-xs"><SelectValue placeholder="Zona" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todas las zonas</SelectItem>
+                {zonasUnicas.map(z => <SelectItem key={z} value={z}>{z}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterCredito} onValueChange={setFilterCredito}>
+              <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Crédito" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="contado">Contado</SelectItem>
+                <SelectItem value="8_dias">8 días</SelectItem>
+                <SelectItem value="15_dias">15 días</SelectItem>
+                <SelectItem value="30_dias">30 días</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterEstadoCredito} onValueChange={setFilterEstadoCredito}>
+              <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="Estado" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="al_corriente">Al corriente</SelectItem>
+                <SelectItem value="con_saldo">Con saldo</SelectItem>
+                <SelectItem value="excedido">Crédito excedido</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-xs text-muted-foreground ml-auto">
+              Mostrando {searchFiltered.length} de {clientes.length} clientes
+            </span>
           </div>
         </div>
 
