@@ -1342,28 +1342,28 @@ const Productos = () => {
                 </div>
               ) : (
                 <div className="border rounded-lg overflow-hidden">
-                  <ScrollArea className="h-[calc(100vh-420px)]">
+                  <div className="overflow-y-auto max-h-[calc(100vh-340px)]">
                     <Table style={{ tableLayout: 'fixed', width: '100%' }}>
                       <colgroup>
-                        <col style={{ width: '90px' }} />
-                        <col />
-                        <col style={{ width: '70px' }} />
-                        <col style={{ width: '70px' }} />
-                        <col style={{ width: '110px' }} />
-                        <col style={{ width: '70px' }} />
-                        <col style={{ width: '70px' }} />
-                        <col style={{ width: '80px' }} />
+                        <col style={{ width: '9%' }} />
+                        <col style={{ width: '30%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '13%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '6%' }} />
                       </colgroup>
-                      <TableHeader>
+                      <TableHeader className="sticky top-0 z-10 bg-background">
                         <TableRow>
                           <TableHead className="px-2 py-1.5"><SortableHeader col="codigo">Código</SortableHeader></TableHead>
-                          <TableHead className="px-2 py-1.5"><SortableHeader col="nombre">Nombre</SortableHeader></TableHead>
+                          <TableHead className="px-2 py-1.5"><SortableHeader col="nombre">Nombre y marca</SortableHeader></TableHead>
                           <TableHead className="px-2 py-1.5">Unidad</TableHead>
                           <TableHead className="px-2 py-1.5">Tipo</TableHead>
                           <TableHead className="px-2 py-1.5 text-right"><SortableHeader col="precio">Precio</SortableHeader></TableHead>
                           <TableHead className="px-2 py-1.5 text-center"><SortableHeader col="stock">Stock</SortableHeader></TableHead>
                           <TableHead className="px-2 py-1.5 text-center">Imp.</TableHead>
-                          <TableHead className="px-2 py-1.5">Acciones</TableHead>
+                          <TableHead className="px-2 py-1.5"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1376,77 +1376,79 @@ const Productos = () => {
                             <TableCell colSpan={8} className="text-center">No hay productos</TableCell>
                           </TableRow>
                         ) : (
-                          filteredProductos.map((producto) => (
-                            <TableRow key={producto.id} className={producto.activo === false ? "opacity-50" : ""}>
-                              <TableCell className="px-2 py-1.5 font-mono text-xs font-medium truncate">{producto.codigo}</TableCell>
-                              <TableCell className="px-2 py-1.5">
-                                <div className="truncate">
-                                  <span className="font-medium text-sm">{producto.nombre}</span>
-                                  {producto.marca && <span className="text-muted-foreground ml-1 text-xs">{producto.marca}</span>}
-                                </div>
-                                <div className="flex items-center gap-1 mt-0.5">
-                                  {producto.especificaciones && <span className="text-muted-foreground text-xs truncate">{producto.especificaciones}</span>}
-                                  {producto.bloqueado_venta && <Badge variant="destructive" className="text-[9px] px-1 py-0 h-3.5">Bloqueado</Badge>}
-                                  {producto.es_promocion && <Badge className="text-[9px] px-1 py-0 h-3.5 bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-400 dark:border-orange-800">Promo</Badge>}
-                                  {producto.solo_uso_interno && <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5">Interno</Badge>}
-                                </div>
-                              </TableCell>
-                              <TableCell className="px-2 py-1.5 capitalize text-xs">{producto.unidad}</TableCell>
-                              <TableCell className="px-2 py-1.5">
-                                {producto.precio_por_kilo ? (
-                                  <Badge className="text-[10px] px-1.5 py-0 h-4 bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800">/kilo</Badge>
-                                ) : (
-                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">/unidad</Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="px-2 py-1.5 text-right">
-                                {producto.precio_venta ? (
-                                  producto.precio_por_kilo ? (
-                                    <div>
-                                      <span className="font-medium text-sm">{formatCurrency(producto.precio_venta)}/kg</span>
-                                      {producto.peso_kg > 0 && (
-                                        <p className="text-[11px] text-muted-foreground">={formatCurrency(producto.precio_venta * producto.peso_kg)}/{producto.unidad}</p>
-                                      )}
+                          filteredProductos.map((producto) => {
+                            const details = [producto.marca, producto.especificaciones, producto.contenido_empaque].filter(Boolean).join(' · ');
+                            return (
+                              <TableRow key={producto.id} className={producto.activo === false ? "opacity-50" : ""}>
+                                <TableCell className="px-2 py-1.5 font-mono text-xs font-medium truncate">{producto.codigo}</TableCell>
+                                <TableCell className="px-2 py-1.5">
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1 min-w-0">
+                                      <span className="font-medium text-sm truncate">{producto.nombre}</span>
+                                      {producto.bloqueado_venta && <Badge variant="destructive" className="text-[9px] px-1 py-0 h-3.5 shrink-0">Bloq</Badge>}
+                                      {producto.es_promocion && <Badge className="text-[9px] px-1 py-0 h-3.5 shrink-0 bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-400 dark:border-orange-800">Promo</Badge>}
+                                      {producto.solo_uso_interno && <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 shrink-0">Int</Badge>}
                                     </div>
+                                    {details && <p className="text-xs text-muted-foreground truncate mt-0.5">{details}</p>}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="px-2 py-1.5 capitalize text-xs">{producto.unidad}</TableCell>
+                                <TableCell className="px-2 py-1.5">
+                                  {producto.precio_por_kilo ? (
+                                    <Badge className="text-[10px] px-1.5 py-0 h-4 bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800">/kilo</Badge>
                                   ) : (
-                                    <span className="font-medium text-sm">{formatCurrency(producto.precio_venta)}/{producto.unidad}</span>
-                                  )
-                                ) : "-"}
-                              </TableCell>
-                              <TableCell className="px-2 py-1.5 text-center">{getStockDisplay(producto)}</TableCell>
-                              <TableCell className="px-2 py-1.5 text-center">
-                                <div className="flex items-center justify-center gap-0.5">
-                                  {producto.aplica_iva && (
-                                    <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800">IVA</Badge>
+                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">/unidad</Badge>
                                   )}
-                                  {producto.aplica_ieps && (
-                                    <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800">IEPS</Badge>
-                                  )}
-                                  {!producto.aplica_iva && !producto.aplica_ieps && <span className="text-muted-foreground text-xs">-</span>}
-                                </div>
-                              </TableCell>
-                              <TableCell className="px-2 py-1.5">
-                                <div className="flex gap-0.5">
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(producto)}>
-                                    <Edit className="h-3.5 w-3.5" />
-                                  </Button>
-                                  {tabActivo === "inactivos" ? (
-                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleReactivate(producto)} title="Reactivar">
-                                      <RotateCcw className="h-3.5 w-3.5 text-green-600" />
+                                </TableCell>
+                                <TableCell className="px-2 py-1.5 text-right">
+                                  {producto.precio_venta ? (
+                                    producto.precio_por_kilo ? (
+                                      <div>
+                                        <span className="font-medium text-sm">{formatCurrency(producto.precio_venta)}/kg</span>
+                                        {producto.peso_kg > 0 && (
+                                          <p className="text-[11px] text-muted-foreground">={formatCurrency(producto.precio_venta * producto.peso_kg)}/{producto.unidad}</p>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="font-medium text-sm">{formatCurrency(producto.precio_venta)}/{producto.unidad}</span>
+                                    )
+                                  ) : "-"}
+                                </TableCell>
+                                <TableCell className="px-2 py-1.5 text-center">{getStockDisplay(producto)}</TableCell>
+                                <TableCell className="px-2 py-1.5 text-center">
+                                  <div className="flex items-center justify-center gap-0.5">
+                                    {producto.aplica_iva && (
+                                      <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800">IVA</Badge>
+                                    )}
+                                    {producto.aplica_ieps && (
+                                      <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800">IEPS</Badge>
+                                    )}
+                                    {!producto.aplica_iva && !producto.aplica_ieps && <span className="text-muted-foreground text-xs">-</span>}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="px-2 py-1.5">
+                                  <div className="flex gap-0.5">
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(producto)}>
+                                      <Edit className="h-3.5 w-3.5" />
                                     </Button>
-                                  ) : (
-                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeactivate(producto)} title="Desactivar">
-                                      <Power className="h-3.5 w-3.5 text-destructive" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
+                                    {tabActivo === "inactivos" ? (
+                                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleReactivate(producto)} title="Reactivar">
+                                        <RotateCcw className="h-3.5 w-3.5 text-green-600" />
+                                      </Button>
+                                    ) : (
+                                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeactivate(producto)} title="Desactivar">
+                                        <Power className="h-3.5 w-3.5 text-destructive" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
                         )}
                       </TableBody>
                     </Table>
-                  </ScrollArea>
+                  </div>
                 </div>
               )}
             </TabsContent>
