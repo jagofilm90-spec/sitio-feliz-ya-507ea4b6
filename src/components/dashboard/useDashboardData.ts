@@ -23,6 +23,7 @@ export interface DashboardKPIs {
   pedidosSinAutorizar24h: number;
   facturasVencenSemana: number;
   pagosPorValidar: number;
+  preciosRevisionPendientes: number;
 }
 
 export interface AlertaUrgente {
