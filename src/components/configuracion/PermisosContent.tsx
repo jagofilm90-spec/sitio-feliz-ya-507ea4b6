@@ -43,6 +43,13 @@ const MODULES = [
   { path: "/chat", name: "Chat" },
   { path: "/correos", name: "Correos" },
   { path: "/permisos", name: "Permisos" },
+  { path: "/precios", name: "Precios" },
+  { path: "/almacen-tablet", name: "Almacén Tablet" },
+  { path: "/chofer", name: "Panel Chofer" },
+  { path: "/vendedor", name: "Panel Vendedor" },
+  { path: "/secretaria", name: "Panel Secretaria" },
+  { path: "/configuracion", name: "Configuración" },
+  { path: "/respaldos", name: "Respaldos" },
 ];
 
 export function PermisosContent() {
