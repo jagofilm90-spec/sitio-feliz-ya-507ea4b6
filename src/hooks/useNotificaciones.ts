@@ -188,6 +188,7 @@ export const useNotificaciones = () => {
     }
   };
 
+  const cargarAlertasCaducidad = async (): Promise<ProductoCaducidad[]> => {
     try {
       const { data: productos, error: productosError } = await supabase
         .from("productos")
