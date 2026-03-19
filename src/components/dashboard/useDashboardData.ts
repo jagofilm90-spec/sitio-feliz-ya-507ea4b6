@@ -177,6 +177,15 @@ export function useDashboardData(periodo: Periodo = 'mes') {
 
       const cobrosHoy = cobrosHoyRes.data?.reduce((s: number, p: any) => s + (Number(p.monto_total) || 0), 0) || 0;
 
+      // Compute fumigaciones vencidas count from data
+      const nowDate = new Date();
+      const fumVencidasCount = (fumigacionesVencidasRes.data || []).filter((p: any) => {
+        if (!p.fecha_ultima_fumigacion) return true;
+        const venc = new Date(p.fecha_ultima_fumigacion);
+        venc.setMonth(venc.getMonth() + 6);
+        return venc < nowDate;
+      }).length;
+
       const kpis: DashboardKPIs = {
         ventasDia, ventasMes, ventasMesAnterior, variacionMes,
         porCobrar, totalVencido, cobrosHoy,
@@ -189,6 +198,8 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         facturasVencenSemana: facturasVencenSemanaRes.count || 0,
         pagosPorValidar: pagosPorValidarRes.count || 0,
         preciosRevisionPendientes: (preciosRevisionRes as any)?.count || 0,
+        lotesVencidos: lotesVencidosRes.count || 0,
+        fumigacionesVencidas: fumVencidasCount,
       };
 
       // Alertas urgentes
