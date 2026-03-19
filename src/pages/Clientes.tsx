@@ -119,6 +119,8 @@ const Clientes = () => {
   const [importSucursalesDialogOpen, setImportSucursalesDialogOpen] = useState(false);
   const [sucursalesConRfcCount, setSucursalesConRfcCount] = useState(0);
   const [activeVendedorTab, setActiveVendedorTab] = useState("casa");
+  const [vendedores, setVendedores] = useState<Vendedor[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const { toast } = useToast();
   const { isAdmin } = useUserRoles();
 
