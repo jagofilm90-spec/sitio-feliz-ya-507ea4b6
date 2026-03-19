@@ -1314,13 +1314,13 @@ const Productos = () => {
             </p>
           </div>
 
-          <Tabs value={tabActivo} onValueChange={(value) => setTabActivo(value as "activos" | "inactivos")}>
-            <TabsList>
+          <Tabs value={tabActivo} onValueChange={(value) => setTabActivo(value as "activos" | "inactivos")} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <TabsList className="flex-shrink-0">
               <TabsTrigger value="activos">Activos ({productosActivos})</TabsTrigger>
               <TabsTrigger value="inactivos">Inactivos ({productosInactivos})</TabsTrigger>
             </TabsList>
 
-            <TabsContent value={tabActivo} className="mt-4">
+            <TabsContent value={tabActivo} className="mt-2 flex-1 min-h-0 overflow-hidden">
               {isMobile ? (
                 <div className="space-y-3">
                   {loading ? (
