@@ -562,6 +562,7 @@ export const useNotificaciones = () => {
     } catch { return []; }
   };
 
+  useEffect(() => {
     cargarNotificaciones();
 
     // Recargar cada 2 minutos
