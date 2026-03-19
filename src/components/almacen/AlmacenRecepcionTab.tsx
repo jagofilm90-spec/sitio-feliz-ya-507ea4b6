@@ -115,6 +115,8 @@ interface AlmacenRecepcionTabProps {
 
 export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps) => {
   const [entregas, setEntregas] = useState<EntregaCompra[]>([]);
+  const [entregasManana, setEntregasManana] = useState<EntregaCompra[]>([]);
+  const [entregasCompletadas, setEntregasCompletadas] = useState<EntregaCompra[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEntrega, setSelectedEntrega] = useState<EntregaCompra | null>(null);
   const [llegadaSheetOpen, setLlegadaSheetOpen] = useState(false);
@@ -124,6 +126,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
   const [tomandoRecepcion, setTomandoRecepcion] = useState(false);
   const [cancelarDescargaEntrega, setCancelarDescargaEntrega] = useState<EntregaCompra | null>(null);
   const [activeTab, setActiveTab] = useState<"hoy" | "proximas">("hoy");
+  const [completadasExpandido, setCompletadasExpandido] = useState(false);
   const { toast } = useToast();
   
   // Refs para saber si hay sheets abiertos (accesible desde realtime callbacks)
