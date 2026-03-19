@@ -858,7 +858,7 @@ const Productos = () => {
 
                   {/* ===== SECCIÓN 2: Presentación y precio ===== */}
                   <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
-                    <span className="text-sm font-semibold text-foreground">💰 Presentación y precio</span>
+                    <span className="text-sm font-semibold text-foreground flex items-center gap-1.5"><Tag className="h-4 w-4 text-muted-foreground" /> Presentación y precio</span>
 
                     {/* Row 1: Unidad + Peso + Contenido */}
                     <div className="grid grid-cols-3 gap-3">
