@@ -438,7 +438,7 @@ const Layout = ({ children }: LayoutProps) => {
         </div>
       </header>
 
-      <div className="flex">
+      <div className="flex h-[calc(100vh-4rem)]">
         {/* Sidebar - Desktop (más angosto en tablets) */}
         <aside className="hidden md:flex md:w-52 lg:w-64 min-h-[calc(100vh-4rem)] border-r bg-card flex-shrink-0">
           <nav className="flex flex-col w-full p-3 lg:p-4 overflow-y-auto">
