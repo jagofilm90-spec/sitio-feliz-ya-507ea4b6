@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, ShieldAlert, Package, CreditCard, Radio } from "lucide-react";
+import { AlertTriangle, ShieldAlert, Package, CreditCard, Radio, TrendingUp } from "lucide-react";
 import type { AlertaUrgente } from "./useDashboardData";
 
 const iconMap = {
