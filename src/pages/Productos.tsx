@@ -1058,11 +1058,13 @@ const Productos = () => {
                   </div>
 
                   {/* ===== SECCIÓN 4: Operativo ===== */}
+                  {/* ===== SECCIÓN 4: Proveedor ===== */}
                   <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
-                    <span className="text-sm font-semibold text-foreground">⚙️ Operativo</span>
+                    <span className="text-sm font-semibold text-foreground flex items-center gap-1.5"><Settings2 className="h-4 w-4 text-muted-foreground" /> Operativo</span>
 
                     <div className="space-y-2">
                       <Label htmlFor="proveedor">Proveedor principal</Label>
+                      <p className="text-xs text-muted-foreground -mt-1">¿De quién compras normalmente este producto?</p>
                       <Select
                         value={formData.proveedor_id}
                         onValueChange={(value) => setFormData({ ...formData, proveedor_id: value })}
@@ -1078,75 +1080,91 @@ const Productos = () => {
                       </Select>
                     </div>
 
-                    <div className="flex items-center justify-between p-2 rounded border bg-background">
-                      <div>
-                        <Label htmlFor="requiere_fumigacion" className="cursor-pointer text-sm">Requiere fumigación cada 6 meses</Label>
-                      </div>
-                      <Switch
-                        id="requiere_fumigacion"
-                        checked={formData.requiere_fumigacion}
-                        onCheckedChange={(checked) => setFormData({ ...formData, requiere_fumigacion: checked })}
-                      />
-                    </div>
-                    {formData.requiere_fumigacion && (
-                      <div className="space-y-2 ml-2">
-                        <Label htmlFor="fecha_ultima_fumigacion">Fecha de última fumigación</Label>
-                        <Input
-                          id="fecha_ultima_fumigacion"
-                          type="date"
-                          value={formData.fecha_ultima_fumigacion}
-                          onChange={(e) => setFormData({ ...formData, fecha_ultima_fumigacion: e.target.value })}
-                          autoComplete="off"
-                        />
-                      </div>
-                    )}
+                    {/* Configuración especial — collapsible */}
+                    <Collapsible defaultOpen={editingProduct && (formData.requiere_fumigacion || formData.solo_uso_interno || formData.bloqueado_venta || formData.es_promocion)}>
+                      <CollapsibleTrigger asChild>
+                        <Button type="button" variant="ghost" className="w-full justify-between p-2 h-auto border rounded">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {(formData.requiere_fumigacion || formData.solo_uso_interno || formData.bloqueado_venta || formData.es_promocion)
+                              ? "Configuración especial activa"
+                              : "Sin configuración especial"}
+                          </span>
+                          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="space-y-2 pt-2">
+                        <div className="flex items-center justify-between p-2 rounded border bg-background">
+                          <div>
+                            <Label htmlFor="requiere_fumigacion" className="cursor-pointer text-sm">Requiere fumigación</Label>
+                            <p className="text-xs text-muted-foreground">El sistema alertará cada 6 meses</p>
+                          </div>
+                          <Switch
+                            id="requiere_fumigacion"
+                            checked={formData.requiere_fumigacion}
+                            onCheckedChange={(checked) => setFormData({ ...formData, requiere_fumigacion: checked })}
+                          />
+                        </div>
+                        {formData.requiere_fumigacion && (
+                          <div className="space-y-2 ml-2">
+                            <Label htmlFor="fecha_ultima_fumigacion">Fecha de última fumigación</Label>
+                            <Input
+                              id="fecha_ultima_fumigacion"
+                              type="date"
+                              value={formData.fecha_ultima_fumigacion}
+                              onChange={(e) => setFormData({ ...formData, fecha_ultima_fumigacion: e.target.value })}
+                              autoComplete="off"
+                            />
+                          </div>
+                        )}
 
-                    <div className="flex items-center justify-between p-2 rounded border bg-background">
-                      <div>
-                        <Label htmlFor="solo_uso_interno" className="cursor-pointer text-sm">Solo uso interno</Label>
-                        <p className="text-xs text-muted-foreground">No aparece en pedidos de clientes</p>
-                      </div>
-                      <Switch
-                        id="solo_uso_interno"
-                        checked={formData.solo_uso_interno}
-                        onCheckedChange={(checked) => setFormData({ ...formData, solo_uso_interno: checked })}
-                      />
-                    </div>
+                        <div className="flex items-center justify-between p-2 rounded border bg-background">
+                          <div>
+                            <Label htmlFor="solo_uso_interno" className="cursor-pointer text-sm">Solo uso interno</Label>
+                            <p className="text-xs text-muted-foreground">No aparece en pedidos de clientes</p>
+                          </div>
+                          <Switch
+                            id="solo_uso_interno"
+                            checked={formData.solo_uso_interno}
+                            onCheckedChange={(checked) => setFormData({ ...formData, solo_uso_interno: checked })}
+                          />
+                        </div>
 
-                    <div className={`flex items-center justify-between p-2 rounded border ${formData.bloqueado_venta ? 'bg-destructive/10 border-destructive/30' : 'bg-background'}`}>
-                      <div>
-                        <Label htmlFor="bloqueado_venta" className="cursor-pointer text-sm">Bloquear ventas temporalmente</Label>
-                        <p className="text-xs text-muted-foreground">Seguirá en catálogo pero nadie podrá venderlo</p>
-                      </div>
-                      <Switch
-                        id="bloqueado_venta"
-                        checked={formData.bloqueado_venta}
-                        onCheckedChange={(checked) => setFormData({ ...formData, bloqueado_venta: checked })}
-                      />
-                    </div>
+                        <div className={`flex items-center justify-between p-2 rounded border ${formData.bloqueado_venta ? 'bg-destructive/10 border-destructive/30' : 'bg-background'}`}>
+                          <div>
+                            <Label htmlFor="bloqueado_venta" className="cursor-pointer text-sm">Ventas bloqueadas</Label>
+                            <p className="text-xs text-muted-foreground">Nadie puede venderlo temporalmente</p>
+                          </div>
+                          <Switch
+                            id="bloqueado_venta"
+                            checked={formData.bloqueado_venta}
+                            onCheckedChange={(checked) => setFormData({ ...formData, bloqueado_venta: checked })}
+                          />
+                        </div>
 
-                    <div className="flex items-center justify-between p-2 rounded border bg-background">
-                      <div>
-                        <Label htmlFor="es_promocion" className="cursor-pointer text-sm">Producto en promoción</Label>
-                      </div>
-                      <Switch
-                        id="es_promocion"
-                        checked={formData.es_promocion}
-                        onCheckedChange={(checked) => setFormData({ ...formData, es_promocion: checked })}
-                      />
-                    </div>
-                    {formData.es_promocion && (
-                      <div className="space-y-2 ml-2">
-                        <Label htmlFor="descripcion_promocion">Descripción de la promoción</Label>
-                        <Input
-                          id="descripcion_promocion"
-                          value={formData.descripcion_promocion}
-                          onChange={(e) => setFormData({ ...formData, descripcion_promocion: e.target.value })}
-                          placeholder="Ej: Compra 3 lleva 4"
-                          autoComplete="off"
-                        />
-                      </div>
-                    )}
+                        <div className="flex items-center justify-between p-2 rounded border bg-background">
+                          <div>
+                            <Label htmlFor="es_promocion" className="cursor-pointer text-sm">En promoción</Label>
+                          </div>
+                          <Switch
+                            id="es_promocion"
+                            checked={formData.es_promocion}
+                            onCheckedChange={(checked) => setFormData({ ...formData, es_promocion: checked })}
+                          />
+                        </div>
+                        {formData.es_promocion && (
+                          <div className="space-y-2 ml-2">
+                            <Label htmlFor="descripcion_promocion">Descripción de la promoción</Label>
+                            <Input
+                              id="descripcion_promocion"
+                              value={formData.descripcion_promocion}
+                              onChange={(e) => setFormData({ ...formData, descripcion_promocion: e.target.value })}
+                              placeholder="Ej: Compra 3 lleva 4"
+                              autoComplete="off"
+                            />
+                          </div>
+                        )}
+                      </CollapsibleContent>
+                    </Collapsible>
                   </div>
 
                   {/* ===== SECCIÓN 5: Fiscal (colapsable) ===== */}
