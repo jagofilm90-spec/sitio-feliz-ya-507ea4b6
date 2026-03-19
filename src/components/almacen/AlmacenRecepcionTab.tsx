@@ -598,24 +598,49 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
         </CardHeader>
         <CardContent className="p-0">
           {activeTab === "hoy" ? (
-            entregas.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">
-                <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No hay entregas programadas para hoy</p>
-                <p className="text-sm mt-1">Revisa la pestaña "Próximas entregas"</p>
-              </div>
-            ) : (
-              <ScrollArea className="h-[calc(100vh-380px)] min-h-[300px]">
-                <div className="divide-y divide-border">
-                  {/* Entregas en descarga (prioritarias) */}
-                  {entregasEnDescarga.length > 0 && (
-                    <div className="p-3 bg-amber-50 dark:bg-amber-950/20">
-                      <div className="text-sm font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2 mb-2">
-                        <Clock className="w-4 h-4" />
-                        En descarga ({entregasEnDescarga.length})
+            <ScrollArea className="h-[calc(100vh-380px)] min-h-[300px]">
+              <div className="divide-y divide-border">
+                {/* ============================
+                    SECCIÓN 1: RECEPCIONES DE HOY
+                    ============================ */}
+                {entregas.length === 0 && entregasManana.length === 0 && entregasCompletadas.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>No hay entregas programadas para hoy</p>
+                    <p className="text-sm mt-1">Revisa la pestaña "Próximas entregas"</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Entregas en descarga (prioritarias) */}
+                    {entregasEnDescarga.length > 0 && (
+                      <div className="p-3 bg-amber-50 dark:bg-amber-950/20">
+                        <div className="text-sm font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2 mb-2">
+                          <Clock className="w-4 h-4" />
+                          🟢 En descarga ({entregasEnDescarga.length})
+                        </div>
+                        <div className="space-y-2">
+                          {entregasEnDescarga.map((entrega) => (
+                            <EntregaCard 
+                              key={entrega.id}
+                              entrega={entrega}
+                              currentUserId={currentUserId}
+                              onRegistrarLlegada={handleRegistrarLlegada}
+                              onCompletarRecepcion={handleCompletarRecepcion}
+                              onTomarRecepcion={setTomarRecepcionEntrega}
+                              onCancelarDescarga={setCancelarDescargaEntrega}
+                            />
+                          ))}
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        {entregasEnDescarga.map((entrega) => (
+                    )}
+
+                    {/* Entregas pendientes de hoy */}
+                    {entregasPendientes.length > 0 && (
+                      <div className="p-3">
+                        <div className="text-sm font-medium text-muted-foreground flex items-center gap-2 mb-2">
+                          🟡 Esperando llegada ({entregasPendientes.length})
+                        </div>
+                        {entregasPendientes.map((entrega) => (
                           <EntregaCard 
                             key={entrega.id}
                             entrega={entrega}
@@ -627,24 +652,118 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                           />
                         ))}
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Entregas pendientes */}
-                  {entregasPendientes.map((entrega) => (
-                    <EntregaCard 
-                      key={entrega.id}
-                      entrega={entrega}
-                      currentUserId={currentUserId}
-                      onRegistrarLlegada={handleRegistrarLlegada}
-                      onCompletarRecepcion={handleCompletarRecepcion}
-                      onTomarRecepcion={setTomarRecepcionEntrega}
-                      onCancelarDescarga={setCancelarDescargaEntrega}
-                    />
-                  ))}
-                </div>
-              </ScrollArea>
-            )
+                    {/* ============================
+                        SECCIÓN 2: MAÑANA — PREPARARSE
+                        ============================ */}
+                    {entregasManana.length > 0 && (
+                      <div className="p-3">
+                        <div className="text-sm font-medium text-blue-600 dark:text-blue-400 flex items-center gap-2 mb-3">
+                          📋 Mañana — Prepararse ({entregasManana.length})
+                        </div>
+                        <div className="space-y-2">
+                          {entregasManana.map((entrega) => {
+                            const provNombre = entrega.orden_compra?.proveedor?.nombre 
+                              || entrega.orden_compra?.proveedor_nombre_manual 
+                              || "Proveedor";
+                            const totalProductos = entrega.productos?.length || 0;
+                            const totalBultos = entrega.cantidad_bultos;
+                            return (
+                              <Collapsible key={entrega.id}>
+                                <CollapsibleTrigger className="w-full text-left">
+                                  <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                                    <div className="flex-1 min-w-0">
+                                      <span className="font-medium">{provNombre}</span>
+                                      <span className="text-muted-foreground ml-2">— {entrega.orden_compra?.folio}</span>
+                                      <div className="text-sm text-muted-foreground mt-0.5">
+                                        {totalProductos} productos · ~{totalBultos.toLocaleString()} bultos
+                                      </div>
+                                    </div>
+                                    <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                  </div>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent>
+                                  <div className="pl-4 pt-2 pb-1">
+                                    <ProductosEntregaList 
+                                      productos={entrega.productos}
+                                      origen_faltante={entrega.origen_faltante}
+                                      productos_faltantes={entrega.productos_faltantes as ProductoFaltante[] | undefined}
+                                    />
+                                  </div>
+                                </CollapsibleContent>
+                              </Collapsible>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ============================
+                        SECCIÓN 3: COMPLETADAS HOY
+                        ============================ */}
+                    {entregasCompletadas.length > 0 && (
+                      <div className="p-3">
+                        <Collapsible open={completadasExpandido} onOpenChange={setCompletadasExpandido}>
+                          <CollapsibleTrigger className="w-full text-left">
+                            <div className="flex items-center justify-between">
+                              <div className="text-sm font-medium text-green-600 dark:text-green-400 flex items-center gap-2">
+                                ✅ Completadas hoy ({entregasCompletadas.length})
+                              </div>
+                              {completadasExpandido ? (
+                                <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                              )}
+                            </div>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <div className="mt-2 space-y-2">
+                              {entregasCompletadas.map((entrega) => {
+                                const provNombre = entrega.orden_compra?.proveedor?.nombre 
+                                  || entrega.orden_compra?.proveedor_nombre_manual 
+                                  || "Proveedor";
+                                const horaRecepcion = entrega.fecha_entrega_real 
+                                  ? format(new Date(entrega.fecha_entrega_real), "HH:mm", { locale: es })
+                                  : "";
+                                const comprobanteUrl = (entrega as any).comprobante_recepcion_url;
+                                return (
+                                  <div key={entrega.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-green-50/50 dark:bg-green-950/10">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium truncate">{provNombre}</span>
+                                        <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 gap-1 flex-shrink-0">
+                                          <CheckCircle2 className="w-3 h-3" />
+                                          Completada
+                                        </Badge>
+                                      </div>
+                                      <div className="text-sm text-muted-foreground mt-0.5">
+                                        {entrega.orden_compra?.folio} · Recibida a las {horaRecepcion}
+                                      </div>
+                                    </div>
+                                    {comprobanteUrl && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-1 flex-shrink-0"
+                                        onClick={() => window.open(comprobanteUrl, "_blank")}
+                                      >
+                                        <FileText className="w-4 h-4" />
+                                        Ver comprobante
+                                      </Button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </ScrollArea>
           ) : (
             <ScrollArea className="h-[calc(100vh-380px)] min-h-[300px]">
               <ProximasEntregasTab onEntregaReprogramada={loadEntregas} />
