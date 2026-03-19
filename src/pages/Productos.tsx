@@ -852,7 +852,7 @@ const Productos = () => {
 
                   {duplicateWarning && (
                     <p className="text-xs text-destructive bg-destructive/10 p-2 rounded border border-destructive/20">
-                      ❌ {duplicateWarning}
+                      {duplicateWarning}
                     </p>
                   )}
 
