@@ -183,12 +183,20 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/fumigaciones" element={
-                <ProtectedRoute allowedRoles={['admin', 'gerente_almacen']} redirectTo="/auth">
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'almacen', 'gerente_almacen']} redirectTo="/auth">
                   <Fumigaciones />
                 </ProtectedRoute>
               } />
-              <Route path="/correos" element={<CorreosCorporativos />} />
-              <Route path="/generate-assets" element={<GenerateAssets />} />
+              <Route path="/correos" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria']} redirectTo="/auth">
+                  <CorreosCorporativos />
+                </ProtectedRoute>
+              } />
+              <Route path="/generate-assets" element={
+                <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
+                  <GenerateAssets />
+                </ProtectedRoute>
+              } />
               <Route path="/tarjeta" element={<TarjetaDigital />} />
               <Route path="/privacidad" element={<Privacidad />} />
               <Route path="/soporte" element={<Soporte />} />
