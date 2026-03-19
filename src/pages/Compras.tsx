@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import Layout from "@/components/Layout";
-import { Package, Truck, Calendar, BarChart3, History, AlertTriangle, CreditCard } from "lucide-react";
+import { Package, Truck, Calendar, BarChart3, History, AlertTriangle, CreditCard, Lightbulb } from "lucide-react";
 import ProveedoresTab from "@/components/compras/ProveedoresTab";
 import OrdenesCompraTab from "@/components/compras/OrdenesCompraTab";
 import CalendarioEntregasTab from "@/components/compras/CalendarioEntregasTab";
@@ -12,6 +12,7 @@ import ComprasAnalyticsTab from "@/components/compras/ComprasAnalyticsTab";
 import HistorialComprasProductoTab from "@/components/compras/HistorialComprasProductoTab";
 import DevolucionesFaltantesTab from "@/components/compras/DevolucionesFaltantesTab";
 import AdeudosProveedoresTab from "@/components/compras/AdeudosProveedoresTab";
+import SugerenciasReabastecimientoTab from "@/components/compras/SugerenciasReabastecimientoTab";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -112,13 +113,29 @@ const Compras = () => {
     refetchInterval: 60000,
   });
 
+  // Fetch count of products needing restock
+  const { data: sugerenciasCount = 0 } = useQuery({
+    queryKey: ["sugerencias-reabastecimiento-count"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("productos")
+        .select("id, stock_actual, stock_minimo")
+        .eq("activo", true)
+        .or("solo_uso_interno.is.null,solo_uso_interno.eq.false");
+
+      if (error) return 0;
+      return (data || []).filter(p => (p.stock_actual ?? 0) <= (p.stock_minimo ?? 0)).length;
+    },
+    refetchInterval: 60000,
+  });
+
   // Combined count for Devoluciones/Faltantes tab
   const devFaltCombinedCount = devolucionesPendientesCount + faltantesPendientesCount;
 
   // Auto-switch tabs based on URL params
   useEffect(() => {
     const tabParam = searchParams.get("tab");
-    if (tabParam && ["proveedores", "ordenes", "calendario", "devoluciones-faltantes", "historial", "adeudos", "analytics"].includes(tabParam)) {
+    if (tabParam && ["proveedores", "ordenes", "calendario", "devoluciones-faltantes", "historial", "adeudos", "analytics", "sugerencias"].includes(tabParam)) {
       setActiveTab(tabParam);
     } else if (searchParams.get("aprobar")) {
       setActiveTab("ordenes");
@@ -178,6 +195,15 @@ const Compras = () => {
                     </Badge>
                   )}
                 </TabsTrigger>
+                <TabsTrigger value="sugerencias" className="flex items-center gap-1 px-2.5 text-xs">
+                  <Lightbulb className="h-3.5 w-3.5" />
+                  Sug
+                  {sugerenciasCount > 0 && (
+                    <Badge className="ml-0.5 h-4 min-w-4 px-1 text-[10px] font-bold bg-orange-500 text-white">
+                      {sugerenciasCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
                 <TabsTrigger value="analytics" className="flex items-center gap-1 px-2.5 text-xs">
                   <BarChart3 className="h-3.5 w-3.5" />
                   Anal
@@ -185,7 +211,7 @@ const Compras = () => {
               </TabsList>
             </div>
           ) : (
-            <TabsList className="w-full grid grid-cols-7">
+            <TabsList className="w-full grid grid-cols-8">
               <TabsTrigger value="proveedores" className="flex items-center gap-1.5">
                 <Package className="h-4 w-4" />
                 Proveedores
@@ -225,6 +251,15 @@ const Compras = () => {
                   </Badge>
                 )}
               </TabsTrigger>
+              <TabsTrigger value="sugerencias" className="flex items-center gap-1.5">
+                <Lightbulb className="h-4 w-4" />
+                Sugerencias
+                {sugerenciasCount > 0 && (
+                  <Badge className="ml-1 h-5 min-w-5 px-1.5 text-xs font-bold bg-orange-500 text-white">
+                    {sugerenciasCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="analytics" className="flex items-center gap-1.5">
                 <BarChart3 className="h-4 w-4" />
                 Analytics
@@ -254,6 +289,10 @@ const Compras = () => {
 
           <TabsContent value="adeudos">
             <AdeudosProveedoresTab />
+          </TabsContent>
+
+          <TabsContent value="sugerencias">
+            <SugerenciasReabastecimientoTab />
           </TabsContent>
 
           <TabsContent value="analytics">

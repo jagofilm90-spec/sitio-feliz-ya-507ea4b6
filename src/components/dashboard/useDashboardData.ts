@@ -208,7 +208,7 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         alertas.push({ tipo: 'pedidos_sin_autorizar', cantidad: pedidosSinAutRes.count || 0, ruta: '/pedidos?tab=por-autorizar', botonTexto: 'Ir a autorizar' });
       }
       if ((stockCeroRes.count || 0) > 0) {
-        alertas.push({ tipo: 'stock_cero', cantidad: stockCeroRes.count || 0, ruta: '/inventario', botonTexto: 'Ver inventario' });
+        alertas.push({ tipo: 'stock_cero', cantidad: stockCeroRes.count || 0, ruta: '/compras?tab=sugerencias', botonTexto: 'Ver sugerencias' });
       }
       if (creditoExcedido > 0) {
         alertas.push({ tipo: 'credito_excedido', cantidad: creditoExcedido, ruta: '/clientes', botonTexto: 'Ver cobranza' });
