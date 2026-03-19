@@ -72,6 +72,7 @@ export interface NotificacionesData {
   confirmacionesProveedor: ConfirmacionProveedor[];
   notificacionesPrecios: NotificacionGeneral[];
   notificacionesPedidos: NotificacionGeneral[];
+  notificacionesRechazo: NotificacionGeneral[];
   totalCount: number;
 }
 
