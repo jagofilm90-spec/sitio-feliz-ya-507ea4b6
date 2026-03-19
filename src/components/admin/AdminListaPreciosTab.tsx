@@ -888,6 +888,26 @@ export const AdminListaPreciosTab = () => {
         </div>
       </div>
 
+      {/* Loss warning banner */}
+      {stats.perdida > 0 && estadoFilter !== 'perdida' && (
+        <div className="flex items-center justify-between p-3 mb-2 rounded-lg bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 animate-pulse" />
+            <span className="text-sm font-semibold text-red-800 dark:text-red-300">
+              ⚠️ {stats.perdida} producto{stats.perdida > 1 ? 's' : ''} vendiendo a pérdida
+            </span>
+          </div>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="h-7 text-xs"
+            onClick={() => setEstadoFilter('perdida')}
+          >
+            Ver solo pérdidas
+          </Button>
+        </div>
+      )}
+
       {/* Review Panel */}
       {renderReviewPanel()}
 
