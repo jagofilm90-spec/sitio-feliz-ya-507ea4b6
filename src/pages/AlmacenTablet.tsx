@@ -280,6 +280,7 @@ const AlmacenTablet = () => {
       inventario: "Inventario",
       productos: "Productos",
       fumigaciones: "Fumigaciones",
+      caducidad: "Reporte Caducidad (FEFO)",
       alertas: "Alertas de Flotilla",
       checkups: "Checkups de Vehículos",
       vehiculos: "Vehículos",
