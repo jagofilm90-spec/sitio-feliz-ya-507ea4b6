@@ -156,6 +156,10 @@ export const AdminListaPreciosTab = () => {
   const [parcialMode, setParcialMode] = useState<Record<string, boolean>>({});
 
   // Bulk update
+  // Historial
+  const [historialDialogOpen, setHistorialDialogOpen] = useState(false);
+  const [selectedProductForHistory, setSelectedProductForHistory] = useState<ProductoConAnalisis | null>(null);
+
   const [bulkSheetOpen, setBulkSheetOpen] = useState(false);
   const [bulkMode, setBulkMode] = useState<'margen' | 'incremento'>('margen');
   const [bulkFilter, setBulkFilter] = useState<string>("all");
