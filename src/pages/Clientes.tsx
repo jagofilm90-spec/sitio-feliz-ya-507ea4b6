@@ -680,36 +680,41 @@ const Clientes = () => {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("¿Estás seguro de eliminar este cliente?")) return;
-
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
       const { error } = await supabase
         .from("clientes")
-        .delete()
-        .eq("id", id);
+        .update({ activo: false })
+        .eq("id", deleteTarget.id);
 
-      if (error) {
-        if (error.message.includes("violates foreign key constraint")) {
-          if (error.message.includes("cotizaciones")) {
-            throw new Error("No se puede eliminar el cliente porque tiene cotizaciones asociadas.");
-          } else if (error.message.includes("pedidos")) {
-            throw new Error("No se puede eliminar el cliente porque tiene pedidos asociados.");
-          } else if (error.message.includes("facturas")) {
-            throw new Error("No se puede eliminar el cliente porque tiene facturas asociadas.");
-          } else if (error.message.includes("cliente_sucursales")) {
-            throw new Error("No se puede eliminar el cliente porque tiene sucursales asociadas.");
-          } else {
-            throw new Error("No se puede eliminar el cliente porque tiene registros asociados.");
-          }
-        }
-        throw error;
-      }
-      toast({ title: "Cliente eliminado" });
+      if (error) throw error;
+      toast({ title: `"${deleteTarget.nombre}" desactivado` });
       loadClientes();
     } catch (error: any) {
       toast({
-        title: "Error al eliminar",
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleReactivar = async (cliente: any) => {
+    try {
+      const { error } = await supabase
+        .from("clientes")
+        .update({ activo: true })
+        .eq("id", cliente.id);
+
+      if (error) throw error;
+      toast({ title: `"${cliente.nombre}" reactivado` });
+      loadClientes();
+    } catch (error: any) {
+      toast({
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
