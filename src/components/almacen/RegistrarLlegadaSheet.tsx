@@ -298,7 +298,7 @@ export const RegistrarLlegadaSheet = ({
           entrega_id: entrega.id,
           user_id: user.id,
           accion: "rechazo_total",
-          notas: `Rechazó entrega completa. Motivo: ${motivoLabel}. Chofer: ${nombreChofer.trim()}`
+          notas: `Rechazó entrega completa. Motivo: ${motivoLabelHistorial}. Chofer: ${nombreChofer.trim()}`
         });
 
         // 3. Subir evidencias básicas (placas, identificación)
