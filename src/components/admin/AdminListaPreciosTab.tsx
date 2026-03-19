@@ -211,6 +211,10 @@ export const AdminListaPreciosTab = () => {
             precio_nuevo: nuevoPrecio,
             usuario_id: user.id,
           });
+          // Notify vendedores
+          const review = revisionesPendientes.find((r: any) => r.id === reviewId);
+          const productoNombre = review?.productos?.nombre || "";
+          notificarCambioPrecio({ productoNombre, precioAnterior, precioNuevo: nuevoPrecio });
         }
       }
 

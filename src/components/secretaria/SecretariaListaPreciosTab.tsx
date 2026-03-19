@@ -191,6 +191,10 @@ export const SecretariaListaPreciosTab = () => {
         if (historialError) {
           console.error("Error saving price history:", historialError);
         }
+
+        // Notify vendedores
+        const productoNombre = editingProduct?.nombre || "";
+        notificarCambioPrecio({ productoNombre, precioAnterior: precio_anterior, precioNuevo: precio_venta });
       }
     },
     onSuccess: () => {
