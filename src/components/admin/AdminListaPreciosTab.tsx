@@ -984,6 +984,7 @@ export const AdminListaPreciosTab = () => {
 
       {/* Dialogs */}
       {renderDialogs()}
+      {renderBulkSheet()}
     </div>
   );
 
