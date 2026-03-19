@@ -1,71 +1,29 @@
 
 
-# Plan: Folio Diario Consecutivo para Pedidos
+## Analysis
 
-## Problema actual
-Los folios se generan con timestamps (`PED-V-123456`) o secuencias mensuales (`PED-202603-0001`). No hay forma de saber cuántos pedidos salieron en un día ni detectar faltantes al juntar las hojas firmadas.
+After searching the file thoroughly:
 
-## Solución
+1. **CAMBIO 1 (ScrollArea height)**: There is no `<ScrollArea className="h-[calc(100vh-420px)]">` in the file. The only `100vh` reference is on line 506: `<div className="flex flex-col h-[calc(100vh-4rem-3rem)]">` which is the outer container, not a ScrollArea. This change cannot be applied as described — the line doesn't exist.
 
-Agregar un campo `numero_dia` (integer) a la tabla `pedidos` que se auto-incrementa por día, empezando en 1 cada día. Este número aparecerá prominente en las hojas de carga.
+2. **CAMBIO 2 (Remove fecha_caducidad blocks)**: The two UI blocks for `fecha_caducidad_inicial` inputs (BLOQUE A and BLOQUE B) **do not exist** in the current file — they were already removed in the previous rewrite.
 
-### 1. Migración de base de datos
+   However, the **informational note** that should appear when `maneja_caducidad` is active ("El almacén registrará la fecha de caducidad de cada lote al recibir la mercancía") is **not present** in its styled `<p>` form. The current code has the text inline as a sublabel inside the switch row (line 825), but not as a separate highlighted box below the switch.
 
-- Agregar columna `numero_dia` (integer, nullable) a `pedidos`
-- Crear función `asignar_numero_dia()` como trigger BEFORE INSERT que:
-  - Cuenta cuántos pedidos existen para la misma `fecha_pedido::date` (excluyendo borradores)
-  - Asigna `numero_dia = count + 1`
-  - Solo lo asigna si el status NO es `borrador`
-- Crear trigger en `pedidos` BEFORE INSERT que ejecute la función
+### Plan
 
-```sql
--- Pseudológica del trigger:
-IF NEW.status != 'borrador' THEN
-  SELECT COALESCE(MAX(numero_dia), 0) + 1 INTO NEW.numero_dia
-  FROM pedidos
-  WHERE fecha_pedido::date = NEW.fecha_pedido::date
-    AND status != 'borrador'
-    AND numero_dia IS NOT NULL;
-END IF;
+**Single change**: After line 831 (closing `</div>` of the caducidad switch block), insert the styled informational note:
+
+```tsx
+{formData.maneja_caducidad && (
+  <p className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/30 p-2 rounded border border-blue-200 dark:border-blue-800">
+    El almacén registrará la fecha de caducidad de cada lote al recibir la mercancía.
+  </p>
+)}
 ```
 
-### 2. Actualizar folio a incluir número del día
+**No other changes** — the ScrollArea line doesn't exist in the file, and the fecha_caducidad blocks were already removed.
 
-Cambiar el formato del folio en los 5 lugares donde se genera:
-- `VendedorNuevoPedidoTab.tsx` (vendedor crea pedido)
-- `ProcesarPedidoDialog.tsx` (correos)
-- `PedidosAcumulativosManager.tsx` (acumulativos, 2 lugares)
-- `CotizacionDetalleDialog.tsx` (cotización → pedido)
-- `NuevoPedidoDialog.tsx` (secretaria)
-- `ClienteNuevoPedido.tsx` (cliente)
-
-El folio **mantiene** el formato actual (`PED-YYYYMM-XXXX`) para identificación única. El `numero_dia` es un dato **adicional** que se muestra en las hojas.
-
-### 3. Mostrar número del día en hojas de carga
-
-En `HojaCargaUnificadaTemplate.tsx`, mostrar prominente:
-```
-NOTA #3
-```
-Usando el campo `numero_dia` del pedido. Se mostrará grande y visible en el header de la hoja para fácil identificación al juntar las hojas firmadas.
-
-### 4. Mostrar en el template de pedido (PedidoPrintTemplate)
-
-También agregar el número del día en `PedidoPrintTemplate.tsx` para la vista previa del vendedor.
-
-## Archivos a modificar
-
-| Archivo | Cambio |
-|---------|--------|
-| **Migración SQL** | Agregar `numero_dia`, función trigger, trigger |
-| `HojaCargaUnificadaTemplate.tsx` | Mostrar `NOTA #X` prominente en header |
-| `PedidoPrintTemplate.tsx` | Mostrar número del día |
-| `PedidoPDFPreviewDialog.tsx` | Pasar `numero_dia` a los datos |
-| `VendedorNuevoPedidoTab.tsx` | Leer `numero_dia` del pedido creado para mostrar |
-| Interfaces de datos print | Agregar campo `numeroDia` opcional |
-
-## Ventajas sobre el foliador físico
-- Se asigna automáticamente, sin error humano
-- Si se cancela un pedido, el número queda registrado (se puede ver el hueco)
-- Se puede consultar digitalmente cuántos pedidos salieron por día
+### Files modified
+- `src/pages/Productos.tsx` — 1 insertion (4 lines after line 831)
 
