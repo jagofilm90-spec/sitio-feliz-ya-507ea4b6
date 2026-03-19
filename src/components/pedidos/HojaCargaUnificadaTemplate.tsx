@@ -103,36 +103,59 @@ export const HojaCargaUnificadaTemplate = ({ datos, variante }: Props) => {
         </div>
       )}
 
-      {/* Tabla de productos */}
-      <table className="w-full mb-1 border-collapse">
+      {/* Tabla de productos (5 columnas) */}
+      <table className="w-full mb-1 border-collapse" style={{ tableLayout: 'fixed' }}>
+        <colgroup>
+          <col style={{ width: '10%' }} />
+          <col style={{ width: '10%' }} />
+          <col style={{ width: '12%' }} />
+          <col style={{ width: '58%' }} />
+          <col style={{ width: '10%' }} />
+        </colgroup>
         <thead>
           <tr className="bg-gray-800 text-white text-[8px]">
-            <th className="py-1 px-2 text-center w-14 border border-gray-700 font-semibold">CANT.</th>
-            <th className="py-1 px-2 text-left border border-gray-700 font-semibold">PRODUCTO</th>
-            <th className="py-1 px-2 text-center w-14 border border-gray-700 font-semibold">UNIDAD</th>
-            <th className="py-1 px-2 text-right w-18 border border-gray-700 font-semibold">PESO</th>
+            <th className="py-1 px-2 text-center border border-gray-700 font-semibold">CANT.</th>
+            <th className="py-1 px-2 text-center border border-gray-700 font-semibold">UNIDAD</th>
+            <th className="py-1 px-2 text-right border border-gray-700 font-semibold">PESO KG</th>
+            <th className="py-1 px-2 text-left border border-gray-700 font-semibold">DESCRIPCIÓN</th>
+            <th className="py-1 px-2 text-center border border-gray-700 font-semibold">✓</th>
           </tr>
         </thead>
         <tbody>
-          {datos.productos.map((prod, i) => (
-            <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-              <td className="py-1 px-2 border border-gray-300 text-center text-[9px] font-medium">{prod.cantidad}</td>
-              <td className="py-1 px-2 border border-gray-300 text-[9px]">{prod.descripcion}</td>
-              <td className="py-1 px-2 border border-gray-300 text-center text-[9px]">{prod.unidad}</td>
-              <td className="py-1 px-2 border border-gray-300 text-right text-[9px]">
-                {prod.pesoTotal ? fmtKg(prod.pesoTotal) : "-"}
-              </td>
-            </tr>
-          ))}
+          {datos.productos.map((prod, i) => {
+            const capitalUnidad = prod.unidad ? prod.unidad.charAt(0).toUpperCase() + prod.unidad.slice(1) : '';
+            return (
+              <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                <td className="py-1 px-2 border border-gray-300 text-center text-[9px] font-medium">{prod.cantidad}</td>
+                <td className="py-1 px-2 border border-gray-300 text-center text-[9px]">{capitalUnidad}</td>
+                <td className="py-1 px-2 border border-gray-300 text-right text-[9px]">
+                  {prod.pesoTotal ? `${prod.pesoTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })} kg` : "-"}
+                </td>
+                <td className="py-1 px-2 border border-gray-300 text-[9px]">{prod.descripcion}</td>
+                <td className="py-1 px-2 border border-gray-300 text-center">
+                  <div className="w-4 h-4 border-2 border-gray-400 mx-auto" />
+                </td>
+              </tr>
+            );
+          })}
           {Array.from({ length: emptyRows }).map((_, i) => (
             <tr key={`e-${i}`}>
               <td className="py-1 px-2 border border-gray-300">&nbsp;</td>
               <td className="py-1 px-2 border border-gray-300" />
               <td className="py-1 px-2 border border-gray-300" />
               <td className="py-1 px-2 border border-gray-300" />
+              <td className="py-1 px-2 border border-gray-300" />
             </tr>
           ))}
         </tbody>
+        <tfoot>
+          <tr className="bg-gray-100 text-[9px] font-semibold">
+            <td className="py-1 px-2 border border-gray-300 text-center">{datos.productos.reduce((s, p) => s + p.cantidad, 0)}</td>
+            <td className="py-1 px-2 border border-gray-300 text-center text-[8px]">TOTAL</td>
+            <td className="py-1 px-2 border border-gray-300 text-right">{fmtKg(datos.pesoTotalKg)}</td>
+            <td className="py-1 px-2 border border-gray-300" colSpan={2} />
+          </tr>
+        </tfoot>
       </table>
 
       {/* No reclamaciones — solo ORIGINAL y CLIENTE */}

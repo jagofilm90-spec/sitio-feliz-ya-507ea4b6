@@ -7,15 +7,22 @@
  * Sincronizado con el enum unit_type de la base de datos
  */
 export const UNIDADES_PRODUCTO = [
-  { value: 'balón', label: 'Balón' },
-  { value: 'bulto', label: 'Bulto' },
-  { value: 'caja', label: 'Caja' },
-  { value: 'churla', label: 'Churla' },
+  { value: 'bulto',  label: 'Bulto'   },
+  { value: 'balon',  label: 'Balón'   },
+  { value: 'caja',   label: 'Caja'    },
+  { value: 'cubeta', label: 'Cubeta'  },
+  { value: 'pieza',  label: 'Pieza'   },
+  { value: 'churla', label: 'Churla'  },
+] as const;
+
+/**
+ * Unidades legacy que ya no se permiten al crear, pero se muestran si existen en BD
+ */
+export const UNIDADES_LEGACY = [
   { value: 'costal', label: 'Costal' },
-  { value: 'cubeta', label: 'Cubeta' },
   { value: 'kg', label: 'Kilogramo' },
   { value: 'litro', label: 'Litro' },
-  { value: 'pieza', label: 'Pieza' },
+  { value: 'balón', label: 'Balón' },
 ] as const;
 
 export type UnidadProductoValue = typeof UNIDADES_PRODUCTO[number]['value'];

@@ -86,7 +86,7 @@ export function PedidoPDFPreviewDialog({ open, onOpenChange, pedidoId }: Props) 
         const pesoTotal = pesoKg > 0 ? d.cantidad * pesoKg : null;
         if (pesoTotal) pesoTotalKg += pesoTotal;
         const importe = prod.precio_por_kilo && pesoTotal ? pesoTotal * d.precio_unitario : d.subtotal;
-        return { cantidad: d.cantidad, descripcion: getDisplayName(prod), pesoTotal, precioUnitario: d.precio_unitario, importe, precioPorKilo: prod.precio_por_kilo };
+        return { cantidad: d.cantidad, unidad: prod.unidad || 'pieza', descripcion: getDisplayName(prod), pesoTotal, precioUnitario: d.precio_unitario, importe, precioPorKilo: prod.precio_por_kilo };
       });
 
       const formatDir = (c: any): string => {

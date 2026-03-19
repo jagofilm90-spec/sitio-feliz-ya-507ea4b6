@@ -244,6 +244,7 @@ export function ConciliacionDetalleDialog({
 
           return {
             cantidad: cantidadReal,
+            unidad: producto?.unidad || 'pieza',
             descripcion: getDisplayName(producto),
             pesoTotal: pesoKg > 0 ? cantidadReal * pesoKg : null,
             precioUnitario: d.precio_unitario,

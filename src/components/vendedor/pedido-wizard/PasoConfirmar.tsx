@@ -120,6 +120,7 @@ export function PasoConfirmar({
       const pesoTotal = pesoKg > 0 ? l.cantidad * pesoKg : null;
       return {
         cantidad: l.cantidad,
+        unidad: l.producto.unidad || 'pieza',
         descripcion: getDisplayName(l.producto),
         pesoTotal,
         precioUnitario: l.precioUnitario,

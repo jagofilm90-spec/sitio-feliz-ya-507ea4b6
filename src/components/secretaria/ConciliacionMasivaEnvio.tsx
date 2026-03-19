@@ -539,6 +539,7 @@ async function generateConciliacionPdf(pedido: PedidoConciliacion): Promise<stri
           : cantidadReal * d.precio_unitario;
         return {
           cantidad: cantidadReal,
+          unidad: producto?.unidad || 'pieza',
           descripcion: getDisplayName(producto),
           pesoTotal: pesoKg > 0 ? cantidadReal * pesoKg : null,
           precioUnitario: d.precio_unitario,
