@@ -613,9 +613,14 @@ export const AdminListaPreciosTab = () => {
       <div className="flex flex-col h-[calc(100vh-8rem)]">
         {/* Header móvil */}
         <div className="pb-3 space-y-3 sticky top-0 bg-background z-20">
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-primary" />
-            <h2 className="text-base font-semibold">Análisis de Precios</h2>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-primary" />
+              <h2 className="text-base font-semibold">Análisis de Precios</h2>
+            </div>
+            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setBulkSheetOpen(true)}>
+              <ListChecks className="h-3.5 w-3.5 mr-1" /> En masa
+            </Button>
           </div>
           
           {/* Stats badges - scroll horizontal */}
