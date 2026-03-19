@@ -1002,7 +1002,7 @@ const Productos = () => {
 
                   {/* ===== SECCIÓN 3: Inventario ===== */}
                   <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
-                    <span className="text-sm font-semibold text-foreground">📊 Inventario</span>
+                    <span className="text-sm font-semibold text-foreground flex items-center gap-1.5"><Boxes className="h-4 w-4 text-muted-foreground" /> Inventario</span>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
                         <div className="flex items-center gap-1">
