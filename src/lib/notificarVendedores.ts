@@ -39,7 +39,7 @@ export async function notificarCambioPrecio({
   try {
     await supabase.functions.invoke("send-push-notification", {
       body: {
-        roles: ["vendedor"],
+        roles,
         title: titulo,
         body: `${productoNombre}: ${formatCurrency(precioAnterior)} → ${formatCurrency(precioNuevo)}`,
       },
