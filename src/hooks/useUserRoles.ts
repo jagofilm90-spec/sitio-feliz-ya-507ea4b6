@@ -91,27 +91,29 @@ export const useUserRoles = (): UseUserRolesReturn => {
 // IMPORTANTE: almacen y chofer NO deben tener acceso a /dashboard
 // Se redirigen automáticamente a sus interfaces dedicadas
 export const MODULE_PERMISSIONS: Record<string, AppRole[]> = {
-  '/dashboard': ['admin', 'secretaria', 'vendedor', 'contadora'], // SIN almacen ni chofer
-  '/productos': ['admin', 'secretaria', 'almacen', 'gerente_almacen'],
+  '/dashboard': ['admin', 'secretaria', 'vendedor', 'contadora'],
+  '/productos': ['admin', 'secretaria', 'contadora'],
   '/fumigaciones': ['admin', 'secretaria', 'almacen', 'gerente_almacen'],
   '/clientes': ['admin', 'secretaria', 'vendedor'],
   '/pedidos': ['admin', 'secretaria', 'vendedor'],
-  '/compras': ['admin', 'secretaria'],
+  '/compras': ['admin', 'secretaria', 'contadora'],
   '/inventario': ['admin', 'secretaria', 'almacen', 'gerente_almacen'],
   '/rentabilidad': ['admin', 'contadora'],
-  '/rutas': ['admin', 'secretaria', 'chofer'],
+  '/rutas': ['admin', 'secretaria'],
   '/facturas': ['admin', 'secretaria', 'contadora'],
   '/empleados': ['admin', 'secretaria', 'contadora'],
   '/usuarios': ['admin'],
-  '/chat': ['admin', 'secretaria', 'vendedor', 'chofer', 'almacen', 'contadora', 'gerente_almacen'],
+  '/chat': ['admin', 'secretaria', 'vendedor', 'contadora', 'almacen', 'gerente_almacen'],
   '/correos': ['admin', 'secretaria'],
   '/generate-assets': ['admin'],
   '/permisos': ['admin'],
-  '/almacen-tablet': ['almacen', 'gerente_almacen'], // Interfaz dedicada para almacenistas y gerente
-  '/chofer': ['chofer'], // Interfaz dedicada para choferes
-  '/secretaria': ['admin', 'secretaria'], // Interfaz dedicada para secretarias
-  '/vendedor': ['admin', 'vendedor'], // Interfaz dedicada para vendedores
-  '/precios': ['admin', 'secretaria', 'vendedor'], // Lista de precios (edición solo admin/secretaria)
+  '/almacen-tablet': ['admin', 'almacen', 'gerente_almacen'],
+  '/chofer': ['admin', 'chofer'],
+  '/secretaria': ['admin', 'secretaria'],
+  '/vendedor': ['admin', 'vendedor'],
+  '/precios': ['admin', 'secretaria', 'vendedor'],
+  '/configuracion': ['admin', 'contadora', 'gerente_almacen'],
+  '/respaldos': ['admin'],
 };
 
 // Hook para verificar acceso a un módulo específico (usa permisos de BD con fallback)
