@@ -41,13 +41,8 @@ import { RegistrarLlegadaSheet } from "./RegistrarLlegadaSheet";
 import { AlmacenRecepcionSheet } from "./AlmacenRecepcionSheet";
 import { CancelarDescargaDialog } from "./CancelarDescargaDialog";
 import { ProximasEntregasTab } from "./ProximasEntregasTab";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { getCompactDisplayName } from "@/lib/productUtils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface TrabajandoPor {
   id: string;
