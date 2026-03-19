@@ -191,7 +191,20 @@ export const AdminListaPreciosTab = () => {
       if (!user) throw new Error("No autenticado");
 
       if (tipo !== 'ignorado') {
+        // Get current price for history
+        const { data: prodData } = await supabase.from("productos").select("precio_venta").eq("id", productoId).single();
+        const precioAnterior = prodData?.precio_venta ?? 0;
+
         await supabase.from("productos").update({ precio_venta: nuevoPrecio }).eq("id", productoId);
+
+        if (precioAnterior !== nuevoPrecio) {
+          await supabase.from("productos_historial_precios").insert({
+            producto_id: productoId,
+            precio_anterior: precioAnterior,
+            precio_nuevo: nuevoPrecio,
+            usuario_id: user.id,
+          });
+        }
       }
 
       const review = revisionesPendientes.find((r: any) => r.id === reviewId);
