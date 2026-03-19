@@ -142,7 +142,52 @@ export const useNotificaciones = () => {
     return [];
   };
 
-  const cargarAlertasCaducidad = async (): Promise<ProductoCaducidad[]> => {
+  const cargarNotificacionesPrecios = async (): Promise<NotificacionGeneral[]> => {
+    try {
+      const { data, error } = await supabase
+        .from("notificaciones")
+        .select("id, tipo, titulo, descripcion, created_at")
+        .in("tipo", ["revision_precio_requerida", "costo_incrementado"])
+        .eq("leida", false)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error) return [];
+      return (data || []) as NotificacionGeneral[];
+    } catch (error) {
+      console.error("Error cargando notificaciones de precios:", error);
+      return [];
+    }
+  };
+
+  const cargarNotificacionesPedidos = async (): Promise<NotificacionGeneral[]> => {
+    try {
+      // Only load for admin and secretaria
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+      const hasAccess = roles?.some(r => r.role === 'admin' || r.role === 'secretaria') || false;
+      if (!hasAccess) return [];
+
+      const { data, error } = await supabase
+        .from("notificaciones")
+        .select("id, tipo, titulo, descripcion, created_at")
+        .eq("tipo", "nuevo_pedido_vendedor")
+        .eq("leida", false)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error) return [];
+      return (data || []) as NotificacionGeneral[];
+    } catch (error) {
+      console.error("Error cargando notificaciones de pedidos:", error);
+      return [];
+    }
+  };
+
     try {
       const { data: productos, error: productosError } = await supabase
         .from("productos")
