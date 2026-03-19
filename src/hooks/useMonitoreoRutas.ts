@@ -240,10 +240,23 @@ export const useMonitoreoRutas = () => {
           .from('empleados')
           .select('id, nombre_completo')
           .in('id', empleadoIds);
-        
+
         empleados?.forEach(emp => {
           empleadosMap[emp.id] = emp.nombre_completo;
         });
+
+        // Fallback para rutas legacy con profiles.id
+        const idsNoEncontrados = empleadoIds.filter(id => !empleadosMap[id]);
+        if (idsNoEncontrados.length > 0) {
+          const { data: profilesFallback } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', idsNoEncontrados);
+
+          profilesFallback?.forEach(p => {
+            empleadosMap[p.id] = p.full_name || 'Sin nombre';
+          });
+        }
       }
 
       // Cargar entregas y carga para cada ruta

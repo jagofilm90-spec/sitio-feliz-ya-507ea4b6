@@ -92,48 +92,38 @@ const RutasContent = () => {
 
       // Obtener IDs de choferes únicos
       const choferIds = [...new Set((rutasData || []).map(r => r.chofer_id).filter(Boolean))];
-      
-      // DEBUG: Mostrar choferIds extraídos
-      console.log('🔍 DEBUG Rutas.tsx - choferIds:', choferIds);
-      console.log('🔍 DEBUG Rutas.tsx - rutasData sample:', rutasData?.slice(0, 3).map(r => ({ id: r.id, folio: r.folio, chofer_id: r.chofer_id })));
-      
+
       // Cargar nombres de choferes desde empleados
       let choferesMap: Record<string, string> = {};
       if (choferIds.length > 0) {
-        const { data: empleados, error: empError } = await supabase
+        const { data: empleados } = await supabase
           .from("empleados")
           .select("id, nombre_completo")
           .in("id", choferIds);
-        
-        // DEBUG: Mostrar resultado de empleados
-        console.log('🔍 DEBUG Rutas.tsx - empleados query error:', empError);
-        console.log('🔍 DEBUG Rutas.tsx - empleados data:', empleados);
-        
+
         empleados?.forEach(emp => {
           choferesMap[emp.id] = emp.nombre_completo;
         });
-        
-        // DEBUG: Mostrar mapa final
-        console.log('🔍 DEBUG Rutas.tsx - choferesMap:', choferesMap);
+
+        // Fallback para rutas legacy con profiles.id
+        const idsNoEncontrados = choferIds.filter(id => !choferesMap[id]);
+        if (idsNoEncontrados.length > 0) {
+          const { data: profilesFallback } = await supabase
+            .from("profiles")
+            .select("id, full_name")
+            .in("id", idsNoEncontrados);
+
+          profilesFallback?.forEach(p => {
+            choferesMap[p.id] = p.full_name || 'Sin nombre';
+          });
+        }
       }
 
       // Mapear nombres a rutas
-      const rutasConChofer = (rutasData || []).map(ruta => {
-        const choferNombre = ruta.chofer_id ? choferesMap[ruta.chofer_id] : null;
-        // DEBUG: Solo mostrar si hay problema
-        if (ruta.chofer_id && !choferNombre) {
-          console.warn('⚠️ DEBUG Rutas.tsx - Chofer no encontrado para ruta:', { 
-            rutaId: ruta.id, 
-            folio: ruta.folio, 
-            chofer_id: ruta.chofer_id,
-            existeEnMapa: ruta.chofer_id in choferesMap
-          });
-        }
-        return {
-          ...ruta,
-          chofer: ruta.chofer_id ? { full_name: choferNombre || 'Chofer desconocido' } : null
-        };
-      });
+      const rutasConChofer = (rutasData || []).map(ruta => ({
+        ...ruta,
+        chofer: ruta.chofer_id ? { full_name: choferesMap[ruta.chofer_id] || 'Chofer desconocido' } : null
+      }));
 
       setRutas(rutasConChofer);
       setSelectedRutas([]);
