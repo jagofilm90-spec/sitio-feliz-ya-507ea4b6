@@ -32,10 +32,14 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   Loader2, Search, TrendingUp, TrendingDown, DollarSign, 
   AlertTriangle, CheckCircle2, XCircle, Calculator, Pencil,
-  ArrowUpDown
+  ArrowUpDown, ChevronDown, ChevronUp, Check, Clock, ListChecks
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Separator } from "@/components/ui/separator";
 import { analizarMargen, simularPrecioPropuesto, calcularPrecioSugerido, redondear } from "@/lib/calculos";
 import { ProductoPrecioCardMobile } from "./ProductoPrecioCardMobile";
 
@@ -143,9 +147,97 @@ export const AdminListaPreciosTab = () => {
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
   const [precioVenta, setPrecioVenta] = useState("");
   const [descuentoMaximo, setDescuentoMaximo] = useState("");
-  
+
+  // Review panel
+  const [reviewPanelOpen, setReviewPanelOpen] = useState(true);
+  const [parcialPrecio, setParcialPrecio] = useState<Record<string, string>>({});
+  const [parcialMode, setParcialMode] = useState<Record<string, boolean>>({});
+
+  // Bulk update
+  const [bulkSheetOpen, setBulkSheetOpen] = useState(false);
+  const [bulkMode, setBulkMode] = useState<'margen' | 'incremento'>('margen');
+  const [bulkFilter, setBulkFilter] = useState<string>("all");
+  const [bulkMargen, setBulkMargen] = useState("");
+  const [bulkDescuento, setBulkDescuento] = useState("");
+  const [bulkIncremento, setBulkIncremento] = useState("");
+  const [bulkTipo, setBulkTipo] = useState<'pesos' | 'porcentaje'>('porcentaje');
+  const [bulkPreview, setBulkPreview] = useState<Array<{ id: string; nombre: string; precioActual: number; precioNuevo: number; cambio: number }>>([]);
+
+  // Simulator enhanced
+  const [simMargenDeseado, setSimMargenDeseado] = useState("");
+  const [simDescuentoMax, setSimDescuentoMax] = useState("");
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch pending price reviews
+  const { data: revisionesPendientes = [], refetch: refetchRevisiones } = useQuery({
+    queryKey: ["revisiones-precio-pendientes"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("productos_revision_precio")
+        .select("*, productos:producto_id(id, codigo, nombre, unidad, precio_por_kilo, peso_kg)")
+        .in("status", ["pendiente", "parcial"])
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Mutation: apply full price review
+  const applyReviewMutation = useMutation({
+    mutationFn: async ({ reviewId, productoId, nuevoPrecio, tipo }: { reviewId: string; productoId: string; nuevoPrecio: number; tipo: 'completado' | 'parcial' | 'ignorado' }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No autenticado");
+
+      if (tipo !== 'ignorado') {
+        await supabase.from("productos").update({ precio_venta: nuevoPrecio }).eq("id", productoId);
+      }
+
+      const review = revisionesPendientes.find((r: any) => r.id === reviewId);
+      const pendienteRestante = tipo === 'parcial' && review
+        ? redondear(review.precio_venta_sugerido - nuevoPrecio)
+        : 0;
+
+      await (supabase as any).from("productos_revision_precio").update({
+        status: tipo,
+        ajuste_aplicado: tipo !== 'ignorado' ? redondear(nuevoPrecio - (review?.precio_venta_actual || 0)) : 0,
+        pendiente_ajuste: pendienteRestante,
+        resuelto_por: user.id,
+        resuelto_at: new Date().toISOString(),
+      }).eq("id", reviewId);
+    },
+    onSuccess: (_, vars) => {
+      const msg = vars.tipo === 'completado' ? "Precio actualizado" : vars.tipo === 'parcial' ? "Precio parcialmente actualizado" : "Revisión pospuesta";
+      toast({ title: msg });
+      queryClient.invalidateQueries({ queryKey: ["admin-lista-precios-analisis"] });
+      refetchRevisiones();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Mutation: bulk price update
+  const bulkUpdateMutation = useMutation({
+    mutationFn: async (items: Array<{ id: string; precioNuevo: number }>) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No autenticado");
+      for (const item of items) {
+        await supabase.from("productos").update({ precio_venta: item.precioNuevo }).eq("id", item.id);
+      }
+      return items.length;
+    },
+    onSuccess: (count) => {
+      toast({ title: `${count} productos actualizados` });
+      queryClient.invalidateQueries({ queryKey: ["admin-lista-precios-analisis"] });
+      setBulkSheetOpen(false);
+      setBulkPreview([]);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
 
   // Fetch products with costs
   const { data: productos, isLoading } = useQuery({
@@ -317,6 +409,196 @@ export const AdminListaPreciosTab = () => {
     );
   }, [simuladorProduct, precioPropuesto]);
 
+  // Calculate bulk preview
+  const calculateBulkPreview = () => {
+    if (!productos) return;
+    const filtered = bulkFilter === 'all' ? productos : productos.filter(p => p.categoria === bulkFilter || p.marca === bulkFilter);
+    const preview = filtered.map(p => {
+      let precioNuevo = p.precio_venta;
+      if (bulkMode === 'margen') {
+        const costo = p.costo_promedio_ponderado || p.ultimo_costo_compra || 0;
+        const margen = parseFloat(bulkMargen) || 0;
+        const desc = parseFloat(bulkDescuento) || 0;
+        precioNuevo = costo > 0 ? redondear(costo * (1 + margen / 100) + desc) : p.precio_venta;
+      } else {
+        const inc = parseFloat(bulkIncremento) || 0;
+        precioNuevo = bulkTipo === 'porcentaje' ? redondear(p.precio_venta * (1 + inc / 100)) : redondear(p.precio_venta + inc);
+      }
+      return { id: p.id, nombre: `${p.codigo} - ${p.nombre}`, precioActual: p.precio_venta, precioNuevo, cambio: redondear(((precioNuevo - p.precio_venta) / p.precio_venta) * 100) };
+    }).filter(p => p.precioNuevo !== p.precioActual);
+    setBulkPreview(preview);
+  };
+
+  // Render review panel
+  function renderReviewPanel() {
+    if (revisionesPendientes.length === 0) return null;
+    return (
+      <Collapsible open={reviewPanelOpen} onOpenChange={setReviewPanelOpen}>
+        <div className="mb-4 border border-orange-300 dark:border-orange-700 rounded-lg overflow-hidden">
+          <CollapsibleTrigger asChild>
+            <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950/30 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-950/50">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                <span className="text-sm font-semibold text-orange-800 dark:text-orange-300">
+                  {revisionesPendientes.length} producto(s) con ajuste de precio pendiente
+                </span>
+              </div>
+              {reviewPanelOpen ? <ChevronUp className="h-4 w-4 text-orange-600" /> : <ChevronDown className="h-4 w-4 text-orange-600" />}
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="p-3 space-y-3 max-h-[400px] overflow-auto">
+              {revisionesPendientes.map((rev: any) => {
+                const prod = rev.productos;
+                const isParcialMode = parcialMode[rev.id];
+                const margenInput = parseFloat(parcialPrecio[rev.id] || '') || 0;
+                return (
+                  <div key={rev.id} className="p-3 border rounded-lg bg-background space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-medium text-sm">{prod?.nombre || 'Producto'}</span>
+                        <span className="text-xs text-muted-foreground ml-2">{prod?.codigo}</span>
+                      </div>
+                      {rev.status === 'parcial' && <Badge className="bg-amber-100 text-amber-700 border-amber-300 text-[10px]">Parcial</Badge>}
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                      <div><span className="text-muted-foreground">Costo:</span> <span className="font-medium">{formatCurrency(rev.costo_anterior)}→{formatCurrency(rev.costo_nuevo)}</span></div>
+                      <div><span className="text-muted-foreground">Precio actual:</span> <span className="font-medium">{formatCurrency(rev.precio_venta_actual)}</span></div>
+                      <div><span className="text-muted-foreground">Sugerido:</span> <span className="font-semibold text-orange-600">{formatCurrency(rev.precio_venta_sugerido)}</span></div>
+                      <div><span className="text-muted-foreground">Pendiente:</span> <span className="font-medium">+{formatCurrency(rev.pendiente_ajuste)}</span></div>
+                    </div>
+
+                    {isParcialMode ? (
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs shrink-0">Precio a aplicar:</Label>
+                        <div className="relative flex-1">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span>
+                          <Input type="number" step="0.01" className="pl-6 h-8 text-xs" value={parcialPrecio[rev.id] || ''} onChange={e => setParcialPrecio(p => ({...p, [rev.id]: e.target.value}))} />
+                        </div>
+                        <Button size="sm" className="h-8 text-xs" disabled={!margenInput || applyReviewMutation.isPending}
+                          onClick={() => applyReviewMutation.mutate({ reviewId: rev.id, productoId: rev.producto_id, nuevoPrecio: margenInput, tipo: 'parcial' })}>
+                          Aplicar
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setParcialMode(p => ({...p, [rev.id]: false}))}>Cancelar</Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2 flex-wrap">
+                        <Button size="sm" className="h-7 text-xs" disabled={applyReviewMutation.isPending}
+                          onClick={() => applyReviewMutation.mutate({ reviewId: rev.id, productoId: rev.producto_id, nuevoPrecio: rev.precio_venta_sugerido, tipo: 'completado' })}>
+                          <Check className="h-3 w-3 mr-1" /> Aplicar completo
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-7 text-xs"
+                          onClick={() => { setParcialMode(p => ({...p, [rev.id]: true})); setParcialPrecio(p => ({...p, [rev.id]: rev.precio_venta_actual.toString()})); }}>
+                          Aplicar parcial
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={applyReviewMutation.isPending}
+                          onClick={() => applyReviewMutation.mutate({ reviewId: rev.id, productoId: rev.producto_id, nuevoPrecio: 0, tipo: 'ignorado' })}>
+                          <Clock className="h-3 w-3 mr-1" /> Después
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
+    );
+  }
+
+  // Render bulk update sheet
+  function renderBulkSheet() {
+    return (
+      <Sheet open={bulkSheetOpen} onOpenChange={setBulkSheetOpen}>
+        <SheetContent className="sm:max-w-lg overflow-auto">
+          <SheetHeader>
+            <SheetTitle>Actualización en Masa</SheetTitle>
+            <SheetDescription>Ajustar precios de venta para múltiples productos</SheetDescription>
+          </SheetHeader>
+          <div className="space-y-4 mt-4">
+            <div className="flex gap-2">
+              <Button size="sm" variant={bulkMode === 'margen' ? 'default' : 'outline'} onClick={() => { setBulkMode('margen'); setBulkPreview([]); }}>Por margen %</Button>
+              <Button size="sm" variant={bulkMode === 'incremento' ? 'default' : 'outline'} onClick={() => { setBulkMode('incremento'); setBulkPreview([]); }}>Por incremento</Button>
+            </div>
+            <div>
+              <Label className="text-xs">Filtrar por categoría/marca</Label>
+              <Select value={bulkFilter} onValueChange={v => { setBulkFilter(v); setBulkPreview([]); }}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {[...new Set(productos?.map(p => p.categoria).filter(Boolean) as string[])].map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {bulkMode === 'margen' ? (
+              <>
+                <div>
+                  <Label className="text-xs">Margen deseado %</Label>
+                  <Input type="number" value={bulkMargen} onChange={e => setBulkMargen(e.target.value)} placeholder="15" className="h-9" />
+                </div>
+                <div>
+                  <Label className="text-xs">Descuento máximo $</Label>
+                  <Input type="number" value={bulkDescuento} onChange={e => setBulkDescuento(e.target.value)} placeholder="0" className="h-9" />
+                </div>
+              </>
+            ) : (
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Label className="text-xs">Incremento</Label>
+                  <Input type="number" value={bulkIncremento} onChange={e => setBulkIncremento(e.target.value)} placeholder="10" className="h-9" />
+                </div>
+                <div>
+                  <Label className="text-xs">Tipo</Label>
+                  <Select value={bulkTipo} onValueChange={(v: any) => setBulkTipo(v)}>
+                    <SelectTrigger className="h-9 w-24"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="porcentaje">%</SelectItem>
+                      <SelectItem value="pesos">$</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            <Button variant="outline" onClick={calculateBulkPreview} className="w-full">Calcular preview</Button>
+            {bulkPreview.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-xs font-semibold">{bulkPreview.length} productos con cambios:</div>
+                <ScrollArea className="h-[250px] border rounded-lg">
+                  <Table>
+                    <TableHeader><TableRow>
+                      <TableHead className="text-[10px]">Producto</TableHead>
+                      <TableHead className="text-[10px] text-right">Actual</TableHead>
+                      <TableHead className="text-[10px] text-right">Nuevo</TableHead>
+                      <TableHead className="text-[10px] text-right">%</TableHead>
+                    </TableRow></TableHeader>
+                    <TableBody>
+                      {bulkPreview.map(p => (
+                        <TableRow key={p.id}>
+                          <TableCell className="text-[10px] py-1">{p.nombre}</TableCell>
+                          <TableCell className="text-[10px] py-1 text-right">{formatCurrency(p.precioActual)}</TableCell>
+                          <TableCell className="text-[10px] py-1 text-right font-medium">{formatCurrency(p.precioNuevo)}</TableCell>
+                          <TableCell className={cn("text-[10px] py-1 text-right", p.cambio > 0 ? "text-green-600" : "text-red-600")}>{p.cambio > 0 ? '+' : ''}{p.cambio}%</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+                <Button className="w-full" disabled={bulkUpdateMutation.isPending}
+                  onClick={() => bulkUpdateMutation.mutate(bulkPreview.map(p => ({ id: p.id, precioNuevo: p.precioNuevo })))}>
+                  {bulkUpdateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ListChecks className="h-4 w-4 mr-2" />}
+                  Aplicar a {bulkPreview.length} productos
+                </Button>
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -331,9 +613,14 @@ export const AdminListaPreciosTab = () => {
       <div className="flex flex-col h-[calc(100vh-8rem)]">
         {/* Header móvil */}
         <div className="pb-3 space-y-3 sticky top-0 bg-background z-20">
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-primary" />
-            <h2 className="text-base font-semibold">Análisis de Precios</h2>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-primary" />
+              <h2 className="text-base font-semibold">Análisis de Precios</h2>
+            </div>
+            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setBulkSheetOpen(true)}>
+              <ListChecks className="h-3.5 w-3.5 mr-1" /> En masa
+            </Button>
           </div>
           
           {/* Stats badges - scroll horizontal */}
@@ -405,8 +692,29 @@ export const AdminListaPreciosTab = () => {
           )}
         </div>
 
+        {renderReviewPanel()}
+
+        {/* Lista de cards */}
+        <div className="flex-1 overflow-auto space-y-3 py-2">
+          {filteredProductos.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No se encontraron productos
+            </div>
+          ) : (
+            filteredProductos.map((producto) => (
+              <ProductoPrecioCardMobile
+                key={producto.id}
+                producto={producto}
+                onSimular={openSimulador}
+                onEditar={openEditor}
+              />
+            ))
+          )}
+        </div>
+
         {/* Dialogs - se mantienen igual */}
         {renderDialogs()}
+        {renderBulkSheet()}
       </div>
     );
   }
@@ -421,6 +729,9 @@ export const AdminListaPreciosTab = () => {
             <DollarSign className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Análisis de Precios y Márgenes</h2>
           </div>
+          <Button size="sm" variant="outline" onClick={() => setBulkSheetOpen(true)}>
+            <ListChecks className="h-4 w-4 mr-1" /> Actualizar en masa
+          </Button>
         </div>
         
         {/* Stats badges */}
@@ -486,6 +797,9 @@ export const AdminListaPreciosTab = () => {
           </Select>
         </div>
       </div>
+
+      {/* Review Panel */}
+      {renderReviewPanel()}
 
       {/* Table */}
       <div className="flex-1 overflow-auto">
@@ -670,6 +984,7 @@ export const AdminListaPreciosTab = () => {
 
       {/* Dialogs */}
       {renderDialogs()}
+      {renderBulkSheet()}
     </div>
   );
 
@@ -784,6 +1099,28 @@ export const AdminListaPreciosTab = () => {
                     })}
                   </div>
                 </div>
+
+                {/* Aplicar este precio */}
+                {simulacionResult && !simulacionResult.es_perdida && (
+                  <Separator />
+                )}
+                {simulacionResult && (
+                  <Button
+                    className="w-full"
+                    disabled={!simulacionResult || simulacionResult.es_perdida || updatePriceMutation.isPending}
+                    onClick={() => {
+                      const precio = parseFloat(precioPropuesto);
+                      if (!simuladorProduct || isNaN(precio)) return;
+                      updatePriceMutation.mutate(
+                        { id: simuladorProduct.id, precio_venta: precio, descuento_maximo: simuladorProduct.descuento_maximo },
+                        { onSuccess: () => setSimuladorOpen(false) }
+                      );
+                    }}
+                  >
+                    {updatePriceMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+                    Aplicar este precio
+                  </Button>
+                )}
               </div>
             )}
           </DialogContent>

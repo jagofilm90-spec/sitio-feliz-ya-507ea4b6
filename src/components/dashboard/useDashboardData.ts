@@ -23,10 +23,11 @@ export interface DashboardKPIs {
   pedidosSinAutorizar24h: number;
   facturasVencenSemana: number;
   pagosPorValidar: number;
+  preciosRevisionPendientes: number;
 }
 
 export interface AlertaUrgente {
-  tipo: 'pedidos_sin_autorizar' | 'chofer_sin_gps' | 'stock_cero' | 'credito_excedido' | 'pagos_por_validar';
+  tipo: 'pedidos_sin_autorizar' | 'chofer_sin_gps' | 'stock_cero' | 'credito_excedido' | 'pagos_por_validar' | 'precios_por_revisar';
   cantidad: number;
   detalle?: string;
   ruta: string;
@@ -66,7 +67,7 @@ const EMPTY_KPIS: DashboardKPIs = {
   ventasDia: 0, ventasMes: 0, ventasMesAnterior: 0, variacionMes: 0,
   porCobrar: 0, totalVencido: 0, cobrosHoy: 0, pedidosEnCalle: 0,
   entregasCompletadasHoy: 0, entregasPendientesHoy: 0, pedidosPorSurtir: 0,
-  creditoExcedido: 0, stockBajo: 0, pedidosSinAutorizar24h: 0, facturasVencenSemana: 0, pagosPorValidar: 0,
+  creditoExcedido: 0, stockBajo: 0, pedidosSinAutorizar24h: 0, facturasVencenSemana: 0, pagosPorValidar: 0, preciosRevisionPendientes: 0,
 };
 
 export function useDashboardData(periodo: Periodo = 'mes') {
@@ -103,6 +104,7 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         entregasHoyRes,
         cobrosHoyRes,
         pagosPorValidarRes,
+        preciosRevisionRes,
       ] = await Promise.all([
         // Ventas del día
         supabase.from("pedidos").select("total").gte("created_at", inicioHoy).in("status", ["entregado", "en_ruta"]),
@@ -138,6 +140,8 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         supabase.from("pagos_cliente").select("monto_total").gte("fecha_registro", inicioHoy).neq("status", "rechazado"),
         // Pagos por validar
         supabase.from("pagos_cliente").select("id", { count: "exact", head: true }).eq("status", "pendiente").eq("requiere_validacion", true),
+        // Precios revision pendientes
+        (supabase as any).from("productos_revision_precio").select("id", { count: "exact", head: true }).in("status", ["pendiente", "parcial"]),
       ]);
 
       // KPIs calculations
@@ -175,6 +179,7 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         pedidosSinAutorizar24h: pedidosSinAutRes.count || 0,
         facturasVencenSemana: facturasVencenSemanaRes.count || 0,
         pagosPorValidar: pagosPorValidarRes.count || 0,
+        preciosRevisionPendientes: (preciosRevisionRes as any)?.count || 0,
       };
 
       // Alertas urgentes
@@ -191,8 +196,11 @@ export function useDashboardData(periodo: Periodo = 'mes') {
       if ((pagosPorValidarRes.count || 0) > 0) {
         alertas.push({ tipo: 'pagos_por_validar', cantidad: pagosPorValidarRes.count || 0, ruta: '/secretaria', botonTexto: 'Validar pagos' });
       }
+      const preciosCount = (preciosRevisionRes as any)?.count || 0;
+      if (preciosCount > 0) {
+        alertas.push({ tipo: 'precios_por_revisar', cantidad: preciosCount, ruta: '/precios', botonTexto: 'Revisar ahora' });
+      }
 
-      // Top productos aggregation
       const prodMap = new Map<string, TopProducto>();
       topProductosRes.data?.forEach((d: any) => {
         const pid = d.producto_id;

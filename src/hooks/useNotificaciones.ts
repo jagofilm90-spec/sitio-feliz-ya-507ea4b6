@@ -55,6 +55,14 @@ interface ConfirmacionProveedor {
   confirmado_en: string;
 }
 
+interface NotificacionGeneral {
+  id: string;
+  tipo: string;
+  titulo: string;
+  descripcion: string;
+  created_at: string;
+}
+
 export interface NotificacionesData {
   alertasCaducidad: ProductoCaducidad[];
   notificacionesStock: NotificacionStockBajo[];
@@ -62,6 +70,8 @@ export interface NotificacionesData {
   autorizacionesOC: AutorizacionOC[];
   autorizacionesCotizacion: AutorizacionCotizacion[];
   confirmacionesProveedor: ConfirmacionProveedor[];
+  notificacionesPrecios: NotificacionGeneral[];
+  notificacionesPedidos: NotificacionGeneral[];
   totalCount: number;
 }
 
@@ -73,6 +83,8 @@ export const useNotificaciones = () => {
     autorizacionesOC: [],
     autorizacionesCotizacion: [],
     confirmacionesProveedor: [],
+    notificacionesPrecios: [],
+    notificacionesPedidos: [],
     totalCount: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -94,16 +106,18 @@ export const useNotificaciones = () => {
 
   const cargarNotificaciones = async () => {
     try {
-      const [caducidad, stock, licencias, autorizaciones, autorizacionesCot, confirmaciones] = await Promise.all([
+      const [caducidad, stock, licencias, autorizaciones, autorizacionesCot, confirmaciones, precios, pedidos] = await Promise.all([
         cargarAlertasCaducidad(),
         cargarNotificacionesStock(),
         cargarAlertasLicencias(),
         isAdmin ? cargarAutorizacionesOC() : Promise.resolve([]),
         isAdmin ? cargarAutorizacionesCotizacion() : Promise.resolve([]),
         cargarConfirmacionesProveedor(),
+        isAdmin ? cargarNotificacionesPrecios() : Promise.resolve([]),
+        cargarNotificacionesPedidos(),
       ]);
 
-      const total = caducidad.length + stock.length + licencias.length + autorizaciones.length + autorizacionesCot.length + confirmaciones.length;
+      const total = caducidad.length + stock.length + licencias.length + autorizaciones.length + autorizacionesCot.length + confirmaciones.length + precios.length + pedidos.length;
       setNotificaciones({
         alertasCaducidad: caducidad,
         notificacionesStock: stock,
@@ -111,6 +125,8 @@ export const useNotificaciones = () => {
         autorizacionesOC: autorizaciones,
         autorizacionesCotizacion: autorizacionesCot,
         confirmacionesProveedor: confirmaciones,
+        notificacionesPrecios: precios,
+        notificacionesPedidos: pedidos,
         totalCount: total,
       });
     } catch (error) {
@@ -124,6 +140,52 @@ export const useNotificaciones = () => {
   const cargarConfirmacionesProveedor = async (): Promise<ConfirmacionProveedor[]> => {
     // Confirmation system was removed - always return empty array
     return [];
+  };
+
+  const cargarNotificacionesPrecios = async (): Promise<NotificacionGeneral[]> => {
+    try {
+      const { data, error } = await supabase
+        .from("notificaciones")
+        .select("id, tipo, titulo, descripcion, created_at")
+        .in("tipo", ["revision_precio_requerida", "costo_incrementado"])
+        .eq("leida", false)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error) return [];
+      return (data || []) as NotificacionGeneral[];
+    } catch (error) {
+      console.error("Error cargando notificaciones de precios:", error);
+      return [];
+    }
+  };
+
+  const cargarNotificacionesPedidos = async (): Promise<NotificacionGeneral[]> => {
+    try {
+      // Only load for admin and secretaria
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+      const hasAccess = roles?.some(r => r.role === 'admin' || r.role === 'secretaria') || false;
+      if (!hasAccess) return [];
+
+      const { data, error } = await supabase
+        .from("notificaciones")
+        .select("id, tipo, titulo, descripcion, created_at")
+        .eq("tipo", "nuevo_pedido_vendedor")
+        .eq("leida", false)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error) return [];
+      return (data || []) as NotificacionGeneral[];
+    } catch (error) {
+      console.error("Error cargando notificaciones de pedidos:", error);
+      return [];
+    }
   };
 
   const cargarAlertasCaducidad = async (): Promise<ProductoCaducidad[]> => {
