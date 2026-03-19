@@ -830,6 +830,11 @@ const Productos = () => {
                       />
                     </div>
                   </div>
+                  {formData.maneja_caducidad && (
+                    <p className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/30 p-2 rounded border border-blue-200 dark:border-blue-800">
+                      El almacén registrará la fecha de caducidad de cada lote al recibir la mercancía.
+                    </p>
+                  )}
 
                   {/* ── SECCIÓN 4: Proveedor ── */}
                   <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
