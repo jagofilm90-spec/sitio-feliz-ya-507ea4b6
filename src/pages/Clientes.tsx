@@ -31,7 +31,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, MapPin, X, Mail, BarChart3, Loader2, Sparkles, User, Package, Map, ClipboardList, FileSpreadsheet, Users, Building2, Gift, CalendarDays, Home } from "lucide-react";
+import { Plus, Search, Edit, Trash2, MapPin, X, Mail, BarChart3, Loader2, Sparkles, User, Package, Map, ClipboardList, FileSpreadsheet, Users, Building2, Gift, CalendarDays, Home, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AuditoriaFiscalSheet } from "@/components/clientes/AuditoriaFiscalSheet";
 import ClienteSucursalesDialog from "@/components/clientes/ClienteSucursalesDialog";
