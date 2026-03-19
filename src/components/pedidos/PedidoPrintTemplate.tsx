@@ -133,34 +133,46 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false }: PedidoPrintTempla
         </div>
       </div>
 
-      {/* ═══════ TABLA DE PRODUCTOS ═══════ */}
-      <table className="w-full mb-2 border-collapse flex-grow-0">
+      {/* ═══════ TABLA DE PRODUCTOS (6 columnas) ═══════ */}
+      <table className="w-full mb-2 border-collapse flex-grow-0" style={{ tableLayout: 'fixed' }}>
+        <colgroup>
+          <col style={{ width: '8%' }} />
+          <col style={{ width: '10%' }} />
+          <col style={{ width: '12%' }} />
+          <col style={{ width: '38%' }} />
+          <col style={{ width: '14%' }} />
+          <col style={{ width: '18%' }} />
+        </colgroup>
         <thead>
-          <tr className="bg-gray-800 text-white text-[10px]">
-            <th className="p-1.5 text-center w-16 border border-gray-700">CANTIDAD</th>
-            <th className="p-1.5 text-left border border-gray-700">DETALLE</th>
-            <th className="p-1.5 text-right w-20 border border-gray-700">PESO</th>
-            <th className="p-1.5 text-right w-20 border border-gray-700">PRECIO U.</th>
-            <th className="p-1.5 text-right w-24 border border-gray-700">IMPORTE</th>
+          <tr className="bg-gray-800 text-white text-[9px]">
+            <th className="p-1 text-center border border-gray-700">CANT.</th>
+            <th className="p-1 text-center border border-gray-700">UNIDAD</th>
+            <th className="p-1 text-right border border-gray-700">PESO KG</th>
+            <th className="p-1 text-left border border-gray-700">DESCRIPCIÓN</th>
+            <th className="p-1 text-right border border-gray-700">PRECIO</th>
+            <th className="p-1 text-right border border-gray-700">TOTAL</th>
           </tr>
         </thead>
         <tbody>
-          {datos.productos.map((prod, i) => (
-            <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-              <td className="p-1 border border-gray-300 text-center font-semibold">{prod.cantidad}</td>
-              <td className="p-1 border border-gray-300 text-[10px]">{prod.descripcion}</td>
-              <td className="p-1 border border-gray-300 text-right text-[10px]">{prod.pesoTotal ? fmtKg(prod.pesoTotal) : "-"}</td>
-              <td className="p-1 border border-gray-300 text-right text-[10px]">
-                {fmtMoney(prod.precioUnitario)}
-                {prod.precioPorKilo && <span className="text-[8px]">/kg</span>}
-              </td>
-              <td className="p-1 border border-gray-300 text-right font-semibold text-[10px]">{fmtMoney(prod.importe)}</td>
-            </tr>
-          ))}
-          {/* Filas vacías para mínimo visual */}
+          {datos.productos.map((prod, i) => {
+            const capitalUnidad = prod.unidad ? prod.unidad.charAt(0).toUpperCase() + prod.unidad.slice(1) : '';
+            return (
+              <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                <td className="p-1 border border-gray-300 text-center font-semibold text-[10px]">{prod.cantidad}</td>
+                <td className="p-1 border border-gray-300 text-center text-[10px]">{capitalUnidad}</td>
+                <td className="p-1 border border-gray-300 text-right text-[10px]">{prod.pesoTotal ? `${prod.pesoTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })} kg` : "-"}</td>
+                <td className="p-1 border border-gray-300 text-[10px]">{prod.descripcion}</td>
+                <td className="p-1 border border-gray-300 text-right text-[10px]">
+                  {fmtMoney(prod.precioUnitario)}{prod.precioPorKilo && <span className="text-[8px]">/kg</span>}
+                </td>
+                <td className="p-1 border border-gray-300 text-right font-semibold text-[10px]">{fmtMoney(prod.importe)}</td>
+              </tr>
+            );
+          })}
           {Array.from({ length: Math.max(0, 2 - datos.productos.length) }).map((_, i) => (
             <tr key={`e-${i}`}>
               <td className="p-1 border border-gray-300">&nbsp;</td>
+              <td className="p-1 border border-gray-300" />
               <td className="p-1 border border-gray-300" />
               <td className="p-1 border border-gray-300" />
               <td className="p-1 border border-gray-300" />
