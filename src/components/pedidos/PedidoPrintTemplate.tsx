@@ -5,6 +5,7 @@ import { QRCodeSVG } from "qrcode.react";
 
 interface ProductoPedido {
   cantidad: number;
+  unidad: string;
   descripcion: string;
   pesoTotal: number | null;
   precioUnitario: number;
