@@ -34,7 +34,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   Loader2, Search, TrendingUp, TrendingDown, DollarSign, 
   AlertTriangle, CheckCircle2, XCircle, Calculator, Pencil,
-  ArrowUpDown, ChevronDown, ChevronUp, Check, Clock, ListChecks
+  ArrowUpDown, ChevronDown, ChevronUp, Check, Clock, ListChecks, History, Minus
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
