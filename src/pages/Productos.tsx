@@ -58,7 +58,7 @@ import { Plus, Search, Edit, Power, RotateCcw, ChevronDown, Filter, X, ArrowUpDo
 import { Badge } from "@/components/ui/badge";
 import { LotesDesglose } from "@/components/productos/LotesDesglose";
 import { NotificacionesSistema } from "@/components/NotificacionesSistema";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { getDisplayName, UNIDADES_SAT, UNIDADES_PRODUCTO, UNIDADES_LEGACY } from "@/lib/productUtils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ProductoCardMobile from "@/components/productos/ProductoCardMobile";
