@@ -93,6 +93,8 @@ export const useNotificaciones = () => {
     notificacionesRechazo: [],
     notificacionesCaducidadPush: [],
     notificacionesFumigacionPush: [],
+    notificacionesPreciosVendedor: [],
+    notificacionesProductoNuevo: [],
     totalCount: 0,
   });
   const [loading, setLoading] = useState(true);
