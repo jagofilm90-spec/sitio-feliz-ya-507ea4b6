@@ -214,7 +214,7 @@ export const AdminListaPreciosTab = () => {
           // Notify vendedores
           const review = revisionesPendientes.find((r: any) => r.id === reviewId);
           const productoNombre = review?.productos?.nombre || "";
-          notificarCambioPrecio({ productoNombre, precioAnterior, precioNuevo: nuevoPrecio });
+          notificarCambioPrecio({ productoNombre, precioAnterior, precioNuevo: nuevoPrecio, roles: ['secretaria', 'vendedor'] });
         }
       }
 
@@ -281,7 +281,7 @@ export const AdminListaPreciosTab = () => {
         try {
           await supabase.functions.invoke("send-push-notification", {
             body: {
-              roles: ["vendedor"],
+              roles: ["secretaria", "vendedor"],
               title: "💰 Precios actualizados",
               body: `Se actualizaron los precios de ${changedCount} productos`,
             },
@@ -370,7 +370,7 @@ export const AdminListaPreciosTab = () => {
         });
         // Notify vendedores
         const productoNombre = editingProduct?.nombre || "";
-        notificarCambioPrecio({ productoNombre, precioAnterior, precioNuevo: precio_venta });
+        notificarCambioPrecio({ productoNombre, precioAnterior, precioNuevo: precio_venta, roles: ['secretaria', 'vendedor'] });
       }
     },
     onSuccess: () => {

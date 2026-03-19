@@ -527,8 +527,8 @@ export const useNotificaciones = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
       const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
-      const isVendedor = roles?.some(r => r.role === 'vendedor') || false;
-      if (!isVendedor) return [];
+      const hasAccess = roles?.some(r => ['admin', 'secretaria', 'vendedor'].includes(r.role as string)) || false;
+      if (!hasAccess) return [];
 
       const { data, error } = await supabase
         .from("notificaciones")
@@ -547,8 +547,8 @@ export const useNotificaciones = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
       const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
-      const isVendedor = roles?.some(r => r.role === 'vendedor') || false;
-      if (!isVendedor) return [];
+      const hasAccess = roles?.some(r => ['admin', 'secretaria', 'vendedor'].includes(r.role as string)) || false;
+      if (!hasAccess) return [];
 
       const { data, error } = await supabase
         .from("notificaciones")

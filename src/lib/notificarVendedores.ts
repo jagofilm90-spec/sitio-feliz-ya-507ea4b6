@@ -11,10 +11,12 @@ export async function notificarCambioPrecio({
   productoNombre,
   precioAnterior,
   precioNuevo,
+  roles = ["vendedor"],
 }: {
   productoNombre: string;
   precioAnterior: number;
   precioNuevo: number;
+  roles?: string[];
 }) {
   if (precioAnterior === precioNuevo) return;
 
@@ -37,7 +39,7 @@ export async function notificarCambioPrecio({
   try {
     await supabase.functions.invoke("send-push-notification", {
       body: {
-        roles: ["vendedor"],
+        roles,
         title: titulo,
         body: `${productoNombre}: ${formatCurrency(precioAnterior)} → ${formatCurrency(precioNuevo)}`,
       },
@@ -54,10 +56,12 @@ export async function notificarProductoNuevo({
   productoNombre,
   precioVenta,
   unidad,
+  roles = ["vendedor"],
 }: {
   productoNombre: string;
   precioVenta: number;
   unidad: string;
+  roles?: string[];
 }) {
   const titulo = "🆕 Nuevo producto disponible";
   const descripcion = `${productoNombre} — ${formatCurrency(precioVenta)}/${unidad} ya disponible en el catálogo`;
@@ -78,7 +82,7 @@ export async function notificarProductoNuevo({
   try {
     await supabase.functions.invoke("send-push-notification", {
       body: {
-        roles: ["vendedor"],
+        roles,
         title: "🆕 Nuevo producto",
         body: `${productoNombre} ya está disponible — ${formatCurrency(precioVenta)}/${unidad}`,
       },
