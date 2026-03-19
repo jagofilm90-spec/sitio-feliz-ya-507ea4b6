@@ -273,6 +273,34 @@ export const AdminListaPreciosTab = () => {
     },
   });
 
+  // Fetch price history
+  const { data: historialPrecios, isLoading: isLoadingHistorial } = useQuery({
+    queryKey: ["admin-historial-precios", selectedProductForHistory?.id],
+    queryFn: async () => {
+      if (!selectedProductForHistory?.id) return [];
+      const { data: historial, error } = await supabase
+        .from("productos_historial_precios")
+        .select("id, precio_anterior, precio_nuevo, created_at, usuario_id")
+        .eq("producto_id", selectedProductForHistory.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      if (!historial || historial.length === 0) return [];
+      const userIds = [...new Set(historial.map(h => h.usuario_id).filter(Boolean))] as string[];
+      let userMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", userIds);
+        if (profiles) {
+          userMap = profiles.reduce((acc, p) => { acc[p.id] = p.full_name || "Usuario"; return acc; }, {} as Record<string, string>);
+        }
+      }
+      return historial.map(h => ({
+        ...h,
+        usuario_nombre: h.usuario_id ? userMap[h.usuario_id] || "Usuario" : null,
+      }));
+    },
+    enabled: !!selectedProductForHistory?.id,
+  });
+
   // Fetch products with costs
   const { data: productos, isLoading } = useQuery({
     queryKey: ["admin-lista-precios-analisis"],
