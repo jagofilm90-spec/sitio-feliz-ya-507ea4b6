@@ -220,6 +220,12 @@ export function useDashboardData(periodo: Periodo = 'mes') {
       if (preciosCount > 0) {
         alertas.push({ tipo: 'precios_por_revisar', cantidad: preciosCount, ruta: '/precios', botonTexto: 'Revisar ahora' });
       }
+      if ((lotesVencidosRes.count || 0) > 0) {
+        alertas.push({ tipo: 'lotes_vencidos', cantidad: lotesVencidosRes.count || 0, ruta: '/almacen-tablet', botonTexto: 'Ver en almacén' });
+      }
+      if (fumVencidasCount > 0) {
+        alertas.push({ tipo: 'fumigaciones_vencidas', cantidad: fumVencidasCount, ruta: '/almacen-tablet', botonTexto: 'Ver fumigaciones' });
+      }
 
       const prodMap = new Map<string, TopProducto>();
       topProductosRes.data?.forEach((d: any) => {
