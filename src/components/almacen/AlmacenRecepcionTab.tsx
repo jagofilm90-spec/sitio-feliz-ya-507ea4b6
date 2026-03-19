@@ -34,6 +34,8 @@ import {
   RefreshCw,
   Box,
   XCircle,
+  FileText,
+  AlertTriangle,
 } from "lucide-react";
 import { RegistrarLlegadaSheet } from "./RegistrarLlegadaSheet";
 import { AlmacenRecepcionSheet } from "./AlmacenRecepcionSheet";
