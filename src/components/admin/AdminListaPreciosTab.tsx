@@ -147,9 +147,97 @@ export const AdminListaPreciosTab = () => {
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
   const [precioVenta, setPrecioVenta] = useState("");
   const [descuentoMaximo, setDescuentoMaximo] = useState("");
-  
+
+  // Review panel
+  const [reviewPanelOpen, setReviewPanelOpen] = useState(true);
+  const [parcialPrecio, setParcialPrecio] = useState<Record<string, string>>({});
+  const [parcialMode, setParcialMode] = useState<Record<string, boolean>>({});
+
+  // Bulk update
+  const [bulkSheetOpen, setBulkSheetOpen] = useState(false);
+  const [bulkMode, setBulkMode] = useState<'margen' | 'incremento'>('margen');
+  const [bulkFilter, setBulkFilter] = useState<string>("all");
+  const [bulkMargen, setBulkMargen] = useState("");
+  const [bulkDescuento, setBulkDescuento] = useState("");
+  const [bulkIncremento, setBulkIncremento] = useState("");
+  const [bulkTipo, setBulkTipo] = useState<'pesos' | 'porcentaje'>('porcentaje');
+  const [bulkPreview, setBulkPreview] = useState<Array<{ id: string; nombre: string; precioActual: number; precioNuevo: number; cambio: number }>>([]);
+
+  // Simulator enhanced
+  const [simMargenDeseado, setSimMargenDeseado] = useState("");
+  const [simDescuentoMax, setSimDescuentoMax] = useState("");
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch pending price reviews
+  const { data: revisionesPendientes = [], refetch: refetchRevisiones } = useQuery({
+    queryKey: ["revisiones-precio-pendientes"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("productos_revision_precio")
+        .select("*, productos:producto_id(id, codigo, nombre, unidad, precio_por_kilo, peso_kg)")
+        .in("status", ["pendiente", "parcial"])
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Mutation: apply full price review
+  const applyReviewMutation = useMutation({
+    mutationFn: async ({ reviewId, productoId, nuevoPrecio, tipo }: { reviewId: string; productoId: string; nuevoPrecio: number; tipo: 'completado' | 'parcial' | 'ignorado' }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No autenticado");
+
+      if (tipo !== 'ignorado') {
+        await supabase.from("productos").update({ precio_venta: nuevoPrecio }).eq("id", productoId);
+      }
+
+      const review = revisionesPendientes.find((r: any) => r.id === reviewId);
+      const pendienteRestante = tipo === 'parcial' && review
+        ? redondear(review.precio_venta_sugerido - nuevoPrecio)
+        : 0;
+
+      await (supabase as any).from("productos_revision_precio").update({
+        status: tipo,
+        ajuste_aplicado: tipo !== 'ignorado' ? redondear(nuevoPrecio - (review?.precio_venta_actual || 0)) : 0,
+        pendiente_ajuste: pendienteRestante,
+        resuelto_por: user.id,
+        resuelto_at: new Date().toISOString(),
+      }).eq("id", reviewId);
+    },
+    onSuccess: (_, vars) => {
+      const msg = vars.tipo === 'completado' ? "Precio actualizado" : vars.tipo === 'parcial' ? "Precio parcialmente actualizado" : "Revisión pospuesta";
+      toast({ title: msg });
+      queryClient.invalidateQueries({ queryKey: ["admin-lista-precios-analisis"] });
+      refetchRevisiones();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Mutation: bulk price update
+  const bulkUpdateMutation = useMutation({
+    mutationFn: async (items: Array<{ id: string; precioNuevo: number }>) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No autenticado");
+      for (const item of items) {
+        await supabase.from("productos").update({ precio_venta: item.precioNuevo }).eq("id", item.id);
+      }
+      return items.length;
+    },
+    onSuccess: (count) => {
+      toast({ title: `${count} productos actualizados` });
+      queryClient.invalidateQueries({ queryKey: ["admin-lista-precios-analisis"] });
+      setBulkSheetOpen(false);
+      setBulkPreview([]);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
 
   // Fetch products with costs
   const { data: productos, isLoading } = useQuery({
