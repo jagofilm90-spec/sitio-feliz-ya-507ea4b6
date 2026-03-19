@@ -98,14 +98,6 @@ interface Vendedor {
   nombre_corto: string;
 }
 
-// Lista de vendedores con sus user_ids
-const VENDEDORES: Vendedor[] = [
-  { user_id: "1e19d492-2dff-4798-942d-a2fe99ff1389", nombre: "Carlos Giron Intzin", nombre_corto: "Carlos" },
-  { user_id: "b8eef389-1ea1-4e84-81af-5d2d805e198f", nombre: "Venancio Gregorio", nombre_corto: "Venancio" },
-  { user_id: "07400eb2-f9a3-42dc-9a49-5d1126530f23", nombre: "Salvador Rojas Joaquin", nombre_corto: "Salvador" },
-  { user_id: "001ed4a3-44d3-4bbc-a362-4b78c4d52dd2", nombre: "Martin Castro Albarran", nombre_corto: "Martin" },
-];
-
 const Clientes = () => {
   const isMobile = useIsMobile();
   const [clientes, setClientes] = useState<any[]>([]);
