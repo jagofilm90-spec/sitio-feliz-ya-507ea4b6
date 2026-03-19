@@ -11,10 +11,12 @@ export async function notificarCambioPrecio({
   productoNombre,
   precioAnterior,
   precioNuevo,
+  roles = ["vendedor"],
 }: {
   productoNombre: string;
   precioAnterior: number;
   precioNuevo: number;
+  roles?: string[];
 }) {
   if (precioAnterior === precioNuevo) return;
 
