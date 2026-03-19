@@ -1414,57 +1414,103 @@ const CrearOrdenCompraWizard = ({
               : '<p>Por confirmar</p>';
 
           // 8. HTML del correo
-          const htmlBody = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
-              <div style="background: #C8102E; padding: 20px; text-align: center;">
-                <h1 style="color: white; margin: 0; font-size: 24px;">Nueva Orden de Compra</h1>
-              </div>
-              
-              <div style="padding: 30px;">
-                <p style="font-size: 16px;">Estimado proveedor <strong>${proveedorNombreNotif}</strong>,</p>
-                <p>Hemos generado una nueva orden de compra para su empresa. Adjunto encontrará el documento completo con el detalle de productos.</p>
-                
-                <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 25px 0;">
-                  <table style="width: 100%;">
-                    <tr>
-                      <td style="padding: 5px 0;"><strong>Folio:</strong></td>
-                      <td style="text-align: right; font-size: 18px; color: #C8102E;"><strong>${orden.folio}</strong></td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 5px 0;"><strong>Total:</strong></td>
-                      <td style="text-align: right; font-size: 18px;"><strong>$${orden.total?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong></td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 5px 0;"><strong>Tipo de Pago:</strong></td>
-                      <td style="text-align: right;">${tipoPago === 'anticipado' ? 'Pago Anticipado' : 'Contra Entrega'}</td>
-                    </tr>
-                  </table>
-                </div>
-                
-                <div style="margin: 25px 0;">
-                  <h3 style="color: #2e7d32; margin-bottom: 10px;">📅 Fecha(s) de Entrega Programadas:</h3>
-                  ${fechasEntregaHtml}
-                </div>
-                
-                <div style="margin: 25px 0; padding: 15px; background: #f8fafc; border-left: 4px solid #e11d48; border-radius: 4px;">
-                  <p style="margin: 0; color: #475569; font-size: 14px;">
-                    Para cualquier cambio o confirmación de fechas, contáctenos:<br>
-                    <strong>📞 Tel: ${COMPANY_DATA.telefonosFormateados}</strong><br>
-                    <strong>📧 Email: ${COMPANY_DATA.emails.compras}</strong>
-                  </p>
-                </div>
-                
-                <p style="color: #666; font-size: 14px;">
-                  <strong>📎 Adjunto:</strong> Orden de Compra ${orden.folio} con detalle completo de productos.
-                </p>
-              </div>
-              
-              <div style="background: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: #666;">
-                <p style="margin: 0;">${COMPANY_DATA.razonSocial}</p>
-                <p style="margin: 5px 0;">Este correo fue enviado automáticamente desde el sistema ERP</p>
-              </div>
-            </div>
-          `;
+          const htmlBody = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"></head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:30px 20px;">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+
+  <tr><td style="background:#C8102E;padding:30px 40px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td>
+        <div style="color:white;font-size:26px;font-weight:bold;letter-spacing:2px;">ALMASA</div>
+        <div style="color:#ffcccc;font-size:13px;margin-top:4px;">Abarrotes la Manita S.A. de C.V.</div>
+      </td>
+      <td align="right">
+        <div style="color:white;font-size:12px;text-align:right;">
+          <strong>Departamento de Compras</strong><br>
+          compras@almasa.com.mx<br>
+          ${COMPANY_DATA.telefonosFormateados}
+        </div>
+      </td>
+    </tr></table>
+  </td></tr>
+
+  <tr><td style="background:#f8f8f8;padding:20px 40px;border-bottom:3px solid #C8102E;">
+    <h1 style="margin:0;color:#C8102E;font-size:20px;">Nueva Orden de Compra</h1>
+    <p style="margin:5px 0 0;color:#666;font-size:14px;">Folio: <strong>${orden.folio}</strong></p>
+  </td></tr>
+
+  <tr><td style="padding:25px 40px 15px;">
+    <p style="margin:0;color:#333;font-size:15px;">Estimado(a) <strong>${proveedorNombreNotif}</strong>,</p>
+    <p style="margin:10px 0 0;color:#555;font-size:14px;line-height:1.6;">
+      Por medio del presente, le comunicamos que hemos generado una nueva orden de compra a su empresa.
+      Adjunto encontrará el documento con el detalle completo de los productos solicitados.
+    </p>
+  </td></tr>
+
+  <tr><td style="padding:15px 40px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f8f8;border-radius:6px;border:1px solid #e0e0e0;">
+      <tr>
+        <td style="padding:15px 20px;border-bottom:1px solid #e0e0e0;">
+          <span style="color:#888;font-size:13px;">Folio</span><br>
+          <strong style="color:#333;font-size:15px;">${orden.folio}</strong>
+        </td>
+        <td style="padding:15px 20px;border-bottom:1px solid #e0e0e0;">
+          <span style="color:#888;font-size:13px;">Total</span><br>
+          <strong style="color:#C8102E;font-size:15px;">${formatCurrency(orden.total || 0)}</strong>
+        </td>
+        <td style="padding:15px 20px;border-bottom:1px solid #e0e0e0;">
+          <span style="color:#888;font-size:13px;">Tipo de Pago</span><br>
+          <strong style="color:#333;font-size:15px;">${tipoPago === 'anticipado' ? 'Pago Anticipado' : 'Contra Entrega'}</strong>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="3" style="padding:15px 20px;">
+          <span style="color:#888;font-size:13px;">📅 Fecha(s) de Entrega Programada(s)</span><br>
+          <div style="margin-top:8px;color:#333;font-size:14px;">${fechasEntregaHtml}</div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <tr><td style="padding:15px 40px;">
+    <div style="background:#fff8e1;border-left:4px solid #f59e0b;padding:12px 15px;border-radius:4px;">
+      <p style="margin:0;color:#555;font-size:13px;">
+        📎 <strong>Adjunto:</strong> Encontrará el documento completo de la orden de compra con el detalle de productos, cantidades y precios.
+      </p>
+    </div>
+  </td></tr>
+
+  <tr><td style="padding:15px 40px 25px;">
+    <div style="background:#f8fafc;border-left:4px solid #C8102E;padding:15px;border-radius:4px;">
+      <p style="margin:0 0 8px;color:#333;font-size:14px;"><strong>Para cualquier aclaración:</strong></p>
+      <p style="margin:0;color:#555;font-size:13px;line-height:1.8;">
+        📞 ${COMPANY_DATA.telefonosFormateados}<br>
+        📧 compras@almasa.com.mx
+      </p>
+    </div>
+  </td></tr>
+
+  <tr><td style="background:#2d2d2d;padding:20px 40px;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td>
+        <div style="color:#fff;font-size:13px;font-weight:bold;">ALMASA — Abarrotes la Manita S.A. de C.V.</div>
+        <div style="color:#aaa;font-size:12px;margin-top:4px;">${COMPANY_DATA.razonSocial}<br>RFC: ${COMPANY_DATA.rfc}</div>
+      </td>
+      <td align="right">
+        <div style="color:#aaa;font-size:11px;text-align:right;">
+          <strong style="color:#fff;">Departamento de Compras</strong><br>
+          Este es un correo automático.<br>
+          Por favor no responda a este mensaje.
+        </div>
+      </td>
+    </tr></table>
+  </td></tr>
+
+</table>
+</td></tr></table>
+</body></html>`;
 
           // 9. Preparar adjunto PDF
           const attachments = [{
