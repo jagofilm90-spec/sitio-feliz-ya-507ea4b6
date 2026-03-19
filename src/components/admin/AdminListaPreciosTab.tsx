@@ -1099,6 +1099,28 @@ export const AdminListaPreciosTab = () => {
                     })}
                   </div>
                 </div>
+
+                {/* Aplicar este precio */}
+                {simulacionResult && !simulacionResult.es_perdida && (
+                  <Separator />
+                )}
+                {simulacionResult && (
+                  <Button
+                    className="w-full"
+                    disabled={!simulacionResult || simulacionResult.es_perdida || updatePriceMutation.isPending}
+                    onClick={() => {
+                      const precio = parseFloat(precioPropuesto);
+                      if (!simuladorProduct || isNaN(precio)) return;
+                      updatePriceMutation.mutate(
+                        { id: simuladorProduct.id, precio_venta: precio, descuento_maximo: simuladorProduct.descuento_maximo },
+                        { onSuccess: () => setSimuladorOpen(false) }
+                      );
+                    }}
+                  >
+                    {updatePriceMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+                    Aplicar este precio
+                  </Button>
+                )}
               </div>
             )}
           </DialogContent>
