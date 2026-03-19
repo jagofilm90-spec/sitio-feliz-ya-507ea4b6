@@ -1457,6 +1457,28 @@ const Clientes = () => {
         }))}
         onSuccess={loadClientes}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              ¿Desactivar "{deleteTarget?.nombre}"?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              El cliente dejará de aparecer en ventas pero se conservará su historial de pedidos y pagos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground"
+              onClick={confirmDelete}
+            >
+              Sí, desactivar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };
