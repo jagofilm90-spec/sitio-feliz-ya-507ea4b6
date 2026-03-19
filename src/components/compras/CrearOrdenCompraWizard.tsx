@@ -1404,17 +1404,7 @@ const CrearOrdenCompraWizard = ({
           // 5. Convertir HTML a PDF real de alta calidad
           const pdfBase64 = await htmlToPdfBase64(pdfHtml);
 
-          // 6. Generar URLs de confirmación
-          const { data: confirmUrlData } = await supabase.functions.invoke(
-            'generate-oc-confirmation-url',
-            { body: { ordenId: orden.id, action: 'confirm' } }
-          );
-          const { data: proposeDateUrlData } = await supabase.functions.invoke(
-            'generate-oc-confirmation-url',
-            { body: { ordenId: orden.id, action: 'propose-date' } }
-          );
-
-          // 7. Construir fechas para el email
+          // 6. Construir fechas para el email
           const fechasEntregaHtml = tipoEntrega === 'multiple'
             ? `<ul style="margin: 10px 0; padding-left: 20px;">${entregasProgramadas.map(e => 
                 `<li style="margin: 5px 0;">${e.fecha_programada ? format(parseDateLocal(e.fecha_programada), "EEEE dd 'de' MMMM yyyy", { locale: es }) : 'Por confirmar'} - ${e.cantidad_bultos.toLocaleString()} bultos</li>`
@@ -1456,18 +1446,12 @@ const CrearOrdenCompraWizard = ({
                   ${fechasEntregaHtml}
                 </div>
                 
-                <div style="text-align: center; margin: 35px 0; padding: 25px; background: #f0f9ff; border-radius: 8px;">
-                  <p style="font-size: 16px; margin-bottom: 20px;"><strong>¿Puede cumplir con la(s) fecha(s) de entrega?</strong></p>
-                  <div>
-                    <a href="${confirmUrlData?.url || '#'}" 
-                       style="display: inline-block; background: #22c55e; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 5px;">
-                      ✓ Confirmar Fechas
-                    </a>
-                    <a href="${proposeDateUrlData?.url || '#'}" 
-                       style="display: inline-block; background: #f59e0b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 5px;">
-                      📅 Proponer Otra Fecha
-                    </a>
-                  </div>
+                <div style="margin: 25px 0; padding: 15px; background: #f8fafc; border-left: 4px solid #e11d48; border-radius: 4px;">
+                  <p style="margin: 0; color: #475569; font-size: 14px;">
+                    Para cualquier cambio o confirmación de fechas, contáctenos:<br>
+                    <strong>📞 Tel: ${COMPANY_DATA.telefonosFormateados}</strong><br>
+                    <strong>📧 Email: ${COMPANY_DATA.emails.compras}</strong>
+                  </p>
                 </div>
                 
                 <p style="color: #666; font-size: 14px;">
