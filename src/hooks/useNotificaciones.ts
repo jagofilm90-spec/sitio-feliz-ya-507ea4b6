@@ -106,16 +106,18 @@ export const useNotificaciones = () => {
 
   const cargarNotificaciones = async () => {
     try {
-      const [caducidad, stock, licencias, autorizaciones, autorizacionesCot, confirmaciones] = await Promise.all([
+      const [caducidad, stock, licencias, autorizaciones, autorizacionesCot, confirmaciones, precios, pedidos] = await Promise.all([
         cargarAlertasCaducidad(),
         cargarNotificacionesStock(),
         cargarAlertasLicencias(),
         isAdmin ? cargarAutorizacionesOC() : Promise.resolve([]),
         isAdmin ? cargarAutorizacionesCotizacion() : Promise.resolve([]),
         cargarConfirmacionesProveedor(),
+        isAdmin ? cargarNotificacionesPrecios() : Promise.resolve([]),
+        cargarNotificacionesPedidos(),
       ]);
 
-      const total = caducidad.length + stock.length + licencias.length + autorizaciones.length + autorizacionesCot.length + confirmaciones.length;
+      const total = caducidad.length + stock.length + licencias.length + autorizaciones.length + autorizacionesCot.length + confirmaciones.length + precios.length + pedidos.length;
       setNotificaciones({
         alertasCaducidad: caducidad,
         notificacionesStock: stock,
@@ -123,6 +125,8 @@ export const useNotificaciones = () => {
         autorizacionesOC: autorizaciones,
         autorizacionesCotizacion: autorizacionesCot,
         confirmacionesProveedor: confirmaciones,
+        notificacionesPrecios: precios,
+        notificacionesPedidos: pedidos,
         totalCount: total,
       });
     } catch (error) {
