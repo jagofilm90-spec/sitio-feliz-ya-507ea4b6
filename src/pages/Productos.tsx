@@ -54,11 +54,11 @@ import {
 } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Power, RotateCcw, ChevronDown, Filter, X, ArrowUpDown, Info } from "lucide-react";
+import { Plus, Search, Edit, Power, RotateCcw, ChevronDown, Filter, X, ArrowUpDown, Info, Package, Tag, Settings2, FileText, Boxes } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { LotesDesglose } from "@/components/productos/LotesDesglose";
 import { NotificacionesSistema } from "@/components/NotificacionesSistema";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { getDisplayName, UNIDADES_SAT, UNIDADES_PRODUCTO, UNIDADES_LEGACY } from "@/lib/productUtils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ProductoCardMobile from "@/components/productos/ProductoCardMobile";
@@ -217,7 +217,7 @@ const Productos = () => {
     contenido_empaque: "",
     unidad_sat: "",
     peso_kg: "",
-    unidad: "bulto" as "bulto" | "caja" | "churla" | "costal" | "cubeta" | "kg" | "litro" | "pieza" | "balón",
+    unidad: "bulto" as "bulto" | "balon" | "caja" | "churla" | "costal" | "cubeta" | "paquete" | "pieza" | "balón",
     piezas_por_unidad: "1",
     precio_compra: "",
     precio_venta: "",
@@ -326,7 +326,7 @@ const Productos = () => {
         contenido_empaque: formData.contenido_empaque || null,
         unidad_sat: formData.unidad_sat || null,
         peso_kg: formData.peso_kg ? parseFloat(formData.peso_kg) : null,
-        unidad: formData.unidad,
+        unidad: formData.unidad as any,
         piezas_por_unidad: formData.piezas_por_unidad ? parseInt(formData.piezas_por_unidad) : 1,
         precio_compra: parseFloat(formData.precio_compra) || 0,
         precio_venta: precioVenta,
@@ -718,7 +718,7 @@ const Productos = () => {
                 <form onSubmit={handleSave} className="space-y-5">
                   {/* ===== SECCIÓN 1: Información básica ===== */}
                   <div className="space-y-3">
-                    <span className="text-sm font-semibold text-foreground">📦 Información básica</span>
+                    <span className="text-sm font-semibold text-foreground flex items-center gap-1.5"><Package className="h-4 w-4 text-muted-foreground" /> Información básica</span>
                     <div className="space-y-2">
                       <Label htmlFor="nombre">Nombre del producto *</Label>
                       <Input
@@ -746,7 +746,7 @@ const Productos = () => {
                       {similarNameSuggestion && (
                         <div className="flex items-center justify-between text-xs bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-800">
                           <span className="text-amber-700 dark:text-amber-400">
-                            💡 ¿Quisiste decir "<strong>{similarNameSuggestion.suggestedName}</strong>"? ({similarNameSuggestion.codigo})
+                            ¿Quisiste decir "<strong>{similarNameSuggestion.suggestedName}</strong>"? ({similarNameSuggestion.codigo})
                           </span>
                           <div className="flex gap-2 ml-2">
                             <button type="button" onClick={applySuggestedName} className="text-green-600 hover:text-green-800 p-1 rounded" title="Usar esta sugerencia">✓</button>
@@ -852,13 +852,13 @@ const Productos = () => {
 
                   {duplicateWarning && (
                     <p className="text-xs text-destructive bg-destructive/10 p-2 rounded border border-destructive/20">
-                      ❌ {duplicateWarning}
+                      {duplicateWarning}
                     </p>
                   )}
 
                   {/* ===== SECCIÓN 2: Presentación y precio ===== */}
                   <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
-                    <span className="text-sm font-semibold text-foreground">💰 Presentación y precio</span>
+                    <span className="text-sm font-semibold text-foreground flex items-center gap-1.5"><Tag className="h-4 w-4 text-muted-foreground" /> Presentación y precio</span>
 
                     {/* Row 1: Unidad + Peso + Contenido */}
                     <div className="grid grid-cols-3 gap-3">
@@ -937,8 +937,8 @@ const Productos = () => {
                         : `Precio por unidad · Total = cantidad × precio\nEjemplo: 3 cajas × $325 = $975`}
                     </div>
                     {kiloPesoError && (
-                      <p className="text-xs text-destructive bg-destructive/10 p-2 rounded border border-destructive/20">
-                        ❌ Los productos por kilo requieren un peso definido
+                       <p className="text-xs text-destructive bg-destructive/10 p-2 rounded border border-destructive/20">
+                        Los productos por kilo requieren un peso definido
                       </p>
                     )}
 
@@ -990,19 +990,19 @@ const Productos = () => {
 
                     {margenNegativo && canSeeCosts && (
                       <p className="text-xs p-2 rounded bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-                        ⚠️ El precio de venta es menor al costo. Margen negativo.
+                        El precio de venta es menor al costo. Margen negativo.
                       </p>
                     )}
                     {descuentoExcesivo && (
                       <p className="text-xs text-destructive bg-destructive/10 p-2 rounded border border-destructive/20">
-                        ❌ El descuento no puede ser mayor o igual al precio
+                        El descuento no puede ser mayor o igual al precio
                       </p>
                     )}
                   </div>
 
                   {/* ===== SECCIÓN 3: Inventario ===== */}
                   <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
-                    <span className="text-sm font-semibold text-foreground">📊 Inventario</span>
+                    <span className="text-sm font-semibold text-foreground flex items-center gap-1.5"><Boxes className="h-4 w-4 text-muted-foreground" /> Inventario</span>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
                         <div className="flex items-center gap-1">
@@ -1050,38 +1050,21 @@ const Productos = () => {
                         onCheckedChange={(checked) => setFormData({ ...formData, maneja_caducidad: checked })}
                       />
                     </div>
-                    {formData.maneja_caducidad && !editingProduct && (
-                      <div className="space-y-2 ml-2">
-                        <Label htmlFor="fecha_caducidad_inicial">Fecha de caducidad del stock inicial</Label>
-                        <Input
-                          id="fecha_caducidad_inicial"
-                          type="date"
-                          value={formData.fecha_caducidad_inicial}
-                          onChange={(e) => setFormData({ ...formData, fecha_caducidad_inicial: e.target.value })}
-                          autoComplete="off"
-                        />
-                      </div>
-                    )}
-                    {formData.maneja_caducidad && editingProduct && (
-                      <div className="space-y-2 ml-2">
-                        <Label htmlFor="fecha_caducidad_inicial">Fecha de caducidad (para stock que agregues)</Label>
-                        <Input
-                          id="fecha_caducidad_inicial"
-                          type="date"
-                          value={formData.fecha_caducidad_inicial}
-                          onChange={(e) => setFormData({ ...formData, fecha_caducidad_inicial: e.target.value })}
-                          autoComplete="off"
-                        />
-                      </div>
+                    {formData.maneja_caducidad && (
+                      <p className="text-xs text-muted-foreground ml-2 p-2 rounded bg-muted">
+                        Cuando llegue mercancía de este producto, el almacén deberá registrar la fecha de caducidad de cada lote recibido.
+                      </p>
                     )}
                   </div>
 
                   {/* ===== SECCIÓN 4: Operativo ===== */}
+                  {/* ===== SECCIÓN 4: Proveedor ===== */}
                   <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
-                    <span className="text-sm font-semibold text-foreground">⚙️ Operativo</span>
+                    <span className="text-sm font-semibold text-foreground flex items-center gap-1.5"><Settings2 className="h-4 w-4 text-muted-foreground" /> Operativo</span>
 
                     <div className="space-y-2">
                       <Label htmlFor="proveedor">Proveedor principal</Label>
+                      <p className="text-xs text-muted-foreground -mt-1">¿De quién compras normalmente este producto?</p>
                       <Select
                         value={formData.proveedor_id}
                         onValueChange={(value) => setFormData({ ...formData, proveedor_id: value })}
@@ -1097,75 +1080,91 @@ const Productos = () => {
                       </Select>
                     </div>
 
-                    <div className="flex items-center justify-between p-2 rounded border bg-background">
-                      <div>
-                        <Label htmlFor="requiere_fumigacion" className="cursor-pointer text-sm">Requiere fumigación cada 6 meses</Label>
-                      </div>
-                      <Switch
-                        id="requiere_fumigacion"
-                        checked={formData.requiere_fumigacion}
-                        onCheckedChange={(checked) => setFormData({ ...formData, requiere_fumigacion: checked })}
-                      />
-                    </div>
-                    {formData.requiere_fumigacion && (
-                      <div className="space-y-2 ml-2">
-                        <Label htmlFor="fecha_ultima_fumigacion">Fecha de última fumigación</Label>
-                        <Input
-                          id="fecha_ultima_fumigacion"
-                          type="date"
-                          value={formData.fecha_ultima_fumigacion}
-                          onChange={(e) => setFormData({ ...formData, fecha_ultima_fumigacion: e.target.value })}
-                          autoComplete="off"
-                        />
-                      </div>
-                    )}
+                    {/* Configuración especial — collapsible */}
+                    <Collapsible defaultOpen={editingProduct && (formData.requiere_fumigacion || formData.solo_uso_interno || formData.bloqueado_venta || formData.es_promocion)}>
+                      <CollapsibleTrigger asChild>
+                        <Button type="button" variant="ghost" className="w-full justify-between p-2 h-auto border rounded">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {(formData.requiere_fumigacion || formData.solo_uso_interno || formData.bloqueado_venta || formData.es_promocion)
+                              ? "Configuración especial activa"
+                              : "Sin configuración especial"}
+                          </span>
+                          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="space-y-2 pt-2">
+                        <div className="flex items-center justify-between p-2 rounded border bg-background">
+                          <div>
+                            <Label htmlFor="requiere_fumigacion" className="cursor-pointer text-sm">Requiere fumigación</Label>
+                            <p className="text-xs text-muted-foreground">El sistema alertará cada 6 meses</p>
+                          </div>
+                          <Switch
+                            id="requiere_fumigacion"
+                            checked={formData.requiere_fumigacion}
+                            onCheckedChange={(checked) => setFormData({ ...formData, requiere_fumigacion: checked })}
+                          />
+                        </div>
+                        {formData.requiere_fumigacion && (
+                          <div className="space-y-2 ml-2">
+                            <Label htmlFor="fecha_ultima_fumigacion">Fecha de última fumigación</Label>
+                            <Input
+                              id="fecha_ultima_fumigacion"
+                              type="date"
+                              value={formData.fecha_ultima_fumigacion}
+                              onChange={(e) => setFormData({ ...formData, fecha_ultima_fumigacion: e.target.value })}
+                              autoComplete="off"
+                            />
+                          </div>
+                        )}
 
-                    <div className="flex items-center justify-between p-2 rounded border bg-background">
-                      <div>
-                        <Label htmlFor="solo_uso_interno" className="cursor-pointer text-sm">Solo uso interno</Label>
-                        <p className="text-xs text-muted-foreground">No aparece en pedidos de clientes</p>
-                      </div>
-                      <Switch
-                        id="solo_uso_interno"
-                        checked={formData.solo_uso_interno}
-                        onCheckedChange={(checked) => setFormData({ ...formData, solo_uso_interno: checked })}
-                      />
-                    </div>
+                        <div className="flex items-center justify-between p-2 rounded border bg-background">
+                          <div>
+                            <Label htmlFor="solo_uso_interno" className="cursor-pointer text-sm">Solo uso interno</Label>
+                            <p className="text-xs text-muted-foreground">No aparece en pedidos de clientes</p>
+                          </div>
+                          <Switch
+                            id="solo_uso_interno"
+                            checked={formData.solo_uso_interno}
+                            onCheckedChange={(checked) => setFormData({ ...formData, solo_uso_interno: checked })}
+                          />
+                        </div>
 
-                    <div className={`flex items-center justify-between p-2 rounded border ${formData.bloqueado_venta ? 'bg-destructive/10 border-destructive/30' : 'bg-background'}`}>
-                      <div>
-                        <Label htmlFor="bloqueado_venta" className="cursor-pointer text-sm">Bloquear ventas temporalmente</Label>
-                        <p className="text-xs text-muted-foreground">Seguirá en catálogo pero nadie podrá venderlo</p>
-                      </div>
-                      <Switch
-                        id="bloqueado_venta"
-                        checked={formData.bloqueado_venta}
-                        onCheckedChange={(checked) => setFormData({ ...formData, bloqueado_venta: checked })}
-                      />
-                    </div>
+                        <div className={`flex items-center justify-between p-2 rounded border ${formData.bloqueado_venta ? 'bg-destructive/10 border-destructive/30' : 'bg-background'}`}>
+                          <div>
+                            <Label htmlFor="bloqueado_venta" className="cursor-pointer text-sm">Ventas bloqueadas</Label>
+                            <p className="text-xs text-muted-foreground">Nadie puede venderlo temporalmente</p>
+                          </div>
+                          <Switch
+                            id="bloqueado_venta"
+                            checked={formData.bloqueado_venta}
+                            onCheckedChange={(checked) => setFormData({ ...formData, bloqueado_venta: checked })}
+                          />
+                        </div>
 
-                    <div className="flex items-center justify-between p-2 rounded border bg-background">
-                      <div>
-                        <Label htmlFor="es_promocion" className="cursor-pointer text-sm">Producto en promoción</Label>
-                      </div>
-                      <Switch
-                        id="es_promocion"
-                        checked={formData.es_promocion}
-                        onCheckedChange={(checked) => setFormData({ ...formData, es_promocion: checked })}
-                      />
-                    </div>
-                    {formData.es_promocion && (
-                      <div className="space-y-2 ml-2">
-                        <Label htmlFor="descripcion_promocion">Descripción de la promoción</Label>
-                        <Input
-                          id="descripcion_promocion"
-                          value={formData.descripcion_promocion}
-                          onChange={(e) => setFormData({ ...formData, descripcion_promocion: e.target.value })}
-                          placeholder="Ej: Compra 3 lleva 4"
-                          autoComplete="off"
-                        />
-                      </div>
-                    )}
+                        <div className="flex items-center justify-between p-2 rounded border bg-background">
+                          <div>
+                            <Label htmlFor="es_promocion" className="cursor-pointer text-sm">En promoción</Label>
+                          </div>
+                          <Switch
+                            id="es_promocion"
+                            checked={formData.es_promocion}
+                            onCheckedChange={(checked) => setFormData({ ...formData, es_promocion: checked })}
+                          />
+                        </div>
+                        {formData.es_promocion && (
+                          <div className="space-y-2 ml-2">
+                            <Label htmlFor="descripcion_promocion">Descripción de la promoción</Label>
+                            <Input
+                              id="descripcion_promocion"
+                              value={formData.descripcion_promocion}
+                              onChange={(e) => setFormData({ ...formData, descripcion_promocion: e.target.value })}
+                              placeholder="Ej: Compra 3 lleva 4"
+                              autoComplete="off"
+                            />
+                          </div>
+                        )}
+                      </CollapsibleContent>
+                    </Collapsible>
                   </div>
 
                   {/* ===== SECCIÓN 5: Fiscal (colapsable) ===== */}
@@ -1173,7 +1172,7 @@ const Productos = () => {
                     <CollapsibleTrigger asChild>
                       <Button type="button" variant="ghost" className="w-full justify-between p-3 h-auto bg-muted/30 border rounded-lg">
                         <div className="text-left">
-                          <span className="text-sm font-medium">🏛️ Datos fiscales (CFDI)</span>
+                          <span className="text-sm font-medium flex items-center gap-1.5"><FileText className="h-4 w-4 text-muted-foreground" /> Datos fiscales (CFDI)</span>
                           <p className="text-xs text-muted-foreground font-normal">Necesario para facturación electrónica</p>
                         </div>
                         <ChevronDown className="h-4 w-4 shrink-0" />
@@ -1343,28 +1342,28 @@ const Productos = () => {
                 </div>
               ) : (
                 <div className="border rounded-lg overflow-hidden">
-                  <ScrollArea className="h-[calc(100vh-420px)]">
+                  <div className="overflow-y-auto max-h-[calc(100vh-340px)]">
                     <Table style={{ tableLayout: 'fixed', width: '100%' }}>
                       <colgroup>
-                        <col style={{ width: '90px' }} />
-                        <col />
-                        <col style={{ width: '70px' }} />
-                        <col style={{ width: '70px' }} />
-                        <col style={{ width: '110px' }} />
-                        <col style={{ width: '70px' }} />
-                        <col style={{ width: '70px' }} />
-                        <col style={{ width: '80px' }} />
+                        <col style={{ width: '9%' }} />
+                        <col style={{ width: '30%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '13%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '6%' }} />
                       </colgroup>
-                      <TableHeader>
+                      <TableHeader className="sticky top-0 z-10 bg-background">
                         <TableRow>
                           <TableHead className="px-2 py-1.5"><SortableHeader col="codigo">Código</SortableHeader></TableHead>
-                          <TableHead className="px-2 py-1.5"><SortableHeader col="nombre">Nombre</SortableHeader></TableHead>
+                          <TableHead className="px-2 py-1.5"><SortableHeader col="nombre">Nombre y marca</SortableHeader></TableHead>
                           <TableHead className="px-2 py-1.5">Unidad</TableHead>
                           <TableHead className="px-2 py-1.5">Tipo</TableHead>
                           <TableHead className="px-2 py-1.5 text-right"><SortableHeader col="precio">Precio</SortableHeader></TableHead>
                           <TableHead className="px-2 py-1.5 text-center"><SortableHeader col="stock">Stock</SortableHeader></TableHead>
                           <TableHead className="px-2 py-1.5 text-center">Imp.</TableHead>
-                          <TableHead className="px-2 py-1.5">Acciones</TableHead>
+                          <TableHead className="px-2 py-1.5"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1377,77 +1376,79 @@ const Productos = () => {
                             <TableCell colSpan={8} className="text-center">No hay productos</TableCell>
                           </TableRow>
                         ) : (
-                          filteredProductos.map((producto) => (
-                            <TableRow key={producto.id} className={producto.activo === false ? "opacity-50" : ""}>
-                              <TableCell className="px-2 py-1.5 font-mono text-xs font-medium truncate">{producto.codigo}</TableCell>
-                              <TableCell className="px-2 py-1.5">
-                                <div className="truncate">
-                                  <span className="font-medium text-sm">{producto.nombre}</span>
-                                  {producto.marca && <span className="text-muted-foreground ml-1 text-xs">{producto.marca}</span>}
-                                </div>
-                                <div className="flex items-center gap-1 mt-0.5">
-                                  {producto.especificaciones && <span className="text-muted-foreground text-xs truncate">{producto.especificaciones}</span>}
-                                  {producto.bloqueado_venta && <Badge variant="destructive" className="text-[9px] px-1 py-0 h-3.5">Bloqueado</Badge>}
-                                  {producto.es_promocion && <Badge className="text-[9px] px-1 py-0 h-3.5 bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-400 dark:border-orange-800">Promo</Badge>}
-                                  {producto.solo_uso_interno && <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5">Interno</Badge>}
-                                </div>
-                              </TableCell>
-                              <TableCell className="px-2 py-1.5 capitalize text-xs">{producto.unidad}</TableCell>
-                              <TableCell className="px-2 py-1.5">
-                                {producto.precio_por_kilo ? (
-                                  <Badge className="text-[10px] px-1.5 py-0 h-4 bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800">/kilo</Badge>
-                                ) : (
-                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">/unidad</Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="px-2 py-1.5 text-right">
-                                {producto.precio_venta ? (
-                                  producto.precio_por_kilo ? (
-                                    <div>
-                                      <span className="font-medium text-sm">{formatCurrency(producto.precio_venta)}/kg</span>
-                                      {producto.peso_kg > 0 && (
-                                        <p className="text-[11px] text-muted-foreground">={formatCurrency(producto.precio_venta * producto.peso_kg)}/{producto.unidad}</p>
-                                      )}
+                          filteredProductos.map((producto) => {
+                            const details = [producto.marca, producto.especificaciones, producto.contenido_empaque].filter(Boolean).join(' · ');
+                            return (
+                              <TableRow key={producto.id} className={producto.activo === false ? "opacity-50" : ""}>
+                                <TableCell className="px-2 py-1.5 font-mono text-xs font-medium truncate">{producto.codigo}</TableCell>
+                                <TableCell className="px-2 py-1.5">
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1 min-w-0">
+                                      <span className="font-medium text-sm truncate">{producto.nombre}</span>
+                                      {producto.bloqueado_venta && <Badge variant="destructive" className="text-[9px] px-1 py-0 h-3.5 shrink-0">Bloq</Badge>}
+                                      {producto.es_promocion && <Badge className="text-[9px] px-1 py-0 h-3.5 shrink-0 bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-400 dark:border-orange-800">Promo</Badge>}
+                                      {producto.solo_uso_interno && <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 shrink-0">Int</Badge>}
                                     </div>
+                                    {details && <p className="text-xs text-muted-foreground truncate mt-0.5">{details}</p>}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="px-2 py-1.5 capitalize text-xs">{producto.unidad}</TableCell>
+                                <TableCell className="px-2 py-1.5">
+                                  {producto.precio_por_kilo ? (
+                                    <Badge className="text-[10px] px-1.5 py-0 h-4 bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800">/kilo</Badge>
                                   ) : (
-                                    <span className="font-medium text-sm">{formatCurrency(producto.precio_venta)}/{producto.unidad}</span>
-                                  )
-                                ) : "-"}
-                              </TableCell>
-                              <TableCell className="px-2 py-1.5 text-center">{getStockDisplay(producto)}</TableCell>
-                              <TableCell className="px-2 py-1.5 text-center">
-                                <div className="flex items-center justify-center gap-0.5">
-                                  {producto.aplica_iva && (
-                                    <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800">IVA</Badge>
+                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">/unidad</Badge>
                                   )}
-                                  {producto.aplica_ieps && (
-                                    <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800">IEPS</Badge>
-                                  )}
-                                  {!producto.aplica_iva && !producto.aplica_ieps && <span className="text-muted-foreground text-xs">-</span>}
-                                </div>
-                              </TableCell>
-                              <TableCell className="px-2 py-1.5">
-                                <div className="flex gap-0.5">
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(producto)}>
-                                    <Edit className="h-3.5 w-3.5" />
-                                  </Button>
-                                  {tabActivo === "inactivos" ? (
-                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleReactivate(producto)} title="Reactivar">
-                                      <RotateCcw className="h-3.5 w-3.5 text-green-600" />
+                                </TableCell>
+                                <TableCell className="px-2 py-1.5 text-right">
+                                  {producto.precio_venta ? (
+                                    producto.precio_por_kilo ? (
+                                      <div>
+                                        <span className="font-medium text-sm">{formatCurrency(producto.precio_venta)}/kg</span>
+                                        {producto.peso_kg > 0 && (
+                                          <p className="text-[11px] text-muted-foreground">={formatCurrency(producto.precio_venta * producto.peso_kg)}/{producto.unidad}</p>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="font-medium text-sm">{formatCurrency(producto.precio_venta)}/{producto.unidad}</span>
+                                    )
+                                  ) : "-"}
+                                </TableCell>
+                                <TableCell className="px-2 py-1.5 text-center">{getStockDisplay(producto)}</TableCell>
+                                <TableCell className="px-2 py-1.5 text-center">
+                                  <div className="flex items-center justify-center gap-0.5">
+                                    {producto.aplica_iva && (
+                                      <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800">IVA</Badge>
+                                    )}
+                                    {producto.aplica_ieps && (
+                                      <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800">IEPS</Badge>
+                                    )}
+                                    {!producto.aplica_iva && !producto.aplica_ieps && <span className="text-muted-foreground text-xs">-</span>}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="px-2 py-1.5">
+                                  <div className="flex gap-0.5">
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(producto)}>
+                                      <Edit className="h-3.5 w-3.5" />
                                     </Button>
-                                  ) : (
-                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeactivate(producto)} title="Desactivar">
-                                      <Power className="h-3.5 w-3.5 text-destructive" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
+                                    {tabActivo === "inactivos" ? (
+                                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleReactivate(producto)} title="Reactivar">
+                                        <RotateCcw className="h-3.5 w-3.5 text-green-600" />
+                                      </Button>
+                                    ) : (
+                                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeactivate(producto)} title="Desactivar">
+                                        <Power className="h-3.5 w-3.5 text-destructive" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
                         )}
                       </TableBody>
                     </Table>
-                  </ScrollArea>
+                  </div>
                 </div>
               )}
             </TabsContent>

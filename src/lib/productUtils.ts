@@ -7,12 +7,13 @@
  * Sincronizado con el enum unit_type de la base de datos
  */
 export const UNIDADES_PRODUCTO = [
-  { value: 'bulto',  label: 'Bulto'   },
-  { value: 'balon',  label: 'Balón'   },
-  { value: 'caja',   label: 'Caja'    },
-  { value: 'cubeta', label: 'Cubeta'  },
-  { value: 'pieza',  label: 'Pieza'   },
-  { value: 'churla', label: 'Churla'  },
+  { value: 'bulto',   label: 'Bulto'   },
+  { value: 'balon',   label: 'Balón'   },
+  { value: 'caja',    label: 'Caja'    },
+  { value: 'cubeta',  label: 'Cubeta'  },
+  { value: 'paquete', label: 'Paquete' },
+  { value: 'pieza',   label: 'Pieza'   },
+  { value: 'churla',  label: 'Churla'  },
 ] as const;
 
 /**
