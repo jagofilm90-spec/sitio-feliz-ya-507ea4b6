@@ -269,11 +269,6 @@ export const AdminListaPreciosTab = () => {
       }
       // Send one summary notification for bulk updates
       if (changedCount > 0) {
-        notificarCambioPrecio({
-          productoNombre: `${changedCount} productos`,
-          precioAnterior: 0,
-          precioNuevo: 0,
-        });
         // Override with a custom in-app notification for bulk
         try {
           await supabase.from("notificaciones").insert({
