@@ -370,7 +370,7 @@ export const AdminListaPreciosTab = () => {
         });
         // Notify vendedores
         const productoNombre = editingProduct?.nombre || "";
-        notificarCambioPrecio({ productoNombre, precioAnterior, precioNuevo: precio_venta });
+        notificarCambioPrecio({ productoNombre, precioAnterior, precioNuevo: precio_venta, roles: ['secretaria', 'vendedor'] });
       }
     },
     onSuccess: () => {
