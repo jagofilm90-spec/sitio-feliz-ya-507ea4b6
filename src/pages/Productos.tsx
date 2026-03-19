@@ -937,8 +937,8 @@ const Productos = () => {
                         : `Precio por unidad · Total = cantidad × precio\nEjemplo: 3 cajas × $325 = $975`}
                     </div>
                     {kiloPesoError && (
-                      <p className="text-xs text-destructive bg-destructive/10 p-2 rounded border border-destructive/20">
-                        ❌ Los productos por kilo requieren un peso definido
+                       <p className="text-xs text-destructive bg-destructive/10 p-2 rounded border border-destructive/20">
+                        Los productos por kilo requieren un peso definido
                       </p>
                     )}
 
