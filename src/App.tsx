@@ -158,7 +158,7 @@ const App = () => (
               } />
               <Route path="/portal-cliente" element={<PortalCliente />} />
               <Route path="/empleados" element={
-                <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'contadora']} redirectTo="/auth">
                   <Empleados />
                 </ProtectedRoute>
               } />
