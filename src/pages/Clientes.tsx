@@ -838,7 +838,7 @@ const Clientes = () => {
                   setSelectedClienteForProductos(c);
                   setProductosDialogOpen(true);
                 }}
-                onDelete={handleDelete}
+                onDelete={(id) => setDeleteTarget(clientes.find(c => c.id === id))}
                 getVendedorNombre={getVendedorName}
                 getCreditLabel={getCreditLabel}
               />
