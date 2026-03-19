@@ -75,6 +75,8 @@ export interface NotificacionesData {
   notificacionesRechazo: NotificacionGeneral[];
   notificacionesCaducidadPush: NotificacionGeneral[];
   notificacionesFumigacionPush: NotificacionGeneral[];
+  notificacionesPreciosVendedor: NotificacionGeneral[];
+  notificacionesProductoNuevo: NotificacionGeneral[];
   totalCount: number;
 }
 
