@@ -1259,7 +1259,7 @@ const Productos = () => {
           </div>
 
           {/* Search + Filters */}
-          <div className="space-y-3 flex-shrink-0">
+          <div className="space-y-3 flex-shrink-0 mb-2">
             <div className="flex gap-2 items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
