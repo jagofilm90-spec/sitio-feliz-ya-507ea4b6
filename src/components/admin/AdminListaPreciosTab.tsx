@@ -259,12 +259,26 @@ export const AdminListaPreciosTab = () => {
   // Update price mutation
   const updatePriceMutation = useMutation({
     mutationFn: async ({ id, precio_venta, descuento_maximo }: { id: string; precio_venta: number; descuento_maximo: number | null }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      // Get current price before updating
+      const precioAnterior = editingProduct?.precio_venta ?? 0;
+
       const { error } = await supabase
         .from("productos")
         .update({ precio_venta, descuento_maximo })
         .eq("id", id);
       
       if (error) throw error;
+
+      // Record price history
+      if (precioAnterior !== precio_venta) {
+        await supabase.from("productos_historial_precios").insert({
+          producto_id: id,
+          precio_anterior: precioAnterior,
+          precio_nuevo: precio_venta,
+          usuario_id: user?.id ?? null,
+        });
+      }
     },
     onSuccess: () => {
       toast({ title: "Precio actualizado" });
