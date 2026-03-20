@@ -27,6 +27,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSam
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { LiveIndicator } from "@/components/ui/live-indicator";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { isHoliday, getMexicanHolidays, MexicanHoliday } from "@/lib/mexicanHolidays";
@@ -40,6 +41,7 @@ interface ProductoEntrega {
 
 const CalendarioEntregasTab = () => {
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [accionesDialogOpen, setAccionesDialogOpen] = useState(false);
   const [ordenSeleccionada, setOrdenSeleccionada] = useState<any>(null);
   const [vistaCalendario, setVistaCalendario] = useState(true);
@@ -664,6 +666,62 @@ const CalendarioEntregasTab = () => {
       )}
 
       {vistaCalendario ? (
+        isMobile ? (
+          /* ====== MOBILE: Vista semanal ====== */
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Button variant="ghost" size="sm" onClick={() => { const d = new Date(mesActual); d.setDate(d.getDate() - 7); setMesActual(d); }}>
+                <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
+              </Button>
+              <span className="text-sm font-medium">
+                {format(mesActual, "dd MMM", { locale: es })} — {format(new Date(mesActual.getTime() + 6 * 86400000), "dd MMM", { locale: es })}
+              </span>
+              <Button variant="ghost" size="sm" onClick={() => { const d = new Date(mesActual); d.setDate(d.getDate() + 7); setMesActual(d); }}>
+                Siguiente <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+            {Array.from({ length: 7 }, (_, i) => {
+              const dia = new Date(mesActual);
+              dia.setDate(dia.getDate() - dia.getDay() + i + 1);
+              const fechaKey = format(dia, "yyyy-MM-dd");
+              const entregasDelDia = entregasPorFecha[fechaKey] || [];
+              const esHoy = isSameDay(dia, new Date());
+              const holiday = isHoliday(fechaKey);
+              return (
+                <div key={fechaKey} className={cn(
+                  "border rounded-lg p-3",
+                  esHoy && "border-primary bg-primary/5",
+                  holiday && "border-red-300 bg-red-50/50 dark:bg-red-950/20",
+                  entregasDelDia.length === 0 && !esHoy && !holiday && "opacity-50"
+                )}>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className={cn("text-sm font-medium capitalize", esHoy && "text-primary")}>
+                      {format(dia, "EEEE dd", { locale: es })}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {holiday && <Badge variant="outline" className="text-[10px] text-red-600 border-red-300">{holiday.shortName}</Badge>}
+                      {entregasDelDia.length > 0 && <Badge variant="secondary" className="text-xs">{entregasDelDia.length}</Badge>}
+                    </div>
+                  </div>
+                  {entregasDelDia.length > 0 ? entregasDelDia.map((e: any) => (
+                    <div key={e.id} className="text-xs flex justify-between items-center py-1.5 border-t" onClick={() => { setDiaSeleccionado(dia); setDialogDiaOpen(true); }}>
+                      <div className="flex items-center gap-2 min-w-0">
+                        {e.esCompletada ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" /> :
+                         e.esFaltante ? <PackageX className="h-3.5 w-3.5 text-orange-500 shrink-0" /> :
+                         <Truck className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                        <span className="truncate">{e.proveedor}</span>
+                      </div>
+                      <span className="text-muted-foreground shrink-0 ml-2">{e.cantidadBultos ? `${e.cantidadBultos} btos` : e.folio}</span>
+                    </div>
+                  )) : (
+                    <p className="text-xs text-muted-foreground py-1">Sin entregas</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+        /* ====== DESKTOP: Grid mensual ====== */
         <div className="space-y-4">
           {/* Calendar header */}
           <div className="flex items-center justify-between">
@@ -835,6 +893,7 @@ const CalendarioEntregasTab = () => {
             </div>
           </div>
         </div>
+        )
       ) : (
         // Lista view (existing)
         <>

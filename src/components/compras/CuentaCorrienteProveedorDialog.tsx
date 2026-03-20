@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -54,6 +55,7 @@ const getPagoBadge = (tipo: string, statusPago: string) => {
 };
 
 export function CuentaCorrienteProveedorDialog({ open, onOpenChange, proveedor }: Props) {
+  const isMobile = useIsMobile();
   const proveedorId = proveedor?.id;
 
   // OCs activas
@@ -192,6 +194,32 @@ export function CuentaCorrienteProveedorDialog({ open, onOpenChange, proveedor }
             <div className="space-y-2">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}</div>
           ) : ocsActivas.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">Sin OCs activas ✓</p>
+          ) : isMobile ? (
+            <div className="space-y-2">
+              {ocsActivas.map((oc: any) => {
+                const pctRecibido = calcRecepcion(oc);
+                return (
+                  <div key={oc.id} className="border rounded-lg p-3 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="font-mono font-medium text-sm">{oc.folio}</span>
+                      {getStatusBadge(oc.status)}
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{format(new Date(oc.fecha_orden), "dd/MM/yyyy")}</span>
+                      {getPagoBadge(oc.tipo_pago, oc.status_pago)}
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Total: <strong>{formatCurrency(oc.total)}</strong></span>
+                      <span>Pagado: <strong className="text-green-600 dark:text-green-400">{formatCurrency(oc.monto_pagado || 0)}</strong></span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-1.5">
+                      <div className={cn("h-1.5 rounded-full", pctRecibido === 100 ? "bg-green-500" : "bg-primary")} style={{ width: `${pctRecibido}%` }} />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground text-right">{pctRecibido}% recibido</p>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <div className="rounded-md border overflow-auto">
               <Table>
@@ -216,9 +244,7 @@ export function CuentaCorrienteProveedorDialog({ open, onOpenChange, proveedor }
                         <TableCell className="py-1.5 text-right">{formatCurrency(oc.total)}</TableCell>
                         <TableCell className="py-1.5 text-right">{formatCurrency(oc.monto_pagado || 0)}</TableCell>
                         <TableCell className="py-1.5 text-center">
-                          <span className={cn("font-medium", pctRecibido === 100 && "text-green-600", pctRecibido > 0 && pctRecibido < 100 && "text-blue-600")}>
-                            {pctRecibido}%
-                          </span>
+                          <span className={cn("font-medium", pctRecibido === 100 && "text-green-600", pctRecibido > 0 && pctRecibido < 100 && "text-blue-600")}>{pctRecibido}%</span>
                         </TableCell>
                         <TableCell className="py-1.5">{getStatusBadge(oc.status)}</TableCell>
                         <TableCell className="py-1.5">{getPagoBadge(oc.tipo_pago, oc.status_pago)}</TableCell>
@@ -241,6 +267,20 @@ export function CuentaCorrienteProveedorDialog({ open, onOpenChange, proveedor }
             <div className="space-y-2">{[...Array(2)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}</div>
           ) : creditos.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">Sin créditos pendientes ✓</p>
+          ) : isMobile ? (
+            <div className="space-y-2">
+              {creditos.map((c: any) => (
+                <div key={c.id} className="border rounded-lg p-3 space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">{c.producto_nombre}</span>
+                    <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-0 text-xs">{formatCurrency(c.monto_total)}</Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {c.motivo} · {format(new Date(c.created_at), "dd/MM/yyyy")} · Cant: {c.cantidad}
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="rounded-md border overflow-auto">
               <Table>
