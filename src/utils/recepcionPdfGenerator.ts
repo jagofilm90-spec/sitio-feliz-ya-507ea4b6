@@ -804,11 +804,10 @@ export const generarRecepcionPDF = async (data: RecepcionData): Promise<string> 
     console.log("PDF generado exitosamente:", fileName);
   } catch (saveError) {
     console.error("Error al guardar/descargar PDF:", saveError);
-    // Fallback: open in new tab
+    // Fallback: download via link
     try {
-      const pdfDataUri = doc.output('datauristring');
-      window.open(pdfDataUri, '_blank');
-      console.log("PDF abierto en nueva pestaña como fallback");
+      const { abrirPDFBlob } = await import("@/lib/pdfUtils");
+      abrirPDFBlob(doc.output("blob"), fileName);
     } catch (fallbackError) {
       console.error("Error en fallback:", fallbackError);
       throw saveError;

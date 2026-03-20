@@ -114,8 +114,11 @@ export const ImprimirRemisionDialog = ({ open, onOpenChange, datos }: ImprimirRe
     const printContent = printRef.current;
     if (!printContent) return;
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
 
     // Obtener todos los estilos de la página actual
     const styles = Array.from(document.styleSheets)

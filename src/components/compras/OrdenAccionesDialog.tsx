@@ -1050,8 +1050,8 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       const blob = new Blob([pdfContent], { type: 'text/html' });
       const blobUrl = URL.createObjectURL(blob);
       
-      // Try window.open first
-      const printWindow = window.open(blobUrl, '_blank');
+      // Try window.open with fallback for popup blockers
+      const printWindow = window.open(blobUrl, '_blank', 'width=800,height=600');
       
       if (printWindow) {
         // Wait for content to load then trigger print

@@ -17,8 +17,11 @@ export const NotaVentaMostradorPrint = ({ solicitud, onPrint }: NotaVentaMostrad
     const printContent = printRef.current;
     if (!printContent) return;
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
 
     printWindow.document.write(`
       <!DOCTYPE html>
