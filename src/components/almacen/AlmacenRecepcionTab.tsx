@@ -637,7 +637,15 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
     doc.setFontSize(8); doc.setFont("helvetica", "italic");
     doc.text("Documento sin valor fiscal — Solo para uso interno de almacén", 15, 270);
 
-    window.open(doc.output("bloburl"), "_blank");
+    const blob = doc.output("blob");
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `hoja-recepcion-${folio}-entrega${entrega.numero_entrega}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   // Calculate peso esperado for KPI
