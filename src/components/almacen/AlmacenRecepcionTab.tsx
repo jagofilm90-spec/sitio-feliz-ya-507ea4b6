@@ -128,6 +128,8 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
   const [cancelarDescargaEntrega, setCancelarDescargaEntrega] = useState<EntregaCompra | null>(null);
   const [activeTab, setActiveTab] = useState<"hoy" | "proximas">("hoy");
   const [completadasExpandido, setCompletadasExpandido] = useState(false);
+  const [hojaOpen, setHojaOpen] = useState(false);
+  const [hojaEntrega, setHojaEntrega] = useState<EntregaCompra | null>(null);
   const { toast } = useToast();
   
   // Refs para saber si hay sheets abiertos (accesible desde realtime callbacks)
@@ -556,9 +558,6 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
     );
   }
 
-  // Hoja de recepción dialog state
-  const [hojaOpen, setHojaOpen] = useState(false);
-  const [hojaEntrega, setHojaEntrega] = useState<EntregaCompra | null>(null);
   const proveedorNombreHoja = hojaEntrega
     ? (hojaEntrega.orden_compra?.proveedor?.nombre
       || hojaEntrega.orden_compra?.proveedor_nombre_manual
