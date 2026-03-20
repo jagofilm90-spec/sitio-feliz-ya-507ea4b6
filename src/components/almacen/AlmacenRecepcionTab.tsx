@@ -559,6 +559,11 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
   // Hoja de recepción dialog state
   const [hojaOpen, setHojaOpen] = useState(false);
   const [hojaEntrega, setHojaEntrega] = useState<EntregaCompra | null>(null);
+  const proveedorNombreHoja = hojaEntrega
+    ? (hojaEntrega.orden_compra?.proveedor?.nombre
+      || hojaEntrega.orden_compra?.proveedor_nombre_manual
+      || "Sin proveedor")
+    : "";
 
   // Separar por status para mostrar en grupos
   const entregasEnDescarga = entregas.filter(e => e.status === "en_descarga");
@@ -852,11 +857,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
           <DialogHeader className="sr-only">
             <DialogTitle>Hoja de Recepción</DialogTitle>
           </DialogHeader>
-          {hojaEntrega && (() => {
-            const proveedorNombre = hojaEntrega.orden_compra?.proveedor?.nombre
-              || hojaEntrega.orden_compra?.proveedor_nombre_manual
-              || "Sin proveedor";
-            return (
+          {hojaEntrega && (
               <div className="space-y-0">
                 {/* Header */}
                 <div className="text-center border-b pb-4">
@@ -868,7 +869,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                 <div className="grid grid-cols-2 gap-4 py-4 border-b">
                   <div>
                     <p className="text-xs text-muted-foreground">PROVEEDOR</p>
-                    <p className="font-bold text-lg">{proveedorNombre}</p>
+                    <p className="font-bold text-lg">{proveedorNombreHoja}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">ORDEN DE COMPRA</p>
@@ -955,8 +956,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                   Solo para uso interno de almacén · Sin valor fiscal
                 </div>
               </div>
-            );
-          })()}
+          )}
         </DialogContent>
       </Dialog>
     </>
