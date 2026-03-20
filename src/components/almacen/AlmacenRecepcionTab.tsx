@@ -37,6 +37,8 @@ import {
   FileText,
   AlertTriangle,
 } from "lucide-react";
+import jsPDF from "jspdf";
+import { COMPANY_DATA } from "@/constants/companyData";
 import { RegistrarLlegadaSheet } from "./RegistrarLlegadaSheet";
 import { AlmacenRecepcionSheet } from "./AlmacenRecepcionSheet";
 import { CancelarDescargaDialog } from "./CancelarDescargaDialog";
@@ -554,6 +556,94 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
       </div>
     );
   }
+
+  // Generar hoja de recepción PDF sin precios
+  const generarHojaRecepcion = (entrega: EntregaCompra) => {
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
+    const provNombre = entrega.orden_compra?.proveedor?.nombre || entrega.orden_compra?.proveedor_nombre_manual || "Proveedor";
+    const folio = entrega.orden_compra?.folio || "";
+    const fechaHoy = format(new Date(), "EEEE dd 'de' MMMM yyyy", { locale: es });
+
+    // Header
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("ALMASA", 15, 20);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(COMPANY_DATA.razonSocial, 15, 26);
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("HOJA DE RECEPCIÓN", 130, 20);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(fechaHoy, 130, 27);
+
+    doc.setDrawColor(200); doc.line(15, 32, 200, 32);
+
+    // Info
+    let y = 40;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold"); doc.text("Proveedor:", 15, y);
+    doc.setFont("helvetica", "normal"); doc.text(provNombre, 50, y);
+    y += 7;
+    doc.setFont("helvetica", "bold"); doc.text("OC:", 15, y);
+    doc.setFont("helvetica", "normal"); doc.text(`${folio}  ·  Entrega #${entrega.numero_entrega}`, 50, y);
+    y += 7;
+    doc.setFont("helvetica", "bold"); doc.text("Bultos:", 15, y);
+    doc.setFont("helvetica", "normal"); doc.text(`${entrega.cantidad_bultos}`, 50, y);
+    y += 12;
+
+    // Table header
+    doc.setFillColor(30, 58, 95);
+    doc.rect(15, y, 185, 8, "F");
+    doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.setTextColor(255);
+    doc.text("Código", 17, y + 5.5);
+    doc.text("Producto", 45, y + 5.5);
+    doc.text("Esperado", 130, y + 5.5);
+    doc.text("Recibido", 155, y + 5.5);
+    doc.text("Diferencia", 180, y + 5.5);
+    doc.setTextColor(0); y += 10;
+
+    // Products
+    const prods = entrega.origen_faltante && entrega.productos_faltantes
+      ? entrega.productos_faltantes.map(p => ({ codigo: p.codigo || "", nombre: p.nombre, cantidad: p.cantidad_faltante, peso: 0 }))
+      : (entrega.productos || []).map(p => ({ codigo: p.producto?.id?.slice(0, 8) || "", nombre: getCompactDisplayName(p.producto), cantidad: p.cantidad_ordenada, peso: (p.producto?.peso_kg || 0) * p.cantidad_ordenada }));
+
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+    prods.forEach((p, i) => {
+      if (y > 250) { doc.addPage(); y = 20; }
+      const bgColor = i % 2 === 0 ? 245 : 255;
+      doc.setFillColor(bgColor, bgColor, bgColor);
+      doc.rect(15, y - 3.5, 185, 7, "F");
+      doc.text(p.codigo.slice(0, 10), 17, y);
+      doc.text(p.nombre.slice(0, 45), 45, y);
+      doc.text(String(p.cantidad), 135, y);
+      // Recibido and Diferencia columns left blank for manual fill
+      doc.setDrawColor(180); doc.line(153, y - 3, 173, y - 3); doc.line(153, y + 3, 173, y + 3);
+      doc.line(178, y - 3, 198, y - 3); doc.line(178, y + 3, 198, y + 3);
+      y += 7;
+    });
+
+    // Notes area
+    y += 10;
+    if (y > 240) { doc.addPage(); y = 20; }
+    doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+    doc.text("Notas:", 15, y); y += 5;
+    doc.setDrawColor(180);
+    for (let i = 0; i < 4; i++) { doc.line(15, y + i * 8, 200, y + i * 8); }
+
+    // Footer
+    doc.setFontSize(8); doc.setFont("helvetica", "italic");
+    doc.text("Documento sin valor fiscal — Solo para uso interno de almacén", 15, 270);
+
+    window.open(doc.output("bloburl"), "_blank");
+  };
+
+  // Calculate peso esperado for KPI
+  const pesoEsperadoHoy = entregas
+    .filter(e => e.status === "programada" || e.status === "en_transito" || e.status === "en_descarga")
+    .reduce((sum, e) => sum + (e.productos || []).reduce((s, p) => s + ((p.cantidad_ordenada || 0) * (p.producto?.peso_kg || 0)), 0), 0);
 
   // Separar por status para mostrar en grupos
   const entregasEnDescarga = entregas.filter(e => e.status === "en_descarga");
@@ -1181,9 +1271,19 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
                 )}
               </>
             ) : (
-              puedeRegistrarLlegada ? (
-                <Button 
-                  size="lg" 
+              <>
+                <Button
+                  size="lg"
+                  variant="ghost"
+                  onClick={() => generarHojaRecepcion(entrega)}
+                  className="gap-2 h-10 px-4 touch-manipulation text-muted-foreground"
+                >
+                  <FileText className="w-4 h-4" />
+                  Ver Hoja
+                </Button>
+                {puedeRegistrarLlegada ? (
+                <Button
+                  size="lg"
                   variant="outline"
                   onClick={() => onRegistrarLlegada(entrega)}
                   className="gap-2 h-12 px-5 touch-manipulation"
@@ -1221,7 +1321,8 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-              )
+                )}
+              </>
             )}
           </div>
         </div>
