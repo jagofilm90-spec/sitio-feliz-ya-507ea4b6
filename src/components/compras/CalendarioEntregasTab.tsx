@@ -11,7 +11,14 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, List, MoreVertical, Truck, ChevronLeft, ChevronRight, RotateCcw, Eye, Banknote, CheckCircle2, PackageX, AlertTriangle, Flag } from "lucide-react";
+import { Calendar as CalendarIcon, List, MoreVertical, Truck, ChevronLeft, ChevronRight, RotateCcw, Eye, Banknote, CheckCircle2, PackageX, AlertTriangle, Flag, Clock, DollarSign } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import OrdenAccionesDialog from "./OrdenAccionesDialog";
 import { RecepcionDetalleDialog } from "./RecepcionDetalleDialog";
 import { useState, useMemo, useEffect, useCallback } from "react";
@@ -39,6 +46,7 @@ const CalendarioEntregasTab = () => {
   const [mesActual, setMesActual] = useState(new Date());
   const [diaSeleccionado, setDiaSeleccionado] = useState<Date | null>(null);
   const [dialogDiaOpen, setDialogDiaOpen] = useState(false);
+  const [filterProveedor, setFilterProveedor] = useState("todos");
   const [recepcionDetalleId, setRecepcionDetalleId] = useState<string | null>(null);
   const [recepcionDialogOpen, setRecepcionDialogOpen] = useState(false);
   
@@ -294,6 +302,38 @@ const CalendarioEntregasTab = () => {
     })),
   ], [entregasProgramadas, ordenesSimples]);
 
+  // Reset filter when month changes
+  useEffect(() => { setFilterProveedor("todos"); }, [mesActual]);
+
+  // Proveedores únicos del mes actual
+  const proveedoresDelMes = useMemo(() => {
+    const nombres = todasLasEntregas
+      .filter(e => e.fecha && isSameMonth(new Date(e.fecha), mesActual))
+      .map(e => e.proveedor)
+      .filter(Boolean);
+    return [...new Set(nombres)] as string[];
+  }, [todasLasEntregas, mesActual]);
+
+  // Entregas filtradas por proveedor
+  const entregasFiltradas = useMemo(() => {
+    if (filterProveedor === "todos") return todasLasEntregas;
+    return todasLasEntregas.filter(e => e.proveedor === filterProveedor);
+  }, [todasLasEntregas, filterProveedor]);
+
+  // KPIs del mes actual (con filtro aplicado)
+  const kpisMes = useMemo(() => {
+    const delMes = entregasFiltradas.filter(e => e.fecha && isSameMonth(new Date(e.fecha), mesActual));
+    return {
+      pendientes: delMes.filter(e => e.status === "programada" || e.status === "pendiente").length,
+      completadas: delMes.filter(e => e.esCompletada).length,
+      faltantes: delMes.filter(e => e.esFaltante).length,
+      totalEsperado: delMes.filter(e => !e.esCompletada).reduce((sum, e) => sum + (e.total || 0), 0),
+    };
+  }, [entregasFiltradas, mesActual]);
+
+  const formatCurrency = (v: number) =>
+    new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(v);
+
   // Pre-load products for completed deliveries when switching to list view
   useEffect(() => {
     const cargarProductosEntregasRecibidas = async () => {
@@ -325,10 +365,10 @@ const CalendarioEntregasTab = () => {
     return new Date(year, month - 1, day);
   };
 
-  // Map of dates with deliveries
+  // Map of dates with deliveries (uses filtered data)
   const entregasPorFecha = useMemo(() => {
-    const mapa: Record<string, typeof todasLasEntregas> = {};
-    todasLasEntregas.forEach((entrega) => {
+    const mapa: Record<string, typeof entregasFiltradas> = {};
+    entregasFiltradas.forEach((entrega) => {
       if (entrega.fecha) {
         // Use the date string directly as key to avoid timezone issues
         const fechaKey = entrega.fecha.split('T')[0]; // Handle both "2025-12-01" and "2025-12-01T00:00:00"
@@ -339,11 +379,11 @@ const CalendarioEntregasTab = () => {
       }
     });
     return mapa;
-  }, [todasLasEntregas]);
+  }, [entregasFiltradas]);
 
   const agruparPorFecha = () => {
-    const grupos: Record<string, typeof todasLasEntregas> = {};
-    todasLasEntregas.forEach((entrega) => {
+    const grupos: Record<string, typeof entregasFiltradas> = {};
+    entregasFiltradas.forEach((entrega) => {
       if (entrega.fecha) {
         // Parse date without timezone conversion
         const dateStr = entrega.fecha.split('T')[0];
@@ -568,6 +608,60 @@ const CalendarioEntregasTab = () => {
           Visualiza y gestiona las entregas programadas de tus proveedores
         </p>
       </div>
+
+      {/* KPIs del mes */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <div className="p-3 rounded-lg border bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+          <div className="flex items-center gap-2 mb-1">
+            <Clock className="h-4 w-4 text-amber-600" />
+            <span className="text-xs text-amber-700 dark:text-amber-400">Pendientes</span>
+          </div>
+          <p className="text-2xl font-bold text-amber-800 dark:text-amber-300">{kpisMes.pendientes}</p>
+        </div>
+        <div className="p-3 rounded-lg border bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+          <div className="flex items-center gap-2 mb-1">
+            <CheckCircle2 className="h-4 w-4 text-green-600" />
+            <span className="text-xs text-green-700 dark:text-green-400">Completadas</span>
+          </div>
+          <p className="text-2xl font-bold text-green-800 dark:text-green-300">{kpisMes.completadas}</p>
+        </div>
+        <div className="p-3 rounded-lg border bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800">
+          <div className="flex items-center gap-2 mb-1">
+            <PackageX className="h-4 w-4 text-orange-600" />
+            <span className="text-xs text-orange-700 dark:text-orange-400">Faltantes</span>
+          </div>
+          <p className="text-2xl font-bold text-orange-800 dark:text-orange-300">{kpisMes.faltantes}</p>
+        </div>
+        <div className="p-3 rounded-lg border bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+          <div className="flex items-center gap-2 mb-1">
+            <DollarSign className="h-4 w-4 text-blue-600" />
+            <span className="text-xs text-blue-700 dark:text-blue-400">$ Esperado</span>
+          </div>
+          <p className="text-2xl font-bold text-blue-800 dark:text-blue-300">{formatCurrency(kpisMes.totalEsperado)}</p>
+        </div>
+      </div>
+
+      {/* Filtro por proveedor */}
+      {proveedoresDelMes.length > 1 && (
+        <div className="flex items-center gap-3 mb-4">
+          <Select value={filterProveedor} onValueChange={setFilterProveedor}>
+            <SelectTrigger className="w-[220px] h-9 text-xs">
+              <SelectValue placeholder="Todos los proveedores" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos los proveedores</SelectItem>
+              {proveedoresDelMes.map(p => (
+                <SelectItem key={p} value={p}>{p}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {filterProveedor !== "todos" && (
+            <span className="text-xs text-muted-foreground">
+              Filtrando: <strong>{filterProveedor}</strong>
+            </span>
+          )}
+        </div>
+      )}
 
       {vistaCalendario ? (
         <div className="space-y-4">
