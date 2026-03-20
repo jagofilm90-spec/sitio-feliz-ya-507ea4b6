@@ -1797,6 +1797,68 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
           </div>
         </div>
 
+        {/* ====== BALANCE DE PAGO ====== */}
+        {(orden?.tipo_pago === 'anticipado' || (orden?.monto_pagado || 0) > 0) && (() => {
+          const totalOC = orden?.total || 0;
+          const montoPagado = orden?.monto_pagado || 0;
+          const totalRecibido = (orden?.ordenes_compra_detalles || []).reduce(
+            (sum: number, d: any) => sum + ((d.cantidad_recibida || 0) * (d.precio_unitario_compra || 0)), 0
+          );
+          const saldoAFavor = montoPagado - totalRecibido;
+          const porRecibir = totalOC - totalRecibido;
+
+          return (
+            <div className="border rounded-lg p-4 bg-muted/30 space-y-3">
+              <h4 className="text-sm font-medium flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Balance de Pago
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="text-center p-2 rounded bg-background border">
+                  <div className="text-xs text-muted-foreground">Total OC</div>
+                  <div className="font-bold text-sm">{formatCurrency(totalOC)}</div>
+                </div>
+                <div className="text-center p-2 rounded bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                  <div className="text-xs text-green-600 dark:text-green-400">Pagado</div>
+                  <div className="font-bold text-sm text-green-700 dark:text-green-300">{formatCurrency(montoPagado)}</div>
+                </div>
+                <div className="text-center p-2 rounded bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                  <div className="text-xs text-blue-600 dark:text-blue-400">Mercancía recibida</div>
+                  <div className="font-bold text-sm text-blue-700 dark:text-blue-300">{formatCurrency(totalRecibido)}</div>
+                </div>
+                <div className={cn(
+                  "text-center p-2 rounded border",
+                  saldoAFavor > 0 && "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800",
+                  saldoAFavor < 0 && "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800",
+                  saldoAFavor === 0 && "bg-muted border"
+                )}>
+                  <div className="text-xs text-muted-foreground">
+                    {saldoAFavor > 0 ? 'Saldo a tu favor' : saldoAFavor < 0 ? 'Saldo pendiente' : 'Liquidado'}
+                  </div>
+                  <div className={cn(
+                    "font-bold text-sm",
+                    saldoAFavor > 0 && "text-amber-700 dark:text-amber-300",
+                    saldoAFavor < 0 && "text-red-700 dark:text-red-300",
+                    saldoAFavor === 0 && "text-muted-foreground"
+                  )}>
+                    {saldoAFavor !== 0 ? formatCurrency(Math.abs(saldoAFavor)) : '✓ Al corriente'}
+                  </div>
+                </div>
+              </div>
+              {saldoAFavor > 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+                  ⚠️ Tienes {formatCurrency(saldoAFavor)} a tu favor pendiente de reposición o reembolso
+                </p>
+              )}
+              {porRecibir > 0 && !saldoAFavor && (
+                <p className="text-xs text-muted-foreground text-center">
+                  Pendiente de recibir: {formatCurrency(porRecibir)}
+                </p>
+              )}
+            </div>
+          );
+        })()}
+
         {!accion ? (
           <div className="space-y-4">
             {/* ====== ACCIONES FRECUENTES ====== */}
