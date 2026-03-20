@@ -37,8 +37,7 @@ import {
   FileText,
   AlertTriangle,
 } from "lucide-react";
-import jsPDF from "jspdf";
-import { COMPANY_DATA } from "@/constants/companyData";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RegistrarLlegadaSheet } from "./RegistrarLlegadaSheet";
 import { AlmacenRecepcionSheet } from "./AlmacenRecepcionSheet";
 import { CancelarDescargaDialog } from "./CancelarDescargaDialog";
@@ -557,101 +556,9 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
     );
   }
 
-  // Generar hoja de recepción PDF sin precios
-  const generarHojaRecepcion = (entrega: EntregaCompra) => {
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
-    const provNombre = entrega.orden_compra?.proveedor?.nombre || entrega.orden_compra?.proveedor_nombre_manual || "Proveedor";
-    const folio = entrega.orden_compra?.folio || "";
-    const fechaHoy = format(new Date(), "EEEE dd 'de' MMMM yyyy", { locale: es });
-
-    // Header
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text("ALMASA", 15, 20);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text(COMPANY_DATA.razonSocial, 15, 26);
-
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("HOJA DE RECEPCIÓN", 130, 20);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text(fechaHoy, 130, 27);
-
-    doc.setDrawColor(200); doc.line(15, 32, 200, 32);
-
-    // Info
-    let y = 40;
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold"); doc.text("Proveedor:", 15, y);
-    doc.setFont("helvetica", "normal"); doc.text(provNombre, 50, y);
-    y += 7;
-    doc.setFont("helvetica", "bold"); doc.text("OC:", 15, y);
-    doc.setFont("helvetica", "normal"); doc.text(`${folio}  ·  Entrega #${entrega.numero_entrega}`, 50, y);
-    y += 7;
-    doc.setFont("helvetica", "bold"); doc.text("Bultos:", 15, y);
-    doc.setFont("helvetica", "normal"); doc.text(`${entrega.cantidad_bultos}`, 50, y);
-    y += 12;
-
-    // Table header
-    doc.setFillColor(30, 58, 95);
-    doc.rect(15, y, 185, 8, "F");
-    doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.setTextColor(255);
-    doc.text("Código", 17, y + 5.5);
-    doc.text("Producto", 45, y + 5.5);
-    doc.text("Esperado", 130, y + 5.5);
-    doc.text("Recibido", 155, y + 5.5);
-    doc.text("Diferencia", 180, y + 5.5);
-    doc.setTextColor(0); y += 10;
-
-    // Products
-    const prods = entrega.origen_faltante && entrega.productos_faltantes
-      ? entrega.productos_faltantes.map(p => ({ codigo: p.codigo || "", nombre: p.nombre, cantidad: p.cantidad_faltante, peso: 0 }))
-      : (entrega.productos || []).map(p => ({ codigo: p.producto?.id?.slice(0, 8) || "", nombre: getCompactDisplayName(p.producto), cantidad: p.cantidad_ordenada, peso: (p.producto?.peso_kg || 0) * p.cantidad_ordenada }));
-
-    doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-    prods.forEach((p, i) => {
-      if (y > 250) { doc.addPage(); y = 20; }
-      const bgColor = i % 2 === 0 ? 245 : 255;
-      doc.setFillColor(bgColor, bgColor, bgColor);
-      doc.rect(15, y - 3.5, 185, 7, "F");
-      doc.text(p.codigo.slice(0, 10), 17, y);
-      doc.text(p.nombre.slice(0, 45), 45, y);
-      doc.text(String(p.cantidad), 135, y);
-      // Recibido and Diferencia columns left blank for manual fill
-      doc.setDrawColor(180); doc.line(153, y - 3, 173, y - 3); doc.line(153, y + 3, 173, y + 3);
-      doc.line(178, y - 3, 198, y - 3); doc.line(178, y + 3, 198, y + 3);
-      y += 7;
-    });
-
-    // Notes area
-    y += 10;
-    if (y > 240) { doc.addPage(); y = 20; }
-    doc.setFont("helvetica", "bold"); doc.setFontSize(10);
-    doc.text("Notas:", 15, y); y += 5;
-    doc.setDrawColor(180);
-    for (let i = 0; i < 4; i++) { doc.line(15, y + i * 8, 200, y + i * 8); }
-
-    // Footer
-    doc.setFontSize(8); doc.setFont("helvetica", "italic");
-    doc.text("Documento sin valor fiscal — Solo para uso interno de almacén", 15, 270);
-
-    const blob = doc.output("blob");
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `hoja-recepcion-${folio}-entrega${entrega.numero_entrega}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
-
-  // Calculate peso esperado for KPI
-  const pesoEsperadoHoy = entregas
-    .filter(e => e.status === "programada" || e.status === "en_transito" || e.status === "en_descarga")
-    .reduce((sum, e) => sum + (e.productos || []).reduce((s, p) => s + ((p.cantidad_ordenada || 0) * (p.producto?.peso_kg || 0)), 0), 0);
+  // Hoja de recepción dialog state
+  const [hojaOpen, setHojaOpen] = useState(false);
+  const [hojaEntrega, setHojaEntrega] = useState<EntregaCompra | null>(null);
 
   // Separar por status para mostrar en grupos
   const entregasEnDescarga = entregas.filter(e => e.status === "en_descarga");
@@ -938,6 +845,126 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
         }
         onDescargaCancelada={loadEntregas}
       />
+
+      {/* Dialog Hoja de Recepción en pantalla */}
+      <Dialog open={hojaOpen} onOpenChange={setHojaOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Hoja de Recepción
+            </DialogTitle>
+          </DialogHeader>
+          {hojaEntrega && (
+            <div className="space-y-4">
+              {/* Encabezado OC y Proveedor */}
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Orden de Compra:</span>
+                  <span className="font-mono font-bold">{hojaEntrega.orden_compra?.folio}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Proveedor:</span>
+                  <span className="font-medium">
+                    {hojaEntrega.orden_compra?.proveedor?.nombre || hojaEntrega.orden_compra?.proveedor_nombre_manual || "Sin proveedor"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Entrega:</span>
+                  <span>#{hojaEntrega.numero_entrega} de {hojaEntrega.cantidad_bultos} bultos</span>
+                </div>
+                {hojaEntrega.fecha_programada && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Fecha programada:</span>
+                    <span>{format(new Date(hojaEntrega.fecha_programada), "dd/MMM/yyyy", { locale: es })}</span>
+                  </div>
+                )}
+                {hojaEntrega.nombre_chofer_proveedor && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Chofer:</span>
+                    <span>{hojaEntrega.nombre_chofer_proveedor}</span>
+                  </div>
+                )}
+                {hojaEntrega.placas_vehiculo && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Placas:</span>
+                    <span className="font-mono">{hojaEntrega.placas_vehiculo}</span>
+                  </div>
+                )}
+                {hojaEntrega.numero_sello_llegada && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Sello:</span>
+                    <span className="font-mono">{hojaEntrega.numero_sello_llegada}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Productos */}
+              <div>
+                <h4 className="font-semibold text-sm mb-2 flex items-center gap-1">
+                  <Package className="w-4 h-4" />
+                  Productos a recibir
+                </h4>
+                <div className="space-y-2">
+                  {hojaEntrega.origen_faltante && hojaEntrega.productos_faltantes?.length ? (
+                    hojaEntrega.productos_faltantes.map((prod, idx) => (
+                      <div key={idx} className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                        <div className="font-medium text-sm">{prod.nombre}</div>
+                        <div className="flex justify-between mt-1 text-sm">
+                          <span className="text-muted-foreground">Cantidad faltante:</span>
+                          <span className="font-bold text-amber-600">{prod.cantidad_faltante}</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : hojaEntrega.productos?.length ? (
+                    hojaEntrega.productos.map((prod) => {
+                      const pesoTotal = prod.producto.peso_kg
+                        ? prod.cantidad_ordenada * prod.producto.peso_kg
+                        : null;
+                      return (
+                        <div key={prod.id} className="bg-background border rounded-lg p-3">
+                          <div className="font-medium text-sm">
+                            {getCompactDisplayName({
+                              nombre: prod.producto.nombre,
+                              marca: prod.producto.marca,
+                              especificaciones: prod.producto.especificaciones,
+                              contenido_empaque: prod.producto.contenido_empaque,
+                            })}
+                          </div>
+                          <div className="flex justify-between mt-1 text-sm">
+                            <span className="text-muted-foreground">Cantidad:</span>
+                            <span className="font-bold">
+                              {prod.cantidad_ordenada} {prod.producto.unidad || "pzas"}
+                            </span>
+                          </div>
+                          {pesoTotal && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Peso estimado:</span>
+                              <span>{pesoTotal.toLocaleString("es-MX")} kg</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Sin productos disponibles
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Notas */}
+              {hojaEntrega.notas && (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <span className="text-xs font-medium text-muted-foreground">Notas:</span>
+                  <p className="text-sm mt-1">{hojaEntrega.notas}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
@@ -1283,7 +1310,7 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
                 <Button
                   size="lg"
                   variant="ghost"
-                  onClick={() => generarHojaRecepcion(entrega)}
+                  onClick={() => { setHojaEntrega(entrega); setHojaOpen(true); }}
                   className="gap-2 h-10 px-4 touch-manipulation text-muted-foreground"
                 >
                   <FileText className="w-4 h-4" />
