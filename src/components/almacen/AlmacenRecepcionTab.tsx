@@ -848,121 +848,115 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
 
       {/* Dialog Hoja de Recepción en pantalla */}
       <Dialog open={hojaOpen} onOpenChange={setHojaOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              Hoja de Recepción
-            </DialogTitle>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Hoja de Recepción</DialogTitle>
           </DialogHeader>
-          {hojaEntrega && (
-            <div className="space-y-4">
-              {/* Encabezado OC y Proveedor */}
-              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Orden de Compra:</span>
-                  <span className="font-mono font-bold">{hojaEntrega.orden_compra?.folio}</span>
+          {hojaEntrega && (() => {
+            const proveedorNombre = hojaEntrega.orden_compra?.proveedor?.nombre
+              || hojaEntrega.orden_compra?.proveedor_nombre_manual
+              || "Sin proveedor";
+            return (
+              <div className="space-y-0">
+                {/* Header */}
+                <div className="text-center border-b pb-4">
+                  <h1 className="text-2xl font-bold">ALMASA</h1>
+                  <h2 className="text-lg font-semibold text-muted-foreground">HOJA DE RECEPCIÓN</h2>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Proveedor:</span>
-                  <span className="font-medium">
-                    {hojaEntrega.orden_compra?.proveedor?.nombre || hojaEntrega.orden_compra?.proveedor_nombre_manual || "Sin proveedor"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Entrega:</span>
-                  <span>#{hojaEntrega.numero_entrega} de {hojaEntrega.cantidad_bultos} bultos</span>
-                </div>
-                {hojaEntrega.fecha_programada && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Fecha programada:</span>
-                    <span>{format(new Date(hojaEntrega.fecha_programada), "dd/MMM/yyyy", { locale: es })}</span>
-                  </div>
-                )}
-                {hojaEntrega.nombre_chofer_proveedor && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Chofer:</span>
-                    <span>{hojaEntrega.nombre_chofer_proveedor}</span>
-                  </div>
-                )}
-                {hojaEntrega.placas_vehiculo && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Placas:</span>
-                    <span className="font-mono">{hojaEntrega.placas_vehiculo}</span>
-                  </div>
-                )}
-                {hojaEntrega.numero_sello_llegada && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Sello:</span>
-                    <span className="font-mono">{hojaEntrega.numero_sello_llegada}</span>
-                  </div>
-                )}
-              </div>
 
-              {/* Productos */}
-              <div>
-                <h4 className="font-semibold text-sm mb-2 flex items-center gap-1">
-                  <Package className="w-4 h-4" />
-                  Productos a recibir
-                </h4>
-                <div className="space-y-2">
-                  {hojaEntrega.origen_faltante && hojaEntrega.productos_faltantes?.length ? (
-                    hojaEntrega.productos_faltantes.map((prod, idx) => (
-                      <div key={idx} className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-                        <div className="font-medium text-sm">{prod.nombre}</div>
-                        <div className="flex justify-between mt-1 text-sm">
-                          <span className="text-muted-foreground">Cantidad faltante:</span>
-                          <span className="font-bold text-amber-600">{prod.cantidad_faltante}</span>
-                        </div>
-                      </div>
-                    ))
-                  ) : hojaEntrega.productos?.length ? (
-                    hojaEntrega.productos.map((prod) => {
-                      const pesoTotal = prod.producto.peso_kg
-                        ? prod.cantidad_ordenada * prod.producto.peso_kg
-                        : null;
-                      return (
-                        <div key={prod.id} className="bg-background border rounded-lg p-3">
-                          <div className="font-medium text-sm">
-                            {getCompactDisplayName({
-                              nombre: prod.producto.nombre,
-                              marca: prod.producto.marca,
-                              especificaciones: prod.producto.especificaciones,
-                              contenido_empaque: prod.producto.contenido_empaque,
-                            })}
-                          </div>
-                          <div className="flex justify-between mt-1 text-sm">
-                            <span className="text-muted-foreground">Cantidad:</span>
-                            <span className="font-bold">
-                              {prod.cantidad_ordenada} {prod.producto.unidad || "pzas"}
-                            </span>
-                          </div>
-                          {pesoTotal && (
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Peso estimado:</span>
-                              <span>{pesoTotal.toLocaleString("es-MX")} kg</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Sin productos disponibles
+                {/* Info del proveedor */}
+                <div className="grid grid-cols-2 gap-4 py-4 border-b">
+                  <div>
+                    <p className="text-xs text-muted-foreground">PROVEEDOR</p>
+                    <p className="font-bold text-lg">{proveedorNombre}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">ORDEN DE COMPRA</p>
+                    <p className="font-bold">{hojaEntrega.orden_compra?.folio}</p>
+                    <p className="text-sm text-muted-foreground">Entrega #{hojaEntrega.numero_entrega}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">FECHA ESPERADA</p>
+                    <p className="font-medium">
+                      {hojaEntrega.fecha_programada
+                        ? format(new Date(hojaEntrega.fecha_programada), "dd/MMM/yyyy", { locale: es })
+                        : "Sin fecha"}
                     </p>
-                  )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">TOTAL BULTOS</p>
+                    <p className="font-bold text-2xl text-primary">{hojaEntrega.cantidad_bultos}</p>
+                  </div>
+                </div>
+
+                {/* Tabla de productos */}
+                <div className="py-4">
+                  <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase">
+                    Productos a Recibir
+                  </h3>
+                  <div className="space-y-3">
+                    {hojaEntrega.origen_faltante && hojaEntrega.productos_faltantes?.length ? (
+                      hojaEntrega.productos_faltantes.map((prod, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                          <div>
+                            <p className="font-medium">{prod.nombre}</p>
+                            {prod.codigo && (
+                              <p className="font-mono text-xs text-muted-foreground">{prod.codigo}</p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold text-amber-600">{prod.cantidad_faltante}</p>
+                            <p className="text-xs text-muted-foreground">faltante</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : hojaEntrega.productos?.length ? (
+                      hojaEntrega.productos.map((prod) => (
+                        <div key={prod.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
+                          <div>
+                            <p className="font-medium">
+                              {getCompactDisplayName({
+                                nombre: prod.producto.nombre,
+                                marca: prod.producto.marca,
+                                especificaciones: prod.producto.especificaciones,
+                                contenido_empaque: prod.producto.contenido_empaque,
+                              })}
+                            </p>
+                          </div>
+                          <div className="text-right flex-shrink-0 ml-3">
+                            <p className="text-2xl font-bold text-primary">{prod.cantidad_ordenada}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {prod.producto.unidad || "pzas"}
+                              {prod.producto.peso_kg
+                                ? ` (${(prod.cantidad_ordenada * prod.producto.peso_kg).toLocaleString("es-MX")} kg)`
+                                : ""}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Sin productos disponibles
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Notas */}
+                {hojaEntrega.notas && (
+                  <div className="bg-muted/50 rounded-lg p-3 border">
+                    <span className="text-xs font-medium text-muted-foreground uppercase">Notas:</span>
+                    <p className="text-sm mt-1">{hojaEntrega.notas}</p>
+                  </div>
+                )}
+
+                {/* Footer */}
+                <div className="border-t pt-4 text-center text-xs text-muted-foreground">
+                  Solo para uso interno de almacén · Sin valor fiscal
                 </div>
               </div>
-
-              {/* Notas */}
-              {hojaEntrega.notas && (
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <span className="text-xs font-medium text-muted-foreground">Notas:</span>
-                  <p className="text-sm mt-1">{hojaEntrega.notas}</p>
-                </div>
-              )}
-            </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </>
