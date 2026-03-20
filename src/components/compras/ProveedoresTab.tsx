@@ -39,7 +39,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Globe, Package, Trash2, X, FileText, Upload, Loader2, CheckCircle2, Star, Phone, User, Mail, ChevronDown, Building2, Landmark, HandCoins, CreditCard } from "lucide-react";
+import { Plus, Search, Edit, Globe, Package, Trash2, X, FileText, Upload, Loader2, CheckCircle2, Star, Phone, User, Mail, ChevronDown, Building2, Landmark, HandCoins, CreditCard, BookOpen } from "lucide-react";
+import CuentaCorrienteProveedorDialog from "./CuentaCorrienteProveedorDialog";
 import { Badge } from "@/components/ui/badge";
 import ProveedorProductosSelector from "./ProveedorProductosSelector";
 import {
@@ -783,9 +784,11 @@ const ProveedoresTab = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isProductosDialogOpen, setIsProductosDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isCuentaDialogOpen, setIsCuentaDialogOpen] = useState(false);
   const [editingProveedor, setEditingProveedor] = useState<Proveedor | null>(null);
   const [productosProveedor, setProductosProveedor] = useState<Proveedor | null>(null);
   const [deletingProveedor, setDeletingProveedor] = useState<Proveedor | null>(null);
+  const [proveedorCuenta, setProveedorCuenta] = useState<Proveedor | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   
   // Filters
@@ -1677,6 +1680,17 @@ const ProveedoresTab = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => {
+                          setProveedorCuenta(proveedor);
+                          setIsCuentaDialogOpen(true);
+                        }}
+                        title="Ver cuenta corriente"
+                      >
+                        <BookOpen className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
                           setProductosProveedor(proveedor);
                           setIsProductosDialogOpen(true);
                         }}
@@ -1878,6 +1892,12 @@ const ProveedoresTab = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CuentaCorrienteProveedorDialog
+        open={isCuentaDialogOpen}
+        onOpenChange={setIsCuentaDialogOpen}
+        proveedor={proveedorCuenta}
+      />
     </Card>
   );
 };
