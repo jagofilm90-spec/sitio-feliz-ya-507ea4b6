@@ -1096,6 +1096,7 @@ const InventarioContent = () => {
                       <TableHead>Caducidad</TableHead>
                       <TableHead>Usuario</TableHead>
                       <TableHead>Referencia</TableHead>
+                      <TableHead>Notas</TableHead>
                       <TableHead className="w-[140px] text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1127,6 +1128,13 @@ const InventarioContent = () => {
                         </TableCell>
                         <TableCell>{movimiento.profiles?.full_name || "—"}</TableCell>
                         <TableCell>{movimiento.referencia || "—"}</TableCell>
+                        <TableCell className="max-w-[200px]">
+                          {movimiento.notas ? (
+                            <span className="text-sm text-muted-foreground truncate block" title={movimiento.notas}>{movimiento.notas}</span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right space-x-2">
                           <Button
                             size="sm"

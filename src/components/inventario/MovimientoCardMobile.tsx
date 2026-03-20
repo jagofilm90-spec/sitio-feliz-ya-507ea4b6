@@ -14,6 +14,7 @@ interface MovimientoCardMobileProps {
     lote: string | null;
     fecha_caducidad: string | null;
     referencia: string | null;
+    notas: string | null;
     productos?: {
       codigo: string;
       nombre: string;
@@ -121,6 +122,11 @@ export const MovimientoCardMobile = ({ movimiento, onEdit, onDelete }: Movimient
             <span>📅 {new Date(movimiento.fecha_caducidad).toLocaleDateString('es-MX')}</span>
           )}
         </div>
+
+        {/* Notas */}
+        {movimiento.notas && (
+          <p className="text-xs text-muted-foreground italic mt-1">"{movimiento.notas}"</p>
+        )}
 
         {/* Usuario */}
         {movimiento.profiles?.full_name && (
