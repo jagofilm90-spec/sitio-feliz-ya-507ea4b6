@@ -54,7 +54,6 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
   // Send notification email to supplier for scheduled deliveries
   const sendDeliveryNotificationEmail = async (scheduledEntregas: Entrega[], isDateChange: boolean = false, oldDate?: string) => {
     if (!orden.proveedores?.email) {
-      console.log("No supplier email available");
       return;
     }
 
@@ -69,7 +68,6 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
 
       const gmailCuenta = gmailCuentas?.[0];
       if (!gmailCuenta) {
-        console.log("No gmail account configured for compras");
         return;
       }
 

@@ -259,8 +259,6 @@ export const RecepcionDetalleDialog = ({
 
       // Load products specifically received in THIS delivery using inventory lots
       const patronLote = `REC-${(entrega as any).orden_compra.folio}-${(entrega as any).numero_entrega}`;
-      console.log("Buscando lotes con patrón:", patronLote);
-      
       const { data: lotesEntrega, error: lotesError } = await supabase
         .from("inventario_lotes")
         .select(`
@@ -273,7 +271,6 @@ export const RecepcionDetalleDialog = ({
       if (lotesError) {
         console.error("Error cargando lotes de entrega:", lotesError);
       } else {
-        console.log("Lotes encontrados para esta entrega:", lotesEntrega?.length || 0, lotesEntrega);
         const productosEstaEntrega: ProductoEntrega[] = (lotesEntrega || []).map((lote: any) => ({
           id: lote.id,
           cantidad_recibida: lote.cantidad_disponible,
@@ -298,7 +295,6 @@ export const RecepcionDetalleDialog = ({
       const evidenciasList = (evidenciasData as unknown as EvidenciaRecepcion[]) || [];
       setEvidencias(evidenciasList);
       
-      console.log("Evidencias encontradas:", evidenciasList.length, evidenciasList);
 
       // Get signed URLs for evidences - with better error handling
       const urls: Record<string, string> = {};
@@ -312,7 +308,6 @@ export const RecepcionDetalleDialog = ({
             continue;
           }
           
-          console.log(`Generando URL para evidencia ${ev.tipo_evidencia}:`, rutaStorage);
           
           try {
             const { data: signedUrl, error: urlError } = await supabase.storage
@@ -326,7 +321,6 @@ export const RecepcionDetalleDialog = ({
             
             if (signedUrl?.signedUrl) {
               urls[ev.id] = signedUrl.signedUrl;
-              console.log(`✓ URL generada para ${ev.tipo_evidencia}`);
             }
           } catch (urlGenError) {
             console.error(`Excepción generando URL para ${rutaStorage}:`, urlGenError);
@@ -335,7 +329,6 @@ export const RecepcionDetalleDialog = ({
       }
       
       setEvidenciasUrls(urls);
-      console.log(`Total URLs generadas: ${Object.keys(urls).length} de ${evidenciasList.length} evidencias`);
 
     } catch (error) {
       console.error("Error cargando recepción:", error);

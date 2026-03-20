@@ -302,7 +302,6 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       
       // Si es OC recibida de prueba, eliminar también los lotes de inventario en cascada
       if ((orden.status === 'completada' || orden.status === 'recibida') && esOCPruebaLocal) {
-        console.log("🧹 Eliminando OC de prueba con datos de inventario:", orden.folio);
         
         // 1. Eliminar lotes de inventario asociados (trigger actualizará stock)
         const { error: lotesError } = await supabase
@@ -346,7 +345,6 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
             .eq("orden_compra_id", orden.id);
         }
         
-        console.log("✅ Datos de inventario y recepciones eliminados para OC de prueba:", orden.folio);
       }
 
       // Get supplier email before deleting
@@ -1486,7 +1484,6 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
             attachments: attachments,
           },
         });
-        console.log('Copy email sent to compras@almasa.com.mx');
       } catch (copyError) {
         console.error('Error sending copy email:', copyError);
         // Don't fail the main operation if copy fails

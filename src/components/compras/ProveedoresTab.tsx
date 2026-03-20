@@ -39,7 +39,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Globe, Package, Trash2, X, FileText, Upload, Loader2, CheckCircle2, Star, Phone, User, Mail, ChevronDown, Building2, Landmark, HandCoins, CreditCard, BookOpen } from "lucide-react";
+import { Plus, Search, Edit, Globe, Package, Trash2, X, FileText, Upload, Loader2, CheckCircle2, Star, Phone, User, Mail, ChevronDown, Building2, Landmark, HandCoins, CreditCard, BookOpen, RotateCcw, Power } from "lucide-react";
 import CuentaCorrienteProveedorDialog from "./CuentaCorrienteProveedorDialog";
 import { Badge } from "@/components/ui/badge";
 import ProveedorProductosSelector from "./ProveedorProductosSelector";
@@ -1301,35 +1301,39 @@ const ProveedoresTab = () => {
     },
   });
 
-  const deleteProveedor = useMutation({
+  const deactivateProveedor = useMutation({
     mutationFn: async (proveedorId: string) => {
-      await supabase
-        .from("proveedor_productos")
-        .delete()
-        .eq("proveedor_id", proveedorId);
-      
       const { error } = await supabase
         .from("proveedores")
-        .delete()
+        .update({ activo: false })
         .eq("id", proveedorId);
-      
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["proveedores"] });
       setIsDeleteDialogOpen(false);
       setDeletingProveedor(null);
-      toast({
-        title: "Proveedor eliminado",
-        description: "El proveedor ha sido eliminado exitosamente",
-      });
+      toast({ title: "Proveedor desactivado" });
     },
     onError: () => {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "No se pudo eliminar el proveedor. Puede tener órdenes de compra asociadas.",
-      });
+      toast({ variant: "destructive", title: "Error", description: "No se pudo desactivar el proveedor" });
+    },
+  });
+
+  const reactivateProveedor = useMutation({
+    mutationFn: async (proveedorId: string) => {
+      const { error } = await supabase
+        .from("proveedores")
+        .update({ activo: true })
+        .eq("id", proveedorId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["proveedores"] });
+      toast({ title: "Proveedor reactivado" });
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo reactivar el proveedor" });
     },
   });
 
@@ -1710,18 +1714,30 @@ const ProveedoresTab = () => {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setDeletingProveedor(proveedor);
-                          setIsDeleteDialogOpen(true);
-                        }}
-                        title="Eliminar proveedor"
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {proveedor.activo ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setDeletingProveedor(proveedor);
+                            setIsDeleteDialogOpen(true);
+                          }}
+                          title="Desactivar proveedor"
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Power className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => reactivateProveedor.mutate(proveedor.id)}
+                          title="Reactivar proveedor"
+                          className="text-green-600 hover:text-green-700"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -1872,9 +1888,9 @@ const ProveedoresTab = () => {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar proveedor?</AlertDialogTitle>
+            <AlertDialogTitle>¿Desactivar proveedor?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará el proveedor "{deletingProveedor?.nombre}" y todas sus relaciones con productos.
+              El proveedor "{deletingProveedor?.nombre}" dejará de aparecer en órdenes de compra pero se conservará su historial.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1882,12 +1898,12 @@ const ProveedoresTab = () => {
             <AlertDialogAction
               onClick={() => {
                 if (deletingProveedor) {
-                  deleteProveedor.mutate(deletingProveedor.id);
+                  deactivateProveedor.mutate(deletingProveedor.id);
                 }
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Eliminar
+              Sí, desactivar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
