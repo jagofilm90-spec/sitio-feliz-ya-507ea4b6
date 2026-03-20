@@ -93,21 +93,43 @@ const Layout = ({ children }: LayoutProps) => {
     };
     initSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_OUT") {
         navigate("/auth");
+      } else if (event === "TOKEN_REFRESHED" && session) {
+        setUser(session.user);
+        console.log("[Layout] Token refreshed — invalidating all queries");
+        queryClient.invalidateQueries();
+      } else if (!session && event !== "INITIAL_SESSION") {
+        // Token refresh falló silenciosamente → forzar logout
+        console.warn("[Layout] Session lost — forcing logout");
+        await supabase.auth.signOut();
+        navigate("/auth");
+        toast({
+          title: "Sesión expirada",
+          description: "Por favor inicia sesión nuevamente",
+          variant: "destructive",
+        });
       } else if (session) {
         setUser(session.user);
-        // Cuando el token se refresca, invalidar todas las queries para recargar datos
-        if (event === "TOKEN_REFRESHED") {
-          console.log("[Layout] Token refreshed — invalidating all queries");
-          queryClient.invalidateQueries();
-        }
       }
-      // No redirigir en TOKEN_REFRESHED, INITIAL_SESSION, etc.
     });
 
     return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  // Verificar sesión cada 30 minutos (protección contra expiración silenciosa)
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.warn("[Layout] Periodic check: no active session");
+        navigate("/auth");
+      }
+    };
+
+    const interval = setInterval(checkSession, 30 * 60 * 1000);
+    return () => clearInterval(interval);
   }, [navigate]);
 
   // Detectar si usuario es solo almacen

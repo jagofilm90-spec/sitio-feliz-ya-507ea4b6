@@ -15,3 +15,15 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   }
 });
+
+// Interceptor global: detectar sesión perdida silenciosamente
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (!session && event !== 'SIGNED_OUT') {
+    // Sin sesión activa y no fue logout manual → posible expiración
+    const { error } = await supabase.auth.refreshSession();
+    if (error) {
+      // No se pudo renovar → forzar redirección a login
+      window.location.href = '/auth';
+    }
+  }
+});
