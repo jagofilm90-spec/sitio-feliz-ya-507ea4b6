@@ -2212,27 +2212,64 @@ const CrearOrdenCompraWizard = ({
 
               {/* Campos de precio por kg (visible si está activo) */}
               {usaPrecioPorKg && (
-                <div className="grid grid-cols-2 gap-3 p-3 bg-muted/50 rounded-lg">
-                  <div>
-                    <Label className="text-xs">Precio por kg</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={precioPorKg}
-                      onChange={(e) => setPrecioPorKg(e.target.value)}
-                      placeholder="$0.00"
-                    />
+                <div className="p-3 bg-muted/50 rounded-lg space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Precio por kg</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={precioPorKg}
+                        onChange={(e) => setPrecioPorKg(e.target.value)}
+                        placeholder="$0.00"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Kg por unidad</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={kgPorUnidad}
+                        onChange={(e) => setKgPorUnidad(e.target.value)}
+                        placeholder="0.00"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-xs">Kg por unidad</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={kgPorUnidad}
-                      onChange={(e) => setKgPorUnidad(e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
+                  {/* Preview de cálculo en tiempo real */}
+                  {cantidad && precioPorKg && kgPorUnidad && parseFloat(precioPorKg) > 0 && parseFloat(kgPorUnidad) > 0 && parseInt(cantidad) > 0 && (
+                    <div className="text-xs text-muted-foreground bg-background p-2 rounded border">
+                      <span className="font-medium">{parseInt(cantidad).toLocaleString()} {productoSeleccionadoData?.unidad || 'bultos'}</span>
+                      {' × '}
+                      <span>{parseFloat(kgPorUnidad)}kg</span>
+                      {' × '}
+                      <span>${parseFloat(precioPorKg).toFixed(2)}/kg</span>
+                      {' = '}
+                      <span className="font-bold text-foreground">
+                        ${(parseInt(cantidad) * parseFloat(kgPorUnidad) * parseFloat(precioPorKg)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                      </span>
+                      <span className="ml-2 text-muted-foreground">
+                        ({(parseInt(cantidad) * parseFloat(kgPorUnidad)).toLocaleString()} kg total)
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Preview de cálculo por unidad */}
+              {!usaPrecioPorKg && cantidad && precioUnitario && parseInt(cantidad) > 0 && parseFloat(precioUnitario) > 0 && (
+                <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded border">
+                  <span className="font-medium">{parseInt(cantidad).toLocaleString()} {productoSeleccionadoData?.unidad || 'bultos'}</span>
+                  {' × '}
+                  <span>${parseFloat(precioUnitario).toFixed(2)}/{productoSeleccionadoData?.unidad || 'u'}</span>
+                  {' = '}
+                  <span className="font-bold text-foreground">
+                    ${(parseInt(cantidad) * parseFloat(precioUnitario)).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  </span>
+                  {productoSeleccionadoData?.peso_kg && productoSeleccionadoData.peso_kg > 0 && (
+                    <span className="ml-2 text-muted-foreground">
+                      ({(parseInt(cantidad) * productoSeleccionadoData.peso_kg).toLocaleString()} kg total)
+                    </span>
+                  )}
                 </div>
               )}
 
