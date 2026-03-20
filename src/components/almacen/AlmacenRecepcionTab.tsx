@@ -970,7 +970,8 @@ const ProductosEntregaList = ({ productos, origen_faltante, productos_faltantes 
               {getCompactDisplayName(prod.producto)}
             </span>
             <Badge variant="outline" className="text-xs flex-shrink-0">
-              {prod.cantidad_ordenada.toLocaleString()}
+              {prod.cantidad_ordenada.toLocaleString()} {prod.producto?.unidad || ""}
+              {prod.producto?.peso_kg ? ` (${(prod.cantidad_ordenada * prod.producto.peso_kg).toLocaleString()} kg)` : ""}
             </Badge>
           </div>
         ))}
@@ -1055,7 +1056,7 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
           {/* Línea 1: Proveedor + Cantidad */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="font-semibold text-lg truncate">
+              <span className="font-bold text-xl truncate">
                 {proveedorNombre}
               </span>
               {/* Badge de mañana */}
@@ -1073,9 +1074,15 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
                 </Badge>
               )}
             </div>
-            <Badge className="text-base font-bold bg-primary text-primary-foreground flex-shrink-0">
-              {entrega.cantidad_bultos.toLocaleString()} bultos
-            </Badge>
+            <div className="text-right flex-shrink-0">
+              <Badge className="text-base font-bold bg-primary text-primary-foreground">
+                {entrega.cantidad_bultos.toLocaleString()} bultos
+              </Badge>
+              {entrega.productos && entrega.productos.length > 0 && (() => {
+                const pesoTotal = entrega.productos.reduce((sum, p) => sum + ((p.cantidad_ordenada || 0) * (p.producto?.peso_kg || 0)), 0);
+                return pesoTotal > 0 ? <p className="text-xs text-muted-foreground mt-0.5">{pesoTotal.toLocaleString()} kg</p> : null;
+              })()}
+            </div>
           </div>
           
           {/* Línea 2: Info adicional */}
