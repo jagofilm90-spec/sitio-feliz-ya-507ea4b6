@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DollarSign, TrendingUp, CreditCard, Clock,
   Truck, CheckCircle2, Package, ShoppingCart,
-  AlertTriangle, AlertOctagon, FileWarning, CalendarClock
+  AlertTriangle, AlertOctagon, FileWarning, CalendarClock,
+  BadgeCheck,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrencyCompact } from "@/lib/formatDashboard";
@@ -156,6 +157,31 @@ export const KPICards = ({ data, loading }: Props) => {
           description: "Facturas",
           alertWhen: (v: number) => v > 0,
           alertColor: "border-yellow-500/50",
+        },
+      ],
+    },
+    {
+      label: "Compras",
+      kpis: [
+        {
+          title: "Anticipos en Curso",
+          value: data ? formatCurrencyCompact(data.anticiposPendientes) : "$0",
+          icon: CreditCard,
+          color: "text-amber-600 dark:text-amber-400",
+          bgColor: "bg-amber-50 dark:bg-amber-950/30",
+          route: "/compras?tab=adeudos",
+          description: "OCs pagadas sin recibir",
+          alertWhen: (v: number) => false,
+        },
+        {
+          title: "Créditos a Favor",
+          value: data ? formatCurrencyCompact(data.creditosProveedores) : "$0",
+          icon: BadgeCheck,
+          color: "text-green-600 dark:text-green-400",
+          bgColor: "bg-green-50 dark:bg-green-950/30",
+          route: "/compras?tab=devoluciones-faltantes",
+          description: "Proveedores nos deben",
+          alertWhen: (v: number) => false,
         },
       ],
     },

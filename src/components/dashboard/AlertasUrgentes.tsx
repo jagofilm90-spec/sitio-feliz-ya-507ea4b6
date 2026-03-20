@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, ShieldAlert, Package, CreditCard, Radio, TrendingUp, Timer, Bug } from "lucide-react";
+import { AlertTriangle, ShieldAlert, Package, CreditCard, Radio, TrendingUp, Timer, Bug, BadgeCheck } from "lucide-react";
 import type { AlertaUrgente } from "./useDashboardData";
 
 const iconMap: Record<string, any> = {
@@ -13,6 +13,8 @@ const iconMap: Record<string, any> = {
   precios_por_revisar: TrendingUp,
   lotes_vencidos: Timer,
   fumigaciones_vencidas: Bug,
+  anticipos_pendientes: CreditCard,
+  creditos_proveedores: BadgeCheck,
 };
 
 const colorMap: Record<string, string> = {
@@ -24,6 +26,8 @@ const colorMap: Record<string, string> = {
   precios_por_revisar: 'bg-orange-500/10 border-orange-500/30 text-orange-700 dark:text-orange-400',
   lotes_vencidos: 'bg-destructive/10 border-destructive/30 text-destructive',
   fumigaciones_vencidas: 'bg-destructive/10 border-destructive/30 text-destructive',
+  anticipos_pendientes: 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400',
+  creditos_proveedores: 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400',
 };
 
 interface Props {
@@ -57,6 +61,8 @@ export const AlertasUrgentes = ({ alertas }: Props) => {
                 {alerta.tipo === 'precios_por_revisar' && 'Precios por revisar (costo subió)'}
                 {alerta.tipo === 'lotes_vencidos' && 'Lotes vencidos en inventario'}
                 {alerta.tipo === 'fumigaciones_vencidas' && 'Fumigaciones vencidas'}
+                {alerta.tipo === 'anticipos_pendientes' && 'Anticipos pagados sin recibir mercancía'}
+                {alerta.tipo === 'creditos_proveedores' && 'Créditos a favor pendientes de proveedores'}
               </span>
               {alerta.detalle && <span className="text-xs truncate opacity-75">{alerta.detalle}</span>}
             </div>
