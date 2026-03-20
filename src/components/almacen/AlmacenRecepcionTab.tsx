@@ -44,6 +44,7 @@ import { CancelarDescargaDialog } from "./CancelarDescargaDialog";
 import { ProximasEntregasTab } from "./ProximasEntregasTab";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { getCompactDisplayName } from "@/lib/productUtils";
+import logoAlmasa from "@/assets/logo-almasa.png";
 import {
   Tooltip,
   TooltipContent,
@@ -862,7 +863,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
               <div className="space-y-0">
                 {/* Header */}
                 <div className="text-center border-b pb-4">
-                  <h1 className="text-2xl font-bold">ALMASA</h1>
+                  <img src={logoAlmasa} alt="ALMASA" className="h-12 mx-auto object-contain" />
                   <h2 className="text-lg font-semibold text-muted-foreground">HOJA DE RECEPCIÓN</h2>
                 </div>
 
