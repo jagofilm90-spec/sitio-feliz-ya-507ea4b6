@@ -629,7 +629,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                         </div>
                         <div className="space-y-2">
                           {entregasEnDescarga.map((entrega) => (
-                            <EntregaCard 
+                            <EntregaCard
                               key={entrega.id}
                               entrega={entrega}
                               currentUserId={currentUserId}
@@ -637,6 +637,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                               onCompletarRecepcion={handleCompletarRecepcion}
                               onTomarRecepcion={setTomarRecepcionEntrega}
                               onCancelarDescarga={setCancelarDescargaEntrega}
+                              onVerHoja={(e) => { setHojaEntrega(e); setHojaOpen(true); }}
                             />
                           ))}
                         </div>
@@ -650,7 +651,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                           🟡 Esperando llegada ({entregasPendientes.length})
                         </div>
                         {entregasPendientes.map((entrega) => (
-                          <EntregaCard 
+                          <EntregaCard
                             key={entrega.id}
                             entrega={entrega}
                             currentUserId={currentUserId}
@@ -658,6 +659,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                             onCompletarRecepcion={handleCompletarRecepcion}
                             onTomarRecepcion={setTomarRecepcionEntrega}
                             onCancelarDescarga={setCancelarDescargaEntrega}
+                            onVerHoja={(e) => { setHojaEntrega(e); setHojaOpen(true); }}
                           />
                         ))}
                       </div>
@@ -1124,9 +1126,10 @@ interface EntregaCardProps {
   onCompletarRecepcion: (entrega: EntregaCompra) => void;
   onTomarRecepcion: (entrega: EntregaCompra) => void;
   onCancelarDescarga: (entrega: EntregaCompra) => void;
+  onVerHoja: (entrega: EntregaCompra) => void;
 }
 
-const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRecepcion, onTomarRecepcion, onCancelarDescarga }: EntregaCardProps) => {
+const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRecepcion, onTomarRecepcion, onCancelarDescarga, onVerHoja }: EntregaCardProps) => {
   const estado = getEstadoConfigStatic(entrega.status);
   const esEnDescarga = entrega.status === "en_descarga";
   const Icon = estado.icon;
@@ -1303,7 +1306,7 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
                 <Button
                   size="lg"
                   variant="ghost"
-                  onClick={() => { setHojaEntrega(entrega); setHojaOpen(true); }}
+                  onClick={(e) => { e.stopPropagation(); onVerHoja(entrega); }}
                   className="gap-2 h-10 px-4 touch-manipulation text-muted-foreground"
                 >
                   <FileText className="w-4 h-4" />
