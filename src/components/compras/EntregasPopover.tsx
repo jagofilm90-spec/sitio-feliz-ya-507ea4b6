@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarCheck, CalendarX, Check, Loader2, Pencil, X, Mail, CheckCircle, FileText, Package, Download } from "lucide-react";
 import { registrarCorreoEnviado } from "./HistorialCorreosOC";
 import { RecepcionDetalleDialog } from "./RecepcionDetalleDialog";
+import { openStorageFile } from "@/lib/storageUtils";
 
 // Helper para parsear fechas evitando problemas de zona horaria
 const parseDateLocal = (dateStr: string) => {

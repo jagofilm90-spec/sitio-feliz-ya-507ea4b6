@@ -45,6 +45,7 @@ import { ProximasEntregasTab } from "./ProximasEntregasTab";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { getCompactDisplayName } from "@/lib/productUtils";
 import { cn } from "@/lib/utils";
+import { openStorageFile } from "@/lib/storageUtils";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import {
   Tooltip,
