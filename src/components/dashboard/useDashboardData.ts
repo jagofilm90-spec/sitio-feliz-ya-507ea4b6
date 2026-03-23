@@ -168,7 +168,7 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         // Entregas de compras atrasadas (fecha pasada, status programada)
         supabase.from("ordenes_compra_entregas").select("id", { count: "exact", head: true }).eq("status", "programada").lt("fecha_programada", hoy),
         // Entregas en descarga (en curso)
-        supabase.from("ordenes_compra_entregas").select(`id, numero_entrega, llegada_registrada_en, trabajando_desde, nombre_chofer_proveedor, cantidad_bultos, orden_compra:ordenes_compra!inner(folio, proveedor:proveedores(nombre))`).eq("status", "en_descarga"),
+        supabase.from("ordenes_compra_entregas").select(`id, numero_entrega, llegada_registrada_en, trabajando_desde, nombre_chofer_proveedor, placas_vehiculo, cantidad_bultos, orden_compra:ordenes_compra!inner(id, folio, proveedor:proveedores(nombre))`).eq("status", "en_descarga"),
       ]);
 
       // KPIs calculations
