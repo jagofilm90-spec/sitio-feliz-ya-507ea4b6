@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Truck, ChevronRight, Clock, User, Car, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import logoAlmasa from "@/assets/logo-almasa.png";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -180,19 +181,20 @@ export const EntregasEnDescargaWidget = ({ entregas }: Props) => {
             <>
               {/* Header */}
               <div className="p-5 border-b bg-orange-50 dark:bg-orange-950/20">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-bold text-xl">
-                      {selectedEntrega.orden_compra?.proveedor?.nombre || "Sin proveedor"}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {selectedEntrega.orden_compra?.folio} · Entrega #{selectedEntrega.numero_entrega}
-                    </p>
-                  </div>
-                  <Badge className="bg-orange-500 text-white flex-shrink-0 gap-1">
+                <div className="flex items-center justify-between mb-3">
+                  <img src={logoAlmasa} alt="ALMASA" className="h-7 object-contain" />
+                  <Badge className="bg-orange-500 text-white gap-1">
                     <Truck className="h-3 w-3" />
                     EN DESCARGA
                   </Badge>
+                </div>
+                <div>
+                  <p className="font-bold text-xl">
+                    {selectedEntrega.orden_compra?.proveedor?.nombre || "Sin proveedor"}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {selectedEntrega.orden_compra?.folio} · Entrega #{selectedEntrega.numero_entrega}
+                  </p>
                 </div>
 
                 {/* Timer en tiempo real */}
