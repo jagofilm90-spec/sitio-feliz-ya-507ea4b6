@@ -151,6 +151,8 @@ const PersonalFlotillaTab = () => {
           await supabase.from("empleados_documentos").insert({
             empleado_id: choferEditar.id,
             tipo_documento: "licencia_conducir",
+            nombre_archivo: "licencia_conducir",
+            ruta_storage: "",
             fecha_vencimiento: editFechaLicencia,
           });
         }
