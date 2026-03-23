@@ -29,6 +29,8 @@ export interface DashboardKPIs {
   anticiposPendientes: number;
   creditosProveedores: number;
   entregasComprasAtrasadas: number;
+  entregasEnDescarga: number;
+  entregasEnDescargaDetalle: any[];
 }
 
 export interface AlertaUrgente {
@@ -74,7 +76,7 @@ const EMPTY_KPIS: DashboardKPIs = {
   entregasCompletadasHoy: 0, entregasPendientesHoy: 0, pedidosPorSurtir: 0,
   creditoExcedido: 0, stockBajo: 0, pedidosSinAutorizar24h: 0, facturasVencenSemana: 0, pagosPorValidar: 0, preciosRevisionPendientes: 0,
   lotesVencidos: 0, fumigacionesVencidas: 0,
-  anticiposPendientes: 0, creditosProveedores: 0, entregasComprasAtrasadas: 0,
+  anticiposPendientes: 0, creditosProveedores: 0, entregasComprasAtrasadas: 0, entregasEnDescarga: 0, entregasEnDescargaDetalle: [],
 };
 
 export function useDashboardData(periodo: Periodo = 'mes') {
@@ -117,6 +119,7 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         anticiposRes,
         creditosProvRes,
         entregasComprasAtrasadasRes,
+        entregasEnDescargaRes,
       ] = await Promise.all([
         // Ventas del día
         supabase.from("pedidos").select("total").gte("created_at", inicioHoy).in("status", ["entregado", "en_ruta"]),
@@ -164,6 +167,8 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         (supabase as any).from("proveedor_creditos_pendientes").select("monto_total").eq("status", "pendiente"),
         // Entregas de compras atrasadas (fecha pasada, status programada)
         supabase.from("ordenes_compra_entregas").select("id", { count: "exact", head: true }).eq("status", "programada").lt("fecha_programada", hoy),
+        // Entregas en descarga (en curso)
+        supabase.from("ordenes_compra_entregas").select(`id, numero_entrega, llegada_registrada_en, trabajando_desde, nombre_chofer_proveedor, cantidad_bultos, orden_compra:ordenes_compra!inner(folio, proveedor:proveedores(nombre))`).eq("status", "en_descarga"),
       ]);
 
       // KPIs calculations
@@ -216,6 +221,8 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         anticiposPendientes: (anticiposRes.data || []).reduce((s: number, oc: any) => s + (oc.monto_pagado || 0), 0),
         creditosProveedores: (creditosProvRes.data || []).reduce((s: number, c: any) => s + (c.monto_total || 0), 0),
         entregasComprasAtrasadas: entregasComprasAtrasadasRes.count || 0,
+        entregasEnDescarga: (entregasEnDescargaRes.data as any[])?.length || 0,
+        entregasEnDescargaDetalle: (entregasEnDescargaRes.data as any[]) || [],
       };
 
       // Alertas urgentes

@@ -26,6 +26,7 @@ import { AlertasUrgentes } from "@/components/dashboard/AlertasUrgentes";
 import { TopProductosClientesPanel } from "@/components/dashboard/TopProductosClientesPanel";
 import { ResumenFinancieroPanel } from "@/components/dashboard/ResumenFinancieroPanel";
 import { useDashboardData, type Periodo } from "@/components/dashboard/useDashboardData";
+import { EntregasEnDescargaWidget } from "@/components/dashboard/EntregasEnDescargaWidget";
 import { COMPANY_DATA } from "@/constants/companyData";
 
 const Dashboard = () => {
@@ -125,6 +126,11 @@ const Dashboard = () => {
 
         {/* Alertas Urgentes - solo si hay */}
         {dashData && <AlertasUrgentes alertas={dashData.alertas} />}
+
+        {/* Descargas en curso - solo si hay */}
+        {dashData?.kpis?.entregasEnDescarga > 0 && (
+          <EntregasEnDescargaWidget entregas={dashData.kpis.entregasEnDescargaDetalle} />
+        )}
 
         {/* KPIs Principales - 3 rows */}
         <KPICards data={dashData?.kpis ?? null} loading={dashLoading} />
