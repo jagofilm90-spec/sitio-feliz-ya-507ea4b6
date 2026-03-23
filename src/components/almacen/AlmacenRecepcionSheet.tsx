@@ -1501,12 +1501,16 @@ export const AlmacenRecepcionSheet = ({
 
             const comprobanteUrl = signedUrlData?.signedUrl || pdfStoragePath;
 
-            await supabase
+            const { error: updateUrlError } = await supabase
               .from("ordenes_compra_entregas")
               .update({ comprobante_recepcion_url: comprobanteUrl })
               .eq("id", entrega.id);
 
-            console.log("PDF guardado permanentemente:", pdfStoragePath);
+            if (updateUrlError) {
+              console.error("Error guardando URL del comprobante en DB:", updateUrlError);
+            } else {
+              console.log("PDF guardado permanentemente:", pdfStoragePath, "URL:", comprobanteUrl);
+            }
           } else {
             console.error("Error subiendo PDF a storage:", uploadPdfError);
           }
