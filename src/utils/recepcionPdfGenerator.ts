@@ -64,8 +64,9 @@ interface RecepcionData {
 
 // Map tipo codes to descriptive labels
 const TIPO_EVIDENCIA_LABELS: Record<string, string> = {
-  sello_1: "Sello Puerta 1",
-  sello_2: "Sello Puerta 2",
+  sello_1: "Sello 1",
+  sello_2: "Sello 2",
+  sello_3: "Sello 3",
   sello: "Sello",
   identificacion: "Identificación Chofer",
   placas: "Placas Vehículo",
@@ -132,11 +133,11 @@ const formatDuration = (minutes: number): string => {
 // Get status display info
 const getStatusDisplay = (status: string): { text: string; color: { r: number; g: number; b: number } } => {
   const statusMap: Record<string, { text: string; color: { r: number; g: number; b: number } }> = {
-    recibida: { text: "✓ RECIBIDA", color: { r: 34, g: 139, b: 34 } },
-    completada: { text: "✓ COMPLETADA", color: { r: 34, g: 139, b: 34 } },
-    en_descarga: { text: "⏳ EN DESCARGA", color: { r: 255, g: 140, b: 0 } },
-    programada: { text: "📅 PROGRAMADA", color: { r: 70, g: 130, b: 180 } },
-    cancelada: { text: "✕ CANCELADA", color: { r: 178, g: 34, b: 34 } },
+    recibida: { text: "RECIBIDA", color: { r: 34, g: 139, b: 34 } },
+    completada: { text: "COMPLETADA", color: { r: 34, g: 139, b: 34 } },
+    en_descarga: { text: "EN DESCARGA", color: { r: 255, g: 140, b: 0 } },
+    programada: { text: "PROGRAMADA", color: { r: 70, g: 130, b: 180 } },
+    cancelada: { text: "CANCELADA", color: { r: 178, g: 34, b: 34 } },
   };
   return statusMap[status] || { text: status.toUpperCase(), color: BRAND_GRAY };
 };
@@ -322,7 +323,7 @@ const generarDocumentoPDF = async (data: RecepcionData): Promise<{ doc: jsPDF; f
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(180, 100, 40);
-    doc.text("🚛 DATOS DEL TRANSPORTE", 20, yPos + 7);
+    doc.text("DATOS DEL TRANSPORTE", 20, yPos + 7);
     
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
@@ -622,7 +623,7 @@ const generarDocumentoPDF = async (data: RecepcionData): Promise<{ doc: jsPDF; f
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(180, 100, 40);
-    doc.text("⚠️ DECLARACIÓN: VEHÍCULO SIN SELLOS DE SEGURIDAD", 105, yPos + 10, { align: "center" });
+    doc.text("DECLARACION: VEHICULO SIN SELLOS DE SEGURIDAD", 105, yPos + 10, { align: "center" });
     
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
