@@ -16,7 +16,8 @@ import {
   XCircle, 
   AlertTriangle,
   Package,
-  Loader2
+  Loader2,
+  FileText
 } from "lucide-react";
 
 interface EntregasDetallePopoverProps {
@@ -39,6 +40,7 @@ interface Entrega {
   llegada_registrada_en: string | null;
   recepcion_finalizada_en: string | null;
   motivo_rechazo: string | null;
+  comprobante_recepcion_url: string | null;
 }
 
 interface Devolucion {
@@ -215,8 +217,23 @@ const EntregasDetallePopover = ({ ordenId, entregasResumen }: EntregasDetallePop
 
                     {entrega.motivo_rechazo && (
                       <p className="mt-1 text-xs text-destructive">
-                        ⚠️ {entrega.motivo_rechazo}
+                        {entrega.motivo_rechazo}
                       </p>
+                    )}
+
+                    {entrega.status === "recibida" && entrega.comprobante_recepcion_url && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 h-7 text-xs gap-1 w-full"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(entrega.comprobante_recepcion_url!, "_blank");
+                        }}
+                      >
+                        <FileText className="h-3 w-3" />
+                        Ver comprobante PDF
+                      </Button>
                     )}
 
                     {devolucionesEntrega.length > 0 && (
