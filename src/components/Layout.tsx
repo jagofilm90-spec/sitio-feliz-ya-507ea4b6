@@ -74,21 +74,27 @@ const Layout = ({ children }: LayoutProps) => {
   const { allowedPaths, isLoading: permissionsLoading, checkAccess } = useUserModulePermissions();
 
   useEffect(() => {
+    let refreshAttempted = false;
+
     const initSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setUser(session.user);
         setLoading(false);
-      } else {
-        // Intentar refrescar antes de redirigir
+      } else if (!refreshAttempted) {
+        refreshAttempted = true;
         const { data: refreshed } = await supabase.auth.refreshSession();
         if (refreshed.session) {
           setUser(refreshed.session.user);
           setLoading(false);
         } else {
           setLoading(false);
+          await supabase.auth.signOut();
           navigate("/auth");
         }
+      } else {
+        setLoading(false);
+        navigate("/auth");
       }
     };
     initSession();
@@ -97,11 +103,17 @@ const Layout = ({ children }: LayoutProps) => {
       if (event === "SIGNED_OUT") {
         navigate("/auth");
       } else if (event === "TOKEN_REFRESHED" && session) {
+        refreshAttempted = false;
         setUser(session.user);
         console.log("[Layout] Token refreshed — invalidating all queries");
         queryClient.invalidateQueries();
+      } else if (event === "SIGNED_IN" && session) {
+        refreshAttempted = false;
+        setUser(session.user);
       } else if (!session && event !== "INITIAL_SESSION") {
-        // Token refresh falló silenciosamente → forzar logout
+        // Token refresh falló → forzar logout (una sola vez)
+        if (refreshAttempted) return;
+        refreshAttempted = true;
         console.warn("[Layout] Session lost — forcing logout");
         await supabase.auth.signOut();
         navigate("/auth");

@@ -38,6 +38,10 @@ const Auth = () => {
           await checkUserRoleAndRedirect(session.user.id);
         }, 100);
       }
+      // Si el token no se pudo refrescar, limpiar sesión corrupta
+      if (!session && event !== "SIGNED_OUT" && event !== "INITIAL_SESSION") {
+        await supabase.auth.signOut();
+      }
     });
 
     return () => subscription.unsubscribe();

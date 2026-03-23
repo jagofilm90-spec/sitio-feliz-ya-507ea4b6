@@ -16,13 +16,21 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   }
 });
 
+// Flag global para evitar loops de refresh
+let _refreshAttempted = false;
+
 // Interceptor global: detectar sesión perdida silenciosamente
 supabase.auth.onAuthStateChange(async (event, session) => {
-  if (!session && event !== 'SIGNED_OUT') {
-    // Sin sesión activa y no fue logout manual → posible expiración
+  if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+    _refreshAttempted = false; // Reset flag on successful auth
+    return;
+  }
+  if (!session && event !== 'SIGNED_OUT' && event !== 'INITIAL_SESSION') {
+    if (_refreshAttempted) return; // Ya se intentó, no repetir
+    _refreshAttempted = true;
     const { error } = await supabase.auth.refreshSession();
     if (error) {
-      // No se pudo renovar → forzar redirección a login
+      await supabase.auth.signOut();
       window.location.href = '/auth';
     }
   }
