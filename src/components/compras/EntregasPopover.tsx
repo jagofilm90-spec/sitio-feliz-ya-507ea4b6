@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { CalendarCheck, CalendarX, Check, Loader2, Pencil, X, Mail, CheckCircle, FileText, Package } from "lucide-react";
+import { CalendarCheck, CalendarX, Check, Loader2, Pencil, X, Mail, CheckCircle, FileText, Package, Download } from "lucide-react";
 import { registrarCorreoEnviado } from "./HistorialCorreosOC";
 import { RecepcionDetalleDialog } from "./RecepcionDetalleDialog";
 
@@ -492,6 +492,17 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
                           <FileText className="h-3 w-3" />
                           Ver Recepción
                         </Button>
+                        {(entregaRecibidaSingle as any).comprobante_recepcion_url && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs gap-1"
+                            onClick={(e) => { e.stopPropagation(); window.open((entregaRecibidaSingle as any).comprobante_recepcion_url, "_blank"); }}
+                          >
+                            <Download className="h-3 w-3" />
+                            PDF
+                          </Button>
+                        )}
                       </div>
                     ) : editingId === "single" ? (
                       <div className="flex items-center gap-2 mt-1">
@@ -604,8 +615,19 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
                               }}
                             >
                               <FileText className="h-3 w-3 mr-1" />
-                              Ver PDF
+                              Ver Recepción
                             </Button>
+                            {(entrega as any).comprobante_recepcion_url && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-6 text-xs gap-1"
+                                onClick={(e) => { e.stopPropagation(); window.open((entrega as any).comprobante_recepcion_url, "_blank"); }}
+                              >
+                                <Download className="h-3 w-3" />
+                                PDF
+                              </Button>
+                            )}
                           </div>
                         ) : editingId === entrega.id ? (
                           <div className="flex items-center gap-2 mt-1">
