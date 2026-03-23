@@ -56,6 +56,7 @@ interface PedidoPorAutorizar {
   fecha_entrega_estimada: string | null;
   total: number;
   notas: string | null;
+  vendedor_id: string | null;
   clientes: { id: string; nombre: string; email: string | null } | null;
   cliente_sucursales: { id: string; nombre: string } | null;
   pedidos_detalles: {

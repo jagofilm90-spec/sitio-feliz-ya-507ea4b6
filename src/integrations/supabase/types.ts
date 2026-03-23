@@ -3175,6 +3175,7 @@ export type Database = {
           conciliado_en: string | null
           conciliado_por: string | null
           created_at: string
+          datos_llegada_parcial: Json | null
           descarga_cancelada_en: string | null
           descarga_cancelada_por: string | null
           devolucion_generada_id: string | null
@@ -3224,6 +3225,7 @@ export type Database = {
           conciliado_en?: string | null
           conciliado_por?: string | null
           created_at?: string
+          datos_llegada_parcial?: Json | null
           descarga_cancelada_en?: string | null
           descarga_cancelada_por?: string | null
           devolucion_generada_id?: string | null
@@ -3273,6 +3275,7 @@ export type Database = {
           conciliado_en?: string | null
           conciliado_por?: string | null
           created_at?: string
+          datos_llegada_parcial?: Json | null
           descarga_cancelada_en?: string | null
           descarga_cancelada_por?: string | null
           devolucion_generada_id?: string | null
