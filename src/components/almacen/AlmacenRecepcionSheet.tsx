@@ -1495,21 +1495,16 @@ export const AlmacenRecepcionSheet = ({
             .upload(pdfStoragePath, pdfBlob, { contentType: "application/pdf", upsert: true });
 
           if (!uploadPdfError) {
-            const { data: signedUrlData } = await supabase.storage
-              .from("recepciones-evidencias")
-              .createSignedUrl(pdfStoragePath, 60 * 60 * 24 * 365 * 5); // 5 years
-
-            const comprobanteUrl = signedUrlData?.signedUrl || pdfStoragePath;
-
+            // Store the storage path (not a signed URL) — signed URLs expire
             const { error: updateUrlError } = await supabase
               .from("ordenes_compra_entregas")
-              .update({ comprobante_recepcion_url: comprobanteUrl })
+              .update({ comprobante_recepcion_url: pdfStoragePath })
               .eq("id", entrega.id);
 
             if (updateUrlError) {
               console.error("Error guardando URL del comprobante en DB:", updateUrlError);
             } else {
-              console.log("PDF guardado permanentemente:", pdfStoragePath, "URL:", comprobanteUrl);
+              console.log("PDF guardado permanentemente:", pdfStoragePath);
             }
           } else {
             console.error("Error subiendo PDF a storage:", uploadPdfError);
