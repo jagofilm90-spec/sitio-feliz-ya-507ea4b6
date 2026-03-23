@@ -4988,6 +4988,30 @@ export type Database = {
           },
         ]
       }
+      resumenes_diarios: {
+        Row: {
+          created_at: string | null
+          datos: Json
+          enviado_en: string | null
+          fecha: string
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          datos: Json
+          enviado_en?: string | null
+          fecha: string
+          id?: string
+        }
+        Update: {
+          created_at?: string | null
+          datos?: Json
+          enviado_en?: string | null
+          fecha?: string
+          id?: string
+        }
+        Relationships: []
+      }
       rutas: {
         Row: {
           almacenista_id: string | null
