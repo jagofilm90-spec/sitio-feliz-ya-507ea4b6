@@ -772,7 +772,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                                         variant="outline"
                                         size="sm"
                                         className="gap-1 flex-shrink-0"
-                                        onClick={() => window.open(comprobanteUrl, "_blank")}
+                                        onClick={() => openStorageFile("recepciones-evidencias", comprobanteUrl)}
                                       >
                                         <FileText className="w-4 h-4" />
                                         Ver comprobante

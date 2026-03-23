@@ -497,7 +497,7 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
                             size="sm"
                             variant="outline"
                             className="h-7 text-xs gap-1"
-                            onClick={(e) => { e.stopPropagation(); window.open((entregaRecibidaSingle as any).comprobante_recepcion_url, "_blank"); }}
+                            onClick={(e) => { e.stopPropagation(); openStorageFile("recepciones-evidencias", (entregaRecibidaSingle as any).comprobante_recepcion_url); }}
                           >
                             <Download className="h-3 w-3" />
                             PDF
