@@ -167,7 +167,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       if (!orden?.id) return { total: 0, sinFecha: 0, programadas: 0, enProceso: 0, completadas: 0 };
       const { data, error } = await supabase
         .from("ordenes_compra_entregas")
-        .select("id, status, fecha_programada, llegada_registrada_en, recepcion_finalizada_en")
+        .select("id, status, fecha_programada, llegada_registrada_en, recepcion_finalizada_en, comprobante_recepcion_url")
         .eq("orden_compra_id", orden.id);
       
       if (error) {
@@ -200,7 +200,12 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       // RECIBIDAS: Completamente procesadas
       const completadas = entregas.filter(e => e.status === "recibida").length;
       
-      return { total: entregas.length, sinFecha, programadas, enProceso, completadas };
+      // Comprobantes de recepciones completadas
+      const comprobantes = entregas
+        .filter((e: any) => e.status === "recibida" && e.comprobante_recepcion_url)
+        .map((e: any) => ({ id: e.id, url: e.comprobante_recepcion_url as string }));
+
+      return { total: entregas.length, sinFecha, programadas, enProceso, completadas, comprobantes };
     },
     enabled: !!orden?.id,
   });
@@ -1906,6 +1911,30 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                   <div className="text-xs text-muted-foreground">Descarga documento de la orden</div>
                 </div>
               </button>
+
+              {/* Comprobante de Recepción */}
+              {entregasResumen?.comprobantes && entregasResumen.comprobantes.length > 0 && (
+                <button
+                  className="w-full flex items-center gap-3 p-4 rounded-lg border border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-950/30 text-left transition-colors"
+                  onClick={() => {
+                    if (entregasResumen.comprobantes.length === 1) {
+                      window.open(entregasResumen.comprobantes[0].url, "_blank");
+                    } else {
+                      entregasResumen.comprobantes.forEach((c: any) => window.open(c.url, "_blank"));
+                    }
+                  }}
+                >
+                  <FileCheck className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <div>
+                    <div className="font-medium text-sm">Comprobante de Recepción</div>
+                    <div className="text-xs text-muted-foreground">
+                      {entregasResumen.comprobantes.length === 1
+                        ? "Ver PDF de la recepción"
+                        : `Ver ${entregasResumen.comprobantes.length} comprobantes de recepción`}
+                    </div>
+                  </div>
+                </button>
+              )}
 
               {/* Historial de Correos */}
               <Collapsible className="w-full">
