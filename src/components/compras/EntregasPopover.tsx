@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarCheck, CalendarX, Check, Loader2, Pencil, X, Mail, CheckCircle, FileText, Package, Download } from "lucide-react";
 import { registrarCorreoEnviado } from "./HistorialCorreosOC";
 import { RecepcionDetalleDialog } from "./RecepcionDetalleDialog";
+import { openStorageFile } from "@/lib/storageUtils";
 
 // Helper para parsear fechas evitando problemas de zona horaria
 const parseDateLocal = (dateStr: string) => {
@@ -497,7 +498,7 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
                             size="sm"
                             variant="outline"
                             className="h-7 text-xs gap-1"
-                            onClick={(e) => { e.stopPropagation(); window.open((entregaRecibidaSingle as any).comprobante_recepcion_url, "_blank"); }}
+                            onClick={(e) => { e.stopPropagation(); openStorageFile("recepciones-evidencias", (entregaRecibidaSingle as any).comprobante_recepcion_url); }}
                           >
                             <Download className="h-3 w-3" />
                             PDF
@@ -622,7 +623,7 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
                                 size="sm"
                                 variant="outline"
                                 className="h-6 text-xs gap-1"
-                                onClick={(e) => { e.stopPropagation(); window.open((entrega as any).comprobante_recepcion_url, "_blank"); }}
+                                onClick={(e) => { e.stopPropagation(); openStorageFile("recepciones-evidencias", (entrega as any).comprobante_recepcion_url); }}
                               >
                                 <Download className="h-3 w-3" />
                                 PDF

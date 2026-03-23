@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { openStorageFile } from "@/lib/storageUtils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
@@ -228,7 +229,7 @@ const EntregasDetallePopover = ({ ordenId, entregasResumen }: EntregasDetallePop
                         className="mt-2 h-7 text-xs gap-1 w-full"
                         onClick={(e) => {
                           e.stopPropagation();
-                          window.open(entrega.comprobante_recepcion_url!, "_blank");
+                          openStorageFile("recepciones-evidencias", entrega.comprobante_recepcion_url!);
                         }}
                       >
                         <FileText className="h-3 w-3" />

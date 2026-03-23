@@ -3,6 +3,7 @@ import { useUserRoles } from "@/hooks/useUserRoles";
 import { format } from "date-fns";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { openStorageFile } from "@/lib/storageUtils";
 import { useToast } from "@/hooks/use-toast";
 import { COMPANY_DATA } from "@/constants/companyData";
 import { getProveedorFiscalHTML } from "@/lib/proveedorUtils";
@@ -1917,11 +1918,9 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                 <button
                   className="w-full flex items-center gap-3 p-4 rounded-lg border border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-950/30 text-left transition-colors"
                   onClick={() => {
-                    if (entregasResumen.comprobantes.length === 1) {
-                      window.open(entregasResumen.comprobantes[0].url, "_blank");
-                    } else {
-                      entregasResumen.comprobantes.forEach((c: any) => window.open(c.url, "_blank"));
-                    }
+                    entregasResumen.comprobantes.forEach((c: any) => 
+                      openStorageFile("recepciones-evidencias", c.url)
+                    );
                   }}
                 >
                   <FileCheck className="h-5 w-5 text-green-600 flex-shrink-0" />

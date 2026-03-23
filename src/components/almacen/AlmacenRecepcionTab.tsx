@@ -45,6 +45,7 @@ import { ProximasEntregasTab } from "./ProximasEntregasTab";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { getCompactDisplayName } from "@/lib/productUtils";
 import { cn } from "@/lib/utils";
+import { openStorageFile } from "@/lib/storageUtils";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import {
   Tooltip,
@@ -772,7 +773,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                                         variant="outline"
                                         size="sm"
                                         className="gap-1 flex-shrink-0"
-                                        onClick={() => window.open(comprobanteUrl, "_blank")}
+                                        onClick={() => openStorageFile("recepciones-evidencias", comprobanteUrl)}
                                       >
                                         <FileText className="w-4 h-4" />
                                         Ver comprobante
