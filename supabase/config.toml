@@ -129,3 +129,6 @@ verify_jwt = false
 
 [functions.send-chofer-route-email]
 verify_jwt = false
+
+[functions.resumen-diario]
+verify_jwt = false
