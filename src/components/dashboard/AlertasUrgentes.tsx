@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, ShieldAlert, Package, CreditCard, Radio, TrendingUp, Timer, Bug, BadgeCheck } from "lucide-react";
+import { AlertTriangle, ShieldAlert, Package, CreditCard, Radio, TrendingUp, Timer, Bug, BadgeCheck, PackageX } from "lucide-react";
 import type { AlertaUrgente } from "./useDashboardData";
 
 const iconMap: Record<string, any> = {
@@ -15,6 +15,7 @@ const iconMap: Record<string, any> = {
   fumigaciones_vencidas: Bug,
   anticipos_pendientes: CreditCard,
   creditos_proveedores: BadgeCheck,
+  entregas_compras_atrasadas: PackageX,
 };
 
 const colorMap: Record<string, string> = {
@@ -28,6 +29,7 @@ const colorMap: Record<string, string> = {
   fumigaciones_vencidas: 'bg-destructive/10 border-destructive/30 text-destructive',
   anticipos_pendientes: 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400',
   creditos_proveedores: 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400',
+  entregas_compras_atrasadas: 'bg-destructive/10 border-destructive/30 text-destructive',
 };
 
 interface Props {
@@ -63,6 +65,7 @@ export const AlertasUrgentes = ({ alertas }: Props) => {
                 {alerta.tipo === 'fumigaciones_vencidas' && 'Fumigaciones vencidas'}
                 {alerta.tipo === 'anticipos_pendientes' && 'Anticipos pagados sin recibir mercancía'}
                 {alerta.tipo === 'creditos_proveedores' && 'Créditos a favor pendientes de proveedores'}
+                {alerta.tipo === 'entregas_compras_atrasadas' && 'Entregas de proveedor atrasadas'}
               </span>
               {alerta.detalle && <span className="text-xs truncate opacity-75">{alerta.detalle}</span>}
             </div>

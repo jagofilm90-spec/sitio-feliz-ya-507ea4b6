@@ -44,6 +44,7 @@ import { CancelarDescargaDialog } from "./CancelarDescargaDialog";
 import { ProximasEntregasTab } from "./ProximasEntregasTab";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { getCompactDisplayName } from "@/lib/productUtils";
+import { cn } from "@/lib/utils";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import {
   Tooltip,
@@ -1169,8 +1170,14 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
   // Verificar si la entrega es para mañana
   const esMañana = diasRestantes === 1;
 
+  // Verificar si la entrega está atrasada
+  const estaAtrasada = fechaProgramada && fechaProgramada < hoy && entrega.status === "programada";
+  const diasAtraso = estaAtrasada && fechaProgramada
+    ? Math.floor((hoy.getTime() - fechaProgramada.getTime()) / 86400000)
+    : 0;
+
   return (
-    <div className="p-4 hover:bg-muted/50 transition-colors">
+    <div className={cn("p-4 hover:bg-muted/50 transition-colors", estaAtrasada && "border-l-4 border-l-destructive bg-destructive/5")}>
       <div className="flex items-start gap-4">
         <div className={`w-3 h-3 rounded-full ${estado.color} flex-shrink-0 mt-2`} />
         
@@ -1181,6 +1188,13 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
               <span className="font-bold text-xl truncate">
                 {proveedorNombre}
               </span>
+              {/* Badge de atrasada */}
+              {estaAtrasada && (
+                <Badge variant="destructive" className="gap-1 flex-shrink-0">
+                  <AlertTriangle className="w-3 h-3" />
+                  ATRASADA {diasAtraso}d
+                </Badge>
+              )}
               {/* Badge de mañana */}
               {esMañana && (
                 <Badge variant="outline" className="gap-1 border-blue-500 text-blue-600 dark:text-blue-400 flex-shrink-0">

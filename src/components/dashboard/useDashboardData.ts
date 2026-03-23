@@ -28,10 +28,11 @@ export interface DashboardKPIs {
   fumigacionesVencidas: number;
   anticiposPendientes: number;
   creditosProveedores: number;
+  entregasComprasAtrasadas: number;
 }
 
 export interface AlertaUrgente {
-  tipo: 'pedidos_sin_autorizar' | 'chofer_sin_gps' | 'stock_cero' | 'credito_excedido' | 'pagos_por_validar' | 'precios_por_revisar' | 'lotes_vencidos' | 'fumigaciones_vencidas' | 'anticipos_pendientes' | 'creditos_proveedores';
+  tipo: 'pedidos_sin_autorizar' | 'chofer_sin_gps' | 'stock_cero' | 'credito_excedido' | 'pagos_por_validar' | 'precios_por_revisar' | 'lotes_vencidos' | 'fumigaciones_vencidas' | 'anticipos_pendientes' | 'creditos_proveedores' | 'entregas_compras_atrasadas';
   cantidad: number;
   detalle?: string;
   ruta: string;
@@ -73,7 +74,7 @@ const EMPTY_KPIS: DashboardKPIs = {
   entregasCompletadasHoy: 0, entregasPendientesHoy: 0, pedidosPorSurtir: 0,
   creditoExcedido: 0, stockBajo: 0, pedidosSinAutorizar24h: 0, facturasVencenSemana: 0, pagosPorValidar: 0, preciosRevisionPendientes: 0,
   lotesVencidos: 0, fumigacionesVencidas: 0,
-  anticiposPendientes: 0, creditosProveedores: 0,
+  anticiposPendientes: 0, creditosProveedores: 0, entregasComprasAtrasadas: 0,
 };
 
 export function useDashboardData(periodo: Periodo = 'mes') {
@@ -115,6 +116,7 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         fumigacionesVencidasRes,
         anticiposRes,
         creditosProvRes,
+        entregasComprasAtrasadasRes,
       ] = await Promise.all([
         // Ventas del día
         supabase.from("pedidos").select("total").gte("created_at", inicioHoy).in("status", ["entregado", "en_ruta"]),
@@ -160,6 +162,8 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         supabase.from("ordenes_compra").select("total, monto_pagado").eq("tipo_pago", "anticipado").eq("status_pago", "pagado").not("status", "in", "(recibida,completada,cancelada)"),
         // Créditos a favor de proveedores
         (supabase as any).from("proveedor_creditos_pendientes").select("monto_total").eq("status", "pendiente"),
+        // Entregas de compras atrasadas (fecha pasada, status programada)
+        supabase.from("ordenes_compra_entregas").select("id", { count: "exact", head: true }).eq("status", "programada").lt("fecha_programada", hoy),
       ]);
 
       // KPIs calculations
@@ -211,6 +215,7 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         fumigacionesVencidas: fumVencidasCount,
         anticiposPendientes: (anticiposRes.data || []).reduce((s: number, oc: any) => s + (oc.monto_pagado || 0), 0),
         creditosProveedores: (creditosProvRes.data || []).reduce((s: number, c: any) => s + (c.monto_total || 0), 0),
+        entregasComprasAtrasadas: entregasComprasAtrasadasRes.count || 0,
       };
 
       // Alertas urgentes
@@ -242,6 +247,9 @@ export function useDashboardData(periodo: Periodo = 'mes') {
       }
       if (kpis.creditosProveedores > 0) {
         alertas.push({ tipo: 'creditos_proveedores', cantidad: kpis.creditosProveedores, ruta: '/compras?tab=devoluciones-faltantes', botonTexto: 'Ver créditos' });
+      }
+      if (kpis.entregasComprasAtrasadas > 0) {
+        alertas.push({ tipo: 'entregas_compras_atrasadas', cantidad: kpis.entregasComprasAtrasadas, ruta: '/almacen-tablet', botonTexto: 'Ver entregas' });
       }
 
       const prodMap = new Map<string, TopProducto>();
