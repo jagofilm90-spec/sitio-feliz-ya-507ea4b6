@@ -87,10 +87,12 @@ const RAZON_LABELS: Record<string, string> = {
   otro: "Otro",
 };
 
-// Brand colors (RGB)
-const BRAND_RED = { r: 180, g: 30, b: 30 };
+// Brand colors (RGB) — Azul oscuro corporativo
+const BRAND_PRIMARY = { r: 30, g: 58, b: 95 }; // #1e3a5f
 const BRAND_DARK = { r: 40, g: 40, b: 40 };
 const BRAND_GRAY = { r: 100, g: 100, b: 100 };
+// Legacy alias
+const BRAND_RED = BRAND_PRIMARY;
 
 // Helper function to load image as base64
 const loadImageAsBase64 = async (url: string): Promise<string | null> => {

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useBodegaAutoDetect } from "@/hooks/useBodegaAutoDetect";
 import { cn } from "@/lib/utils";
+import { emailWrapper, emailRow, emailTable, emailNote, emailSignature, emailDiferenciasTable, emailDiferenciaRow } from "@/lib/emailTemplates";
 import {
   Sheet,
   SheetContent,
@@ -1539,87 +1540,43 @@ export const AlmacenRecepcionSheet = ({
             // Construir sección de diferencias si aplica
             let seccionDiferencias = "";
             if (hayDiferencias) {
-              const tablaProductos = productosConDiferencia.map(p => {
+              const filasDiferencias = productosConDiferencia.map(p => {
                 const esperado = p.cantidad_ordenada;
                 const recibido = getCantidadNumerica(p.id);
                 const diferencia = esperado - recibido;
                 const razon = razonesDiferencia[p.id] || "No especificada";
                 const razonLabel = RAZONES_DIFERENCIA.find(r => r.value === razon)?.label || razon;
-                
-                return `
-                  <tr>
-                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${p.producto.nombre}</td>
-                    <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${esperado}</td>
-                    <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">${recibido}</td>
-                    <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; color: #dc2626; font-weight: bold;">${diferencia}</td>
-                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${razonLabel}</td>
-                  </tr>
-                `;
+                return emailDiferenciaRow(p.producto.nombre, esperado, recibido, diferencia, razonLabel);
               }).join("");
-
-              seccionDiferencias = `
-                <div style="margin-top: 25px; border-top: 2px solid #dc2626; padding-top: 15px;">
-                  <h3 style="color: #dc2626; margin-bottom: 10px;">⚠️ Productos con Diferencia / Devolución</h3>
-                  <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
-                    <thead>
-                      <tr style="background: #fef2f2;">
-                        <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: left;">Producto</th>
-                        <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">Esperados</th>
-                        <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">Recibidos</th>
-                        <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">Diferencia</th>
-                        <th style="padding: 10px; border: 1px solid #e5e7eb; text-align: left;">Razón</th>
-                      </tr>
-                    </thead>
-                    <tbody>${tablaProductos}</tbody>
-                  </table>
-                </div>
-              `;
+              seccionDiferencias = emailDiferenciasTable(filasDiferencias);
             }
+
+            const bannerColor = hayDiferencias ? "#d97706" : "#16a34a";
+            const bannerIcon = hayDiferencias ? "⚠️" : "✅";
+            const bannerTitle = hayDiferencias ? "DESCARGA CON DIFERENCIAS" : "DESCARGA COMPLETADA";
+            const estadoTexto = hayDiferencias
+              ? `<strong style="color:#d97706">Con diferencias</strong>`
+              : `<strong style="color:#16a34a">Recepción completa</strong>`;
 
             const asunto = hayDiferencias
               ? `⚠️ Descarga completada con diferencias - OC ${entrega.orden_compra.folio} - ${nombreProveedor}`
               : `✅ Descarga completada - OC ${entrega.orden_compra.folio} - ${nombreProveedor}`;
 
-            const htmlBody = `
-              <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto;">
-                <h2 style="color: ${hayDiferencias ? '#dc2626' : '#16a34a'};">${hayDiferencias ? '⚠️' : '✅'} Descarga Completada${hayDiferencias ? ' - Con Diferencias' : ''}</h2>
-                <p>Estimado(a) ${contactoLogistica.nombre},</p>
-                <p>Le informamos que la descarga de su unidad ha finalizado.</p>
-                <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                  <tr style="background: #f3f4f6;">
-                    <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Proveedor:</strong></td>
-                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${nombreProveedor}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Orden de Compra:</strong></td>
-                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${entrega.orden_compra.folio}</td>
-                  </tr>
-                  <tr style="background: #f3f4f6;">
-                    <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Hora de inicio:</strong></td>
-                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${horaInicio}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Hora de finalización:</strong></td>
-                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${horaFin}</td>
-                  </tr>
-                  <tr style="background: #f3f4f6;">
-                    <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Duración total:</strong></td>
-                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${duracionFormateada}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Estado:</strong></td>
-                    <td style="padding: 8px; border: 1px solid #e5e7eb;">${hayDiferencias ? '<span style="color: #dc2626; font-weight: bold;">Con diferencias</span>' : '<span style="color: #16a34a; font-weight: bold;">Recepción completa</span>'}</td>
-                  </tr>
-                </table>
-
-                ${seccionDiferencias}
-
-                <p style="margin-top: 20px;"><strong>Su unidad puede retirarse.</strong></p>
-                <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
-                  Este es un correo automático del sistema de ALMASA. Adjunto encontrará el comprobante de recepción con evidencias fotográficas y firmas.
-                </p>
-              </div>
-            `;
+            const htmlBody = emailWrapper(bannerColor, bannerIcon, bannerTitle,
+              `<p style="color:#374151;font-size:15px;margin:0 0 20px">Estimado(a) <strong>${contactoLogistica.nombre}</strong>,</p>
+              <p style="color:#374151;font-size:15px;margin:0 0 25px">Le informamos que la descarga de su unidad ha <strong>finalizado</strong>.</p>
+              ${emailTable(
+                emailRow("Proveedor", `<strong>${nombreProveedor}</strong>`, false, true) +
+                emailRow("Orden de Compra", entrega.orden_compra.folio) +
+                emailRow("Hora de inicio", horaInicio, false, true) +
+                emailRow("Hora de finalización", `<strong style="color:#16a34a">${horaFin}</strong>`) +
+                emailRow("Duración total", `<strong style="color:#16a34a">${duracionFormateada}</strong>`, false, true) +
+                emailRow("Estado", estadoTexto)
+              )}
+              ${seccionDiferencias}
+              <p style="color:#374151;font-size:15px;margin:25px 0"><strong>Su unidad puede retirarse.</strong></p>
+              ${emailNote(hayDiferencias ? "#fef3c7" : "#f0fdf4", hayDiferencias ? "#d97706" : "#16a34a", "📎 Se adjunta el comprobante oficial de recepción en PDF con evidencias fotográficas y firmas.")}
+              ${emailSignature("Departamento de Almacén")}`);
 
             // Determinar destinatarios: logística + devoluciones (si hay diferencias y existe contacto diferente)
             let ccEmails: string[] = [];
