@@ -132,15 +132,35 @@ export const RegistrarLlegadaSheet = ({
 
   const { toast } = useToast();
 
-  // Cargar borrador al abrir
+  // Resetear al abrir y cargar borrador si existe
   useEffect(() => {
-    if (open && entrega.datos_llegada_parcial) {
-      const datos = entrega.datos_llegada_parcial;
-      if (datos.nombreChofer) setNombreChofer(datos.nombreChofer);
-      if (datos.placas) setPlacas(datos.placas);
-      if (datos.sinSellos) setSinSellos(datos.sinSellos);
-      if (datos.sellos?.length) {
-        setSellos(datos.sellos.map((s: any) => ({ foto: null, numero: s.numero || "" })));
+    if (open) {
+      // Siempre resetear estados volátiles (no guardados en borrador)
+      setRechazoTotal(false);
+      setMotivoRechazo("");
+      setFotosRechazo([]);
+      setFirmaChoferRechazo(null);
+      setFirmaChoferSinSellos(null);
+      setEvidencias([]);
+      setSaving(false);
+
+      // Cargar borrador si existe
+      if (entrega.datos_llegada_parcial) {
+        const datos = entrega.datos_llegada_parcial;
+        setNombreChofer(datos.nombreChofer || "");
+        setPlacas(datos.placas || "");
+        setSinSellos(datos.sinSellos || false);
+        if (datos.sellos?.length) {
+          setSellos(datos.sellos.map((s: any) => ({ foto: null, numero: s.numero || "" })));
+        } else {
+          setSellos([{ foto: null, numero: "" }]);
+        }
+      } else {
+        // Sin borrador: form limpio
+        setNombreChofer("");
+        setPlacas("");
+        setSinSellos(false);
+        setSellos([{ foto: null, numero: "" }]);
       }
     }
   }, [open, entrega.id]);
