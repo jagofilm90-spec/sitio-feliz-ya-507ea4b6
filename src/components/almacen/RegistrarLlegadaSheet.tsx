@@ -56,6 +56,38 @@ const MOTIVOS_RECHAZO_TOTAL = [
   { value: "producto_incorrecto", label: "Llegó producto diferente al ordenado" },
 ];
 
+// Email wrapper reutilizable
+const emailWrapper = (bannerColor: string, bannerIcon: string, bannerTitle: string, bodyContent: string) => `
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:20px 0;font-family:Arial,sans-serif;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+      <tr><td style="background:#1e3a5f;padding:30px 40px;text-align:center">
+        <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:bold;letter-spacing:2px">ALMASA</h1>
+        <p style="color:#94b8d9;margin:5px 0 0;font-size:13px">Abarrotes la Manita SA de CV</p>
+      </td></tr>
+      <tr><td style="background:${bannerColor};padding:15px 40px;text-align:center">
+        <p style="margin:0;color:#ffffff;font-size:18px;font-weight:bold">${bannerIcon} ${bannerTitle}</p>
+      </td></tr>
+      <tr><td style="padding:30px 40px">${bodyContent}</td></tr>
+      <tr><td style="background:#f8fafc;padding:20px 40px;border-top:1px solid #e2e8f0;text-align:center">
+        <p style="margin:0;color:#94a3b8;font-size:12px">Este es un correo automático del sistema ALMASA.<br>Por favor no responda a este mensaje.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>`;
+
+const emailRow = (label: string, value: string, highlight?: boolean, alt?: boolean) =>
+  `<tr${alt ? ' style="background:#f8fafc"' : ''}><td style="padding:12px 15px;border:1px solid #e2e8f0;color:#64748b;font-size:13px;width:40%"><strong>${label}</strong></td><td style="padding:12px 15px;border:1px solid #e2e8f0;color:${highlight ? '#f97316' : '#1e293b'};font-size:14px;${highlight ? 'font-weight:bold' : ''}">${value}</td></tr>`;
+
+const emailTable = (rows: string) =>
+  `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:25px">${rows}</table>`;
+
+const emailNote = (color: string, borderColor: string, text: string) =>
+  `<div style="background:${color};border-left:4px solid ${borderColor};padding:15px;border-radius:4px;margin-bottom:25px"><p style="margin:0;color:#92400e;font-size:13px">${text}</p></div>`;
+
+const emailSignature = (dept: string) =>
+  `<p style="color:#374151;font-size:14px;margin:0">Atentamente,<br><strong>${dept}</strong><br>Abarrotes la Manita SA de CV</p>`;
+
 interface EntregaCompra {
   id: string;
   numero_entrega: number;
@@ -470,7 +502,19 @@ export const RegistrarLlegadaSheet = ({
               }
 
               const asuntoRechazo = `🚫 Rechazo de entrega — OC ${entrega.orden_compra.folio}`;
-              const htmlBodyRechazo = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;"><h2 style="color: #dc2626;">🚫 Rechazo de Entrega</h2><p>Estimado(a) ${contactoLogistica.nombre},</p><p>Le informamos que la entrega correspondiente a la siguiente orden de compra ha sido <strong>rechazada en su totalidad</strong>.</p><table style="width: 100%; border-collapse: collapse; margin: 20px 0;"><tr style="background: #fef2f2;"><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Orden de Compra:</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb;">${entrega.orden_compra.folio}</td></tr><tr><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Fecha y hora del rechazo:</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb;">${fechaRechazo}</td></tr><tr style="background: #fef2f2;"><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Motivo del rechazo:</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb; color: #dc2626; font-weight: bold;">${motivoLabel}</td></tr><tr><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Almacenista:</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb;">${almacenistaNombre}</td></tr><tr style="background: #fef2f2;"><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Chofer del proveedor:</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb;">${nombreChofer.trim()}</td></tr><tr><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Placas del vehículo:</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb;">${placas.trim()}</td></tr></table><p style="color: #dc2626; font-weight: bold;">Se adjuntan evidencias fotográficas del rechazo.</p><p>Favor de comunicarse con nuestro departamento de compras para coordinar la reposición.</p><p style="color: #6b7280; font-size: 12px; margin-top: 30px;">Este es un correo automático del sistema de ALMASA.</p></div>`;
+              const htmlBodyRechazo = emailWrapper("#dc2626", "🚫", "RECHAZO DE ENTREGA",
+                `<p style="color:#374151;font-size:15px;margin:0 0 20px">Estimado(a) <strong>${contactoLogistica.nombre}</strong>,</p>
+                <p style="color:#374151;font-size:15px;margin:0 0 25px">Le informamos que la entrega correspondiente a la siguiente orden de compra ha sido <strong style="color:#dc2626">rechazada en su totalidad</strong>.</p>
+                ${emailTable(
+                  emailRow("Orden de Compra", `<strong>${entrega.orden_compra.folio}</strong>`, false, true) +
+                  emailRow("Fecha y hora del rechazo", fechaRechazo) +
+                  emailRow("Motivo del rechazo", `<strong style="color:#dc2626">${motivoLabel}</strong>`, false, true) +
+                  emailRow("Almacenista", almacenistaNombre) +
+                  emailRow("Chofer del proveedor", nombreChofer.trim(), false, true) +
+                  emailRow("Placas del vehículo", `<strong style="letter-spacing:1px">${placas.trim()}</strong>`)
+                )}
+                ${emailNote("#fef2f2", "#dc2626", "📷 Se adjuntan evidencias fotográficas del rechazo. Favor de comunicarse con nuestro departamento de compras para coordinar la reposición.")}
+                ${emailSignature("Departamento de Almacén")}`);
 
               const { data: emailData, error: emailError } = await supabase.functions.invoke("gmail-api", {
                 body: { action: "send", email: "compras@almasa.com.mx", to: contactoLogistica.email,
@@ -595,7 +639,18 @@ export const RegistrarLlegadaSheet = ({
             const horaInicio = format(new Date(), "HH:mm 'del' dd/MM/yyyy", { locale: es });
             const nombreProveedor = entrega.orden_compra.proveedor?.nombre || entrega.orden_compra.proveedor_nombre_manual || "Proveedor";
             const asunto = `🚛 Inicio de descarga - OC ${entrega.orden_compra.folio} - ${nombreProveedor}`;
-            const htmlBody = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;"><h2 style="color: #f97316;">🚛 Inicio de Descarga</h2><p>Estimado(a) ${contactoLogistica.nombre},</p><p>Le informamos que su unidad ha llegado a nuestro almacén y se ha iniciado la descarga.</p><table style="width: 100%; border-collapse: collapse; margin: 20px 0;"><tr style="background: #f3f4f6;"><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Proveedor:</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb;">${nombreProveedor}</td></tr><tr><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Orden de Compra:</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb;">${entrega.orden_compra.folio}</td></tr><tr style="background: #f3f4f6;"><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Hora de inicio:</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb;">${horaInicio}</td></tr><tr><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Chofer:</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb;">${nombreChofer.trim()}</td></tr><tr style="background: #f3f4f6;"><td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Placas:</strong></td><td style="padding: 8px; border: 1px solid #e5e7eb;">${placas.trim()}</td></tr></table><p>Le notificaremos cuando la descarga haya finalizado.</p><p style="color: #6b7280; font-size: 12px; margin-top: 30px;">Este es un correo automático del sistema de ALMASA.</p></div>`;
+            const htmlBody = emailWrapper("#f97316", "🚛", "INICIO DE DESCARGA",
+              `<p style="color:#374151;font-size:15px;margin:0 0 20px">Estimado(a) <strong>${contactoLogistica.nombre}</strong>,</p>
+              <p style="color:#374151;font-size:15px;margin:0 0 25px">Le informamos que su unidad ha llegado a nuestras instalaciones y se ha <strong>iniciado la descarga</strong>.</p>
+              ${emailTable(
+                emailRow("Proveedor", `<strong>${nombreProveedor}</strong>`, false, true) +
+                emailRow("Orden de Compra", entrega.orden_compra.folio) +
+                emailRow("Hora de inicio", horaInicio, true, true) +
+                emailRow("Chofer", nombreChofer.trim()) +
+                emailRow("Placas del vehículo", `<strong style="letter-spacing:1px">${placas.trim()}</strong>`, false, true)
+              )}
+              ${emailNote("#fef3c7", "#f97316", "📋 Le notificaremos por este medio cuando la descarga haya finalizado con el comprobante de recepción correspondiente.")}
+              ${emailSignature("Departamento de Almacén")}`);
 
             const { data: emailData, error: emailError } = await supabase.functions.invoke("gmail-api", {
               body: { action: "send", email: "compras@almasa.com.mx", to: contactoLogistica.email, subject: asunto, body: htmlBody }
