@@ -127,9 +127,12 @@ const Dashboard = () => {
         {/* Alertas Urgentes - solo si hay */}
         {dashData && <AlertasUrgentes alertas={dashData.alertas} />}
 
-        {/* Descargas en curso - solo si hay */}
-        {dashData?.kpis?.entregasEnDescarga > 0 && (
-          <EntregasEnDescargaWidget entregas={dashData.kpis.entregasEnDescargaDetalle} />
+        {/* Descargas en curso + completadas hoy */}
+        {(dashData?.kpis?.entregasEnDescarga > 0 || (dashData?.kpis?.entregasCompletadasHoyDetalle?.length || 0) > 0) && (
+          <EntregasEnDescargaWidget
+            entregas={dashData?.kpis?.entregasEnDescargaDetalle || []}
+            completadasHoy={dashData?.kpis?.entregasCompletadasHoyDetalle || []}
+          />
         )}
 
         {/* KPIs Principales - 3 rows */}

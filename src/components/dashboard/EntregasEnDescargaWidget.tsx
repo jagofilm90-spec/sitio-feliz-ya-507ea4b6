@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Truck, ChevronRight, Clock, User, Car, Package } from "lucide-react";
+import { Truck, ChevronRight, Clock, User, Car, Package, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import logoAlmasa from "@/assets/logo-almasa.png";
@@ -37,8 +37,22 @@ interface ProductoDetalle {
   } | null;
 }
 
+interface EntregaCompletada {
+  id: string;
+  numero_entrega: number;
+  llegada_registrada_en: string | null;
+  recepcion_finalizada_en: string | null;
+  nombre_chofer_proveedor: string | null;
+  cantidad_bultos: number;
+  orden_compra: {
+    folio: string;
+    proveedor: { nombre: string } | null;
+  };
+}
+
 interface Props {
   entregas: EntregaDescarga[];
+  completadasHoy?: EntregaCompletada[];
 }
 
 // Timer helper
@@ -82,7 +96,7 @@ const TimerEnVivo = ({ inicio }: { inicio: string }) => {
   );
 };
 
-export const EntregasEnDescargaWidget = ({ entregas }: Props) => {
+export const EntregasEnDescargaWidget = ({ entregas, completadasHoy = [] }: Props) => {
   const [, setTick] = useState(0);
   const [selectedEntrega, setSelectedEntrega] = useState<EntregaDescarga | null>(null);
   const [productos, setProductos] = useState<ProductoDetalle[]>([]);
@@ -118,7 +132,7 @@ export const EntregasEnDescargaWidget = ({ entregas }: Props) => {
     loadProductos();
   }, [selectedEntrega?.id]);
 
-  if (entregas.length === 0) return null;
+  if (entregas.length === 0 && completadasHoy.length === 0) return null;
 
   return (
     <>
@@ -300,6 +314,47 @@ export const EntregasEnDescargaWidget = ({ entregas }: Props) => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Completadas hoy */}
+      {completadasHoy.length > 0 && (
+        <Card className="border-green-500/50 bg-green-50/50 dark:bg-green-950/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-400 text-base">
+              <CheckCircle2 className="h-5 w-5" />
+              {completadasHoy.length} recepción{completadasHoy.length > 1 ? "es" : ""} completada{completadasHoy.length > 1 ? "s" : ""} hoy
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-0">
+              {completadasHoy.map((e) => {
+                const inicio = e.llegada_registrada_en ? new Date(e.llegada_registrada_en).getTime() : 0;
+                const fin = e.recepcion_finalizada_en ? new Date(e.recepcion_finalizada_en).getTime() : 0;
+                const minutos = inicio && fin ? Math.floor((fin - inicio) / 60000) : 0;
+                const duracion = minutos >= 60
+                  ? `${Math.floor(minutos / 60)}h ${minutos % 60}min`
+                  : `${minutos} min`;
+
+                return (
+                  <div key={e.id} className="flex items-center justify-between py-2.5 border-b last:border-0 border-green-200/50 dark:border-green-800/30">
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">
+                        {e.orden_compra?.proveedor?.nombre || "Sin proveedor"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {e.orden_compra?.folio} · Entrega #{e.numero_entrega} · {e.cantidad_bultos} bultos
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-3">
+                      <p className="text-sm font-bold text-green-600 dark:text-green-400">{duracion}</p>
+                      <p className="text-xs text-muted-foreground">descarga</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 };

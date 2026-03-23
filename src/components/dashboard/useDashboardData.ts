@@ -31,6 +31,7 @@ export interface DashboardKPIs {
   entregasComprasAtrasadas: number;
   entregasEnDescarga: number;
   entregasEnDescargaDetalle: any[];
+  entregasCompletadasHoyDetalle: any[];
 }
 
 export interface AlertaUrgente {
@@ -76,7 +77,7 @@ const EMPTY_KPIS: DashboardKPIs = {
   entregasCompletadasHoy: 0, entregasPendientesHoy: 0, pedidosPorSurtir: 0,
   creditoExcedido: 0, stockBajo: 0, pedidosSinAutorizar24h: 0, facturasVencenSemana: 0, pagosPorValidar: 0, preciosRevisionPendientes: 0,
   lotesVencidos: 0, fumigacionesVencidas: 0,
-  anticiposPendientes: 0, creditosProveedores: 0, entregasComprasAtrasadas: 0, entregasEnDescarga: 0, entregasEnDescargaDetalle: [],
+  anticiposPendientes: 0, creditosProveedores: 0, entregasComprasAtrasadas: 0, entregasEnDescarga: 0, entregasEnDescargaDetalle: [], entregasCompletadasHoyDetalle: [],
 };
 
 export function useDashboardData(periodo: Periodo = 'mes') {
@@ -120,6 +121,7 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         creditosProvRes,
         entregasComprasAtrasadasRes,
         entregasEnDescargaRes,
+        entregasRecibidasHoyRes,
       ] = await Promise.all([
         // Ventas del día
         supabase.from("pedidos").select("total").gte("created_at", inicioHoy).in("status", ["entregado", "en_ruta"]),
@@ -169,6 +171,8 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         supabase.from("ordenes_compra_entregas").select("id", { count: "exact", head: true }).eq("status", "programada").lt("fecha_programada", hoy),
         // Entregas en descarga (en curso)
         supabase.from("ordenes_compra_entregas").select(`id, numero_entrega, llegada_registrada_en, trabajando_desde, nombre_chofer_proveedor, placas_vehiculo, cantidad_bultos, orden_compra:ordenes_compra!inner(id, folio, proveedor:proveedores(nombre))`).eq("status", "en_descarga"),
+        // Entregas completadas hoy
+        supabase.from("ordenes_compra_entregas").select(`id, numero_entrega, llegada_registrada_en, recepcion_finalizada_en, nombre_chofer_proveedor, cantidad_bultos, orden_compra:ordenes_compra!inner(folio, proveedor:proveedores(nombre))`).eq("status", "recibida").gte("recepcion_finalizada_en", hoy + "T00:00:00"),
       ]);
 
       // KPIs calculations
@@ -223,6 +227,7 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         entregasComprasAtrasadas: entregasComprasAtrasadasRes.count || 0,
         entregasEnDescarga: (entregasEnDescargaRes.data as any[])?.length || 0,
         entregasEnDescargaDetalle: (entregasEnDescargaRes.data as any[]) || [],
+        entregasCompletadasHoyDetalle: (entregasRecibidasHoyRes.data as any[]) || [],
       };
 
       // Alertas urgentes
