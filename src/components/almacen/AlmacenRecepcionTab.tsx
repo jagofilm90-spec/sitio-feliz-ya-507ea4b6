@@ -100,6 +100,7 @@ interface EntregaCompra {
   // Campos para entregas de faltantes
   origen_faltante?: boolean;
   productos_faltantes?: ProductoFaltante[];
+  datos_llegada_parcial?: any;
   orden_compra: {
     id: string;
     folio: string;
@@ -187,6 +188,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
           trabajando_desde,
           origen_faltante,
           productos_faltantes,
+          datos_llegada_parcial,
           orden_compra:ordenes_compra!inner(
             id,
             folio,
