@@ -27,6 +27,7 @@ import { TopProductosClientesPanel } from "@/components/dashboard/TopProductosCl
 import { ResumenFinancieroPanel } from "@/components/dashboard/ResumenFinancieroPanel";
 import { useDashboardData, type Periodo } from "@/components/dashboard/useDashboardData";
 import { EntregasEnDescargaWidget } from "@/components/dashboard/EntregasEnDescargaWidget";
+import { ResumenDiaWidget } from "@/components/dashboard/ResumenDiaWidget";
 import { COMPANY_DATA } from "@/constants/companyData";
 
 const Dashboard = () => {
@@ -134,6 +135,9 @@ const Dashboard = () => {
             completadasHoy={dashData?.kpis?.entregasCompletadasHoyDetalle || []}
           />
         )}
+
+        {/* Resumen del Día - solo admin */}
+        {isAdmin && <ResumenDiaWidget />}
 
         {/* KPIs Principales - 3 rows */}
         <KPICards data={dashData?.kpis ?? null} loading={dashLoading} />
