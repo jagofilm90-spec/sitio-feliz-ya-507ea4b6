@@ -4,7 +4,7 @@ import {
   DollarSign, TrendingUp, CreditCard, Clock,
   Truck, CheckCircle2, Package, ShoppingCart,
   AlertTriangle, AlertOctagon, FileWarning, CalendarClock,
-  BadgeCheck,
+  BadgeCheck, PackageX,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrencyCompact } from "@/lib/formatDashboard";
@@ -182,6 +182,17 @@ export const KPICards = ({ data, loading }: Props) => {
           route: "/compras?tab=devoluciones-faltantes",
           description: "Proveedores nos deben",
           alertWhen: (v: number) => false,
+        },
+        {
+          title: "Entregas Atrasadas",
+          value: data?.entregasComprasAtrasadas ?? 0,
+          icon: PackageX,
+          color: "text-red-600 dark:text-red-400",
+          bgColor: "bg-red-50 dark:bg-red-950/30",
+          route: "/almacen-tablet",
+          description: "Sin recibir de días anteriores",
+          alertWhen: (v: number) => v > 0,
+          alertColor: "border-destructive/50",
         },
       ],
     },

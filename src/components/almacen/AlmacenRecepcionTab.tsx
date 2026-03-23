@@ -568,7 +568,18 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
 
   // Separar por status para mostrar en grupos
   const entregasEnDescarga = entregas.filter(e => e.status === "en_descarga");
-  const entregasPendientes = entregas.filter(e => e.status === "programada" || e.status === "en_transito");
+  const hoySort = new Date();
+  hoySort.setHours(0, 0, 0, 0);
+  const entregasPendientes = entregas
+    .filter(e => e.status === "programada" || e.status === "en_transito")
+    .sort((a, b) => {
+      // Atrasadas primero
+      const aAtrasada = a.fecha_programada && new Date(a.fecha_programada + "T00:00:00") < hoySort && a.status === "programada";
+      const bAtrasada = b.fecha_programada && new Date(b.fecha_programada + "T00:00:00") < hoySort && b.status === "programada";
+      if (aAtrasada && !bAtrasada) return -1;
+      if (!aAtrasada && bAtrasada) return 1;
+      return 0; // Mantener orden original (por fecha_programada asc)
+    });
 
   return (
     <>
@@ -1224,8 +1235,9 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
           {/* Línea 2: Info adicional */}
           <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
             {entrega.fecha_programada && (
-              <span className="flex items-center gap-1">
+              <span className={cn("flex items-center gap-1", estaAtrasada && "text-destructive font-medium")}>
                 <Calendar className="w-4 h-4" />
+                {estaAtrasada ? "Programada: " : ""}
                 {format(new Date(entrega.fecha_programada + "T12:00:00"), "dd/MM/yyyy", { locale: es })}
               </span>
             )}
