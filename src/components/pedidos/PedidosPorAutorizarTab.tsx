@@ -297,15 +297,14 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
             };
           });
 
-          const newTotal = detallesEmail.reduce((sum, d) => sum + d.subtotal, 0);
+          const totalParaEmail = isEditing ? calculateNewTotal() : selectedPedido.total;
 
           await supabase.functions.invoke("send-order-authorized-email", {
             body: {
               clienteEmail,
               clienteNombre: selectedPedido.clientes?.nombre || "Cliente",
               pedidoFolio: selectedPedido.folio,
-              total: newTotal,
-              fechaEntrega: selectedPedido.fecha_entrega_estimada || new Date().toISOString(),
+              total: totalParaEmail,
               ajustesPrecio,
               detalles: detallesEmail
             }
