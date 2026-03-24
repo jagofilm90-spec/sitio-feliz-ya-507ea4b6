@@ -314,13 +314,13 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
           let clientePdfName: string | undefined;
           try {
             const cpdf = await generarConfirmacionClientePDF({
-              folio: selectedPedido.folio,
-              clienteNombre: selectedPedido.clientes?.nombre || "Cliente",
-              vendedorNombre: (selectedPedido as any).vendedor?.full_name || "Vendedor",
-              direccionEntrega: selectedPedido.cliente_sucursales?.direccion || selectedPedido.cliente_sucursales?.nombre || "",
-              terminoCredito: selectedPedido.termino_credito || "contado",
-              total: totalParaEmail,
-              productos: detallesEmail.map(d => ({ cantidad: d.cantidad, unidad: d.unidad, nombre: d.producto, precioUnitario: d.precioUnitario, importe: d.subtotal, kgTotales: d.kgTotales, precioPorKilo: d.precioPorKilo })),
+              folio: selectedPedido.folio, fecha: new Date().toISOString(),
+              vendedor: (selectedPedido as any).vendedor?.full_name || "Vendedor",
+              terminoCredito: selectedPedido.termino_credito || "Contado",
+              cliente: { nombre: selectedPedido.clientes?.nombre || "Cliente" },
+              sucursal: { nombre: selectedPedido.cliente_sucursales?.nombre || "Principal", direccion: selectedPedido.cliente_sucursales?.direccion || undefined },
+              productos: detallesEmail.map(d => ({ cantidad: d.cantidad, unidad: d.unidad, descripcion: d.producto, pesoTotal: d.kgTotales || null, precioUnitario: d.precioUnitario, importe: d.subtotal, precioPorKilo: d.precioPorKilo || false })),
+              subtotal: totalParaEmail, iva: 0, ieps: 0, total: totalParaEmail, pesoTotalKg: 0,
             });
             clientePdf64 = cpdf.base64;
             clientePdfName = cpdf.filename;
@@ -369,61 +369,63 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
         } catch (e) { console.error("Error enviando push al vendedor:", e); }
       }
 
-      // Email interno a pedidos@ (se envía ahora que fue autorizado)
+      // Preparar datos para PDFs y emails
       try {
-        const productosEmail = selectedPedido.pedidos_detalles.map(d => {
-          const pesoKg = d.productos?.peso_kg || 0;
-          const precioPorKilo = d.productos?.precio_por_kilo || false;
-          const precio = editingPrices[d.id] ?? d.precio_unitario;
-          const kgTotales = pesoKg > 0 ? d.cantidad * pesoKg : null;
-          const importe = precioPorKilo && kgTotales ? kgTotales * precio : d.cantidad * precio;
-          return {
-            cantidad: d.cantidad,
-            unidad: d.productos?.unidad || "pza",
-            nombre: d.productos?.nombre || "Producto",
-            precioUnitario: precio,
-            importe,
-            kgTotales,
-            precioPorKilo,
-          };
-        });
         const totalFinal = isEditing ? calculateNewTotal() : selectedPedido.total;
         const direccion = selectedPedido.cliente_sucursales?.direccion;
         const sucNombre = selectedPedido.cliente_sucursales?.nombre || "Principal";
 
-        // Generar PDF de la nota
+        // Datos en formato DatosPedidoPrint (compartido con el template)
+        const datosPrint: import("@/components/pedidos/PedidoPrintTemplate").DatosPedidoPrint = {
+          pedidoId: pedidoId,
+          folio: selectedPedido.folio,
+          fecha: new Date().toISOString(),
+          vendedor: (selectedPedido as any).vendedor?.full_name || "Vendedor",
+          terminoCredito: selectedPedido.termino_credito || "Contado",
+          cliente: { nombre: selectedPedido.clientes?.nombre || "Cliente" },
+          direccionEntrega: direccion || "",
+          sucursal: { nombre: sucNombre, direccion: direccion || undefined },
+          productos: selectedPedido.pedidos_detalles.map(d => {
+            const pesoKg = d.productos?.peso_kg || 0;
+            const precioPorKilo = d.productos?.precio_por_kilo || false;
+            const precio = editingPrices[d.id] ?? d.precio_unitario;
+            const kgTotales = pesoKg > 0 ? d.cantidad * pesoKg : null;
+            const importe = precioPorKilo && kgTotales ? kgTotales * precio : d.cantidad * precio;
+            return { cantidad: d.cantidad, unidad: d.productos?.unidad || "pza", descripcion: d.productos?.nombre || "Producto", pesoTotal: kgTotales, precioUnitario: precio, importe, precioPorKilo };
+          }),
+          subtotal: totalFinal, // TODO: desglosar subtotal/iva/ieps
+          iva: 0, ieps: 0, total: totalFinal,
+          pesoTotalKg: selectedPedido.pedidos_detalles.reduce((s, d) => s + (d.cantidad * (d.productos?.peso_kg || 0)), 0),
+        };
+
+        // Generar PDF nota interna (ORIGINAL + COPIA CLIENTE)
         let pdfBase64: string | undefined;
         let pdfFilename: string | undefined;
         try {
-          const pdf = await generarNotaPDF({
-            folio: selectedPedido.folio,
-            clienteNombre: selectedPedido.clientes?.nombre || "Cliente",
-            vendedorNombre: (selectedPedido as any).vendedor?.full_name || "Vendedor",
-            direccionEntrega: direccion || sucNombre,
-            terminoCredito: selectedPedido.termino_credito || "contado",
-            total: totalFinal,
-            subtotal: undefined,
-            impuestos: undefined,
-            productos: productosEmail,
-          });
+          const pdf = await generarNotaPDF(datosPrint);
           pdfBase64 = pdf.base64;
           pdfFilename = pdf.filename;
-        } catch (pdfErr) { console.error("Error generando PDF:", pdfErr); }
+        } catch (pdfErr) { console.error("Error generando PDF nota:", pdfErr); }
+
+        // Enviar email interno con PDF adjunto
+        const productosEmail = datosPrint.productos.map(p => ({
+          cantidad: p.cantidad, unidad: p.unidad, nombre: p.descripcion,
+          precioUnitario: p.precioUnitario, importe: p.importe,
+          kgTotales: p.pesoTotal, precioPorKilo: p.precioPorKilo,
+        }));
 
         await supabase.functions.invoke("enviar-pedido-interno", {
           body: {
             folio: selectedPedido.folio,
             clienteNombre: selectedPedido.clientes?.nombre || "Cliente",
-            vendedorNombre: (selectedPedido as any).vendedor?.full_name || "Vendedor",
+            vendedorNombre: datosPrint.vendedor,
             terminoCredito: selectedPedido.termino_credito || "contado",
             direccionEntrega: direccion || sucNombre,
             sucursalNombre: sucNombre,
             total: totalFinal,
             fecha: new Date().toISOString(),
-            pedidoId: pedidoId,
-            productos: productosEmail,
-            pdfBase64,
-            pdfFilename,
+            pedidoId, productos: productosEmail,
+            pdfBase64, pdfFilename,
           }
         });
       } catch (e) { console.error("Error enviando email interno:", e); }
