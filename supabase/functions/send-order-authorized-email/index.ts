@@ -5,6 +5,8 @@ interface SendOrderAuthorizedRequest {
   clienteEmail: string; clienteNombre: string; pedidoFolio: string;
   total: number; fechaEntrega?: string; ajustesPrecio: number;
   detalles: Array<{ producto: string; cantidad: number; unidad: string; precioUnitario: number; subtotal: number; precioAnterior?: number; fueAjustado: boolean; kgTotales?: number | null; precioPorKilo?: boolean; }>;
+  pdfBase64?: string;
+  pdfFilename?: string;
 }
 
 const LOGO = "https://vrcyjmfpteoccqdmdmqn.supabase.co/storage/v1/object/public/email-assets/logo-almasa.png";
@@ -23,12 +25,14 @@ async function getToken(sb: any, c: any) {
   return t.access_token;
 }
 
-function rawEmail(from: string, to: string, subj: string, html: string) {
+function rawEmail(from: string, to: string, subj: string, html: string, pdf64?: string, pdfName?: string) {
   const enc = new TextEncoder();
   const s64 = btoa(String.fromCharCode(...enc.encode(subj)));
   const b64 = btoa(String.fromCharCode(...enc.encode(html)));
   const bnd = `b_${Date.now()}`;
-  const p = [`From: Pedidos ALMASA <${from}>`,`To: ${to}`,`Subject: =?UTF-8?B?${s64}?=`,`MIME-Version: 1.0`,`Content-Type: multipart/mixed; boundary="${bnd}"`,``,`--${bnd}`,`Content-Type: text/html; charset=UTF-8`,`Content-Transfer-Encoding: base64`,``,b64,`--${bnd}--`];
+  const p = [`From: Pedidos ALMASA <${from}>`,`To: ${to}`,`Subject: =?UTF-8?B?${s64}?=`,`MIME-Version: 1.0`,`Content-Type: multipart/mixed; boundary="${bnd}"`,``,`--${bnd}`,`Content-Type: text/html; charset=UTF-8`,`Content-Transfer-Encoding: base64`,``,b64];
+  if (pdf64 && pdfName) p.push(`--${bnd}`,`Content-Type: application/pdf; name="${pdfName}"`,`Content-Disposition: attachment; filename="${pdfName}"`,`Content-Transfer-Encoding: base64`,``,pdf64);
+  p.push(`--${bnd}--`);
   return btoa(p.join("\r\n")).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
 }
 
@@ -36,7 +40,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { clienteEmail, clienteNombre, pedidoFolio, total, ajustesPrecio, detalles }: SendOrderAuthorizedRequest = await req.json();
+    const { clienteEmail, clienteNombre, pedidoFolio, total, ajustesPrecio, detalles, pdfBase64, pdfFilename }: SendOrderAuthorizedRequest = await req.json();
     console.log("[send-order-authorized-email] To:", clienteEmail, "Folio:", pedidoFolio, "Total:", total);
     if (!clienteEmail || !pedidoFolio) throw new Error("Email y folio requeridos");
 
@@ -75,7 +79,7 @@ ${alertHtml}
 <tr><td style="padding:20px 36px;border-top:1px solid #eee"><p style="margin:0 0 4px;color:#666;font-size:11px;font-weight:600">Departamento de Pedidos</p><p style="margin:0;color:#999;font-size:10px;line-height:1.6">Melchor Ocampo #59, Col. Magdalena Mixiuhca, C.P. 15850, CDMX<br>Tel: 55 5552-0168 / 55 5552-7887 &bull; 1904@almasa.com.mx</p><p style="margin:6px 0 0;color:#bbb;font-size:10px">Correo generado automaticamente. No responder.</p></td></tr>
 </table></td></tr></table>`;
 
-    const raw = rawEmail(sender, clienteEmail, subj, emailHtml);
+    const raw = rawEmail(sender, clienteEmail, subj, emailHtml, pdfBase64, pdfFilename);
     const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", { method: "POST", headers: { Authorization: `Bearer ${at}`, "Content-Type": "application/json" }, body: JSON.stringify({ raw }) });
     if (!res.ok) { const e = await res.text(); throw new Error(`Gmail: ${e}`); }
     const r = await res.json();

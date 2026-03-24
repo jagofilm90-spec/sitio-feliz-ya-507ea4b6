@@ -47,7 +47,7 @@ import { es } from "date-fns/locale";
 import { ordenarProductosAzucarPrimero } from "@/lib/calculos";
 import { formatCurrency } from "@/lib/utils";
 import logoAlmasa from "@/assets/logo-almasa.png";
-import { generarNotaPDF } from "@/lib/generarNotaPDF";
+import { generarNotaPDF, generarConfirmacionClientePDF } from "@/lib/generarNotaPDF";
 import { PedidoCardMobile } from "./PedidoCardMobile";
 import { AutorizacionRapidaSheet } from "./AutorizacionRapidaSheet";
 
@@ -309,6 +309,23 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
 
           const totalParaEmail = isEditing ? calculateNewTotal() : selectedPedido.total;
 
+          // Generar PDF de confirmación para el cliente
+          let clientePdf64: string | undefined;
+          let clientePdfName: string | undefined;
+          try {
+            const cpdf = await generarConfirmacionClientePDF({
+              folio: selectedPedido.folio,
+              clienteNombre: selectedPedido.clientes?.nombre || "Cliente",
+              vendedorNombre: (selectedPedido as any).vendedor?.full_name || "Vendedor",
+              direccionEntrega: selectedPedido.cliente_sucursales?.direccion || selectedPedido.cliente_sucursales?.nombre || "",
+              terminoCredito: selectedPedido.termino_credito || "contado",
+              total: totalParaEmail,
+              productos: detallesEmail.map(d => ({ cantidad: d.cantidad, unidad: d.unidad, nombre: d.producto, precioUnitario: d.precioUnitario, importe: d.subtotal, kgTotales: d.kgTotales, precioPorKilo: d.precioPorKilo })),
+            });
+            clientePdf64 = cpdf.base64;
+            clientePdfName = cpdf.filename;
+          } catch (e) { console.error("Error generando PDF cliente:", e); }
+
           await supabase.functions.invoke("send-order-authorized-email", {
             body: {
               clienteEmail,
@@ -316,7 +333,9 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
               pedidoFolio: selectedPedido.folio,
               total: totalParaEmail,
               ajustesPrecio,
-              detalles: detallesEmail
+              detalles: detallesEmail,
+              pdfBase64: clientePdf64,
+              pdfFilename: clientePdfName,
             }
           });
           console.log("Email de autorización enviado al cliente");
