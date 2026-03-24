@@ -32,8 +32,6 @@ interface PedidoInternoPayload {
   pdfFilename?: string;
 }
 
-const LOGO_URL = "https://vrcyjmfpteoccqdmdmqn.supabase.co/storage/v1/object/public/email-assets/logo-almasa.png";
-
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(amount);
 }
@@ -131,59 +129,53 @@ function buildEmailHtml(data: PedidoInternoPayload): string {
     </table>`;
   }
 
-  return `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:20px 0;font-family:Arial,sans-serif">
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f0f0;padding:20px 0;font-family:Arial,Helvetica,sans-serif">
   <tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
-      <!-- Header con logo -->
-      <tr><td style="background:#C8102E;padding:24px 40px;text-align:center">
-        <img src="${LOGO_URL}" alt="ALMASA" width="160" style="display:block;margin:0 auto;max-width:160px;height:auto" />
-        <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:12px;letter-spacing:0.5px">Abarrotes la Manita SA de CV</p>
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden">
+      <tr><td style="background:#C8102E;padding:28px 40px;text-align:center">
+        <h1 style="margin:0;color:#ffffff;font-size:32px;font-weight:800;letter-spacing:3px;font-family:Arial,Helvetica,sans-serif">ALMASA</h1>
+        <p style="margin:6px 0 0;color:rgba(255,255,255,0.8);font-size:12px;letter-spacing:1px;text-transform:uppercase">Abarrotes la Manita SA de CV</p>
       </td></tr>
-      <!-- Banner -->
       <tr><td style="background:#1e3a5f;padding:14px 40px;text-align:center">
-        <p style="margin:0;color:#fff;font-size:18px;font-weight:bold">NUEVO PEDIDO ${data.folio}</p>
+        <p style="margin:0;color:#ffffff;font-size:17px;font-weight:700;letter-spacing:0.5px">NUEVO PEDIDO &mdash; ${data.folio}</p>
       </td></tr>
-      <!-- Body -->
-      <tr><td style="padding:28px 40px">
-        <p style="color:#374151;font-size:15px;margin:0 0 20px">Se ha registrado un nuevo pedido en el sistema.</p>
-        <!-- Info grid -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:20px">
+      <tr><td style="padding:28px 32px">
+        <p style="color:#374151;font-size:15px;margin:0 0 20px;line-height:1.5">Se ha registrado un nuevo pedido en el sistema.</p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:24px">
           <tr style="background:#f8fafc">
-            <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#64748b;font-size:13px;width:35%"><strong>Cliente</strong></td>
-            <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#1e293b;font-size:14px;font-weight:bold">${data.clienteNombre}</td>
+            <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#64748b;font-size:11px;width:35%;text-transform:uppercase;letter-spacing:0.5px;font-weight:700">CLIENTE</td>
+            <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#1e293b;font-size:14px;font-weight:700">${data.clienteNombre}</td>
           </tr>
           <tr>
-            <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#64748b;font-size:13px"><strong>Vendedor</strong></td>
+            <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700">VENDEDOR</td>
             <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#1e293b;font-size:14px">${data.vendedorNombre}</td>
           </tr>
           <tr style="background:#f8fafc">
-            <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#64748b;font-size:13px"><strong>Sucursal / Entrega</strong></td>
+            <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700">SUCURSAL</td>
             <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#1e293b;font-size:14px">${data.sucursalNombre || data.direccionEntrega}</td>
           </tr>
           <tr>
-            <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#64748b;font-size:13px"><strong>Plazo de credito</strong></td>
+            <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700">PLAZO</td>
             <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#1e293b;font-size:14px">${formatCreditTerm(data.terminoCredito)}</td>
           </tr>
           <tr style="background:#f8fafc">
-            <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#64748b;font-size:13px"><strong>Fecha</strong></td>
+            <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700">FECHA</td>
             <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#1e293b;font-size:14px">${fecha}</td>
           </tr>
         </table>
         <!-- Productos -->
         ${productosHtml}
-        <!-- Total -->
-        <div style="background:#fef3c7;border-left:4px solid #C8102E;padding:16px;border-radius:4px;margin:20px 0">
-          <table width="100%" cellpadding="0" cellspacing="0">
-            ${data.subtotal ? `<tr><td style="font-size:14px;color:#92400e">Subtotal:</td><td style="text-align:right;font-size:14px;color:#92400e">${formatCurrency(data.subtotal)}</td></tr>` : ""}
-            ${data.impuestos ? `<tr><td style="font-size:14px;color:#92400e">Impuestos:</td><td style="text-align:right;font-size:14px;color:#92400e">${formatCurrency(data.impuestos)}</td></tr>` : ""}
-            <tr><td style="font-size:20px;font-weight:bold;color:#92400e;padding-top:4px">TOTAL:</td><td style="text-align:right;font-size:20px;font-weight:bold;color:#C8102E;padding-top:4px">${formatCurrency(data.total)}</td></tr>
-          </table>
-        </div>
-        <p style="color:#374151;font-size:14px;margin:16px 0 0"><strong>Favor de imprimir PDF para su entrega.</strong></p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0">
+          ${data.subtotal ? `<tr><td style="padding:6px 0;font-size:14px;color:#64748b">Subtotal</td><td style="padding:6px 0;text-align:right;font-size:14px;color:#374151">${formatCurrency(data.subtotal)}</td></tr>` : ""}
+          ${data.impuestos ? `<tr><td style="padding:6px 0;font-size:14px;color:#64748b">Impuestos</td><td style="padding:6px 0;text-align:right;font-size:14px;color:#374151">${formatCurrency(data.impuestos)}</td></tr>` : ""}
+          <tr><td colspan="2" style="padding:0"><div style="border-top:2px solid #C8102E;margin:8px 0"></div></td></tr>
+          <tr><td style="padding:8px 0;font-size:22px;font-weight:800;color:#1e293b">TOTAL</td><td style="padding:8px 0;text-align:right;font-size:22px;font-weight:800;color:#C8102E">${formatCurrency(data.total)}</td></tr>
+        </table>
+        <p style="color:#64748b;font-size:13px;margin:20px 0 0;padding:12px 16px;background:#f0fdf4;border-left:3px solid #16a34a;border-radius:4px"><strong style="color:#15803d">Favor de imprimir PDF adjunto para su entrega.</strong></p>
       </td></tr>
-      <!-- Footer -->
-      <tr><td style="background:#f8fafc;padding:20px 40px;border-top:1px solid #e2e8f0;text-align:center">
-        <p style="margin:0;color:#94a3b8;font-size:12px">Este es un correo automatico del sistema ALMASA.<br>Por favor no responda a este mensaje.</p>
+      <tr><td style="background:#1e3a5f;padding:20px 32px;text-align:center">
+        <p style="margin:0;color:rgba(255,255,255,0.7);font-size:11px;letter-spacing:0.5px">ALMASA &mdash; Abarrotes la Manita SA de CV</p>
+        <p style="margin:4px 0 0;color:rgba(255,255,255,0.5);font-size:10px">Correo generado automaticamente &bull; No responder</p>
       </td></tr>
     </table>
   </td></tr>

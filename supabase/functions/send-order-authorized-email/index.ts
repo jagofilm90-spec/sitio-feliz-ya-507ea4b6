@@ -19,8 +19,6 @@ interface SendOrderAuthorizedRequest {
   }>;
 }
 
-const LOGO_URL = "https://vrcyjmfpteoccqdmdmqn.supabase.co/storage/v1/object/public/email-assets/logo-almasa.png";
-
 async function refreshAccessToken(refreshToken: string): Promise<{ access_token: string; expires_in: number } | null> {
   const GMAIL_CLIENT_ID = Deno.env.get("GMAIL_CLIENT_ID");
   const GMAIL_CLIENT_SECRET = Deno.env.get("GMAIL_CLIENT_SECRET");
@@ -98,7 +96,32 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return `<tr style="${bg}"><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px">${d.producto}${d.fueAjustado ? " <span style='color:#B45309;font-size:11px'>(ajustado)</span>" : ""}</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:13px">${d.cantidad} ${d.unidad}</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-size:13px">${price}</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-size:13px;font-weight:600">${fmt(d.subtotal)}</td></tr>`;
     }).join("");
 
-    const emailHtml = `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:20px 0;font-family:Arial,sans-serif"><tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)"><tr><td style="background:#C8102E;padding:24px 40px;text-align:center"><img src="${LOGO_URL}" alt="ALMASA" width="160" style="display:block;margin:0 auto;max-width:160px;height:auto"/><p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:12px">Abarrotes la Manita SA de CV</p></td></tr><tr><td style="background:#16a34a;padding:14px 40px;text-align:center"><p style="margin:0;color:#fff;font-size:18px;font-weight:bold">PEDIDO PROGRAMADO</p></td></tr><tr><td style="padding:28px 40px">${alertBanner}<p style="color:#374151;font-size:15px;margin:0 0 16px">Estimado(a) <strong>${clienteNombre}</strong>,</p><p style="color:#374151;font-size:15px;margin:0 0 20px">Su pedido ha sido autorizado y programado para entrega:</p><table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;margin:0 0 20px;border-collapse:collapse"><tr><td style="padding:12px 20px;border-bottom:1px solid #e2e8f0"><strong>Folio:</strong></td><td style="padding:12px 20px;text-align:right;border-bottom:1px solid #e2e8f0">${pedidoFolio}</td></tr><tr><td style="padding:12px 20px;border-bottom:1px solid #e2e8f0"><strong>Fecha de entrega:</strong></td><td style="padding:12px 20px;text-align:right;border-bottom:1px solid #e2e8f0">${formattedDate}</td></tr><tr><td style="padding:12px 20px"><strong style="font-size:18px">Total:</strong></td><td style="padding:12px 20px;text-align:right;font-size:18px;font-weight:bold;color:#16a34a">${formattedTotal}</td></tr></table><table style="width:100%;border-collapse:collapse;margin:20px 0"><thead><tr style="background:#1e3a5f"><th style="padding:10px 12px;text-align:left;color:#fff;font-size:12px">Producto</th><th style="padding:10px 12px;text-align:center;color:#fff;font-size:12px">Cant.</th><th style="padding:10px 12px;text-align:right;color:#fff;font-size:12px">Precio</th><th style="padding:10px 12px;text-align:right;color:#fff;font-size:12px">Subtotal</th></tr></thead><tbody>${rows}</tbody></table><p style="color:#888;font-size:13px;margin-top:24px">Si tiene alguna pregunta, no dude en contactarnos.</p></td></tr><tr><td style="background:#f8fafc;padding:20px 40px;border-top:1px solid #e2e8f0;text-align:center"><p style="margin:0;color:#94a3b8;font-size:12px">Correo automatico del sistema ALMASA. No responda a este mensaje.</p></td></tr></table></td></tr></table>`;
+    const emailHtml = `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f0f0;padding:20px 0;font-family:Arial,Helvetica,sans-serif">
+<tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border-radius:8px;overflow:hidden">
+  <tr><td style="background:#C8102E;padding:28px 40px;text-align:center">
+    <h1 style="margin:0;color:#fff;font-size:32px;font-weight:800;letter-spacing:3px">ALMASA</h1>
+    <p style="margin:6px 0 0;color:rgba(255,255,255,0.8);font-size:12px;letter-spacing:1px;text-transform:uppercase">Abarrotes la Manita SA de CV</p>
+  </td></tr>
+  <tr><td style="background:#16a34a;padding:14px 40px;text-align:center">
+    <p style="margin:0;color:#fff;font-size:17px;font-weight:700;letter-spacing:0.5px">PEDIDO PROGRAMADO</p>
+  </td></tr>
+  <tr><td style="padding:28px 32px">
+    ${alertBanner}
+    <p style="color:#374151;font-size:15px;margin:0 0 16px;line-height:1.5">Estimado(a) <strong>${clienteNombre}</strong>,</p>
+    <p style="color:#374151;font-size:15px;margin:0 0 20px;line-height:1.5">Su pedido ha sido autorizado y programado para entrega:</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 20px">
+      <tr style="background:#f8fafc"><td style="padding:10px 14px;border:1px solid #e2e8f0;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700">FOLIO</td><td style="padding:10px 14px;border:1px solid #e2e8f0;color:#1e293b;font-size:14px;font-weight:700">${pedidoFolio}</td></tr>
+      <tr><td style="padding:10px 14px;border:1px solid #e2e8f0;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700">ENTREGA</td><td style="padding:10px 14px;border:1px solid #e2e8f0;color:#1e293b;font-size:14px">${formattedDate}</td></tr>
+      <tr style="background:#f8fafc"><td style="padding:10px 14px;border:1px solid #e2e8f0;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700">TOTAL</td><td style="padding:10px 14px;border:1px solid #e2e8f0;font-size:20px;font-weight:800;color:#16a34a">${formattedTotal}</td></tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;margin:20px 0"><thead><tr style="background:#1e3a5f"><th style="padding:10px 12px;text-align:left;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Producto</th><th style="padding:10px 12px;text-align:center;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Cant.</th><th style="padding:10px 12px;text-align:right;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Precio</th><th style="padding:10px 12px;text-align:right;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Subtotal</th></tr></thead><tbody>${rows}</tbody></table>
+    <p style="color:#64748b;font-size:13px;margin-top:24px;line-height:1.5">Si tiene alguna pregunta sobre su pedido, no dude en contactarnos.</p>
+  </td></tr>
+  <tr><td style="background:#1e3a5f;padding:20px 32px;text-align:center">
+    <p style="margin:0;color:rgba(255,255,255,0.7);font-size:11px;letter-spacing:0.5px">ALMASA &mdash; Abarrotes la Manita SA de CV</p>
+    <p style="margin:4px 0 0;color:rgba(255,255,255,0.5);font-size:10px">Correo generado automaticamente &bull; No responder</p>
+  </td></tr>
+</table></td></tr></table>`;
 
     const rawEmail = buildRawEmail(senderEmail, clienteEmail, subject, emailHtml);
     const sendResponse = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
