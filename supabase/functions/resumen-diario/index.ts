@@ -40,11 +40,8 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
 
-    // Calcular fecha México (UTC-6)
-    const now = new Date();
-    const mexicoOffset = -6 * 60;
-    const mexicoTime = new Date(now.getTime() + (mexicoOffset + now.getTimezoneOffset()) * 60000);
-    const fecha = body.fecha || mexicoTime.toISOString().split("T")[0];
+    // Fecha en hora México (America/Mexico_City)
+    const fecha = body.fecha || new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date());
     // Inicio/fin del día en UTC ajustado a México
     const inicioDiaUTC = `${fecha}T06:00:00Z`; // 00:00 México = 06:00 UTC
     const finDiaUTC = new Date(new Date(`${fecha}T06:00:00Z`).getTime() + 24 * 60 * 60 * 1000).toISOString();
