@@ -45,7 +45,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Eye, ShoppingCart, FileText, Link2, Printer, Receipt, Send, CheckCircle2, Clock, BarChart3, Trash2, AlertCircle, FileCheck, CalendarDays } from "lucide-react";
+import { Plus, Search, Eye, ShoppingCart, FileText, Link2, Printer, Receipt, Send, CheckCircle2, Clock, BarChart3, Trash2, AlertCircle, FileCheck, CalendarDays, Truck, Navigation, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import CotizacionesTab from "@/components/cotizaciones/CotizacionesTab";
@@ -829,75 +829,51 @@ const PedidosContent = () => {
                         <TableCell>{getStatusBadge(pedido.status)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
+                            {/* Siempre: ver detalle */}
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon"
-                                    onClick={() => {
-                                      setSelectedPedidoId(pedido.id);
-                                      setPedidoDetalleOpen(true);
-                                    }}
-                                  >
+                                  <Button variant="ghost" size="icon" onClick={() => { setSelectedPedidoId(pedido.id); setPedidoDetalleOpen(true); }}>
                                     <Eye className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>Ver detalles</TooltipContent>
+                                <TooltipContent>Ver detalle</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon"
-                                    onClick={() => handlePrintRemision(pedido.id)}
-                                  >
-                                    <Printer className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Imprimir Remisión</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-
-                            {/* Botón Generar Factura CFDI */}
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon"
-                                    onClick={() => {
-                                      setSelectedPedidoForFactura(pedido);
-                                      setFacturaDialogOpen(true);
-                                    }}
-                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                  >
-                                    <FileCheck className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Generar Factura CFDI</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            
-                            {/* Botón unificado: Facturar y Enviar */}
-                            {!pedido.factura_enviada_al_cliente && (
+                            {/* Acción contextual según estado */}
+                            {pedido.status === "pendiente" && (
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon"
-                                      onClick={() => handleFacturarYEnviar(pedido)}
-                                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                    >
-                                      <Send className="h-4 w-4" />
+                                    <Button variant="ghost" size="icon" onClick={() => navigate(`/rutas?tab=planificar&pedido_id=${pedido.id}`)}>
+                                      <Truck className="h-4 w-4" />
                                     </Button>
                                   </TooltipTrigger>
-                                  <TooltipContent>
-                                    {pedido.facturado ? "Enviar Factura" : "Facturar y Enviar"}
-                                  </TooltipContent>
+                                  <TooltipContent>Asignar a ruta</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {pedido.status === "en_ruta" && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" disabled className="opacity-50">
+                                      <Navigation className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>En camino</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {pedido.status === "entregado" && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" onClick={() => { setSelectedPedidoId(pedido.id); setPedidoDetalleOpen(true); }}>
+                                      <DollarSign className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Cobrar</TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
                             )}
