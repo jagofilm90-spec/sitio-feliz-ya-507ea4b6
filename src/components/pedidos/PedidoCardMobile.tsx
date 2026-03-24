@@ -97,7 +97,7 @@ export function PedidoCardMobile({
             {format(new Date(fechaPedido), "dd MMM yyyy", { locale: es })}
           </span>
           <span className="font-mono font-bold text-lg text-primary">
-            ${formatCurrency(total)}
+            {formatCurrency(total)}
           </span>
         </div>
 

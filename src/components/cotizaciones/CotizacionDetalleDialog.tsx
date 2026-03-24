@@ -1071,14 +1071,14 @@ const CotizacionDetalleDialog = ({
                         </TableCell>
                       )}
                       <TableCell className="text-right font-mono">
-                        ${formatCurrency(d.precio_unitario)}
+                        {formatCurrency(d.precio_unitario)}
                         <span className="text-xs text-muted-foreground ml-1">
                           {esPorKilo ? '/kg' : `/${d.producto?.unidad}`}
                         </span>
                       </TableCell>
                       {!esSoloPrecios && (
                         <TableCell className="text-right font-medium font-mono">
-                          ${formatCurrency(d.subtotal)}
+                          {formatCurrency(d.subtotal)}
                           {esPorKilo && d.kilos_totales && (
                             <div className="text-xs text-muted-foreground font-normal">
                               {d.kilos_totales.toLocaleString('es-MX')} × ${d.precio_unitario.toFixed(2)}
@@ -1099,16 +1099,16 @@ const CotizacionDetalleDialog = ({
               <div className="w-72 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal:</span>
-                  <span className="font-mono">${formatCurrency(cotizacion.subtotal)}</span>
+                  <span className="font-mono">{formatCurrency(cotizacion.subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-blue-600">
                   <span>Impuestos:</span>
-                  <span className="font-mono">${formatCurrency(cotizacion.impuestos)}</span>
+                  <span className="font-mono">{formatCurrency(cotizacion.impuestos)}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total:</span>
-                  <span className="font-mono">${formatCurrency(cotizacion.total)}</span>
+                  <span className="font-mono">{formatCurrency(cotizacion.total)}</span>
                 </div>
               </div>
             </div>
@@ -1375,7 +1375,7 @@ const CotizacionDetalleDialog = ({
             <div className="bg-muted/50 p-3 rounded-lg text-sm space-y-1">
               <p><strong>Cliente:</strong> {cotizacion.cliente?.nombre}</p>
               <p><strong>Productos:</strong> {cotizacion.detalles?.length || 0} items</p>
-              <p><strong>Total:</strong> ${formatCurrency(cotizacion.total)}</p>
+              <p><strong>Total:</strong> {formatCurrency(cotizacion.total)}</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="fechaEntrega">Fecha de entrega estimada</Label>

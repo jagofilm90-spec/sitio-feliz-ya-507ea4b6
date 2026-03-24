@@ -511,7 +511,7 @@ export function PedidosPorAutorizarTab() {
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="text-right font-mono">${formatCurrency(pedido.total)}</TableCell>
+                <TableCell className="text-right font-mono">{formatCurrency(pedido.total)}</TableCell>
                 <TableCell>
                   <Button
                     variant="outline"
@@ -595,12 +595,12 @@ export function PedidosPorAutorizarTab() {
                       <div className="space-y-1 border-t pt-2">
                         <div className="flex justify-between text-xs">
                           <span className="text-muted-foreground">P. Lista</span>
-                          <span className="font-mono">${formatCurrency(listPrice)}</span>
+                          <span className="font-mono">{formatCurrency(listPrice)}</span>
                         </div>
                         {descuentoMax > 0 && (
                           <div className="flex justify-between text-xs">
                             <span className="text-muted-foreground">P. Mínimo</span>
-                            <span className="font-mono">${formatCurrency(precioMinimo)}</span>
+                            <span className="font-mono">{formatCurrency(precioMinimo)}</span>
                           </div>
                         )}
                         <div className="flex justify-between text-xs">
@@ -615,7 +615,7 @@ export function PedidosPorAutorizarTab() {
                             />
                           ) : (
                             <span className={`font-mono font-semibold ${porDebajoMinimo ? "text-destructive" : ""}`}>
-                              ${formatCurrency(currentPrice)}
+                              {formatCurrency(currentPrice)}
                             </span>
                           )}
                         </div>
@@ -623,7 +623,7 @@ export function PedidosPorAutorizarTab() {
                           <div className="flex justify-between text-xs">
                             <span className="text-muted-foreground">Diferencia</span>
                             <span className={`font-mono font-semibold ${diferencia < 0 ? "text-destructive" : "text-green-600"}`}>
-                              {diferencia >= 0 ? "+" : ""}${formatCurrency(diferencia)}
+                              {diferencia >= 0 ? "+" : ""}{formatCurrency(diferencia)}
                             </span>
                           </div>
                         )}
@@ -633,7 +633,7 @@ export function PedidosPorAutorizarTab() {
                       <div className="border-t pt-2 flex items-center justify-between text-xs">
                         {costo > 0 ? (
                           <>
-                            <span className="text-muted-foreground">Costo: <span className="font-mono">${formatCurrency(costo)}</span></span>
+                            <span className="text-muted-foreground">Costo: <span className="font-mono">{formatCurrency(costo)}</span></span>
                             <Badge
                               variant={margenPct < 0 ? "destructive" : "secondary"}
                               className={`text-[10px] ${margenPct >= 10 ? "bg-green-100 text-green-800 border-green-200" : margenPct >= 0 ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}`}
@@ -654,7 +654,7 @@ export function PedidosPorAutorizarTab() {
                       {/* Subtotal */}
                       <div className="border-t pt-2 flex justify-between items-center">
                         <span className="text-xs text-muted-foreground">Subtotal</span>
-                        <span className="font-mono font-semibold">${formatCurrency(subtotal)}</span>
+                        <span className="font-mono font-semibold">{formatCurrency(subtotal)}</span>
                       </div>
 
                       <Button
@@ -680,7 +680,7 @@ export function PedidosPorAutorizarTab() {
                                   <Badge variant={h.fuente === "pedido" ? "default" : "secondary"} className="text-[10px] h-5">
                                     {h.fuente === "pedido" ? "Pedido" : "Cotización"}
                                   </Badge>
-                                  <span className="font-mono">${formatCurrency(h.precio)} ({format(new Date(h.fecha), "dd/MM/yy")})</span>
+                                  <span className="font-mono">{formatCurrency(h.precio)} ({format(new Date(h.fecha), "dd/MM/yy")})</span>
                                 </div>
                               ))}
                             </div>
@@ -735,10 +735,10 @@ export function PedidosPorAutorizarTab() {
                               {detalle.cantidad} {detalle.productos?.unidad}
                             </TableCell>
                             <TableCell className="text-right font-mono text-muted-foreground">
-                              ${formatCurrency(listPrice)}
+                              {formatCurrency(listPrice)}
                             </TableCell>
                             <TableCell className="text-right font-mono text-muted-foreground">
-                              {descuentoMax > 0 ? `$${formatCurrency(precioMinimo)}` : "—"}
+                              {descuentoMax > 0 ? `${formatCurrency(precioMinimo)}` : "—"}
                             </TableCell>
                             <TableCell className="text-right">
                               {isEditing ? (
@@ -751,14 +751,14 @@ export function PedidosPorAutorizarTab() {
                                 />
                               ) : (
                                 <span className={`font-mono font-medium ${porDebajoMinimo ? "text-destructive" : ""}`}>
-                                  ${formatCurrency(currentPrice)}
+                                  {formatCurrency(currentPrice)}
                                 </span>
                               )}
                             </TableCell>
                             <TableCell className="text-right">
                               {descuentoMax > 0 ? (
                                 <span className={`font-mono text-sm font-semibold ${diferencia < 0 ? "text-destructive" : "text-green-600"}`}>
-                                  {diferencia >= 0 ? "+" : ""}${formatCurrency(diferencia)}
+                                  {diferencia >= 0 ? "+" : ""}{formatCurrency(diferencia)}
                                 </span>
                               ) : "—"}
                             </TableCell>
@@ -777,7 +777,7 @@ export function PedidosPorAutorizarTab() {
                               )}
                             </TableCell>
                             <TableCell className="text-right font-mono font-medium">
-                              ${formatCurrency(subtotal)}
+                              {formatCurrency(subtotal)}
                             </TableCell>
                             <TableCell>
                               <Button
@@ -806,7 +806,7 @@ export function PedidosPorAutorizarTab() {
                                           <Badge variant={h.fuente === "pedido" ? "default" : "secondary"} className="mr-2">
                                             {h.fuente === "pedido" ? "Pedido" : "Cotización"}
                                           </Badge>
-                                          <span className="font-mono">${formatCurrency(h.precio)}</span>
+                                          <span className="font-mono">{formatCurrency(h.precio)}</span>
                                           <span className="text-muted-foreground ml-1">
                                             ({format(new Date(h.fecha), "dd/MM/yy")})
                                           </span>
@@ -832,12 +832,12 @@ export function PedidosPorAutorizarTab() {
                     <div className="flex justify-between items-center">
                       <span className="text-muted-foreground">Total:</span>
                       <span className="text-xl font-bold font-mono">
-                        ${formatCurrency(isEditing ? calculateNewTotal() : selectedPedido.total)}
+                        {formatCurrency(isEditing ? calculateNewTotal() : selectedPedido.total)}
                       </span>
                     </div>
                     {isEditing && calculateNewTotal() !== selectedPedido.total && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        Original: ${formatCurrency(selectedPedido.total)}
+                        Original: {formatCurrency(selectedPedido.total)}
                       </p>
                     )}
                   </CardContent>

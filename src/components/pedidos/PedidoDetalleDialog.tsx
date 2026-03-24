@@ -274,10 +274,10 @@ export default function PedidoDetalleDialog({
                             {presentacionDisplay}
                           </TableCell>
                           <TableCell className="text-right font-mono">
-                            ${formatCurrency(detalle.precio_unitario)}
+                            {formatCurrency(detalle.precio_unitario)}
                             {producto.precio_por_kilo && <span className="text-xs text-muted-foreground">/kg</span>}
                           </TableCell>
-                          <TableCell className="text-right font-mono">${formatCurrency(detalle.subtotal)}</TableCell>
+                          <TableCell className="text-right font-mono">{formatCurrency(detalle.subtotal)}</TableCell>
                         </TableRow>
                       );
                     })}
@@ -291,15 +291,15 @@ export default function PedidoDetalleDialog({
               <div className={`${isMobile ? "w-full" : "w-64"} space-y-2`}>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal:</span>
-                  <span className="font-mono">${formatCurrency(pedido.subtotal || 0)}</span>
+                  <span className="font-mono">{formatCurrency(pedido.subtotal || 0)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Impuestos:</span>
-                  <span className="font-mono">${formatCurrency(pedido.impuestos || 0)}</span>
+                  <span className="font-mono">{formatCurrency(pedido.impuestos || 0)}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold border-t pt-2">
                   <span>Total:</span>
-                  <span className="font-mono">${formatCurrency(pedido.total)}</span>
+                  <span className="font-mono">{formatCurrency(pedido.total)}</span>
                 </div>
               </div>
             </div>

@@ -74,7 +74,7 @@ export function PedidoDetalleProductCards({ detalles, clienteNombre }: PedidoDet
                   <p className="font-medium text-sm leading-tight">{getDisplayName(producto)}</p>
                   <p className="font-mono text-xs text-muted-foreground">{producto.codigo}</p>
                 </div>
-                <p className="font-mono font-bold text-primary shrink-0">${formatCurrency(detalle.subtotal)}</p>
+                <p className="font-mono font-bold text-primary shrink-0">{formatCurrency(detalle.subtotal)}</p>
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                 <span>{cantidadDisplay}
@@ -86,7 +86,7 @@ export function PedidoDetalleProductCards({ detalles, clienteNombre }: PedidoDet
                   <span className="font-semibold text-primary text-xs">{presentacionDisplay}</span>
                 )}
                 <span className="font-mono text-xs">
-                  ${formatCurrency(detalle.precio_unitario)}
+                  {formatCurrency(detalle.precio_unitario)}
                   {producto.precio_por_kilo && <span>/kg</span>}
                 </span>
               </div>

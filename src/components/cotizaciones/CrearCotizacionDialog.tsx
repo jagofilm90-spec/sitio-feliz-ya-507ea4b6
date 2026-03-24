@@ -1113,7 +1113,7 @@ const CrearCotizacionDialog = ({
                         </TableCell>
                         {!sinCantidades && (
                           <TableCell className="text-right font-medium">
-                            ${formatCurrency(d.subtotal)}
+                            {formatCurrency(d.subtotal)}
                             {esPorKilo && d.kilos_totales !== null && (
                               <div className="text-xs text-muted-foreground font-normal">
                                 {d.kilos_totales.toLocaleString('es-MX')} × ${d.precio_unitario.toFixed(2)}
@@ -1155,23 +1155,23 @@ const CrearCotizacionDialog = ({
               <div className="w-72 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span className="font-mono">${formatCurrency(totales.subtotal)}</span>
+                  <span className="font-mono">{formatCurrency(totales.subtotal)}</span>
                 </div>
                 {totales.iva > 0 && (
                   <div className="flex justify-between text-blue-600">
                     <span>IVA (16%):</span>
-                    <span className="font-mono">${formatCurrency(totales.iva)}</span>
+                    <span className="font-mono">{formatCurrency(totales.iva)}</span>
                   </div>
                 )}
                 {totales.ieps > 0 && (
                   <div className="flex justify-between text-orange-600">
                     <span>IEPS (8%):</span>
-                    <span className="font-mono">${formatCurrency(totales.ieps)}</span>
+                    <span className="font-mono">{formatCurrency(totales.ieps)}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-lg border-t pt-2">
                   <span>Total:</span>
-                  <span className="font-mono">${formatCurrency(totales.total)}</span>
+                  <span className="font-mono">{formatCurrency(totales.total)}</span>
                 </div>
               </div>
             </div>

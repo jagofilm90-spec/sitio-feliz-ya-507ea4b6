@@ -259,8 +259,8 @@ const AutorizacionOCDialog = ({ open, onOpenChange, orden }: AutorizacionOCDialo
                     <tr key={idx} className="border-t">
                       <td className="p-2">{d.productos?.nombre || "Producto"}</td>
                       <td className="text-center p-2">{d.cantidad_ordenada?.toLocaleString()}</td>
-                      <td className="text-right p-2">${formatCurrency(d.precio_unitario_compra)}</td>
-                      <td className="text-right p-2 font-medium">${formatCurrency(d.subtotal)}</td>
+                      <td className="text-right p-2">{formatCurrency(d.precio_unitario_compra)}</td>
+                      <td className="text-right p-2 font-medium">{formatCurrency(d.subtotal)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -317,11 +317,11 @@ const AutorizacionOCDialog = ({ open, onOpenChange, orden }: AutorizacionOCDialo
             <div className="w-64 space-y-1">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal:</span>
-                <span>${formatCurrency(orden.subtotal)}</span>
+                <span>{formatCurrency(orden.subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">IVA (16%):</span>
-                <span>${formatCurrency(orden.impuestos)}</span>
+                <span>{formatCurrency(orden.impuestos)}</span>
               </div>
               <Separator className="my-2" />
               <div className="flex justify-between font-bold text-lg">
@@ -329,7 +329,7 @@ const AutorizacionOCDialog = ({ open, onOpenChange, orden }: AutorizacionOCDialo
                   <DollarSign className="h-4 w-4" />
                   Total:
                 </span>
-                <span className="text-primary">${formatCurrency(orden.total)}</span>
+                <span className="text-primary">{formatCurrency(orden.total)}</span>
               </div>
             </div>
           </div>

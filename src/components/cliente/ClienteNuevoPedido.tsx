@@ -830,7 +830,7 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
                           <p className="text-xs text-muted-foreground">{detalle.codigo}</p>
                         </div>
                       </TableCell>
-                      <TableCell>${formatCurrency(detalle.precioUnitario)}</TableCell>
+                      <TableCell>{formatCurrency(detalle.precioUnitario)}</TableCell>
                       <TableCell>
                         <Input
                           type="number"
@@ -846,7 +846,7 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
                         />
                       </TableCell>
                       <TableCell className="text-right font-medium font-mono">
-                        ${formatCurrency(detalle.subtotal)}
+                        {formatCurrency(detalle.subtotal)}
                       </TableCell>
                       <TableCell>
                         <Button
@@ -876,23 +876,23 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
             <div className="space-y-2 pt-4 border-t">
               <div className="flex justify-between text-sm">
                 <span>Subtotal:</span>
-                <span className="font-mono">${formatCurrency(subtotal)}</span>
+                <span className="font-mono">{formatCurrency(subtotal)}</span>
               </div>
               {iva > 0 && (
                 <div className="flex justify-between text-sm text-blue-600">
                   <span>IVA (16%):</span>
-                  <span className="font-mono">${formatCurrency(iva)}</span>
+                  <span className="font-mono">{formatCurrency(iva)}</span>
                 </div>
               )}
               {ieps > 0 && (
                 <div className="flex justify-between text-sm text-orange-600">
                   <span>IEPS (8%):</span>
-                  <span className="font-mono">${formatCurrency(ieps)}</span>
+                  <span className="font-mono">{formatCurrency(ieps)}</span>
                 </div>
               )}
               <div className="flex justify-between text-lg font-bold">
                 <span>Total:</span>
-                <span className="font-mono">${formatCurrency(total)}</span>
+                <span className="font-mono">{formatCurrency(total)}</span>
               </div>
               
               {/* Peso Total - siempre visible */}

@@ -1468,7 +1468,7 @@ const CrearOrdenCompraWizard = ({
         </td>
         <td style="padding:15px 20px;border-bottom:1px solid #e0e0e0;">
           <span style="color:#888;font-size:13px;">Total</span><br>
-          <strong style="color:#C8102E;font-size:15px;">${formatCurrency(orden.total || 0)}</strong>
+          <strong style="color:#C8102E;font-size:15px;">{formatCurrency(orden.total || 0)}</strong>
         </td>
         <td style="padding:15px 20px;border-bottom:1px solid #e0e0e0;">
           <span style="color:#888;font-size:13px;">Tipo de Pago</span><br>

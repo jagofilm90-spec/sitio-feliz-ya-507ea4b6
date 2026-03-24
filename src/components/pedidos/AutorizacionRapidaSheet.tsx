@@ -327,25 +327,25 @@ export function AutorizacionRapidaSheet({
                   <div className="border-t pt-2 space-y-1">
                     <div className="flex justify-between text-xs">
                       <span className="text-muted-foreground">P. Lista</span>
-                      <span className="font-mono">${formatCurrency(listPrice)}</span>
+                      <span className="font-mono">{formatCurrency(listPrice)}</span>
                     </div>
                     {descuentoMax > 0 && (
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">P. Mínimo</span>
-                        <span className="font-mono">${formatCurrency(precioMinimo)}</span>
+                        <span className="font-mono">{formatCurrency(precioMinimo)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-xs">
                       <span className="text-muted-foreground">P. Solicitado</span>
                       <span className={`font-mono font-semibold ${porDebajoMinimo ? "text-destructive" : ""}`}>
-                        ${formatCurrency(currentPrice)}
+                        {formatCurrency(currentPrice)}
                       </span>
                     </div>
                     {descuentoMax > 0 && (
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Diferencia</span>
                         <span className={`font-mono font-semibold ${diferencia < 0 ? "text-destructive" : "text-green-600"}`}>
-                          {diferencia >= 0 ? "+" : ""}${formatCurrency(diferencia)}
+                          {diferencia >= 0 ? "+" : ""}{formatCurrency(diferencia)}
                         </span>
                       </div>
                     )}
@@ -355,7 +355,7 @@ export function AutorizacionRapidaSheet({
                   <div className="border-t pt-2 flex items-center justify-between text-xs">
                     {costo > 0 ? (
                       <>
-                        <span className="text-muted-foreground">Costo: <span className="font-mono">${formatCurrency(costo)}</span></span>
+                        <span className="text-muted-foreground">Costo: <span className="font-mono">{formatCurrency(costo)}</span></span>
                         <Badge
                           variant={margenPct < 0 ? "destructive" : "secondary"}
                           className={`text-[10px] ${margenPct >= 10 ? "bg-green-100 text-green-800 border-green-200" : margenPct >= 0 ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}`}
@@ -377,7 +377,7 @@ export function AutorizacionRapidaSheet({
                   <div className="border-t pt-2 flex justify-between items-center">
                     <span className="text-xs text-muted-foreground">Subtotal</span>
                     <span className="font-mono font-semibold">
-                      ${formatCurrency(detalle.cantidad * currentPrice)}
+                      {formatCurrency(detalle.cantidad * currentPrice)}
                     </span>
                   </div>
 
@@ -439,7 +439,7 @@ export function AutorizacionRapidaSheet({
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Total:</span>
                 <span className="text-2xl font-bold font-mono">
-                  ${formatCurrency(isEditing ? calculateNewTotal() : pedido.total)}
+                  {formatCurrency(isEditing ? calculateNewTotal() : pedido.total)}
                 </span>
               </div>
 

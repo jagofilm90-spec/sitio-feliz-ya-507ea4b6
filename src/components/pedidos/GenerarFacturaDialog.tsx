@@ -250,7 +250,7 @@ export default function GenerarFacturaDialog({
             </p>
             <p className="text-sm">
               <span className="text-muted-foreground">Total:</span>{" "}
-              <span className="font-mono font-bold">${formatCurrency(pedido.total)}</span>
+              <span className="font-mono font-bold">{formatCurrency(pedido.total)}</span>
             </p>
             {esVentaMostrador && (
               <p className="text-xs text-primary mt-1">Se facturará como venta de mostrador</p>

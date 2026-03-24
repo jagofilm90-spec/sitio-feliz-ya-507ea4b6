@@ -812,7 +812,7 @@ const PedidosContent = () => {
                         <TableCell>
                           {new Date(pedido.fecha_pedido).toLocaleDateString()}
                         </TableCell>
-                        <TableCell className="font-mono">${formatCurrency(pedido.total)}</TableCell>
+                        <TableCell className="font-mono">{formatCurrency(pedido.total)}</TableCell>
                         <TableCell className="font-mono">
                           {pedido.peso_total_kg ? (
                             <span className="text-sm">

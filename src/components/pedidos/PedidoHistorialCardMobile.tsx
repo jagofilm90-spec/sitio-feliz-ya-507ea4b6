@@ -149,7 +149,7 @@ export const PedidoHistorialCardMobile = ({
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground text-xs">Total:</span>
-            <span className="font-mono text-xs font-medium">${formatCurrency(pedido.total)}</span>
+            <span className="font-mono text-xs font-medium">{formatCurrency(pedido.total)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground text-xs">Peso:</span>

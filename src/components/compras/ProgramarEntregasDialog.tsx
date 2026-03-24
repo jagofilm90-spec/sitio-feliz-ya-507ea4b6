@@ -289,7 +289,7 @@ const ProgramarEntregasDialog = ({ open, onOpenChange, orden }: ProgramarEntrega
             </div>
             <div className="p-3 bg-muted/50 rounded-lg">
               <p className="text-xs text-muted-foreground">Total Orden</p>
-              <p className="font-medium">${formatCurrency(orden.total)}</p>
+              <p className="font-medium">{formatCurrency(orden.total)}</p>
             </div>
           </div>
 

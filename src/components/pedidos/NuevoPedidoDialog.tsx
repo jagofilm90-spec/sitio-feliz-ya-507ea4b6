@@ -569,7 +569,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
                       {getDisplayName(p)}
                     </span>
                     <span className="text-sm text-muted-foreground">
-                      ${formatCurrency(p.precio_venta)} / {p.unidad}
+                      {formatCurrency(p.precio_venta)} / {p.unidad}
                     </span>
                   </button>
                 ))}
@@ -624,7 +624,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
                             ) : (
                               <span />
                             )}
-                            <span className="font-mono font-bold text-primary">${formatCurrency(d.subtotal)}</span>
+                            <span className="font-mono font-bold text-primary">{formatCurrency(d.subtotal)}</span>
                           </div>
                         </CardContent>
                       </Card>
@@ -703,7 +703,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
                             </div>
                           </TableCell>
                           <TableCell className="text-right font-mono font-medium">
-                            ${formatCurrency(d.subtotal)}
+                            {formatCurrency(d.subtotal)}
                             {esPorKilo && (
                               <div className="text-xs text-muted-foreground font-normal">
                                 {d.kilos_totales?.toLocaleString('es-MX')} × ${d.precio_unitario.toFixed(2)}
@@ -835,23 +835,23 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
             <div className="bg-muted/50 rounded-lg p-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal:</span>
-                <span className="font-mono">${formatCurrency(totales.subtotal)}</span>
+                <span className="font-mono">{formatCurrency(totales.subtotal)}</span>
               </div>
               {totales.iva > 0 && (
                 <div className="flex justify-between text-sm">
                   <span>IVA (16%):</span>
-                  <span className="font-mono">${formatCurrency(totales.iva)}</span>
+                  <span className="font-mono">{formatCurrency(totales.iva)}</span>
                 </div>
               )}
               {totales.ieps > 0 && (
                 <div className="flex justify-between text-sm">
                   <span>IEPS (8%):</span>
-                  <span className="font-mono">${formatCurrency(totales.ieps)}</span>
+                  <span className="font-mono">{formatCurrency(totales.ieps)}</span>
                 </div>
               )}
               <div className="flex justify-between text-lg font-bold border-t pt-2">
                 <span>Total:</span>
-                <span className="font-mono">${formatCurrency(totales.total)}</span>
+                <span className="font-mono">{formatCurrency(totales.total)}</span>
               </div>
             </div>
           )}

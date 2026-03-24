@@ -269,8 +269,8 @@ const AutorizacionCotizacionDialog = ({ open, onOpenChange, cotizacion }: Autori
                         {d.producto?.nombre || "Producto"}
                       </td>
                       {!soloPrecios && <td className="text-center p-2">{d.cantidad?.toLocaleString()}</td>}
-                      <td className="text-right p-2">${formatCurrency(d.precio_unitario)}</td>
-                      {!soloPrecios && <td className="text-right p-2 font-medium">${formatCurrency(d.subtotal)}</td>}
+                      <td className="text-right p-2">{formatCurrency(d.precio_unitario)}</td>
+                      {!soloPrecios && <td className="text-right p-2 font-medium">{formatCurrency(d.subtotal)}</td>}
                     </tr>
                   ))}
                 </tbody>
@@ -284,11 +284,11 @@ const AutorizacionCotizacionDialog = ({ open, onOpenChange, cotizacion }: Autori
               <div className="w-64 space-y-1">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal:</span>
-                  <span>${formatCurrency(cotizacion.subtotal)}</span>
+                  <span>{formatCurrency(cotizacion.subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Impuestos:</span>
-                  <span>${formatCurrency(cotizacion.impuestos)}</span>
+                  <span>{formatCurrency(cotizacion.impuestos)}</span>
                 </div>
                 <Separator className="my-2" />
                 <div className="flex justify-between font-bold text-lg">
@@ -296,7 +296,7 @@ const AutorizacionCotizacionDialog = ({ open, onOpenChange, cotizacion }: Autori
                     <DollarSign className="h-4 w-4" />
                     Total:
                   </span>
-                  <span className="text-primary">${formatCurrency(cotizacion.total)}</span>
+                  <span className="text-primary">{formatCurrency(cotizacion.total)}</span>
                 </div>
               </div>
             </div>
