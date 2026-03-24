@@ -809,7 +809,7 @@ const InventarioContent = () => {
                               <TableCell>
                                 <div className="flex items-center gap-1.5">
                                   <span className="font-medium">{p.nombre}</span>
-                                  {p.tieneVencimiento && <AlertTriangle className="h-3.5 w-3.5 text-amber-500" title="Lotes próximos a vencer" />}
+                                  {p.tieneVencimiento && <span title="Lotes próximos a vencer"><AlertTriangle className="h-3.5 w-3.5 text-amber-500" /></span>}
                                 </div>
                               </TableCell>
                               <TableCell className="text-sm text-muted-foreground">{p.categoria}</TableCell>
