@@ -590,6 +590,31 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                 </CardContent>
               </Card>
 
+              {/* Resumen de autorización */}
+              {(() => {
+                const total = selectedPedido.pedidos_detalles.length;
+                const requieren = selectedPedido.pedidos_detalles.filter(d => {
+                  const listPrice = d.productos?.precio_venta || 0;
+                  const descMax = d.productos?.descuento_maximo ?? 0;
+                  return (editingPrices[d.id] ?? d.precio_unitario) < (listPrice - descMax);
+                }).length;
+                return requieren > 0 ? (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30">
+                    <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
+                    <span className="text-sm font-medium text-destructive">
+                      {requieren} de {total} producto{total > 1 ? "s" : ""} requiere{requieren === 1 ? "" : "n"} autorización
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                    <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                      Todos los precios están dentro del rango permitido
+                    </span>
+                  </div>
+                );
+              })()}
+
               {/* Productos - Cards en móvil, Tabla en desktop */}
               <div className="sm:hidden space-y-2">
                 {ordenarProductosAzucarPrimero(selectedPedido.pedidos_detalles, (d) => d.productos?.nombre || '').map((detalle) => {
@@ -604,9 +629,12 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                   const porDebajoMinimo = currentPrice < precioMinimo;
 
                   return (
-                    <div key={detalle.id} className={`border rounded-lg p-3 space-y-2 ${porDebajoMinimo ? "border-destructive/50 bg-destructive/5" : ""}`}>
+                    <div key={detalle.id} className={`border rounded-lg p-3 space-y-2 ${porDebajoMinimo ? "border-destructive/50 bg-destructive/5" : "border-green-200/50 dark:border-green-800/30"}`}>
                       <div className="min-w-0">
-                        <p className="font-medium text-sm line-clamp-2">{detalle.productos?.nombre}</p>
+                        <p className="font-medium text-sm line-clamp-2 flex items-center gap-1.5">
+                          {porDebajoMinimo ? <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" /> : <CheckCircle2 className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />}
+                          {detalle.productos?.nombre}
+                        </p>
                         <p className="text-xs text-muted-foreground">{detalle.productos?.codigo} · {detalle.cantidad} {detalle.productos?.unidad}</p>
                       </div>
 
@@ -743,9 +771,10 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                         <>
                           <TableRow key={detalle.id} className={porDebajoMinimo ? "bg-destructive/5" : ""}>
                             <TableCell>
-                              <div>
+                              <div className="flex items-center gap-1.5">
+                                {porDebajoMinimo ? <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" /> : <CheckCircle2 className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />}
                                 <span className="font-medium">{detalle.productos?.nombre}</span>
-                                <span className="text-xs text-muted-foreground ml-2">
+                                <span className="text-xs text-muted-foreground ml-1">
                                   {detalle.productos?.codigo}
                                 </span>
                               </div>
