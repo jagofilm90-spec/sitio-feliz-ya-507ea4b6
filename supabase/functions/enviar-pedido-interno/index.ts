@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-interface ProductoEmail { cantidad: number; unidad: string; nombre: string; precioUnitario: number; importe: number; }
+interface ProductoEmail { cantidad: number; unidad: string; nombre: string; precioUnitario: number; importe: number; kgTotales?: number | null; precioPorKilo?: boolean; }
 
 interface PedidoInternoPayload {
   folio: string; clienteNombre: string; vendedorNombre: string;
@@ -50,15 +50,21 @@ function buildHtml(d: PedidoInternoPayload): string {
   const row = (label: string, val: string, bold = false) => `<tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0;width:140px">${label}</td><td style="padding:8px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0;${bold?"font-weight:700":""}"> ${val}</td></tr>`;
   let prodHtml = "";
   if (d.productos?.length) {
-    const rows = d.productos.map((p,i) => `<tr style="${i%2?"background:#fafafa":""}"><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:center">${p.cantidad} ${p.unidad}</td><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px">${p.nombre}</td><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:right">${fmt(p.precioUnitario)}</td><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:right;font-weight:600">${fmt(p.importe)}</td></tr>`).join("");
-    prodHtml = `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:20px 0"><thead><tr style="border-bottom:2px solid #C8102E"><th style="padding:8px 10px;text-align:center;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Cant.</th><th style="padding:8px 10px;text-align:left;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Producto</th><th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">P. Unit.</th><th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Importe</th></tr></thead><tbody>${rows}</tbody></table>`;
+    const hasKg = d.productos.some(p => p.kgTotales && p.kgTotales > 0);
+    const rows = d.productos.map((p,i) => {
+      const bg = i%2 ? "background:#fafafa;" : "";
+      const kgCell = hasKg ? `<td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:right;color:#666">${p.kgTotales ? p.kgTotales.toLocaleString("es-MX") + " kg" : ""}</td>` : "";
+      return `<tr style="${bg}"><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:center">${p.cantidad} ${p.unidad}</td><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px">${p.nombre}</td>${kgCell}<td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:right">${fmt(p.precioUnitario)}${p.precioPorKilo ? "/kg" : ""}</td><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:right;font-weight:600">${fmt(p.importe)}</td></tr>`;
+    }).join("");
+    const kgHeader = hasKg ? `<th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Kg</th>` : "";
+    prodHtml = `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:20px 0"><thead><tr style="border-bottom:2px solid #C8102E"><th style="padding:8px 10px;text-align:center;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Cant.</th><th style="padding:8px 10px;text-align:left;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Producto</th>${kgHeader}<th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">P. Unit.</th><th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Importe</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
   return `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0;font-family:Arial,Helvetica,sans-serif"><tr><td align="center"><table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;background:#fff;border-radius:4px;overflow:hidden;border:1px solid #e0e0e0">
 <tr><td style="padding:28px 36px;border-bottom:1px solid #eee"><table width="100%"><tr><td><img src="${LOGO}" alt="ALMASA" width="120" style="display:block;max-width:120px;height:auto"/></td><td style="text-align:right;vertical-align:bottom"><p style="margin:0;color:#888;font-size:11px">Abarrotes la Manita SA de CV</p></td></tr></table></td></tr>
 <tr><td style="padding:28px 36px">
 <h2 style="margin:0 0 20px;font-size:18px;color:#222;font-weight:700">Nuevo Pedido ${d.folio}</h2>
 <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
-${row("Cliente",d.clienteNombre,true)}${row("Vendedor",d.vendedorNombre)}${row("Sucursal",d.sucursalNombre||d.direccionEntrega)}${row("Plazo",fmtTerm(d.terminoCredito))}${row("Fecha",fecha)}
+${row("Cliente",d.clienteNombre,true)}${row("Vendedor",d.vendedorNombre)}${row("Sucursal",d.sucursalNombre||"Principal")}${d.direccionEntrega && d.direccionEntrega !== d.sucursalNombre ? row("Direccion",d.direccionEntrega) : ""}${row("Plazo",fmtTerm(d.terminoCredito))}${row("Fecha",fecha)}
 </table>
 ${prodHtml}
 <table width="100%" style="margin-top:16px"><tr><td style="border-top:2px solid #222;padding:12px 0"><table width="100%">

@@ -59,7 +59,7 @@ interface PedidoPorAutorizar {
   vendedor_id: string | null;
   vendedor: { id: string; full_name: string } | null;
   clientes: { id: string; nombre: string; email: string | null } | null;
-  cliente_sucursales: { id: string; nombre: string } | null;
+  cliente_sucursales: { id: string; nombre: string; direccion: string | null } | null;
   pedidos_detalles: {
     id: string;
     cantidad: number;
@@ -130,7 +130,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
           vendedor_id,
           vendedor:vendedor_id (id, full_name),
           clientes (id, nombre, email),
-          cliente_sucursales:sucursal_id (id, nombre),
+          cliente_sucursales:sucursal_id (id, nombre, direccion),
           pedidos_detalles (
             id,
             cantidad,
@@ -286,6 +286,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
             const precioOriginal = preciosOriginales[d.id];
             const precioNuevo = editingPrices[d.id] ?? d.precio_unitario;
             const fueAjustado = precioNuevo !== precioOriginal;
+            const pesoKg = d.productos?.peso_kg || 0;
             return {
               producto: d.productos?.nombre || "Producto",
               cantidad: d.cantidad,
@@ -293,7 +294,9 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
               precioUnitario: precioNuevo,
               subtotal: d.cantidad * precioNuevo,
               precioAnterior: fueAjustado ? precioOriginal : undefined,
-              fueAjustado
+              fueAjustado,
+              kgTotales: pesoKg > 0 ? d.cantidad * pesoKg : null,
+              precioPorKilo: d.productos?.precio_por_kilo || false,
             };
           });
 
@@ -342,22 +345,30 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
 
       // Email interno a pedidos@ (se envía ahora que fue autorizado)
       try {
-        const productosEmail = selectedPedido.pedidos_detalles.map(d => ({
-          cantidad: d.cantidad,
-          unidad: d.productos?.unidad || "pza",
-          nombre: d.productos?.nombre || "Producto",
-          precioUnitario: editingPrices[d.id] ?? d.precio_unitario,
-          importe: d.cantidad * (editingPrices[d.id] ?? d.precio_unitario),
-        }));
+        const productosEmail = selectedPedido.pedidos_detalles.map(d => {
+          const pesoKg = d.productos?.peso_kg || 0;
+          const precioPorKilo = d.productos?.precio_por_kilo || false;
+          return {
+            cantidad: d.cantidad,
+            unidad: d.productos?.unidad || "pza",
+            nombre: d.productos?.nombre || "Producto",
+            precioUnitario: editingPrices[d.id] ?? d.precio_unitario,
+            importe: d.cantidad * (editingPrices[d.id] ?? d.precio_unitario),
+            kgTotales: pesoKg > 0 ? d.cantidad * pesoKg : null,
+            precioPorKilo,
+          };
+        });
         const totalFinal = isEditing ? calculateNewTotal() : selectedPedido.total;
+        const direccion = selectedPedido.cliente_sucursales?.direccion;
+        const sucNombre = selectedPedido.cliente_sucursales?.nombre || "Principal";
         await supabase.functions.invoke("enviar-pedido-interno", {
           body: {
             folio: selectedPedido.folio,
             clienteNombre: selectedPedido.clientes?.nombre || "Cliente",
             vendedorNombre: (selectedPedido as any).vendedor?.full_name || "Vendedor",
             terminoCredito: "por definir",
-            direccionEntrega: selectedPedido.cliente_sucursales?.nombre || "Por asignar",
-            sucursalNombre: selectedPedido.cliente_sucursales?.nombre || undefined,
+            direccionEntrega: direccion || sucNombre,
+            sucursalNombre: sucNombre,
             total: totalFinal,
             fecha: new Date().toISOString(),
             pedidoId: pedidoId,

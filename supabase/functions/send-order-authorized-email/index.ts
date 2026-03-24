@@ -4,7 +4,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 interface SendOrderAuthorizedRequest {
   clienteEmail: string; clienteNombre: string; pedidoFolio: string;
   total: number; fechaEntrega?: string; ajustesPrecio: number;
-  detalles: Array<{ producto: string; cantidad: number; unidad: string; precioUnitario: number; subtotal: number; precioAnterior?: number; fueAjustado: boolean; }>;
+  detalles: Array<{ producto: string; cantidad: number; unidad: string; precioUnitario: number; subtotal: number; precioAnterior?: number; fueAjustado: boolean; kgTotales?: number | null; precioPorKilo?: boolean; }>;
 }
 
 const LOGO = "https://vrcyjmfpteoccqdmdmqn.supabase.co/storage/v1/object/public/email-assets/logo-almasa.png";
@@ -52,11 +52,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     let alertHtml = "";
     if (ajustesPrecio > 0) alertHtml = `<p style="margin:16px 0;padding:10px 14px;background:#fafafa;border-left:3px solid #C8102E;font-size:13px;color:#555">Se realizaron ${ajustesPrecio} ajuste${ajustesPrecio > 1 ? "s" : ""} de precio. Los productos ajustados estan marcados abajo.</p>`;
 
+    const hasKg = detalles.some(d => d.kgTotales && d.kgTotales > 0);
     const rows = detalles.map((d, i) => {
       const bg = d.fueAjustado ? "background:#fff8f0;" : (i % 2 ? "background:#fafafa;" : "");
-      const price = d.fueAjustado && d.precioAnterior ? `<span style="text-decoration:line-through;color:#bbb;font-size:12px">${fmt(d.precioAnterior)}</span> ${fmt(d.precioUnitario)}` : fmt(d.precioUnitario);
-      return `<tr style="${bg}"><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px">${d.producto}${d.fueAjustado ? " *" : ""}</td><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:center">${d.cantidad} ${d.unidad}</td><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:right">${price}</td><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:right;font-weight:600">${fmt(d.subtotal)}</td></tr>`;
+      const price = d.fueAjustado && d.precioAnterior ? `<span style="text-decoration:line-through;color:#bbb;font-size:12px">${fmt(d.precioAnterior)}</span> ${fmt(d.precioUnitario)}` : `${fmt(d.precioUnitario)}${d.precioPorKilo ? "/kg" : ""}`;
+      const kgCell = hasKg ? `<td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:right;color:#666">${d.kgTotales ? d.kgTotales.toLocaleString("es-MX") + " kg" : ""}</td>` : "";
+      return `<tr style="${bg}"><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px">${d.producto}${d.fueAjustado ? " *" : ""}</td><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:center">${d.cantidad} ${d.unidad}</td>${kgCell}<td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:right">${price}</td><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:right;font-weight:600">${fmt(d.subtotal)}</td></tr>`;
     }).join("");
+    const kgHeader = hasKg ? `<th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Kg</th>` : "";
 
     const emailHtml = `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0;font-family:Arial,Helvetica,sans-serif"><tr><td align="center"><table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;background:#fff;border-radius:4px;overflow:hidden;border:1px solid #e0e0e0">
 <tr><td style="padding:28px 36px;border-bottom:1px solid #eee"><table width="100%"><tr><td><img src="${LOGO}" alt="ALMASA" width="120" style="display:block;max-width:120px;height:auto"/></td><td style="text-align:right;vertical-align:bottom"><p style="margin:0;color:#888;font-size:11px">Abarrotes la Manita SA de CV</p></td></tr></table></td></tr>
@@ -65,7 +68,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 <p style="margin:0 0 20px;color:#888;font-size:14px">${pedidoFolio}</p>
 <p style="color:#444;font-size:14px;line-height:1.6;margin:0 0 20px">Estimado(a) <strong>${clienteNombre}</strong>, su pedido ha sido confirmado y sera programado para entrega.</p>
 ${alertHtml}
-<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:20px 0"><thead><tr style="border-bottom:2px solid #C8102E"><th style="padding:8px 10px;text-align:left;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Producto</th><th style="padding:8px 10px;text-align:center;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Cant.</th><th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Precio</th><th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Importe</th></tr></thead><tbody>${rows}</tbody></table>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:20px 0"><thead><tr style="border-bottom:2px solid #C8102E"><th style="padding:8px 10px;text-align:left;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Producto</th><th style="padding:8px 10px;text-align:center;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Cant.</th>${kgHeader}<th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Precio</th><th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Importe</th></tr></thead><tbody>${rows}</tbody></table>
 <table width="100%" style="margin-top:8px"><tr><td style="border-top:2px solid #222;padding:12px 0"><table width="100%"><tr><td style="font-size:18px;font-weight:800;color:#222">Total</td><td style="text-align:right;font-size:18px;font-weight:800;color:#222">${fmt(total)}</td></tr></table></td></tr></table>
 <p style="color:#888;font-size:13px;margin:24px 0 0;line-height:1.5">Si tiene alguna pregunta sobre su pedido, no dude en contactarnos.</p>
 </td></tr>
