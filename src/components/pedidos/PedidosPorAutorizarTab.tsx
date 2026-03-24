@@ -56,6 +56,7 @@ interface PedidoPorAutorizar {
   fecha_entrega_estimada: string | null;
   total: number;
   notas: string | null;
+  termino_credito: string | null;
   vendedor_id: string | null;
   vendedor: { id: string; full_name: string } | null;
   clientes: { id: string; nombre: string; email: string | null } | null;
@@ -127,6 +128,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
           fecha_entrega_estimada,
           total,
           notas,
+          termino_credito,
           vendedor_id,
           vendedor:vendedor_id (id, full_name),
           clientes (id, nombre, email),
@@ -287,16 +289,19 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
             const precioNuevo = editingPrices[d.id] ?? d.precio_unitario;
             const fueAjustado = precioNuevo !== precioOriginal;
             const pesoKg = d.productos?.peso_kg || 0;
+            const precioPorKilo = d.productos?.precio_por_kilo || false;
+            const kgTotales = pesoKg > 0 ? d.cantidad * pesoKg : null;
+            const subtotal = precioPorKilo && kgTotales ? kgTotales * precioNuevo : d.cantidad * precioNuevo;
             return {
               producto: d.productos?.nombre || "Producto",
               cantidad: d.cantidad,
               unidad: d.productos?.unidad || "pza",
               precioUnitario: precioNuevo,
-              subtotal: d.cantidad * precioNuevo,
+              subtotal,
               precioAnterior: fueAjustado ? precioOriginal : undefined,
               fueAjustado,
-              kgTotales: pesoKg > 0 ? d.cantidad * pesoKg : null,
-              precioPorKilo: d.productos?.precio_por_kilo || false,
+              kgTotales,
+              precioPorKilo,
             };
           });
 
@@ -348,13 +353,16 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
         const productosEmail = selectedPedido.pedidos_detalles.map(d => {
           const pesoKg = d.productos?.peso_kg || 0;
           const precioPorKilo = d.productos?.precio_por_kilo || false;
+          const precio = editingPrices[d.id] ?? d.precio_unitario;
+          const kgTotales = pesoKg > 0 ? d.cantidad * pesoKg : null;
+          const importe = precioPorKilo && kgTotales ? kgTotales * precio : d.cantidad * precio;
           return {
             cantidad: d.cantidad,
             unidad: d.productos?.unidad || "pza",
             nombre: d.productos?.nombre || "Producto",
-            precioUnitario: editingPrices[d.id] ?? d.precio_unitario,
-            importe: d.cantidad * (editingPrices[d.id] ?? d.precio_unitario),
-            kgTotales: pesoKg > 0 ? d.cantidad * pesoKg : null,
+            precioUnitario: precio,
+            importe,
+            kgTotales,
             precioPorKilo,
           };
         });
@@ -366,7 +374,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
             folio: selectedPedido.folio,
             clienteNombre: selectedPedido.clientes?.nombre || "Cliente",
             vendedorNombre: (selectedPedido as any).vendedor?.full_name || "Vendedor",
-            terminoCredito: "por definir",
+            terminoCredito: selectedPedido.termino_credito || "contado",
             direccionEntrega: direccion || sucNombre,
             sucursalNombre: sucNombre,
             total: totalFinal,

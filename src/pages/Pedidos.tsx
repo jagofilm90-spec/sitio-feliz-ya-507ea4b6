@@ -137,6 +137,7 @@ const PedidosContent = () => {
           profiles:vendedor_id (full_name),
           cliente_sucursales:sucursal_id (nombre, email_facturacion, codigo_sucursal, rfc, razon_social)
         `)
+        .neq("status", "por_autorizar")
         .order("fecha_pedido", { ascending: false });
 
       if (pedidosError) throw pedidosError;
