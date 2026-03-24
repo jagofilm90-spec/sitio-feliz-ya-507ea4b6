@@ -47,6 +47,7 @@ import { es } from "date-fns/locale";
 import { ordenarProductosAzucarPrimero } from "@/lib/calculos";
 import { formatCurrency } from "@/lib/utils";
 import logoAlmasa from "@/assets/logo-almasa.png";
+import { generarNotaPDF } from "@/lib/generarNotaPDF";
 import { PedidoCardMobile } from "./PedidoCardMobile";
 import { AutorizacionRapidaSheet } from "./AutorizacionRapidaSheet";
 
@@ -370,6 +371,26 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
         const totalFinal = isEditing ? calculateNewTotal() : selectedPedido.total;
         const direccion = selectedPedido.cliente_sucursales?.direccion;
         const sucNombre = selectedPedido.cliente_sucursales?.nombre || "Principal";
+
+        // Generar PDF de la nota
+        let pdfBase64: string | undefined;
+        let pdfFilename: string | undefined;
+        try {
+          const pdf = await generarNotaPDF({
+            folio: selectedPedido.folio,
+            clienteNombre: selectedPedido.clientes?.nombre || "Cliente",
+            vendedorNombre: (selectedPedido as any).vendedor?.full_name || "Vendedor",
+            direccionEntrega: direccion || sucNombre,
+            terminoCredito: selectedPedido.termino_credito || "contado",
+            total: totalFinal,
+            subtotal: undefined,
+            impuestos: undefined,
+            productos: productosEmail,
+          });
+          pdfBase64 = pdf.base64;
+          pdfFilename = pdf.filename;
+        } catch (pdfErr) { console.error("Error generando PDF:", pdfErr); }
+
         await supabase.functions.invoke("enviar-pedido-interno", {
           body: {
             folio: selectedPedido.folio,
@@ -382,6 +403,8 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
             fecha: new Date().toISOString(),
             pedidoId: pedidoId,
             productos: productosEmail,
+            pdfBase64,
+            pdfFilename,
           }
         });
       } catch (e) { console.error("Error enviando email interno:", e); }

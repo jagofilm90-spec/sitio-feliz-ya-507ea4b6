@@ -18,10 +18,8 @@ interface PedidoInternoPayload {
 }
 
 const LOGO = "https://vrcyjmfpteoccqdmdmqn.supabase.co/storage/v1/object/public/email-assets/logo-almasa.png";
-const QR = (folio: string) => `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(folio)}`;
 const fmt = (n: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
 const fmtTerm = (t: string) => ({ contado: "Contado", "8_dias": "8 días", "15_dias": "15 días", "30_dias": "30 días", "60_dias": "60 días" }[t] || t.replace(/_/g, " "));
-const plazoEnLetras = (t: string) => ({ contado: "Contado", "8_dias": "Ocho", "15_dias": "Quince", "30_dias": "Treinta", "60_dias": "Sesenta" }[t] || "—");
 
 async function refreshToken(rt: string) {
   const r = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ client_id: Deno.env.get("GMAIL_CLIENT_ID")!, client_secret: Deno.env.get("GMAIL_CLIENT_SECRET")!, refresh_token: rt, grant_type: "refresh_token" }) });
@@ -36,29 +34,17 @@ async function getToken(sb: any, c: any) {
   return t.access_token;
 }
 
-function buildRawEmail(from: string, to: string, subj: string, html: string, pdfHtml?: string, pdfName?: string, existingPdf64?: string, existingPdfName?: string) {
+function buildRawEmail(from: string, to: string, subj: string, html: string, pdf64?: string, pdfName?: string) {
   const enc = new TextEncoder();
   const s64 = btoa(String.fromCharCode(...enc.encode(subj)));
   const b64 = btoa(String.fromCharCode(...enc.encode(html)));
   const bnd = `b_${Date.now()}`;
   const p = [`From: Pedidos ALMASA <${from}>`,`To: ${to}`,`Subject: =?UTF-8?B?${s64}?=`,`MIME-Version: 1.0`,`Content-Type: multipart/mixed; boundary="${bnd}"`,``,`--${bnd}`,`Content-Type: text/html; charset=UTF-8`,`Content-Transfer-Encoding: base64`,``,b64];
-
-  // Attach existing PDF from frontend if provided
-  if (existingPdf64 && existingPdfName) {
-    p.push(`--${bnd}`,`Content-Type: application/pdf; name="${existingPdfName}"`,`Content-Disposition: attachment; filename="${existingPdfName}"`,`Content-Transfer-Encoding: base64`,``,existingPdf64);
-  }
-  // Attach generated HTML nota as .html (printable)
-  if (pdfHtml && pdfName) {
-    const notaB64 = btoa(String.fromCharCode(...enc.encode(pdfHtml)));
-    p.push(`--${bnd}`,`Content-Type: text/html; name="${pdfName}"`,`Content-Disposition: attachment; filename="${pdfName}"`,`Content-Transfer-Encoding: base64`,``,notaB64);
-  }
+  if (pdf64 && pdfName) p.push(`--${bnd}`,`Content-Type: application/pdf; name="${pdfName}"`,`Content-Disposition: attachment; filename="${pdfName}"`,`Content-Transfer-Encoding: base64`,``,pdf64);
   p.push(`--${bnd}--`);
   return btoa(p.join("\r\n")).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
 }
 
-// ============================================================
-// EMAIL HTML (lo que ve el destinatario en su bandeja)
-// ============================================================
 function buildEmailHtml(d: PedidoInternoPayload): string {
   const fecha = d.fecha ? new Date(d.fecha).toLocaleDateString("es-MX",{weekday:"short",day:"numeric",month:"short",year:"numeric"}) : new Date().toLocaleDateString("es-MX",{weekday:"short",day:"numeric",month:"short",year:"numeric"});
   const row = (label: string, val: string, bold = false) => `<tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0;width:140px">${label}</td><td style="padding:8px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0;${bold?"font-weight:700":""}"> ${val}</td></tr>`;
@@ -73,9 +59,9 @@ function buildEmailHtml(d: PedidoInternoPayload): string {
     const kgH = hasKg ? `<th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Kg</th>` : "";
     prodHtml = `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:20px 0"><thead><tr style="border-bottom:2px solid #C8102E"><th style="padding:8px 10px;text-align:center;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Cant.</th><th style="padding:8px 10px;text-align:left;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Producto</th>${kgH}<th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">P. Unit.</th><th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Importe</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
-  const qrUrl = QR(d.folio);
+  const hasPdf = d.pdfBase64 ? "PDF de la nota adjunto." : "";
   return `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0;font-family:Arial,Helvetica,sans-serif"><tr><td align="center"><table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;background:#fff;border-radius:4px;overflow:hidden;border:1px solid #e0e0e0">
-<tr><td style="padding:28px 36px;border-bottom:1px solid #eee"><table width="100%"><tr><td><img src="${LOGO}" alt="ALMASA" width="120" style="display:block;max-width:120px;height:auto"/></td><td style="text-align:right;vertical-align:top"><img src="${qrUrl}" alt="${d.folio}" width="80" height="80" style="display:block;margin-left:auto"/><p style="margin:4px 0 0;color:#888;font-size:10px;text-align:center">${d.folio}</p></td></tr></table></td></tr>
+<tr><td style="padding:28px 36px;border-bottom:1px solid #eee"><table width="100%"><tr><td><img src="${LOGO}" alt="ALMASA" width="120" style="display:block;max-width:120px;height:auto"/></td><td style="text-align:right;vertical-align:bottom"><p style="margin:0;color:#444;font-size:12px;font-weight:600">Abarrotes la Manita SA de CV</p><p style="margin:2px 0 0;color:#999;font-size:11px;font-style:italic">Desde 1904</p></td></tr></table></td></tr>
 <tr><td style="padding:28px 36px">
 <h2 style="margin:0 0 20px;font-size:18px;color:#222;font-weight:700">Nuevo Pedido ${d.folio}</h2>
 <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
@@ -87,59 +73,10 @@ ${d.subtotal?`<tr><td style="color:#888;font-size:13px;padding:2px 0">Subtotal</
 ${d.impuestos?`<tr><td style="color:#888;font-size:13px;padding:2px 0">Impuestos</td><td style="text-align:right;font-size:13px;color:#444;padding:2px 0">${fmt(d.impuestos)}</td></tr>`:""}
 <tr><td style="font-size:18px;font-weight:800;color:#222;padding:4px 0">Total</td><td style="text-align:right;font-size:18px;font-weight:800;color:#222;padding:4px 0">${fmt(d.total)}</td></tr>
 </table></td></tr></table>
-<p style="margin:20px 0 0;padding:10px 14px;background:#f9f9f9;border-left:3px solid #C8102E;font-size:13px;color:#555">Favor de imprimir la nota adjunta para su entrega.</p>
+${hasPdf ? `<p style="margin:20px 0 0;padding:10px 14px;background:#f9f9f9;border-left:3px solid #C8102E;font-size:13px;color:#555">${hasPdf}</p>` : ""}
 </td></tr>
 <tr><td style="padding:20px 36px;border-top:1px solid #eee"><p style="margin:0 0 4px;color:#666;font-size:11px;font-weight:600">Departamento de Pedidos</p><p style="margin:0;color:#999;font-size:10px;line-height:1.6">Melchor Ocampo #59, Col. Magdalena Mixiuhca, C.P. 15850, CDMX<br>Tel: 55 5552-0168 / 55 5552-7887 &bull; 1904@almasa.com.mx</p><p style="margin:6px 0 0;color:#bbb;font-size:10px">Correo generado automaticamente. No responder.</p></td></tr>
 </table></td></tr></table>`;
-}
-
-// ============================================================
-// NOTA IMPRIMIBLE (HTML adjunta como archivo .html)
-// ============================================================
-function buildNotaHtml(d: PedidoInternoPayload): string {
-  const qrUrl = QR(d.folio);
-  let prodRows = "";
-  if (d.productos?.length) {
-    prodRows = d.productos.map((p,i) => {
-      const detalle = p.precioPorKilo && p.kgTotales ? `${p.nombre} (${p.kgTotales.toLocaleString("es-MX")} kg)` : p.nombre;
-      return `<tr style="${i%2?"background:#fafafa":""}"><td style="border:1px solid #ccc;padding:6px 8px;text-align:center;font-size:12px">${p.cantidad} ${p.unidad}</td><td style="border:1px solid #ccc;padding:6px 8px;font-size:12px">${detalle}</td><td style="border:1px solid #ccc;padding:6px 8px;text-align:right;font-size:12px">${fmt(p.precioUnitario)}${p.precioPorKilo?"/kg":""}</td><td style="border:1px solid #ccc;padding:6px 8px;text-align:right;font-size:12px;font-weight:bold">${fmt(p.importe)}</td></tr>`;
-    }).join("");
-  }
-
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Nota ${d.folio}</title>
-<style>@media print{body{margin:0}@page{size:letter;margin:1.5cm}}</style>
-</head><body style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;padding:20px;color:#222">
-<table width="100%" style="border-bottom:2px solid #C8102E;padding-bottom:12px;margin-bottom:16px"><tr>
-<td style="vertical-align:top"><img src="${LOGO}" alt="ALMASA" width="140" style="max-width:140px"/><p style="margin:4px 0 0;font-size:11px;color:#666;font-weight:600">Abarrotes la Manita SA de CV &mdash; Desde 1904</p><p style="margin:2px 0;font-size:10px;color:#999">RFC: AMA700701GI8</p><p style="margin:0;font-size:10px;color:#999">Melchor Ocampo No. 59, Col. Magdalena Mixiuhca, C.P. 15850, CDMX</p><p style="margin:0;font-size:10px;color:#999">Tel: 55-5764-1433 / 55-5552-8750 / 55-5552-0168</p></td>
-<td style="text-align:right;vertical-align:top"><img src="${qrUrl}" width="100" height="100" style="display:block;margin-left:auto"/><p style="margin:4px 0 0;font-size:11px;font-weight:bold;text-align:center;color:#C8102E">${d.folio}</p></td>
-</tr></table>
-
-<table width="100%" style="margin-bottom:16px;font-size:12px;border-collapse:collapse">
-<tr><td style="padding:4px 0;width:100px;color:#888">Nombre:</td><td style="padding:4px 0;font-weight:bold;border-bottom:1px solid #ddd">${d.clienteNombre}</td><td style="padding:4px 0 4px 20px;width:80px;color:#888">Fecha:</td><td style="padding:4px 0;border-bottom:1px solid #ddd;width:120px"></td></tr>
-<tr><td style="padding:4px 0;color:#888">Domicilio:</td><td style="padding:4px 0;border-bottom:1px solid #ddd">${d.direccionEntrega || "—"}</td><td style="padding:4px 0 4px 20px;color:#888">Unidad:</td><td style="padding:4px 0;border-bottom:1px solid #ddd"></td></tr>
-<tr><td style="padding:4px 0;color:#888">Sello vendedor:</td><td style="padding:4px 0;border-bottom:1px solid #ddd;font-weight:600">${d.vendedorNombre}</td><td style="padding:4px 0 4px 20px;color:#888">N/N:</td><td style="padding:4px 0;border-bottom:1px solid #ddd"></td></tr>
-</table>
-
-<table width="100%" style="border-collapse:collapse;margin-bottom:12px">
-<thead><tr style="background:#333;color:#fff"><th style="border:1px solid #333;padding:6px 8px;text-align:center;font-size:11px">CANTIDAD</th><th style="border:1px solid #333;padding:6px 8px;text-align:left;font-size:11px">DETALLE</th><th style="border:1px solid #333;padding:6px 8px;text-align:right;font-size:11px">PRECIO U.</th><th style="border:1px solid #333;padding:6px 8px;text-align:right;font-size:11px">IMPORTE</th></tr></thead>
-<tbody>${prodRows}</tbody>
-</table>
-
-<table width="100%" style="margin-bottom:16px"><tr>
-<td style="vertical-align:top;width:50%;font-size:11px;color:#555">Pagare a <strong>${plazoEnLetras(d.terminoCredito)}</strong> dias</td>
-<td style="text-align:right"><table style="margin-left:auto;border-collapse:collapse">
-${d.subtotal?`<tr><td style="padding:2px 12px;font-size:12px;color:#666">Subtotal</td><td style="padding:2px 0;font-size:12px;text-align:right">${fmt(d.subtotal)}</td></tr>`:""}
-${d.impuestos?`<tr><td style="padding:2px 12px;font-size:12px;color:#666">Impuestos</td><td style="padding:2px 0;font-size:12px;text-align:right">${fmt(d.impuestos)}</td></tr>`:""}
-<tr style="border-top:2px solid #222"><td style="padding:6px 12px;font-size:16px;font-weight:800">TOTAL</td><td style="padding:6px 0;font-size:16px;font-weight:800;text-align:right">${fmt(d.total)}</td></tr>
-</table></td></tr></table>
-
-<div style="border-top:1px solid #ccc;padding-top:12px;margin-top:20px">
-<p style="font-size:10px;color:#666;text-align:center;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.5px">Recibida la mercancia no se admiten reclamaciones ni cambios</p>
-<table width="100%"><tr><td style="width:50%;text-align:center;padding-top:30px;border-top:1px solid #999"><p style="margin:4px 0 0;font-size:10px;color:#888">NOMBRE Y FIRMA DE CONFORMIDAD</p></td><td style="width:50%;text-align:center;padding-top:30px;border-top:1px solid #999"><p style="margin:4px 0 0;font-size:10px;color:#888">SELLO DE LA EMPRESA</p></td></tr></table>
-</div>
-
-<p style="text-align:center;font-size:9px;color:#bbb;margin-top:20px">ORIGINAL &mdash; Generado por ALMASA ERP</p>
-</body></html>`;
 }
 
 serve(async (req: Request): Promise<Response> => {
@@ -148,7 +85,7 @@ serve(async (req: Request): Promise<Response> => {
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const payload: PedidoInternoPayload = await req.json();
     if (!payload.folio || !payload.clienteNombre) return new Response(JSON.stringify({ error: "Payload invalido" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } });
-    console.log(`[enviar-pedido-interno] ${payload.folio} → ${payload.clienteNombre}, ${payload.productos?.length||0} productos, total: ${payload.total}`);
+    console.log(`[enviar-pedido-interno] ${payload.folio} → ${payload.clienteNombre}, ${payload.productos?.length||0} productos, total: ${payload.total}, pdf: ${payload.pdfBase64 ? "yes" : "no"}`);
 
     const sender = "pedidos@almasa.com.mx";
     const { data: gc, error: ge } = await sb.from("gmail_cuentas").select("*").eq("email", sender).eq("activo", true).single();
@@ -157,15 +94,8 @@ serve(async (req: Request): Promise<Response> => {
     if (!at) throw new Error(`No token para ${sender}`);
 
     const emailHtml = buildEmailHtml(payload);
-    const notaHtml = buildNotaHtml(payload);
     const subj = `Nuevo Pedido ${payload.folio} — ${payload.clienteNombre} — ${fmt(payload.total)}`;
-
-    // Build email with nota attached
-    const raw = buildRawEmail(
-      sender, "pedidos@almasa.com.mx", subj, emailHtml,
-      notaHtml, `Nota_${payload.folio}.html`,
-      payload.pdfBase64, payload.pdfFilename
-    );
+    const raw = buildRawEmail(sender, "pedidos@almasa.com.mx", subj, emailHtml, payload.pdfBase64, payload.pdfFilename);
 
     const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", { method: "POST", headers: { Authorization: `Bearer ${at}`, "Content-Type": "application/json" }, body: JSON.stringify({ raw }) });
     if (!res.ok) { const e = await res.text(); throw new Error(`Gmail: ${e}`); }
