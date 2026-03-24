@@ -343,6 +343,14 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
 
       // Email interno a pedidos@ (se envía ahora que fue autorizado)
       try {
+        const productosEmail = selectedPedido.pedidos_detalles.map(d => ({
+          cantidad: d.cantidad,
+          unidad: d.productos?.unidad || "pza",
+          nombre: d.productos?.nombre || "Producto",
+          precioUnitario: editingPrices[d.id] ?? d.precio_unitario,
+          importe: d.cantidad * (editingPrices[d.id] ?? d.precio_unitario),
+        }));
+        const totalFinal = isEditing ? calculateNewTotal() : selectedPedido.total;
         await supabase.functions.invoke("enviar-pedido-interno", {
           body: {
             folio: selectedPedido.folio,
@@ -350,8 +358,11 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
             vendedorNombre: (selectedPedido as any).vendedor?.full_name || "Vendedor",
             terminoCredito: "por definir",
             direccionEntrega: selectedPedido.cliente_sucursales?.nombre || "Por asignar",
-            total: isEditing ? calculateNewTotal() : selectedPedido.total,
+            sucursalNombre: selectedPedido.cliente_sucursales?.nombre || undefined,
+            total: totalFinal,
+            fecha: new Date().toISOString(),
             pedidoId: pedidoId,
+            productos: productosEmail,
           }
         });
       } catch (e) { console.error("Error enviando email interno:", e); }
