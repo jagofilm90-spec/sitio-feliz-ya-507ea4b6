@@ -348,6 +348,8 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
             folio: selectedPedido.folio,
             clienteNombre: selectedPedido.clientes?.nombre || "Cliente",
             vendedorNombre: (selectedPedido as any).vendedor?.full_name || "Vendedor",
+            terminoCredito: "por definir",
+            direccionEntrega: selectedPedido.cliente_sucursales?.nombre || "Por asignar",
             total: isEditing ? calculateNewTotal() : selectedPedido.total,
             pedidoId: pedidoId,
           }
