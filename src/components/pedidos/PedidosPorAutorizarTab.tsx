@@ -640,9 +640,9 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                         </div>
                         {descuentoMax > 0 && (
                           <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">Diferencia</span>
-                            <span className={`font-mono font-semibold ${diferencia < 0 ? "text-destructive" : "text-green-600"}`}>
-                              {diferencia >= 0 ? "+" : ""}{formatCurrency(diferencia)}
+                            <span className="text-muted-foreground">vs Mínimo</span>
+                            <span className={`font-mono font-semibold ${diferencia < 0 ? "text-destructive" : diferencia === 0 ? "text-muted-foreground" : "text-green-600"}`}>
+                              {diferencia > 0 ? "+" : ""}{formatCurrency(diferencia)}
                             </span>
                           </div>
                         )}
@@ -655,16 +655,16 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                             <span className="text-muted-foreground">Costo: <span className="font-mono">{formatCurrency(costo)}</span></span>
                             <Badge
                               variant={margenPct < 0 ? "destructive" : "secondary"}
-                              className={`text-[10px] ${margenPct >= 10 ? "bg-green-100 text-green-800 border-green-200" : margenPct >= 0 ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}`}
+                              className={`text-[10px] ${margenPct >= 20 ? "bg-green-100 text-green-800 border-green-200" : margenPct >= 0 ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}`}
                             >
-                              {margenPct >= 0 ? "+" : ""}{margenPct.toFixed(1)}%
+                              {margenPct < 0 && "⚠ "}{margenPct >= 0 ? "+" : ""}{margenPct.toFixed(1)}%
                             </Badge>
                           </>
                         ) : (
                           <>
-                            <span className="text-muted-foreground">Costo: <span className="font-mono">Sin registro</span></span>
+                            <span className="text-muted-foreground">Costo: <span className="font-mono">N/D</span></span>
                             <Badge variant="outline" className="text-[10px] text-muted-foreground">
-                              --
+                              N/D
                             </Badge>
                           </>
                         )}
@@ -721,7 +721,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                       <TableHead className="text-right">P. Lista</TableHead>
                       <TableHead className="text-right">P. Mínimo</TableHead>
                       <TableHead className="text-right">P. Solicitado</TableHead>
-                      <TableHead className="text-right">Diferencia</TableHead>
+                      <TableHead className="text-right">vs Mínimo</TableHead>
                       <TableHead className="text-right">Margen %</TableHead>
                       <TableHead className="text-right">Subtotal</TableHead>
                       <TableHead className="w-10"></TableHead>
@@ -776,8 +776,8 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                             </TableCell>
                             <TableCell className="text-right">
                               {descuentoMax > 0 ? (
-                                <span className={`font-mono text-sm font-semibold ${diferencia < 0 ? "text-destructive" : "text-green-600"}`}>
-                                  {diferencia >= 0 ? "+" : ""}{formatCurrency(diferencia)}
+                                <span className={`font-mono text-sm font-semibold ${diferencia < 0 ? "text-destructive" : diferencia === 0 ? "text-muted-foreground" : "text-green-600"}`}>
+                                  {diferencia > 0 ? "+" : ""}{formatCurrency(diferencia)}
                                 </span>
                               ) : "—"}
                             </TableCell>
@@ -785,13 +785,13 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                               {costo > 0 ? (
                                 <Badge
                                   variant={margenPct < 0 ? "destructive" : "secondary"}
-                                  className={`text-xs ${margenPct >= 10 ? "bg-green-100 text-green-800 border-green-200" : margenPct >= 0 ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}`}
+                                  className={`text-xs ${margenPct >= 20 ? "bg-green-100 text-green-800 border-green-200" : margenPct >= 0 ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}`}
                                 >
-                                  {margenPct >= 0 ? "+" : ""}{margenPct.toFixed(1)}%
+                                  {margenPct < 0 && "⚠ "}{margenPct >= 0 ? "+" : ""}{margenPct.toFixed(1)}%
                                 </Badge>
                               ) : (
                                 <Badge variant="outline" className="text-xs text-muted-foreground">
-                                  Sin costo
+                                  N/D
                                 </Badge>
                               )}
                             </TableCell>
