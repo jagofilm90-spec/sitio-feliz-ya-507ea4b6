@@ -804,27 +804,33 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
               leida: false,
             })).catch(e => console.error("Notif error:", e)),
             
-            supabase.functions.invoke('send-push-notification', {
-              body: {
-                roles: ['secretaria'],
-                title: '📦 Nuevo Pedido',
-                body: `${vendedorNombre} → ${clienteNombre} - ${formatCurrency(totales.total)}`,
-                data: { type: 'nuevo_pedido', pedido_id: pedido.id, folio }
-              }
-            }).catch(e => console.error("Push error:", e)),
-            
-            supabase.functions.invoke('send-secretary-notification', {
-              body: {
-                tipo: 'nuevo_pedido',
-                pedidoId: pedido.id,
-                folio,
-                vendedor: vendedorNombre,
-                cliente: clienteNombre,
-                total: totales.total,
-                requiereFactura: selectedCliente?.termino_credito !== 'contado'
-              }
-            }).catch(e => console.error("Secretary email error:", e)),
           ];
+
+          // Push y email a secretaria solo si NO requiere autorización
+          // (si requiere, solo se notifica al admin)
+          if (pedido.status !== "por_autorizar") {
+            notifPromises.push(
+              supabase.functions.invoke('send-push-notification', {
+                body: {
+                  roles: ['secretaria'],
+                  title: '📦 Nuevo Pedido',
+                  body: `${vendedorNombre} → ${clienteNombre} - ${formatCurrency(totales.total)}`,
+                  data: { type: 'nuevo_pedido', pedido_id: pedido.id, folio }
+                }
+              }).catch(e => console.error("Push error:", e)),
+              supabase.functions.invoke('send-secretary-notification', {
+                body: {
+                  tipo: 'nuevo_pedido',
+                  pedidoId: pedido.id,
+                  folio,
+                  vendedor: vendedorNombre,
+                  cliente: clienteNombre,
+                  total: totales.total,
+                  requiereFactura: selectedCliente?.termino_credito !== 'contado'
+                }
+              }).catch(e => console.error("Secretary email error:", e))
+            );
+          }
 
           // Push adicional a admin si requiere autorización
           if (pedido.status === "por_autorizar") {
@@ -986,7 +992,10 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
 
           const emailPromises: Promise<any>[] = [];
 
-          // Email interno siempre
+          // Email interno solo si no requiere autorización
+          // (cuando se autorice, PedidosPorAutorizarTab lo enviará)
+          const esPorAutorizarFinal = pedido.status === "por_autorizar";
+          if (!esPorAutorizarFinal) {
           console.log(`[Email] Sending internal email, PDF attached: ${!!pdfBase64}, size: ${pdfBase64 ? (pdfBase64.length / 1024 / 1024).toFixed(2) + 'MB' : 'none'}`);
           emailPromises.push(
             supabase.functions.invoke("enviar-pedido-interno", {
@@ -1006,6 +1015,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
               else console.log("[Email] Internal email sent successfully");
             }).catch(e => console.error("Internal email error:", e))
           );
+          } // cierre if (!esPorAutorizarFinal)
 
           // Email al cliente solo si no requiere autorización
           const esPorAutorizar = lineas.some(l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente');

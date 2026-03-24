@@ -317,6 +317,43 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
         }
       }
 
+      // Push notification al vendedor
+      if (selectedPedido?.vendedor_id) {
+        try {
+          await supabase.from("notificaciones").insert({
+            tipo: "pedido_autorizado",
+            titulo: `✅ Pedido ${selectedPedido.folio} autorizado`,
+            descripcion: `Tu pedido para ${selectedPedido.clientes?.nombre || "cliente"} fue autorizado${ajustesPrecio > 0 ? ` con ${ajustesPrecio} ajuste(s) de precio` : ""}`,
+            pedido_id: pedidoId,
+            leida: false,
+          });
+        } catch (e) { console.error("Error creando notificación:", e); }
+
+        try {
+          await supabase.functions.invoke("send-push-notification", {
+            body: {
+              user_ids: [selectedPedido.vendedor_id],
+              title: "✅ Pedido autorizado",
+              body: `${selectedPedido.folio} — ${selectedPedido.clientes?.nombre || "cliente"}${ajustesPrecio > 0 ? ` (${ajustesPrecio} ajuste${ajustesPrecio > 1 ? "s" : ""})` : ""}`,
+              data: { type: 'pedido_autorizado', pedido_id: pedidoId, folio: selectedPedido.folio }
+            }
+          });
+        } catch (e) { console.error("Error enviando push al vendedor:", e); }
+      }
+
+      // Email interno a pedidos@ (se envía ahora que fue autorizado)
+      try {
+        await supabase.functions.invoke("enviar-pedido-interno", {
+          body: {
+            folio: selectedPedido.folio,
+            clienteNombre: selectedPedido.clientes?.nombre || "Cliente",
+            vendedorNombre: (selectedPedido as any).vendedor?.full_name || "Vendedor",
+            total: isEditing ? calculateNewTotal() : selectedPedido.total,
+            pedidoId: pedidoId,
+          }
+        });
+      } catch (e) { console.error("Error enviando email interno:", e); }
+
       return { ajustesPrecio };
     },
     onSuccess: (result) => {
