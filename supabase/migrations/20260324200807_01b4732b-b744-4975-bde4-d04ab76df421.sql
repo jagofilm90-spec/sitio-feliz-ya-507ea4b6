@@ -1,0 +1,1 @@
+UPDATE pedidos SET status = 'por_autorizar', updated_at = now() WHERE folio = 'PED-V-215153';
