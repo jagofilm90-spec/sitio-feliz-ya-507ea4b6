@@ -22,6 +22,7 @@ interface PedidoConCotizacion {
   total: number;
   peso_total_kg: number | null;
   status: string;
+  termino_credito: string | null;
   requiere_factura: boolean;
   facturado: boolean;
   factura_enviada_al_cliente: boolean;
