@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,7 @@ interface PedidoPorAutorizar {
   total: number;
   notas: string | null;
   vendedor_id: string | null;
+  vendedor: { id: string; full_name: string } | null;
   clientes: { id: string; nombre: string; email: string | null } | null;
   cliente_sucursales: { id: string; nombre: string } | null;
   pedidos_detalles: {
@@ -96,7 +97,11 @@ interface PrecioHistorialProducto {
   fuente: "cotizacion" | "pedido";
 }
 
-export function PedidosPorAutorizarTab() {
+interface PedidosPorAutorizarTabProps {
+  autoOpenPedidoId?: string | null;
+}
+
+export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizarTabProps = {}) {
   const [selectedPedido, setSelectedPedido] = useState<PedidoPorAutorizar | null>(null);
   const [editingPrices, setEditingPrices] = useState<Record<string, number>>({});
   const [isEditing, setIsEditing] = useState(false);
@@ -108,6 +113,14 @@ export function PedidosPorAutorizarTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
+
+  // Auto-open specific pedido from deep link
+  useEffect(() => {
+    if (autoOpenPedidoId && pedidos && pedidos.length > 0 && !selectedPedido) {
+      const target = pedidos.find(p => p.id === autoOpenPedidoId);
+      if (target) setSelectedPedido(target);
+    }
+  }, [autoOpenPedidoId, pedidos]);
 
   // Fetch pedidos por autorizar
   const { data: pedidos, isLoading } = useQuery({
@@ -479,6 +492,7 @@ export function PedidosPorAutorizarTab() {
           <TableHeader>
             <TableRow>
               <TableHead>Folio</TableHead>
+              <TableHead>Vendedor</TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead>Sucursal</TableHead>
               <TableHead>Fecha</TableHead>
@@ -492,6 +506,7 @@ export function PedidosPorAutorizarTab() {
             {pedidos.map((pedido) => (
               <TableRow key={pedido.id}>
                 <TableCell className="font-mono font-medium">{pedido.folio}</TableCell>
+                <TableCell className="text-sm">{(pedido as any).vendedor?.full_name || "—"}</TableCell>
                 <TableCell>{pedido.clientes?.nombre || "—"}</TableCell>
                 <TableCell className="text-sm">{pedido.cliente_sucursales?.nombre || "—"}</TableCell>
                 <TableCell>{format(new Date(pedido.fecha_pedido), "dd/MM/yyyy", { locale: es })}</TableCell>
@@ -551,10 +566,14 @@ export function PedidosPorAutorizarTab() {
 
           {selectedPedido && (
             <div className="space-y-4">
-              {/* Info del cliente */}
+              {/* Info del pedido */}
               <Card>
                 <CardContent className="pt-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Vendedor:</span>
+                      <p className="font-bold text-primary">{(selectedPedido as any).vendedor?.full_name || "—"}</p>
+                    </div>
                     <div>
                       <span className="text-muted-foreground">Cliente:</span>
                       <p className="font-medium">{selectedPedido.clientes?.nombre}</p>

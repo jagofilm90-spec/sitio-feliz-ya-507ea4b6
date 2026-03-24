@@ -324,6 +324,9 @@ const handleNotificationTap = (action: ActionPerformed) => {
     case 'solicitud_descuento':
       window.location.href = '/pedidos?tab=por-autorizar';
       break;
+    case 'solicitud_autorizacion':
+      window.location.href = `/pedidos?tab=por-autorizar${data.pedido_id ? `&pedido_id=${data.pedido_id}` : ''}`;
+      break;
     case 'carga_completa':
     case 'ruta_asignada':
     case 'ruta_modificada':

@@ -84,6 +84,7 @@ const PedidosContent = () => {
   const isMobile = useIsMobile();
   const [searchParams] = useSearchParams();
   const tabFromUrl = searchParams.get("tab");
+  const pedidoIdFromUrl = searchParams.get("pedido_id");
   
   const [pedidos, setPedidos] = useState<PedidoConCotizacion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -935,7 +936,7 @@ const PedidosContent = () => {
 
           <TabsContent value="por-autorizar" className="mt-6 space-y-6">
             <SolicitudesDescuentoPanel />
-            <PedidosPorAutorizarTab />
+            <PedidosPorAutorizarTab autoOpenPedidoId={pedidoIdFromUrl} />
           </TabsContent>
 
           <TabsContent value="cotizaciones" className="mt-6">

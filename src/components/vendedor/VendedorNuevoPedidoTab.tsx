@@ -826,6 +826,20 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
             }).catch(e => console.error("Secretary email error:", e)),
           ];
 
+          // Push adicional a admin si requiere autorización
+          if (pedido.status === "por_autorizar") {
+            notifPromises.push(
+              supabase.functions.invoke('send-push-notification', {
+                body: {
+                  roles: ['admin'],
+                  title: '🔔 Solicitud de autorización de precio',
+                  body: `${vendedorNombre} solicita autorización — ${folio} · ${clienteNombre} · ${formatCurrency(totales.total)}`,
+                  data: { type: 'solicitud_autorizacion', pedido_id: pedido.id, folio }
+                }
+              }).catch(e => console.error("Push admin auth error:", e))
+            );
+          }
+
           // 2. Generar PDFs en paralelo con las notificaciones
           const datosPrintFinal: DatosPedidoPrint = {
             pedidoId: pedido.id,
