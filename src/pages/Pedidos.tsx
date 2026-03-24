@@ -71,6 +71,7 @@ interface PedidoConCotizacion {
   total: number;
   peso_total_kg: number | null;
   status: string;
+  termino_credito: string | null;
   requiere_factura: boolean;
   facturado: boolean;
   factura_enviada_al_cliente: boolean;
@@ -78,6 +79,7 @@ interface PedidoConCotizacion {
   profiles: { full_name: string } | null;
   cotizacion_origen?: { id: string; folio: string } | null;
   sucursal?: { nombre: string; email_facturacion: string | null; codigo_sucursal: string | null; rfc: string | null; razon_social: string | null } | null;
+  pedidos_detalles?: { id: string }[];
 }
 
 const PedidosContent = () => {
@@ -129,13 +131,15 @@ const PedidosContent = () => {
           total,
           peso_total_kg,
           status,
+          termino_credito,
           requiere_factura,
           facturado,
           factura_enviada_al_cliente,
           sucursal_id,
           clientes (id, nombre, email, rfc, razon_social),
           profiles:vendedor_id (full_name),
-          cliente_sucursales:sucursal_id (nombre, email_facturacion, codigo_sucursal, rfc, razon_social)
+          cliente_sucursales:sucursal_id (nombre, email_facturacion, codigo_sucursal, rfc, razon_social),
+          pedidos_detalles (id)
         `)
         .neq("status", "por_autorizar")
         .order("fecha_pedido", { ascending: false });
@@ -773,27 +777,26 @@ const PedidosContent = () => {
                     </TableHead>
                     <TableHead>Folio</TableHead>
                     <TableHead>Cliente</TableHead>
-                    <TableHead>Sucursal</TableHead>
                     <TableHead>Vendedor</TableHead>
                     <TableHead>Fecha</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Peso Total</TableHead>
+                    <TableHead>Prod.</TableHead>
+                    <TableHead>Peso</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead>Plazo</TableHead>
                     <TableHead>Estado</TableHead>
-                    <TableHead>Factura</TableHead>
-                    <TableHead>Origen</TableHead>
                     <TableHead>Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={12} className="text-center">
+                      <TableCell colSpan={11} className="text-center">
                         Cargando...
                       </TableCell>
                     </TableRow>
                   ) : filteredPedidos.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={12} className="text-center">
+                      <TableCell colSpan={11} className="text-center">
                         No hay pedidos registrados
                       </TableCell>
                     </TableRow>
@@ -809,47 +812,21 @@ const PedidosContent = () => {
                         </TableCell>
                         <TableCell className="font-medium font-mono">{pedido.folio}</TableCell>
                         <TableCell>{pedido.clientes?.nombre || "—"}</TableCell>
-                        <TableCell className="text-sm">{pedido.sucursal?.nombre || "—"}</TableCell>
-                        <TableCell>{pedido.profiles?.full_name || "—"}</TableCell>
-                        <TableCell>
-                          {new Date(pedido.fecha_pedido).toLocaleDateString()}
+                        <TableCell className="text-sm">{pedido.profiles?.full_name || "—"}</TableCell>
+                        <TableCell className="text-sm">
+                          {new Date(pedido.fecha_pedido).toLocaleDateString("es-MX")}
                         </TableCell>
-                        <TableCell className="font-mono">{formatCurrency(pedido.total)}</TableCell>
-                        <TableCell className="font-mono">
-                          {pedido.peso_total_kg ? (
-                            <span className="text-sm">
-                              {Math.round(pedido.peso_total_kg).toLocaleString()} kg
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">—</span>
-                          )}
+                        <TableCell className="text-sm text-muted-foreground">
+                          {pedido.pedidos_detalles?.length || 0}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm text-muted-foreground">
+                          {pedido.peso_total_kg ? `${Math.round(pedido.peso_total_kg).toLocaleString()} kg` : "—"}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">{formatCurrency(pedido.total)}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {pedido.termino_credito ? ({ contado: "Contado", "8_dias": "8 días", "15_dias": "15 días", "30_dias": "30 días", "60_dias": "60 días" }[pedido.termino_credito] || pedido.termino_credito) : "—"}
                         </TableCell>
                         <TableCell>{getStatusBadge(pedido.status)}</TableCell>
-                        <TableCell>{getFacturaBadge(pedido)}</TableCell>
-                        <TableCell>
-                          {pedido.cotizacion_origen ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="gap-1 text-primary hover:text-primary/80 p-1 h-auto"
-                                    onClick={() => setSelectedCotizacionId(pedido.cotizacion_origen!.id)}
-                                  >
-                                    <Link2 className="h-3 w-3" />
-                                    <span className="font-mono text-xs">{pedido.cotizacion_origen.folio}</span>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Ver cotización origen</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">Directo</span>
-                          )}
-                        </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
                             <TooltipProvider>
