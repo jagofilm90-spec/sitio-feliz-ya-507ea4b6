@@ -172,7 +172,8 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         // Entregas en descarga (en curso)
         supabase.from("ordenes_compra_entregas").select(`id, numero_entrega, llegada_registrada_en, trabajando_desde, nombre_chofer_proveedor, placas_vehiculo, cantidad_bultos, orden_compra:ordenes_compra!inner(id, folio, proveedor:proveedores(nombre))`).eq("status", "en_descarga"),
         // Entregas completadas hoy
-        supabase.from("ordenes_compra_entregas").select(`id, numero_entrega, llegada_registrada_en, recepcion_finalizada_en, nombre_chofer_proveedor, cantidad_bultos, orden_compra:ordenes_compra!inner(folio, proveedor:proveedores(nombre))`).eq("status", "recibida").gte("recepcion_finalizada_en", hoy + "T00:00:00"),
+        // Entregas completadas hoy (UTC-6 México: 00:00 MX = 06:00 UTC)
+        supabase.from("ordenes_compra_entregas").select(`id, numero_entrega, llegada_registrada_en, recepcion_finalizada_en, nombre_chofer_proveedor, cantidad_bultos, orden_compra:ordenes_compra!inner(folio, proveedor:proveedores(nombre))`).eq("status", "recibida").gte("recepcion_finalizada_en", hoy + "T06:00:00Z"),
       ]);
 
       // KPIs calculations

@@ -3,7 +3,6 @@ import { corsHeaders } from "../_shared/cors.ts";
 
 const formatCurrency = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
-// Email template helpers (same style as frontend emailTemplates.ts)
 const emailWrapper = (bannerColor: string, bannerIcon: string, bannerTitle: string, body: string) => `
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:20px 0;font-family:Arial,sans-serif;">
   <tr><td align="center">
@@ -46,46 +45,50 @@ Deno.serve(async (req) => {
     const mexicoOffset = -6 * 60;
     const mexicoTime = new Date(now.getTime() + (mexicoOffset + now.getTimezoneOffset()) * 60000);
     const fecha = body.fecha || mexicoTime.toISOString().split("T")[0];
-    const inicioDia = `${fecha}T00:00:00`;
-    const finDia = `${fecha}T23:59:59`;
+    // Inicio/fin del día en UTC ajustado a México
+    const inicioDiaUTC = `${fecha}T06:00:00Z`; // 00:00 México = 06:00 UTC
+    const finDiaUTC = new Date(new Date(`${fecha}T06:00:00Z`).getTime() + 24 * 60 * 60 * 1000).toISOString();
 
-    console.log(`Generando resumen del día: ${fecha}`);
+    console.log(`Generando resumen del día: ${fecha} (UTC range: ${inicioDiaUTC} to ${finDiaUTC})`);
 
     // =================== QUERIES ===================
     const [
-      recepcionesRes,
-      rutasRes,
-      entregasRutaRes,
+      recepcionesDetalleRes,
+      rutasDetalleRes,
       ventasRes,
+      ventasMostradorRes,
       cobrosRes,
       porAutorizarRes,
       atrasadasRes,
       devolucionesRes,
+      creditoExcedidoRes,
     ] = await Promise.all([
-      // COMPRAS: recepciones completadas hoy
+      // RECEPCIONES detalladas
       supabase.from("ordenes_compra_entregas")
-        .select("id, cantidad_bultos")
+        .select(`id, numero_entrega, llegada_registrada_en, recepcion_finalizada_en, nombre_chofer_proveedor, placas_vehiculo, cantidad_bultos, orden_compra:ordenes_compra!inner(folio, proveedor:proveedores(nombre))`)
         .eq("status", "recibida")
-        .gte("recepcion_finalizada_en", inicioDia)
-        .lte("recepcion_finalizada_en", finDia),
-      // RUTAS completadas hoy
+        .gte("recepcion_finalizada_en", inicioDiaUTC)
+        .lt("recepcion_finalizada_en", finDiaUTC),
+      // RUTAS detalladas
       supabase.from("rutas")
-        .select("id", { count: "exact", head: true })
-        .eq("fecha_ruta", fecha)
-        .eq("status", "completada"),
-      // ENTREGAS de rutas hoy
-      supabase.from("rutas")
-        .select("id, entregas(id, status_entrega)")
+        .select(`id, nombre, status, hora_salida, hora_regreso, entregas(id, status_entrega)`)
         .eq("fecha_ruta", fecha),
-      // VENTAS del día
+      // VENTAS (pedidos)
       supabase.from("pedidos")
-        .select("id, total")
-        .gte("created_at", inicioDia)
+        .select("id, total, status")
+        .gte("created_at", inicioDiaUTC)
+        .lt("created_at", finDiaUTC)
         .in("status", ["entregado", "en_ruta"]),
-      // COBROS del día
+      // VENTAS MOSTRADOR
+      supabase.from("solicitudes_venta" as any)
+        .select("id, total, forma_pago, status")
+        .gte("created_at", inicioDiaUTC)
+        .lt("created_at", finDiaUTC)
+        .in("status", ["pagada", "entregada"]),
+      // COBROS
       supabase.from("pagos_cliente")
-        .select("monto_total")
-        .gte("fecha_registro", inicioDia)
+        .select("monto_total, metodo_pago")
+        .gte("fecha_registro", inicioDiaUTC)
         .neq("status", "rechazado"),
       // PEDIDOS por autorizar
       supabase.from("pedidos")
@@ -99,46 +102,94 @@ Deno.serve(async (req) => {
       // DEVOLUCIONES del día
       supabase.from("devoluciones_proveedor" as any)
         .select("id", { count: "exact", head: true })
-        .gte("created_at", inicioDia),
+        .gte("created_at", inicioDiaUTC),
+      // CRÉDITO excedido
+      supabase.from("clientes")
+        .select("id", { count: "exact", head: true })
+        .gt("saldo_pendiente", 0)
+        .not("limite_credito", "is", null),
     ]);
 
     // =================== CALCULAR ===================
-    const recepciones = (recepcionesRes.data as any[]) || [];
-    const recepcionesCount = recepciones.length;
+    // Recepciones
+    const recepciones = (recepcionesDetalleRes.data as any[]) || [];
     const bultosRecibidos = recepciones.reduce((s: number, r: any) => s + (r.cantidad_bultos || 0), 0);
 
-    const rutasCompletadas = rutasRes.count || 0;
-
+    // Rutas
+    const rutas = (rutasDetalleRes.data as any[]) || [];
+    const rutasCompletadas = rutas.filter((r: any) => r.status === "completada").length;
     let entregasCompletadas = 0;
     let entregasPendientes = 0;
-    ((entregasRutaRes.data as any[]) || []).forEach((ruta: any) => {
+    rutas.forEach((ruta: any) => {
       (ruta.entregas || []).forEach((e: any) => {
         if (e.status_entrega === "entregado" || e.status_entrega === "completo") entregasCompletadas++;
         else entregasPendientes++;
       });
     });
 
+    // Ventas
     const ventas = (ventasRes.data as any[]) || [];
     const ventasTotal = ventas.reduce((s: number, p: any) => s + (p.total || 0), 0);
-    const ventasCount = ventas.length;
 
-    const cobrosTotal = ((cobrosRes.data as any[]) || []).reduce((s: number, p: any) => s + (Number(p.monto_total) || 0), 0);
+    // Ventas mostrador
+    const ventasMostrador = (ventasMostradorRes.data as any[]) || [];
+    const ventasMostradorTotal = ventasMostrador.reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
+    const mostradorEfectivo = ventasMostrador.filter((v: any) => v.forma_pago === "efectivo").reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
+    const mostradorTransferencia = ventasMostradorTotal - mostradorEfectivo;
+
+    // Cobros
+    const cobros = (cobrosRes.data as any[]) || [];
+    const cobrosTotal = cobros.reduce((s: number, p: any) => s + (Number(p.monto_total) || 0), 0);
 
     const porAutorizar = porAutorizarRes.count || 0;
     const atrasadas = atrasadasRes.count || 0;
     const devoluciones = devolucionesRes.count || 0;
+    const creditoExcedido = creditoExcedidoRes.count || 0;
 
     const datos = {
       fecha,
-      compras: { recepciones: recepcionesCount, bultos: bultosRecibidos },
-      rutas: { completadas: rutasCompletadas, entregasCompletadas, entregasPendientes },
-      ventas: { total: ventasTotal, count: ventasCount },
+      generado_en: new Date().toISOString(),
+      compras: {
+        recepciones: recepciones.length,
+        bultos: bultosRecibidos,
+        detalle: recepciones.map((r: any) => ({
+          proveedor: r.orden_compra?.proveedor?.nombre || "—",
+          folio: r.orden_compra?.folio || "—",
+          entrega: r.numero_entrega,
+          bultos: r.cantidad_bultos,
+          chofer: r.nombre_chofer_proveedor,
+          placas: r.placas_vehiculo,
+          llegada: r.llegada_registrada_en,
+          fin: r.recepcion_finalizada_en,
+        })),
+      },
+      rutas: {
+        total: rutas.length,
+        completadas: rutasCompletadas,
+        entregasCompletadas,
+        entregasPendientes,
+        detalle: rutas.map((r: any) => ({
+          nombre: r.nombre,
+          status: r.status,
+          horaSalida: r.hora_salida,
+          horaRegreso: r.hora_regreso,
+          entregas: (r.entregas || []).length,
+          entregadas: (r.entregas || []).filter((e: any) => e.status_entrega === "entregado" || e.status_entrega === "completo").length,
+        })),
+      },
+      ventas: { total: ventasTotal, count: ventas.length },
+      ventasMostrador: {
+        total: ventasMostradorTotal,
+        count: ventasMostrador.length,
+        efectivo: mostradorEfectivo,
+        transferencia: mostradorTransferencia,
+      },
       cobros: { total: cobrosTotal },
       devoluciones: { count: devoluciones },
-      pendientes: { porAutorizar, atrasadas },
+      pendientes: { porAutorizar, atrasadas, creditoExcedido },
     };
 
-    console.log("Resumen calculado:", JSON.stringify(datos));
+    console.log("Resumen calculado:", JSON.stringify({ fecha, recepciones: recepciones.length, rutas: rutas.length, ventas: ventas.length }));
 
     // =================== GUARDAR ===================
     await supabase.from("resumenes_diarios" as any).upsert({
@@ -147,73 +198,62 @@ Deno.serve(async (req) => {
       enviado_en: new Date().toISOString(),
     } as any, { onConflict: "fecha" });
 
-    // =================== PUSH NOTIFICATION ===================
-    const pushBody = `Ventas: ${formatCurrency(ventasTotal)} · Cobros: ${formatCurrency(cobrosTotal)} · ${recepcionesCount} recepciones`;
+    // =================== PUSH ===================
     try {
       await supabase.functions.invoke("send-push-notification", {
         body: {
           roles: ["admin"],
           title: "📊 Tu resumen del día está listo",
-          body: pushBody,
+          body: `Ventas: ${formatCurrency(ventasTotal)} · Cobros: ${formatCurrency(cobrosTotal)} · ${recepciones.length} recepciones`,
         },
       });
-    } catch (pushErr) {
-      console.error("Error enviando push:", pushErr);
-    }
+    } catch (pushErr) { console.error("Error enviando push:", pushErr); }
 
     // =================== EMAIL ===================
     try {
       const htmlBody = emailWrapper("#1e3a5f", "📊", `RESUMEN DEL DÍA — ${fecha}`,
         `<p style="color:#374151;font-size:15px;margin:0 0 25px">Aquí está el resumen de operaciones del día.</p>
-        ${kpiCard("📦 COMPRAS", "Recepciones", [
-          `<strong>${recepcionesCount}</strong> recepciones completadas`,
+        ${kpiCard("📦 COMPRAS", "Recepciones de Mercancía", [
+          `<strong>${recepciones.length}</strong> recepciones completadas`,
           `<strong>${bultosRecibidos.toLocaleString()}</strong> bultos recibidos`,
         ])}
         ${kpiCard("🚛 RUTAS Y ENTREGAS", "Logística", [
-          `<strong>${rutasCompletadas}</strong> rutas completadas`,
+          `<strong>${rutasCompletadas}</strong> de ${rutas.length} rutas completadas`,
           `<strong>${entregasCompletadas}</strong> pedidos entregados`,
           entregasPendientes > 0 ? `<span style="color:#d97706"><strong>${entregasPendientes}</strong> pedidos pendientes</span>` : "Sin pedidos pendientes",
         ])}
         ${kpiCard("💰 VENTAS Y COBROS", "Finanzas", [
-          `Vendido hoy: <strong>${formatCurrency(ventasTotal)}</strong> (${ventasCount} pedidos)`,
+          `Vendido hoy: <strong>${formatCurrency(ventasTotal)}</strong> (${ventas.length} pedidos)`,
+          ventasMostrador.length > 0 ? `Mostrador: <strong>${formatCurrency(ventasMostradorTotal)}</strong> (${ventasMostrador.length} ventas)` : "",
           `Cobrado hoy: <strong>${formatCurrency(cobrosTotal)}</strong>`,
-        ])}
-        ${devoluciones > 0 ? kpiCard("↩️ DEVOLUCIONES", "Proveedores", [
-          `<strong>${devoluciones}</strong> devoluciones registradas`,
-        ]) : ""}
-        ${(porAutorizar > 0 || atrasadas > 0) ? kpiCard("⚠️ PENDIENTES", "Requieren atención", [
+        ].filter(Boolean))}
+        ${devoluciones > 0 ? kpiCard("↩️ DEVOLUCIONES", "Proveedores", [`<strong>${devoluciones}</strong> devoluciones registradas`]) : ""}
+        ${(porAutorizar > 0 || atrasadas > 0 || creditoExcedido > 0) ? kpiCard("⚠️ PENDIENTES", "Requieren atención", [
           porAutorizar > 0 ? `<span style="color:#dc2626"><strong>${porAutorizar}</strong> pedidos por autorizar</span>` : "",
           atrasadas > 0 ? `<span style="color:#dc2626"><strong>${atrasadas}</strong> entregas de proveedor atrasadas</span>` : "",
+          creditoExcedido > 0 ? `<span style="color:#d97706"><strong>${creditoExcedido}</strong> clientes con crédito excedido</span>` : "",
         ].filter(Boolean)) : ""}
         <p style="color:#374151;font-size:14px;margin:25px 0 0">Atentamente,<br><strong>Sistema ALMASA</strong></p>`
       );
 
-      // Enviar a admin emails
       const { data: adminEmails } = await supabase
         .from("user_roles")
         .select("user_id, profiles:user_id(email)")
-        .eq("role", "admin");
+        .in("role", ["admin", "secretaria"]);
 
-      const emails = ((adminEmails as any[]) || [])
-        .map((u: any) => u.profiles?.email)
-        .filter(Boolean);
+      const emails = [...new Set(((adminEmails as any[]) || []).map((u: any) => u.profiles?.email).filter(Boolean))];
 
       if (emails.length > 0) {
         await supabase.functions.invoke("gmail-api", {
           body: {
-            action: "send",
-            email: "compras@almasa.com.mx",
-            to: emails[0],
-            cc: emails.slice(1).join(",") || undefined,
-            subject: `📊 Resumen del día — ${fecha}`,
-            body: htmlBody,
+            action: "send", email: "compras@almasa.com.mx",
+            to: emails[0], cc: emails.slice(1).join(",") || undefined,
+            subject: `📊 Resumen del día — ${fecha}`, body: htmlBody,
           },
         });
         console.log("Email de resumen enviado a:", emails.join(", "));
       }
-    } catch (emailErr) {
-      console.error("Error enviando email de resumen:", emailErr);
-    }
+    } catch (emailErr) { console.error("Error enviando email:", emailErr); }
 
     return new Response(
       JSON.stringify({ success: true, datos }),
