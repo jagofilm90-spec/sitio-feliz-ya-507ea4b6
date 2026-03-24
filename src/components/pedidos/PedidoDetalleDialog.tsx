@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { esProductoBolsas5kg, redondearABolsasCompletas, calcularNumeroBolsas, KG_POR_BOLSA, ordenarProductosAzucarPrimero } from "@/lib/calculos";
 import { Loader2 } from "lucide-react";
+import logoAlmasa from "@/assets/logo-almasa.png";
 import { getDisplayName } from "@/lib/productUtils";
 import { CreditoStatusBadge } from "./CreditoStatusBadge";
 import { PedidoHistorialCambios } from "./PedidoHistorialCambios";
@@ -149,7 +150,8 @@ export default function PedidoDetalleDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="flex items-center gap-3">
+            <img src={logoAlmasa} alt="ALMASA" className="h-7 object-contain hidden sm:block" />
             Detalle del Pedido {pedido?.folio}
           </DialogTitle>
         </DialogHeader>
@@ -176,7 +178,7 @@ export default function PedidoDetalleDialog({
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Fecha</p>
-                <p className="font-medium">{new Date(pedido.fecha_pedido).toLocaleDateString()}</p>
+                <p className="font-medium">{new Date(pedido.fecha_pedido).toLocaleDateString("es-MX")}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Estado</p>

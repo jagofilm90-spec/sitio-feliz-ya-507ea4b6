@@ -281,27 +281,15 @@ const PedidosContent = () => {
   const someSelected = filteredPedidos.some(p => selectedPedidos.has(p.id));
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, any> = {
-      por_autorizar: "outline",
-      pendiente: "secondary",
-      en_ruta: "default",
-      entregado: "default",
-      cancelado: "destructive",
+    const config: Record<string, { label: string; variant: any; className: string }> = {
+      por_autorizar: { label: "Por autorizar", variant: "outline", className: "border-amber-500 text-amber-600 dark:text-amber-400" },
+      pendiente: { label: "Listo para surtir", variant: "outline", className: "border-blue-500 text-blue-600 dark:text-blue-400" },
+      en_ruta: { label: "En ruta", variant: "secondary", className: "" },
+      entregado: { label: "Entregado", variant: "outline", className: "border-green-500 text-green-600 dark:text-green-400" },
+      cancelado: { label: "Cancelado", variant: "outline", className: "border-muted text-muted-foreground" },
     };
-
-    const labels: Record<string, string> = {
-      por_autorizar: "Por Autorizar",
-      pendiente: "Pendiente",
-      en_ruta: "En Ruta",
-      entregado: "Entregado",
-      cancelado: "Cancelado",
-    };
-
-    return (
-      <Badge variant={variants[status] || "default"} className={status === "por_autorizar" ? "border-amber-500 text-amber-600" : ""}>
-        {labels[status] || status}
-      </Badge>
-    );
+    const c = config[status] || { label: status, variant: "secondary", className: "" };
+    return <Badge variant={c.variant} className={c.className}>{c.label}</Badge>;
   };
 
   const getFacturaBadge = (pedido: PedidoConCotizacion) => {

@@ -145,7 +145,7 @@ export const PedidoHistorialCardMobile = ({
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground text-xs">Fecha:</span>
-            <span className="text-xs">{new Date(pedido.fecha_pedido).toLocaleDateString()}</span>
+            <span className="text-xs">{new Date(pedido.fecha_pedido).toLocaleDateString("es-MX")}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground text-xs">Total:</span>
