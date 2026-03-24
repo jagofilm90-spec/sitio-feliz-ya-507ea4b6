@@ -62,7 +62,10 @@ export const ResumenDiaWidget = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const hoy = new Date().toISOString().split("T")[0];
+  // Fecha en hora México (UTC-6)
+  const ahora = new Date();
+  const fechaMexico = new Date(ahora.getTime() + (-6 * 60 + ahora.getTimezoneOffset()) * 60000);
+  const hoy = fechaMexico.toISOString().split("T")[0];
 
   useEffect(() => { loadResumen(); }, []);
 
