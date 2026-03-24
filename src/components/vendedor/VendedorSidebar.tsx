@@ -33,6 +33,7 @@ import {
   User, 
   IdCard,
   HandCoins,
+  TrendingUp,
 } from "lucide-react";
 import logoAlmasa from "@/assets/logo-almasa.png";
 
@@ -72,7 +73,7 @@ export const VendedorSidebar = ({
     { id: "nuevo", label: "Nuevo Pedido", icon: ShoppingCart },
     { id: "pedidos", label: "Pedidos", icon: ClipboardList },
     { id: "cobranza", label: "Cobranza", icon: HandCoins },
-    { id: "ventas", label: "Mis Ventas", icon: BarChart3 },
+    { id: "ventas", label: "Mis Ventas", icon: TrendingUp },
     { id: "novedades", label: "Novedades", icon: Sparkles, badge: novedadesCount },
     { id: "precios", label: "Precios", icon: List },
     { id: "saldos", label: "Saldos", icon: Wallet },

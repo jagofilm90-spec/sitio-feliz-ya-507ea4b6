@@ -171,7 +171,7 @@ const Layout = ({ children }: LayoutProps) => {
 
   const allowedPagesForAlmacen = ["/almacen-tablet", "/almacen-tablet/carga-scan", "/chat"];
   const allowedPagesForSecretaria = ["/secretaria", "/chat"];
-  const allowedPagesForVendedor = ["/vendedor", "/chat", "/precios"];
+  const allowedPagesForVendedor = ["/vendedor", "/vendedor/analisis", "/chat", "/precios"];
   const allowedPagesForChofer = ["/chofer", "/chat"];
 
   // Menú organizado por categorías
