@@ -386,13 +386,9 @@ export function VendedorMisClientesTab({ onClienteCreado, onNavigateNuevoPedido 
                           </Badge>
                         )}
                         {(cliente.sucursales_sin_gps || 0) > 0 && (
-                          <Badge 
-                            variant="secondary" 
-                            className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 text-xs"
-                          >
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            Sin GPS
-                          </Badge>
+                          <span title="Ubicación no configurada" className="text-muted-foreground">
+                            <MapPin className="h-3.5 w-3.5" />
+                          </span>
                         )}
                       </div>
                     </div>
@@ -467,24 +463,22 @@ export function VendedorMisClientesTab({ onClienteCreado, onNavigateNuevoPedido 
                     </div>
                   )}
 
-                  {/* Sucursales sin GPS - Botón para geocodificar */}
+                  {/* Sucursales sin GPS - discreto */}
                   {(cliente.sucursales_sin_gps || 0) > 0 && (
-                    <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                      <p className="text-xs text-amber-700 dark:text-amber-300 mb-2">
-                        📍 Sucursales pendientes de geocodificar:
-                      </p>
-                      <div className="flex flex-wrap gap-2">
+                    <div className="mb-4">
+                      <div className="flex flex-wrap gap-1.5">
                         {cliente.sucursales
-                          ?.filter((s) => !s.latitud || !s.longitud)
-                          .map((sucursal) => (
+                          ?.filter((s: any) => !s.latitud || !s.longitud)
+                          .map((sucursal: any) => (
                             <Button
                               key={sucursal.id}
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
-                              className="h-8 text-xs bg-white dark:bg-background"
+                              className="h-7 text-xs text-muted-foreground gap-1"
                               onClick={() => handleOpenGeocodificar(sucursal)}
+                              title="Configurar ubicación"
                             >
-                              <Navigation className="h-3 w-3 mr-1" />
+                              <MapPin className="h-3 w-3" />
                               {sucursal.nombre}
                             </Button>
                           ))}
