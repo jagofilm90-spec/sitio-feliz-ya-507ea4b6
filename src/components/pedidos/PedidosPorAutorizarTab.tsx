@@ -114,14 +114,6 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
 
-  // Auto-open specific pedido from deep link
-  useEffect(() => {
-    if (autoOpenPedidoId && pedidos && pedidos.length > 0 && !selectedPedido) {
-      const target = pedidos.find(p => p.id === autoOpenPedidoId);
-      if (target) setSelectedPedido(target);
-    }
-  }, [autoOpenPedidoId, pedidos]);
-
   // Fetch pedidos por autorizar
   const { data: pedidos, isLoading } = useQuery({
     queryKey: ["pedidos-por-autorizar"],
@@ -154,6 +146,14 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
       return data as unknown as PedidoPorAutorizar[];
     },
   });
+
+  // Auto-open specific pedido from deep link
+  useEffect(() => {
+    if (autoOpenPedidoId && pedidos && pedidos.length > 0 && !selectedPedido) {
+      const target = pedidos.find(p => p.id === autoOpenPedidoId);
+      if (target) setSelectedPedido(target);
+    }
+  }, [autoOpenPedidoId, pedidos]);
 
   // Fetch price history for a specific client and product
   const fetchPriceHistory = async (clienteId: string, productoId: string): Promise<PrecioHistorialProducto[]> => {
