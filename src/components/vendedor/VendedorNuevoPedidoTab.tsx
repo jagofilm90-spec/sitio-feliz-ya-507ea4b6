@@ -795,7 +795,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       const backgroundTasks = async () => {
         try {
           // 1. Notificaciones rápidas en paralelo (no dependen de PDF)
-          const notifPromises = [
+          const notifPromises: Promise<any>[] = [
             Promise.resolve(supabase.from("notificaciones").insert({
               tipo: "nuevo_pedido_vendedor",
               titulo: `Nuevo pedido ${folio}`,
