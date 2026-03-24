@@ -46,6 +46,7 @@ import { format, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { ordenarProductosAzucarPrimero } from "@/lib/calculos";
 import { formatCurrency } from "@/lib/utils";
+import logoAlmasa from "@/assets/logo-almasa.png";
 import { PedidoCardMobile } from "./PedidoCardMobile";
 import { AutorizacionRapidaSheet } from "./AutorizacionRapidaSheet";
 
@@ -615,7 +616,10 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <span className="text-base sm:text-lg">Autorizar Pedido {selectedPedido?.folio}</span>
+              <div className="flex items-center gap-3">
+                <img src={logoAlmasa} alt="ALMASA" className="h-7 object-contain hidden sm:block" />
+                <span className="text-base sm:text-lg">Autorizar Pedido {selectedPedido?.folio}</span>
+              </div>
               <div className="flex gap-2">
                 {!isEditing ? (
                   <Button variant="outline" size="sm" onClick={handleStartEditing}>
@@ -658,7 +662,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                 </CardContent>
               </Card>
 
-              {/* Resumen de autorización */}
+              {/* Resumen — solo si hay productos que requieren autorización */}
               {(() => {
                 const total = selectedPedido.pedidos_detalles.length;
                 const requieren = selectedPedido.pedidos_detalles.filter(d => {
@@ -667,27 +671,21 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                   return (editingPrices[d.id] ?? d.precio_unitario) < (listPrice - descMax);
                 }).length;
                 return requieren > 0 ? (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30">
-                    <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
-                    <span className="text-sm font-medium text-destructive">
-                      {requieren} de {total} producto{total > 1 ? "s" : ""} requiere{requieren === 1 ? "" : "n"} autorización
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-                    <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                    <span className="text-sm font-medium text-green-700 dark:text-green-400">
-                      Todos los precios están dentro del rango permitido
-                    </span>
-                  </div>
-                );
+                  <p className="text-sm text-muted-foreground">
+                    <AlertTriangle className="h-3.5 w-3.5 text-destructive inline mr-1" />
+                    {requieren} de {total} producto{total > 1 ? "s" : ""} por debajo del precio mínimo
+                  </p>
+                ) : null;
               })()}
 
               {/* Productos - Cards en móvil, Tabla en desktop */}
               <div className="sm:hidden space-y-2">
                 {ordenarProductosAzucarPrimero(selectedPedido.pedidos_detalles, (d) => d.productos?.nombre || '').map((detalle) => {
                   const currentPrice = editingPrices[detalle.id] ?? detalle.precio_unitario;
-                  const subtotal = detalle.cantidad * currentPrice;
+                  const pesoKg = detalle.productos?.peso_kg || 0;
+                  const precioPorKilo = detalle.productos?.precio_por_kilo || false;
+                  const kgTotales = pesoKg > 0 ? detalle.cantidad * pesoKg : 0;
+                  const subtotal = precioPorKilo && kgTotales ? kgTotales * currentPrice : detalle.cantidad * currentPrice;
                   const listPrice = detalle.productos?.precio_venta || 0;
                   const descuentoMax = detalle.productos?.descuento_maximo ?? 0;
                   const precioMinimo = listPrice - descuentoMax;
@@ -697,10 +695,10 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                   const porDebajoMinimo = currentPrice < precioMinimo;
 
                   return (
-                    <div key={detalle.id} className={`border rounded-lg p-3 space-y-2 ${porDebajoMinimo ? "border-destructive/50 bg-destructive/5" : "border-green-200/50 dark:border-green-800/30"}`}>
+                    <div key={detalle.id} className={`border rounded-lg p-3 space-y-2 ${porDebajoMinimo ? "border-destructive/30" : ""}`}>
                       <div className="min-w-0">
                         <p className="font-medium text-sm line-clamp-2 flex items-center gap-1.5">
-                          {porDebajoMinimo ? <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" /> : <CheckCircle2 className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />}
+                          {porDebajoMinimo && <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />}
                           {detalle.productos?.nombre}
                         </p>
                         <p className="text-xs text-muted-foreground">{detalle.productos?.codigo} · {detalle.cantidad} {detalle.productos?.unidad}</p>
@@ -745,16 +743,19 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                       </div>
 
                       {/* Costo y margen */}
-                      <div className="border-t pt-2 flex items-center justify-between text-xs">
+                      {kgTotales > 0 && (
+                        <div className="flex justify-between text-xs border-t pt-2">
+                          <span className="text-muted-foreground">Kg totales</span>
+                          <span className="font-mono">{kgTotales.toLocaleString()} kg</span>
+                        </div>
+                      )}
+                      <div className={`${kgTotales > 0 ? "" : "border-t pt-2"} flex items-center justify-between text-xs`}>
                         {costo > 0 ? (
                           <>
                             <span className="text-muted-foreground">Costo: <span className="font-mono">{formatCurrency(costo)}</span></span>
-                            <Badge
-                              variant={margenPct < 0 ? "destructive" : "secondary"}
-                              className={`text-[10px] ${margenPct >= 20 ? "bg-green-100 text-green-800 border-green-200" : margenPct >= 0 ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}`}
-                            >
-                              {margenPct < 0 && "⚠ "}{margenPct >= 0 ? "+" : ""}{margenPct.toFixed(1)}%
-                            </Badge>
+                            <span className={`font-mono ${margenPct < 0 ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                              {margenPct >= 0 ? "+" : ""}{margenPct.toFixed(1)}%
+                            </span>
                           </>
                         ) : (
                           <>
@@ -814,11 +815,12 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                     <TableRow>
                       <TableHead>Producto</TableHead>
                       <TableHead className="text-right">Cantidad</TableHead>
+                      <TableHead className="text-right">Kg</TableHead>
                       <TableHead className="text-right">P. Lista</TableHead>
                       <TableHead className="text-right">P. Mínimo</TableHead>
                       <TableHead className="text-right">P. Solicitado</TableHead>
                       <TableHead className="text-right">vs Mínimo</TableHead>
-                      <TableHead className="text-right">Margen %</TableHead>
+                      <TableHead className="text-right">Margen</TableHead>
                       <TableHead className="text-right">Subtotal</TableHead>
                       <TableHead className="w-10"></TableHead>
                     </TableRow>
@@ -826,7 +828,10 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                   <TableBody>
                     {ordenarProductosAzucarPrimero(selectedPedido.pedidos_detalles, (d) => d.productos?.nombre || '').map((detalle) => {
                       const currentPrice = editingPrices[detalle.id] ?? detalle.precio_unitario;
-                      const subtotal = detalle.cantidad * currentPrice;
+                      const pesoKg = detalle.productos?.peso_kg || 0;
+                      const precioPorKilo = detalle.productos?.precio_por_kilo || false;
+                      const kgTotales = pesoKg > 0 ? detalle.cantidad * pesoKg : 0;
+                      const subtotal = precioPorKilo && kgTotales ? kgTotales * currentPrice : detalle.cantidad * currentPrice;
                       const listPrice = detalle.productos?.precio_venta || 0;
                       const descuentoMax = detalle.productos?.descuento_maximo ?? 0;
                       const precioMinimo = listPrice - descuentoMax;
@@ -837,10 +842,10 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
 
                       return (
                         <>
-                          <TableRow key={detalle.id} className={porDebajoMinimo ? "bg-destructive/5" : ""}>
+                          <TableRow key={detalle.id}>
                             <TableCell>
                               <div className="flex items-center gap-1.5">
-                                {porDebajoMinimo ? <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" /> : <CheckCircle2 className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />}
+                                {porDebajoMinimo && <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />}
                                 <span className="font-medium">{detalle.productos?.nombre}</span>
                                 <span className="text-xs text-muted-foreground ml-1">
                                   {detalle.productos?.codigo}
@@ -850,8 +855,11 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                             <TableCell className="text-right font-mono">
                               {detalle.cantidad} {detalle.productos?.unidad}
                             </TableCell>
+                            <TableCell className="text-right font-mono text-muted-foreground text-xs">
+                              {kgTotales > 0 ? `${kgTotales.toLocaleString()} kg` : ""}
+                            </TableCell>
                             <TableCell className="text-right font-mono text-muted-foreground">
-                              {formatCurrency(listPrice)}
+                              {formatCurrency(listPrice)}{precioPorKilo ? "/kg" : ""}
                             </TableCell>
                             <TableCell className="text-right font-mono text-muted-foreground">
                               {descuentoMax > 0 ? `${formatCurrency(precioMinimo)}` : "—"}
@@ -880,16 +888,11 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                             </TableCell>
                             <TableCell className="text-right">
                               {costo > 0 ? (
-                                <Badge
-                                  variant={margenPct < 0 ? "destructive" : "secondary"}
-                                  className={`text-xs ${margenPct >= 20 ? "bg-green-100 text-green-800 border-green-200" : margenPct >= 0 ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}`}
-                                >
-                                  {margenPct < 0 && "⚠ "}{margenPct >= 0 ? "+" : ""}{margenPct.toFixed(1)}%
-                                </Badge>
+                                <span className={`font-mono text-xs ${margenPct < 0 ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                                  {margenPct >= 0 ? "+" : ""}{margenPct.toFixed(1)}%
+                                </span>
                               ) : (
-                                <Badge variant="outline" className="text-xs text-muted-foreground">
-                                  N/D
-                                </Badge>
+                                <span className="text-xs text-muted-foreground">—</span>
                               )}
                             </TableCell>
                             <TableCell className="text-right font-mono font-medium">
