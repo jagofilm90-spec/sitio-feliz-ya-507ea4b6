@@ -105,22 +105,29 @@ Deno.serve(async (req: Request): Promise<Response> => {
       </td></tr>
     </table>`;
 
-    // Enviar via Gmail API (consistente con el resto del sistema)
-    const { data: emailResult, error: emailError } = await supabase.functions.invoke("gmail-api", {
-      body: {
+    // Enviar via Gmail API usando fetch directo para evitar problemas de JWT
+    const gmailResponse = await fetch(`${supabaseUrl}/functions/v1/gmail-api`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${supabaseServiceKey}`,
+      },
+      body: JSON.stringify({
         action: "send",
         email: "pedidos@almasa.com.mx",
         to: clienteEmail,
         subject,
         body: emailHtml,
-      }
+      }),
     });
 
-    if (emailError) {
-      console.error("Gmail API error:", emailError);
-      throw new Error(`Error enviando email: ${emailError.message}`);
+    if (!gmailResponse.ok) {
+      const errText = await gmailResponse.text();
+      console.error("Gmail API error:", gmailResponse.status, errText);
+      throw new Error(`Error enviando email: ${gmailResponse.status} ${errText}`);
     }
 
+    const emailResult = await gmailResponse.json();
     console.log("Email sent successfully via Gmail API:", emailResult?.messageId);
 
     return new Response(
