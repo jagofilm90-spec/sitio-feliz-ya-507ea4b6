@@ -150,7 +150,7 @@ const InventarioContent = () => {
           .limit(100),
         supabase
           .from("productos")
-          .select("id, codigo, nombre, stock_actual, maneja_caducidad, requiere_fumigacion, fecha_ultima_fumigacion")
+          .select("id, codigo, nombre, stock_actual, stock_minimo, unidad, categoria, maneja_caducidad, requiere_fumigacion, fecha_ultima_fumigacion")
           .eq("activo", true)
           .order("nombre"),
         supabase
@@ -186,6 +186,37 @@ const InventarioContent = () => {
         }
         setEntregasPorOrden(mapa);
       }
+
+      // Construir resumen de productos con stock desde lotes
+      const lotesActivos = (lotesData.data || []).filter((l: any) => l.cantidad_disponible > 0);
+      const productoMap = new Map<string, { codigo: string; nombre: string; categoria: string; unidad: string; stockTotal: number; stockMinimo: number; tieneVencimiento: boolean }>();
+
+      for (const prod of (productosData.data || [])) {
+        productoMap.set(prod.id, {
+          codigo: prod.codigo || "",
+          nombre: prod.nombre,
+          categoria: (prod as any).categoria || "Sin categoría",
+          unidad: (prod as any).unidad || "pzas",
+          stockTotal: prod.stock_actual || 0,
+          stockMinimo: (prod as any).stock_minimo || 0,
+          tieneVencimiento: false,
+        });
+      }
+
+      // Detectar lotes próximos a vencer por producto
+      const hoy = new Date();
+      for (const lote of lotesActivos) {
+        if (lote.fecha_caducidad) {
+          const diasRestantes = Math.ceil((new Date(lote.fecha_caducidad).getTime() - hoy.getTime()) / 86400000);
+          if (diasRestantes <= 30 && productoMap.has(lote.producto_id)) {
+            productoMap.get(lote.producto_id)!.tieneVencimiento = true;
+          }
+        }
+      }
+
+      setProductosResumen(
+        Array.from(productoMap.entries()).map(([id, p]) => ({ id, ...p }))
+      );
     } catch (error: any) {
       toast({
         title: "Error",
@@ -451,7 +482,9 @@ const InventarioContent = () => {
     }
   };
 
-  const [activeTab, setActiveTab] = useState("lotes");
+  const [activeTab, setActiveTab] = useState("productos");
+  const [productosResumen, setProductosResumen] = useState<any[]>([]);
+  const [searchProductos, setSearchProductos] = useState("");
 
   // Helper para formato de caducidad
   const getCaducidadBadge = (fechaCaducidad: string | null) => {
@@ -683,23 +716,128 @@ const InventarioContent = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
             <TabsList className="inline-flex w-max gap-1">
+              <TabsTrigger value="productos" className="flex items-center gap-1.5 px-2 sm:px-3">
+                <Package className="h-4 w-4" />
+                <span className="hidden sm:inline">Productos</span>
+                <span className="sm:hidden">Prod</span>
+              </TabsTrigger>
               <TabsTrigger value="lotes" className="flex items-center gap-1.5 px-2 sm:px-3">
                 <Boxes className="h-4 w-4" />
-                <span className="hidden sm:inline">Lotes (Entradas)</span>
+                <span className="hidden sm:inline">Lotes</span>
                 <span className="sm:hidden">Lotes</span>
               </TabsTrigger>
               <TabsTrigger value="movimientos" className="flex items-center gap-1.5 px-2 sm:px-3">
                 <List className="h-4 w-4" />
-                <span className="hidden sm:inline">Movimientos Manuales</span>
+                <span className="hidden sm:inline">Movimientos</span>
                 <span className="sm:hidden">Movim</span>
               </TabsTrigger>
               <TabsTrigger value="categoria" className="flex items-center gap-1.5 px-2 sm:px-3">
-                <Package className="h-4 w-4" />
+                <Warehouse className="h-4 w-4" />
                 <span className="hidden sm:inline">Por Categoría</span>
                 <span className="sm:hidden">Categ</span>
               </TabsTrigger>
             </TabsList>
           </div>
+
+          {/* ===== TAB PRODUCTOS ===== */}
+          <TabsContent value="productos" className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nombre o código..."
+                value={searchProductos}
+                onChange={(e) => setSearchProductos(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {(() => {
+              const filtrados = productosResumen.filter(p =>
+                p.nombre.toLowerCase().includes(searchProductos.toLowerCase()) ||
+                p.codigo.toLowerCase().includes(searchProductos.toLowerCase())
+              );
+              const conStock = filtrados.filter(p => p.stockTotal > 0).length;
+              const sinStock = filtrados.filter(p => p.stockTotal === 0).length;
+
+              return (
+                <>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <span>{filtrados.length} productos</span>
+                    <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">{conStock} con stock</Badge>
+                    {sinStock > 0 && <Badge variant="destructive">{sinStock} sin stock</Badge>}
+                  </div>
+
+                  {loading ? (
+                    <div className="text-center py-8">Cargando...</div>
+                  ) : isMobile ? (
+                    <div className="space-y-2">
+                      {filtrados.map(p => (
+                        <div key={p.id} className="p-3 border rounded-lg flex items-center justify-between">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-medium text-sm truncate">{p.nombre}</p>
+                              {p.tieneVencimiento && <AlertTriangle className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />}
+                            </div>
+                            <p className="text-xs text-muted-foreground">{p.codigo || "—"} · {p.categoria}</p>
+                          </div>
+                          <div className="text-right flex-shrink-0 ml-2">
+                            <p className={`font-bold text-lg ${p.stockTotal === 0 ? "text-destructive" : p.stockTotal <= p.stockMinimo && p.stockMinimo > 0 ? "text-amber-600 dark:text-amber-400" : ""}`}>
+                              {p.stockTotal.toLocaleString()}
+                            </p>
+                            <p className="text-xs text-muted-foreground">{p.unidad}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Código</TableHead>
+                            <TableHead>Producto</TableHead>
+                            <TableHead>Categoría</TableHead>
+                            <TableHead className="text-right">Stock Total</TableHead>
+                            <TableHead>Unidad</TableHead>
+                            <TableHead>Estado</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filtrados.map(p => (
+                            <TableRow key={p.id} className={p.stockTotal === 0 ? "opacity-60" : ""}>
+                              <TableCell className="font-mono text-xs">{p.codigo || "—"}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-medium">{p.nombre}</span>
+                                  {p.tieneVencimiento && <AlertTriangle className="h-3.5 w-3.5 text-amber-500" title="Lotes próximos a vencer" />}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{p.categoria}</TableCell>
+                              <TableCell className="text-right">
+                                <span className={`font-bold ${p.stockTotal === 0 ? "text-destructive" : p.stockTotal <= p.stockMinimo && p.stockMinimo > 0 ? "text-amber-600 dark:text-amber-400" : ""}`}>
+                                  {p.stockTotal.toLocaleString()}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{p.unidad}</TableCell>
+                              <TableCell>
+                                {p.stockTotal === 0 ? (
+                                  <Badge variant="destructive">Sin stock</Badge>
+                                ) : p.stockMinimo > 0 && p.stockTotal <= p.stockMinimo ? (
+                                  <Badge variant="outline" className="border-amber-500 text-amber-600 dark:text-amber-400">Stock bajo</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="border-green-500 text-green-600 dark:text-green-400">Disponible</Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </TabsContent>
 
           <TabsContent value="lotes" className="space-y-4">
             {/* Filtros responsivos */}
