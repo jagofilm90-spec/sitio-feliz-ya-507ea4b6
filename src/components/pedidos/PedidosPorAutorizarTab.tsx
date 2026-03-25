@@ -616,8 +616,28 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
               })()}
 
               {/* Productos - Cards en móvil, Tabla en desktop */}
+              {(() => {
+                const todos = ordenarProductosAzucarPrimero(selectedPedido.pedidos_detalles, (d) => d.productos?.nombre || '');
+                const requierenAuth = todos.filter(d => {
+                  const listPrice = d.productos?.precio_venta || 0;
+                  const descMax = d.productos?.descuento_maximo ?? 0;
+                  const precioMin = listPrice - descMax;
+                  const price = editingPrices[d.id] ?? d.precio_unitario;
+                  return price < precioMin;
+                });
+                const autorizados = todos.filter(d => !requierenAuth.includes(d));
+                const totalAutorizados = autorizados.reduce((sum, d) => {
+                  const price = editingPrices[d.id] ?? d.precio_unitario;
+                  const precioPorKilo = d.productos?.precio_por_kilo || false;
+                  const kgTotales = (d.productos?.peso_kg || 0) > 0 ? d.cantidad * (d.productos?.peso_kg || 0) : 0;
+                  return sum + (precioPorKilo && kgTotales ? kgTotales * price : d.cantidad * price);
+                }, 0);
+                const productosAMostrar = requierenAuth.length > 0 ? requierenAuth : todos;
+                const showSummary = requierenAuth.length > 0 && autorizados.length > 0;
+
+                return (<>
               <div className="sm:hidden space-y-2">
-                {ordenarProductosAzucarPrimero(selectedPedido.pedidos_detalles, (d) => d.productos?.nombre || '').map((detalle) => {
+                {productosAMostrar.map((detalle) => {
                   const currentPrice = editingPrices[detalle.id] ?? detalle.precio_unitario;
                   const pesoKg = detalle.productos?.peso_kg || 0;
                   const precioPorKilo = detalle.productos?.precio_por_kilo || false;
@@ -752,6 +772,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                     <TableRow>
                       <TableHead>Producto</TableHead>
                       <TableHead className="text-right">Cantidad</TableHead>
+
                       <TableHead className="text-right">Kg</TableHead>
                       <TableHead className="text-right">P. Lista</TableHead>
                       <TableHead className="text-right">P. Mínimo</TableHead>
@@ -763,7 +784,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {ordenarProductosAzucarPrimero(selectedPedido.pedidos_detalles, (d) => d.productos?.nombre || '').map((detalle) => {
+                    {productosAMostrar.map((detalle) => {
                       const currentPrice = editingPrices[detalle.id] ?? detalle.precio_unitario;
                       const pesoKg = detalle.productos?.peso_kg || 0;
                       const precioPorKilo = detalle.productos?.precio_por_kilo || false;
@@ -880,6 +901,17 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Resumen de productos autorizados */}
+              {showSummary && (
+                <div className="flex items-center justify-between bg-muted/50 border border-border rounded-lg px-4 py-2.5">
+                  <span className="text-sm text-muted-foreground">
+                    Otros <span className="font-semibold text-foreground">{autorizados.length}</span> producto{autorizados.length !== 1 ? "s" : ""} con precio autorizado
+                  </span>
+                  <span className="text-sm font-mono font-semibold">{formatCurrency(totalAutorizados)}</span>
+                </div>
+              )}
+              </>); })()}
 
               {/* Total */}
               <div className="flex sm:justify-end">

@@ -269,27 +269,33 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                   <div className="space-y-2">
                     {detallesConDescuentoSolicitado.map(detalle => {
                       const precioLista = detalle.producto?.precio_venta || 0;
+                      const descMax = detalle.producto?.descuento_maximo || 0;
+                      const precioMaxDesc = precioLista - descMax;
                       const precioSolicitado = getPrecioSolicitadoDetalle(detalle);
-                      const diferencia = getDescuentoSolicitadoDetalle(detalle);
+                      const diferencia = precioSolicitado - precioMaxDesc;
 
                       return (
                         <div key={detalle.id} className="rounded-md border border-border/70 bg-background/80 p-2">
                           <div className="flex items-start gap-2">
-                            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
                             <div className="min-w-0 flex-1">
                               <p className="text-xs font-medium text-foreground">{detalle.producto?.nombre}</p>
-                              <div className="mt-1 grid grid-cols-3 gap-2 text-[11px]">
+                              <div className="mt-1 grid grid-cols-4 gap-2 text-[11px]">
                                 <div>
-                                  <span className="block text-muted-foreground">Precio lista</span>
+                                  <span className="block text-muted-foreground">Lista</span>
                                   <span className="font-medium text-foreground">{formatCurrency(precioLista)}</span>
                                 </div>
                                 <div>
-                                  <span className="block text-muted-foreground">Precio solicitado</span>
-                                  <span className="font-medium text-foreground">{formatCurrency(precioSolicitado)}</span>
+                                  <span className="block text-muted-foreground">Máx. Desc.</span>
+                                  <span className="font-medium text-foreground">{formatCurrency(precioMaxDesc)}</span>
+                                </div>
+                                <div>
+                                  <span className="block text-muted-foreground">Solicitado</span>
+                                  <span className="font-semibold text-amber-700 dark:text-amber-300">{formatCurrency(precioSolicitado)}</span>
                                 </div>
                                 <div>
                                   <span className="block text-muted-foreground">Diferencia</span>
-                                  <span className="font-medium text-foreground">{formatCurrency(diferencia)}</span>
+                                  <span className="font-semibold text-destructive">{formatCurrency(diferencia)}</span>
                                 </div>
                               </div>
                             </div>
