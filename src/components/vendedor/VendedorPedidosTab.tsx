@@ -265,16 +265,6 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
               <DollarSign className="h-3.5 w-3.5 mr-1" /> Cobrar
             </Button>
           )}
-          {(pedido.status === "por_autorizar" || pedido.status === "pendiente") && (
-            <>
-              <Button variant="outline" size="sm" className="text-amber-600 border-amber-300" onClick={() => abrirCancelar(pedido)}>
-                <X className="h-3.5 w-3.5" />
-              </Button>
-              <Button variant="destructive" size="sm" onClick={() => abrirEliminar(pedido)}>
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </>
-          )}
         </div>
       </CardContent>
     </Card>
