@@ -75,7 +75,7 @@ ${d.impuestos?`<tr><td style="color:#888;font-size:13px;padding:2px 0">Impuestos
 </table></td></tr></table>
 ${hasPdf ? `<p style="margin:20px 0 0;padding:10px 14px;background:#f9f9f9;border-left:3px solid #C8102E;font-size:13px;color:#555">${hasPdf}</p>` : ""}
 </td></tr>
-<tr><td style="padding:20px 36px;border-top:1px solid #eee"><p style="margin:0 0 4px;color:#666;font-size:11px;font-weight:600">Departamento de Pedidos</p><p style="margin:0;color:#999;font-size:10px;line-height:1.6">Melchor Ocampo #59, Col. Magdalena Mixiuhca, C.P. 15850, CDMX<br>Tel: 55 5552-0168 / 55 5552-7887 &bull; 1904@almasa.com.mx</p><p style="margin:6px 0 0;color:#bbb;font-size:10px">Correo generado automaticamente. No responder.</p></td></tr>
+<tr><td style="padding:20px 36px;border-top:1px solid #eee"><p style="margin:0 0 4px;color:#666;font-size:11px;font-weight:600">Departamento de Pedidos</p><p style="margin:0;color:#999;font-size:10px;line-height:1.6">Melchor Ocampo #59, Col. Magdalena Mixiuhca, C.P. 15850, CDMX<br>Tel: 55 5552-0168 / 55 5552-7887 &bull; pedidos@almasa.com.mx</p><p style="margin:6px 0 0;color:#bbb;font-size:10px">Correo generado automaticamente. No responder.</p></td></tr>
 </table></td></tr></table>`;
 }
 

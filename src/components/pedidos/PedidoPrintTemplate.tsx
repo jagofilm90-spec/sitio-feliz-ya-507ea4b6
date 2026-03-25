@@ -1,5 +1,7 @@
 import { COMPANY_DATA } from "@/constants/companyData";
 import { QRCodeSVG } from "qrcode.react";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface ProductoPedido {
   cantidad: number;
@@ -42,6 +44,18 @@ const $$ = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigits:
 const kgFmt = (n: number) => `${n.toLocaleString("es-MX", { maximumFractionDigits: 2 })} kg`;
 const plazoLetras: Record<string, string> = { contado: "Contado", "8_dias": "Ocho", "15_dias": "Quince", "30_dias": "Treinta", "60_dias": "Sesenta" };
 
+const formatFecha = (raw: string): string => {
+  try {
+    const d = raw.includes("T") ? parseISO(raw) : new Date(raw);
+    return format(d, "d 'de' MMMM 'de' yyyy", { locale: es });
+  } catch {
+    return raw;
+  }
+};
+
+// Shared cell style for vertical centering
+const vcell: React.CSSProperties = { verticalAlign: "middle" };
+
 export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) => {
   const dir = datos.sucursal?.direccion || datos.direccionEntrega || datos.cliente.direccionFiscal || "";
   const isAlm = variante === "almacen";
@@ -51,6 +65,11 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
   const b = COMPANY_DATA.datosBancarios;
 
   const varianteLabel = isOrig ? "NOTA DE VENTA" : isAlm ? "HOJA DE CARGA" : isConf ? "CONFIRMACIÓN" : "";
+
+  // Fecha solo en hoja de carga
+  const showFecha = isAlm;
+  // Columnas de barra resumen: almacén muestra fecha; original/confirmación no
+  const barCols = showFecha ? 3 : (showPrices ? 3 : 2);
 
   return (
     <div className="p-5 bg-white text-black w-[11in] min-h-[8.5in] mx-auto font-sans flex flex-col" style={{ fontSize: "11px" }}>
@@ -85,15 +104,15 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
 
       {/* ══ DATOS CLIENTE ══ */}
       <div className="border border-gray-400 rounded mb-2">
-        <div className="flex">
-          <div className="flex-1 px-3 py-2 border-r border-gray-300 flex flex-col justify-center">
+        <div className="flex" style={{ minHeight: "56px" }}>
+          <div className="flex-1 px-3 border-r border-gray-300 flex flex-col justify-center" style={{ paddingTop: "8px", paddingBottom: "8px" }}>
             <div className="flex items-center mb-1">
-              <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Nombre:</span>
+              <span className="font-bold text-gray-500 uppercase flex-shrink-0" style={{ fontSize: "9px" }}>Nombre:</span>
               <span className="ml-2 font-bold" style={{ fontSize: "15px" }}>{datos.cliente.nombre}</span>
             </div>
             {datos.sucursal?.nombre && (
               <div className="flex items-center mb-0.5">
-                <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Sucursal:</span>
+                <span className="font-bold text-gray-500 uppercase flex-shrink-0" style={{ fontSize: "9px" }}>Sucursal:</span>
                 <span className="ml-2 font-semibold" style={{ fontSize: "12px" }}>{datos.sucursal.nombre}</span>
               </div>
             )}
@@ -104,7 +123,7 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
               </span>
             </div>
           </div>
-          <div className="w-44 px-3 py-2 flex flex-col items-center justify-center">
+          <div className="w-44 px-3 flex flex-col items-center justify-center" style={{ paddingTop: "8px", paddingBottom: "8px" }}>
             <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "8px" }}>Vendedor</span>
             <div className="border-2 border-gray-400 rounded px-3 py-1 mt-1 text-center w-full">
               <p className="font-black" style={{ fontSize: "12px" }}>{datos.vendedor}</p>
@@ -114,22 +133,24 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
       </div>
 
       {/* ══ BARRA RESUMEN ══ */}
-      <div className={`grid ${showPrices ? "grid-cols-4" : "grid-cols-3"} gap-0 border border-gray-400 rounded mb-2`} style={{ fontSize: "11px" }}>
-        <div className="border-r border-gray-300 px-3 py-1.5 flex items-center">
-          <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Fecha:</span>
-          <span className="ml-1 font-semibold">{datos.fecha}</span>
-        </div>
+      <div className={`grid grid-cols-${barCols} gap-0 border border-gray-400 rounded mb-2`} style={{ fontSize: "11px", minHeight: "36px" }}>
+        {showFecha && (
+          <div className="border-r border-gray-300 px-3 flex items-center" style={{ paddingTop: "6px", paddingBottom: "6px" }}>
+            <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Fecha:</span>
+            <span className="ml-1 font-semibold">{formatFecha(datos.fecha)}</span>
+          </div>
+        )}
         {showPrices && (
-          <div className="border-r border-gray-300 px-3 py-1.5 flex items-center">
+          <div className="border-r border-gray-300 px-3 flex items-center" style={{ paddingTop: "6px", paddingBottom: "6px" }}>
             <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Crédito:</span>
             <span className="ml-1 font-semibold">{datos.terminoCredito}</span>
           </div>
         )}
-        <div className="border-r border-gray-300 px-3 py-1.5 flex items-center">
+        <div className="border-r border-gray-300 px-3 flex items-center" style={{ paddingTop: "6px", paddingBottom: "6px" }}>
           <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Peso Total:</span>
           <span className="ml-1 font-semibold">{kgFmt(datos.pesoTotalKg)}</span>
         </div>
-        <div className="px-3 py-1.5 flex items-center">
+        <div className="px-3 flex items-center" style={{ paddingTop: "6px", paddingBottom: "6px" }}>
           <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Productos:</span>
           <span className="ml-1 font-semibold">{datos.productos.length}</span>
         </div>
@@ -154,21 +175,21 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
         </colgroup>
         <thead>
           <tr className="bg-gray-800 text-white" style={{ fontSize: "10px" }}>
-            <th className="p-1.5 text-center border border-gray-700" style={{ verticalAlign: "middle" }}>CANT.</th>
-            <th className="p-1.5 text-right border border-gray-700" style={{ verticalAlign: "middle" }}>PESO</th>
-            <th className="p-1.5 text-left border border-gray-700" style={{ verticalAlign: "middle" }}>DETALLE</th>
-            {showPrices && <th className="p-1.5 text-right border border-gray-700" style={{ verticalAlign: "middle" }}>PRECIO U.</th>}
-            {showPrices && <th className="p-1.5 text-right border border-gray-700" style={{ verticalAlign: "middle" }}>IMPORTE</th>}
+            <th className="px-2 text-center border border-gray-700" style={{ ...vcell, paddingTop: "6px", paddingBottom: "6px" }}>CANT.</th>
+            <th className="px-2 text-right border border-gray-700" style={{ ...vcell, paddingTop: "6px", paddingBottom: "6px" }}>PESO</th>
+            <th className="px-2 text-left border border-gray-700" style={{ ...vcell, paddingTop: "6px", paddingBottom: "6px" }}>DETALLE</th>
+            {showPrices && <th className="px-2 text-right border border-gray-700" style={{ ...vcell, paddingTop: "6px", paddingBottom: "6px" }}>PRECIO U.</th>}
+            {showPrices && <th className="px-2 text-right border border-gray-700" style={{ ...vcell, paddingTop: "6px", paddingBottom: "6px" }}>IMPORTE</th>}
           </tr>
         </thead>
         <tbody>
           {datos.productos.map((p, i) => (
             <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-              <td className="p-1.5 border border-gray-300 text-center font-semibold" style={{ fontSize: "11px", verticalAlign: "middle" }}>{p.cantidad} {p.unidad.charAt(0).toUpperCase() + p.unidad.slice(1)}</td>
-              <td className="p-1.5 border border-gray-300 text-right" style={{ fontSize: "11px", verticalAlign: "middle" }}>{p.pesoTotal ? `${p.pesoTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })} kg` : "—"}</td>
-              <td className="p-1.5 border border-gray-300" style={{ fontSize: "11px", verticalAlign: "middle" }}>{p.descripcion}</td>
-              {showPrices && <td className="p-1.5 border border-gray-300 text-right" style={{ fontSize: "11px", verticalAlign: "middle" }}>{$$(p.precioUnitario)}{p.precioPorKilo && <span style={{ fontSize: "9px" }}>/kg</span>}</td>}
-              {showPrices && <td className="p-1.5 border border-gray-300 text-right font-semibold" style={{ fontSize: "11px", verticalAlign: "middle" }}>{$$(p.importe)}</td>}
+              <td className="px-2 border border-gray-300 text-center font-semibold" style={{ fontSize: "11px", ...vcell, paddingTop: "5px", paddingBottom: "5px" }}>{p.cantidad} {p.unidad.charAt(0).toUpperCase() + p.unidad.slice(1)}</td>
+              <td className="px-2 border border-gray-300 text-right" style={{ fontSize: "11px", ...vcell, paddingTop: "5px", paddingBottom: "5px" }}>{p.pesoTotal ? `${p.pesoTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })} kg` : "—"}</td>
+              <td className="px-2 border border-gray-300" style={{ fontSize: "11px", ...vcell, paddingTop: "5px", paddingBottom: "5px" }}>{p.descripcion}</td>
+              {showPrices && <td className="px-2 border border-gray-300 text-right" style={{ fontSize: "11px", ...vcell, paddingTop: "5px", paddingBottom: "5px" }}>{$$(p.precioUnitario)}{p.precioPorKilo && <span style={{ fontSize: "9px" }}>/kg</span>}</td>}
+              {showPrices && <td className="px-2 border border-gray-300 text-right font-semibold" style={{ fontSize: "11px", ...vcell, paddingTop: "5px", paddingBottom: "5px" }}>{$$(p.importe)}</td>}
             </tr>
           ))}
         </tbody>
@@ -187,11 +208,11 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
           </div>
           <table className="border-collapse" style={{ fontSize: "11px", width: "240px" }}>
             <tbody>
-              {datos.pesoTotalKg > 0 && <tr><td className="p-1 font-semibold text-right border border-gray-300">Peso Total:</td><td className="p-1 text-right border border-gray-300 font-mono">{kgFmt(datos.pesoTotalKg)}</td></tr>}
-              <tr><td className="p-1 font-semibold text-right border border-gray-300">Subtotal:</td><td className="p-1 text-right border border-gray-300 font-mono">{$$(datos.subtotal)}</td></tr>
-              <tr><td className="p-1 font-semibold text-right border border-gray-300">IVA (16%):</td><td className="p-1 text-right border border-gray-300 font-mono">{$$(datos.iva)}</td></tr>
-              {datos.ieps > 0 && <tr><td className="p-1 font-semibold text-right border border-gray-300">IEPS (8%):</td><td className="p-1 text-right border border-gray-300 font-mono">{$$(datos.ieps)}</td></tr>}
-              <tr className="bg-black text-white"><td className="p-1.5 font-bold text-right">TOTAL:</td><td className="p-1.5 text-right font-bold font-mono" style={{ fontSize: "14px" }}>{$$(datos.total)}</td></tr>
+              {datos.pesoTotalKg > 0 && <tr><td className="p-1 font-semibold text-right border border-gray-300" style={vcell}>Peso Total:</td><td className="p-1 text-right border border-gray-300 font-mono" style={vcell}>{kgFmt(datos.pesoTotalKg)}</td></tr>}
+              <tr><td className="p-1 font-semibold text-right border border-gray-300" style={vcell}>Subtotal:</td><td className="p-1 text-right border border-gray-300 font-mono" style={vcell}>{$$(datos.subtotal)}</td></tr>
+              <tr><td className="p-1 font-semibold text-right border border-gray-300" style={vcell}>IVA (16%):</td><td className="p-1 text-right border border-gray-300 font-mono" style={vcell}>{$$(datos.iva)}</td></tr>
+              {datos.ieps > 0 && <tr><td className="p-1 font-semibold text-right border border-gray-300" style={vcell}>IEPS (8%):</td><td className="p-1 text-right border border-gray-300 font-mono" style={vcell}>{$$(datos.ieps)}</td></tr>}
+              <tr className="bg-black text-white"><td className="p-1.5 font-bold text-right" style={vcell}>TOTAL:</td><td className="p-1.5 text-right font-bold font-mono" style={{ fontSize: "14px", ...vcell }}>{$$(datos.total)}</td></tr>
             </tbody>
           </table>
         </div>
@@ -200,8 +221,8 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
       {/* ══ PESO TOTAL destacado — solo almacén ══ */}
       {isAlm && (
         <div className="flex justify-end mb-2">
-          <div className="bg-gray-100 border border-gray-400 rounded px-4 py-2 text-right">
-            <span className="font-bold uppercase text-gray-500" style={{ fontSize: "10px" }}>Peso Total: </span>
+          <div className="bg-gray-100 border border-gray-400 rounded px-4 py-2 text-right flex items-center gap-2">
+            <span className="font-bold uppercase text-gray-500" style={{ fontSize: "10px" }}>Peso Total:</span>
             <span className="font-bold" style={{ fontSize: "16px" }}>{kgFmt(datos.pesoTotalKg)}</span>
           </div>
         </div>
