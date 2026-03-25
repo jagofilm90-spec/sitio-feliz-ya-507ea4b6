@@ -6261,7 +6261,7 @@ export type Database = {
       order_status:
         | "borrador"
         | "por_autorizar"
-        | "por_confirmar_vendedor"
+        | "rechazado"
         | "pendiente"
         | "en_ruta"
         | "entregado"
@@ -6450,7 +6450,7 @@ export const Constants = {
       order_status: [
         "borrador",
         "por_autorizar",
-        "por_confirmar_vendedor",
+        "rechazado",
         "pendiente",
         "en_ruta",
         "entregado",

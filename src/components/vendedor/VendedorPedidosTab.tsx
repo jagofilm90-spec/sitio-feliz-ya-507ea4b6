@@ -22,8 +22,8 @@ import { RegistrarCobroPedidoDialog } from "./RegistrarCobroPedidoDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VendedorEnCargaTab } from "./VendedorEnCargaTab";
 import { VendedorEnRutaTab } from "./VendedorEnRutaTab";
-import { ConfirmarPreciosVendedorDialog } from "./ConfirmarPreciosVendedorDialog";
-import { AlertCircle } from "lucide-react";
+import { EditarPedidoRechazadoDialog } from "./EditarPedidoRechazadoDialog";
+import { AlertCircle, Edit2 } from "lucide-react";
 
 interface Pedido {
   id: string;
@@ -90,8 +90,8 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
   const [pdfPedidoId, setPdfPedidoId] = useState<string>("");
   const [enCargaCount, setEnCargaCount] = useState(0);
   const [pedidosEnCargaIds, setPedidosEnCargaIds] = useState<Set<string>>(new Set());
-  const [showConfirmarPrecios, setShowConfirmarPrecios] = useState(false);
-  const [pedidoParaConfirmar, setPedidoParaConfirmar] = useState<Pedido | null>(null);
+  const [showEditarRechazado, setShowEditarRechazado] = useState(false);
+  const [pedidoParaEditar, setPedidoParaEditar] = useState<Pedido | null>(null);
 
   useEffect(() => {
     fetchPedidos();
@@ -177,7 +177,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
 
   // Clasificación
   const pedidosPorAutorizar = pedidos.filter(p =>
-    p.status === "por_autorizar" || p.status === "por_confirmar_vendedor"
+    p.status === "por_autorizar" || p.status === "rechazado"
   );
   const pedidosListos = pedidos.filter(p =>
     p.status === "pendiente" && !pedidosEnCargaIds.has(p.id)
@@ -215,8 +215,8 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="font-bold text-base">{pedido.folio}</span>
-              {pedido.status === "por_autorizar" && <Badge variant="secondary" className="text-xs">Por autorizar</Badge>}
-              {pedido.status === "por_confirmar_vendedor" && <Badge className="text-xs bg-orange-500">Revisión de precios</Badge>}
+              {pedido.status === "por_autorizar" && <Badge variant="secondary" className="text-xs">Pendiente de autorización</Badge>}
+              {pedido.status === "rechazado" && <Badge variant="destructive" className="text-xs">Precio rechazado</Badge>}
               {pedido.status === "pendiente" && <Badge variant="default" className="text-xs">Pendiente</Badge>}
               {pedido.status === "en_ruta" && <Badge className="text-xs bg-blue-500">En ruta</Badge>}
               {pedido.status === "entregado" && <Badge variant="outline" className="text-xs text-green-600 border-green-400">Entregado</Badge>}
@@ -250,9 +250,9 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
           <Button variant="outline" size="sm" className="flex-1" onClick={() => abrirDetalle(pedido)}>
             <Eye className="h-3.5 w-3.5 mr-1" /> Ver
           </Button>
-          {pedido.status === "por_confirmar_vendedor" && (
-            <Button size="sm" className="flex-1 bg-orange-500 hover:bg-orange-600 text-white" onClick={() => { setPedidoParaConfirmar(pedido); setShowConfirmarPrecios(true); }}>
-              <AlertCircle className="h-3.5 w-3.5 mr-1" /> Revisar precios
+          {pedido.status === "rechazado" && (
+            <Button size="sm" className="flex-1 bg-amber-500 hover:bg-amber-600 text-white" onClick={() => { setPedidoParaEditar(pedido); setShowEditarRechazado(true); }}>
+              <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar pedido
             </Button>
           )}
           {["pendiente", "en_ruta", "entregado"].includes(pedido.status) && (
@@ -496,13 +496,13 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
         pedidoId={pdfPedidoId}
       />
 
-      {pedidoParaConfirmar && (
-        <ConfirmarPreciosVendedorDialog
-          open={showConfirmarPrecios}
-          onOpenChange={setShowConfirmarPrecios}
-          pedidoId={pedidoParaConfirmar.id}
-          folio={pedidoParaConfirmar.folio}
-          onConfirmed={fetchPedidos}
+      {pedidoParaEditar && (
+        <EditarPedidoRechazadoDialog
+          open={showEditarRechazado}
+          onOpenChange={setShowEditarRechazado}
+          pedidoId={pedidoParaEditar.id}
+          folio={pedidoParaEditar.folio}
+          onSaved={fetchPedidos}
         />
       )}
     </div>
