@@ -303,7 +303,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
               <FileText className="h-3.5 w-3.5 mr-1" /> PDF
             </Button>
           )}
-          {showCobrarBtn && !pedido.pagado && (
+          {showCobrarBtn && !pedido.pagado && pedido.status === "entregado" && (
             <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={() => abrirCobro(pedido)}>
               <DollarSign className="h-3.5 w-3.5 mr-1" /> Cobrar
             </Button>
