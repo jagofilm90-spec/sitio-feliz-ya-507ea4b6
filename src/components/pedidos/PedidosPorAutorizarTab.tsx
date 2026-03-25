@@ -320,7 +320,8 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
               cliente: { nombre: selectedPedido.clientes?.nombre || "Cliente" },
               sucursal: { nombre: selectedPedido.cliente_sucursales?.nombre || "Principal", direccion: selectedPedido.cliente_sucursales?.direccion || undefined },
               productos: detallesEmail.map(d => ({ cantidad: d.cantidad, unidad: d.unidad, descripcion: d.producto, pesoTotal: d.kgTotales || null, precioUnitario: d.precioUnitario, importe: d.subtotal, precioPorKilo: d.precioPorKilo || false })),
-              subtotal: totalParaEmail, iva: 0, ieps: 0, total: totalParaEmail, pesoTotalKg: 0,
+              subtotal: totalParaEmail, iva: 0, ieps: 0, total: totalParaEmail,
+              pesoTotalKg: selectedPedido.pedidos_detalles.reduce((s, d) => s + (d.cantidad * (d.productos?.peso_kg || 0)), 0),
             });
             clientePdf64 = cpdf.base64;
             clientePdfName = cpdf.filename;
