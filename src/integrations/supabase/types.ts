@@ -6262,6 +6262,7 @@ export type Database = {
         | "borrador"
         | "por_autorizar"
         | "rechazado"
+        | "por_confirmar_vendedor"
         | "pendiente"
         | "en_ruta"
         | "entregado"
@@ -6451,6 +6452,7 @@ export const Constants = {
         "borrador",
         "por_autorizar",
         "rechazado",
+        "por_confirmar_vendedor",
         "pendiente",
         "en_ruta",
         "entregado",
