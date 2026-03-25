@@ -481,47 +481,41 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[90px]">Pedido</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead className="w-[80px]">Fecha</TableHead>
-                    <TableHead className="w-[60px]">Peso</TableHead>
-                    <TableHead className="w-[65px]">Crédito</TableHead>
-                    <TableHead className="text-right w-[90px]">Total</TableHead>
-                    <TableHead className="text-center w-[40px]"></TableHead>
-                    <TableHead className="text-center w-[40px]"></TableHead>
+                    <TableHead className="text-xs">Folio</TableHead>
+                    <TableHead className="text-xs">Cliente</TableHead>
+                    <TableHead className="text-xs">Dirección</TableHead>
+                    <TableHead className="text-xs w-[60px]">Zona</TableHead>
+                    <TableHead className="text-xs w-[65px]">Fecha</TableHead>
+                    <TableHead className="text-xs w-[55px]">Peso</TableHead>
+                    <TableHead className="text-xs w-[55px]">Crédito</TableHead>
+                    <TableHead className="text-xs text-right w-[80px]">Total</TableHead>
+                    <TableHead className="text-xs w-[35px]">Días</TableHead>
+                    <TableHead className="text-center w-[32px]"></TableHead>
+                    <TableHead className="text-center w-[32px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {pedidosListos.map(p => {
                     const creditoLabels: Record<string, string> = {
-                      contado: "Contado",
-                      "8_dias": "8 días",
-                      "15_dias": "15 días",
-                      "30_dias": "30 días",
-                      "60_dias": "60 días",
+                      contado: "Ctdo",
+                      "8_dias": "8d",
+                      "15_dias": "15d",
+                      "30_dias": "30d",
+                      "60_dias": "60d",
                     };
+                    const diasPedido = differenceInDays(new Date(), new Date(p.fecha_pedido));
+                    const diasColor = diasPedido < 7 ? "text-green-600" : diasPedido <= 14 ? "text-amber-600" : "text-destructive";
                     return (
                       <TableRow key={p.id} className="cursor-pointer" onClick={() => abrirDetalle(p)}>
-                        <TableCell>
-                          <span className="font-bold text-sm">{p.folio}</span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">{p.cliente.nombre}</span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            {format(new Date(p.fecha_pedido), "dd/MM/yy")}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">{p.peso_total_kg && p.peso_total_kg > 0 ? `${Math.round(p.peso_total_kg)} kg` : "—"}</span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-xs">{creditoLabels[p.termino_credito] || p.termino_credito}</span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <span className="font-bold text-sm">{formatCurrency(p.total)}</span>
-                        </TableCell>
+                        <TableCell className="text-xs font-bold whitespace-nowrap">{p.folio}</TableCell>
+                        <TableCell className="text-xs max-w-[120px] truncate">{p.cliente.nombre}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[130px] truncate">{(p.sucursal as any)?.direccion || "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{(p.sucursal as any)?.zona?.nombre || "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{format(new Date(p.fecha_pedido), "dd/MM/yy")}</TableCell>
+                        <TableCell className="text-xs font-mono text-muted-foreground whitespace-nowrap">{p.peso_total_kg && p.peso_total_kg > 0 ? `${Math.round(p.peso_total_kg)} kg` : "—"}</TableCell>
+                        <TableCell className="text-xs whitespace-nowrap">{creditoLabels[p.termino_credito] || p.termino_credito}</TableCell>
+                        <TableCell className="text-xs text-right font-bold whitespace-nowrap">{formatCurrency(p.total)}</TableCell>
+                        <TableCell><span className={`text-xs font-semibold ${diasColor}`}>{diasPedido}d</span></TableCell>
                         <TableCell className="text-center">
                           <Button
                             variant="ghost"

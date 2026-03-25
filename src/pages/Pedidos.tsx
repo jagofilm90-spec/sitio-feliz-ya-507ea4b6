@@ -832,6 +832,7 @@ const PedidosContent = () => {
                     <TableHead>Prod.</TableHead>
                     <TableHead>Peso</TableHead>
                     <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="w-[45px]">Días</TableHead>
                     <TableHead>Plazo</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Acciones</TableHead>
@@ -840,13 +841,13 @@ const PedidosContent = () => {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={12} className="text-center">
+                      <TableCell colSpan={13} className="text-center">
                         Cargando...
                       </TableCell>
                     </TableRow>
                   ) : filteredPedidos.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={12} className="text-center">
+                      <TableCell colSpan={13} className="text-center">
                         No hay pedidos registrados
                       </TableCell>
                     </TableRow>
@@ -874,6 +875,11 @@ const PedidosContent = () => {
                           {pedido.peso_total_kg ? `${Math.round(pedido.peso_total_kg).toLocaleString()} kg` : "—"}
                         </TableCell>
                         <TableCell className="text-right font-mono">{formatCurrency(pedido.total)}</TableCell>
+                        <TableCell>{(() => {
+                          const dias = Math.floor((Date.now() - new Date(pedido.fecha_pedido).getTime()) / 86400000);
+                          const color = dias < 7 ? "text-green-600" : dias <= 14 ? "text-amber-600" : "text-destructive";
+                          return <span className={`text-xs font-semibold ${color}`}>{dias}d</span>;
+                        })()}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {pedido.termino_credito ? ({ contado: "Contado", "8_dias": "8 días", "15_dias": "15 días", "30_dias": "30 días", "60_dias": "60 días" }[pedido.termino_credito] || pedido.termino_credito) : "—"}
                         </TableCell>
