@@ -66,7 +66,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const kgHeader = hasKg ? `<th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Kg</th>` : "";
 
     const emailHtml = `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0;font-family:Arial,Helvetica,sans-serif"><tr><td align="center"><table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;background:#fff;border-radius:4px;overflow:hidden;border:1px solid #e0e0e0">
-<tr><td style="padding:28px 36px;border-bottom:1px solid #eee"><table width="100%"><tr><td><img src="${LOGO}" alt="ALMASA" width="120" style="display:block;max-width:120px;height:auto"/></td><td style="text-align:right;vertical-align:bottom"><p style="margin:0;color:#444;font-size:12px;font-weight:600">Abarrotes la Manita SA de CV</p><p style="margin:2px 0 0;color:#999;font-size:11px;font-style:italic">Desde 1904</p></td></tr></table></td></tr>
+<tr><td style="padding:28px 36px;border-bottom:1px solid #eee;text-align:center"><p style="margin:0 0 4px;color:#999;font-size:11px;font-style:italic;letter-spacing:1px">Desde 1904</p><img src="${LOGO}" alt="ALMASA" width="180" style="display:inline-block;max-width:180px;height:auto"/></td></tr>
 <tr><td style="padding:28px 36px">
 <h2 style="margin:0 0 6px;font-size:18px;color:#222;font-weight:700">Pedido Confirmado</h2>
 <p style="margin:0 0 20px;color:#888;font-size:14px">${pedidoFolio}</p>
@@ -74,9 +74,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
 ${alertHtml}
 <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:20px 0"><thead><tr style="border-bottom:2px solid #C8102E"><th style="padding:8px 10px;text-align:left;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Producto</th><th style="padding:8px 10px;text-align:center;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Cant.</th>${kgHeader}<th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Precio</th><th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Importe</th></tr></thead><tbody>${rows}</tbody></table>
 <table width="100%" style="margin-top:8px"><tr><td style="border-top:2px solid #222;padding:12px 0"><table width="100%"><tr><td style="font-size:18px;font-weight:800;color:#222">Total</td><td style="text-align:right;font-size:18px;font-weight:800;color:#222">${fmt(total)}</td></tr></table></td></tr></table>
-<p style="color:#888;font-size:13px;margin:24px 0 0;line-height:1.5">Si tiene alguna pregunta sobre su pedido, no dude en contactarnos.</p>
+<p style="color:#555;font-size:13px;margin:24px 0 0;line-height:1.5;padding:10px 14px;background:#f0f9ff;border-left:3px solid #2563eb;border-radius:2px">Se le notificará vía correo electrónico cuando su pedido haya salido a ruta.</p>
+<p style="color:#888;font-size:13px;margin:16px 0 0;line-height:1.5">Si tiene alguna pregunta sobre su pedido, no dude en contactarnos.</p>
 </td></tr>
-<tr><td style="padding:20px 36px;border-top:1px solid #eee"><p style="margin:0 0 4px;color:#666;font-size:11px;font-weight:600">Departamento de Pedidos</p><p style="margin:0;color:#999;font-size:10px;line-height:1.6">Melchor Ocampo #59, Col. Magdalena Mixiuhca, C.P. 15850, CDMX<br>Tel: 55 5552-0168 / 55 5552-7887 &bull; 1904@almasa.com.mx</p><p style="margin:6px 0 0;color:#bbb;font-size:10px">Correo generado automaticamente. No responder.</p></td></tr>
+<tr><td style="padding:20px 36px;border-top:1px solid #eee"><p style="margin:0 0 4px;color:#666;font-size:11px;font-weight:600">Departamento de Pedidos</p><p style="margin:0;color:#999;font-size:10px;line-height:1.6">Melchor Ocampo #59, Col. Magdalena Mixiuhca, C.P. 15850, CDMX<br>Tel: 55 5552-0168 / 55 5552-7887 &bull; pedidos@almasa.com.mx</p><p style="margin:6px 0 0;color:#bbb;font-size:10px">Correo generado automaticamente. No responder.</p></td></tr>
 </table></td></tr></table>`;
 
     const raw = rawEmail(sender, clienteEmail, subj, emailHtml, pdfBase64, pdfFilename);

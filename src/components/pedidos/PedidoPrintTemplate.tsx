@@ -66,10 +66,10 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
           )}
         </div>
 
-        {/* Center: logo + desde 1904 */}
+        {/* Center: desde 1904 + logo */}
         <div className="text-center flex-1">
+          <p className="italic text-gray-500 mb-0.5" style={{ fontSize: "10px", letterSpacing: "1px" }}>Desde 1904</p>
           <img src="/logo-almasa-header.png" alt="ALMASA" className="h-14 w-auto object-contain mx-auto" />
-          <p className="italic text-gray-500 mt-0.5" style={{ fontSize: "10px", letterSpacing: "1px" }}>Desde 1904</p>
         </div>
 
         {/* Right: variante label + folio */}
@@ -86,19 +86,19 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
       {/* ══ DATOS CLIENTE ══ */}
       <div className="border border-gray-400 rounded mb-2">
         <div className="flex">
-          <div className="flex-1 px-3 py-2 border-r border-gray-300">
-            <div className="mb-1">
+          <div className="flex-1 px-3 py-2 border-r border-gray-300 flex flex-col justify-center">
+            <div className="flex items-center mb-1">
               <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Nombre:</span>
               <span className="ml-2 font-bold" style={{ fontSize: "15px" }}>{datos.cliente.nombre}</span>
             </div>
             {datos.sucursal?.nombre && (
-              <div className="mb-0.5">
+              <div className="flex items-center mb-0.5">
                 <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Sucursal:</span>
                 <span className="ml-2 font-semibold" style={{ fontSize: "12px" }}>{datos.sucursal.nombre}</span>
               </div>
             )}
-            <div>
-              <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Domicilio:</span>
+            <div className="flex items-center">
+              <span className="font-bold text-gray-500 uppercase flex-shrink-0" style={{ fontSize: "9px" }}>Domicilio:</span>
               <span className="ml-2" style={{ fontSize: "12px" }}>
                 {datos.sucursal?.direccion || dir || <span className="italic text-gray-400">Sin dirección</span>}
               </span>
@@ -115,21 +115,21 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
 
       {/* ══ BARRA RESUMEN ══ */}
       <div className={`grid ${showPrices ? "grid-cols-4" : "grid-cols-3"} gap-0 border border-gray-400 rounded mb-2`} style={{ fontSize: "11px" }}>
-        <div className="border-r border-gray-300 px-3 py-1.5">
+        <div className="border-r border-gray-300 px-3 py-1.5 flex items-center">
           <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Fecha:</span>
           <span className="ml-1 font-semibold">{datos.fecha}</span>
         </div>
         {showPrices && (
-          <div className="border-r border-gray-300 px-3 py-1.5">
+          <div className="border-r border-gray-300 px-3 py-1.5 flex items-center">
             <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Crédito:</span>
             <span className="ml-1 font-semibold">{datos.terminoCredito}</span>
           </div>
         )}
-        <div className="border-r border-gray-300 px-3 py-1.5">
+        <div className="border-r border-gray-300 px-3 py-1.5 flex items-center">
           <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Peso Total:</span>
           <span className="ml-1 font-semibold">{kgFmt(datos.pesoTotalKg)}</span>
         </div>
-        <div className="px-3 py-1.5">
+        <div className="px-3 py-1.5 flex items-center">
           <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Productos:</span>
           <span className="ml-1 font-semibold">{datos.productos.length}</span>
         </div>
@@ -154,21 +154,21 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
         </colgroup>
         <thead>
           <tr className="bg-gray-800 text-white" style={{ fontSize: "10px" }}>
-            <th className="p-1.5 text-center border border-gray-700">CANT.</th>
-            <th className="p-1.5 text-right border border-gray-700">PESO</th>
-            <th className="p-1.5 text-left border border-gray-700">DETALLE</th>
-            {showPrices && <th className="p-1.5 text-right border border-gray-700">PRECIO U.</th>}
-            {showPrices && <th className="p-1.5 text-right border border-gray-700">IMPORTE</th>}
+            <th className="p-1.5 text-center border border-gray-700" style={{ verticalAlign: "middle" }}>CANT.</th>
+            <th className="p-1.5 text-right border border-gray-700" style={{ verticalAlign: "middle" }}>PESO</th>
+            <th className="p-1.5 text-left border border-gray-700" style={{ verticalAlign: "middle" }}>DETALLE</th>
+            {showPrices && <th className="p-1.5 text-right border border-gray-700" style={{ verticalAlign: "middle" }}>PRECIO U.</th>}
+            {showPrices && <th className="p-1.5 text-right border border-gray-700" style={{ verticalAlign: "middle" }}>IMPORTE</th>}
           </tr>
         </thead>
         <tbody>
           {datos.productos.map((p, i) => (
             <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-              <td className="p-1.5 border border-gray-300 text-center font-semibold" style={{ fontSize: "11px" }}>{p.cantidad} {p.unidad.charAt(0).toUpperCase() + p.unidad.slice(1)}</td>
-              <td className="p-1.5 border border-gray-300 text-right" style={{ fontSize: "11px" }}>{p.pesoTotal ? `${p.pesoTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })} kg` : "—"}</td>
-              <td className="p-1.5 border border-gray-300" style={{ fontSize: "11px" }}>{p.descripcion}</td>
-              {showPrices && <td className="p-1.5 border border-gray-300 text-right" style={{ fontSize: "11px" }}>{$$(p.precioUnitario)}{p.precioPorKilo && <span style={{ fontSize: "9px" }}>/kg</span>}</td>}
-              {showPrices && <td className="p-1.5 border border-gray-300 text-right font-semibold" style={{ fontSize: "11px" }}>{$$(p.importe)}</td>}
+              <td className="p-1.5 border border-gray-300 text-center font-semibold" style={{ fontSize: "11px", verticalAlign: "middle" }}>{p.cantidad} {p.unidad.charAt(0).toUpperCase() + p.unidad.slice(1)}</td>
+              <td className="p-1.5 border border-gray-300 text-right" style={{ fontSize: "11px", verticalAlign: "middle" }}>{p.pesoTotal ? `${p.pesoTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })} kg` : "—"}</td>
+              <td className="p-1.5 border border-gray-300" style={{ fontSize: "11px", verticalAlign: "middle" }}>{p.descripcion}</td>
+              {showPrices && <td className="p-1.5 border border-gray-300 text-right" style={{ fontSize: "11px", verticalAlign: "middle" }}>{$$(p.precioUnitario)}{p.precioPorKilo && <span style={{ fontSize: "9px" }}>/kg</span>}</td>}
+              {showPrices && <td className="p-1.5 border border-gray-300 text-right font-semibold" style={{ fontSize: "11px", verticalAlign: "middle" }}>{$$(p.importe)}</td>}
             </tr>
           ))}
         </tbody>
