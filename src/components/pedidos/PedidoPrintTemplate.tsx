@@ -62,7 +62,7 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
   const b = COMPANY_DATA.datosBancarios;
 
   const varianteLabel = isOrig ? "NOTA DE VENTA" : isAlm ? "HOJA DE CARGA" : isConf ? "CONFIRMACIÓN" : "";
-  const showFecha = isAlm;
+  const showFecha = true;
 
   // Sizes: media carta for almacen, full letter for others
   const pageW = isAlm ? "8.5in" : "11in";
