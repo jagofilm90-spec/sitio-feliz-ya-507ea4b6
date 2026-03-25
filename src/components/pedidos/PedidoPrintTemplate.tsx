@@ -218,15 +218,30 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
         </div>
       )}
 
-      {/* ══ PESO TOTAL destacado — solo almacén ══ */}
-      {isAlm && (
-        <div className="flex justify-end mb-2">
-          <div className="bg-gray-100 border border-gray-400 rounded px-4 py-2 text-right flex items-center gap-2">
-            <span className="font-bold uppercase text-gray-500" style={{ fontSize: "10px" }}>Peso Total:</span>
-            <span className="font-bold" style={{ fontSize: "16px" }}>{kgFmt(datos.pesoTotalKg)}</span>
+      {/* ══ RESUMEN BULTOS + PESO TOTAL — solo almacén ══ */}
+      {isAlm && (() => {
+        const porUnidad: Record<string, number> = {};
+        datos.productos.forEach(p => {
+          const u = p.unidad.charAt(0).toUpperCase() + p.unidad.slice(1);
+          porUnidad[u] = (porUnidad[u] || 0) + p.cantidad;
+        });
+        const totalPiezas = Object.values(porUnidad).reduce((s, n) => s + n, 0);
+        const detalle = Object.entries(porUnidad).map(([u, c]) => `${c} ${u}`).join("  |  ");
+        return (
+          <div className="flex items-center justify-between mb-2 gap-4">
+            <div className="flex-1 border border-gray-400 rounded px-4 flex items-center gap-2" style={{ paddingTop: "6px", paddingBottom: "6px" }}>
+              <span className="font-bold uppercase text-gray-500" style={{ fontSize: "10px" }}>Total piezas:</span>
+              <span className="font-bold" style={{ fontSize: "14px" }}>{totalPiezas}</span>
+              <span className="text-gray-400 mx-1">—</span>
+              <span className="font-semibold text-gray-700" style={{ fontSize: "12px" }}>{detalle}</span>
+            </div>
+            <div className="bg-gray-100 border border-gray-400 rounded px-4 flex items-center gap-2" style={{ paddingTop: "6px", paddingBottom: "6px" }}>
+              <span className="font-bold uppercase text-gray-500" style={{ fontSize: "10px" }}>Peso Total:</span>
+              <span className="font-bold" style={{ fontSize: "16px" }}>{kgFmt(datos.pesoTotalKg)}</span>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ══ DATOS BANCARIOS — original y confirmación ══ */}
       {(isOrig || isConf) && (
