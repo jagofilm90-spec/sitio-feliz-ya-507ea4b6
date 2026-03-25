@@ -100,6 +100,7 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
         <div className="text-center flex-1">
           <p className="italic text-gray-500" style={{ fontSize: isAlm ? "8px" : "10px", letterSpacing: "1px", marginBottom: "0px" }}>Desde 1904</p>
           <img src="/logo-almasa-header.png" alt="ALMASA" className={`${logoH} w-auto object-contain mx-auto`} />
+          <p className="uppercase font-semibold text-gray-400" style={{ fontSize: isAlm ? "6px" : "8px", letterSpacing: "2px", marginTop: "0px" }}>Trabajando por un México mejor</p>
         </div>
         <div style={{ width: isAlm ? "140px" : "224px", flexShrink: 0, textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "center" }}>
           <p className="font-bold uppercase text-gray-500" style={{ fontSize: isAlm ? "8px" : "10px", letterSpacing: "0.5px", marginBottom: "2px" }}>

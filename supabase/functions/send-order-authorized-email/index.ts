@@ -66,7 +66,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const kgHeader = hasKg ? `<th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Kg</th>` : "";
 
     const emailHtml = `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0;font-family:Arial,Helvetica,sans-serif"><tr><td align="center"><table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;background:#fff;border-radius:4px;overflow:hidden;border:1px solid #e0e0e0">
-<tr><td style="padding:28px 36px;border-bottom:1px solid #eee;text-align:center"><p style="margin:0 0 4px;color:#999;font-size:11px;font-style:italic;letter-spacing:1px">Desde 1904</p><img src="${LOGO}" alt="ALMASA" width="180" style="display:inline-block;max-width:180px;height:auto"/></td></tr>
+<tr><td style="padding:28px 36px;border-bottom:1px solid #eee;text-align:center"><p style="margin:0 0 0;color:#999;font-size:11px;font-style:italic;letter-spacing:1px">Desde 1904</p><img src="${LOGO}" alt="ALMASA" width="180" style="display:inline-block;max-width:180px;height:auto"/><p style="margin:4px 0 0;font-size:10px;color:#888;text-transform:uppercase;letter-spacing:2px;font-weight:600">Trabajando por un México mejor</p></td></tr>
 <tr><td style="padding:28px 36px">
 <h2 style="margin:0 0 6px;font-size:18px;color:#222;font-weight:700">Pedido Confirmado</h2>
 <p style="margin:0 0 20px;color:#888;font-size:14px">${pedidoFolio}</p>
