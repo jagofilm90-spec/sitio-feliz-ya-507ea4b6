@@ -25,6 +25,18 @@ import { VendedorEnRutaTab } from "./VendedorEnRutaTab";
 import { EditarPedidoRechazadoDialog } from "./EditarPedidoRechazadoDialog";
 import { AlertCircle, Edit2 } from "lucide-react";
 
+interface PedidoDetalle {
+  id: string;
+  precio_unitario: number;
+  cantidad: number;
+  producto: {
+    nombre: string;
+    precio_venta: number;
+    descuento_maximo: number | null;
+    precio_por_kilo: boolean;
+  } | null;
+}
+
 interface Pedido {
   id: string;
   cliente_id: string;
@@ -39,6 +51,7 @@ interface Pedido {
   peso_total_kg: number | null;
   cliente: { nombre: string };
   sucursal?: { nombre: string; direccion?: string | null; zona?: { nombre: string } | null } | null;
+  pedidos_detalles?: PedidoDetalle[];
 }
 
 
@@ -145,10 +158,11 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
       const { data, error } = await supabase
         .from("pedidos")
         .select(`
-          id, folio, fecha_pedido, fecha_entrega_real, total, saldo_pendiente, 
+          id, folio, fecha_pedido, fecha_entrega_real, total, saldo_pendiente,
           status, termino_credito, pagado, peso_total_kg, cliente_id,
           cliente:clientes(nombre),
-          sucursal:cliente_sucursales(nombre, direccion, zona:zonas(nombre))
+          sucursal:cliente_sucursales(nombre, direccion, zona:zonas(nombre)),
+          pedidos_detalles(id, precio_unitario, cantidad, producto:producto_id(nombre, precio_venta, descuento_maximo, precio_por_kilo))
         `)
         .eq("vendedor_id", user.id)
         .neq("status", "cancelado")
@@ -246,6 +260,35 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
             )}
           </div>
         </div>
+        {(pedido.status === "por_autorizar" || pedido.status === "rechazado") && (() => {
+          const productosBajoMinimo = (pedido.pedidos_detalles || []).filter(d => {
+            if (!d.producto) return false;
+            const descuento = d.producto.precio_venta - d.precio_unitario;
+            return descuento > (d.producto.descuento_maximo || 0);
+          });
+          if (productosBajoMinimo.length === 0) return null;
+          return (
+            <div className="mb-3 border border-amber-300 dark:border-amber-700 rounded-lg p-2.5 bg-amber-50 dark:bg-amber-950/30">
+              <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-1.5">Productos con descuento solicitado:</p>
+              <div className="space-y-1">
+                {productosBajoMinimo.map(d => {
+                  const descuento = d.producto!.precio_venta - d.precio_unitario;
+                  return (
+                    <div key={d.id} className="flex items-start gap-1.5 text-xs">
+                      <AlertCircle className="h-3 w-3 text-amber-600 mt-0.5 shrink-0" />
+                      <span className="text-foreground">
+                        <span className="font-medium">{d.producto!.nombre}</span>
+                        <span className="text-muted-foreground"> — Lista: {formatCurrency(d.producto!.precio_venta)} → Solicitado: </span>
+                        <span className="font-semibold text-amber-700 dark:text-amber-300">{formatCurrency(d.precio_unitario)}</span>
+                        <span className="text-destructive font-medium"> (-{formatCurrency(descuento)})</span>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
         <div className="flex gap-2 pt-2 border-t flex-wrap">
           <Button variant="outline" size="sm" className="flex-1" onClick={() => abrirDetalle(pedido)}>
             <Eye className="h-3.5 w-3.5 mr-1" /> Ver
