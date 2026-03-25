@@ -3756,7 +3756,6 @@ export type Database = {
       }
       pedidos_detalles: {
         Row: {
-          autorizacion_status: string
           cantidad: number
           cantidad_original: number | null
           created_at: string
@@ -3768,7 +3767,6 @@ export type Database = {
           notas_ajuste: string | null
           pedido_id: string
           precio_ajustado_por: string | null
-          precio_autorizado: number | null
           precio_original: number | null
           precio_unitario: number
           producto_id: string
@@ -3776,7 +3774,6 @@ export type Database = {
           unidades_manual: number | null
         }
         Insert: {
-          autorizacion_status?: string
           cantidad: number
           cantidad_original?: number | null
           created_at?: string
@@ -3788,7 +3785,6 @@ export type Database = {
           notas_ajuste?: string | null
           pedido_id: string
           precio_ajustado_por?: string | null
-          precio_autorizado?: number | null
           precio_original?: number | null
           precio_unitario: number
           producto_id: string
@@ -3796,7 +3792,6 @@ export type Database = {
           unidades_manual?: number | null
         }
         Update: {
-          autorizacion_status?: string
           cantidad?: number
           cantidad_original?: number | null
           created_at?: string
@@ -3808,7 +3803,6 @@ export type Database = {
           notas_ajuste?: string | null
           pedido_id?: string
           precio_ajustado_por?: string | null
-          precio_autorizado?: number | null
           precio_original?: number | null
           precio_unitario?: number
           producto_id?: string
@@ -6261,7 +6255,6 @@ export type Database = {
       order_status:
         | "borrador"
         | "por_autorizar"
-        | "por_confirmar_vendedor"
         | "pendiente"
         | "en_ruta"
         | "entregado"
@@ -6450,7 +6443,6 @@ export const Constants = {
       order_status: [
         "borrador",
         "por_autorizar",
-        "por_confirmar_vendedor",
         "pendiente",
         "en_ruta",
         "entregado",
