@@ -66,7 +66,7 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
 
   // Sizes: media carta for almacen, full letter for others
   const pageW = isAlm ? "8.5in" : "11in";
-  const pageMinH = isAlm ? "5.5in" : "8.5in";
+  const pageMinH = isAlm ? "6.5in" : "8.5in";
   const baseFontSize = isAlm ? "9px" : "11px";
   const logoH = isAlm ? "h-10" : "h-14";
   const qrSize = isAlm ? 70 : 90;
@@ -98,7 +98,7 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
           )}
         </div>
         <div className="text-center flex-1">
-          <p className="italic text-gray-500" style={{ fontSize: isAlm ? "8px" : "10px", letterSpacing: "1px", marginBottom: "2px" }}>Desde 1904</p>
+          <p className="italic text-gray-500" style={{ fontSize: isAlm ? "8px" : "10px", letterSpacing: "1px", marginBottom: "0px" }}>Desde 1904</p>
           <img src="/logo-almasa-header.png" alt="ALMASA" className={`${logoH} w-auto object-contain mx-auto`} />
         </div>
         <div style={{ width: isAlm ? "140px" : "224px", flexShrink: 0, textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "center" }}>
@@ -249,7 +249,7 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
               <tr>
                 <td className="border border-gray-400" style={{ padding: bultosPad }}>
                   <span className="font-bold uppercase text-gray-500" style={{ fontSize: isAlm ? "9px" : "10px" }}>Total piezas: </span>
-                  <span className="font-bold" style={{ fontSize: isAlm ? "12px" : "14px" }}>{totalPiezas}</span>
+                  <span className="font-semibold text-gray-700" style={{ fontSize: isAlm ? "10px" : "12px" }}>{totalPiezas}</span>
                   <span className="text-gray-400" style={{ margin: "0 6px" }}>—</span>
                   <span className="font-semibold text-gray-700" style={{ fontSize: isAlm ? "10px" : "12px" }}>{detalle}</span>
                 </td>

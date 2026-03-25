@@ -50,8 +50,8 @@ export async function generarNotaInternaPDF(datos: DatosPedidoPrint): Promise<{ 
   const c1 = await renderToCanvas(el("original", datos), "11in");
   addPage(pdf, c1);
 
-  // Page 2: Hoja de carga — media carta landscape (215.9 x 139.7 mm)
-  pdf.addPage([215.9, 139.7], "landscape");
+  // Page 2: Hoja de carga — media carta landscape (215.9 x 177.8 mm = 8.5 x 7 in)
+  pdf.addPage([215.9, 177.8], "landscape");
   const c2 = await renderToCanvas(el("almacen", datos), "8.5in");
   addPage(pdf, c2);
 
