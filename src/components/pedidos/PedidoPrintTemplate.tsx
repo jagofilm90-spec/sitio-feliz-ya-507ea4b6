@@ -98,9 +98,9 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
           )}
         </div>
         <div className="text-center flex-1">
-          <p className="italic text-gray-500" style={{ fontSize: isAlm ? "8px" : "10px", letterSpacing: "1px", marginBottom: "0px" }}>Desde 1904</p>
+          <p className="italic text-gray-500" style={{ fontSize: "10px", letterSpacing: "1px", marginBottom: "0px" }}>Desde 1904</p>
           <img src="/logo-almasa-header.png" alt="ALMASA" className={`${logoH} w-auto object-contain mx-auto`} />
-          <p className="uppercase font-semibold text-gray-400" style={{ fontSize: isAlm ? "6px" : "8px", letterSpacing: "2px", marginTop: "0px" }}>Trabajando por un México mejor</p>
+          <p className="uppercase font-semibold text-gray-400" style={{ fontSize: "8px", letterSpacing: "2px", marginTop: "0px" }}>Trabajando por un México mejor</p>
         </div>
         <div style={{ width: isAlm ? "140px" : "224px", flexShrink: 0, textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "center" }}>
           <p className="font-bold uppercase text-gray-500" style={{ fontSize: isAlm ? "8px" : "10px", letterSpacing: "0.5px", marginBottom: "2px" }}>
@@ -184,26 +184,26 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
       <table className="w-full border-collapse" style={{ tableLayout: "fixed", marginBottom: "6px" }}>
         <colgroup>
           {isAlm ? (
-            <><col style={{ width: "14%" }} /><col style={{ width: "16%" }} /><col style={{ width: "70%" }} /></>
+            <><col style={{ width: "14%" }} /><col style={{ width: "70%" }} /><col style={{ width: "16%" }} /></>
           ) : (
-            <><col style={{ width: "10%" }} /><col style={{ width: "12%" }} /><col style={{ width: "42%" }} /><col style={{ width: "16%" }} /><col style={{ width: "20%" }} /></>
+            <><col style={{ width: "10%" }} /><col style={{ width: "42%" }} /><col style={{ width: "12%" }} /><col style={{ width: "16%" }} /><col style={{ width: "20%" }} /></>
           )}
         </colgroup>
         <thead>
           <tr className="bg-gray-800 text-white" style={{ fontSize: thFontSize }}>
-            <th className="text-center border border-gray-700" style={{ padding: thTdPad }}>CANT.</th>
-            <th className="text-right border border-gray-700" style={{ padding: thTdPad }}>PESO</th>
-            <th className="text-left border border-gray-700" style={{ padding: thTdPad }}>DETALLE</th>
-            {showPrices && <th className="text-right border border-gray-700" style={{ padding: thTdPad }}>PRECIO U.</th>}
-            {showPrices && <th className="text-right border border-gray-700" style={{ padding: thTdPad }}>IMPORTE</th>}
+            <th className="text-center border border-gray-700" style={{ padding: thTdPad }}>CANTIDAD</th>
+            <th className="text-center border border-gray-700" style={{ padding: thTdPad }}>DETALLE</th>
+            <th className="text-center border border-gray-700" style={{ padding: thTdPad }}>PESO</th>
+            {showPrices && <th className="text-center border border-gray-700" style={{ padding: thTdPad }}>PRECIO U.</th>}
+            {showPrices && <th className="text-center border border-gray-700" style={{ padding: thTdPad }}>IMPORTE</th>}
           </tr>
         </thead>
         <tbody>
           {datos.productos.map((p, i) => (
             <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
               <td className="border border-gray-300 text-center font-semibold" style={{ fontSize: prodFontSize, padding: thTdPad }}>{p.cantidad} {p.unidad.charAt(0).toUpperCase() + p.unidad.slice(1)}</td>
-              <td className="border border-gray-300 text-right" style={{ fontSize: prodFontSize, padding: thTdPad }}>{p.pesoTotal ? `${p.pesoTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })} kg` : "—"}</td>
               <td className="border border-gray-300" style={{ fontSize: prodFontSize, padding: thTdPad }}>{p.descripcion}</td>
+              <td className="border border-gray-300 text-right" style={{ fontSize: prodFontSize, padding: thTdPad }}>{p.pesoTotal ? `${p.pesoTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })} kg` : "—"}</td>
               {showPrices && <td className="border border-gray-300 text-right" style={{ fontSize: prodFontSize, padding: thTdPad }}>{$$(p.precioUnitario)}{p.precioPorKilo && <span style={{ fontSize: "9px" }}>/kg</span>}</td>}
               {showPrices && <td className="border border-gray-300 text-right font-semibold" style={{ fontSize: prodFontSize, padding: thTdPad }}>{$$(p.importe)}</td>}
             </tr>

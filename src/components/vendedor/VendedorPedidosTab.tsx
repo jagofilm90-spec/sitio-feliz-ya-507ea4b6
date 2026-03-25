@@ -481,15 +481,14 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[110px]">Pedido</TableHead>
+                    <TableHead className="w-[90px]">Pedido</TableHead>
                     <TableHead>Cliente</TableHead>
-                    <TableHead className="w-[90px]">Fecha</TableHead>
-                    <TableHead>Dirección</TableHead>
-                    <TableHead className="w-[70px]">Peso</TableHead>
-                    <TableHead className="w-[80px]">Crédito</TableHead>
-                    <TableHead className="text-right w-[100px]">Total</TableHead>
-                    <TableHead className="text-center w-[50px]">Ver</TableHead>
-                    <TableHead className="text-center w-[50px]">PDF</TableHead>
+                    <TableHead className="w-[80px]">Fecha</TableHead>
+                    <TableHead className="w-[60px]">Peso</TableHead>
+                    <TableHead className="w-[65px]">Crédito</TableHead>
+                    <TableHead className="text-right w-[90px]">Total</TableHead>
+                    <TableHead className="text-center w-[40px]"></TableHead>
+                    <TableHead className="text-center w-[40px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -510,17 +509,12 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                           <span className="text-sm">{p.cliente.nombre}</span>
                         </TableCell>
                         <TableCell>
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(p.fecha_pedido), "d MMM yy", { locale: es })}
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            {format(new Date(p.fecha_pedido), "dd/MM/yy")}
                           </span>
                         </TableCell>
                         <TableCell>
-                          <span className="text-xs text-muted-foreground truncate max-w-[150px] block">
-                            {(p.sucursal as any)?.direccion || "—"}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-xs font-mono text-muted-foreground">{p.peso_total_kg && p.peso_total_kg > 0 ? `${Math.round(p.peso_total_kg)} kg` : "—"}</span>
+                          <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">{p.peso_total_kg && p.peso_total_kg > 0 ? `${Math.round(p.peso_total_kg)} kg` : "—"}</span>
                         </TableCell>
                         <TableCell>
                           <span className="text-xs">{creditoLabels[p.termino_credito] || p.termino_credito}</span>
