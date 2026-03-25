@@ -578,3 +578,63 @@ Para ver datos reales: Supabase Dashboard → Table Editor → seleccionar tabla
 | `src/utils/recepcionPdfGenerator.ts` | 850 | Generador PDF recepción |
 | `supabase/functions/send-push-notification/index.ts` | 297 | FCM push |
 | `supabase/functions/resumen-diario/index.ts` | ~270 | Resumen del día |
+
+---
+
+## 11. FLUJO OPERATIVO COMPLETO — PEDIDOS A ENTREGA
+
+### 11.1 Al autorizar pedido
+- Email al cliente: confirmación con precios, total, aviso "puede variar"
+- Email a pedidos@: notificación + PDF adjunto de 2 hojas:
+  - Hoja 1: Nota de venta (Original) — precios, total, pagaré, firma
+  - Hoja 2: Hoja de carga — sin precios, con QR grande para escanear
+
+### 11.2 Armado de rutas (dueño + vendedores)
+- Dueño tiene pedidos impresos en folders por vendedor
+- Vendedores proponen sus rutas (por zona geográfica)
+- Dueño valida, calcula peso, define tipo de unidad (camioneta/tortón/rabón)
+- Puede mezclar pedidos de diferentes vendedores + pedidos de la casa si van a la misma zona
+- Cuando tiene la primera tanda, llama a almacén para empezar a cargar
+
+### 11.3 Almacén recibe rutas
+- Gerente de almacén decide: qué unidad, qué chofer, qué ayudantes
+- Reparte las hojas a los almacenistas: "tú cargas esta, tú esta"
+- Almacenista escanea QR con tablet → se abre hoja de carga digital
+- Primero selecciona: chofer, ayudantes, número de unidad
+- Chofer ve los pedidos y decide orden de entrega
+- Almacenista carga en orden INVERSO (si entrega 1,2,3 → carga 3,2,1)
+- Marca checkbox por cada producto, puede editar peso real de báscula
+- Si hay diferencia de peso o cantidad, el sistema registra la modificación
+- Inventario se descuenta en tiempo real de la bodega correcta (detectada por WiFi/GPS)
+
+### 11.4 Al confirmar carga
+- Sistema identifica pedidos modificados
+- Si hubo modificaciones: "Hay 2 pedidos modificados, ¿deseas reimprimir?" → solo se reimprimen los modificados
+- Todos los pedidos llevan: fecha del día, almacenista, chofer, ayudantes, unidad, hora de salida
+- Email automático a clientes: "Tu pedido va en camino"
+  - Si hubo modificaciones: se envía pedido recalculado
+  - Si no: solo aviso de que va en camino
+
+### 11.5 Entrega
+- Chofer lleva notas impresas (Original + Copia cliente)
+- Cliente firma la Original, se queda con la Copia
+- Si hay inconformidad (devolución, peso, faltante), cliente lo anota en la nota
+
+### 11.6 Post-entrega (secretarias)
+- Sección "Pedidos pendientes" agrupados por ruta
+- Si hubo modificaciones en almacén, ya se reflejan
+- Al día siguiente: si cliente reportó inconformidad, secretaria ajusta en el sistema
+- Si se modifica: se envía nota final recalculada al cliente
+- Si no hay cambios: secretaria cierra pedido y envía nota final con plazo de crédito y fecha de vencimiento
+- Vendedor recibe ajuste en su sistema para tener el pedido final
+
+### 11.7 Historial de modificaciones
+- Cada modificación registra: quién, cuándo, qué cambió, en qué etapa
+- Etapas: almacén (carga), entrega (chofer), post-entrega (secretaria)
+
+### 11.8 Bodegas
+- 2 bodegas: Bodega 1 y Bodega 2
+- Detección automática por WiFi (prioridad) → GPS (fallback) → Manual
+- Inventario separado por bodega (lotes con bodega_id)
+- Al cargar, se descuenta del stock de la bodega donde está la tablet
+- Una misma ruta puede tener productos de ambas bodegas
