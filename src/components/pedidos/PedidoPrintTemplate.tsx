@@ -53,9 +53,6 @@ const formatFecha = (raw: string): string => {
   }
 };
 
-// Shared cell style for vertical centering
-const vcell: React.CSSProperties = { verticalAlign: "middle" };
-
 export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) => {
   const dir = datos.sucursal?.direccion || datos.direccionEntrega || datos.cliente.direccionFiscal || "";
   const isAlm = variante === "almacen";
@@ -68,8 +65,6 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
 
   // Fecha solo en hoja de carga
   const showFecha = isAlm;
-  // Columnas de barra resumen: almacén muestra fecha; original/confirmación no
-  const barCols = showFecha ? 3 : (showPrices ? 3 : 2);
 
   return (
     <div className="p-5 bg-white text-black w-[11in] min-h-[8.5in] mx-auto font-sans flex flex-col" style={{ fontSize: "11px" }}>
@@ -103,58 +98,64 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
       </div>
 
       {/* ══ DATOS CLIENTE ══ */}
-      <div className="border border-gray-400 rounded mb-2">
-        <div className="flex" style={{ minHeight: "56px" }}>
-          <div className="flex-1 px-3 border-r border-gray-300 flex flex-col justify-center" style={{ paddingTop: "8px", paddingBottom: "8px" }}>
-            <div className="flex items-center mb-1">
-              <span className="font-bold text-gray-500 uppercase flex-shrink-0" style={{ fontSize: "9px" }}>Nombre:</span>
-              <span className="ml-2 font-bold" style={{ fontSize: "15px" }}>{datos.cliente.nombre}</span>
-            </div>
-            {datos.sucursal?.nombre && (
-              <div className="flex items-center mb-0.5">
-                <span className="font-bold text-gray-500 uppercase flex-shrink-0" style={{ fontSize: "9px" }}>Sucursal:</span>
-                <span className="ml-2 font-semibold" style={{ fontSize: "12px" }}>{datos.sucursal.nombre}</span>
+      <table className="w-full border border-gray-400 rounded mb-2 border-collapse" style={{ fontSize: "11px" }}>
+        <tbody>
+          <tr>
+            <td className="border-r border-gray-300" style={{ padding: "10px 12px", verticalAlign: "middle" }}>
+              <div style={{ marginBottom: "4px" }}>
+                <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Nombre:</span>
+                <span className="ml-2 font-bold" style={{ fontSize: "15px" }}>{datos.cliente.nombre}</span>
               </div>
-            )}
-            <div className="flex items-center">
-              <span className="font-bold text-gray-500 uppercase flex-shrink-0" style={{ fontSize: "9px" }}>Domicilio:</span>
-              <span className="ml-2" style={{ fontSize: "12px" }}>
-                {datos.sucursal?.direccion || dir || <span className="italic text-gray-400">Sin dirección</span>}
-              </span>
-            </div>
-          </div>
-          <div className="w-44 px-3 flex flex-col items-center justify-center" style={{ paddingTop: "8px", paddingBottom: "8px" }}>
-            <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "8px" }}>Vendedor</span>
-            <div className="border-2 border-gray-400 rounded px-3 py-1 mt-1 text-center w-full">
-              <p className="font-black" style={{ fontSize: "12px" }}>{datos.vendedor}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+              {datos.sucursal?.nombre && (
+                <div style={{ marginBottom: "2px" }}>
+                  <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Sucursal:</span>
+                  <span className="ml-2 font-semibold" style={{ fontSize: "12px" }}>{datos.sucursal.nombre}</span>
+                </div>
+              )}
+              <div>
+                <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Domicilio:</span>
+                <span className="ml-2" style={{ fontSize: "12px" }}>
+                  {datos.sucursal?.direccion || dir || <span className="italic text-gray-400">Sin dirección</span>}
+                </span>
+              </div>
+            </td>
+            <td style={{ padding: "10px 12px", verticalAlign: "middle", width: "176px", textAlign: "center" }}>
+              <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "8px" }}>Vendedor</span>
+              <div className="border-2 border-gray-400 rounded" style={{ padding: "4px 12px", marginTop: "4px" }}>
+                <p className="font-black" style={{ fontSize: "12px" }}>{datos.vendedor}</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       {/* ══ BARRA RESUMEN ══ */}
-      <div className={`grid grid-cols-${barCols} gap-0 border border-gray-400 rounded mb-2`} style={{ fontSize: "11px", minHeight: "36px" }}>
-        {showFecha && (
-          <div className="border-r border-gray-300 px-3 flex items-center" style={{ paddingTop: "6px", paddingBottom: "6px" }}>
-            <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Fecha:</span>
-            <span className="ml-1 font-semibold">{formatFecha(datos.fecha)}</span>
-          </div>
-        )}
-        {showPrices && (
-          <div className="border-r border-gray-300 px-3 flex items-center" style={{ paddingTop: "6px", paddingBottom: "6px" }}>
-            <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Crédito:</span>
-            <span className="ml-1 font-semibold">{datos.terminoCredito}</span>
-          </div>
-        )}
-        <div className="border-r border-gray-300 px-3 flex items-center" style={{ paddingTop: "6px", paddingBottom: "6px" }}>
-          <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Peso Total:</span>
-          <span className="ml-1 font-semibold">{kgFmt(datos.pesoTotalKg)}</span>
-        </div>
-        <div className="px-3 flex items-center" style={{ paddingTop: "6px", paddingBottom: "6px" }}>
-          <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Productos:</span>
-          <span className="ml-1 font-semibold">{datos.productos.length}</span>
-        </div>
-      </div>
+      <table className="w-full border border-gray-400 rounded mb-2 border-collapse" style={{ fontSize: "11px" }}>
+        <tbody>
+          <tr>
+            {showFecha && (
+              <td className="border-r border-gray-300" style={{ padding: "10px 12px", verticalAlign: "middle" }}>
+                <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Fecha:</span>
+                <span className="ml-1 font-semibold">{formatFecha(datos.fecha)}</span>
+              </td>
+            )}
+            {showPrices && (
+              <td className="border-r border-gray-300" style={{ padding: "10px 12px", verticalAlign: "middle" }}>
+                <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Crédito:</span>
+                <span className="ml-1 font-semibold">{datos.terminoCredito}</span>
+              </td>
+            )}
+            <td className="border-r border-gray-300" style={{ padding: "10px 12px", verticalAlign: "middle" }}>
+              <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Peso Total:</span>
+              <span className="ml-1 font-semibold">{kgFmt(datos.pesoTotalKg)}</span>
+            </td>
+            <td style={{ padding: "10px 12px", verticalAlign: "middle" }}>
+              <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Productos:</span>
+              <span className="ml-1 font-semibold">{datos.productos.length}</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       {/* ══ CONFIRMACIÓN: título ══ */}
       {isConf && (
@@ -175,21 +176,21 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
         </colgroup>
         <thead>
           <tr className="bg-gray-800 text-white" style={{ fontSize: "10px" }}>
-            <th className="px-2 text-center border border-gray-700" style={{ ...vcell, paddingTop: "6px", paddingBottom: "6px" }}>CANT.</th>
-            <th className="px-2 text-right border border-gray-700" style={{ ...vcell, paddingTop: "6px", paddingBottom: "6px" }}>PESO</th>
-            <th className="px-2 text-left border border-gray-700" style={{ ...vcell, paddingTop: "6px", paddingBottom: "6px" }}>DETALLE</th>
-            {showPrices && <th className="px-2 text-right border border-gray-700" style={{ ...vcell, paddingTop: "6px", paddingBottom: "6px" }}>PRECIO U.</th>}
-            {showPrices && <th className="px-2 text-right border border-gray-700" style={{ ...vcell, paddingTop: "6px", paddingBottom: "6px" }}>IMPORTE</th>}
+            <th className="text-center border border-gray-700" style={{ padding: "8px 6px", verticalAlign: "middle" }}>CANT.</th>
+            <th className="text-right border border-gray-700" style={{ padding: "8px 6px", verticalAlign: "middle" }}>PESO</th>
+            <th className="text-left border border-gray-700" style={{ padding: "8px 6px", verticalAlign: "middle" }}>DETALLE</th>
+            {showPrices && <th className="text-right border border-gray-700" style={{ padding: "8px 6px", verticalAlign: "middle" }}>PRECIO U.</th>}
+            {showPrices && <th className="text-right border border-gray-700" style={{ padding: "8px 6px", verticalAlign: "middle" }}>IMPORTE</th>}
           </tr>
         </thead>
         <tbody>
           {datos.productos.map((p, i) => (
             <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-              <td className="px-2 border border-gray-300 text-center font-semibold" style={{ fontSize: "11px", ...vcell, paddingTop: "5px", paddingBottom: "5px" }}>{p.cantidad} {p.unidad.charAt(0).toUpperCase() + p.unidad.slice(1)}</td>
-              <td className="px-2 border border-gray-300 text-right" style={{ fontSize: "11px", ...vcell, paddingTop: "5px", paddingBottom: "5px" }}>{p.pesoTotal ? `${p.pesoTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })} kg` : "—"}</td>
-              <td className="px-2 border border-gray-300" style={{ fontSize: "11px", ...vcell, paddingTop: "5px", paddingBottom: "5px" }}>{p.descripcion}</td>
-              {showPrices && <td className="px-2 border border-gray-300 text-right" style={{ fontSize: "11px", ...vcell, paddingTop: "5px", paddingBottom: "5px" }}>{$$(p.precioUnitario)}{p.precioPorKilo && <span style={{ fontSize: "9px" }}>/kg</span>}</td>}
-              {showPrices && <td className="px-2 border border-gray-300 text-right font-semibold" style={{ fontSize: "11px", ...vcell, paddingTop: "5px", paddingBottom: "5px" }}>{$$(p.importe)}</td>}
+              <td className="border border-gray-300 text-center font-semibold" style={{ fontSize: "11px", padding: "8px 6px", verticalAlign: "middle" }}>{p.cantidad} {p.unidad.charAt(0).toUpperCase() + p.unidad.slice(1)}</td>
+              <td className="border border-gray-300 text-right" style={{ fontSize: "11px", padding: "8px 6px", verticalAlign: "middle" }}>{p.pesoTotal ? `${p.pesoTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })} kg` : "—"}</td>
+              <td className="border border-gray-300" style={{ fontSize: "11px", padding: "8px 6px", verticalAlign: "middle" }}>{p.descripcion}</td>
+              {showPrices && <td className="border border-gray-300 text-right" style={{ fontSize: "11px", padding: "8px 6px", verticalAlign: "middle" }}>{$$(p.precioUnitario)}{p.precioPorKilo && <span style={{ fontSize: "9px" }}>/kg</span>}</td>}
+              {showPrices && <td className="border border-gray-300 text-right font-semibold" style={{ fontSize: "11px", padding: "8px 6px", verticalAlign: "middle" }}>{$$(p.importe)}</td>}
             </tr>
           ))}
         </tbody>
@@ -208,11 +209,11 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
           </div>
           <table className="border-collapse" style={{ fontSize: "11px", width: "240px" }}>
             <tbody>
-              {datos.pesoTotalKg > 0 && <tr><td className="p-1 font-semibold text-right border border-gray-300" style={vcell}>Peso Total:</td><td className="p-1 text-right border border-gray-300 font-mono" style={vcell}>{kgFmt(datos.pesoTotalKg)}</td></tr>}
-              <tr><td className="p-1 font-semibold text-right border border-gray-300" style={vcell}>Subtotal:</td><td className="p-1 text-right border border-gray-300 font-mono" style={vcell}>{$$(datos.subtotal)}</td></tr>
-              <tr><td className="p-1 font-semibold text-right border border-gray-300" style={vcell}>IVA (16%):</td><td className="p-1 text-right border border-gray-300 font-mono" style={vcell}>{$$(datos.iva)}</td></tr>
-              {datos.ieps > 0 && <tr><td className="p-1 font-semibold text-right border border-gray-300" style={vcell}>IEPS (8%):</td><td className="p-1 text-right border border-gray-300 font-mono" style={vcell}>{$$(datos.ieps)}</td></tr>}
-              <tr className="bg-black text-white"><td className="p-1.5 font-bold text-right" style={vcell}>TOTAL:</td><td className="p-1.5 text-right font-bold font-mono" style={{ fontSize: "14px", ...vcell }}>{$$(datos.total)}</td></tr>
+              {datos.pesoTotalKg > 0 && <tr><td className="font-semibold text-right border border-gray-300" style={{ padding: "6px 8px", verticalAlign: "middle" }}>Peso Total:</td><td className="text-right border border-gray-300 font-mono" style={{ padding: "6px 8px", verticalAlign: "middle" }}>{kgFmt(datos.pesoTotalKg)}</td></tr>}
+              <tr><td className="font-semibold text-right border border-gray-300" style={{ padding: "6px 8px", verticalAlign: "middle" }}>Subtotal:</td><td className="text-right border border-gray-300 font-mono" style={{ padding: "6px 8px", verticalAlign: "middle" }}>{$$(datos.subtotal)}</td></tr>
+              <tr><td className="font-semibold text-right border border-gray-300" style={{ padding: "6px 8px", verticalAlign: "middle" }}>IVA (16%):</td><td className="text-right border border-gray-300 font-mono" style={{ padding: "6px 8px", verticalAlign: "middle" }}>{$$(datos.iva)}</td></tr>
+              {datos.ieps > 0 && <tr><td className="font-semibold text-right border border-gray-300" style={{ padding: "6px 8px", verticalAlign: "middle" }}>IEPS (8%):</td><td className="text-right border border-gray-300 font-mono" style={{ padding: "6px 8px", verticalAlign: "middle" }}>{$$(datos.ieps)}</td></tr>}
+              <tr className="bg-black text-white"><td className="font-bold text-right" style={{ padding: "8px", verticalAlign: "middle" }}>TOTAL:</td><td className="text-right font-bold font-mono" style={{ fontSize: "14px", padding: "8px", verticalAlign: "middle" }}>{$$(datos.total)}</td></tr>
             </tbody>
           </table>
         </div>
@@ -228,18 +229,22 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
         const totalPiezas = Object.values(porUnidad).reduce((s, n) => s + n, 0);
         const detalle = Object.entries(porUnidad).map(([u, c]) => `${c} ${u}`).join("  |  ");
         return (
-          <div className="flex items-center justify-between mb-2 gap-4">
-            <div className="flex-1 border border-gray-400 rounded px-4 flex items-center gap-2" style={{ paddingTop: "6px", paddingBottom: "6px" }}>
-              <span className="font-bold uppercase text-gray-500" style={{ fontSize: "10px" }}>Total piezas:</span>
-              <span className="font-bold" style={{ fontSize: "14px" }}>{totalPiezas}</span>
-              <span className="text-gray-400 mx-1">—</span>
-              <span className="font-semibold text-gray-700" style={{ fontSize: "12px" }}>{detalle}</span>
-            </div>
-            <div className="bg-gray-100 border border-gray-400 rounded px-4 flex items-center gap-2" style={{ paddingTop: "6px", paddingBottom: "6px" }}>
-              <span className="font-bold uppercase text-gray-500" style={{ fontSize: "10px" }}>Peso Total:</span>
-              <span className="font-bold" style={{ fontSize: "16px" }}>{kgFmt(datos.pesoTotalKg)}</span>
-            </div>
-          </div>
+          <table className="w-full mb-2 border-collapse">
+            <tbody>
+              <tr>
+                <td className="border border-gray-400 rounded" style={{ padding: "10px 16px", verticalAlign: "middle" }}>
+                  <span className="font-bold uppercase text-gray-500" style={{ fontSize: "10px" }}>Total piezas: </span>
+                  <span className="font-bold" style={{ fontSize: "14px" }}>{totalPiezas}</span>
+                  <span className="text-gray-400" style={{ margin: "0 6px" }}>—</span>
+                  <span className="font-semibold text-gray-700" style={{ fontSize: "12px" }}>{detalle}</span>
+                </td>
+                <td className="bg-gray-100 border border-gray-400 rounded text-right" style={{ padding: "10px 16px", verticalAlign: "middle", width: "220px" }}>
+                  <span className="font-bold uppercase text-gray-500" style={{ fontSize: "10px" }}>Peso Total: </span>
+                  <span className="font-bold" style={{ fontSize: "16px" }}>{kgFmt(datos.pesoTotalKg)}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         );
       })()}
 
