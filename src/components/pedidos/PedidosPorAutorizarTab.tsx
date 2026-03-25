@@ -113,6 +113,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
   const [expandedHistorial, setExpandedHistorial] = useState<string | null>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [selectedMobileIndex, setSelectedMobileIndex] = useState(0);
+  const [productDecisions, setProductDecisions] = useState<Record<string, 'aprobado' | 'precio_modificado' | 'rechazado'>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
@@ -235,209 +236,221 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
   const authorizeMutation = useMutation({
     mutationFn: async (pedidoId: string) => {
       if (!selectedPedido) throw new Error("No hay pedido seleccionado");
-      
-      // Track which prices were changed
-      const preciosOriginales: Record<string, number> = {};
-      selectedPedido.pedidos_detalles.forEach(d => {
-        preciosOriginales[d.id] = d.precio_unitario;
-      });
 
-      let ajustesPrecio = 0;
-      
-      // Update prices if edited
-      if (Object.keys(editingPrices).length > 0) {
-        for (const [detalleId, newPrice] of Object.entries(editingPrices)) {
-          const detalle = selectedPedido.pedidos_detalles.find(d => d.id === detalleId);
-          if (detalle && newPrice !== detalle.precio_unitario) {
-            ajustesPrecio++;
-            const newSubtotal = detalle.cantidad * newPrice;
-            await supabase
-              .from("pedidos_detalles")
-              .update({ 
-                precio_unitario: newPrice,
-                subtotal: newSubtotal 
-              })
-              .eq("id", detalleId);
-          }
-        }
-        
-        // Recalculate total
-        const { data: detalles } = await supabase
-          .from("pedidos_detalles")
-          .select("subtotal")
-          .eq("pedido_id", pedidoId);
-        
-        const newTotal = detalles?.reduce((sum, d) => sum + d.subtotal, 0) || 0;
-        const pesoTotal = calcularPesoTotalPedido(selectedPedido.pedidos_detalles);
-        
-        await supabase
-          .from("pedidos")
-          .update({ total: newTotal, status: "pendiente", peso_total_kg: pesoTotal > 0 ? pesoTotal : null })
-          .eq("id", pedidoId);
-      } else {
-        const pesoTotal = calcularPesoTotalPedido(selectedPedido.pedidos_detalles);
-        await supabase
-          .from("pedidos")
-          .update({ status: "pendiente", peso_total_kg: pesoTotal > 0 ? pesoTotal : null })
-          .eq("id", pedidoId);
+      // 1. Process per-product decisions
+      const aprobados: typeof selectedPedido.pedidos_detalles = [];
+      const modificados: typeof selectedPedido.pedidos_detalles = [];
+      const rechazados: typeof selectedPedido.pedidos_detalles = [];
+
+      for (const d of selectedPedido.pedidos_detalles) {
+        const decision = productDecisions[d.id] || 'aprobado';
+        if (decision === 'rechazado') rechazados.push(d);
+        else if (decision === 'precio_modificado') modificados.push(d);
+        else aprobados.push(d);
       }
 
-      // Send notification email to client if email exists
-      const clienteEmail = selectedPedido.clientes?.email;
-      if (clienteEmail) {
-        try {
-          const detallesEmail = selectedPedido.pedidos_detalles.map(d => {
-            const precioOriginal = preciosOriginales[d.id];
-            const precioNuevo = editingPrices[d.id] ?? d.precio_unitario;
-            const fueAjustado = precioNuevo !== precioOriginal;
-            const pesoKg = d.productos?.peso_kg || 0;
-            const precioPorKilo = d.productos?.precio_por_kilo || false;
-            const kgTotales = pesoKg > 0 ? d.cantidad * pesoKg : null;
-            const subtotal = precioPorKilo && kgTotales ? kgTotales * precioNuevo : d.cantidad * precioNuevo;
-            return {
-              producto: d.productos?.nombre || "Producto",
-              cantidad: d.cantidad,
-              unidad: d.productos?.unidad || "pza",
-              precioUnitario: precioNuevo,
-              subtotal,
-              precioAnterior: fueAjustado ? precioOriginal : undefined,
-              fueAjustado,
-              kgTotales,
-              precioPorKilo,
-            };
-          });
+      // Delete rejected products
+      if (rechazados.length > 0) {
+        await supabase
+          .from("pedidos_detalles")
+          .delete()
+          .in("id", rechazados.map(d => d.id));
+      }
 
-          const totalParaEmail = isEditing ? calculateNewTotal() : selectedPedido.total;
+      // Mark approved products
+      if (aprobados.length > 0) {
+        await supabase
+          .from("pedidos_detalles")
+          .update({ autorizacion_status: "aprobado" })
+          .in("id", aprobados.map(d => d.id));
+      }
 
-          // Generar PDF de confirmación para el cliente
-          let clientePdf64: string | undefined;
-          let clientePdfName: string | undefined;
+      // Mark modified products with new price
+      for (const d of modificados) {
+        const newPrice = editingPrices[d.id] ?? d.precio_unitario;
+        const precioPorKilo = d.productos?.precio_por_kilo || false;
+        const kgTotales = (d.productos?.peso_kg || 0) > 0 ? d.cantidad * (d.productos?.peso_kg || 0) : 0;
+        const newSubtotal = precioPorKilo && kgTotales ? kgTotales * newPrice : d.cantidad * newPrice;
+        await supabase
+          .from("pedidos_detalles")
+          .update({
+            autorizacion_status: "precio_modificado",
+            precio_autorizado: newPrice,
+            precio_original: d.precio_unitario,
+          })
+          .eq("id", d.id);
+      }
+
+      // Also update prices for approved products that had price edits
+      for (const d of aprobados) {
+        const newPrice = editingPrices[d.id];
+        if (newPrice !== undefined && newPrice !== d.precio_unitario) {
+          const precioPorKilo = d.productos?.precio_por_kilo || false;
+          const kgTotales = (d.productos?.peso_kg || 0) > 0 ? d.cantidad * (d.productos?.peso_kg || 0) : 0;
+          const newSubtotal = precioPorKilo && kgTotales ? kgTotales * newPrice : d.cantidad * newPrice;
+          await supabase
+            .from("pedidos_detalles")
+            .update({ precio_unitario: newPrice, subtotal: newSubtotal })
+            .eq("id", d.id);
+        }
+      }
+
+      // Determine new status
+      const hasModifiedPrices = modificados.length > 0;
+      const newStatus = hasModifiedPrices ? "por_confirmar_vendedor" : "pendiente";
+
+      // Recalculate total from active products
+      const activeDetalles = [...aprobados, ...modificados];
+      const newTotal = activeDetalles.reduce((sum, d) => {
+        const price = editingPrices[d.id] ?? d.precio_unitario;
+        const precioPorKilo = d.productos?.precio_por_kilo || false;
+        const kgTotales = (d.productos?.peso_kg || 0) > 0 ? d.cantidad * (d.productos?.peso_kg || 0) : 0;
+        return sum + (precioPorKilo && kgTotales ? kgTotales * price : d.cantidad * price);
+      }, 0);
+      const pesoTotal = calcularPesoTotalPedido(activeDetalles);
+
+      await supabase
+        .from("pedidos")
+        .update({
+          total: newTotal,
+          status: newStatus as any,
+          peso_total_kg: pesoTotal > 0 ? pesoTotal : null,
+        })
+        .eq("id", pedidoId);
+
+      // 2. Notifications
+      const ajustesPrecio = modificados.length;
+      const rechazadosCount = rechazados.length;
+
+      if (selectedPedido?.vendedor_id) {
+        if (hasModifiedPrices) {
+          // Vendor needs to confirm price changes
           try {
-            const cpdf = await generarConfirmacionClientePDF({
-              folio: selectedPedido.folio, fecha: new Date().toISOString(),
+            await supabase.from("notificaciones").insert({
+              tipo: "pedido_autorizado",
+              titulo: `🔄 Pedido ${selectedPedido.folio} — precios modificados`,
+              descripcion: `${ajustesPrecio} producto${ajustesPrecio > 1 ? "s" : ""} con precio modificado${rechazadosCount > 0 ? `, ${rechazadosCount} rechazado${rechazadosCount > 1 ? "s" : ""}` : ""}. Revisa y confirma.`,
+              pedido_id: pedidoId,
+              leida: false,
+            });
+          } catch (e) { console.error("Error creando notificación:", e); }
+
+          try {
+            await supabase.functions.invoke("send-push-notification", {
+              body: {
+                user_ids: [selectedPedido.vendedor_id],
+                title: "🔄 Precios modificados — revisa y confirma",
+                body: `${selectedPedido.folio} — ${selectedPedido.clientes?.nombre || "cliente"}: ${ajustesPrecio} producto${ajustesPrecio > 1 ? "s" : ""} con nuevo precio`,
+                data: { type: 'pedido_precios_modificados', pedido_id: pedidoId, folio: selectedPedido.folio }
+              }
+            });
+          } catch (e) { console.error("Error enviando push al vendedor:", e); }
+
+          // Do NOT send client/internal emails — vendor must confirm first
+        } else {
+          // All approved (no price modifications that need vendor confirmation)
+          try {
+            await supabase.from("notificaciones").insert({
+              tipo: "pedido_autorizado",
+              titulo: `✅ Pedido ${selectedPedido.folio} autorizado`,
+              descripcion: `Tu pedido para ${selectedPedido.clientes?.nombre || "cliente"} fue autorizado${rechazadosCount > 0 ? ` (${rechazadosCount} producto${rechazadosCount > 1 ? "s" : ""} rechazado${rechazadosCount > 1 ? "s" : ""})` : ""}`,
+              pedido_id: pedidoId,
+              leida: false,
+            });
+          } catch (e) { console.error("Error creando notificación:", e); }
+
+          try {
+            await supabase.functions.invoke("send-push-notification", {
+              body: {
+                user_ids: [selectedPedido.vendedor_id],
+                title: "✅ Pedido autorizado",
+                body: `${selectedPedido.folio} — ${selectedPedido.clientes?.nombre || "cliente"}`,
+                data: { type: 'pedido_autorizado', pedido_id: pedidoId, folio: selectedPedido.folio }
+              }
+            });
+          } catch (e) { console.error("Error enviando push al vendedor:", e); }
+
+          // 3. Send emails + PDFs only when fully approved (no pending vendor confirmation)
+          const clienteEmail = selectedPedido.clientes?.email;
+          try {
+            const totalFinal = newTotal;
+            const direccion = selectedPedido.cliente_sucursales?.direccion;
+            const sucNombre = selectedPedido.cliente_sucursales?.nombre || "Principal";
+
+            const detallesActivos = activeDetalles.map(d => {
+              const pesoKg = d.productos?.peso_kg || 0;
+              const precioPorKilo = d.productos?.precio_por_kilo || false;
+              const precio = editingPrices[d.id] ?? d.precio_unitario;
+              const kgTotales = pesoKg > 0 ? d.cantidad * pesoKg : null;
+              const importe = precioPorKilo && kgTotales ? kgTotales * precio : d.cantidad * precio;
+              return { cantidad: d.cantidad, unidad: d.productos?.unidad || "pza", descripcion: d.productos?.nombre || "Producto", pesoTotal: kgTotales, precioUnitario: precio, importe, precioPorKilo };
+            });
+
+            const datosPrint: import("@/components/pedidos/PedidoPrintTemplate").DatosPedidoPrint = {
+              pedidoId, folio: selectedPedido.folio, fecha: new Date().toISOString(),
               vendedor: (selectedPedido as any).vendedor?.full_name || "Vendedor",
               terminoCredito: selectedPedido.termino_credito || "Contado",
               cliente: { nombre: selectedPedido.clientes?.nombre || "Cliente" },
-              sucursal: { nombre: selectedPedido.cliente_sucursales?.nombre || "Principal", direccion: selectedPedido.cliente_sucursales?.direccion || undefined },
-              productos: detallesEmail.map(d => ({ cantidad: d.cantidad, unidad: d.unidad, descripcion: d.producto, pesoTotal: d.kgTotales || null, precioUnitario: d.precioUnitario, importe: d.subtotal, precioPorKilo: d.precioPorKilo || false })),
-              subtotal: totalParaEmail, iva: 0, ieps: 0, total: totalParaEmail,
-              pesoTotalKg: selectedPedido.pedidos_detalles.reduce((s, d) => s + (d.cantidad * (d.productos?.peso_kg || 0)), 0),
-            });
-            clientePdf64 = cpdf.base64;
-            clientePdfName = cpdf.filename;
-          } catch (e) { console.error("Error generando PDF cliente:", e); }
+              direccionEntrega: direccion || "", sucursal: { nombre: sucNombre, direccion: direccion || undefined },
+              productos: detallesActivos, subtotal: totalFinal, iva: 0, ieps: 0, total: totalFinal,
+              pesoTotalKg: activeDetalles.reduce((s, d) => s + (d.cantidad * (d.productos?.peso_kg || 0)), 0),
+            };
 
-          await supabase.functions.invoke("send-order-authorized-email", {
-            body: {
-              clienteEmail,
-              clienteNombre: selectedPedido.clientes?.nombre || "Cliente",
-              pedidoFolio: selectedPedido.folio,
-              total: totalParaEmail,
-              ajustesPrecio,
-              detalles: detallesEmail,
-              pdfBase64: clientePdf64,
-              pdfFilename: clientePdfName,
+            // Client email + PDF
+            if (clienteEmail) {
+              let clientePdf64: string | undefined, clientePdfName: string | undefined;
+              try {
+                const cpdf = await generarConfirmacionClientePDF(datosPrint);
+                clientePdf64 = cpdf.base64; clientePdfName = cpdf.filename;
+              } catch (e) { console.error("Error generando PDF cliente:", e); }
+
+              await supabase.functions.invoke("send-order-authorized-email", {
+                body: {
+                  clienteEmail, clienteNombre: selectedPedido.clientes?.nombre || "Cliente",
+                  pedidoFolio: selectedPedido.folio, total: totalFinal, ajustesPrecio: 0,
+                  detalles: detallesActivos.map(d => ({
+                    producto: d.descripcion, cantidad: d.cantidad, unidad: d.unidad,
+                    precioUnitario: d.precioUnitario, subtotal: d.importe, fueAjustado: false,
+                    kgTotales: d.pesoTotal, precioPorKilo: d.precioPorKilo,
+                  })),
+                  pdfBase64: clientePdf64, pdfFilename: clientePdfName,
+                }
+              });
             }
-          });
-          console.log("Email de autorización enviado al cliente");
-        } catch (emailError) {
-          console.error("Error enviando email:", emailError);
-          // Don't fail the mutation if email fails
+
+            // Internal email + PDF
+            let pdfBase64: string | undefined, pdfFilename: string | undefined;
+            try {
+              const pdf = await generarNotaPDF(datosPrint);
+              pdfBase64 = pdf.base64; pdfFilename = pdf.filename;
+            } catch (e) { console.error("Error generando PDF nota:", e); }
+
+            await supabase.functions.invoke("enviar-pedido-interno", {
+              body: {
+                folio: selectedPedido.folio, clienteNombre: selectedPedido.clientes?.nombre || "Cliente",
+                vendedorNombre: datosPrint.vendedor, terminoCredito: selectedPedido.termino_credito || "contado",
+                direccionEntrega: direccion || sucNombre, sucursalNombre: sucNombre,
+                total: totalFinal, fecha: new Date().toISOString(), pedidoId,
+                productos: detallesActivos.map(p => ({ cantidad: p.cantidad, unidad: p.unidad, nombre: p.descripcion, precioUnitario: p.precioUnitario, importe: p.importe, kgTotales: p.pesoTotal, precioPorKilo: p.precioPorKilo })),
+                pdfBase64, pdfFilename,
+              }
+            });
+          } catch (e) { console.error("Error enviando emails:", e); }
         }
       }
 
-      // Push notification al vendedor
-      if (selectedPedido?.vendedor_id) {
-        try {
-          await supabase.from("notificaciones").insert({
-            tipo: "pedido_autorizado",
-            titulo: `✅ Pedido ${selectedPedido.folio} autorizado`,
-            descripcion: `Tu pedido para ${selectedPedido.clientes?.nombre || "cliente"} fue autorizado${ajustesPrecio > 0 ? ` con ${ajustesPrecio} ajuste(s) de precio` : ""}`,
-            pedido_id: pedidoId,
-            leida: false,
-          });
-        } catch (e) { console.error("Error creando notificación:", e); }
-
-        try {
-          await supabase.functions.invoke("send-push-notification", {
-            body: {
-              user_ids: [selectedPedido.vendedor_id],
-              title: "✅ Pedido autorizado",
-              body: `${selectedPedido.folio} — ${selectedPedido.clientes?.nombre || "cliente"}${ajustesPrecio > 0 ? ` (${ajustesPrecio} ajuste${ajustesPrecio > 1 ? "s" : ""})` : ""}`,
-              data: { type: 'pedido_autorizado', pedido_id: pedidoId, folio: selectedPedido.folio }
-            }
-          });
-        } catch (e) { console.error("Error enviando push al vendedor:", e); }
-      }
-
-      // Preparar datos para PDFs y emails
-      try {
-        const totalFinal = isEditing ? calculateNewTotal() : selectedPedido.total;
-        const direccion = selectedPedido.cliente_sucursales?.direccion;
-        const sucNombre = selectedPedido.cliente_sucursales?.nombre || "Principal";
-
-        // Datos en formato DatosPedidoPrint (compartido con el template)
-        const datosPrint: import("@/components/pedidos/PedidoPrintTemplate").DatosPedidoPrint = {
-          pedidoId: pedidoId,
-          folio: selectedPedido.folio,
-          fecha: new Date().toISOString(),
-          vendedor: (selectedPedido as any).vendedor?.full_name || "Vendedor",
-          terminoCredito: selectedPedido.termino_credito || "Contado",
-          cliente: { nombre: selectedPedido.clientes?.nombre || "Cliente" },
-          direccionEntrega: direccion || "",
-          sucursal: { nombre: sucNombre, direccion: direccion || undefined },
-          productos: selectedPedido.pedidos_detalles.map(d => {
-            const pesoKg = d.productos?.peso_kg || 0;
-            const precioPorKilo = d.productos?.precio_por_kilo || false;
-            const precio = editingPrices[d.id] ?? d.precio_unitario;
-            const kgTotales = pesoKg > 0 ? d.cantidad * pesoKg : null;
-            const importe = precioPorKilo && kgTotales ? kgTotales * precio : d.cantidad * precio;
-            return { cantidad: d.cantidad, unidad: d.productos?.unidad || "pza", descripcion: d.productos?.nombre || "Producto", pesoTotal: kgTotales, precioUnitario: precio, importe, precioPorKilo };
-          }),
-          subtotal: totalFinal, // TODO: desglosar subtotal/iva/ieps
-          iva: 0, ieps: 0, total: totalFinal,
-          pesoTotalKg: selectedPedido.pedidos_detalles.reduce((s, d) => s + (d.cantidad * (d.productos?.peso_kg || 0)), 0),
-        };
-
-        // Generar PDF nota interna (ORIGINAL + COPIA CLIENTE)
-        let pdfBase64: string | undefined;
-        let pdfFilename: string | undefined;
-        try {
-          const pdf = await generarNotaPDF(datosPrint);
-          pdfBase64 = pdf.base64;
-          pdfFilename = pdf.filename;
-        } catch (pdfErr) { console.error("Error generando PDF nota:", pdfErr); }
-
-        // Enviar email interno con PDF adjunto
-        const productosEmail = datosPrint.productos.map(p => ({
-          cantidad: p.cantidad, unidad: p.unidad, nombre: p.descripcion,
-          precioUnitario: p.precioUnitario, importe: p.importe,
-          kgTotales: p.pesoTotal, precioPorKilo: p.precioPorKilo,
-        }));
-
-        await supabase.functions.invoke("enviar-pedido-interno", {
-          body: {
-            folio: selectedPedido.folio,
-            clienteNombre: selectedPedido.clientes?.nombre || "Cliente",
-            vendedorNombre: datosPrint.vendedor,
-            terminoCredito: selectedPedido.termino_credito || "contado",
-            direccionEntrega: direccion || sucNombre,
-            sucursalNombre: sucNombre,
-            total: totalFinal,
-            fecha: new Date().toISOString(),
-            pedidoId, productos: productosEmail,
-            pdfBase64, pdfFilename,
-          }
-        });
-      } catch (e) { console.error("Error enviando email interno:", e); }
-
-      return { ajustesPrecio };
+      return { ajustesPrecio, rechazadosCount, hasModifiedPrices };
     },
     onSuccess: (result) => {
-      const msg = result.ajustesPrecio > 0 
-        ? `Pedido autorizado con ${result.ajustesPrecio} ajuste${result.ajustesPrecio > 1 ? 's' : ''} de precio` 
-        : "Pedido autorizado";
-      toast({ title: msg, description: "El cliente será notificado por correo" });
+      let msg = "Pedido autorizado";
+      let desc = "El cliente será notificado por correo";
+      if (result.hasModifiedPrices) {
+        msg = `${result.ajustesPrecio} precio${result.ajustesPrecio > 1 ? "s" : ""} modificado${result.ajustesPrecio > 1 ? "s" : ""}`;
+        desc = "El vendedor debe confirmar los cambios de precio";
+      } else if (result.rechazadosCount > 0) {
+        msg = `Pedido autorizado (${result.rechazadosCount} producto${result.rechazadosCount > 1 ? "s" : ""} rechazado${result.rechazadosCount > 1 ? "s" : ""})`;
+      }
+      toast({ title: msg, description: desc });
       queryClient.invalidateQueries({ queryKey: ["pedidos-por-autorizar"] });
       setSelectedPedido(null);
       setEditingPrices({});
@@ -495,6 +508,24 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
     },
   });
 
+  // Initialize per-product decisions when pedido is selected
+  useEffect(() => {
+    if (selectedPedido) {
+      const decisions: Record<string, 'aprobado' | 'precio_modificado' | 'rechazado'> = {};
+      selectedPedido.pedidos_detalles.forEach(d => { decisions[d.id] = 'aprobado'; });
+      setProductDecisions(decisions);
+    } else {
+      setProductDecisions({});
+    }
+  }, [selectedPedido]);
+
+  const handleProductDecision = (detalleId: string, decision: 'aprobado' | 'precio_modificado' | 'rechazado') => {
+    setProductDecisions(prev => ({ ...prev, [detalleId]: decision }));
+    if (decision === 'precio_modificado' && !isEditing) {
+      handleStartEditing();
+    }
+  };
+
   const handleStartEditing = () => {
     if (!selectedPedido) return;
     const prices: Record<string, number> = {};
@@ -508,6 +539,12 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
   const handleCancelEditing = () => {
     setEditingPrices({});
     setIsEditing(false);
+    // Reset all precio_modificado decisions back to aprobado
+    setProductDecisions(prev => {
+      const reset = { ...prev };
+      Object.keys(reset).forEach(k => { if (reset[k] === 'precio_modificado') reset[k] = 'aprobado'; });
+      return reset;
+    });
   };
 
   const handlePriceChange = (detalleId: string, value: string) => {
@@ -517,11 +554,19 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
 
   const calculateNewTotal = () => {
     if (!selectedPedido) return 0;
-    return selectedPedido.pedidos_detalles.reduce((sum, d) => {
-      const price = editingPrices[d.id] ?? d.precio_unitario;
-      return sum + (d.cantidad * price);
-    }, 0);
+    return selectedPedido.pedidos_detalles
+      .filter(d => productDecisions[d.id] !== 'rechazado')
+      .reduce((sum, d) => {
+        const price = editingPrices[d.id] ?? d.precio_unitario;
+        const precioPorKilo = d.productos?.precio_por_kilo || false;
+        const kgTotales = (d.productos?.peso_kg || 0) > 0 ? d.cantidad * (d.productos?.peso_kg || 0) : 0;
+        return sum + (precioPorKilo && kgTotales ? kgTotales * price : d.cantidad * price);
+      }, 0);
   };
+
+  const activeProductCount = selectedPedido
+    ? selectedPedido.pedidos_detalles.filter(d => productDecisions[d.id] !== 'rechazado').length
+    : 0;
 
   // getPriceComparison removed — replaced by P. Mínimo / Diferencia / Margen columns
 
@@ -867,6 +912,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                       <TableHead className="text-right">vs Mínimo</TableHead>
                       <TableHead className="text-right">Margen</TableHead>
                       <TableHead className="text-right">Subtotal</TableHead>
+                      <TableHead className="text-center w-[180px]">Decisión</TableHead>
                       <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -887,10 +933,10 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
 
                       return (
                         <>
-                          <TableRow key={detalle.id}>
+                          <TableRow key={detalle.id} className={productDecisions[detalle.id] === 'rechazado' ? 'opacity-40' : ''}>
                             <TableCell>
                               <div className="flex items-center gap-1.5">
-                                {porDebajoMinimo && <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />}
+                                {porDebajoMinimo && productDecisions[detalle.id] !== 'rechazado' && <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />}
                                 <span className="font-medium">{detalle.productos?.nombre}</span>
                                 <span className="text-xs text-muted-foreground ml-1">
                                   {detalle.productos?.codigo}
@@ -943,6 +989,34 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                             <TableCell className="text-right font-mono font-medium">
                               {formatCurrency(subtotal)}
                             </TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex gap-1 justify-center">
+                                <Button
+                                  variant={productDecisions[detalle.id] === 'aprobado' ? 'default' : 'outline'}
+                                  size="sm"
+                                  className={`h-7 text-xs px-2 ${productDecisions[detalle.id] === 'aprobado' ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                                  onClick={() => handleProductDecision(detalle.id, 'aprobado')}
+                                >
+                                  <CheckCircle2 className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant={productDecisions[detalle.id] === 'precio_modificado' ? 'default' : 'outline'}
+                                  size="sm"
+                                  className={`h-7 text-xs px-2 ${productDecisions[detalle.id] === 'precio_modificado' ? 'bg-amber-500 hover:bg-amber-600' : ''}`}
+                                  onClick={() => handleProductDecision(detalle.id, 'precio_modificado')}
+                                >
+                                  <Edit2 className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant={productDecisions[detalle.id] === 'rechazado' ? 'default' : 'outline'}
+                                  size="sm"
+                                  className={`h-7 text-xs px-2 ${productDecisions[detalle.id] === 'rechazado' ? 'bg-destructive hover:bg-destructive/90' : ''}`}
+                                  onClick={() => handleProductDecision(detalle.id, 'rechazado')}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </TableCell>
                             <TableCell>
                               <Button
                                 variant="ghost"
@@ -958,7 +1032,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                           
                           {expandedHistorial === detalle.productos?.id && historialData && (
                             <TableRow>
-                              <TableCell colSpan={9} className="bg-muted/50">
+                              <TableCell colSpan={10} className="bg-muted/50">
                                 <div className="py-2 px-4">
                                   <p className="text-sm font-medium mb-2">Historial de precios para este cliente:</p>
                                   {historialData.length === 0 ? (
@@ -1033,7 +1107,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                 </Button>
                 <Button
                   onClick={() => authorizeMutation.mutate(selectedPedido.id)}
-                  disabled={authorizeMutation.isPending}
+                  disabled={authorizeMutation.isPending || activeProductCount === 0}
                   className="w-full sm:w-auto"
                 >
                   {authorizeMutation.isPending ? (
@@ -1041,7 +1115,9 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                   ) : (
                     <CheckCircle2 className="h-4 w-4 mr-2" />
                   )}
-                  Autorizar Pedido
+                  {Object.values(productDecisions).some(d => d === 'precio_modificado')
+                    ? "Autorizar con cambios de precio"
+                    : "Autorizar Pedido"}
                 </Button>
               </div>
             </div>

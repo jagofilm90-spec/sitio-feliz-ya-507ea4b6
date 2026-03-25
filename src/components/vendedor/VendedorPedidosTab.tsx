@@ -22,6 +22,8 @@ import { RegistrarCobroPedidoDialog } from "./RegistrarCobroPedidoDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VendedorEnCargaTab } from "./VendedorEnCargaTab";
 import { VendedorEnRutaTab } from "./VendedorEnRutaTab";
+import { ConfirmarPreciosVendedorDialog } from "./ConfirmarPreciosVendedorDialog";
+import { AlertCircle } from "lucide-react";
 
 interface Pedido {
   id: string;
@@ -88,6 +90,8 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
   const [pdfPedidoId, setPdfPedidoId] = useState<string>("");
   const [enCargaCount, setEnCargaCount] = useState(0);
   const [pedidosEnCargaIds, setPedidosEnCargaIds] = useState<Set<string>>(new Set());
+  const [showConfirmarPrecios, setShowConfirmarPrecios] = useState(false);
+  const [pedidoParaConfirmar, setPedidoParaConfirmar] = useState<Pedido | null>(null);
 
   useEffect(() => {
     fetchPedidos();
@@ -172,6 +176,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
   };
 
   // Clasificación
+  const pedidosPorConfirmar = pedidos.filter(p => p.status === "por_confirmar_vendedor");
   const pedidosPendientes = pedidos.filter(p =>
     (p.status === "por_autorizar" || p.status === "pendiente") && !pedidosEnCargaIds.has(p.id)
   );
@@ -209,6 +214,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="font-bold text-base">{pedido.folio}</span>
               {pedido.status === "por_autorizar" && <Badge variant="secondary" className="text-xs">Por autorizar</Badge>}
+              {pedido.status === "por_confirmar_vendedor" && <Badge className="text-xs bg-orange-500">Revisión de precios</Badge>}
               {pedido.status === "pendiente" && <Badge variant="default" className="text-xs">Pendiente</Badge>}
               {pedido.status === "en_ruta" && <Badge className="text-xs bg-blue-500">En ruta</Badge>}
               {pedido.status === "entregado" && <Badge variant="outline" className="text-xs text-green-600 border-green-400">Entregado</Badge>}
@@ -242,6 +248,16 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
           <Button variant="outline" size="sm" className="flex-1" onClick={() => abrirDetalle(pedido)}>
             <Eye className="h-3.5 w-3.5 mr-1" /> Ver
           </Button>
+          {pedido.status === "por_confirmar_vendedor" && (
+            <Button size="sm" className="flex-1 bg-orange-500 hover:bg-orange-600 text-white" onClick={() => { setPedidoParaConfirmar(pedido); setShowConfirmarPrecios(true); }}>
+              <AlertCircle className="h-3.5 w-3.5 mr-1" /> Revisar precios
+            </Button>
+          )}
+          {["pendiente", "en_ruta", "entregado"].includes(pedido.status) && (
+            <Button variant="outline" size="sm" onClick={() => { setPdfPedidoId(pedido.id); setShowPDFPreview(true); }}>
+              <FileText className="h-3.5 w-3.5 mr-1" /> PDF
+            </Button>
+          )}
           {showCobrarBtn && !pedido.pagado && (
             <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={() => abrirCobro(pedido)}>
               <DollarSign className="h-3.5 w-3.5 mr-1" /> Cobrar
@@ -265,7 +281,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
   return (
     <div className="space-y-4">
       <Tabs defaultValue="pedidos">
-        <TabsList className="grid grid-cols-5 w-full h-12">
+        <TabsList className="grid grid-cols-6 w-full h-12">
           <TabsTrigger value="pedidos" className="text-xs gap-1 relative">
             <Package className="h-3.5 w-3.5" />
             Pedidos
@@ -275,6 +291,15 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
               </Badge>
             )}
           </TabsTrigger>
+          {pedidosPorConfirmar.length > 0 && (
+            <TabsTrigger value="revision" className="text-xs gap-1 relative">
+              <AlertCircle className="h-3.5 w-3.5" />
+              Revisión
+              <Badge className="absolute -top-1.5 -right-1.5 h-4 w-4 p-0 flex items-center justify-center text-[10px] bg-orange-500">
+                {pedidosPorConfirmar.length}
+              </Badge>
+            </TabsTrigger>
+          )}
           <TabsTrigger value="en_carga" className="text-xs gap-1 relative">
             <Loader2 className="h-3.5 w-3.5" />
             En Carga
@@ -341,6 +366,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                           <div className="flex flex-col gap-0.5">
                             <span className="font-bold text-sm">{p.folio}</span>
                             {p.status === "por_autorizar" && <Badge variant="secondary" className="text-[10px] w-fit">Por autorizar</Badge>}
+                            {p.status === "por_confirmar_vendedor" && <Badge className="text-[10px] w-fit bg-orange-500">Revisión precios</Badge>}
                             {p.status === "pendiente" && <Badge variant="default" className="text-[10px] w-fit">Pendiente</Badge>}
                           </div>
                         </TableCell>
@@ -398,6 +424,16 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
             )}
           </ScrollArea>
         </TabsContent>
+
+        {pedidosPorConfirmar.length > 0 && (
+          <TabsContent value="revision">
+            <ScrollArea className="h-[calc(100vh-300px)] min-h-[200px]">
+              <div className="space-y-3 pt-1">
+                {pedidosPorConfirmar.map(p => <PedidoCard key={p.id} pedido={p} />)}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+        )}
 
         <TabsContent value="en_carga">
           <ScrollArea className="h-[calc(100vh-300px)] min-h-[200px]">
@@ -468,6 +504,16 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
         onOpenChange={setShowPDFPreview}
         pedidoId={pdfPedidoId}
       />
+
+      {pedidoParaConfirmar && (
+        <ConfirmarPreciosVendedorDialog
+          open={showConfirmarPrecios}
+          onOpenChange={setShowConfirmarPrecios}
+          pedidoId={pedidoParaConfirmar.id}
+          folio={pedidoParaConfirmar.folio}
+          onConfirmed={fetchPedidos}
+        />
+      )}
     </div>
   );
 }

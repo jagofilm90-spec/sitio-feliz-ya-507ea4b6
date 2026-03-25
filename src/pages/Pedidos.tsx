@@ -283,6 +283,7 @@ const PedidosContent = () => {
   const getStatusBadge = (status: string) => {
     const config: Record<string, { label: string; variant: any; className: string }> = {
       por_autorizar: { label: "Por autorizar", variant: "outline", className: "border-amber-500 text-amber-600 dark:text-amber-400" },
+      por_confirmar_vendedor: { label: "Revisión vendedor", variant: "outline", className: "border-orange-500 text-orange-600 dark:text-orange-400" },
       pendiente: { label: "Listo para surtir", variant: "outline", className: "border-blue-500 text-blue-600 dark:text-blue-400" },
       en_ruta: { label: "En ruta", variant: "secondary", className: "" },
       entregado: { label: "Entregado", variant: "outline", className: "border-green-500 text-green-600 dark:text-green-400" },
