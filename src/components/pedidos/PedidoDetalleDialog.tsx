@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { esProductoBolsas5kg, redondearABolsasCompletas, calcularNumeroBolsas, KG_POR_BOLSA, ordenarProductosAzucarPrimero } from "@/lib/calculos";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import { getDisplayName } from "@/lib/productUtils";
 import { CreditoStatusBadge } from "./CreditoStatusBadge";
@@ -126,13 +127,12 @@ export default function PedidoDetalleDialog({
           )
         `)
         .eq("id", pedidoId)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       setPedido(data as any);
     } catch (error: any) {
       console.error("Error loading pedido:", error);
-      // If it's a PGRST116 (no rows) or similar, the pedido genuinely doesn't exist
-      // For other errors (RLS, network), set a minimal placeholder so user sees something useful
+      toast.error(`Error al cargar pedido: ${error?.message || "Error desconocido"}`);
       setPedido(null);
     } finally {
       setLoading(false);

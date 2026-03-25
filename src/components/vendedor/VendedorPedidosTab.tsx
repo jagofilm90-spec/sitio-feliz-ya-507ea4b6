@@ -79,6 +79,20 @@ function SaldoBadge({ pedido }: { pedido: Pedido }) {
   );
 }
 
+const PLAZO_DIAS: Record<string, number> = { contado: 0, "8_dias": 8, "15_dias": 15, "30_dias": 30, "60_dias": 60 };
+
+function VencimientoCredito({ pedido }: { pedido: Pedido }) {
+  const plazoDias = PLAZO_DIAS[pedido.termino_credito] ?? 0;
+  if (plazoDias === 0) return null;
+  const fechaBase = pedido.fecha_entrega_real || pedido.fecha_pedido;
+  const vencimiento = new Date(fechaBase);
+  vencimiento.setDate(vencimiento.getDate() + plazoDias);
+  const diasRestantes = differenceInDays(vencimiento, new Date());
+  const color = diasRestantes > 5 ? "text-green-600" : diasRestantes > 0 ? "text-amber-600" : "text-destructive";
+  const texto = diasRestantes > 1 ? `Vence en ${diasRestantes} días` : diasRestantes === 1 ? "Vence mañana" : diasRestantes === 0 ? "Vence hoy" : `Vencido hace ${Math.abs(diasRestantes)} día${Math.abs(diasRestantes) > 1 ? "s" : ""}`;
+  return <span className={`text-xs font-medium ${color}`}>{texto}</span>;
+}
+
 function getPrecioSolicitadoDetalle(detalle: PedidoDetalle) {
   return detalle.precio_autorizado ?? detalle.precio_unitario;
 }
@@ -321,6 +335,9 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                     {pedido.peso_total_kg.toFixed(1)} kg
                   </span>
                 ) : null}
+                {pedido.status === "entregado" && !pedido.pagado && (
+                  <VencimientoCredito pedido={pedido} />
+                )}
               </div>
             </div>
 
@@ -468,6 +485,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                     <TableHead>Cliente</TableHead>
                     <TableHead className="w-[90px]">Fecha</TableHead>
                     <TableHead>Dirección</TableHead>
+                    <TableHead className="w-[70px]">Peso</TableHead>
                     <TableHead className="w-[80px]">Crédito</TableHead>
                     <TableHead className="text-right w-[100px]">Total</TableHead>
                     <TableHead className="text-center w-[50px]">Ver</TableHead>
@@ -500,6 +518,9 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                           <span className="text-xs text-muted-foreground truncate max-w-[150px] block">
                             {(p.sucursal as any)?.direccion || "—"}
                           </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs font-mono text-muted-foreground">{p.peso_total_kg && p.peso_total_kg > 0 ? `${Math.round(p.peso_total_kg)} kg` : "—"}</span>
                         </TableCell>
                         <TableCell>
                           <span className="text-xs">{creditoLabels[p.termino_credito] || p.termino_credito}</span>

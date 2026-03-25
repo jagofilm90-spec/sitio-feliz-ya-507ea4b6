@@ -59,6 +59,7 @@ import { ImprimirRemisionDialog } from "@/components/remisiones/ImprimirRemision
 import EditarEmailClienteDialog from "@/components/pedidos/EditarEmailClienteDialog";
 import NuevoPedidoDialog from "@/components/pedidos/NuevoPedidoDialog";
 import PedidoDetalleDialog from "@/components/pedidos/PedidoDetalleDialog";
+import { PedidoPDFPreviewDialog } from "@/components/vendedor/PedidoPDFPreviewDialog";
 import GenerarFacturaDialog from "@/components/pedidos/GenerarFacturaDialog";
 import { formatCurrency } from "@/lib/utils";
 import { ordenarProductosAzucarPrimero } from "@/lib/calculos";
@@ -79,7 +80,7 @@ interface PedidoConCotizacion {
   clientes: { id: string; nombre: string; email: string | null; rfc: string | null; razon_social: string | null } | null;
   profiles: { full_name: string } | null;
   cotizacion_origen?: { id: string; folio: string } | null;
-  sucursal?: { nombre: string; email_facturacion: string | null; codigo_sucursal: string | null; rfc: string | null; razon_social: string | null } | null;
+  sucursal?: { nombre: string; email_facturacion: string | null; codigo_sucursal: string | null; rfc: string | null; razon_social: string | null; zona?: { nombre: string } | null } | null;
   pedidos_detalles?: { id: string }[];
 }
 
@@ -102,6 +103,8 @@ const PedidosContent = () => {
   const [selectedPedidoId, setSelectedPedidoId] = useState<string | null>(null);
   const [pedidoDetalleOpen, setPedidoDetalleOpen] = useState(false);
   const [selectedPedidos, setSelectedPedidos] = useState<Set<string>>(new Set());
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const [pdfPedidoId, setPdfPedidoId] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [facturaDialogOpen, setFacturaDialogOpen] = useState(false);
@@ -140,7 +143,7 @@ const PedidosContent = () => {
           sucursal_id,
           clientes (id, nombre, email, rfc, razon_social),
           profiles:vendedor_id (full_name),
-          cliente_sucursales:sucursal_id (nombre, email_facturacion, codigo_sucursal, rfc, razon_social),
+          cliente_sucursales:sucursal_id (nombre, email_facturacion, codigo_sucursal, rfc, razon_social, zona:zonas(nombre)),
           pedidos_detalles (id)
         `)
         .neq("status", "por_autorizar")
@@ -823,6 +826,7 @@ const PedidosContent = () => {
                     </TableHead>
                     <TableHead>Folio</TableHead>
                     <TableHead>Cliente</TableHead>
+                    <TableHead>Zona</TableHead>
                     <TableHead>Vendedor</TableHead>
                     <TableHead>Fecha</TableHead>
                     <TableHead>Prod.</TableHead>
@@ -836,13 +840,13 @@ const PedidosContent = () => {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center">
+                      <TableCell colSpan={12} className="text-center">
                         Cargando...
                       </TableCell>
                     </TableRow>
                   ) : filteredPedidos.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center">
+                      <TableCell colSpan={12} className="text-center">
                         No hay pedidos registrados
                       </TableCell>
                     </TableRow>
@@ -858,6 +862,7 @@ const PedidosContent = () => {
                         </TableCell>
                         <TableCell className="font-medium font-mono">{pedido.folio}</TableCell>
                         <TableCell>{pedido.clientes?.nombre || "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{pedido.sucursal?.zona?.nombre || "—"}</TableCell>
                         <TableCell className="text-sm">{pedido.profiles?.full_name || "—"}</TableCell>
                         <TableCell className="text-sm">
                           {new Date(pedido.fecha_pedido).toLocaleDateString("es-MX")}
@@ -886,6 +891,19 @@ const PedidosContent = () => {
                                 <TooltipContent>Ver detalle</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
+                            {/* PDF */}
+                            {["pendiente", "en_ruta", "entregado"].includes(pedido.status) && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" onClick={() => { setPdfPedidoId(pedido.id); setPdfPreviewOpen(true); }}>
+                                      <FileText className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Ver PDF</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                             {/* Acción contextual según estado */}
                             {pedido.status === "pendiente" && (
                               <TooltipProvider>
@@ -952,6 +970,8 @@ const PedidosContent = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <PedidoPDFPreviewDialog open={pdfPreviewOpen} onOpenChange={setPdfPreviewOpen} pedidoId={pdfPedidoId} />
 
       {/* Dialog para ver cotización origen */}
       {selectedCotizacionId && (
