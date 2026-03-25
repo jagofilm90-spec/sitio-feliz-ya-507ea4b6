@@ -1,6 +1,6 @@
 /**
- * Generador de PDFs de pedidos usando PedidoPrintTemplate + html2canvas + jsPDF.
- * Mismo método probado que usa VendedorNuevoPedidoTab.
+ * Generador de PDFs de pedidos — LANDSCAPE
+ * Usa PedidoPrintTemplate (React) + html2canvas + jsPDF.
  */
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -14,7 +14,7 @@ async function renderToCanvas(element: React.ReactElement, scale = 2): Promise<H
   container.style.position = "absolute";
   container.style.left = "-9999px";
   container.style.top = "0";
-  container.style.width = "8.5in";
+  container.style.width = "11in"; // landscape
   container.style.backgroundColor = "#ffffff";
   document.body.appendChild(container);
 
@@ -41,11 +41,10 @@ function el(variante: VariantePrint, datos: DatosPedidoPrint) {
 }
 
 /**
- * PDF interno (2 hojas): ORIGINAL + HOJA DE CARGA (almacén)
- * Se adjunta al email a pedidos@almasa.com.mx
+ * PDF interno (2 hojas landscape): ORIGINAL + HOJA DE CARGA
  */
 export async function generarNotaInternaPDF(datos: DatosPedidoPrint): Promise<{ base64: string; filename: string }> {
-  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
+  const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "letter" });
 
   const c1 = await renderToCanvas(el("original", datos));
   addPage(pdf, c1);
@@ -59,11 +58,10 @@ export async function generarNotaInternaPDF(datos: DatosPedidoPrint): Promise<{ 
 }
 
 /**
- * PDF confirmación cliente (1 hoja)
- * Se adjunta al email al cliente
+ * PDF confirmación cliente (1 hoja landscape)
  */
 export async function generarConfirmacionClientePDF(datos: DatosPedidoPrint): Promise<{ base64: string; filename: string }> {
-  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
+  const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "letter" });
 
   const c = await renderToCanvas(el("confirmacion_cliente", datos));
   addPage(pdf, c);
@@ -72,8 +70,7 @@ export async function generarConfirmacionClientePDF(datos: DatosPedidoPrint): Pr
   return { base64: out.split(",")[1], filename: `Confirmacion_${datos.folio}.pdf` };
 }
 
-// Re-export for backward compat
+// Backward compat alias
 export const generarNotaPDF = generarNotaInternaPDF;
 
-// Re-export types
 export type { DatosPedidoPrint, VariantePrint };
