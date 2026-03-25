@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { esProductoBolsas5kg, redondearABolsasCompletas, calcularNumeroBolsas, KG_POR_BOLSA, ordenarProductosAzucarPrimero } from "@/lib/calculos";
@@ -86,6 +87,7 @@ export default function PedidoDetalleDialog({
 
   useEffect(() => {
     if (pedidoId && open) {
+      setPedido(null);
       loadPedido();
     }
   }, [pedidoId, open]);
@@ -127,8 +129,11 @@ export default function PedidoDetalleDialog({
         .single();
       if (error) throw error;
       setPedido(data as any);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading pedido:", error);
+      // If it's a PGRST116 (no rows) or similar, the pedido genuinely doesn't exist
+      // For other errors (RLS, network), set a minimal placeholder so user sees something useful
+      setPedido(null);
     } finally {
       setLoading(false);
     }
@@ -310,7 +315,10 @@ export default function PedidoDetalleDialog({
             <PedidoHistorialCambios pedidoId={pedidoId} />
           </div>
         ) : (
-          <p className="text-center text-muted-foreground py-8">No se encontró el pedido</p>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">No se pudo cargar el pedido.</p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={loadPedido}>Reintentar</Button>
+          </div>
         )}
       </DialogContent>
     </Dialog>

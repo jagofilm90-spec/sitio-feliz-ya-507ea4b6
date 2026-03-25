@@ -121,10 +121,14 @@ export function PedidoPDFPreviewDialog({ open, onOpenChange, pedidoId }: Props) 
     if (!printRef.current || !datos) return;
     setDownloading(true);
     try {
-      const canvas = await html2canvas(printRef.current, { scale: 3, useCORS: true, backgroundColor: "#ffffff" });
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({ orientation: "portrait", unit: "in", format: "letter" });
-      pdf.addImage(imgData, "PNG", 0, 0, 8.5, 11);
+      const canvas = await html2canvas(printRef.current, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+      const imgData = canvas.toDataURL("image/jpeg", 0.85);
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "letter" });
+      const pw = pdf.internal.pageSize.getWidth();
+      const ph = pdf.internal.pageSize.getHeight();
+      const ratio = Math.min(pw / canvas.width, ph / canvas.height);
+      const x = (pw - canvas.width * ratio) / 2;
+      pdf.addImage(imgData, "JPEG", x, 3, canvas.width * ratio, canvas.height * ratio);
       pdf.save(`${datos.folio}.pdf`);
     } catch {
       toast.error("Error al generar PDF");
@@ -135,7 +139,7 @@ export function PedidoPDFPreviewDialog({ open, onOpenChange, pedidoId }: Props) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
+      <DialogContent className="max-w-[90vw] w-[1120px] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Vista previa — {datos?.folio || "Pedido"}</span>
