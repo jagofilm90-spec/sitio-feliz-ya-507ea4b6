@@ -45,7 +45,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Eye, ShoppingCart, FileText, Link2, Printer, Receipt, Send, CheckCircle2, Clock, BarChart3, Trash2, AlertCircle, FileCheck, CalendarDays, Truck, Navigation, DollarSign } from "lucide-react";
+import { Plus, Search, Eye, ShoppingCart, FileText, Link2, Printer, Receipt, Send, CheckCircle2, Clock, BarChart3, Trash2, AlertCircle, FileCheck, CalendarDays, Truck, Navigation, DollarSign, Package, Weight } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import CotizacionesTab from "@/components/cotizaciones/CotizacionesTab";
@@ -105,6 +106,7 @@ const PedidosContent = () => {
   const [deleting, setDeleting] = useState(false);
   const [facturaDialogOpen, setFacturaDialogOpen] = useState(false);
   const [selectedPedidoForFactura, setSelectedPedidoForFactura] = useState<PedidoConCotizacion | null>(null);
+  const [resumen, setResumen] = useState({ porAutorizar: 0, pendientes: 0, enRuta: 0, pesoKg: 0, monto: 0 });
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -182,6 +184,25 @@ const PedidosContent = () => {
       });
 
       setPedidos(pedidosConCotizacion);
+
+      // Summary stats (includes por_autorizar which main query excludes)
+      const { data: statsData } = await supabase
+        .from("pedidos")
+        .select("status, total, peso_total_kg")
+        .in("status", ["por_autorizar", "rechazado", "pendiente", "en_ruta"]);
+
+      if (statsData) {
+        const porAut = statsData.filter(p => p.status === "por_autorizar" || p.status === "rechazado");
+        const pend = statsData.filter(p => p.status === "pendiente");
+        const ruta = statsData.filter(p => p.status === "en_ruta");
+        setResumen({
+          porAutorizar: porAut.length,
+          pendientes: pend.length,
+          enRuta: ruta.length,
+          pesoKg: pend.reduce((s, p) => s + (p.peso_total_kg || 0), 0),
+          monto: pend.reduce((s, p) => s + (p.total || 0), 0),
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -659,6 +680,42 @@ const PedidosContent = () => {
           <p className="text-xs sm:text-sm text-muted-foreground">
             Gestión de pedidos de clientes y cotizaciones
           </p>
+        </div>
+
+        {/* Resumen rápido */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {resumen.porAutorizar > 0 && (
+            <Card className="border-amber-300 dark:border-amber-700">
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="p-2 rounded-full bg-amber-100 dark:bg-amber-900/30"><AlertCircle className="h-4 w-4 text-amber-600" /></div>
+                <div><p className="text-xl font-bold">{resumen.porAutorizar}</p><p className="text-xs text-muted-foreground">Por autorizar</p></div>
+              </CardContent>
+            </Card>
+          )}
+          <Card>
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900/30"><Package className="h-4 w-4 text-blue-600" /></div>
+              <div><p className="text-xl font-bold">{resumen.pendientes}</p><p className="text-xs text-muted-foreground">Pendientes</p></div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className="p-2 rounded-full bg-indigo-100 dark:bg-indigo-900/30"><Truck className="h-4 w-4 text-indigo-600" /></div>
+              <div><p className="text-xl font-bold">{resumen.enRuta}</p><p className="text-xs text-muted-foreground">En ruta</p></div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className="p-2 rounded-full bg-muted"><Weight className="h-4 w-4 text-muted-foreground" /></div>
+              <div><p className="text-xl font-bold">{resumen.pesoKg > 0 ? `${(resumen.pesoKg / 1000).toFixed(1)}t` : "0"}</p><p className="text-xs text-muted-foreground">Peso pendiente</p></div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className="p-2 rounded-full bg-green-100 dark:bg-green-900/30"><DollarSign className="h-4 w-4 text-green-600" /></div>
+              <div><p className="text-xl font-bold">{formatCurrency(resumen.monto)}</p><p className="text-xs text-muted-foreground">Monto pendiente</p></div>
+            </CardContent>
+          </Card>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>

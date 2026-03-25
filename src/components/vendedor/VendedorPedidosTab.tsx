@@ -357,8 +357,38 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
     );
   };
 
+  const montoporCobrar = porCobrar.reduce((s, p) => s + (p.saldo_pendiente ?? p.total), 0);
+
   return (
     <div className="space-y-4">
+      {/* Resumen rápido */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <Card>
+          <CardContent className="p-3 flex items-center gap-2.5">
+            <div className="p-1.5 rounded-full bg-blue-100 dark:bg-blue-900/30"><Package className="h-3.5 w-3.5 text-blue-600" /></div>
+            <div><p className="text-lg font-bold">{pedidosListos.length}</p><p className="text-[10px] text-muted-foreground">Por entregar</p></div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3 flex items-center gap-2.5">
+            <div className="p-1.5 rounded-full bg-indigo-100 dark:bg-indigo-900/30"><Truck className="h-3.5 w-3.5 text-indigo-600" /></div>
+            <div><p className="text-lg font-bold">{enRuta.length}</p><p className="text-[10px] text-muted-foreground">En ruta</p></div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3 flex items-center gap-2.5">
+            <div className="p-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30"><CreditCard className="h-3.5 w-3.5 text-amber-600" /></div>
+            <div><p className="text-lg font-bold">{porCobrar.length}</p><p className="text-[10px] text-muted-foreground">Por cobrar</p></div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3 flex items-center gap-2.5">
+            <div className="p-1.5 rounded-full bg-green-100 dark:bg-green-900/30"><DollarSign className="h-3.5 w-3.5 text-green-600" /></div>
+            <div><p className="text-lg font-bold">{formatCurrency(montoporCobrar)}</p><p className="text-[10px] text-muted-foreground">Monto por cobrar</p></div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Tabs defaultValue={pedidosPorAutorizar.length > 0 ? "por_autorizar" : "pedidos"}>
         <TabsList className="grid grid-cols-6 w-full h-12">
           <TabsTrigger value="por_autorizar" className="text-xs gap-1 relative">
