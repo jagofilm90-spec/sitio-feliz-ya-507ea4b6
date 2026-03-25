@@ -176,9 +176,11 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
   };
 
   // Clasificación
-  const pedidosPorConfirmar = pedidos.filter(p => p.status === "por_confirmar_vendedor");
-  const pedidosPendientes = pedidos.filter(p =>
-    (p.status === "por_autorizar" || p.status === "pendiente") && !pedidosEnCargaIds.has(p.id)
+  const pedidosPorAutorizar = pedidos.filter(p =>
+    p.status === "por_autorizar" || p.status === "por_confirmar_vendedor"
+  );
+  const pedidosListos = pedidos.filter(p =>
+    p.status === "pendiente" && !pedidosEnCargaIds.has(p.id)
   );
   const enRuta = pedidos.filter(p => p.status === "en_ruta");
   const entregadosAll = pedidos.filter(p => p.status === "entregado");
@@ -280,26 +282,26 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
 
   return (
     <div className="space-y-4">
-      <Tabs defaultValue="pedidos">
+      <Tabs defaultValue={pedidosPorAutorizar.length > 0 ? "por_autorizar" : "pedidos"}>
         <TabsList className="grid grid-cols-6 w-full h-12">
-          <TabsTrigger value="pedidos" className="text-xs gap-1 relative">
-            <Package className="h-3.5 w-3.5" />
-            Pedidos
-            {pedidosPendientes.length > 0 && (
-              <Badge className="absolute -top-1.5 -right-1.5 h-4 w-4 p-0 flex items-center justify-center text-[10px]">
-                {pedidosPendientes.length}
+          <TabsTrigger value="por_autorizar" className="text-xs gap-1 relative">
+            <Clock className="h-3.5 w-3.5" />
+            Por Autorizar
+            {pedidosPorAutorizar.length > 0 && (
+              <Badge className="absolute -top-1.5 -right-1.5 h-4 w-4 p-0 flex items-center justify-center text-[10px] bg-amber-500">
+                {pedidosPorAutorizar.length}
               </Badge>
             )}
           </TabsTrigger>
-          {pedidosPorConfirmar.length > 0 && (
-            <TabsTrigger value="revision" className="text-xs gap-1 relative">
-              <AlertCircle className="h-3.5 w-3.5" />
-              Revisión
-              <Badge className="absolute -top-1.5 -right-1.5 h-4 w-4 p-0 flex items-center justify-center text-[10px] bg-orange-500">
-                {pedidosPorConfirmar.length}
+          <TabsTrigger value="pedidos" className="text-xs gap-1 relative">
+            <Package className="h-3.5 w-3.5" />
+            Pedidos
+            {pedidosListos.length > 0 && (
+              <Badge className="absolute -top-1.5 -right-1.5 h-4 w-4 p-0 flex items-center justify-center text-[10px]">
+                {pedidosListos.length}
               </Badge>
-            </TabsTrigger>
-          )}
+            )}
+          </TabsTrigger>
           <TabsTrigger value="en_carga" className="text-xs gap-1 relative">
             <Loader2 className="h-3.5 w-3.5" />
             En Carga
@@ -333,10 +335,24 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
           </TabsTrigger>
         </TabsList>
 
+        {/* Tab 1: Por Autorizar */}
+        <TabsContent value="por_autorizar">
+          <ScrollArea className="h-[calc(100vh-300px)] min-h-[200px]">
+            {pedidosPorAutorizar.length === 0 ? (
+              <EmptyState icono={Clock} titulo="Sin pedidos por autorizar" descripcion="Los pedidos que requieran autorización de precios aparecerán aquí" />
+            ) : (
+              <div className="space-y-3 pt-1">
+                {pedidosPorAutorizar.map(p => <PedidoCard key={p.id} pedido={p} />)}
+              </div>
+            )}
+          </ScrollArea>
+        </TabsContent>
+
+        {/* Tab 2: Pedidos (ya autorizados, listos para surtir) */}
         <TabsContent value="pedidos">
           <ScrollArea className="h-[calc(100vh-300px)] min-h-[200px]">
-            {pedidosPendientes.length === 0 ? (
-              <EmptyState icono={Package} titulo="Sin pedidos pendientes" descripcion="Tus pedidos aparecerán aquí hasta que sean autorizados" />
+            {pedidosListos.length === 0 ? (
+              <EmptyState icono={Package} titulo="Sin pedidos listos" descripcion="Los pedidos autorizados y listos para surtir aparecerán aquí" />
             ) : (
               <Table>
                 <TableHeader>
@@ -347,12 +363,12 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                     <TableHead>Dirección</TableHead>
                     <TableHead className="w-[80px]">Crédito</TableHead>
                     <TableHead className="text-right w-[100px]">Total</TableHead>
+                    <TableHead className="text-center w-[50px]">Ver</TableHead>
                     <TableHead className="text-center w-[50px]">PDF</TableHead>
-                    <TableHead className="text-center w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pedidosPendientes.map(p => {
+                  {pedidosListos.map(p => {
                     const creditoLabels: Record<string, string> = {
                       contado: "Contado",
                       "8_dias": "8 días",
@@ -363,12 +379,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                     return (
                       <TableRow key={p.id} className="cursor-pointer" onClick={() => abrirDetalle(p)}>
                         <TableCell>
-                          <div className="flex flex-col gap-0.5">
-                            <span className="font-bold text-sm">{p.folio}</span>
-                            {p.status === "por_autorizar" && <Badge variant="secondary" className="text-[10px] w-fit">Por autorizar</Badge>}
-                            {p.status === "por_confirmar_vendedor" && <Badge className="text-[10px] w-fit bg-orange-500">Revisión precios</Badge>}
-                            {p.status === "pendiente" && <Badge variant="default" className="text-[10px] w-fit">Pendiente</Badge>}
-                          </div>
+                          <span className="font-bold text-sm">{p.folio}</span>
                         </TableCell>
                         <TableCell>
                           <span className="text-sm">{p.cliente.nombre}</span>
@@ -396,24 +407,24 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                             className="h-8 w-8"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setPdfPedidoId(p.id);
-                              setShowPDFPreview(true);
+                              abrirDetalle(p);
                             }}
                           >
-                            <FileText className="h-4 w-4" />
+                            <Eye className="h-4 w-4" />
                           </Button>
                         </TableCell>
                         <TableCell className="text-center">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            className="h-8 w-8"
                             onClick={(e) => {
                               e.stopPropagation();
-                              abrirEliminar(p);
+                              setPdfPedidoId(p.id);
+                              setShowPDFPreview(true);
                             }}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <FileText className="h-4 w-4" />
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -424,16 +435,6 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
             )}
           </ScrollArea>
         </TabsContent>
-
-        {pedidosPorConfirmar.length > 0 && (
-          <TabsContent value="revision">
-            <ScrollArea className="h-[calc(100vh-300px)] min-h-[200px]">
-              <div className="space-y-3 pt-1">
-                {pedidosPorConfirmar.map(p => <PedidoCard key={p.id} pedido={p} />)}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-        )}
 
         <TabsContent value="en_carga">
           <ScrollArea className="h-[calc(100vh-300px)] min-h-[200px]">
