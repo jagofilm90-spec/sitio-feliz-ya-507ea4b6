@@ -55,13 +55,12 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
 
       {/* ══ HEADER ══ */}
       <div className="flex items-center justify-between border-b-2 border-black pb-2 mb-2">
-        <img src="/logo-almasa-header.png" alt="ALMASA" className="h-11 w-auto object-contain flex-shrink-0" />
-        <div className="text-center flex-1 px-4">
-          <h1 className="font-black uppercase tracking-tight" style={{ fontSize: "15px", lineHeight: 1.2 }}>{COMPANY_DATA.razonSocial}</h1>
-          <p className="text-gray-600 mt-0.5" style={{ fontSize: "9px" }}>RFC: {COMPANY_DATA.rfc} | Tel: {COMPANY_DATA.telefonosFormateados}</p>
-          <p className="text-gray-600" style={{ fontSize: "9px" }}>{COMPANY_DATA.direccionCompletaMayusculas}</p>
+        <div className="w-32 flex-shrink-0" />
+        <div className="text-center flex-1">
+          <img src="/logo-almasa-header.png" alt="ALMASA" className="h-14 w-auto object-contain mx-auto" />
+          <p className="italic text-gray-500 mt-0.5" style={{ fontSize: "10px", letterSpacing: "1px" }}>Desde 1904</p>
         </div>
-        <div className="text-right flex-shrink-0">
+        <div className="w-32 flex-shrink-0 text-right">
           {isAlm && datos.pedidoId && !hideQR ? (
             <div className="flex flex-col items-center">
               <QRCodeSVG value={datos.folio} size={100} level="M" />
@@ -70,7 +69,7 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
           ) : (
             <div>
               <p className="font-bold uppercase text-gray-500" style={{ fontSize: "10px" }}>
-                {isAlm ? "Hoja de Carga" : isConf ? "Confirmación" : "Nota de Venta"}
+                {isConf ? "Confirmación" : "Nota de Venta"}
               </p>
               <p className="font-black leading-tight" style={{ fontSize: "20px" }}>{datos.folio}</p>
             </div>
@@ -86,10 +85,16 @@ export const PedidoPrintTemplate = ({ datos, hideQR = false, variante }: Props) 
               <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Nombre:</span>
               <span className="ml-2 font-bold" style={{ fontSize: "15px" }}>{datos.cliente.nombre}</span>
             </div>
+            {datos.sucursal?.nombre && (
+              <div className="mb-0.5">
+                <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Sucursal:</span>
+                <span className="ml-2 font-semibold" style={{ fontSize: "12px" }}>{datos.sucursal.nombre}</span>
+              </div>
+            )}
             <div>
               <span className="font-bold text-gray-500 uppercase" style={{ fontSize: "9px" }}>Domicilio:</span>
               <span className="ml-2" style={{ fontSize: "12px" }}>
-                {datos.sucursal ? <>{datos.sucursal.nombre}{datos.sucursal.direccion ? ` — ${datos.sucursal.direccion}` : ""}</> : dir || <span className="italic text-gray-400">Sin dirección</span>}
+                {datos.sucursal?.direccion || dir || <span className="italic text-gray-400">Sin dirección</span>}
               </span>
             </div>
           </div>
