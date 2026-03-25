@@ -28,6 +28,8 @@ import { AlertCircle, Edit2 } from "lucide-react";
 interface PedidoDetalle {
   id: string;
   precio_unitario: number;
+  precio_autorizado: number | null;
+  autorizacion_status: string | null;
   cantidad: number;
   producto: {
     nombre: string;
@@ -54,7 +56,6 @@ interface Pedido {
   pedidos_detalles?: PedidoDetalle[];
 }
 
-
 function DiasTranscurridos({ fecha }: { fecha: string }) {
   const dias = differenceInDays(new Date(), new Date(fecha));
   const color = dias <= 2 ? "text-green-600" : dias <= 7 ? "text-amber-600" : "text-destructive";
@@ -68,7 +69,7 @@ function DiasTranscurridos({ fecha }: { fecha: string }) {
 
 function SaldoBadge({ pedido }: { pedido: Pedido }) {
   const saldo = pedido.saldo_pendiente ?? pedido.total;
-  if (pedido.pagado || saldo <= 0) return null;
+  if (pedido.status !== "entregado" || pedido.pagado || saldo <= 0) return null;
   const esParcial = saldo < pedido.total;
   return (
     <Badge variant="outline" className={esParcial ? "border-amber-400 text-amber-600 text-xs" : "border-destructive/50 text-destructive text-xs"}>
@@ -76,6 +77,23 @@ function SaldoBadge({ pedido }: { pedido: Pedido }) {
       {esParcial ? `Saldo: ${formatCurrency(saldo)}` : "Por cobrar"}
     </Badge>
   );
+}
+
+function getPrecioSolicitadoDetalle(detalle: PedidoDetalle) {
+  return detalle.precio_autorizado ?? detalle.precio_unitario;
+}
+
+function getDescuentoSolicitadoDetalle(detalle: PedidoDetalle) {
+  if (!detalle.producto) return 0;
+  return Math.max(detalle.producto.precio_venta - getPrecioSolicitadoDetalle(detalle), 0);
+}
+
+function detalleRequiereAutorizacion(detalle: PedidoDetalle) {
+  const status = detalle.autorizacion_status?.toLowerCase() ?? "";
+  const descuentoMaximo = detalle.producto?.descuento_maximo ?? 0;
+  const descuentoSolicitado = getDescuentoSolicitadoDetalle(detalle);
+
+  return ["pendiente", "rechazado", "precio_modificado"].includes(status) || descuentoSolicitado > descuentoMaximo;
 }
 
 function EmptyState({ icono: Icon, titulo, descripcion }: { icono: any; titulo: string; descripcion: string }) {
@@ -162,7 +180,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
           status, termino_credito, pagado, peso_total_kg, cliente_id,
           cliente:clientes(nombre),
           sucursal:cliente_sucursales(nombre, direccion, zona:zonas(nombre)),
-          pedidos_detalles(id, precio_unitario, cantidad, producto:producto_id(nombre, precio_venta, descuento_maximo, precio_por_kilo))
+          pedidos_detalles(id, precio_unitario, precio_autorizado, autorizacion_status, cantidad, producto:producto_id(nombre, precio_venta, descuento_maximo, precio_por_kilo))
         `)
         .eq("vendedor_id", user.id)
         .neq("status", "cancelado")
@@ -200,7 +218,6 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
   const entregadosAll = pedidos.filter(p => p.status === "entregado");
   const porCobrar = pedidos.filter(p => p.status === "entregado" && !p.pagado);
 
-
   const abrirDetalle = (p: Pedido) => { setSelectedPedido(p); setShowDetalle(true); };
   const abrirCancelar = (p: Pedido) => { setSelectedPedido(p); setShowCancelar(true); };
   const abrirEliminar = (p: Pedido) => { setSelectedPedido(p); setShowEliminar(true); };
@@ -222,96 +239,117 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
     );
   }
 
-  const PedidoCard = ({ pedido, showCobrarBtn = false }: { pedido: Pedido; showCobrarBtn?: boolean }) => (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <span className="font-bold text-base">{pedido.folio}</span>
-              {pedido.status === "por_autorizar" && <Badge variant="secondary" className="text-xs">Pendiente de autorización</Badge>}
-              {pedido.status === "rechazado" && <Badge variant="destructive" className="text-xs">Precio rechazado</Badge>}
-              {pedido.status === "pendiente" && <Badge variant="default" className="text-xs">Pendiente</Badge>}
-              {pedido.status === "en_ruta" && <Badge className="text-xs bg-blue-500">En ruta</Badge>}
-              {pedido.status === "entregado" && <Badge variant="outline" className="text-xs text-green-600 border-green-400">Entregado</Badge>}
-              <SaldoBadge pedido={pedido} />
-            </div>
-            <p className="text-sm text-muted-foreground truncate mb-1">{pedido.cliente.nombre}</p>
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {format(new Date(pedido.fecha_pedido), "d MMM yyyy", { locale: es })}
-              </span>
-              {(pedido.status === "por_autorizar" || pedido.status === "pendiente") && (
-                <DiasTranscurridos fecha={pedido.fecha_pedido} />
+  const PedidoCard = ({ pedido, showCobrarBtn = false }: { pedido: Pedido; showCobrarBtn?: boolean }) => {
+    const detallesConDescuentoSolicitado = (pedido.pedidos_detalles || []).filter(
+      detalle => detalle.producto && detalleRequiereAutorizacion(detalle)
+    );
+
+    return (
+      <Card className="hover:shadow-md transition-shadow">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className="font-bold text-base">{pedido.folio}</span>
+                {pedido.status === "por_autorizar" && <Badge variant="secondary" className="text-xs">Pendiente de autorización</Badge>}
+                {pedido.status === "rechazado" && <Badge variant="destructive" className="text-xs">Precio rechazado</Badge>}
+                {pedido.status === "pendiente" && <Badge variant="default" className="text-xs">Pendiente</Badge>}
+                {pedido.status === "en_ruta" && <Badge className="text-xs bg-blue-500">En ruta</Badge>}
+                {pedido.status === "entregado" && <Badge variant="outline" className="text-xs text-green-600 border-green-400">Entregado</Badge>}
+                <SaldoBadge pedido={pedido} />
+              </div>
+
+              <p className="text-sm text-muted-foreground truncate mb-1">{pedido.cliente.nombre}</p>
+
+              {(pedido.status === "por_autorizar" || pedido.status === "rechazado") && detallesConDescuentoSolicitado.length > 0 && (
+                <div className="mt-2 mb-2 rounded-lg border border-border bg-muted/30 p-2.5">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Productos con descuento solicitado:
+                  </p>
+                  <div className="space-y-2">
+                    {detallesConDescuentoSolicitado.map(detalle => {
+                      const precioLista = detalle.producto?.precio_venta || 0;
+                      const precioSolicitado = getPrecioSolicitadoDetalle(detalle);
+                      const diferencia = getDescuentoSolicitadoDetalle(detalle);
+
+                      return (
+                        <div key={detalle.id} className="rounded-md border border-border/70 bg-background/80 p-2">
+                          <div className="flex items-start gap-2">
+                            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-medium text-foreground">{detalle.producto?.nombre}</p>
+                              <div className="mt-1 grid grid-cols-3 gap-2 text-[11px]">
+                                <div>
+                                  <span className="block text-muted-foreground">Precio lista</span>
+                                  <span className="font-medium text-foreground">{formatCurrency(precioLista)}</span>
+                                </div>
+                                <div>
+                                  <span className="block text-muted-foreground">Precio solicitado</span>
+                                  <span className="font-medium text-foreground">{formatCurrency(precioSolicitado)}</span>
+                                </div>
+                                <div>
+                                  <span className="block text-muted-foreground">Diferencia</span>
+                                  <span className="font-medium text-foreground">{formatCurrency(diferencia)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
-              {pedido.peso_total_kg && pedido.peso_total_kg > 0 ? (
+
+              <div className="flex items-center gap-3 flex-wrap">
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Weight className="h-3 w-3" />
-                  {pedido.peso_total_kg.toFixed(1)} kg
+                  <Calendar className="h-3 w-3" />
+                  {format(new Date(pedido.fecha_pedido), "d MMM yyyy", { locale: es })}
                 </span>
-              ) : null}
-            </div>
-          </div>
-          <div className="text-right shrink-0">
-            <p className="text-xl font-bold">{formatCurrency(pedido.total)}</p>
-            {pedido.status === "entregado" && (
-              <p className="text-xs text-green-600">+{formatCurrency(pedido.total * 0.01)} comisión</p>
-            )}
-          </div>
-        </div>
-        {(pedido.status === "por_autorizar" || pedido.status === "rechazado") && (() => {
-          const productosBajoMinimo = (pedido.pedidos_detalles || []).filter(d => {
-            if (!d.producto) return false;
-            const descuento = d.producto.precio_venta - d.precio_unitario;
-            return descuento > (d.producto.descuento_maximo || 0);
-          });
-          if (productosBajoMinimo.length === 0) return null;
-          return (
-            <div className="mb-3 border border-amber-300 dark:border-amber-700 rounded-lg p-2.5 bg-amber-50 dark:bg-amber-950/30">
-              <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-1.5">Productos con descuento solicitado:</p>
-              <div className="space-y-1">
-                {productosBajoMinimo.map(d => {
-                  const descuento = d.producto!.precio_venta - d.precio_unitario;
-                  return (
-                    <div key={d.id} className="flex items-start gap-1.5 text-xs">
-                      <AlertCircle className="h-3 w-3 text-amber-600 mt-0.5 shrink-0" />
-                      <span className="text-foreground">
-                        <span className="font-medium">{d.producto!.nombre}</span>
-                        <span className="text-muted-foreground"> — Lista: {formatCurrency(d.producto!.precio_venta)} → Solicitado: </span>
-                        <span className="font-semibold text-amber-700 dark:text-amber-300">{formatCurrency(d.precio_unitario)}</span>
-                        <span className="text-destructive font-medium"> (-{formatCurrency(descuento)})</span>
-                      </span>
-                    </div>
-                  );
-                })}
+                {(pedido.status === "por_autorizar" || pedido.status === "pendiente") && (
+                  <DiasTranscurridos fecha={pedido.fecha_pedido} />
+                )}
+                {pedido.peso_total_kg && pedido.peso_total_kg > 0 ? (
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Weight className="h-3 w-3" />
+                    {pedido.peso_total_kg.toFixed(1)} kg
+                  </span>
+                ) : null}
               </div>
             </div>
-          );
-        })()}
-        <div className="flex gap-2 pt-2 border-t flex-wrap">
-          <Button variant="outline" size="sm" className="flex-1" onClick={() => abrirDetalle(pedido)}>
-            <Eye className="h-3.5 w-3.5 mr-1" /> Ver
-          </Button>
-          {pedido.status === "rechazado" && (
-            <Button size="sm" className="flex-1 bg-amber-500 hover:bg-amber-600 text-white" onClick={() => { setPedidoParaEditar(pedido); setShowEditarRechazado(true); }}>
-              <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar pedido
+
+            <div className="text-right shrink-0">
+              <p className="text-xl font-bold">{formatCurrency(pedido.total)}</p>
+              {pedido.status === "entregado" && (
+                <p className="text-xs text-green-600">+{formatCurrency(pedido.total * 0.01)} comisión</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-2 border-t flex-wrap">
+            <Button variant="outline" size="sm" className="flex-1" onClick={() => abrirDetalle(pedido)}>
+              <Eye className="h-3.5 w-3.5 mr-1" /> Ver
             </Button>
-          )}
-          {["pendiente", "en_ruta", "entregado"].includes(pedido.status) && (
-            <Button variant="outline" size="sm" onClick={() => { setPdfPedidoId(pedido.id); setShowPDFPreview(true); }}>
-              <FileText className="h-3.5 w-3.5 mr-1" /> PDF
-            </Button>
-          )}
-          {showCobrarBtn && !pedido.pagado && pedido.status === "entregado" && (
-            <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={() => abrirCobro(pedido)}>
-              <DollarSign className="h-3.5 w-3.5 mr-1" /> Cobrar
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
+            {pedido.status === "rechazado" && (
+              <Button size="sm" className="flex-1 bg-amber-500 hover:bg-amber-600 text-white" onClick={() => { setPedidoParaEditar(pedido); setShowEditarRechazado(true); }}>
+                <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar pedido
+              </Button>
+            )}
+            {["pendiente", "en_ruta", "entregado"].includes(pedido.status) && (
+              <Button variant="outline" size="sm" onClick={() => { setPdfPedidoId(pedido.id); setShowPDFPreview(true); }}>
+                <FileText className="h-3.5 w-3.5 mr-1" /> PDF
+              </Button>
+            )}
+            {showCobrarBtn && !pedido.pagado && pedido.status === "entregado" && (
+              <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={() => abrirCobro(pedido)}>
+                <DollarSign className="h-3.5 w-3.5 mr-1" /> Cobrar
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="space-y-4">
