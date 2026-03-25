@@ -14,15 +14,21 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Search, Package, ArrowUpDown, SlidersHorizontal, Loader2 } from "lucide-react";
+import { Search, Package, ArrowUpDown, SlidersHorizontal, Loader2, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { getDisplayName } from "@/lib/productUtils";
 import { cn } from "@/lib/utils";
 
+interface BodegaOption {
+  id: string;
+  nombre: string;
+}
+
 interface Lote {
   id: string;
   producto_id: string;
+  bodega_id: string | null;
   cantidad_disponible: number;
   fecha_caducidad: string | null;
   lote_referencia: string | null;
@@ -54,6 +60,14 @@ export const AlmacenInventarioTab = () => {
   const { toast } = useToast();
   const { isGerenteAlmacen, isAdmin } = useUserRoles();
   const canAdjust = isGerenteAlmacen || isAdmin;
+  const [bodegaFiltro, setBodegaFiltro] = useState<string>("todas");
+  const [bodegasDisponibles, setBodegasDisponibles] = useState<BodegaOption[]>([]);
+
+  useEffect(() => {
+    supabase.from("bodegas").select("id, nombre").eq("activo", true).order("nombre").then(({ data }) => {
+      setBodegasDisponibles(data || []);
+    });
+  }, []);
 
   useEffect(() => {
     loadInventario();
@@ -69,7 +83,7 @@ export const AlmacenInventarioTab = () => {
       const { data, error } = await supabase
         .from("inventario_lotes")
         .select(`
-          id, producto_id, cantidad_disponible, fecha_caducidad, lote_referencia,
+          id, producto_id, bodega_id, cantidad_disponible, fecha_caducidad, lote_referencia,
           bodega:bodega_id (nombre),
           producto:producto_id (codigo, nombre, marca, especificaciones, contenido_empaque, peso_kg, unidad, stock_actual, stock_minimo)
         `)
@@ -84,8 +98,13 @@ export const AlmacenInventarioTab = () => {
     }
   };
 
+  // Filtrar por bodega
+  const lotesFiltrados = bodegaFiltro === "todas"
+    ? lotes
+    : lotes.filter(l => l.bodega_id === bodegaFiltro);
+
   // Group by product
-  const productosAgrupados = lotes.reduce((acc, lote) => {
+  const productosAgrupados = lotesFiltrados.reduce((acc, lote) => {
     const key = lote.producto_id;
     if (!acc[key]) acc[key] = { producto: lote.producto, lotes: [], stockTotal: 0 };
     acc[key].lotes.push(lote);
@@ -175,12 +194,24 @@ export const AlmacenInventarioTab = () => {
 
   return (
     <div className="space-y-4">
-      {/* Search and sort */}
+      {/* Search, bodega filter and sort */}
       <div className="flex gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input placeholder="Buscar por nombre o código..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 h-12 text-lg" />
         </div>
+        <Select value={bodegaFiltro} onValueChange={setBodegaFiltro}>
+          <SelectTrigger className="h-12 w-auto min-w-[160px]">
+            <MapPin className="h-4 w-4 mr-2" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todas">Todas las bodegas</SelectItem>
+            {bodegasDisponibles.map(b => (
+              <SelectItem key={b.id} value={b.id}>{b.nombre}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button
           variant="outline"
           onClick={() => {

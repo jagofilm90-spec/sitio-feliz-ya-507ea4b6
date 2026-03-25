@@ -38,7 +38,12 @@ import { UserPreferencesPopover } from "@/components/UserPreferencesPopover";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useSystemPresence } from "@/hooks/useSystemPresence";
 import { useShowMobileNav, useIsMobile, useIsTablet, useHasPointer, useIsTabletWithMouse } from "@/hooks/use-mobile";
+import { useBodegaAutoDetect } from "@/hooks/useBodegaAutoDetect";
 import { COMPANY_DATA } from "@/constants/companyData";
+import { MapPin, Loader2 as Loader2Icon } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 const AlmacenTablet = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -54,6 +59,22 @@ const AlmacenTablet = () => {
   
   // Track presence in almacen
   useSystemPresence('almacen');
+
+  // Auto-detección de bodega
+  const {
+    bodega: bodegaDetectada,
+    metodoDeteccion,
+    detectando: detectandoBodega,
+    todasLasBodegas,
+    reintentarDeteccion,
+  } = useBodegaAutoDetect();
+  const [bodegaManualId, setBodegaManualId] = useState<string>("");
+
+  const bodegaActiva = bodegaDetectada
+    ? { id: bodegaDetectada.id, nombre: bodegaDetectada.nombre }
+    : todasLasBodegas.find(b => b.id === bodegaManualId)
+      ? { id: bodegaManualId, nombre: todasLasBodegas.find(b => b.id === bodegaManualId)!.nombre }
+      : null;
 
   // El gerente de almacén ve tabs adicionales de flotilla
   // IMPORTANTE: Solo evaluar después de que los roles hayan cargado
@@ -344,10 +365,36 @@ const AlmacenTablet = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {/* Indicador de bodega */}
+              {detectandoBodega ? (
+                <Badge variant="outline" className="h-8 px-3 text-sm gap-1.5">
+                  <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+                  Detectando bodega...
+                </Badge>
+              ) : bodegaActiva ? (
+                <Badge className="h-8 px-3 text-sm gap-1.5 bg-primary">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {bodegaActiva.nombre}
+                  {metodoDeteccion === 'wifi' && <span className="text-[10px] opacity-70">(WiFi)</span>}
+                  {metodoDeteccion === 'gps' && <span className="text-[10px] opacity-70">(GPS)</span>}
+                </Badge>
+              ) : (
+                <Select value={bodegaManualId} onValueChange={setBodegaManualId}>
+                  <SelectTrigger className="h-8 w-auto min-w-[160px] text-sm">
+                    <MapPin className="h-3.5 w-3.5 mr-1.5" />
+                    <SelectValue placeholder="Seleccionar bodega" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {todasLasBodegas.map(b => (
+                      <SelectItem key={b.id} value={b.id}>{b.nombre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               {/* Badge de conexión solo cuando hay nav móvil */}
               {showMobileNav && (
-                <Badge 
-                  variant={isOnline ? "default" : "destructive"} 
+                <Badge
+                  variant={isOnline ? "default" : "destructive"}
                   className="h-8 px-3 text-sm"
                 >
                   {isOnline ? "Online" : "Offline"}

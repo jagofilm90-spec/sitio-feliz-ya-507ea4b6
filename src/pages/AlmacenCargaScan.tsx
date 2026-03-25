@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useParams, useNavigate } from "react-router-dom";
 import { CameraQrScanner } from "@/components/almacen/CameraQrScanner";
 import { supabase } from "@/integrations/supabase/client";
+import { useBodegaAutoDetect } from "@/hooks/useBodegaAutoDetect";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -99,6 +100,9 @@ interface VehiculoOption {
 export default function AlmacenCargaScan() {
   const { pedidoId } = useParams<{ pedidoId: string }>();
   const navigate = useNavigate();
+
+  // Auto-detección de bodega para filtrar lotes
+  const { bodega: bodegaDetectada } = useBodegaAutoDetect();
 
   // Pre-scan step: chofer + vehículo selection
   const [paso, setPaso] = useState<"seleccion" | "escaneo">("seleccion");
@@ -422,18 +426,24 @@ export default function AlmacenCargaScan() {
           .gt("cantidad_disponible", 0)
           .order("fecha_caducidad", { ascending: true, nullsFirst: false });
 
+        // Filtrar lotes por bodega detectada (si hay), sino mostrar todos
+        const allLotes = (lotes || []).map((l) => ({
+          id: l.id,
+          lote_referencia: l.lote_referencia,
+          cantidad_disponible: l.cantidad_disponible,
+          fecha_caducidad: l.fecha_caducidad,
+          bodega_id: l.bodega_id,
+          bodega_nombre: (l.bodega as any)?.nombre || null,
+        }));
+        const lotesFiltrados = bodegaDetectada
+          ? allLotes.filter(l => l.bodega_id === bodegaDetectada.id)
+          : allLotes;
+
         enriched.push({
           ...cp,
           peso_real_kg: cp.peso_real_kg ?? null,
           producto: prod,
-          lotes_disponibles: (lotes || []).map((l) => ({
-            id: l.id,
-            lote_referencia: l.lote_referencia,
-            cantidad_disponible: l.cantidad_disponible,
-            fecha_caducidad: l.fecha_caducidad,
-            bodega_id: l.bodega_id,
-            bodega_nombre: (l.bodega as any)?.nombre || null,
-          })),
+          lotes_disponibles: lotesFiltrados.length > 0 ? lotesFiltrados : allLotes,
         });
       }
 
