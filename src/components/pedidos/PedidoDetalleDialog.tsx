@@ -18,8 +18,9 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { esProductoBolsas5kg, redondearABolsasCompletas, calcularNumeroBolsas, KG_POR_BOLSA, ordenarProductosAzucarPrimero } from "@/lib/calculos";
-import { Loader2 } from "lucide-react";
+import { Loader2, CreditCard } from "lucide-react";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import { getDisplayName } from "@/lib/productUtils";
 import { CreditoStatusBadge } from "./CreditoStatusBadge";
@@ -191,7 +192,23 @@ export default function PedidoDetalleDialog({
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Plazo de Crédito</p>
-                <p className="font-medium">{CREDITO_LABELS[pedido.termino_credito] || pedido.termino_credito}</p>
+                <Select value={pedido.termino_credito || "contado"} onValueChange={async (val) => {
+                  const { error } = await supabase.from("pedidos").update({ termino_credito: val as any }).eq("id", pedido.id);
+                  if (error) { toast.error("Error al cambiar crédito"); return; }
+                  setPedido({ ...pedido, termino_credito: val });
+                  toast.success(`Crédito cambiado a ${CREDITO_LABELS[val] || val}`);
+                }}>
+                  <SelectTrigger className="h-8 w-auto text-sm mt-0.5">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="contado">Contado</SelectItem>
+                    <SelectItem value="8_dias">8 días</SelectItem>
+                    <SelectItem value="15_dias">15 días</SelectItem>
+                    <SelectItem value="30_dias">30 días</SelectItem>
+                    <SelectItem value="60_dias">60 días</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               {pedido.status !== 'cancelado' && (
                 <div>

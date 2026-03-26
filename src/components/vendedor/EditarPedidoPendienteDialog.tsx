@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, CheckCircle2, AlertTriangle, X, Plus, MapPin, Calendar } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, CheckCircle2, AlertTriangle, X, Plus, MapPin, Calendar, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { calcularTotalesConImpuestos } from "@/lib/calculos";
@@ -70,6 +71,7 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [terminoCredito, setTerminoCredito] = useState("contado");
 
   const [catalogo, setCatalogo] = useState<ProductoCatalogo[]>([]);
   const [filtro, setFiltro] = useState("");
@@ -87,7 +89,7 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
 
     // Pedido info
     const { data: ped } = await supabase.from("pedidos")
-      .select("folio, fecha_pedido, cliente:clientes(nombre), sucursal:cliente_sucursales(direccion, zona:zonas(nombre))")
+      .select("folio, fecha_pedido, termino_credito, cliente:clientes(nombre), sucursal:cliente_sucursales(direccion, zona:zonas(nombre))")
       .eq("id", pedidoId).single();
     if (ped) {
       setPedidoInfo({
@@ -96,6 +98,7 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
         direccion: (ped.sucursal as any)?.direccion || "",
         zona: (ped.sucursal as any)?.zona?.nombre || "",
       });
+      setTerminoCredito(ped.termino_credito || "contado");
     }
 
     // Detalles
@@ -211,6 +214,7 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
         subtotal: impuestos.subtotal,
         impuestos: impuestos.iva + impuestos.ieps,
         peso_total_kg: realPeso > 0 ? realPeso : null,
+        termino_credito: terminoCredito as any,
         status: newStatus as any,
         notas: notasActuales.includes("[EDITADO EN OFICINA]") ? notasActuales : `${notaEdicion}\n${notasActuales}`.trim(),
       };
@@ -319,6 +323,19 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
                 {pedidoInfo.direccion && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{pedidoInfo.direccion}</span>}
                 {pedidoInfo.zona && <Badge variant="outline" className="text-[10px]">{pedidoInfo.zona}</Badge>}
                 <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{format(new Date(pedidoInfo.fecha_pedido), "d MMM yyyy", { locale: es })}</span>
+                <Select value={terminoCredito} onValueChange={setTerminoCredito}>
+                  <SelectTrigger className="h-6 w-auto text-xs gap-1">
+                    <CreditCard className="h-3 w-3" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="contado">Contado</SelectItem>
+                    <SelectItem value="8_dias">8 días</SelectItem>
+                    <SelectItem value="15_dias">15 días</SelectItem>
+                    <SelectItem value="30_dias">30 días</SelectItem>
+                    <SelectItem value="60_dias">60 días</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           )}
