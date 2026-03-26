@@ -387,7 +387,7 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
 
           const { data: cargaItems } = await supabase
             .from("carga_productos")
-            .select("pedido_detalle_id, cantidad_cargada, cargado")
+            .select("pedido_detalle_id, cantidad_cargada, peso_real_kg, cargado")
             .eq("entrega_id", entrega.id);
 
           for (const cp of cargaItems || []) {
@@ -395,27 +395,36 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
 
             const { data: detalle } = await supabase
               .from("pedidos_detalles")
-              .select("precio_unitario, cantidad, producto:productos(peso_kg, precio_por_kilo, nombre)")
+              .select("precio_unitario, cantidad, kilos_totales, producto:productos(peso_kg, precio_por_kilo, nombre)")
               .eq("id", cp.pedido_detalle_id)
               .single();
 
             if (!detalle) continue;
             const prod = detalle.producto as any;
 
-            if (detalle.cantidad !== cp.cantidad_cargada) {
-              modificaciones.push({
-                producto: prod?.nombre || "Producto",
-                cantidadOriginal: detalle.cantidad,
-                cantidadNueva: cp.cantidad_cargada,
-              });
+            const cantidadCambio = detalle.cantidad !== cp.cantidad_cargada;
+            const pesoTeoricoKg = prod?.peso_kg ? cp.cantidad_cargada * prod.peso_kg : null;
+            const pesoCambio = cp.peso_real_kg && pesoTeoricoKg && Math.abs(cp.peso_real_kg - pesoTeoricoKg) > 0.1;
 
-              const newSubtotal = prod?.precio_por_kilo && prod?.peso_kg
+            if (cantidadCambio || pesoCambio) {
+              if (cantidadCambio) {
+                modificaciones.push({
+                  producto: prod?.nombre || "Producto",
+                  cantidadOriginal: detalle.cantidad,
+                  cantidadNueva: cp.cantidad_cargada,
+                });
+              }
+
+              const newSubtotal = prod?.precio_por_kilo && cp.peso_real_kg
+                ? cp.peso_real_kg * detalle.precio_unitario
+                : prod?.precio_por_kilo && prod?.peso_kg
                 ? cp.cantidad_cargada * prod.peso_kg * detalle.precio_unitario
                 : cp.cantidad_cargada * detalle.precio_unitario;
 
               await supabase.from("pedidos_detalles").update({
                 cantidad: cp.cantidad_cargada,
                 subtotal: newSubtotal,
+                kilos_totales: cp.peso_real_kg || pesoTeoricoKg || detalle.kilos_totales,
               }).eq("id", cp.pedido_detalle_id);
             }
           }
@@ -435,9 +444,47 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
         }
       }
 
+      const vehiculoObj = vehiculos.find(v => v.id === vehiculoId);
+      const ayudantesNombres = ayudantesIds.map(aId => ayudantes.find(a => a.id === aId)?.nombre_completo || "").filter(Boolean);
+
       const whatsappPendientes: { folio: string; clienteNombre: string; phones: string[]; message: string }[] = [];
       for (const item of cola) {
         await supabase.from("pedidos").update({ status: "en_ruta", updated_at: new Date().toISOString() }).eq("id", item.pedidoId);
+
+        // Generate PDF with real quantities for the client
+        let pdfBase64: string | undefined;
+        let pdfFilename: string | undefined;
+        try {
+          const { generarConfirmacionClientePDF } = await import("@/lib/generarNotaPDF");
+          const { data: pedidoData } = await supabase
+            .from("pedidos")
+            .select("total, termino_credito, sucursal:cliente_sucursales(nombre, direccion)")
+            .eq("id", item.pedidoId).single();
+          const { data: detalles } = await supabase
+            .from("pedidos_detalles")
+            .select("cantidad, precio_unitario, subtotal, producto:productos(nombre, unidad, peso_kg, precio_por_kilo)")
+            .eq("pedido_id", item.pedidoId);
+
+          const productos = (detalles || []).map((d: any) => {
+            const pesoKg = d.producto?.peso_kg || 0;
+            const kgTotales = pesoKg > 0 ? d.cantidad * pesoKg : null;
+            return { cantidad: d.cantidad, unidad: d.producto?.unidad || "pza", descripcion: d.producto?.nombre || "Producto", pesoTotal: kgTotales, precioUnitario: d.precio_unitario, importe: d.subtotal, precioPorKilo: d.producto?.precio_por_kilo || false };
+          });
+          const pesoTotal = productos.reduce((s: number, p: any) => s + (p.pesoTotal || 0), 0);
+          const suc = pedidoData?.sucursal as any;
+
+          const cpdf = await generarConfirmacionClientePDF({
+            pedidoId: item.pedidoId, folio: item.folio, fecha: new Date().toISOString(),
+            vendedor: chofer?.nombre_completo || "Chofer",
+            terminoCredito: pedidoData?.termino_credito || "Contado",
+            cliente: { nombre: item.clienteNombre },
+            sucursal: suc ? { nombre: suc.nombre, direccion: suc.direccion } : undefined,
+            productos, subtotal: pedidoData?.total || 0, iva: 0, ieps: 0, total: pedidoData?.total || 0, pesoTotalKg: pesoTotal,
+          });
+          pdfBase64 = cpdf.base64;
+          pdfFilename = cpdf.filename;
+        } catch (e) { console.error("Error generando PDF en_ruta:", e); }
+
         try {
           const cambios = cambiosPorPedido[item.pedidoId];
           const { data: notifResponse } = await supabase.functions.invoke("send-client-notification", {
@@ -447,12 +494,15 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
               data: {
                 pedidoFolio: item.folio,
                 choferNombre: chofer?.nombre_completo || "Chofer",
+                vehiculoNombre: vehiculoObj ? `${vehiculoObj.nombre}${vehiculoObj.placa ? ` (${vehiculoObj.placa})` : ""}` : undefined,
                 ...(cambios ? {
                   modificaciones: cambios.modificaciones,
                   totalAnterior: cambios.totalAnterior,
                   totalNuevo: cambios.totalNuevo,
                 } : {}),
               },
+              pdfBase64,
+              pdfFilename,
             },
           });
           if (notifResponse?.whatsapp?.pending && notifResponse.whatsapp.phones?.length) {

@@ -30,6 +30,7 @@ interface NotificationRequest {
     diasRestantes?: number;
     total?: number;
     choferNombre?: string;
+    vehiculoNombre?: string;
     horaEstimada?: string;
     horaEntrega?: string;
     nombreReceptor?: string;
@@ -270,6 +271,7 @@ function generateEmailContent(tipo: NotificationType, data: NotificationRequest[
             <tr><td style="padding:16px 20px;">
               <p style="margin:0 0 6px;font-size:14px;"><strong>Folio:</strong> ${data.pedidoFolio}</p>
               ${data.choferNombre ? `<p style="margin:0 0 6px;font-size:14px;"><strong>Chofer:</strong> ${data.choferNombre}</p>` : ''}
+              ${data.vehiculoNombre ? `<p style="margin:0 0 6px;font-size:14px;"><strong>Unidad:</strong> ${data.vehiculoNombre}</p>` : ''}
               ${data.horaEstimada ? `<p style="margin:0;font-size:14px;"><strong>Hora estimada:</strong> ${data.horaEstimada}</p>` : ''}
             </td></tr>
           </table>
@@ -449,7 +451,7 @@ function generateWhatsAppPlainMessage(tipo: NotificationType, data: Notification
     case "pedido_confirmado":
       return `${saludo},\n\n✅ Su pedido *${data.pedidoFolio}* ha sido confirmado y está siendo preparado.${data.total ? `\nTotal: ${formatMoney(data.total)}` : ""}\n\nLe notificaremos cuando esté en camino.${firma}`;
     case "en_ruta": {
-      let msg = `${saludo},\n\n🚚 ¡Su pedido *${data.pedidoFolio}* va en camino!${data.choferNombre ? `\nChofer: ${data.choferNombre}` : ""}${data.horaEstimada ? `\nHora estimada: ${data.horaEstimada}` : ""}`;
+      let msg = `${saludo},\n\n🚚 ¡Su pedido *${data.pedidoFolio}* va en camino!${data.choferNombre ? `\nChofer: ${data.choferNombre}` : ""}${data.vehiculoNombre ? `\nUnidad: ${data.vehiculoNombre}` : ""}${data.horaEstimada ? `\nHora estimada: ${data.horaEstimada}` : ""}`;
       if (data.modificaciones && data.modificaciones.length > 0) {
         msg += `\n\n⚠️ *Ajustes en su pedido:*`;
         for (const m of data.modificaciones) {
