@@ -609,7 +609,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                     const diasPedido = differenceInDays(new Date(), new Date(p.fecha_pedido));
                     const diasColor = diasPedido < 7 ? "text-green-600" : diasPedido <= 14 ? "text-amber-600" : "text-destructive";
                     return (
-                      <TableRow key={p.id} className="cursor-pointer" onClick={() => abrirDetalle(p)}>
+                      <TableRow key={p.id}>
                         <TableCell className="text-xs font-bold" style={{ whiteSpace: "nowrap" }}>
                           {p.folio}
                           {p.notas?.includes("[EDITADO EN OFICINA]") && <Badge className="ml-1 text-[9px] bg-blue-500">Editado</Badge>}

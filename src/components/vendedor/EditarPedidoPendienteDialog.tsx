@@ -264,7 +264,7 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
           // Generate PDFs
           const pdfData = {
             pedidoId, folio, fecha: new Date().toISOString(), vendedor: vendedorNombre,
-            terminoCredito: pedidoData?.termino_credito || "Contado",
+            terminoCredito: ({ contado: "Contado", "8_dias": "8 días", "15_dias": "15 días", "30_dias": "30 días", "60_dias": "60 días" } as Record<string,string>)[terminoCredito] || terminoCredito || "Contado",
             cliente: { nombre: pedidoInfo?.cliente_nombre || "Cliente" },
             sucursal: pedidoInfo?.direccion ? { nombre: pedidoInfo.zona || "Principal", direccion: pedidoInfo.direccion } : undefined,
             productos: productosForPdf, subtotal: impuestos.subtotal, iva: impuestos.iva, ieps: impuestos.ieps, total: impuestos.total, pesoTotalKg: realPeso,
