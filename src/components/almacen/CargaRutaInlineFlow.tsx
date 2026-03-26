@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   QrCode, Truck, User, Loader2, Camera, X, ArrowLeft, CheckCircle2, Timer, Trash2, Package,
-  ChevronUp, ChevronDown,
+  ChevronUp, ChevronDown, AlertCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -46,6 +46,7 @@ interface VehiculoOption {
   placa: string | null;
   tipo: string | null;
   chofer_asignado_id: string | null;
+  peso_maximo_local_kg: number | null;
 }
 
 interface CargaRutaInlineFlowProps {
@@ -126,7 +127,7 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
       const [empleadosRes, vehiculosRes] = await Promise.all([
         supabase.from("empleados").select("id, nombre_completo, puesto")
           .in("puesto", ["Chofer", "Ayudante de Chofer"]).eq("activo", true).order("nombre_completo"),
-        supabase.from("vehiculos").select("id, nombre, placa, tipo, chofer_asignado_id")
+        supabase.from("vehiculos").select("id, nombre, placa, tipo, chofer_asignado_id, peso_maximo_local_kg")
           .eq("activo", true).order("nombre"),
       ]);
 
@@ -646,6 +647,25 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Overweight warning */}
+            {(() => {
+              const veh = vehiculos.find(v => v.id === vehiculoId);
+              const maxKg = veh?.peso_maximo_local_kg;
+              if (!maxKg || pesoTotalCola <= maxKg) return null;
+              const exceso = Math.round(pesoTotalCola - maxKg);
+              return (
+                <div className="border-2 border-destructive rounded-lg p-3 bg-destructive/5">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-destructive text-sm">Sobrepeso: +{exceso.toLocaleString()} kg</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">La carga ({Math.round(pesoTotalCola).toLocaleString()} kg) excede la capacidad del vehículo ({maxKg.toLocaleString()} kg)</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Ayudantes */}
             <div className="space-y-2">

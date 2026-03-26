@@ -28,6 +28,7 @@ interface Ruta {
   fecha_ruta: string;
   status: string;
   peso_total_kg: number | null;
+  porcentaje_carga: number;
   carga_completada: boolean | null;
   carga_completada_en: string | null;
   hora_salida_sugerida: string | null;
@@ -167,6 +168,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
           fecha_ruta,
           status,
           peso_total_kg,
+          porcentaje_carga,
           carga_completada,
           carga_completada_en,
           hora_salida_sugerida,
@@ -628,6 +630,44 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
       </TabsList>
 
       <TabsContent value="carga">
+      {/* Mis cargas activas */}
+      {(() => {
+        const misCargas = rutas.filter(r => r.almacenista_id === empleadoId && !r.carga_completada && r.carga_iniciada_en);
+        if (misCargas.length === 0) return null;
+        return (
+          <div className="space-y-2 mb-4">
+            <p className="text-sm font-semibold text-muted-foreground">Mis cargas activas</p>
+            {misCargas.map(r => {
+              const segsTranscurridos = r.carga_iniciada_en ? Math.floor((Date.now() - new Date(r.carga_iniciada_en).getTime()) / 1000) : 0;
+              const mins = Math.floor(segsTranscurridos / 60);
+              const tiempoStr = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
+              return (
+                <Card key={r.id} className="border-amber-300 dark:border-amber-700 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedRuta(r)}>
+                  <CardContent className="py-3 flex items-center gap-3">
+                    <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-2 shrink-0">
+                      <Package className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm">{r.folio}</span>
+                        <Badge className="text-[10px] bg-amber-500">En carga</Badge>
+                        <span className="text-xs font-mono text-muted-foreground">{r.porcentaje_carga}%</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {r.chofer?.nombre_completo || "Sin chofer"} · {r.entregas?.length || 0} pedidos · {tiempoStr}
+                      </p>
+                    </div>
+                    <Button size="sm" className="shrink-0 bg-amber-500 hover:bg-amber-600 text-white">
+                      Continuar carga
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {/* Banner Empezar a Cargar */}
       <Card className="border-primary/30 bg-primary/5">
         <CardContent className="py-4">
@@ -636,12 +676,12 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
               <QrCode className="h-8 w-8 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-lg text-foreground">Empezar a cargar</h3>
+              <h3 className="font-bold text-lg text-foreground">Escanear hoja de carga</h3>
               <p className="text-sm text-muted-foreground">
-                Selecciona personal, escanea pedidos y confirma la carga
+                Escanea QR, asigna personal y confirma la carga
               </p>
             </div>
-            <Button 
+            <Button
               onClick={() => setShowInlineFlow(true)}
               size="lg"
               className="h-14 px-6 text-base font-bold gap-2 shrink-0"

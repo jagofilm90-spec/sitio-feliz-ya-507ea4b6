@@ -246,9 +246,11 @@ const ProductoRow = ({
 
       {/* Controls row: Quantity, Weight + confirm, Expiry */}
       <div className="flex items-center gap-2 px-3 pb-3 pl-14">
-        {/* Quantity */}
+        {/* Quantity + Unit */}
         <div className="flex flex-col items-center gap-0.5">
-          <label className="text-[10px] text-muted-foreground font-medium uppercase">Cant.</label>
+          <label className="text-[10px] text-muted-foreground font-medium uppercase">
+            {producto.producto.unidad === 'kg' ? 'Cant.' : producto.producto.unidad || 'Cant.'}
+          </label>
           <Input
             type="number"
             inputMode="numeric"
