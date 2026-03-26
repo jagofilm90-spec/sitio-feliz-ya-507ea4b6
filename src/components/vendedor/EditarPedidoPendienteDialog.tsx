@@ -199,6 +199,7 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
       }));
       const impuestos = calcularTotalesConImpuestos(taxItems);
       const realPeso = (allDet || []).reduce((s: number, d: any) => s + (d.cantidad * ((d.producto as any)?.peso_kg || 0)), 0);
+      console.log("[EditarPedido] taxItems:", taxItems, "impuestos:", impuestos, "realPeso:", realPeso);
 
       const newStatus = anyBelowMin ? "por_autorizar" : "pendiente";
       const { data: pedidoData } = await supabase.from("pedidos").select("notas, cliente_id, termino_credito").eq("id", pedidoId).single();
