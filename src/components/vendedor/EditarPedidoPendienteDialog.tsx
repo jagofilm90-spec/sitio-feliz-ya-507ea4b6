@@ -218,8 +218,8 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
       const { data: vendorProfile } = await supabase.from("profiles").select("full_name").eq("id", user?.id || "").single();
       const vendedorNombre = vendorProfile?.full_name || "Vendedor";
       try {
-        await supabase.from("notificaciones").insert({ tipo: "pedido_autorizado", titulo: `✏️ Pedido ${folio} editado`, descripcion: `${vendedorNombre} editó el pedido. Nuevo total: ${formatCurrency(realTotal)}`, pedido_id: pedidoId, leida: false });
-        await supabase.functions.invoke("send-push-notification", { body: { roles: ["admin"], title: `✏️ ${folio} editado`, body: `Nuevo total: ${formatCurrency(realTotal)}` } }).catch(() => {});
+        await supabase.from("notificaciones").insert({ tipo: "pedido_autorizado", titulo: `✏️ Pedido ${folio} editado`, descripcion: `${vendedorNombre} editó el pedido. Nuevo total: ${formatCurrency(impuestos.total)}`, pedido_id: pedidoId, leida: false });
+        await supabase.functions.invoke("send-push-notification", { body: { roles: ["admin"], title: `✏️ ${folio} editado`, body: `Nuevo total: ${formatCurrency(impuestos.total)}` } }).catch(() => {});
       } catch {}
 
       // 4. Build products list for PDF from DB data
@@ -265,7 +265,7 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
                 clienteEmail,
                 clienteNombre: pedidoInfo?.cliente_nombre || "Cliente",
                 pedidoFolio: folio,
-                total: realTotal,
+                total: impuestos.total,
                 ajustesPrecio: 0,
                 detalles: productosForPdf.map(p => ({
                   producto: p.descripcion, cantidad: p.cantidad, unidad: p.unidad,
