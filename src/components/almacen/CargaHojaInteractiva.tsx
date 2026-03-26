@@ -475,9 +475,15 @@ export const CargaHojaInteractiva = ({
       }
 
       // Update local confirmado state
-      setProductos(prev => prev.map((p, i) =>
-        i === idx ? { ...p, confirmado: checked } : p
-      ));
+      setProductos(prev => {
+        const updated = prev.map((p, i) => i === idx ? { ...p, confirmado: checked } : p);
+        // MEJORA 4: Save porcentaje_carga to DB for real-time visibility
+        const activos = updated.filter(p => !p.eliminado);
+        const confirmados = activos.filter(p => p.confirmado).length;
+        const pct = activos.length > 0 ? Math.round((confirmados / activos.length) * 100) : 0;
+        supabase.from("rutas").update({ porcentaje_carga: pct }).eq("id", rutaId).then(() => {});
+        return updated;
+      });
     } catch (err: any) {
       console.error(err);
       // Refresh stock to show current availability
@@ -548,6 +554,29 @@ export const CargaHojaInteractiva = ({
 
   // Confirm checklist and move to evidencias phase
   const handleConfirmarCarga = async () => {
+    // MEJORA 3: Strict validation before confirming
+    const noCargados = productosActivos.filter(p => !p.confirmado);
+    if (noCargados.length > 0) {
+      toast.error(`Hay ${noCargados.length} producto${noCargados.length > 1 ? "s" : ""} no cargado${noCargados.length > 1 ? "s" : ""}. Marca todos los checkbox antes de finalizar.`, {
+        description: noCargados.slice(0, 3).map(p => p.nombre).join(", ") + (noCargados.length > 3 ? "..." : ""),
+        duration: 6000,
+      });
+      return;
+    }
+
+    const productosConPeso = productosActivos.filter(p => p.unidad === 'kg' && (p.pesoKgUnit || 0) > 0);
+    const pesosSinConfirmar = productosConPeso.filter(p => {
+      // Check if peso_confirmado is set in DB (we check local confirmado + pesoRealKg presence)
+      return !p.pesoRealKg || p.pesoRealKg <= 0;
+    });
+    if (pesosSinConfirmar.length > 0) {
+      toast.error(`Hay ${pesosSinConfirmar.length} peso${pesosSinConfirmar.length > 1 ? "s" : ""} sin registrar. Ingresa el peso de báscula para cada producto.`, {
+        description: pesosSinConfirmar.slice(0, 3).map(p => p.nombre).join(", ") + (pesosSinConfirmar.length > 3 ? "..." : ""),
+        duration: 6000,
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
