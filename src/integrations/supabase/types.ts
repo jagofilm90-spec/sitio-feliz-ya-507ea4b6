@@ -146,6 +146,7 @@ export type Database = {
           movimiento_inventario_id: string | null
           notas: string | null
           pedido_detalle_id: string
+          peso_confirmado: boolean
           peso_real_kg: number | null
           updated_at: string | null
         }
@@ -164,6 +165,7 @@ export type Database = {
           movimiento_inventario_id?: string | null
           notas?: string | null
           pedido_detalle_id: string
+          peso_confirmado?: boolean
           peso_real_kg?: number | null
           updated_at?: string | null
         }
@@ -182,6 +184,7 @@ export type Database = {
           movimiento_inventario_id?: string | null
           notas?: string | null
           pedido_detalle_id?: string
+          peso_confirmado?: boolean
           peso_real_kg?: number | null
           updated_at?: string | null
         }
@@ -5053,6 +5056,7 @@ export type Database = {
           notas: string | null
           numero_sello_salida: string | null
           peso_total_kg: number | null
+          porcentaje_carga: number
           status: string | null
           tiempo_estimado_minutos: number | null
           tipo_ruta: string
@@ -5093,6 +5097,7 @@ export type Database = {
           notas?: string | null
           numero_sello_salida?: string | null
           peso_total_kg?: number | null
+          porcentaje_carga?: number
           status?: string | null
           tiempo_estimado_minutos?: number | null
           tipo_ruta?: string
@@ -5133,6 +5138,7 @@ export type Database = {
           notas?: string | null
           numero_sello_salida?: string | null
           peso_total_kg?: number | null
+          porcentaje_carga?: number
           status?: string | null
           tiempo_estimado_minutos?: number | null
           tipo_ruta?: string
@@ -6262,7 +6268,6 @@ export type Database = {
         | "borrador"
         | "por_autorizar"
         | "rechazado"
-        | "por_confirmar_vendedor"
         | "pendiente"
         | "en_ruta"
         | "entregado"
@@ -6452,7 +6457,6 @@ export const Constants = {
         "borrador",
         "por_autorizar",
         "rechazado",
-        "por_confirmar_vendedor",
         "pendiente",
         "en_ruta",
         "entregado",

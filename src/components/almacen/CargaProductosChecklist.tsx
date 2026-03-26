@@ -3,7 +3,9 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -11,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertTriangle, Calendar, Gift, Warehouse, Scale } from "lucide-react";
+import { AlertTriangle, Calendar, Gift, Warehouse, Scale, Check, X } from "lucide-react";
 import { getCompactDisplayName } from "@/lib/productUtils";
 
 interface LoteDisponible {
@@ -31,6 +33,7 @@ interface ProductoCarga {
   cargado: boolean;
   lote_id: string | null;
   peso_real_kg?: number | null;
+  peso_confirmado?: boolean;
   producto: {
     id: string;
     codigo: string;
@@ -54,6 +57,7 @@ export interface CargaProductosChecklistProps {
   ) => void;
   onDesmarcar?: (producto: ProductoCarga) => void;
   onPesoChange?: (cargaId: string, pesoKg: number) => void;
+  onPesoConfirmado?: (cargaId: string, confirmado: boolean) => void;
   disabled?: boolean;
   isCortesia?: boolean;
   entregaConfirmada?: boolean;
@@ -64,18 +68,39 @@ export const CargaProductosChecklist = ({
   onToggle,
   onDesmarcar,
   onPesoChange,
+  onPesoConfirmado,
   disabled = false,
   isCortesia = false,
   entregaConfirmada = false,
 }: CargaProductosChecklistProps) => {
+  const totalProductos = productos.length;
+  const productosCargados = productos.filter(p => p.cargado).length;
+  const porcentaje = totalProductos > 0 ? Math.round((productosCargados / totalProductos) * 100) : 0;
+
   return (
     <div className="space-y-2">
+      {/* Progress bar */}
+      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
+        <div className="flex-1">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-sm font-semibold">
+              Carga: {productosCargados}/{totalProductos} productos
+            </span>
+            <span className={`text-sm font-bold ${porcentaje === 100 ? "text-green-600" : ""}`}>
+              {porcentaje}%
+            </span>
+          </div>
+          <Progress value={porcentaje} className="h-2.5" />
+        </div>
+      </div>
+
       {productos.map((producto) => (
         <ProductoRow
           key={producto.id}
           producto={producto}
           onToggle={onToggle}
           onPesoChange={onPesoChange}
+          onPesoConfirmado={onPesoConfirmado}
           disabled={disabled || entregaConfirmada}
           isCortesia={isCortesia}
         />
@@ -88,12 +113,14 @@ const ProductoRow = ({
   producto,
   onToggle,
   onPesoChange,
+  onPesoConfirmado,
   disabled,
   isCortesia = false,
 }: {
   producto: ProductoCarga;
   onToggle: CargaProductosChecklistProps["onToggle"];
   onPesoChange?: CargaProductosChecklistProps["onPesoChange"];
+  onPesoConfirmado?: CargaProductosChecklistProps["onPesoConfirmado"];
   disabled: boolean;
   isCortesia?: boolean;
 }) => {
@@ -108,10 +135,15 @@ const ProductoRow = ({
   const [loteSeleccionado, setLoteSeleccionado] = useState(
     producto.lote_id || (producto.lotes_disponibles[0]?.id ?? null)
   );
+  const [pesoConfirmadoLocal, setPesoConfirmadoLocal] = useState(producto.peso_confirmado || false);
 
   useEffect(() => {
     setCantidadCargada(producto.cantidad_cargada || producto.cantidad_solicitada);
   }, [producto.cantidad_cargada, producto.cantidad_solicitada]);
+
+  useEffect(() => {
+    setPesoConfirmadoLocal(producto.peso_confirmado || false);
+  }, [producto.peso_confirmado]);
 
   const pesoTeoricoTotal = pesoTeoricoUnitario * cantidadCargada;
   const esVentaPorKg = producto.producto.unidad === 'kg';
@@ -120,7 +152,6 @@ const ProductoRow = ({
   const cantidadDifiere = cantidadCargada !== producto.cantidad_solicitada;
   const pesoDifiere = tienePeso && Math.abs(pesoReal - pesoTeoricoTotal) > 0.1;
 
-  const loteFIFO = producto.lotes_disponibles[0];
   const loteActual = producto.lotes_disponibles.find(l => l.id === loteSeleccionado);
 
   const handleCheckChange = (checked: boolean) => {
@@ -133,14 +164,13 @@ const ProductoRow = ({
     if (pesoTeoricoUnitario > 0) {
       const nuevoPeso = cantidad * pesoTeoricoUnitario;
       setPesoReal(nuevoPeso);
-      if (onPesoChange) {
-        onPesoChange(producto.id, nuevoPeso);
-      }
+      setPesoConfirmadoLocal(false);
+      if (onPesoConfirmado) onPesoConfirmado(producto.id, false);
+      if (onPesoChange) onPesoChange(producto.id, nuevoPeso);
     }
   };
 
   const handleCantidadBlur = () => {
-    // If product is already loaded and quantity changed, trigger adjustment
     if (producto.cargado && cantidadCargada !== producto.cantidad_cargada && cantidadCargada > 0) {
       onToggle(producto.id, true, cantidadCargada, loteSeleccionado);
     }
@@ -157,6 +187,19 @@ const ProductoRow = ({
     }
   };
 
+  const handleConfirmarPeso = () => {
+    setPesoConfirmadoLocal(true);
+    if (onPesoConfirmado) onPesoConfirmado(producto.id, true);
+    if (onPesoChange && pesoReal !== producto.peso_real_kg) {
+      onPesoChange(producto.id, pesoReal);
+    }
+  };
+
+  const handleDesconfirmarPeso = () => {
+    setPesoConfirmadoLocal(false);
+    if (onPesoConfirmado) onPesoConfirmado(producto.id, false);
+  };
+
   const borderColor = producto.cargado
     ? isCortesia
       ? "border-l-amber-500 bg-amber-50/50 dark:bg-amber-950/20"
@@ -165,7 +208,7 @@ const ProductoRow = ({
 
   return (
     <div className={`border rounded-lg overflow-hidden border-l-4 ${borderColor}`}>
-      {/* Fila principal: checkbox + nombre completo */}
+      {/* Main row: checkbox + product name */}
       <div className="flex items-start gap-3 p-3 pb-2">
         <Checkbox
           checked={producto.cargado}
@@ -186,6 +229,11 @@ const ProductoRow = ({
             {producto.cargado && (
               <Badge className="bg-green-600 text-white text-[10px] px-1.5 py-0">CARGADO</Badge>
             )}
+            {tienePeso && pesoConfirmadoLocal && (
+              <Badge className="bg-blue-600 text-white text-[10px] px-1.5 py-0 gap-0.5">
+                <Scale className="w-2.5 h-2.5" />PESO OK
+              </Badge>
+            )}
             {loteActual?.bodega_nombre && (
               <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                 <Warehouse className="w-3 h-3" />
@@ -196,9 +244,9 @@ const ProductoRow = ({
         </div>
       </div>
 
-      {/* Fila de controles: Cantidad, Peso, Lote */}
+      {/* Controls row: Quantity, Weight + confirm, Expiry */}
       <div className="flex items-center gap-2 px-3 pb-3 pl-14">
-        {/* Cantidad */}
+        {/* Quantity */}
         <div className="flex flex-col items-center gap-0.5">
           <label className="text-[10px] text-muted-foreground font-medium uppercase">Cant.</label>
           <Input
@@ -220,24 +268,55 @@ const ProductoRow = ({
           )}
         </div>
 
-        {/* Peso */}
+        {/* Weight + Confirm button */}
         {tienePeso && (
           <div className="flex flex-col items-center gap-0.5">
-            <label className="text-[10px] text-muted-foreground font-medium uppercase">Peso kg</label>
-            <Input
-              type="number"
-              inputMode="decimal"
-              step="0.1"
-              value={pesoReal || ""}
-              onChange={(e) => handlePesoChange(e.target.value)}
-              onBlur={handlePesoBlur}
-              placeholder={pesoTeoricoTotal.toFixed(1)}
-              className={`h-9 w-20 text-center text-sm font-semibold ${
-                pesoDifiere ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : ""
-              }`}
-              disabled={disabled}
-            />
-            {pesoDifiere && (
+            <label className="text-[10px] text-muted-foreground font-medium uppercase flex items-center gap-0.5">
+              <Scale className="w-3 h-3" />Peso kg
+            </label>
+            <div className="flex items-center gap-1">
+              <Input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                value={pesoReal || ""}
+                onChange={(e) => handlePesoChange(e.target.value)}
+                onBlur={handlePesoBlur}
+                placeholder={pesoTeoricoTotal.toFixed(1)}
+                className={`h-9 w-20 text-center text-sm font-semibold ${
+                  pesoConfirmadoLocal
+                    ? "border-blue-400 bg-blue-50 dark:bg-blue-950/30"
+                    : pesoDifiere
+                    ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30"
+                    : ""
+                }`}
+                disabled={disabled || pesoConfirmadoLocal}
+              />
+              {!pesoConfirmadoLocal ? (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 border-green-400 text-green-600 hover:bg-green-50"
+                  onClick={handleConfirmarPeso}
+                  disabled={disabled || !pesoReal}
+                  title="Confirmar peso"
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 border-muted-foreground/30 text-muted-foreground hover:bg-muted"
+                  onClick={handleDesconfirmarPeso}
+                  disabled={disabled}
+                  title="Editar peso"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            {pesoDifiere && !pesoConfirmadoLocal && (
               <span className="text-[10px] text-amber-600 flex items-center gap-0.5">
                 <Scale className="w-3 h-3" />
                 T: {pesoTeoricoTotal.toFixed(1)}
@@ -246,7 +325,7 @@ const ProductoRow = ({
           </div>
         )}
 
-        {/* Fecha caducidad - siempre visible si existe */}
+        {/* Expiry date */}
         {loteActual?.fecha_caducidad && (
           <div className="flex flex-col items-center gap-0.5">
             <label className="text-[10px] text-muted-foreground font-medium uppercase">Caduc.</label>
@@ -257,7 +336,7 @@ const ProductoRow = ({
           </div>
         )}
 
-        {/* Sin lotes */}
+        {/* No lots available */}
         {producto.lotes_disponibles.length === 0 && (
           <span className="text-xs text-destructive flex items-center gap-1 h-9">
             <AlertTriangle className="w-3 h-3" />
