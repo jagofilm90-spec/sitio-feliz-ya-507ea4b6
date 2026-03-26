@@ -106,7 +106,7 @@ export function PedidoPDFPreviewDialog({ open, onOpenChange, pedidoId }: Props) 
         cliente: { nombre: cliente.nombre, razonSocial: cliente.razon_social || undefined, rfc: cliente.rfc || undefined, direccionFiscal: formatDir(cliente), telefono: cliente.telefono || undefined },
         direccionEntrega: cliente.direccion || undefined,
         sucursal: data.sucursal ? { nombre: (data.sucursal as any).nombre, direccion: (data.sucursal as any).direccion || undefined } : undefined,
-        productos, subtotal: subtotalReal, iva: ivaTotal, ieps: iepsCalc, total: data.total, pesoTotalKg,
+        productos, subtotal: subtotalReal, iva: ivaTotal, ieps: iepsCalc, total: subtotalReal + ivaTotal + iepsCalc, pesoTotalKg,
         notas: data.notas || undefined,
       });
     } catch (e) {
