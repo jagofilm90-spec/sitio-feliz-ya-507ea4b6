@@ -552,6 +552,79 @@ export const CargaHojaInteractiva = ({
     return () => { supabase.removeChannel(channel); };
   }, [rutaId, productos.length > 0 ? productos.map(p => p.productoId).join(',') : '']);
 
+  // Realtime: detect new carga_productos added by vendor (agregado_en_carga)
+  useEffect(() => {
+    if (fase !== "checklist") return;
+
+    const entregaIds = [...new Set(productos.map(p => p.entregaId))];
+    if (entregaIds.length === 0) return;
+
+    const channel = supabase
+      .channel('new-carga-products-' + rutaId)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'carga_productos' }, async (payload) => {
+        const newCP = payload.new as any;
+        if (!entregaIds.includes(newCP.entrega_id)) return;
+        // Check if already in our list
+        if (productos.some(p => p.cargaProductoId === newCP.id)) return;
+
+        // Fetch the product info for this new carga_producto
+        try {
+          const { data: detalle } = await supabase
+            .from("pedidos_detalles")
+            .select("precio_unitario, agregado_en_carga, producto:productos(id, codigo, nombre, marca, especificaciones, contenido_empaque, peso_kg, unidad, precio_por_kilo), pedido:pedido_id(folio, cliente:clientes(nombre))")
+            .eq("id", newCP.pedido_detalle_id).single();
+
+          if (!detalle) return;
+          const prod = (detalle.producto as any) || {};
+          const ped = detalle.pedido as any;
+
+          const { data: lotes } = await supabase
+            .from("inventario_lotes")
+            .select("id, lote_referencia, cantidad_disponible, bodega:bodegas(nombre)")
+            .eq("producto_id", prod.id).gt("cantidad_disponible", 0)
+            .order("fecha_caducidad", { ascending: true, nullsFirst: false });
+
+          const newProduct: ProductoHoja = {
+            cargaProductoId: newCP.id,
+            pedidoDetalleId: newCP.pedido_detalle_id,
+            pedidoFolio: ped?.folio || "",
+            clienteNombre: ped?.cliente?.nombre || "",
+            entregaId: newCP.entrega_id,
+            productoId: prod.id,
+            codigo: prod.codigo,
+            nombre: prod.nombre,
+            marca: prod.marca,
+            especificaciones: prod.especificaciones,
+            contenido_empaque: prod.contenido_empaque,
+            unidad: prod.unidad,
+            pesoKgUnit: prod.peso_kg,
+            precioPorKilo: prod.precio_por_kilo,
+            precioUnitario: (detalle as any)?.precio_unitario || 0,
+            cantidadSolicitada: newCP.cantidad_solicitada,
+            cantidadACargar: newCP.cantidad_cargada || newCP.cantidad_solicitada,
+            pesoRealKg: newCP.peso_real_kg,
+            loteId: lotes && lotes.length > 0 ? lotes[0].id : null,
+            lotesDisponibles: (lotes || []).map((l: any) => ({
+              id: l.id, lote_referencia: l.lote_referencia,
+              cantidad_disponible: l.cantidad_disponible,
+              bodega_nombre: (l.bodega as any)?.nombre || null,
+            })),
+            eliminado: false,
+            confirmado: false,
+            movimientoInventarioId: null,
+          };
+
+          setProductos(prev => [...prev, newProduct]);
+          toast.info(`Producto nuevo agregado por vendedor: ${prod.nombre} x${newCP.cantidad_solicitada}`, { duration: 5000 });
+        } catch (e) {
+          console.error("Error loading new carga_producto:", e);
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [rutaId, fase, productos.length]);
+
   // Confirm checklist and move to evidencias phase
   const handleConfirmarCarga = async () => {
     // MEJORA 3: Strict validation before confirming

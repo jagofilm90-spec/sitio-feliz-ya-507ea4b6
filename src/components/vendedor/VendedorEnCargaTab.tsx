@@ -4,15 +4,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Package, Truck, User, Users, Weight, Clock, 
-  ArrowRight, MapPin, CheckCircle2 
+import { Button } from "@/components/ui/button";
+import {
+  Package, Truck, User, Users, Weight, Clock,
+  ArrowRight, MapPin, CheckCircle2, Plus
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { LiveIndicator } from "@/components/ui/live-indicator";
+import { AgregarProductoEnCargaDialog } from "./AgregarProductoEnCargaDialog";
 
 interface EntregaCarga {
   id: string;
+  pedido_id: string;
   orden_entrega: number;
   status_entrega: string;
   pedido_folio: string;
@@ -37,6 +40,8 @@ interface RutaEnCarga {
 export function VendedorEnCargaTab() {
   const [rutasEnCarga, setRutasEnCarga] = useState<RutaEnCarga[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAgregar, setShowAgregar] = useState(false);
+  const [agregarInfo, setAgregarInfo] = useState<{ pedidoId: string; folio: string; entregaId: string } | null>(null);
 
   const fetchRutasEnCarga = useCallback(async () => {
     try {
@@ -86,6 +91,7 @@ export function VendedorEnCargaTab() {
         }
         rutaMap.get(ruta.id).entregas.push({
           id: e.id,
+          pedido_id: e.pedido_id,
           orden_entrega: e.orden_entrega,
           status_entrega: e.status_entrega || "pendiente",
           pedido_folio: e.pedido?.folio || "",
@@ -254,20 +260,23 @@ export function VendedorEnCargaTab() {
                 </p>
                 <div className="space-y-1.5">
                   {ruta.entregas.map((entrega, idx) => (
-                    <div
-                      key={entrega.id}
-                      className="flex items-center gap-2 text-sm"
-                    >
+                    <div key={entrega.id} className="flex items-center gap-2 text-sm">
                       <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-xs font-bold shrink-0">
                         {entrega.orden_entrega}
                       </div>
                       <span className="truncate flex-1 font-medium">{entrega.cliente_nombre}</span>
                       {entrega.sucursal_nombre && (
-                        <span className="text-xs text-muted-foreground truncate max-w-[100px]">
+                        <span className="text-xs text-muted-foreground truncate max-w-[80px]">
                           {entrega.sucursal_nombre}
                         </span>
                       )}
                       <span className="text-xs font-semibold shrink-0">{formatCurrency(entrega.pedido_total)}</span>
+                      <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[10px] text-primary shrink-0" onClick={() => {
+                        setAgregarInfo({ pedidoId: entrega.pedido_id, folio: entrega.pedido_folio, entregaId: entrega.id });
+                        setShowAgregar(true);
+                      }}>
+                        <Plus className="h-3 w-3 mr-0.5" />Agregar
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -276,6 +285,17 @@ export function VendedorEnCargaTab() {
           </CardContent>
         </Card>
       ))}
+
+      {agregarInfo && (
+        <AgregarProductoEnCargaDialog
+          open={showAgregar}
+          onOpenChange={setShowAgregar}
+          pedidoId={agregarInfo.pedidoId}
+          pedidoFolio={agregarInfo.folio}
+          entregaId={agregarInfo.entregaId}
+          onProductoAgregado={fetchRutasEnCarga}
+        />
+      )}
     </div>
   );
 }

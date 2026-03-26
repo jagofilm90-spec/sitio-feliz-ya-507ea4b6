@@ -3759,6 +3759,7 @@ export type Database = {
       }
       pedidos_detalles: {
         Row: {
+          agregado_en_carga: boolean
           autorizacion_status: string
           cantidad: number
           cantidad_original: number | null
@@ -3779,6 +3780,7 @@ export type Database = {
           unidades_manual: number | null
         }
         Insert: {
+          agregado_en_carga?: boolean
           autorizacion_status?: string
           cantidad: number
           cantidad_original?: number | null
@@ -3799,6 +3801,7 @@ export type Database = {
           unidades_manual?: number | null
         }
         Update: {
+          agregado_en_carga?: boolean
           autorizacion_status?: string
           cantidad?: number
           cantidad_original?: number | null
