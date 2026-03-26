@@ -81,6 +81,8 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
   const [horaInicio, setHoraInicio] = useState<Date | null>(null);
   const [tiempoSeg, setTiempoSeg] = useState(0);
   const [cancelling, setCancelling] = useState(false);
+  const [pedidosModificados, setPedidosModificados] = useState<Set<string>>(new Set());
+  const [generandoPDF, setGenerandoPDF] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Timer
@@ -444,6 +446,32 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
         }
       }
 
+      // Track which pedidos were modified for the finalizado screen
+      const modifiedIds = new Set(Object.keys(cambiosPorPedido));
+      setPedidosModificados(modifiedIds);
+
+      // Notify admin/vendedor for modified pedidos
+      for (const [pedidoId, cambios] of Object.entries(cambiosPorPedido)) {
+        const item = cola.find(c => c.pedidoId === pedidoId);
+        if (!item) continue;
+        try {
+          // Get vendedor_id to notify
+          const { data: pedidoData } = await supabase.from("pedidos").select("vendedor_id").eq("id", pedidoId).single();
+          const desc = cambios.modificaciones.map(m => `${m.producto}: ${m.cantidadOriginal}→${m.cantidadNueva}`).join(", ");
+          // Notify vendedor
+          if (pedidoData?.vendedor_id) {
+            await supabase.from("notificaciones").insert({ tipo: "pedido_autorizado", titulo: `⚠️ Pedido ${item.folio} modificado en carga`, descripcion: desc, pedido_id: pedidoId, leida: false });
+            await supabase.functions.invoke("send-push-notification", { body: { user_ids: [pedidoData.vendedor_id], title: `⚠️ ${item.folio} modificado en carga`, body: desc } }).catch(() => {});
+          }
+          // Notify admins
+          await supabase.functions.invoke("send-push-notification", { body: { roles: ["admin"], title: `⚠️ ${item.folio} modificado en carga`, body: desc } }).catch(() => {});
+          // Mark pedido as modified in carga via notas
+          const { data: pedidoNotas } = await supabase.from("pedidos").select("notas").eq("id", pedidoId).single();
+          const notasActuales = pedidoNotas?.notas || "";
+          await supabase.from("pedidos").update({ notas: `[MODIFICADO EN CARGA] ${desc}\n${notasActuales}`.trim() }).eq("id", pedidoId);
+        } catch {}
+      }
+
       const vehiculoObj = vehiculos.find(v => v.id === vehiculoId);
       const ayudantesNombres = ayudantesIds.map(aId => ayudantes.find(a => a.id === aId)?.nombre_completo || "").filter(Boolean);
 
@@ -787,6 +815,43 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
     );
   }
 
+  // Reprint handler for modified pedidos
+  const handleReimprimir = async (pedidoId: string, folio: string) => {
+    setGenerandoPDF(pedidoId);
+    try {
+      const { generarNotaInternaPDF } = await import("@/lib/generarNotaPDF");
+      const { data: ped } = await supabase.from("pedidos").select("total, termino_credito, sucursal:cliente_sucursales(nombre, direccion), vendedor:profiles!pedidos_vendedor_id_fkey(full_name)").eq("id", pedidoId).single();
+      const { data: det } = await supabase.from("pedidos_detalles").select("cantidad, precio_unitario, subtotal, producto:productos(nombre, unidad, peso_kg, precio_por_kilo)").eq("pedido_id", pedidoId);
+      const cli = cola.find(c => c.pedidoId === pedidoId);
+      const productos = (det || []).map((d: any) => {
+        const pesoKg = d.producto?.peso_kg || 0;
+        const kgTotales = pesoKg > 0 ? d.cantidad * pesoKg : null;
+        return { cantidad: d.cantidad, unidad: d.producto?.unidad || "pza", descripcion: d.producto?.nombre || "Producto", pesoTotal: kgTotales, precioUnitario: d.precio_unitario, importe: d.subtotal, precioPorKilo: d.producto?.precio_por_kilo || false };
+      });
+      const pesoTotal = productos.reduce((s: number, p: any) => s + (p.pesoTotal || 0), 0);
+      const suc = ped?.sucursal as any;
+      const pdf = await generarNotaInternaPDF({
+        pedidoId, folio, fecha: new Date().toISOString(),
+        vendedor: (ped?.vendedor as any)?.full_name || "Vendedor",
+        terminoCredito: ped?.termino_credito || "Contado",
+        cliente: { nombre: cli?.clienteNombre || "Cliente" },
+        sucursal: suc ? { nombre: suc.nombre, direccion: suc.direccion } : undefined,
+        productos, subtotal: ped?.total || 0, iva: 0, ieps: 0, total: ped?.total || 0, pesoTotalKg: pesoTotal,
+      });
+      // Download the PDF
+      const link = document.createElement("a");
+      link.href = `data:application/pdf;base64,${pdf.base64}`;
+      link.download = pdf.filename;
+      link.click();
+      toast.success(`PDF ${folio} descargado`);
+    } catch (e) {
+      console.error("Error reimprimiendo:", e);
+      toast.error("Error al generar PDF");
+    } finally {
+      setGenerandoPDF(null);
+    }
+  };
+
   // ─── FINALIZADO ───
   return (
     <div className="flex items-center justify-center py-12">
@@ -802,14 +867,36 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
             </div>
             <p className="text-sm">Los clientes han sido notificados por correo 📧</p>
           </div>
+
+          {pedidosModificados.size > 0 && (
+            <div className="border border-amber-300 dark:border-amber-700 rounded-lg p-3 bg-amber-50 dark:bg-amber-950/30 text-left">
+              <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-1">
+                ⚠️ {pedidosModificados.size} pedido{pedidosModificados.size > 1 ? "s" : ""} modificado{pedidosModificados.size > 1 ? "s" : ""} — reimprimir hoja de carga
+              </p>
+            </div>
+          )}
+
           <div className="space-y-2 pt-2">
-            {cola.map((c, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm justify-center">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-                <span className="font-medium">{c.folio}</span>
-                <span className="text-muted-foreground">— {c.clienteNombre}</span>
-              </div>
-            ))}
+            {cola.map((c, i) => {
+              const modificado = pedidosModificados.has(c.pedidoId);
+              return (
+                <div key={i} className="flex items-center gap-2 text-sm justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    <span className="font-medium">{c.folio}</span>
+                    <span className="text-muted-foreground">— {c.clienteNombre}</span>
+                    {modificado && <Badge className="text-[10px] bg-amber-500">Modificado</Badge>}
+                  </div>
+                  {modificado && (
+                    <Button variant="outline" size="sm" className="h-7 text-xs" disabled={generandoPDF === c.pedidoId}
+                      onClick={() => handleReimprimir(c.pedidoId, c.folio)}>
+                      {generandoPDF === c.pedidoId ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                      Reimprimir
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <Button onClick={() => { onRutaCreada(); onClose(); }} size="lg" className="w-full mt-4">
             Volver a Rutas
