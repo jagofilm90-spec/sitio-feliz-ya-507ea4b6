@@ -27,6 +27,9 @@ interface PedidoEnCola {
   clienteId: string;
   sucursalNombre: string | null;
   direccion: string | null;
+  zonaNombre: string | null;
+  pesoKg: number;
+  total: number;
   latitud: number | null;
   longitud: number | null;
 }
@@ -51,7 +54,7 @@ interface CargaRutaInlineFlowProps {
 }
 
 export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFlowProps) => {
-  const [paso, setPaso] = useState<"seleccion" | "escaneo" | "hoja_carga" | "finalizado">("seleccion");
+  const [paso, setPaso] = useState<"escaneo" | "seleccion" | "hoja_carga" | "finalizado">("escaneo");
 
   // Paso 1: Selección
   const [choferId, setChoferId] = useState("");
@@ -137,12 +140,21 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
   }, []);
 
   // Paso 1 → Paso 2: solo ir a escaneo, SIN crear ruta
-  const handleIrAEscaneo = () => {
+  const handleIrASeleccion = () => {
+    if (cola.length === 0) {
+      toast.error("Escanea al menos un pedido primero");
+      return;
+    }
+    setCameraActive(false);
+    setPaso("seleccion");
+  };
+
+  const handleIrACrearRuta = () => {
     if (!choferId || !vehiculoId) {
       toast.error("Selecciona chofer y vehículo");
       return;
     }
-    setPaso("escaneo");
+    handleCrearRutaYCargar();
   };
 
   // QR processing with dedup
@@ -199,7 +211,7 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
     try {
       const { data, error } = await supabase
         .from("pedidos")
-        .select("id, folio, cliente_id, cliente:clientes(nombre, direccion), sucursal:cliente_sucursales(nombre, direccion, latitud, longitud)")
+        .select("id, folio, cliente_id, total, peso_total_kg, cliente:clientes(nombre, direccion), sucursal:cliente_sucursales(nombre, direccion, latitud, longitud, zona:zonas(nombre))")
         .eq("id", id).single();
       if (error || !data) { toast.error("Pedido no encontrado"); return; }
 
@@ -212,6 +224,9 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
         clienteId: data.cliente_id,
         sucursalNombre: suc?.nombre || null,
         direccion: suc?.direccion || cli?.direccion || null,
+        zonaNombre: suc?.zona?.nombre || null,
+        pesoKg: data.peso_total_kg || 0,
+        total: data.total || 0,
         latitud: suc?.latitud || null,
         longitud: suc?.longitud || null,
       };
@@ -458,105 +473,21 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
     }
   };
 
-  // ─── PASO 1: Selección de personal ───
-  if (paso === "seleccion") {
+  // Totals for scanned orders
+  const pesoTotalCola = cola.reduce((s, c) => s + c.pesoKg, 0);
+  const montoTotalCola = cola.reduce((s, c) => s + c.total, 0);
+
+  // ─── PASO 1: Escaneo de pedidos (PRIMERO) ───
+  if (paso === "escaneo") {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={onClose}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h2 className="text-xl font-bold">Preparar Nueva Carga</h2>
-            <p className="text-sm text-muted-foreground">Selecciona chofer, ayudantes y vehículo</p>
-          </div>
-        </div>
-
-        {loadingOptions ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <div className="space-y-4 max-w-lg">
-            {/* Chofer */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><User className="h-4 w-4" />Chofer</label>
-              <Select value={choferId} onValueChange={(val) => {
-                setChoferId(val);
-                const v = vehiculos.find(v => v.chofer_asignado_id === val);
-                if (v) setVehiculoId(v.id);
-              }}>
-                <SelectTrigger className="h-12 text-base"><SelectValue placeholder="Selecciona un chofer..." /></SelectTrigger>
-                <SelectContent>
-                  {choferes.length === 0 && <div className="px-3 py-2 text-sm text-muted-foreground">No hay choferes disponibles</div>}
-                  {choferes.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre_completo}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Ayudantes */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <User className="h-4 w-4" />Ayudantes <span className="text-muted-foreground font-normal">(opcional)</span>
-              </label>
-              {ayudantesIds.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {ayudantesIds.map(aId => {
-                    const a = ayudantes.find(x => x.id === aId);
-                    return (
-                      <Badge key={aId} variant="secondary" className="text-sm py-1 px-3 gap-1">
-                        {a?.nombre_completo || "..."}
-                        <button type="button" onClick={() => setAyudantesIds(prev => prev.filter(id => id !== aId))} className="ml-1 hover:text-destructive">
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    );
-                  })}
-                </div>
-              )}
-              <Select value="" onValueChange={val => { if (val && !ayudantesIds.includes(val)) setAyudantesIds(prev => [...prev, val]); }}>
-                <SelectTrigger className="h-12 text-base"><SelectValue placeholder="Agregar ayudante..." /></SelectTrigger>
-                <SelectContent>
-                  {ayudantes.filter(a => !ayudantesIds.includes(a.id)).length === 0 && <div className="px-3 py-2 text-sm text-muted-foreground">No hay más ayudantes</div>}
-                  {ayudantes.filter(a => !ayudantesIds.includes(a.id)).map(a => <SelectItem key={a.id} value={a.id}>{a.nombre_completo}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Vehículo */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2"><Truck className="h-4 w-4" />Vehículo / Unidad</label>
-              <Select value={vehiculoId} onValueChange={setVehiculoId}>
-                <SelectTrigger className="h-12 text-base"><SelectValue placeholder="Selecciona un vehículo..." /></SelectTrigger>
-                <SelectContent>
-                  {vehiculos.length === 0 && <div className="px-3 py-2 text-sm text-muted-foreground">No hay vehículos disponibles</div>}
-                  {vehiculos.map(v => <SelectItem key={v.id} value={v.id}>{v.nombre} {v.placa ? `(${v.placa})` : ""}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button onClick={handleIrAEscaneo} disabled={!choferId || !vehiculoId} size="lg" className="w-full h-14 text-lg font-bold mt-4">
-              <QrCode className="h-5 w-5 mr-2" />
-              Escanear QR de Pedidos
-            </Button>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // ─── PASO 2: Escaneo de pedidos (SIN ruta creada aún) ───
-  if (paso === "escaneo") {
-    return (
-      <div className="space-y-4">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setPaso("seleccion")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
           <div className="flex-1">
-            <h2 className="text-xl font-bold">Escanear Pedidos</h2>
-            <p className="text-sm text-muted-foreground">Escanea los códigos QR de los pedidos impresos</p>
+            <h2 className="text-xl font-bold">Escanear Hojas de Carga</h2>
+            <p className="text-sm text-muted-foreground">Escanea los QR de los pedidos impresos</p>
           </div>
         </div>
 
@@ -602,10 +533,19 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
           </div>
         ) : (
           <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">{cola.length} pedido{cola.length > 1 ? "s" : ""} escaneado{cola.length > 1 ? "s" : ""}:</p>
+            {/* Summary bar */}
+            <div className="flex items-center justify-between bg-muted/50 rounded-lg px-3 py-2 border">
+              <span className="text-sm font-medium">{cola.length} pedido{cola.length > 1 ? "s" : ""}</span>
+              <div className="flex items-center gap-4 text-sm">
+                <span className="font-mono">{Math.round(pesoTotalCola).toLocaleString()} kg</span>
+                <span className="font-bold">${Math.round(montoTotalCola).toLocaleString()}</span>
+              </div>
+            </div>
+
             {cola.length > 1 && (
-              <p className="text-xs text-muted-foreground italic">Usa las flechas para definir el orden de entrega (arriba = se carga primero)</p>
+              <p className="text-xs text-muted-foreground italic">Orden de entrega: #1 se entrega primero (se carga al último). Usa flechas para reordenar.</p>
             )}
+
             {cola.map((c, i) => (
               <Card key={c.pedidoId}>
                 <CardContent className="py-3 flex items-center gap-2">
@@ -629,12 +569,19 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
                       </Button>
                     </div>
                   )}
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">{i + 1}</div>
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">#{i + 1}</div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-base uppercase truncate">{c.clienteNombre}</p>
-                    <p className="text-xs text-muted-foreground">{c.folio}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-sm uppercase truncate">{c.clienteNombre}</p>
+                      {c.zonaNombre && <Badge variant="outline" className="text-[10px] shrink-0">{c.zonaNombre}</Badge>}
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">{c.folio} · {c.direccion || "Sin dirección"}</p>
+                    <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+                      <span className="font-mono">{Math.round(c.pesoKg)} kg</span>
+                      <span className="font-bold text-foreground">${Math.round(c.total).toLocaleString()}</span>
+                    </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"
+                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive shrink-0"
                     onClick={() => setCola(prev => prev.filter(x => x.pedidoId !== c.pedidoId))}>
                     <X className="h-4 w-4" />
                   </Button>
@@ -642,11 +589,98 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
               </Card>
             ))}
 
-            <Button onClick={handleCrearRutaYCargar} disabled={creatingRoute} size="lg" className="w-full h-14 text-lg font-bold mt-4">
+            <Button onClick={handleIrASeleccion} size="lg" className="w-full h-14 text-lg font-bold mt-4">
+              <Truck className="h-5 w-5 mr-2" />
+              Siguiente: Asignar chofer y unidad
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ─── PASO 2: Selección de personal ───
+  if (paso === "seleccion") {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => setPaso("escaneo")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h2 className="text-xl font-bold">Asignar Personal y Unidad</h2>
+            <p className="text-sm text-muted-foreground">{cola.length} pedido{cola.length > 1 ? "s" : ""} · {Math.round(pesoTotalCola).toLocaleString()} kg · ${Math.round(montoTotalCola).toLocaleString()}</p>
+          </div>
+        </div>
+
+        {loadingOptions ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="space-y-4 max-w-lg">
+            {/* Chofer */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2"><User className="h-4 w-4" />Chofer</label>
+              <Select value={choferId} onValueChange={(val) => {
+                setChoferId(val);
+                const v = vehiculos.find(v => v.chofer_asignado_id === val);
+                if (v) setVehiculoId(v.id);
+              }}>
+                <SelectTrigger className="h-12 text-base"><SelectValue placeholder="Selecciona un chofer..." /></SelectTrigger>
+                <SelectContent>
+                  {choferes.length === 0 && <div className="px-3 py-2 text-sm text-muted-foreground">No hay choferes disponibles</div>}
+                  {choferes.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre_completo}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Vehículo */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2"><Truck className="h-4 w-4" />Vehículo / Unidad</label>
+              <Select value={vehiculoId} onValueChange={setVehiculoId}>
+                <SelectTrigger className="h-12 text-base"><SelectValue placeholder="Selecciona un vehículo..." /></SelectTrigger>
+                <SelectContent>
+                  {vehiculos.length === 0 && <div className="px-3 py-2 text-sm text-muted-foreground">No hay vehículos disponibles</div>}
+                  {vehiculos.map(v => <SelectItem key={v.id} value={v.id}>{v.nombre} {v.placa ? `(${v.placa})` : ""}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Ayudantes */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <User className="h-4 w-4" />Ayudantes <span className="text-muted-foreground font-normal">(opcional)</span>
+              </label>
+              {ayudantesIds.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {ayudantesIds.map(aId => {
+                    const a = ayudantes.find(x => x.id === aId);
+                    return (
+                      <Badge key={aId} variant="secondary" className="text-sm py-1 px-3 gap-1">
+                        {a?.nombre_completo || "..."}
+                        <button type="button" onClick={() => setAyudantesIds(prev => prev.filter(id => id !== aId))} className="ml-1 hover:text-destructive">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
+              <Select value="" onValueChange={val => { if (val && !ayudantesIds.includes(val)) setAyudantesIds(prev => [...prev, val]); }}>
+                <SelectTrigger className="h-12 text-base"><SelectValue placeholder="Agregar ayudante..." /></SelectTrigger>
+                <SelectContent>
+                  {ayudantes.filter(a => !ayudantesIds.includes(a.id)).length === 0 && <div className="px-3 py-2 text-sm text-muted-foreground">No hay más ayudantes</div>}
+                  {ayudantes.filter(a => !ayudantesIds.includes(a.id)).map(a => <SelectItem key={a.id} value={a.id}>{a.nombre_completo}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button onClick={handleIrACrearRuta} disabled={!choferId || !vehiculoId || creatingRoute} size="lg" className="w-full h-14 text-lg font-bold mt-4">
               {creatingRoute ? (
                 <Loader2 className="h-5 w-5 mr-2 animate-spin" />
               ) : (
-                <Package className="h-5 w-5 mr-2" />
+                <CheckCircle2 className="h-5 w-5 mr-2" />
               )}
               {creatingRoute ? "Creando ruta..." : `Empezar a Cargar (${cola.length} pedido${cola.length > 1 ? "s" : ""})`}
             </Button>
