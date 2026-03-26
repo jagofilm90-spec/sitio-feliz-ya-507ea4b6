@@ -198,7 +198,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
           status, termino_credito, pagado, peso_total_kg, cliente_id, notas,
           cliente:clientes(nombre),
           sucursal:cliente_sucursales(nombre, direccion, zona:zonas(nombre)),
-          pedidos_detalles(id, precio_unitario, precio_autorizado, autorizacion_status, cantidad, producto:producto_id(nombre, precio_venta, descuento_maximo, precio_por_kilo))
+          pedidos_detalles(id, precio_unitario, precio_autorizado, autorizacion_status, cantidad, subtotal, producto:producto_id(nombre, precio_venta, descuento_maximo, precio_por_kilo, peso_kg, aplica_iva, aplica_ieps))
         `)
         .eq("vendedor_id", user.id)
         .neq("status", "cancelado")
