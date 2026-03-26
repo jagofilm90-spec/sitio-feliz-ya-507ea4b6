@@ -57,6 +57,7 @@ interface Pedido {
   cliente: { nombre: string };
   sucursal?: { nombre: string; direccion?: string | null; zona?: { nombre: string } | null } | null;
   pedidos_detalles?: PedidoDetalle[];
+  entregas?: { papeles_recibidos: boolean | null }[];
 }
 
 function DiasTranscurridos({ fecha }: { fecha: string }) {
@@ -199,7 +200,8 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
           status, termino_credito, pagado, peso_total_kg, cliente_id, notas,
           cliente:clientes(nombre),
           sucursal:cliente_sucursales(nombre, direccion, zona:zonas(nombre)),
-          pedidos_detalles(id, precio_unitario, precio_autorizado, autorizacion_status, cantidad, subtotal, producto:producto_id(nombre, precio_venta, descuento_maximo, precio_por_kilo, peso_kg, aplica_iva, aplica_ieps))
+          pedidos_detalles(id, precio_unitario, precio_autorizado, autorizacion_status, cantidad, subtotal, producto:producto_id(nombre, precio_venta, descuento_maximo, precio_por_kilo, peso_kg, aplica_iva, aplica_ieps)),
+          entregas(papeles_recibidos)
         `)
         .eq("vendedor_id", user.id)
         .neq("status", "cancelado")
@@ -252,7 +254,8 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
   );
   const enRuta = pedidos.filter(p => p.status === "en_ruta");
   const entregadosAll = pedidos.filter(p => p.status === "entregado");
-  const porCobrar = pedidos.filter(p => p.status === "entregado" && !p.pagado);
+  const tieneEntregaConciliada = (p: Pedido) => (p.entregas || []).some(e => e.papeles_recibidos === true);
+  const porCobrar = pedidos.filter(p => p.status === "entregado" && !p.pagado && tieneEntregaConciliada(p));
 
   const abrirDetalle = (p: Pedido) => { setSelectedPedido(p); setShowDetalle(true); };
   const abrirCancelar = (p: Pedido) => { setSelectedPedido(p); setShowCancelar(true); };
