@@ -206,14 +206,25 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
       const notasActuales = pedidoData?.notas || "";
       const notaEdicion = `[EDITADO EN OFICINA] por vendedor el ${new Date().toLocaleDateString("es-MX")}`;
 
-      await supabase.from("pedidos").update({
+      const updatePayload = {
         total: impuestos.total,
         subtotal: impuestos.subtotal,
         impuestos: impuestos.iva + impuestos.ieps,
         peso_total_kg: realPeso > 0 ? realPeso : null,
         status: newStatus as any,
         notas: notasActuales.includes("[EDITADO EN OFICINA]") ? notasActuales : `${notaEdicion}\n${notasActuales}`.trim(),
-      }).eq("id", pedidoId);
+      };
+      console.log("[PEDIDO UPDATE] pedidoId:", pedidoId, "payload:", updatePayload);
+      const { error: updateError } = await supabase.from("pedidos").update(updatePayload).eq("id", pedidoId);
+      console.log("[PEDIDO UPDATE RESULT] error:", updateError);
+      if (updateError) {
+        toast.error("Error al actualizar pedido: " + updateError.message);
+        setSaving(false);
+        return;
+      }
+      // Verify the update took effect
+      const { data: verificacion } = await supabase.from("pedidos").select("total, subtotal, impuestos").eq("id", pedidoId).single();
+      console.log("[PEDIDO VERIFY] after update:", verificacion);
 
       // 3. Get vendor name + notify admin
       const { data: vendorProfile } = await supabase.from("profiles").select("full_name").eq("id", user?.id || "").single();
