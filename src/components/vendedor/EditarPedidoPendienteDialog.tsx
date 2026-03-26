@@ -54,6 +54,7 @@ interface Props {
   pedidoId: string;
   folio: string;
   onSaved: () => void;
+  preciosDisabled?: boolean;
 }
 
 const getPrecioMinimo = (pv: number, dm: number | null) => pv - (dm || 0);
@@ -63,7 +64,7 @@ const calcSubtotal = (qty: number, precio: number, precioPorKilo: boolean, pesoK
   return precioPorKilo && pesoKg ? qty * pesoKg * precio : qty * precio;
 };
 
-export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, folio, onSaved }: Props) => {
+export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, folio, onSaved, preciosDisabled = false }: Props) => {
   const [pedidoInfo, setPedidoInfo] = useState<PedidoInfo | null>(null);
   const [detalles, setDetalles] = useState<DetallePedido[]>([]);
   const [editedQtys, setEditedQtys] = useState<Record<string, number>>({});
@@ -376,7 +377,7 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
                           <TableCell className="text-xs text-muted-foreground">{d.producto?.unidad}</TableCell>
                           <TableCell className="text-xs font-medium">{d.producto?.nombre}</TableCell>
                           <TableCell className="text-xs text-muted-foreground font-mono">{peso > 0 ? `${peso.toFixed(1)}` : "—"}</TableCell>
-                          <TableCell><Input type="number" step="0.01" value={precio} onChange={e => setEditedPrices(prev => ({ ...prev, [d.id]: parseFloat(e.target.value) || 0 }))} className={`h-7 w-20 text-xs text-center ${below ? "border-destructive" : ""}`} /></TableCell>
+                          <TableCell><Input type="number" step="0.01" value={precio} onChange={e => setEditedPrices(prev => ({ ...prev, [d.id]: parseFloat(e.target.value) || 0 }))} className={`h-7 w-20 text-xs text-center ${below ? "border-destructive" : ""} ${preciosDisabled ? "opacity-60" : ""}`} disabled={preciosDisabled} /></TableCell>
                           <TableCell className="text-xs text-right font-bold">{formatCurrency(sub)}</TableCell>
                           <TableCell><Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setRemovedIds(prev => new Set([...prev, d.id]))}><X className="h-3 w-3" /></Button></TableCell>
                         </TableRow>
@@ -393,7 +394,7 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
                           <TableCell className="text-xs text-muted-foreground">{n.producto.unidad}</TableCell>
                           <TableCell className="text-xs font-medium"><Badge className="text-[9px] bg-green-600 mr-1">Nuevo</Badge>{n.producto.nombre}</TableCell>
                           <TableCell className="text-xs text-muted-foreground font-mono">{peso > 0 ? `${peso.toFixed(1)}` : "—"}</TableCell>
-                          <TableCell><Input type="number" step="0.01" value={n.precio} onChange={e => setNuevos(prev => prev.map((p, j) => j === i ? { ...p, precio: parseFloat(e.target.value) || 0 } : p))} className={`h-7 w-20 text-xs text-center ${below ? "border-destructive" : ""}`} /></TableCell>
+                          <TableCell><Input type="number" step="0.01" value={n.precio} onChange={e => setNuevos(prev => prev.map((p, j) => j === i ? { ...p, precio: parseFloat(e.target.value) || 0 } : p))} className={`h-7 w-20 text-xs text-center ${below ? "border-destructive" : ""} ${preciosDisabled ? "opacity-60" : ""}`} disabled={preciosDisabled} /></TableCell>
                           <TableCell className="text-xs text-right font-bold">{formatCurrency(sub)}</TableCell>
                           <TableCell><Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setNuevos(prev => prev.filter((_, j) => j !== i))}><X className="h-3 w-3" /></Button></TableCell>
                         </TableRow>
