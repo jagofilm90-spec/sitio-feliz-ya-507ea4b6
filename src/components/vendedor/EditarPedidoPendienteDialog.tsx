@@ -294,8 +294,8 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
         toast.success("Pedido editado — enviado para autorización");
       }
 
-      onSaved();
       onOpenChange(false);
+      setTimeout(() => onSaved(), 500);
     } catch (err: any) {
       toast.error("Error: " + err.message);
     } finally {
