@@ -158,6 +158,7 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
+      // 1. Apply DB changes: delete, update, insert
       if (removedIds.size > 0) await supabase.from("pedidos_detalles").delete().in("id", Array.from(removedIds));
 
       for (const d of detallesActivos) {
@@ -184,40 +185,91 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
         });
       }
 
+      // 2. BUG FIX: Recalculate total and weight FROM DB (not local state)
+      const { data: allDet } = await supabase
+        .from("pedidos_detalles")
+        .select("cantidad, subtotal, precio_unitario, producto:producto_id(peso_kg, precio_por_kilo, nombre, unidad)")
+        .eq("pedido_id", pedidoId);
+
+      const realTotal = (allDet || []).reduce((s: number, d: any) => s + (d.subtotal || 0), 0);
+      const realPeso = (allDet || []).reduce((s: number, d: any) => s + (d.cantidad * ((d.producto as any)?.peso_kg || 0)), 0);
+
       const newStatus = anyBelowMin ? "por_autorizar" : "pendiente";
-      const { data: pedidoData } = await supabase.from("pedidos").select("notas").eq("id", pedidoId).single();
+      const { data: pedidoData } = await supabase.from("pedidos").select("notas, cliente_id, termino_credito").eq("id", pedidoId).single();
       const notasActuales = pedidoData?.notas || "";
       const notaEdicion = `[EDITADO EN OFICINA] por vendedor el ${new Date().toLocaleDateString("es-MX")}`;
 
       await supabase.from("pedidos").update({
-        total: totalGeneral, peso_total_kg: pesoTotal > 0 ? pesoTotal : null,
+        total: realTotal,
+        subtotal: realTotal,
+        peso_total_kg: realPeso > 0 ? realPeso : null,
         status: newStatus as any,
         notas: notasActuales.includes("[EDITADO EN OFICINA]") ? notasActuales : `${notaEdicion}\n${notasActuales}`.trim(),
       }).eq("id", pedidoId);
 
+      // 3. Notify admin
       try {
         const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user?.id || "").single();
-        await supabase.from("notificaciones").insert({ tipo: "pedido_autorizado", titulo: `✏️ Pedido ${folio} editado`, descripcion: `${profile?.full_name || "Vendedor"} editó el pedido. Nuevo total: ${formatCurrency(totalGeneral)}`, pedido_id: pedidoId, leida: false });
-        await supabase.functions.invoke("send-push-notification", { body: { roles: ["admin"], title: `✏️ ${folio} editado`, body: `Nuevo total: ${formatCurrency(totalGeneral)}` } }).catch(() => {});
+        await supabase.from("notificaciones").insert({ tipo: "pedido_autorizado", titulo: `✏️ Pedido ${folio} editado`, descripcion: `${profile?.full_name || "Vendedor"} editó el pedido. Nuevo total: ${formatCurrency(realTotal)}`, pedido_id: pedidoId, leida: false });
+        await supabase.functions.invoke("send-push-notification", { body: { roles: ["admin"], title: `✏️ ${folio} editado`, body: `Nuevo total: ${formatCurrency(realTotal)}` } }).catch(() => {});
       } catch {}
+
+      // 4. Build products list for PDF from DB data
+      const productosForPdf = (allDet || []).map((d: any) => {
+        const prod = d.producto as any;
+        const pk = prod?.peso_kg || 0;
+        return { cantidad: d.cantidad, unidad: prod?.unidad || "pza", descripcion: prod?.nombre || "Producto", pesoTotal: pk > 0 ? d.cantidad * pk : null, precioUnitario: d.precio_unitario, importe: d.subtotal, precioPorKilo: prod?.precio_por_kilo || false };
+      });
 
       if (!anyBelowMin) {
         toast.success("Pedido editado — descargando nueva hoja de carga...");
+
+        // 5. BUG FIX: Send email to client with updated PDF
         try {
-          const { generarNotaInternaPDF } = await import("@/lib/generarNotaPDF");
-          const { data: det } = await supabase.from("pedidos_detalles").select("cantidad, precio_unitario, subtotal, producto:productos(nombre, unidad, peso_kg, precio_por_kilo)").eq("pedido_id", pedidoId);
-          const productos = (det || []).map((d: any) => {
-            const pk = d.producto?.peso_kg || 0;
-            return { cantidad: d.cantidad, unidad: d.producto?.unidad || "pza", descripcion: d.producto?.nombre || "Producto", pesoTotal: pk > 0 ? d.cantidad * pk : null, precioUnitario: d.precio_unitario, importe: d.subtotal, precioPorKilo: d.producto?.precio_por_kilo || false };
-          });
-          const pdf = await generarNotaInternaPDF({
+          const { generarConfirmacionClientePDF, generarNotaInternaPDF } = await import("@/lib/generarNotaPDF");
+
+          // Get client email
+          const clienteId = pedidoData?.cliente_id;
+          let clienteEmail: string | null = null;
+          if (clienteId) {
+            const { data: cli } = await supabase.from("clientes").select("email, nombre").eq("id", clienteId).single();
+            clienteEmail = cli?.email;
+          }
+
+          // Generate PDFs
+          const pdfData = {
             pedidoId, folio, fecha: new Date().toISOString(), vendedor: "Vendedor",
-            terminoCredito: "Contado", cliente: { nombre: pedidoInfo?.cliente_nombre || "Cliente" },
+            terminoCredito: pedidoData?.termino_credito || "Contado",
+            cliente: { nombre: pedidoInfo?.cliente_nombre || "Cliente" },
             sucursal: pedidoInfo?.direccion ? { nombre: pedidoInfo.zona || "Principal", direccion: pedidoInfo.direccion } : undefined,
-            productos, subtotal: totalGeneral, iva: 0, ieps: 0, total: totalGeneral, pesoTotalKg: pesoTotal,
-          });
+            productos: productosForPdf, subtotal: realTotal, iva: 0, ieps: 0, total: realTotal, pesoTotalKg: realPeso,
+          };
+
+          // Download internal PDF (nota + hoja de carga)
+          const pdf = await generarNotaInternaPDF(pdfData);
           const link = document.createElement("a"); link.href = `data:application/pdf;base64,${pdf.base64}`; link.download = pdf.filename; link.click();
-        } catch (e) { console.error("Error PDF:", e); }
+
+          // Send client email with confirmation PDF
+          if (clienteEmail) {
+            const cpdf = await generarConfirmacionClientePDF(pdfData);
+            await supabase.functions.invoke("send-order-authorized-email", {
+              body: {
+                clienteEmail,
+                clienteNombre: pedidoInfo?.cliente_nombre || "Cliente",
+                pedidoFolio: folio,
+                total: realTotal,
+                ajustesPrecio: 0,
+                detalles: productosForPdf.map(p => ({
+                  producto: p.descripcion, cantidad: p.cantidad, unidad: p.unidad,
+                  precioUnitario: p.precioUnitario, subtotal: p.importe, fueAjustado: false,
+                  kgTotales: p.pesoTotal, precioPorKilo: p.precioPorKilo,
+                })),
+                pdfBase64: cpdf.base64,
+                pdfFilename: cpdf.filename,
+              },
+            });
+          }
+        } catch (e) { console.error("Error PDF/email:", e); }
       } else {
         toast.success("Pedido editado — enviado para autorización");
       }
