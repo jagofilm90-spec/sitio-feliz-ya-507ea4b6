@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { calcularTotalesConImpuestos } from "@/lib/calculos";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
