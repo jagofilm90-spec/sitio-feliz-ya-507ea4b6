@@ -915,7 +915,7 @@ const PedidosContent = () => {
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" onClick={() => navigate(`/rutas?tab=planificar&pedido_id=${pedido.id}`)}>
+                                    <Button variant="ghost" size="icon" onClick={() => toast({ title: "Próximamente", description: "Armar rutas desde aquí" })}>
                                       <Truck className="h-4 w-4" />
                                     </Button>
                                   </TooltipTrigger>
