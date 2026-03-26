@@ -354,9 +354,6 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
           </div>
 
           <div className="flex gap-2 pt-2 border-t flex-wrap">
-            <Button variant="outline" size="sm" className="flex-1" onClick={() => abrirDetalle(pedido)}>
-              <Eye className="h-3.5 w-3.5 mr-1" /> Ver
-            </Button>
             {pedido.status === "rechazado" && (
               <Button size="sm" className="flex-1 bg-amber-500 hover:bg-amber-600 text-white" onClick={() => { setPedidoParaEditar(pedido); setShowEditarRechazado(true); }}>
                 <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar pedido
@@ -518,7 +515,6 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                           <TableCell><span className={`text-xs font-semibold ${diasColor}`}>{diasPedido}d</span></TableCell>
                           <TableCell>
                             <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => abrirDetalle(p)}><Eye className="h-3.5 w-3.5" /></Button>
                               {p.status === "rechazado" && (
                                 <Button size="sm" className="h-7 text-xs bg-amber-500 hover:bg-amber-600 text-white" onClick={() => { setPedidoParaEditar(p); setShowEditarRechazado(true); }}>
                                   <Edit2 className="h-3 w-3 mr-1" />Editar
@@ -581,7 +577,6 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                     <TableHead className="text-xs">Días</TableHead>
                     <TableHead className="text-center w-[32px]"></TableHead>
                     <TableHead className="text-center w-[32px]"></TableHead>
-                    <TableHead className="text-center w-[32px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -609,19 +604,6 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                         <TableCell className="text-xs" style={{ whiteSpace: "nowrap" }}>{creditoLabels[p.termino_credito] || p.termino_credito}</TableCell>
                         <TableCell className="text-xs text-right font-bold" style={{ whiteSpace: "nowrap" }}>{formatCurrency(p.total)}</TableCell>
                         <TableCell><span className={`text-xs font-semibold ${diasColor}`} style={{ whiteSpace: "nowrap" }}>{diasPedido}d</span></TableCell>
-                        <TableCell className="text-center">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              abrirDetalle(p);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
                         <TableCell className="text-center">
                           <Button
                             variant="ghost"
