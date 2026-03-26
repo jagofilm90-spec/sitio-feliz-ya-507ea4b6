@@ -59,6 +59,7 @@ interface EntregaDetalle {
     folio: string;
     total: number;
     status: string;
+    notas: string | null;
     cliente: { nombre: string; codigo: string } | null;
   } | null;
 }
@@ -85,12 +86,12 @@ export const SecretariaRutasTab = () => {
             id, orden_entrega, entregado, status_entrega, hora_entrega_real,
             nombre_receptor, firma_recibido, notas, papeles_recibidos, notas_conciliacion,
             pedido:pedidos!entregas_pedido_id_fkey(
-              id, folio, total, status,
+              id, folio, total, status, notas,
               cliente:clientes!pedidos_cliente_id_fkey(nombre, codigo)
             )
           )
         `)
-        .eq("status", "en_curso")
+        .in("status", ["en_curso", "en_ruta", "cargada"])
         .order("fecha_ruta", { ascending: false });
       if (error) throw error;
       return (data || []) as unknown as RutaConDetalles[];
@@ -113,7 +114,7 @@ export const SecretariaRutasTab = () => {
             id, orden_entrega, entregado, status_entrega, hora_entrega_real,
             nombre_receptor, firma_recibido, notas, papeles_recibidos, notas_conciliacion,
             pedido:pedidos!entregas_pedido_id_fkey(
-              id, folio, total, status,
+              id, folio, total, status, notas,
               cliente:clientes!pedidos_cliente_id_fkey(nombre, codigo)
             )
           )
@@ -425,6 +426,12 @@ function EntregaRow({
           </div>
           <div className="flex items-center gap-2">
             {getEntregaStatusBadgeStatic(entrega.status_entrega)}
+            {entrega.pedido?.notas?.includes("[MODIFICADO EN CARGA]") && (
+              <Badge className="bg-amber-500 text-white text-[10px]">
+                <AlertTriangle className="h-3 w-3 mr-0.5" />
+                Modificado
+              </Badge>
+            )}
             {entrega.papeles_recibidos && (
               <Badge className="bg-emerald-600 text-white text-[10px]">
                 <FileCheck className="h-3 w-3 mr-0.5" />
