@@ -23,7 +23,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VendedorEnCargaTab } from "./VendedorEnCargaTab";
 import { VendedorEnRutaTab } from "./VendedorEnRutaTab";
 import { EditarPedidoRechazadoDialog } from "./EditarPedidoRechazadoDialog";
-import { AlertCircle, Edit2 } from "lucide-react";
+import { EditarPedidoPendienteDialog } from "./EditarPedidoPendienteDialog";
+import { AlertCircle, Edit2, Pencil } from "lucide-react";
 
 interface PedidoDetalle {
   id: string;
@@ -51,6 +52,7 @@ interface Pedido {
   termino_credito: string;
   pagado: boolean;
   peso_total_kg: number | null;
+  notas: string | null;
   cliente: { nombre: string };
   sucursal?: { nombre: string; direccion?: string | null; zona?: { nombre: string } | null } | null;
   pedidos_detalles?: PedidoDetalle[];
@@ -137,6 +139,8 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
   const [pedidosEnCargaIds, setPedidosEnCargaIds] = useState<Set<string>>(new Set());
   const [showEditarRechazado, setShowEditarRechazado] = useState(false);
   const [pedidoParaEditar, setPedidoParaEditar] = useState<Pedido | null>(null);
+  const [showEditarPendiente, setShowEditarPendiente] = useState(false);
+  const [pedidoParaEditarPendiente, setPedidoParaEditarPendiente] = useState<Pedido | null>(null);
 
   useEffect(() => {
     fetchPedidos();
@@ -191,7 +195,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
         .from("pedidos")
         .select(`
           id, folio, fecha_pedido, fecha_entrega_real, total, saldo_pendiente,
-          status, termino_credito, pagado, peso_total_kg, cliente_id,
+          status, termino_credito, pagado, peso_total_kg, cliente_id, notas,
           cliente:clientes(nombre),
           sucursal:cliente_sucursales(nombre, direccion, zona:zonas(nombre)),
           pedidos_detalles(id, precio_unitario, precio_autorizado, autorizacion_status, cantidad, producto:producto_id(nombre, precio_venta, descuento_maximo, precio_por_kilo))
@@ -356,6 +360,11 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
             {pedido.status === "rechazado" && (
               <Button size="sm" className="flex-1 bg-amber-500 hover:bg-amber-600 text-white" onClick={() => { setPedidoParaEditar(pedido); setShowEditarRechazado(true); }}>
                 <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar pedido
+              </Button>
+            )}
+            {pedido.status === "pendiente" && !pedidosEnCargaIds.has(pedido.id) && (
+              <Button variant="outline" size="sm" onClick={() => { setPedidoParaEditarPendiente(pedido); setShowEditarPendiente(true); }}>
+                <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
               </Button>
             )}
             {["pendiente", "en_ruta", "entregado"].includes(pedido.status) && (
@@ -572,6 +581,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                     <TableHead className="text-xs">Días</TableHead>
                     <TableHead className="text-center w-[32px]"></TableHead>
                     <TableHead className="text-center w-[32px]"></TableHead>
+                    <TableHead className="text-center w-[32px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -587,7 +597,10 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                     const diasColor = diasPedido < 7 ? "text-green-600" : diasPedido <= 14 ? "text-amber-600" : "text-destructive";
                     return (
                       <TableRow key={p.id} className="cursor-pointer" onClick={() => abrirDetalle(p)}>
-                        <TableCell className="text-xs font-bold" style={{ whiteSpace: "nowrap" }}>{p.folio}</TableCell>
+                        <TableCell className="text-xs font-bold" style={{ whiteSpace: "nowrap" }}>
+                          {p.folio}
+                          {p.notas?.includes("[EDITADO EN OFICINA]") && <Badge className="ml-1 text-[9px] bg-blue-500">Editado</Badge>}
+                        </TableCell>
                         <TableCell className="text-xs" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>{p.cliente.nombre}</TableCell>
                         <TableCell className="text-xs text-muted-foreground" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>{(p.sucursal as any)?.direccion || "—"}</TableCell>
                         <TableCell className="text-xs text-muted-foreground" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>{(p.sucursal as any)?.zona?.nombre || "—"}</TableCell>
@@ -622,6 +635,13 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                           >
                             <FileText className="h-4 w-4" />
                           </Button>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {!pedidosEnCargaIds.has(p.id) && (
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setPedidoParaEditarPendiente(p); setShowEditarPendiente(true); }}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
@@ -709,6 +729,16 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
           onOpenChange={setShowEditarRechazado}
           pedidoId={pedidoParaEditar.id}
           folio={pedidoParaEditar.folio}
+          onSaved={fetchPedidos}
+        />
+      )}
+
+      {pedidoParaEditarPendiente && (
+        <EditarPedidoPendienteDialog
+          open={showEditarPendiente}
+          onOpenChange={setShowEditarPendiente}
+          pedidoId={pedidoParaEditarPendiente.id}
+          folio={pedidoParaEditarPendiente.folio}
           onSaved={fetchPedidos}
         />
       )}
