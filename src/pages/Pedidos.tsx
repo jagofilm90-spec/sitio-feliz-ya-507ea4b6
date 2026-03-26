@@ -813,8 +813,8 @@ const PedidosContent = () => {
                 )}
               </div>
             ) : (
-            <div className="border rounded-lg">
-              <Table>
+            <div className="border rounded-lg" style={{ overflowX: "auto" }}>
+              <Table style={{ minWidth: "950px" }}>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-10">

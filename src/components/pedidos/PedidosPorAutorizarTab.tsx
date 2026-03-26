@@ -134,7 +134,8 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
           vendedor_id,
           vendedor:vendedor_id (id, full_name),
           clientes (id, nombre, email),
-          cliente_sucursales:sucursal_id (id, nombre, direccion),
+          peso_total_kg,
+          cliente_sucursales:sucursal_id (id, nombre, direccion, zona:zonas(nombre)),
           pedidos_detalles (
             id,
             cantidad,
@@ -493,57 +494,49 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
         </Badge>
       </div>
 
-      <div className="border rounded-lg">
-        <Table>
+      <div className="border rounded-lg" style={{ overflowX: "auto" }}>
+        <Table style={{ minWidth: "950px" }}>
           <TableHeader>
             <TableRow>
-              <TableHead>Folio</TableHead>
-              <TableHead>Vendedor</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Sucursal</TableHead>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Productos</TableHead>
-              <TableHead className="text-right">Peso</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead>Acciones</TableHead>
+              <TableHead className="text-xs">Folio</TableHead>
+              <TableHead className="text-xs">Cliente</TableHead>
+              <TableHead className="text-xs">Dirección</TableHead>
+              <TableHead className="text-xs">Zona</TableHead>
+              <TableHead className="text-xs">Vendedor</TableHead>
+              <TableHead className="text-xs">Fecha</TableHead>
+              <TableHead className="text-xs">Peso</TableHead>
+              <TableHead className="text-xs">Crédito</TableHead>
+              <TableHead className="text-xs text-right">Total</TableHead>
+              <TableHead className="text-xs">Días</TableHead>
+              <TableHead className="text-xs">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {pedidos.map((pedido) => (
-              <TableRow key={pedido.id}>
-                <TableCell className="font-mono font-medium">{pedido.folio}</TableCell>
-                <TableCell className="text-sm">{(pedido as any).vendedor?.full_name || "—"}</TableCell>
-                <TableCell>{pedido.clientes?.nombre || "—"}</TableCell>
-                <TableCell className="text-sm">{pedido.cliente_sucursales?.nombre || "—"}</TableCell>
-                <TableCell>{format(new Date(pedido.fecha_pedido), "dd/MM/yyyy", { locale: es })}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">{pedido.pedidos_detalles.length} productos</Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex flex-col items-end gap-1">
-                    <span className="font-mono text-blue-600">
-                      {calcularPesoTotalPedido(pedido.pedidos_detalles).toLocaleString()} kg
-                    </span>
-                    {calcularPesoTotalPedido(pedido.pedidos_detalles) > 15500 && (
-                      <Badge variant="destructive" className="gap-1 text-xs">
-                        <AlertTriangle className="h-3 w-3" />
-                        Excede 15,500 kg
-                      </Badge>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="text-right font-mono">{formatCurrency(pedido.total)}</TableCell>
-                <TableCell>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedPedido(pedido)}
-                  >
-                    Revisar precios
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {pedidos.map((pedido) => {
+              const dias = Math.floor((Date.now() - new Date(pedido.fecha_pedido).getTime()) / 86400000);
+              const diasColor = dias < 7 ? "text-green-600" : dias <= 14 ? "text-amber-600" : "text-destructive";
+              const peso = (pedido as any).peso_total_kg || calcularPesoTotalPedido(pedido.pedidos_detalles);
+              const creditoLabels: Record<string, string> = { contado: "Contado", "8_dias": "8 días", "15_dias": "15 días", "30_dias": "30 días", "60_dias": "60 días" };
+              return (
+                <TableRow key={pedido.id}>
+                  <TableCell className="text-xs font-bold" style={{ whiteSpace: "nowrap" }}>{pedido.folio}</TableCell>
+                  <TableCell className="text-xs" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>{pedido.clientes?.nombre || "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>{pedido.cliente_sucursales?.direccion || "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>{(pedido.cliente_sucursales as any)?.zona?.nombre || "—"}</TableCell>
+                  <TableCell className="text-xs" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>{(pedido as any).vendedor?.full_name || "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground" style={{ whiteSpace: "nowrap" }}>{format(new Date(pedido.fecha_pedido), "dd/MM/yy", { locale: es })}</TableCell>
+                  <TableCell className="text-xs font-mono text-muted-foreground" style={{ whiteSpace: "nowrap" }}>{peso > 0 ? `${Math.round(peso).toLocaleString()} kg` : "—"}</TableCell>
+                  <TableCell className="text-xs" style={{ whiteSpace: "nowrap" }}>{creditoLabels[pedido.termino_credito || ""] || pedido.termino_credito || "—"}</TableCell>
+                  <TableCell className="text-xs text-right font-bold" style={{ whiteSpace: "nowrap" }}>{formatCurrency(pedido.total)}</TableCell>
+                  <TableCell><span className={`text-xs font-semibold ${diasColor}`}>{dias}d</span></TableCell>
+                  <TableCell>
+                    <Button variant="outline" size="sm" className="text-xs" onClick={() => setSelectedPedido(pedido)}>
+                      Revisar precios
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -465,8 +465,87 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
             {pedidosPorAutorizar.length === 0 ? (
               <EmptyState icono={Clock} titulo="Sin pedidos por autorizar" descripcion="Los pedidos que requieran autorización de precios aparecerán aquí" />
             ) : (
-              <div className="space-y-3 pt-1">
-                {pedidosPorAutorizar.map(p => <PedidoCard key={p.id} pedido={p} />)}
+              <div style={{ overflowX: "auto" }}>
+              <Table style={{ minWidth: "950px" }}>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Folio</TableHead>
+                    <TableHead className="text-xs">Cliente</TableHead>
+                    <TableHead className="text-xs">Dirección</TableHead>
+                    <TableHead className="text-xs">Zona</TableHead>
+                    <TableHead className="text-xs">Fecha</TableHead>
+                    <TableHead className="text-xs">Peso</TableHead>
+                    <TableHead className="text-xs">Crédito</TableHead>
+                    <TableHead className="text-xs text-right">Total</TableHead>
+                    <TableHead className="text-xs">Días</TableHead>
+                    <TableHead className="text-xs">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pedidosPorAutorizar.map(p => {
+                    const creditoLabels: Record<string, string> = { contado: "Contado", "8_dias": "8 días", "15_dias": "15 días", "30_dias": "30 días", "60_dias": "60 días" };
+                    const diasPedido = differenceInDays(new Date(), new Date(p.fecha_pedido));
+                    const diasColor = diasPedido < 7 ? "text-green-600" : diasPedido <= 14 ? "text-amber-600" : "text-destructive";
+                    const descuentoProducts = (p.pedidos_detalles || []).filter(d => {
+                      if (!d.producto) return false;
+                      const descuento = d.producto.precio_venta - d.precio_unitario;
+                      return descuento > (d.producto.descuento_maximo || 0);
+                    });
+                    return (
+                      <React.Fragment key={p.id}>
+                        <TableRow>
+                          <TableCell className="text-xs font-bold" style={{ whiteSpace: "nowrap" }}>
+                            {p.folio}
+                            {p.status === "por_autorizar" && <Badge variant="secondary" className="ml-1 text-[9px]">Pendiente</Badge>}
+                            {p.status === "rechazado" && <Badge variant="destructive" className="ml-1 text-[9px]">Rechazado</Badge>}
+                          </TableCell>
+                          <TableCell className="text-xs" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>{p.cliente.nombre}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>{(p.sucursal as any)?.direccion || "—"}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>{(p.sucursal as any)?.zona?.nombre || "—"}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground" style={{ whiteSpace: "nowrap" }}>{format(new Date(p.fecha_pedido), "dd/MM/yy")}</TableCell>
+                          <TableCell className="text-xs font-mono text-muted-foreground" style={{ whiteSpace: "nowrap" }}>{p.peso_total_kg && p.peso_total_kg > 0 ? `${Math.round(p.peso_total_kg)} kg` : "—"}</TableCell>
+                          <TableCell className="text-xs" style={{ whiteSpace: "nowrap" }}>{creditoLabels[p.termino_credito] || p.termino_credito}</TableCell>
+                          <TableCell className="text-xs text-right font-bold" style={{ whiteSpace: "nowrap" }}>{formatCurrency(p.total)}</TableCell>
+                          <TableCell><span className={`text-xs font-semibold ${diasColor}`}>{diasPedido}d</span></TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => abrirDetalle(p)}><Eye className="h-3.5 w-3.5" /></Button>
+                              {p.status === "rechazado" && (
+                                <Button size="sm" className="h-7 text-xs bg-amber-500 hover:bg-amber-600 text-white" onClick={() => { setPedidoParaEditar(p); setShowEditarRechazado(true); }}>
+                                  <Edit2 className="h-3 w-3 mr-1" />Editar
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        {descuentoProducts.length > 0 && (
+                          <TableRow>
+                            <TableCell colSpan={10} className="bg-amber-50 dark:bg-amber-950/20 py-1.5 px-3">
+                              <p className="text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-300 mb-1">Productos con descuento solicitado:</p>
+                              {descuentoProducts.map(d => {
+                                const lista = d.producto!.precio_venta;
+                                const maxDesc = lista - (d.producto!.descuento_maximo || 0);
+                                const solicitado = d.precio_unitario;
+                                const dif = solicitado - maxDesc;
+                                return (
+                                  <div key={d.id} className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                                    <AlertCircle className="h-3 w-3 text-amber-600 shrink-0" />
+                                    <span className="font-medium text-foreground">{d.producto!.nombre}</span>
+                                    <span>Lista: {formatCurrency(lista)}</span>
+                                    <span>Máx: {formatCurrency(maxDesc)}</span>
+                                    <span className="font-semibold text-amber-700 dark:text-amber-300">Solic: {formatCurrency(solicitado)}</span>
+                                    <span className="font-semibold text-destructive">{formatCurrency(dif)}</span>
+                                  </div>
+                                );
+                              })}
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </TableBody>
+              </Table>
               </div>
             )}
           </ScrollArea>
@@ -478,7 +557,8 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
             {pedidosListos.length === 0 ? (
               <EmptyState icono={Package} titulo="Sin pedidos listos" descripcion="Los pedidos autorizados y listos para surtir aparecerán aquí" />
             ) : (
-              <Table>
+              <div style={{ overflowX: "auto" }}>
+              <Table style={{ minWidth: "950px" }}>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-xs">Folio</TableHead>
@@ -548,6 +628,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                   })}
                 </TableBody>
               </Table>
+              </div>
             )}
           </ScrollArea>
         </TabsContent>
