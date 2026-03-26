@@ -577,11 +577,11 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                 <TableBody>
                   {pedidosListos.map(p => {
                     const creditoLabels: Record<string, string> = {
-                      contado: "Ctdo",
-                      "8_dias": "8d",
-                      "15_dias": "15d",
-                      "30_dias": "30d",
-                      "60_dias": "60d",
+                      contado: "Contado",
+                      "8_dias": "8 días",
+                      "15_dias": "15 días",
+                      "30_dias": "30 días",
+                      "60_dias": "60 días",
                     };
                     const diasPedido = differenceInDays(new Date(), new Date(p.fecha_pedido));
                     const diasColor = diasPedido < 7 ? "text-green-600" : diasPedido <= 14 ? "text-amber-600" : "text-destructive";
