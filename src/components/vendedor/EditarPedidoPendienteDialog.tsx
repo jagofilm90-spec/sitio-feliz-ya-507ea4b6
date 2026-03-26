@@ -265,7 +265,7 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
                 clienteEmail,
                 clienteNombre: pedidoInfo?.cliente_nombre || "Cliente",
                 pedidoFolio: folio,
-                total: realTotal,
+                total: impuestos.total,
                 ajustesPrecio: 0,
                 detalles: productosForPdf.map(p => ({
                   producto: p.descripcion, cantidad: p.cantidad, unidad: p.unidad,
