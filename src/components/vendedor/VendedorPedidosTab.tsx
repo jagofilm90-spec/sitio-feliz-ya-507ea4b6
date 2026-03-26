@@ -484,12 +484,12 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                     <TableHead className="text-xs">Folio</TableHead>
                     <TableHead className="text-xs">Cliente</TableHead>
                     <TableHead className="text-xs">Dirección</TableHead>
-                    <TableHead className="text-xs w-[60px]">Zona</TableHead>
-                    <TableHead className="text-xs w-[65px]">Fecha</TableHead>
-                    <TableHead className="text-xs w-[55px]">Peso</TableHead>
-                    <TableHead className="text-xs w-[55px]">Crédito</TableHead>
-                    <TableHead className="text-xs text-right w-[80px]">Total</TableHead>
-                    <TableHead className="text-xs w-[35px]">Días</TableHead>
+                    <TableHead className="text-xs">Zona</TableHead>
+                    <TableHead className="text-xs">Fecha</TableHead>
+                    <TableHead className="text-xs">Peso</TableHead>
+                    <TableHead className="text-xs">Crédito</TableHead>
+                    <TableHead className="text-xs text-right">Total</TableHead>
+                    <TableHead className="text-xs">Días</TableHead>
                     <TableHead className="text-center w-[32px]"></TableHead>
                     <TableHead className="text-center w-[32px]"></TableHead>
                   </TableRow>
@@ -507,15 +507,15 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                     const diasColor = diasPedido < 7 ? "text-green-600" : diasPedido <= 14 ? "text-amber-600" : "text-destructive";
                     return (
                       <TableRow key={p.id} className="cursor-pointer" onClick={() => abrirDetalle(p)}>
-                        <TableCell className="text-xs font-bold whitespace-nowrap">{p.folio}</TableCell>
-                        <TableCell className="text-xs max-w-[120px] truncate">{p.cliente.nombre}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground max-w-[130px] truncate">{(p.sucursal as any)?.direccion || "—"}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{(p.sucursal as any)?.zona?.nombre || "—"}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{format(new Date(p.fecha_pedido), "dd/MM/yy")}</TableCell>
-                        <TableCell className="text-xs font-mono text-muted-foreground whitespace-nowrap">{p.peso_total_kg && p.peso_total_kg > 0 ? `${Math.round(p.peso_total_kg)} kg` : "—"}</TableCell>
-                        <TableCell className="text-xs whitespace-nowrap">{creditoLabels[p.termino_credito] || p.termino_credito}</TableCell>
-                        <TableCell className="text-xs text-right font-bold whitespace-nowrap">{formatCurrency(p.total)}</TableCell>
-                        <TableCell><span className={`text-xs font-semibold ${diasColor}`}>{diasPedido}d</span></TableCell>
+                        <TableCell className="text-xs font-bold" style={{ whiteSpace: "nowrap" }}>{p.folio}</TableCell>
+                        <TableCell className="text-xs" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>{p.cliente.nombre}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>{(p.sucursal as any)?.direccion || "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>{(p.sucursal as any)?.zona?.nombre || "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground" style={{ whiteSpace: "nowrap" }}>{format(new Date(p.fecha_pedido), "dd/MM/yy")}</TableCell>
+                        <TableCell className="text-xs font-mono text-muted-foreground" style={{ whiteSpace: "nowrap" }}>{p.peso_total_kg && p.peso_total_kg > 0 ? `${Math.round(p.peso_total_kg)} kg` : "—"}</TableCell>
+                        <TableCell className="text-xs" style={{ whiteSpace: "nowrap" }}>{creditoLabels[p.termino_credito] || p.termino_credito}</TableCell>
+                        <TableCell className="text-xs text-right font-bold" style={{ whiteSpace: "nowrap" }}>{formatCurrency(p.total)}</TableCell>
+                        <TableCell><span className={`text-xs font-semibold ${diasColor}`} style={{ whiteSpace: "nowrap" }}>{diasPedido}d</span></TableCell>
                         <TableCell className="text-center">
                           <Button
                             variant="ghost"

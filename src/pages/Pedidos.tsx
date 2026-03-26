@@ -861,11 +861,11 @@ const PedidosContent = () => {
                             aria-label={`Seleccionar ${pedido.folio}`}
                           />
                         </TableCell>
-                        <TableCell className="font-medium font-mono">{pedido.folio}</TableCell>
-                        <TableCell>{pedido.clientes?.nombre || "—"}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{pedido.sucursal?.zona?.nombre || "—"}</TableCell>
-                        <TableCell className="text-sm">{pedido.profiles?.full_name || "—"}</TableCell>
-                        <TableCell className="text-sm">
+                        <TableCell className="font-medium font-mono" style={{ whiteSpace: "nowrap" }}>{pedido.folio}</TableCell>
+                        <TableCell style={{ wordBreak: "break-word", whiteSpace: "normal" }}>{pedido.clientes?.nombre || "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>{pedido.sucursal?.zona?.nombre || "—"}</TableCell>
+                        <TableCell className="text-sm" style={{ wordBreak: "break-word", whiteSpace: "normal" }}>{pedido.profiles?.full_name || "—"}</TableCell>
+                        <TableCell className="text-sm" style={{ whiteSpace: "nowrap" }}>
                           {new Date(pedido.fecha_pedido).toLocaleDateString("es-MX")}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
