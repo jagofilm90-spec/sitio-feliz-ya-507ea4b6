@@ -214,10 +214,11 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
         notas: notasActuales.includes("[EDITADO EN OFICINA]") ? notasActuales : `${notaEdicion}\n${notasActuales}`.trim(),
       }).eq("id", pedidoId);
 
-      // 3. Notify admin
+      // 3. Get vendor name + notify admin
+      const { data: vendorProfile } = await supabase.from("profiles").select("full_name").eq("id", user?.id || "").single();
+      const vendedorNombre = vendorProfile?.full_name || "Vendedor";
       try {
-        const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user?.id || "").single();
-        await supabase.from("notificaciones").insert({ tipo: "pedido_autorizado", titulo: `✏️ Pedido ${folio} editado`, descripcion: `${profile?.full_name || "Vendedor"} editó el pedido. Nuevo total: ${formatCurrency(realTotal)}`, pedido_id: pedidoId, leida: false });
+        await supabase.from("notificaciones").insert({ tipo: "pedido_autorizado", titulo: `✏️ Pedido ${folio} editado`, descripcion: `${vendedorNombre} editó el pedido. Nuevo total: ${formatCurrency(realTotal)}`, pedido_id: pedidoId, leida: false });
         await supabase.functions.invoke("send-push-notification", { body: { roles: ["admin"], title: `✏️ ${folio} editado`, body: `Nuevo total: ${formatCurrency(realTotal)}` } }).catch(() => {});
       } catch {}
 
@@ -245,7 +246,7 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
 
           // Generate PDFs
           const pdfData = {
-            pedidoId, folio, fecha: new Date().toISOString(), vendedor: "Vendedor",
+            pedidoId, folio, fecha: new Date().toISOString(), vendedor: vendedorNombre,
             terminoCredito: pedidoData?.termino_credito || "Contado",
             cliente: { nombre: pedidoInfo?.cliente_nombre || "Cliente" },
             sucursal: pedidoInfo?.direccion ? { nombre: pedidoInfo.zona || "Principal", direccion: pedidoInfo.direccion } : undefined,
