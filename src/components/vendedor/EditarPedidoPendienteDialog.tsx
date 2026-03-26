@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, CheckCircle2, AlertTriangle, X, Plus, MapPin, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
+import { calcularTotalesConImpuestos } from "@/lib/calculos";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -185,13 +186,18 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
         });
       }
 
-      // 2. BUG FIX: Recalculate total and weight FROM DB (not local state)
+      // 2. Recalculate total, weight, and taxes FROM DB
       const { data: allDet } = await supabase
         .from("pedidos_detalles")
-        .select("cantidad, subtotal, precio_unitario, producto:producto_id(peso_kg, precio_por_kilo, nombre, unidad)")
+        .select("cantidad, subtotal, precio_unitario, producto:producto_id(peso_kg, precio_por_kilo, nombre, unidad, aplica_iva, aplica_ieps)")
         .eq("pedido_id", pedidoId);
 
-      const realTotal = (allDet || []).reduce((s: number, d: any) => s + (d.subtotal || 0), 0);
+      const taxItems = (allDet || []).map((d: any) => ({
+        subtotal: d.subtotal || 0,
+        aplica_iva: (d.producto as any)?.aplica_iva ?? true,
+        aplica_ieps: (d.producto as any)?.aplica_ieps ?? false,
+      }));
+      const impuestos = calcularTotalesConImpuestos(taxItems);
       const realPeso = (allDet || []).reduce((s: number, d: any) => s + (d.cantidad * ((d.producto as any)?.peso_kg || 0)), 0);
 
       const newStatus = anyBelowMin ? "por_autorizar" : "pendiente";
@@ -200,8 +206,9 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
       const notaEdicion = `[EDITADO EN OFICINA] por vendedor el ${new Date().toLocaleDateString("es-MX")}`;
 
       await supabase.from("pedidos").update({
-        total: realTotal,
-        subtotal: realTotal,
+        total: impuestos.total,
+        subtotal: impuestos.subtotal,
+        impuestos: impuestos.iva + impuestos.ieps,
         peso_total_kg: realPeso > 0 ? realPeso : null,
         status: newStatus as any,
         notas: notasActuales.includes("[EDITADO EN OFICINA]") ? notasActuales : `${notaEdicion}\n${notasActuales}`.trim(),
@@ -242,7 +249,7 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
             terminoCredito: pedidoData?.termino_credito || "Contado",
             cliente: { nombre: pedidoInfo?.cliente_nombre || "Cliente" },
             sucursal: pedidoInfo?.direccion ? { nombre: pedidoInfo.zona || "Principal", direccion: pedidoInfo.direccion } : undefined,
-            productos: productosForPdf, subtotal: realTotal, iva: 0, ieps: 0, total: realTotal, pesoTotalKg: realPeso,
+            productos: productosForPdf, subtotal: impuestos.subtotal, iva: impuestos.iva, ieps: impuestos.ieps, total: impuestos.total, pesoTotalKg: realPeso,
           };
 
           // Download internal PDF (nota + hoja de carga)

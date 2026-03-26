@@ -44,7 +44,7 @@ import {
 } from "lucide-react";
 import { format, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
-import { ordenarProductosAzucarPrimero } from "@/lib/calculos";
+import { ordenarProductosAzucarPrimero, calcularTotalesConImpuestos } from "@/lib/calculos";
 import { formatCurrency } from "@/lib/utils";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import { generarNotaPDF, generarConfirmacionClientePDF } from "@/lib/generarNotaPDF";
@@ -141,7 +141,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
             cantidad,
             precio_unitario,
             subtotal,
-            productos (id, nombre, codigo, precio_venta, unidad, peso_kg, precio_por_kilo, descuento_maximo, ultimo_costo_compra, costo_promedio_ponderado)
+            productos (id, nombre, codigo, precio_venta, unidad, peso_kg, precio_por_kilo, descuento_maximo, ultimo_costo_compra, costo_promedio_ponderado, aplica_iva, aplica_ieps)
           )
         `)
         .eq("status", "por_autorizar")
@@ -301,7 +301,18 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
           terminoCredito: selectedPedido.termino_credito || "Contado",
           cliente: { nombre: selectedPedido.clientes?.nombre || "Cliente" },
           direccionEntrega: direccion || "", sucursal: { nombre: sucNombre, direccion: direccion || undefined },
-          productos: productosForPdf, subtotal: totalFinal, iva: 0, ieps: 0, total: totalFinal,
+          productos: productosForPdf,
+          ...(() => {
+            const taxItems = selectedPedido.pedidos_detalles.map(d => {
+              const precio = editingPrices[d.id] ?? d.precio_unitario;
+              const precioPorKilo = d.productos?.precio_por_kilo || false;
+              const pesoKg = d.productos?.peso_kg || 0;
+              const sub = precioPorKilo && pesoKg ? d.cantidad * pesoKg * precio : d.cantidad * precio;
+              return { subtotal: sub, aplica_iva: (d.productos as any)?.aplica_iva ?? true, aplica_ieps: (d.productos as any)?.aplica_ieps ?? false };
+            });
+            const imp = calcularTotalesConImpuestos(taxItems);
+            return { subtotal: imp.subtotal, iva: imp.iva, ieps: imp.ieps, total: imp.total };
+          })(),
           pesoTotalKg: selectedPedido.pedidos_detalles.reduce((s, d) => s + (d.cantidad * (d.productos?.peso_kg || 0)), 0),
         };
 

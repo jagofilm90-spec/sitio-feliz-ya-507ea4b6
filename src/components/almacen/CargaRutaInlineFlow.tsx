@@ -3,6 +3,7 @@ import { CameraQrScanner } from "@/components/almacen/CameraQrScanner";
 import { CargaHojaInteractiva } from "@/components/almacen/CargaHojaInteractiva";
 import { supabase } from "@/integrations/supabase/client";
 import { recalcularTotalesPedido } from "@/lib/recalcularTotalesPedido";
+import { calcularTotalesConImpuestos } from "@/lib/calculos";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -490,7 +491,7 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
             .eq("id", item.pedidoId).single();
           const { data: detalles } = await supabase
             .from("pedidos_detalles")
-            .select("cantidad, precio_unitario, subtotal, producto:productos(nombre, unidad, peso_kg, precio_por_kilo)")
+            .select("cantidad, precio_unitario, subtotal, producto:productos(nombre, unidad, peso_kg, precio_por_kilo, aplica_iva, aplica_ieps)")
             .eq("pedido_id", item.pedidoId);
 
           const productos = (detalles || []).map((d: any) => {
@@ -500,6 +501,8 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
           });
           const pesoTotal = productos.reduce((s: number, p: any) => s + (p.pesoTotal || 0), 0);
           const suc = pedidoData?.sucursal as any;
+          const taxItems = (detalles || []).map((d: any) => ({ subtotal: d.subtotal || 0, aplica_iva: d.producto?.aplica_iva ?? true, aplica_ieps: d.producto?.aplica_ieps ?? false }));
+          const imp = calcularTotalesConImpuestos(taxItems);
 
           const cpdf = await generarConfirmacionClientePDF({
             pedidoId: item.pedidoId, folio: item.folio, fecha: new Date().toISOString(),
@@ -507,7 +510,7 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
             terminoCredito: pedidoData?.termino_credito || "Contado",
             cliente: { nombre: item.clienteNombre },
             sucursal: suc ? { nombre: suc.nombre, direccion: suc.direccion } : undefined,
-            productos, subtotal: pedidoData?.total || 0, iva: 0, ieps: 0, total: pedidoData?.total || 0, pesoTotalKg: pesoTotal,
+            productos, subtotal: imp.subtotal, iva: imp.iva, ieps: imp.ieps, total: imp.total, pesoTotalKg: pesoTotal,
           });
           pdfBase64 = cpdf.base64;
           pdfFilename = cpdf.filename;
@@ -821,7 +824,7 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
     try {
       const { generarNotaInternaPDF } = await import("@/lib/generarNotaPDF");
       const { data: ped } = await supabase.from("pedidos").select("total, termino_credito, sucursal:cliente_sucursales(nombre, direccion), vendedor:profiles!pedidos_vendedor_id_fkey(full_name)").eq("id", pedidoId).single();
-      const { data: det } = await supabase.from("pedidos_detalles").select("cantidad, precio_unitario, subtotal, producto:productos(nombre, unidad, peso_kg, precio_por_kilo)").eq("pedido_id", pedidoId);
+      const { data: det } = await supabase.from("pedidos_detalles").select("cantidad, precio_unitario, subtotal, producto:productos(nombre, unidad, peso_kg, precio_por_kilo, aplica_iva, aplica_ieps)").eq("pedido_id", pedidoId);
       const cli = cola.find(c => c.pedidoId === pedidoId);
       const productos = (det || []).map((d: any) => {
         const pesoKg = d.producto?.peso_kg || 0;
@@ -830,13 +833,15 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
       });
       const pesoTotal = productos.reduce((s: number, p: any) => s + (p.pesoTotal || 0), 0);
       const suc = ped?.sucursal as any;
+      const taxItems2 = (det || []).map((d: any) => ({ subtotal: d.subtotal || 0, aplica_iva: d.producto?.aplica_iva ?? true, aplica_ieps: d.producto?.aplica_ieps ?? false }));
+      const imp2 = calcularTotalesConImpuestos(taxItems2);
       const pdf = await generarNotaInternaPDF({
         pedidoId, folio, fecha: new Date().toISOString(),
         vendedor: (ped?.vendedor as any)?.full_name || "Vendedor",
         terminoCredito: ped?.termino_credito || "Contado",
         cliente: { nombre: cli?.clienteNombre || "Cliente" },
         sucursal: suc ? { nombre: suc.nombre, direccion: suc.direccion } : undefined,
-        productos, subtotal: ped?.total || 0, iva: 0, ieps: 0, total: ped?.total || 0, pesoTotalKg: pesoTotal,
+        productos, subtotal: imp2.subtotal, iva: imp2.iva, ieps: imp2.ieps, total: imp2.total, pesoTotalKg: pesoTotal,
       });
       // Download the PDF
       const link = document.createElement("a");

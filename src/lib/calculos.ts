@@ -613,6 +613,22 @@ export function validarTotalesLegacy(subtotal: number, iva: number, ieps: number
   return diferencia < 0.02;
 }
 
+/**
+ * Calcula desglose de impuestos para un array de productos con subtotales.
+ * Cada item debe tener: subtotal (con impuestos incluidos), aplica_iva, aplica_ieps
+ */
+export function calcularTotalesConImpuestos(items: { subtotal: number; aplica_iva: boolean; aplica_ieps: boolean }[]): { subtotal: number; iva: number; ieps: number; total: number } {
+  let totalBase = 0, totalIva = 0, totalIeps = 0, totalBruto = 0;
+  for (const item of items) {
+    const d = calcularDesgloseImpuestos({ precio_con_impuestos: item.subtotal, aplica_iva: item.aplica_iva, aplica_ieps: item.aplica_ieps });
+    totalBase += d.base;
+    totalIva += d.iva;
+    totalIeps += d.ieps;
+    totalBruto += item.subtotal;
+  }
+  return { subtotal: redondear(totalBase), iva: redondear(totalIva), ieps: redondear(totalIeps), total: redondear(totalBruto) };
+}
+
 // ==================== ANÁLISIS DE MARGEN Y COSTOS ====================
 
 export interface AnalisisMargenParams {
