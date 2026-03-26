@@ -3756,6 +3756,7 @@ export type Database = {
       }
       pedidos_detalles: {
         Row: {
+          agregado_en_carga: boolean | null
           autorizacion_status: string
           cantidad: number
           cantidad_original: number | null
@@ -3776,6 +3777,7 @@ export type Database = {
           unidades_manual: number | null
         }
         Insert: {
+          agregado_en_carga?: boolean | null
           autorizacion_status?: string
           cantidad: number
           cantidad_original?: number | null
@@ -3796,6 +3798,7 @@ export type Database = {
           unidades_manual?: number | null
         }
         Update: {
+          agregado_en_carga?: boolean | null
           autorizacion_status?: string
           cantidad?: number
           cantidad_original?: number | null
@@ -5053,6 +5056,7 @@ export type Database = {
           notas: string | null
           numero_sello_salida: string | null
           peso_total_kg: number | null
+          porcentaje_carga: number | null
           status: string | null
           tiempo_estimado_minutos: number | null
           tipo_ruta: string
@@ -5093,6 +5097,7 @@ export type Database = {
           notas?: string | null
           numero_sello_salida?: string | null
           peso_total_kg?: number | null
+          porcentaje_carga?: number | null
           status?: string | null
           tiempo_estimado_minutos?: number | null
           tipo_ruta?: string
@@ -5133,6 +5138,7 @@ export type Database = {
           notas?: string | null
           numero_sello_salida?: string | null
           peso_total_kg?: number | null
+          porcentaje_carga?: number | null
           status?: string | null
           tiempo_estimado_minutos?: number | null
           tipo_ruta?: string
