@@ -11,6 +11,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import { Users, ShoppingCart, CreditCard, LogOut, TrendingUp, Calendar, IdCard, Sparkles, List, Wallet, Percent, BarChart3 } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
+import { calcularTotalesConImpuestos } from "@/lib/calculos";
 import { VendedorMisClientesTab } from "@/components/vendedor/VendedorMisClientesTab";
 import { VendedorNuevoPedidoTab } from "@/components/vendedor/VendedorNuevoPedidoTab";
 import { VendedorMisVentasTab } from "@/components/vendedor/VendedorMisVentasTab";
@@ -192,14 +193,25 @@ export default function VendedorPanel() {
       inicioMes.setDate(1);
       inicioMes.setHours(0, 0, 0, 0);
 
+      // Fetch orders with detalles to calculate totals client-side (resilient to stale pedidos.total)
       const { data: ventasMesData } = await supabase
         .from("pedidos")
-        .select("total")
+        .select("total, detalles:pedidos_detalles(subtotal, producto:productos!pedidos_detalles_producto_id_fkey(aplica_iva, aplica_ieps))")
         .eq("vendedor_id", user.id)
         .gte("fecha_pedido", inicioMes.toISOString())
         .not("status", "in", "(cancelado,por_autorizar)");
 
-      const ventasMes = (ventasMesData || []).reduce((sum, p) => sum + (p.total || 0), 0);
+      const calcPedidoTotal = (p: any) => {
+        const items = (p.detalles || []).map((d: any) => ({
+          subtotal: d.subtotal || 0,
+          aplica_iva: d.producto?.aplica_iva ?? true,
+          aplica_ieps: d.producto?.aplica_ieps ?? false,
+        }));
+        if (items.length === 0) return p.total || 0;
+        return calcularTotalesConImpuestos(items).total;
+      };
+
+      const ventasMes = (ventasMesData || []).reduce((sum, p) => sum + calcPedidoTotal(p), 0);
 
       // Get current year sales
       const inicioAnio = new Date();
@@ -208,12 +220,12 @@ export default function VendedorPanel() {
 
       const { data: ventasAnioData } = await supabase
         .from("pedidos")
-        .select("total")
+        .select("total, detalles:pedidos_detalles(subtotal, producto:productos!pedidos_detalles_producto_id_fkey(aplica_iva, aplica_ieps))")
         .eq("vendedor_id", user.id)
         .gte("fecha_pedido", inicioAnio.toISOString())
         .not("status", "in", "(cancelado,por_autorizar)");
 
-      const ventasAnio = (ventasAnioData || []).reduce((sum, p) => sum + (p.total || 0), 0);
+      const ventasAnio = (ventasAnioData || []).reduce((sum, p) => sum + calcPedidoTotal(p), 0);
 
       // Get accounts receivable (facturas pendientes de clientes del vendedor)
       const { data: clientesIds } = await supabase
