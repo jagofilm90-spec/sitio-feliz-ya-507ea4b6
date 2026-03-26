@@ -33,6 +33,7 @@ interface Ruta {
   carga_completada_en: string | null;
   hora_salida_sugerida: string | null;
   carga_iniciada_en: string | null;
+  almacenista_id: string | null;
   ayudantes_ids: string[] | null;
   lleva_sellos: boolean | null;
   numero_sello_salida: string | null;
