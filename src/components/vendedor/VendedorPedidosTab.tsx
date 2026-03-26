@@ -208,16 +208,33 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
 
       if (error) throw error;
 
-      setPedidos((data || []).map((p: any) => ({
-        ...p,
-        cliente: p.cliente || { nombre: "Sin cliente" },
-        sucursal: p.sucursal || null,
-        termino_credito: p.termino_credito || "contado",
-        fecha_entrega_real: p.fecha_entrega_real || null,
-        pagado: p.pagado || false,
-        saldo_pendiente: p.saldo_pendiente ?? null,
-        peso_total_kg: p.peso_total_kg || 0,
-      })));
+      setPedidos((data || []).map((p: any) => {
+        const detalles = p.pedidos_detalles || [];
+        // Calculate weight from details
+        const pesoCalculado = detalles.reduce((sum: number, d: any) => {
+          const pesoKg = d.producto?.peso_kg || 0;
+          return sum + (d.cantidad * pesoKg);
+        }, 0);
+        // Calculate total from details using tax logic
+        const taxItems = detalles.map((d: any) => ({
+          subtotal: d.subtotal || 0,
+          aplica_iva: d.producto?.aplica_iva ?? true,
+          aplica_ieps: d.producto?.aplica_ieps ?? false,
+        }));
+        const impuestos = calcularTotalesConImpuestos(taxItems);
+
+        return {
+          ...p,
+          cliente: p.cliente || { nombre: "Sin cliente" },
+          sucursal: p.sucursal || null,
+          termino_credito: p.termino_credito || "contado",
+          fecha_entrega_real: p.fecha_entrega_real || null,
+          pagado: p.pagado || false,
+          saldo_pendiente: p.saldo_pendiente ?? null,
+          peso_total_kg: pesoCalculado > 0 ? pesoCalculado : (p.peso_total_kg || 0),
+          total: impuestos.total > 0 ? impuestos.total : p.total,
+        };
+      }));
     } catch (error) {
       console.error("Error:", error);
       toast.error("Error al cargar pedidos");
