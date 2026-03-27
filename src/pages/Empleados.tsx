@@ -482,11 +482,17 @@ const Empleados = () => {
         empleadoId = editingEmpleado.id;
 
         // Update extras via RPC
-        await supabase.rpc("update_empleado_extras", {
+        console.log("RPC update_empleado_extras:", {
+          p_empleado_id: empleadoId,
+          p_beneficiario: (formData as any).beneficiario,
+          p_premio_asistencia_semanal: (formData as any).premio_asistencia_semanal,
+        });
+        const { error: rpcEditError } = await supabase.rpc("update_empleado_extras", {
           p_empleado_id: empleadoId,
           p_beneficiario: (formData as any).beneficiario || null,
           p_premio_asistencia_semanal: (formData as any).premio_asistencia_semanal || null,
-        }).then(({ error: e }) => { if (e) console.warn("RPC update extras:", e.message); });
+        });
+        if (rpcEditError) console.error("ERROR RPC update:", rpcEditError);
 
         // Si el empleado tiene usuario asociado, actualizar el nombre en profiles
         if (formData.user_id) {
