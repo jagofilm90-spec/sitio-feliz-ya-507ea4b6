@@ -418,8 +418,8 @@ const Empleados = () => {
       if (!formData.sueldo_bruto) faltantes.push("Sueldo Bruto");
       if (!formData.rfc?.trim()) faltantes.push("RFC");
       if (!formData.curp?.trim()) faltantes.push("CURP");
-      if (!(formData as any).beneficiario?.trim()) faltantes.push("Beneficiario");
-      if ((formData.puesto === "Chofer" || formData.puesto === "Ayudante de Chofer") && !(formData as any).premio_asistencia_semanal) faltantes.push("Premio de Asistencia Semanal");
+      if (!formData.beneficiario?.trim()) faltantes.push("Beneficiario");
+      if ((formData.puesto === "Chofer" || formData.puesto === "Ayudante de Chofer") && !formData.premio_asistencia_semanal) faltantes.push("Premio de Asistencia Semanal");
       if (faltantes.length > 0) {
         toast({ title: "Campos obligatorios faltantes", description: faltantes.join(", "), variant: "destructive" });
         return;
