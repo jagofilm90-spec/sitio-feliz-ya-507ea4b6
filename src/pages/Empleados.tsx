@@ -510,20 +510,8 @@ const Empleados = () => {
           description: "El empleado se actualizó correctamente",
         });
       } else {
-        // Crear empleado — insert sin campos nuevos que pueden no estar en cache
-        const { beneficiario: _b, premio_asistencia_semanal: _p, ...safePayload } = payload as any;
-        const { data: newEmp, error } = await supabase.from("empleados").insert([safePayload]).select("id").single();
+        const { data: newEmp, error } = await supabase.from("empleados").insert([payload]).select("id").single();
         if (error) throw error;
-
-        // Update campos extras via RPC (bypasea schema cache)
-        if (newEmp?.id) {
-          const { error: rpcError } = await supabase.rpc("update_empleado_extras", {
-            p_empleado_id: newEmp.id,
-            p_beneficiario: (formData as any).beneficiario || null,
-            p_premio_asistencia_semanal: (formData as any).premio_asistencia_semanal || null,
-          });
-          if (rpcError) console.warn("RPC update_empleado_extras:", rpcError.message);
-        }
 
         toast({
           title: "Empleado creado",
