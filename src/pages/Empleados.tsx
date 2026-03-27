@@ -281,7 +281,7 @@ const Empleados = () => {
         .order("nombre_completo");
 
       if (error) throw error;
-      setEmpleados((data || []) as Empleado[]);
+      setEmpleados((data || []) as unknown as Empleado[]);
 
       // Load documents for each employee
       if (data) {
