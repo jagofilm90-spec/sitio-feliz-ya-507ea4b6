@@ -598,8 +598,8 @@ const Empleados = () => {
 
     // Leer extras via RPC (bypasea schema cache)
     const { data: extras } = await supabase.rpc("get_empleado_extras", { p_empleado_id: empleado.id });
-    const benefFromDb = extras?.[0]?.beneficiario || "";
-    const premioFromDb = extras?.[0]?.premio_asistencia_semanal || null;
+    const benefFromDb = extras?.beneficiario || "";
+    const premioFromDb = extras?.premio_asistencia_semanal || null;
     const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
 
     setFormData({
@@ -645,8 +645,8 @@ const Empleados = () => {
       // Leer extras via RPC (bypasea schema cache)
       const { data: extras } = await supabase.rpc("get_empleado_extras", { p_empleado_id: empleado.id });
       const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
-      const premio = extras?.[0]?.premio_asistencia_semanal || empleado.premio_asistencia_semanal || premioDefault;
-      const beneficiario = extras?.[0]?.beneficiario || empleado.beneficiario || "Por designar";
+      const premio = extras?.premio_asistencia_semanal || empleado.premio_asistencia_semanal || premioDefault;
+      const beneficiario = extras?.beneficiario || empleado.beneficiario || "Por designar";
       await generarContratoPDF({
         empleado: {
           nombre_completo: empleado.nombre_completo,
