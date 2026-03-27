@@ -1108,47 +1108,7 @@ const Empleados = () => {
   return (
     <Layout>
       <div className="space-y-6">
-        {/* Widget de notificaciones */}
-        {notificaciones.length > 0 && (
-          <Card className="p-4 border-destructive/50 bg-destructive/5">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
-              <div className="flex-1">
-                <h3 className="font-semibold text-destructive mb-2">
-                  {notificaciones.length} Notificación{notificaciones.length > 1 ? "es" : ""} Pendiente{notificaciones.length > 1 ? "s" : ""}
-                </h3>
-                <div className="space-y-2">
-                  {notificaciones.slice(0, 3).map((notif) => (
-                    <div key={notif.id} className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-medium">{notif.titulo}</p>
-                        <p className="text-xs text-muted-foreground">{notif.descripcion}</p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={async () => {
-                          await supabase
-                            .from("notificaciones")
-                            .update({ leida: true })
-                            .eq("id", notif.id);
-                          loadNotificaciones();
-                        }}
-                      >
-                        Marcar leída
-                      </Button>
-                    </div>
-                  ))}
-                  {notificaciones.length > 3 && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Y {notificaciones.length - 3} notificación{notificaciones.length - 3 > 1 ? "es" : ""} más...
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </Card>
-        )}
+        {/* Notificaciones se muestran solo en la campana del header */}
 
         <div className="flex items-center justify-between">
           <div>
