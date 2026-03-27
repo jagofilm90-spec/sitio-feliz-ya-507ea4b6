@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { EmpleadoCardMobile } from "@/components/empleados/EmpleadoCardMobile";
 import { DarAccesoSistemaDialog } from "@/components/empleados/DarAccesoSistemaDialog";
+import { generarContratoPDF } from "@/lib/generarContratoPDF";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -578,6 +579,39 @@ const Empleados = () => {
       motivo_baja: empleado.motivo_baja || "",
     });
     setIsDialogOpen(true);
+  };
+
+  const handleGenerarContrato = async (empleado: Empleado) => {
+    if (!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto) {
+      toast({ title: "Datos incompletos", description: "El empleado necesita RFC, CURP y sueldo para generar el contrato", variant: "destructive" });
+      return;
+    }
+    try {
+      const esChofer = empleado.puesto === "Chofer" || empleado.puesto === "Ayudante de Chofer";
+      await generarContratoPDF({
+        empleado: {
+          nombre_completo: empleado.nombre_completo,
+          rfc: empleado.rfc,
+          curp: empleado.curp,
+          puesto: empleado.puesto,
+          sueldo_bruto: empleado.sueldo_bruto,
+          premio_asistencia: esChofer ? Math.round(empleado.sueldo_bruto * 0.15) : null,
+          beneficiario: (empleado as any).beneficiario || "Por designar",
+          fecha_ingreso: empleado.fecha_ingreso,
+          fecha_contrato: new Date().toISOString().split("T")[0],
+          direccion: empleado.direccion || null,
+        },
+        empresa: {
+          representante_legal: "JOSE ANTONIO GOMEZ ORTEGA",
+          razon_social: "ABARROTES LA MANITA, S.A. DE C.V.",
+          rfc: "AMA 700701GI8",
+          domicilio: "MELCHOR OCAMPO 59, MAGDALENA MIXIHUCA, VENUSTIANO CARRANZA, 15850, CIUDAD DE MEXICO",
+        },
+      });
+      toast({ title: "Contrato generado", description: `PDF descargado para ${empleado.nombre_completo}` });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
   };
 
   const handleDelete = async (empleado: Empleado) => {
@@ -1287,6 +1321,10 @@ const Empleados = () => {
                       <Label htmlFor="direccion">Dirección</Label>
                       <Input id="direccion" value={formData.direccion} onChange={(e) => setFormData({ ...formData, direccion: e.target.value })} placeholder="Calle, número, colonia..." autoComplete="off" />
                     </div>
+                    <div>
+                      <Label htmlFor="beneficiario">Beneficiario (para contrato)</Label>
+                      <Input id="beneficiario" value={(formData as any).beneficiario || ""} onChange={(e) => setFormData({ ...formData, beneficiario: e.target.value } as any)} placeholder="Nombre del beneficiario" autoComplete="off" />
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="cuenta_bancaria">Cuenta Bancaria</Label>
@@ -1795,6 +1833,11 @@ const Empleados = () => {
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
+                                {empleado.rfc && empleado.curp && empleado.sueldo_bruto && (
+                                  <Button variant="ghost" size="sm" onClick={() => handleGenerarContrato(empleado)} title="Generar contrato">
+                                    <FileText className="h-4 w-4" />
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -1990,6 +2033,11 @@ const Empleados = () => {
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
+                                {empleado.rfc && empleado.curp && empleado.sueldo_bruto && (
+                                  <Button variant="ghost" size="sm" onClick={() => handleGenerarContrato(empleado)} title="Generar contrato">
+                                    <FileText className="h-4 w-4" />
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -2184,6 +2232,11 @@ const Empleados = () => {
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
+                                {empleado.rfc && empleado.curp && empleado.sueldo_bruto && (
+                                  <Button variant="ghost" size="sm" onClick={() => handleGenerarContrato(empleado)} title="Generar contrato">
+                                    <FileText className="h-4 w-4" />
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="sm"
