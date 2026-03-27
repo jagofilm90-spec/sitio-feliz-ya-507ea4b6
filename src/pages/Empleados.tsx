@@ -471,13 +471,22 @@ const Empleados = () => {
       let empleadoId: string;
 
       if (editingEmpleado) {
+        // Strip extras from payload to avoid schema cache error
+        const { beneficiario: _b2, premio_asistencia_semanal: _p2, ...safeEditPayload } = payload as any;
         const { error } = await supabase
           .from("empleados")
-          .update(payload)
+          .update(safeEditPayload)
           .eq("id", editingEmpleado.id);
 
         if (error) throw error;
         empleadoId = editingEmpleado.id;
+
+        // Update extras via RPC
+        await supabase.rpc("update_empleado_extras", {
+          p_empleado_id: empleadoId,
+          p_beneficiario: (formData as any).beneficiario || null,
+          p_premio_asistencia_semanal: (formData as any).premio_asistencia_semanal || null,
+        }).then(({ error: e }) => { if (e) console.warn("RPC update extras:", e.message); });
 
         // Si el empleado tiene usuario asociado, actualizar el nombre en profiles
         if (formData.user_id) {
@@ -515,15 +524,14 @@ const Empleados = () => {
         const { data: newEmp, error } = await supabase.from("empleados").insert([safePayload]).select("id").single();
         if (error) throw error;
 
-        // Update con campos adicionales
+        // Update campos extras via RPC (bypasea schema cache)
         if (newEmp?.id) {
-          const { error: extraError } = await supabase.from("empleados").update({
-            beneficiario: (formData as any).beneficiario || null,
-            premio_asistencia_semanal: (formData as any).premio_asistencia_semanal || null,
-          }).eq("id", newEmp.id);
-          if (extraError) {
-            console.warn("No se pudieron guardar beneficiario/premio (columnas pueden no existir):", extraError.message);
-          }
+          const { error: rpcError } = await supabase.rpc("update_empleado_extras", {
+            p_empleado_id: newEmp.id,
+            p_beneficiario: (formData as any).beneficiario || null,
+            p_premio_asistencia_semanal: (formData as any).premio_asistencia_semanal || null,
+          });
+          if (rpcError) console.warn("RPC update_empleado_extras:", rpcError.message);
         }
 
         toast({
