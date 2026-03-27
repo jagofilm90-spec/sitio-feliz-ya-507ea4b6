@@ -440,6 +440,8 @@ export async function generarContratoPDF(datos: DatosContrato): Promise<{ filena
 
   // Footer with employee signature on every page
   const addFooter = () => {
+    const prevSize = pdf.getFontSize();
+    const prevFont = pdf.getFont();
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(7);
     pdf.setTextColor(150);
@@ -448,6 +450,8 @@ export async function generarContratoPDF(datos: DatosContrato): Promise<{ filena
     pdf.setFontSize(6);
     pdf.text(NOM, pageW - mR, pageH - 5, { align: "right" });
     pdf.setTextColor(0);
+    pdf.setFont(prevFont.fontName, prevFont.fontStyle);
+    pdf.setFontSize(prevSize);
     pageNum++;
   };
 
@@ -457,14 +461,14 @@ export async function generarContratoPDF(datos: DatosContrato): Promise<{ filena
   const writeCenter = (text: string, size = 11, bold = true) => {
     checkPage(8); pdf.setFont("helvetica", bold ? "bold" : "normal"); pdf.setFontSize(size);
     const lines = pdf.splitTextToSize(text, maxW);
-    for (const l of lines) { checkPage(5); pdf.text(l, pageW / 2, y, { align: "center" }); y += size * 0.42; }
+    for (const l of lines) { checkPage(5); pdf.setFont("helvetica", bold ? "bold" : "normal"); pdf.setFontSize(size); pdf.text(l, pageW / 2, y, { align: "center" }); y += size * 0.42; }
     y += 2;
   };
 
   const write = (text: string, size = 9.5, bold = false) => {
     pdf.setFont("helvetica", bold ? "bold" : "normal"); pdf.setFontSize(size);
     const lines = pdf.splitTextToSize(text, maxW);
-    for (const l of lines) { checkPage(4.5); pdf.text(l, mL, y); y += 4; }
+    for (const l of lines) { checkPage(4.5); pdf.setFont("helvetica", bold ? "bold" : "normal"); pdf.setFontSize(size); pdf.text(l, mL, y); y += 4; }
     y += 1.5;
   };
 
@@ -678,8 +682,8 @@ export async function generarAvisoPrivacidadPDF(params: { nombre_empleado: strin
   const addPage = () => { pdf.addPage(); y = 20; };
   const checkPage = (n: number) => { if (y + n > pageH - 18) addPage(); };
   const writeTitle = (t: string, s = 12) => { checkPage(10); pdf.setFont("helvetica", "bold"); pdf.setFontSize(s); pdf.text(t, pageW / 2, y, { align: "center" }); y += s * 0.5 + 2; };
-  const writeBold = (t: string, s = 9) => { pdf.setFont("helvetica", "bold"); pdf.setFontSize(s); for (const l of pdf.splitTextToSize(t, maxW)) { checkPage(4.5); pdf.text(l, mL, y); y += 4; } y += 1; };
-  const writeNormal = (t: string, s = 9) => { pdf.setFont("helvetica", "normal"); pdf.setFontSize(s); for (const l of pdf.splitTextToSize(t, maxW)) { checkPage(4.5); pdf.text(l, mL, y); y += 4; } y += 1; };
+  const writeBold = (t: string, s = 9) => { pdf.setFont("helvetica", "bold"); pdf.setFontSize(s); for (const l of pdf.splitTextToSize(t, maxW)) { checkPage(4.5); pdf.setFont("helvetica", "bold"); pdf.setFontSize(s); pdf.text(l, mL, y); y += 4; } y += 1; };
+  const writeNormal = (t: string, s = 9) => { pdf.setFont("helvetica", "normal"); pdf.setFontSize(s); for (const l of pdf.splitTextToSize(t, maxW)) { checkPage(4.5); pdf.setFont("helvetica", "normal"); pdf.setFontSize(s); pdf.text(l, mL, y); y += 4; } y += 1; };
 
   writeTitle("AVISO DE PRIVACIDAD PARA EMPLEADOS Y CANDIDATOS", 12);
   y += 3;
