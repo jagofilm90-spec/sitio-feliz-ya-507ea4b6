@@ -20,6 +20,7 @@ interface Profile {
   full_name: string;
   email: string;
   phone?: string;
+  last_seen?: string | null;
 }
 
 interface UserWithRoles extends Profile {
@@ -95,7 +96,7 @@ export function UsuariosContent() {
 
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("*")
+        .select("id, full_name, email, phone, last_seen")
         .order("full_name");
 
       if (profilesError) throw profilesError;
@@ -572,7 +573,7 @@ export function UsuariosContent() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="segundo_apellido">Segundo Apellido *</Label>
+                <Label htmlFor="segundo_apellido">Segundo Apellido</Label>
                 <Input
                   id="segundo_apellido"
                   placeholder="García"
@@ -770,19 +771,20 @@ export function UsuariosContent() {
                         <TableHead>Correo</TableHead>
                         <TableHead>Teléfono</TableHead>
                         <TableHead>Roles</TableHead>
-                        <TableHead className="w-[100px]">Acciones</TableHead>
+                        <TableHead>Último acceso</TableHead>
+                        <TableHead className="w-[120px]">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8">
+                          <TableCell colSpan={6} className="text-center py-8">
                             Cargando usuarios...
                           </TableCell>
                         </TableRow>
                       ) : displayUsers.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8">
+                          <TableCell colSpan={6} className="text-center py-8">
                             No se encontraron usuarios
                           </TableCell>
                         </TableRow>
@@ -803,6 +805,9 @@ export function UsuariosContent() {
                                 )}
                               </div>
                             </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {user.last_seen ? new Date(user.last_seen).toLocaleDateString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "Nunca"}
+                            </TableCell>
                             <TableCell>
                               <div className="flex gap-1">
                                 <Button
@@ -813,7 +818,7 @@ export function UsuariosContent() {
                                     const nombre = nombrePartes[0] || "";
                                     const primerApellido = nombrePartes[1] || "";
                                     const segundoApellido = nombrePartes.slice(2).join(" ") || "";
-                                    
+
                                     setEditingUser(user);
                                     setEditUserFields({
                                       nombre,
@@ -822,13 +827,23 @@ export function UsuariosContent() {
                                     });
                                     setIsEditDialogOpen(true);
                                   }}
+                                  title="Editar"
                                 >
                                   <Pencil className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="sm"
+                                  onClick={() => setResetPasswordUser(user)}
+                                  title="Cambiar contraseña"
+                                >
+                                  <KeyRound className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => setUserToDelete(user)}
+                                  title="Eliminar"
                                 >
                                   <Trash2 className="h-4 w-4 text-destructive" />
                                 </Button>
