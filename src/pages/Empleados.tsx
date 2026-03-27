@@ -488,40 +488,10 @@ const Empleados = () => {
       if (editingEmpleado) {
         empleadoId = editingEmpleado.id;
 
-        // UPDATE completo via RPC JSON — bypasea PostgREST schema cache
-        const { error } = await supabase.rpc("update_empleado_json", {
-          p_id: empleadoId,
-          p_data: {
-            nombre_completo: nombreCompleto,
-            nombre: formData.nombre || null,
-            primer_apellido: formData.primer_apellido || null,
-            segundo_apellido: formData.segundo_apellido || null,
-            rfc: formData.rfc || null,
-            curp: formData.curp || null,
-            fecha_nacimiento: formData.fecha_nacimiento || null,
-            telefono: formData.telefono || null,
-            email: formData.email || null,
-            fecha_ingreso: formData.fecha_ingreso || null,
-            puesto: formData.puesto || null,
-            activo: formData.activo,
-            notas: formData.notas || null,
-            sueldo_bruto: formData.sueldo_bruto ? parseFloat(formData.sueldo_bruto) : null,
-            periodo_pago: formData.periodo_pago || null,
-            fecha_baja: formData.fecha_baja || null,
-            motivo_baja: formData.motivo_baja || null,
-            beneficiario: (formData as any).beneficiario || null,
-            premio_asistencia_semanal: (formData as any).premio_asistencia_semanal || null,
-            numero_seguro_social: formData.numero_seguro_social || null,
-            contacto_emergencia_nombre: formData.contacto_emergencia_nombre || null,
-            contacto_emergencia_telefono: formData.contacto_emergencia_telefono || null,
-            tipo_sangre: formData.tipo_sangre || null,
-            estado_civil: formData.estado_civil || null,
-            numero_dependientes: formData.numero_dependientes ? parseInt(formData.numero_dependientes) : null,
-            nivel_estudios: formData.nivel_estudios || null,
-            cuenta_bancaria: formData.cuenta_bancaria || null,
-            clabe_interbancaria: formData.clabe_interbancaria || null,
-          }
-        });
+        const { error } = await supabase
+          .from("empleados")
+          .update(payload)
+          .eq("id", empleadoId);
         if (error) throw error;
 
         // Si el empleado tiene usuario asociado, actualizar el nombre en profiles
