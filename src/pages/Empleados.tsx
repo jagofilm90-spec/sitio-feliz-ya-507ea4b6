@@ -608,9 +608,34 @@ const Empleados = () => {
     }
   };
 
-  const handleEdit = (empleado: Empleado) => {
+  // Fetch beneficiario y premio via fetch directo (bypasea PostgREST schema cache)
+  const fetchEmpleadoExtras = async (empleadoId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return { beneficiario: null, premio_asistencia_semanal: null };
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/get_empleado_extras`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ p_empleado_id: empleadoId })
+        }
+      );
+      if (!response.ok) return { beneficiario: null, premio_asistencia_semanal: null };
+      return await response.json();
+    } catch {
+      return { beneficiario: null, premio_asistencia_semanal: null };
+    }
+  };
+
+  const handleEdit = async (empleado: Empleado) => {
     setEditingEmpleado(empleado);
 
+    const extras = await fetchEmpleadoExtras(empleado.id);
     const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
 
     setFormData({
@@ -641,8 +666,8 @@ const Empleados = () => {
       periodo_pago: empleado.periodo_pago || "",
       fecha_baja: empleado.fecha_baja || "",
       motivo_baja: empleado.motivo_baja || "",
-      beneficiario: (empleado as any).beneficiario || "",
-      premio_asistencia_semanal: (empleado as any).premio_asistencia_semanal || premioDefault,
+      beneficiario: extras?.beneficiario || "",
+      premio_asistencia_semanal: extras?.premio_asistencia_semanal || premioDefault,
     } as any);
     setIsDialogOpen(true);
   };
@@ -653,9 +678,10 @@ const Empleados = () => {
       return;
     }
     try {
+      const extras = await fetchEmpleadoExtras(empleado.id);
       const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
-      const premio = (empleado as any).premio_asistencia_semanal || premioDefault;
-      const beneficiario = (empleado as any).beneficiario || "Por designar";
+      const premio = extras?.premio_asistencia_semanal || premioDefault;
+      const beneficiario = extras?.beneficiario || "Por designar";
       await generarContratoPDF({
         empleado: {
           nombre_completo: empleado.nombre_completo,
