@@ -1324,7 +1324,7 @@ const Empleados = () => {
 
                 <div>
                   <Label htmlFor="beneficiario">Beneficiario *</Label>
-                  <Input id="beneficiario" value={(formData as any).beneficiario || ""} onChange={(e) => setFormData({ ...formData, beneficiario: e.target.value } as any)} placeholder="Nombre completo del beneficiario" autoComplete="off" />
+                  <Input id="beneficiario" value={formData.beneficiario || ""} onChange={(e) => setFormData({ ...formData, beneficiario: e.target.value })} placeholder="Nombre completo del beneficiario" autoComplete="off" />
                 </div>
 
                 {/* Premio de asistencia — solo chofer/ayudante */}
