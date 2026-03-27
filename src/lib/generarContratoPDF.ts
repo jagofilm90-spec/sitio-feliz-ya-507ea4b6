@@ -1,8 +1,33 @@
 /**
- * Generador de Contratos Laborales en PDF — ALMASA
- * Usa jsPDF para generar contrato multi-página con texto legal completo.
+ * Generador de Contratos Laborales y Aviso de Privacidad en PDF — ALMASA
+ * Usa jsPDF para generar documentos multi-página con texto legal completo.
  */
 import jsPDF from "jspdf";
+
+// Load logo as base64 for jsPDF
+async function loadLogoBase64(): Promise<string | null> {
+  try {
+    const response = await fetch("/logo-almasa-header.png");
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch { return null; }
+}
+
+function addLogo(pdf: jsPDF, logoBase64: string | null, pageW: number): number {
+  if (!logoBase64) return 20;
+  try {
+    const logoW = 50;
+    const logoH = 15;
+    const x = (pageW - logoW) / 2;
+    pdf.addImage(logoBase64, "PNG", x, 10, logoW, logoH);
+    return 30;
+  } catch { return 20; }
+}
 
 interface DatosContrato {
   empleado: {
@@ -160,13 +185,14 @@ V. El vendedor deberá reportar semanalmente su actividad de ventas y cobranza.`
 
 export async function generarContratoPDF(datos: DatosContrato): Promise<{ filename: string }> {
   const { empleado: emp, empresa } = datos;
+  const logoBase64 = await loadLogoBase64();
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
   const marginL = 25;
   const marginR = 25;
   const maxW = pageW - marginL - marginR;
-  let y = 30;
+  let y = addLogo(pdf, logoBase64, pageW);
 
   const esChoferOAyudante = emp.puesto === "Chofer" || emp.puesto === "Ayudante de Chofer";
   const sueldoBase = esChoferOAyudante && emp.premio_asistencia ? emp.sueldo_bruto - emp.premio_asistencia : emp.sueldo_bruto;
@@ -376,3 +402,102 @@ export async function generarContratoPDF(datos: DatosContrato): Promise<{ filena
   pdf.save(filename);
   return { filename };
 }
+
+// ═══════════════════════════════════════════════════════════════
+// AVISO DE PRIVACIDAD
+// ═══════════════════════════════════════════════════════════════
+
+export async function generarAvisoPrivacidadPDF(params: { nombre_empleado: string; fecha: string }): Promise<{ filename: string }> {
+  const logoBase64 = await loadLogoBase64();
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const marginL = 25;
+  const maxW = pageW - 50;
+  let y = addLogo(pdf, logoBase64, pageW);
+
+  const addPage = () => { pdf.addPage(); y = 20; };
+  const checkPage = (needed: number) => { if (y + needed > pageH - 20) addPage(); };
+  const writeTitle = (text: string, size = 12) => { checkPage(10); pdf.setFont("helvetica", "bold"); pdf.setFontSize(size); pdf.text(text, pageW / 2, y, { align: "center" }); y += size * 0.5 + 2; };
+  const writeBold = (text: string, size = 9.5) => { pdf.setFont("helvetica", "bold"); pdf.setFontSize(size); const lines = pdf.splitTextToSize(text, maxW); for (const l of lines) { checkPage(5); pdf.text(l, marginL, y); y += 4.5; } y += 1; };
+  const writeNormal = (text: string, size = 9.5) => { pdf.setFont("helvetica", "normal"); pdf.setFontSize(size); const lines = pdf.splitTextToSize(text, maxW); for (const l of lines) { checkPage(5); pdf.text(l, marginL, y); y += 4.5; } y += 1; };
+
+  writeTitle("AVISO DE PRIVACIDAD INTEGRAL", 13);
+  writeTitle("PARA EMPLEADOS Y CANDIDATOS", 11);
+  y += 3;
+
+  writeBold("RESPONSABLE DEL TRATAMIENTO DE DATOS PERSONALES");
+  writeNormal("ABARROTES LA MANITA, S.A. DE C.V., con domicilio en Melchor Ocampo 59, Magdalena Mixiuhca, Venustiano Carranza, C.P. 15850, Ciudad de México, es responsable del uso, tratamiento y protección de sus datos personales, de conformidad con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares y su Reglamento.");
+  y += 2;
+
+  writeBold("DATOS PERSONALES QUE SE RECABAN");
+  writeNormal("Para las finalidades señaladas en el presente aviso, se podrán recabar los siguientes datos personales:");
+  writeNormal("• Datos de identificación: nombre completo, fecha de nacimiento, CURP, RFC, INE, fotografía, estado civil.");
+  writeNormal("• Datos de contacto: domicilio, teléfono fijo y móvil, correo electrónico.");
+  writeNormal("• Datos laborales: historial laboral, puesto, antigüedad, evaluaciones de desempeño.");
+  writeNormal("• Datos financieros: cuenta bancaria, CLABE interbancaria para depósito de nómina.");
+  writeNormal("• Datos de seguridad social: número de seguridad social (NSS/IMSS).");
+  writeNormal("• Datos de beneficiarios: nombre y datos de contacto de beneficiarios designados.");
+  writeNormal("• Datos sensibles: tipo de sangre, alergias, información médica relevante para el desempeño del puesto.");
+  y += 2;
+
+  writeBold("FINALIDADES DEL TRATAMIENTO");
+  writeNormal("Sus datos personales serán utilizados para las siguientes finalidades primarias:");
+  writeNormal("I. Administración de la relación laboral (contratación, nómina, prestaciones).");
+  writeNormal("II. Inscripción y trámites ante el IMSS, SAT, INFONAVIT y demás instituciones.");
+  writeNormal("III. Elaboración de contratos, recibos de nómina y constancias laborales.");
+  writeNormal("IV. Cumplimiento de obligaciones fiscales y de seguridad social.");
+  writeNormal("V. Control de asistencia, puntualidad y evaluación de desempeño.");
+  writeNormal("VI. Comunicación interna y gestión de emergencias.");
+  writeNormal("VII. Contacto con beneficiarios en caso de emergencia o fallecimiento.");
+  y += 1;
+  writeNormal("Finalidades secundarias:");
+  writeNormal("VIII. Envío de comunicaciones internas, capacitaciones y eventos.");
+  writeNormal("IX. Elaboración de estadísticas y reportes internos.");
+  y += 2;
+
+  writeBold("TRANSFERENCIAS DE DATOS");
+  writeNormal("Sus datos personales podrán ser transferidos a las siguientes entidades:");
+  writeNormal("• IMSS, SAT, INFONAVIT — para cumplimiento de obligaciones legales.");
+  writeNormal("• Instituciones bancarias — para pago de nómina.");
+  writeNormal("• Aseguradoras — en caso de contar con seguro de vida o gastos médicos.");
+  writeNormal("• Autoridades competentes — cuando sea requerido por mandato judicial o legal.");
+  y += 2;
+
+  writeBold("DERECHOS ARCO");
+  writeNormal("Usted tiene derecho a Acceder, Rectificar, Cancelar u Oponerse al tratamiento de sus datos personales (Derechos ARCO). Para ejercer estos derechos, deberá presentar una solicitud por escrito dirigida al área de Recursos Humanos de ABARROTES LA MANITA, S.A. DE C.V., en el domicilio señalado, o al correo electrónico: 1904@almasa.com.mx");
+  y += 2;
+
+  writeBold("MEDIOS PARA LIMITAR EL USO O DIVULGACIÓN");
+  writeNormal("Para limitar el uso o divulgación de sus datos, podrá enviar una solicitud a la dirección o correo señalados. Se le proporcionará un formulario para tal efecto.");
+  y += 2;
+
+  writeBold("MODIFICACIONES AL AVISO DE PRIVACIDAD");
+  writeNormal("El presente aviso de privacidad puede sufrir modificaciones, cambios o actualizaciones. Cualquier cambio será notificado personalmente o publicado en las instalaciones de la empresa.");
+  y += 2;
+
+  writeBold("CONSENTIMIENTO");
+  writeNormal(`Al firmar el presente documento, el C. ${params.nombre_empleado} manifiesta que:`);
+  y += 3;
+
+  // Checkboxes visuales
+  pdf.setFont("helvetica", "normal"); pdf.setFontSize(9.5);
+  checkPage(15);
+  pdf.rect(marginL, y - 3, 4, 4); // checkbox
+  pdf.text("Sí otorgo mi consentimiento para el tratamiento de mis datos personales conforme al presente aviso.", marginL + 7, y);
+  y += 8;
+  pdf.rect(marginL, y - 3, 4, 4); // checkbox
+  pdf.text("No otorgo mi consentimiento para las finalidades secundarias (puntos VIII y IX).", marginL + 7, y);
+  y += 12;
+
+  // Firma
+  checkPage(30);
+  pdf.text("Nombre: ________________________________________", marginL, y); y += 10;
+  pdf.text("Firma: _________________________________________", marginL, y); y += 10;
+  pdf.text(`Fecha: ${params.fecha}`, marginL, y);
+
+  const filename = `Aviso_Privacidad_${params.nombre_empleado.replace(/\s+/g, "_")}.pdf`;
+  pdf.save(filename);
+  return { filename };
+}
+

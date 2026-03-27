@@ -3,7 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { EmpleadoCardMobile } from "@/components/empleados/EmpleadoCardMobile";
 import { DarAccesoSistemaDialog } from "@/components/empleados/DarAccesoSistemaDialog";
-import { generarContratoPDF } from "@/lib/generarContratoPDF";
+import { generarContratoPDF, generarAvisoPrivacidadPDF } from "@/lib/generarContratoPDF";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -612,6 +613,23 @@ const Empleados = () => {
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
+  };
+
+  const handleGenerarAviso = async (empleado: Empleado) => {
+    try {
+      await generarAvisoPrivacidadPDF({
+        nombre_empleado: empleado.nombre_completo,
+        fecha: new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" }),
+      });
+      toast({ title: "Aviso de privacidad generado", description: `PDF descargado` });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const handleGenerarTodos = async (empleado: Empleado) => {
+    await handleGenerarContrato(empleado);
+    await handleGenerarAviso(empleado);
   };
 
   const handleDelete = async (empleado: Empleado) => {
@@ -1833,11 +1851,24 @@ const Empleados = () => {
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
-                                {empleado.rfc && empleado.curp && empleado.sueldo_bruto && (
-                                  <Button variant="ghost" size="sm" onClick={() => handleGenerarContrato(empleado)} title="Generar contrato">
-                                    <FileText className="h-4 w-4" />
-                                  </Button>
-                                )}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" title="Documentos">
+                                      <FileText className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarContrato(empleado)}>
+                                      Contrato Individual
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleGenerarAviso(empleado)}>
+                                      Aviso de Privacidad
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarTodos(empleado)}>
+                                      Todos los documentos
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -2033,11 +2064,24 @@ const Empleados = () => {
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
-                                {empleado.rfc && empleado.curp && empleado.sueldo_bruto && (
-                                  <Button variant="ghost" size="sm" onClick={() => handleGenerarContrato(empleado)} title="Generar contrato">
-                                    <FileText className="h-4 w-4" />
-                                  </Button>
-                                )}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" title="Documentos">
+                                      <FileText className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarContrato(empleado)}>
+                                      Contrato Individual
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleGenerarAviso(empleado)}>
+                                      Aviso de Privacidad
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarTodos(empleado)}>
+                                      Todos los documentos
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -2232,11 +2276,24 @@ const Empleados = () => {
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
-                                {empleado.rfc && empleado.curp && empleado.sueldo_bruto && (
-                                  <Button variant="ghost" size="sm" onClick={() => handleGenerarContrato(empleado)} title="Generar contrato">
-                                    <FileText className="h-4 w-4" />
-                                  </Button>
-                                )}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" title="Documentos">
+                                      <FileText className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarContrato(empleado)}>
+                                      Contrato Individual
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleGenerarAviso(empleado)}>
+                                      Aviso de Privacidad
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarTodos(empleado)}>
+                                      Todos los documentos
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                                 <Button
                                   variant="ghost"
                                   size="sm"
