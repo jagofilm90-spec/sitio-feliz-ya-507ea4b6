@@ -1247,9 +1247,10 @@ const Empleados = () => {
                     <Label htmlFor="puesto">Puesto *</Label>
                     <Select
                       value={formData.puesto}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, puesto: value })
-                      }
+                      onValueChange={(value) => {
+                        const periodoPago = (value === "Chofer" || value === "Ayudante de Chofer") ? "semanal" : "quincenal";
+                        setFormData({ ...formData, puesto: value, periodo_pago: periodoPago } as any);
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar puesto" />
