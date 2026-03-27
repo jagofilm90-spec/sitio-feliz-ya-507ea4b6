@@ -81,120 +81,328 @@ interface DatosContrato {
 // ═══ ANEXOS POR PUESTO ═══
 
 const ANEXOS: Record<string, string> = {
-  "Ayudante de Chofer": `FUNCIONES:
-I. Apoyar al chofer en la carga y descarga de mercancía en las instalaciones de la empresa y en los domicilios de los clientes.
-II. Verificar que la mercancía cargada coincida con las remisiones y/o facturas correspondientes.
-III. Acomodar y estibar correctamente la mercancía dentro de la unidad de reparto para evitar daños durante el traslado.
-IV. Entregar la mercancía a los clientes conforme a las rutas asignadas, recabando las firmas de recibido en las remisiones o facturas.
-V. Reportar cualquier anomalía, faltante o daño en la mercancía al chofer y/o al supervisor inmediato.
-VI. Mantener limpia y ordenada el área de carga de la unidad.
-VII. Apoyar en el conteo e inventario de mercancía cuando sea requerido.
-VIII. Utilizar el equipo de protección personal proporcionado por la empresa durante las labores de carga y descarga.
-IX. Cumplir con los horarios de salida y regreso establecidos para las rutas de reparto.
-X. Respetar las normas de seguridad vial cuando se encuentre dentro o alrededor de la unidad de reparto.
-XI. Realizar cualquier otra actividad análoga o conexa que le sea encomendada por su jefe inmediato.
+  "Ayudante de Chofer": `Objeto del puesto:
+El trabajador será responsable de apoyar al chofer en la carga, traslado, entrega y descarga de mercancía, así como en el manejo físico de los productos durante la ruta, asegurando que las entregas se realicen de manera correcta, completa y en buen estado.
 
-RESPONSABILIDAD DEL PUESTO:
-El trabajador es responsable solidariamente con el chofer de la mercancía que se le confía para su traslado y entrega, desde el momento de la carga hasta la entrega final al cliente o el retorno a las instalaciones de la empresa.
+Funciones y responsabilidades:
 
-CLÁUSULA DE RESPONSABILIDAD POR MERCANCÍA:
-I. El trabajador deberá verificar, junto con el chofer, el estado y cantidad de la mercancía al momento de la carga.
-II. Cualquier faltante o daño detectado durante la ruta deberá ser reportado inmediatamente al supervisor.
-III. En caso de pérdida o daño por negligencia comprobada del trabajador, este se obliga a cubrir el costo de la mercancía afectada.
-IV. El trabajador firmará la hoja de carga como constancia de haber recibido la mercancía en buen estado.`,
-  "Chofer": `FUNCIONES:
-I. Conducir la unidad de reparto asignada de manera responsable y conforme a las leyes de tránsito aplicables.
-II. Realizar la entrega de mercancía a los clientes de acuerdo con las rutas y horarios establecidos.
-III. Verificar el buen estado de la unidad antes de cada salida, reportando cualquier falla mecánica o daño.
-IV. Supervisar la carga y descarga de mercancía junto con el ayudante, asegurando que coincida con las remisiones.
-V. Recabar las firmas de recibido de los clientes en las remisiones y/o facturas.
-VI. Cobrar y resguardar el dinero de las ventas de contado conforme a las políticas de la empresa.
-VII. Entregar la cobranza y documentación al finalizar cada ruta.
-VIII. Mantener limpia y en buen estado la unidad asignada.
-IX. Reportar cualquier incidente vial, robo, asalto o situación irregular ocurrida durante la ruta.
-X. Respetar los límites de velocidad y las normas de seguridad vial en todo momento.
-XI. No permitir el ascenso de personas ajenas a la empresa en la unidad de reparto.
-XII. Realizar cualquier otra actividad análoga o conexa que le sea encomendada por su jefe inmediato.
+I. Apoyar en la carga de mercancía en el almacén conforme a las instrucciones y documentos de salida (notas, remisiones o pedidos), verificando cantidades y condiciones del producto.
 
-RESPONSABILIDAD DEL PUESTO:
-El chofer es el responsable principal de la unidad de reparto asignada, la mercancía transportada, la cobranza recaudada y la seguridad del personal a su cargo durante las rutas de reparto.
+II. Acomodar la mercancía dentro de la unidad de reparto, asegurando su correcta distribución para evitar daños durante el traslado.
 
-CLÁUSULA DE RESPONSABILIDAD POR MERCANCÍA:
-I. El chofer deberá firmar la hoja de carga como responsable de la mercancía cargada en la unidad.
-II. Cualquier faltante de mercancía o dinero al cierre de ruta será responsabilidad del chofer.
-III. En caso de robo o asalto, el chofer deberá levantar el acta correspondiente ante el Ministerio Público.
-IV. El chofer no podrá desviarse de las rutas establecidas sin autorización previa.
-V. El uso de la unidad para fines personales queda estrictamente prohibido.
-VI. El chofer es responsable de las multas de tránsito generadas por infracciones cometidas durante su conducción.`,
-  "Almacenista": `FUNCIONES:
-I. Recibir, verificar y almacenar la mercancía que ingresa al almacén conforme a las órdenes de compra.
-II. Preparar los pedidos de los clientes conforme a las remisiones y/o facturas emitidas por el área de ventas.
-III. Realizar el acomodo y estiba de mercancía en las áreas designadas del almacén, respetando el sistema PEPS.
-IV. Mantener el almacén limpio, ordenado y libre de plagas.
-V. Realizar conteos físicos de inventario cuando sea requerido por la administración.
-VI. Reportar cualquier faltante, sobrante o daño en la mercancía al supervisor.
-VII. Operar el equipo de carga (patín hidráulico, montacargas, diablito) de manera segura.
-VIII. Utilizar el equipo de protección personal proporcionado por la empresa.
-IX. Apoyar en la carga y descarga de unidades de reparto.
-X. Verificar las fechas de caducidad de los productos y reportar los que estén próximos a vencer.
-XI. Llevar un registro actualizado de las entradas y salidas de mercancía.
-XII. Colaborar en las fumigaciones y medidas de control de plagas.
-XIII. Realizar cualquier otra actividad análoga o conexa que le sea encomendada por su jefe inmediato.
+III. Acompañar al chofer durante la ruta de entrega, colaborando en la localización de clientes y optimización de las entregas.
 
-RESPONSABILIDAD DEL PUESTO:
-El almacenista es responsable del correcto manejo, almacenamiento y control de la mercancía bajo su resguardo.
+IV. Descargar y entregar la mercancía en el domicilio del cliente, cuidando su integridad y respetando las indicaciones del mismo.
 
-CLÁUSULA DE CONTROL DE INVENTARIO:
-I. El almacenista deberá firmar las hojas de recepción de mercancía como constancia.
-II. Cualquier discrepancia entre el inventario físico y el sistema deberá ser reportada inmediatamente.
-III. El almacenista es responsable de la correcta rotación de productos (PEPS).
-IV. Queda prohibido el consumo de productos del almacén sin autorización.
-V. El almacenista deberá mantener actualizados los registros de entrada y salida.
-VI. En caso de merma por negligencia comprobada, el almacenista se obliga a cubrir el costo.
-VII. El almacenista participará en los inventarios físicos programados por la administración.`,
-  "Secretaria": `FUNCIONES:
-I. Atender llamadas telefónicas y canalizarlas al área correspondiente.
-II. Recibir, clasificar y distribuir la correspondencia y documentación.
-III. Capturar pedidos de clientes en el sistema de la empresa.
-IV. Elaborar remisiones, facturas y notas de crédito conforme a los pedidos autorizados.
-V. Dar seguimiento a la cobranza de los clientes, emitiendo estados de cuenta y recordatorios.
-VI. Archivar y organizar la documentación contable, fiscal y administrativa.
-VII. Apoyar en la conciliación de cuentas por cobrar y cuentas por pagar.
-VIII. Atender a los clientes y proveedores que se presenten en las instalaciones.
-IX. Mantener actualizada la base de datos de clientes y proveedores.
-X. Elaborar reportes administrativos cuando le sean solicitados.
-XI. Realizar cualquier otra actividad análoga o conexa que le sea encomendada por su jefe inmediato.
+V. Verificar junto con el chofer que la mercancía entregada coincida con los documentos correspondientes.
 
-RESPONSABILIDAD DEL PUESTO:
-La secretaria administrativa es responsable del correcto manejo de la documentación y la información confidencial de la empresa.
+VI. Apoyar en la obtención de firmas de conformidad por parte del cliente en las notas o remisiones.
 
-CLÁUSULA DE CONTROL DE PEDIDOS:
-I. La secretaria deberá verificar que los pedidos capturados coincidan con las solicitudes de los clientes.
-II. Es responsable de la correcta emisión de facturas y remisiones.
-III. Deberá dar seguimiento puntual a las cuentas por cobrar vencidas.
-IV. La información confidencial de la empresa deberá ser tratada con absoluta discreción.`,
-  "Vendedor": `FUNCIONES:
-I. Visitar a los clientes asignados conforme a la ruta y calendario establecidos.
-II. Ofrecer y promover los productos de la empresa a clientes actuales y potenciales.
-III. Levantar pedidos y transmitirlos oportunamente al área administrativa para su captura.
-IV. Informar a los clientes sobre precios, promociones y condiciones de venta vigentes.
-V. Dar seguimiento a la entrega de los pedidos levantados y a la satisfacción de los clientes.
-VI. Realizar la cobranza de los clientes que le sean asignados conforme a las políticas de crédito.
-VII. Reportar las condiciones del mercado, la competencia y las necesidades de los clientes.
-VIII. Prospectar nuevos clientes y mercados en la zona asignada.
-IX. Mantener actualizada la información de contacto y crédito de sus clientes.
-X. Cumplir con las metas de venta y cobranza establecidas.
-XI. Realizar cualquier otra actividad análoga o conexa que le sea encomendada por su jefe inmediato.
+VII. Manejar adecuadamente devoluciones, retornando la mercancía al almacén y reportando cualquier incidencia.
 
-RESPONSABILIDAD DEL PUESTO:
-El vendedor es responsable del mantenimiento y crecimiento de la cartera de clientes asignada, así como de la cobranza generada por sus ventas.
+VIII. Cuidar la mercancía durante todo el proceso de carga, traslado y descarga, evitando pérdidas, daños o mal manejo.
 
-CLÁUSULA DE CONTROL COMERCIAL:
-I. El vendedor deberá respetar las listas de precios y políticas de descuento autorizadas.
-II. Cualquier descuento fuera de política deberá ser autorizado previamente por la gerencia.
-III. El vendedor es responsable de la cobranza de los clientes que surta.
-IV. Queda prohibido otorgar crédito a clientes no autorizados.
-V. El vendedor deberá reportar semanalmente su actividad de ventas y cobranza.`,
+IX. Mantener una conducta respetuosa y profesional con clientes, compañeros de trabajo y superiores.
+
+X. Apoyar en la descarga de mercancía en el almacén al finalizar la ruta, incluyendo devoluciones o sobrantes.
+
+XI. Reportar cualquier anomalía detectada durante la ruta, incluyendo faltantes, errores en pedidos, daños o incidencias con clientes.
+
+RESPONSABILIDAD DEL PUESTO
+
+El ayudante de chofer será corresponsable junto con el chofer de la mercancía transportada durante la ruta, incluyendo su carga, manejo y entrega.
+
+Cualquier pérdida, daño o diferencia derivada de negligencia, mal manejo o falta de verificación podrá generar responsabilidad conforme a las políticas internas de la empresa.
+
+El ayudante de chofer deberá trabajar en coordinación directa con:
+- Chofer repartidor
+- Personal de almacén
+- Área administrativa
+
+Para asegurar una entrega eficiente, ordenada y sin errores.
+
+CLÁUSULA ADICIONAL
+
+El trabajador se obliga a cumplir con las funciones descritas y aquellas adicionales que le sean asignadas, siempre que sean acordes a la naturaleza de su puesto y necesarias para la operación de la empresa.
+
+CLÁUSULA DE RESPONSABILIDAD POR MERCANCÍA EN RUTA Y FIRMA DE CARGA
+
+El trabajador reconoce que, al momento de iniciar la ruta, la mercancía cargada en la unidad de reparto ha sido previamente verificada en cantidad, presentación y condiciones físicas, conforme a los documentos correspondientes (notas, remisiones o pedidos).
+
+En consecuencia:
+
+I. Verificación de carga
+El chofer y el ayudante de chofer (machetero) deberán verificar conjuntamente, antes de la salida de la unidad, que la mercancía cargada coincida con la documentación correspondiente.
+La salida de la unidad implicará la aceptación expresa de conformidad sobre la mercancía cargada.
+
+II. Responsabilidad durante la ruta
+A partir de la salida de la unidad, el chofer y su ayudante serán corresponsables del resguardo, manejo y entrega de la mercancía, obligándose a:
+- Cuidar la integridad de los productos
+- Evitar pérdidas, daños o extravíos
+- Realizar entregas completas conforme a los documentos
+
+III. Entrega y documentación
+El trabajador deberá asegurarse de que toda entrega cuente con firma de conformidad por parte del cliente en la documentación correspondiente.
+En caso de faltantes, devoluciones o incidencias, estas deberán anotarse claramente en la documentación y reportarse de inmediato a la empresa.
+
+IV. Faltantes y diferencias
+Cualquier diferencia en la mercancía (faltantes, extravíos o daños) detectada al finalizar la ruta, que no se encuentre debidamente justificada o documentada, podrá ser atribuida a responsabilidad del chofer y/o ayudante de chofer.
+La empresa podrá aplicar las medidas correspondientes conforme a la legislación laboral vigente y a las políticas internas.
+
+V. Firma de salida
+El trabajador se obliga a firmar los documentos de carga o salida de mercancía cuando así le sea requerido, reconociendo con ello la recepción conforme de la mercancía para su traslado.`,
+
+  "Chofer": `Objeto del puesto:
+El trabajador será responsable del traslado, resguardo y entrega de la mercancía, así como del correcto manejo de la documentación y, en su caso, de la cobranza, garantizando un servicio eficiente y seguro.
+
+Funciones y responsabilidades:
+
+I. Conducir la unidad asignada de manera responsable, cumpliendo con las normas de tránsito y políticas de la empresa.
+
+II. Verificar, antes de salir, que la mercancía cargada coincida con los documentos de salida (notas, remisiones o pedidos).
+
+III. Supervisar la correcta carga de la unidad, asegurando una adecuada distribución del peso y orden de entrega.
+
+IV. Transportar la mercancía conforme a la ruta asignada, optimizando tiempos y garantizando la seguridad de la carga.
+
+V. Entregar los pedidos al cliente, verificando cantidades y condiciones del producto.
+
+VI. Obtener firma de conformidad del cliente en los documentos correspondientes por cada entrega realizada.
+
+VII. Realizar la cobranza cuando así se le indique, resguardando el dinero y entregándolo a la empresa conforme a los procedimientos establecidos.
+
+VIII. Custodiar y entregar en tiempo y forma toda la documentación de la ruta (notas, remisiones, comprobantes de pago, etc.).
+
+IX. Reportar de inmediato cualquier incidencia durante la ruta, incluyendo rechazos, devoluciones, faltantes, daños o retrasos.
+
+X. Verificar el estado general de la unidad antes, durante y después de la ruta (niveles, llantas, combustible), reportando cualquier falla.
+
+XI. Apoyar en la descarga de devoluciones o mercancía sobrante al regresar al almacén.
+
+XII. Mantener una conducta respetuosa y profesional con clientes, compañeros y superiores.
+
+RESPONSABILIDAD DEL PUESTO
+
+El chofer será responsable directo del resguardo de la mercancía durante su traslado, así como del uso adecuado de la unidad asignada.
+
+Cualquier daño, pérdida o diferencia derivada de negligencia, mal manejo o incumplimiento de sus funciones podrá generar responsabilidad conforme a las políticas internas de la empresa.
+
+CLÁUSULA DE RESPONSABILIDAD POR MERCANCÍA EN RUTA Y FIRMA DE CARGA (CHOFER)
+
+El trabajador reconoce que, al momento de iniciar la ruta, la mercancía cargada en la unidad ha sido verificada en cantidad, presentación y condiciones físicas conforme a los documentos correspondientes.
+
+I. Verificación de carga
+El chofer deberá verificar, junto con el ayudante de chofer, que la mercancía cargada coincida con la documentación antes de la salida.
+La salida de la unidad implicará aceptación expresa de conformidad sobre la mercancía.
+
+II. Responsabilidad durante la ruta
+A partir de la salida, el chofer será responsable de:
+- El resguardo total de la mercancía
+- La correcta entrega de los pedidos
+- El manejo adecuado de la unidad
+
+III. Entrega y documentación
+El chofer deberá asegurarse de que todas las entregas cuenten con firma de conformidad del cliente.
+Cualquier incidencia deberá anotarse en la documentación y reportarse de inmediato.
+
+IV. Faltantes y diferencias
+Las diferencias de mercancía no justificadas o no documentadas al finalizar la ruta podrán ser imputables al chofer y su ayudante, conforme a las políticas internas y la legislación aplicable.
+
+V. Firma de salida
+El chofer se obliga a firmar los documentos de carga o salida, reconociendo la recepción conforme de la mercancía.
+
+VI. Prohibiciones
+Queda estrictamente prohibido:
+- Disponer de mercancía sin autorización
+- Realizar entregas fuera de documentación
+- Alterar documentos
+- Ocultar faltantes o incidencias
+El incumplimiento podrá considerarse falta grave.`,
+
+  "Almacenista": `Objeto del puesto:
+El trabajador será responsable del control, resguardo, organización y supervisión del almacén, asegurando la correcta administración del inventario, preparación de pedidos y coordinación con el área de reparto.
+
+Funciones y responsabilidades:
+
+I. Recibir mercancía de proveedores, verificando cantidades, presentaciones y estado físico conforme a los documentos correspondientes, reportando cualquier diferencia o daño.
+
+II. Registrar y controlar las entradas de mercancía en los sistemas o formatos establecidos por la empresa.
+
+III. Supervisar el acomodo, clasificación y orden de los productos dentro del almacén, asegurando su correcta identificación.
+
+IV. Coordinar y supervisar al personal de almacén (macheteros o ayudantes) en las actividades de carga, descarga y preparación de pedidos.
+
+V. Preparar o validar los pedidos conforme a notas, remisiones o instrucciones del área administrativa o de ventas.
+
+VI. Verificar que los pedidos estén completos y correctos antes de ser cargados en las unidades de reparto.
+
+VII. Autorizar la salida de mercancía únicamente cuando coincida con la documentación correspondiente.
+
+VIII. Controlar y registrar las devoluciones, verificando cantidades y condiciones de la mercancía retornada.
+
+IX. Mantener actualizado el inventario mediante conteos periódicos, reportando diferencias, mermas o incidencias.
+
+X. Garantizar el correcto manejo, conservación y resguardo de la mercancía, evitando pérdidas, daños o deterioro.
+
+XI. Coordinar la carga de unidades de reparto, asegurando correcta distribución de peso y orden de entrega.
+
+XII. Mantener el almacén en condiciones óptimas de orden, limpieza y seguridad.
+
+XIII. Reportar de inmediato cualquier irregularidad, faltante, error en pedidos o incidencia relevante.
+
+RESPONSABILIDAD DEL PUESTO
+
+El almacenista será responsable del control del inventario físico bajo su resguardo, así como de la correcta preparación y validación de los pedidos.
+
+Cualquier diferencia, pérdida, merma o error derivado de negligencia, falta de control o incumplimiento de sus funciones podrá generar responsabilidad conforme a las políticas internas de la empresa.
+
+CLÁUSULA DE CONTROL DE INVENTARIO Y SALIDAS DE MERCANCÍA
+
+El trabajador reconoce que es el responsable directo de supervisar y validar la correcta salida de mercancía del almacén.
+
+I. Control de inventario
+El almacenista deberá mantener control actualizado del inventario, asegurando que toda entrada y salida de mercancía quede debidamente registrada.
+
+II. Validación de pedidos
+Antes de autorizar la salida de cualquier pedido, el almacenista deberá verificar que:
+- Las cantidades coincidan con la documentación
+- La mercancía esté en condiciones adecuadas
+- El pedido esté completo
+
+III. Salida de mercancía
+Ninguna mercancía podrá salir del almacén sin la validación previa del almacenista y sin contar con la documentación correspondiente.
+
+IV. Diferencias y mermas
+Cualquier diferencia de inventario, faltante o merma no justificada podrá ser atribuida a responsabilidad del almacenista cuando derive de falta de control, supervisión o registro.
+
+V. Coordinación de carga
+El almacenista será responsable de supervisar que la carga de las unidades de reparto se realice correctamente, en coordinación con el personal de carga y los choferes.
+
+VI. Reporte de incidencias
+El almacenista deberá reportar de inmediato cualquier irregularidad, incluyendo:
+- Faltantes de mercancía
+- Errores en pedidos
+- Daños en productos
+- Incumplimiento del personal
+
+VII. Prohibiciones
+Queda estrictamente prohibido:
+- Autorizar salidas de mercancía sin documentación
+- Omitir registros de entradas o salidas
+- Alterar información de inventario
+- Ocultar diferencias o incidencias
+El incumplimiento podrá considerarse falta grave.`,
+
+  "Secretaria": `Objeto del puesto:
+El trabajador será responsable de la atención a clientes y proveedores, recepción y captura de pedidos, elaboración de documentos administrativos y apoyo en la coordinación operativa de la empresa.
+
+Funciones y responsabilidades:
+
+I. Atender llamadas, correos electrónicos y mensajes de clientes, brindando información sobre productos, precios y pedidos.
+
+II. Recibir, registrar y capturar pedidos en los sistemas o formatos establecidos por la empresa.
+
+III. Elaborar cotizaciones, notas, remisiones y/o facturas conforme a las instrucciones recibidas.
+
+IV. Dar seguimiento a pedidos, coordinando con el área de almacén y reparto para su correcta entrega.
+
+V. Mantener actualizada la información de clientes, incluyendo datos de contacto, condiciones de pago y precios.
+
+VI. Gestionar la documentación administrativa, asegurando el correcto archivo físico o digital de los documentos.
+
+VII. Apoyar en la cobranza, seguimiento de pagos y envío de información a clientes cuando sea requerido.
+
+VIII. Coordinar con vendedores, almacenistas y choferes para asegurar la correcta ejecución de los pedidos.
+
+IX. Reportar cualquier incidencia, error o situación relevante detectada en pedidos o información.
+
+X. Mantener confidencialidad sobre la información de la empresa, clientes y operaciones.
+
+XI. Realizar las actividades administrativas adicionales que le sean asignadas conforme a la operación de la empresa.
+
+RESPONSABILIDAD DEL PUESTO
+
+La secretaria será responsable de la correcta captura, manejo y transmisión de la información administrativa.
+
+Cualquier error en pedidos, documentos o información derivado de negligencia o falta de atención podrá generar responsabilidad conforme a las políticas internas.
+
+CLÁUSULA DE CONTROL DE PEDIDOS E INFORMACIÓN
+
+El trabajador reconoce que la información capturada y gestionada impacta directamente en la operación de la empresa.
+
+I. Captura de pedidos
+Todo pedido deberá registrarse de forma clara, completa y correcta, evitando errores en productos, cantidades o condiciones.
+
+II. Validación de información
+Antes de procesar cualquier pedido o documento, la secretaria deberá verificar:
+- Datos del cliente
+- Productos y cantidades
+- Condiciones de entrega y pago
+
+III. Errores administrativos
+Cualquier error que genere pérdidas, devoluciones o afectaciones a la operación podrá ser atribuible a responsabilidad del puesto si deriva de omisión o negligencia.
+
+IV. Confidencialidad
+Queda estrictamente prohibido compartir información de clientes, precios o condiciones comerciales sin autorización.`,
+
+  "Vendedor": `Objeto del puesto:
+El trabajador será responsable de la prospección, atención y desarrollo de clientes, así como de la generación de ventas, seguimiento de pedidos y cumplimiento de objetivos comerciales.
+
+Funciones y responsabilidades:
+
+I. Prospectar nuevos clientes y desarrollar relaciones comerciales.
+
+II. Atender a clientes existentes, brindando seguimiento constante a sus necesidades de compra.
+
+III. Levantar pedidos de manera correcta, especificando productos, cantidades y condiciones acordadas.
+
+IV. Enviar los pedidos a la empresa conforme a los procedimientos establecidos.
+
+V. Dar seguimiento a la entrega de pedidos, asegurando la satisfacción del cliente.
+
+VI. Comunicar precios, promociones y condiciones comerciales autorizadas por la empresa.
+
+VII. Respetar las políticas de precios y márgenes establecidos por la empresa.
+
+VIII. Dar seguimiento a la cobranza de sus clientes, informando atrasos o riesgos de pago.
+
+IX. Reportar información relevante del mercado, clientes o competencia.
+
+X. Mantener comunicación constante con el área administrativa y de almacén para coordinar pedidos.
+
+XI. Cumplir con metas de venta establecidas por la empresa.
+
+RESPONSABILIDAD DEL PUESTO
+
+El vendedor será responsable de la correcta gestión de sus clientes, pedidos y condiciones comerciales.
+
+Cualquier error en precios, pedidos o condiciones no autorizadas podrá generar responsabilidad conforme a las políticas internas.
+
+CLÁUSULA DE CONTROL COMERCIAL Y PRECIOS
+
+El trabajador reconoce que deberá apegarse estrictamente a las condiciones comerciales establecidas por la empresa.
+
+I. Manejo de precios
+El vendedor no podrá modificar precios, ofrecer descuentos o condiciones especiales sin autorización previa.
+
+II. Levantamiento de pedidos
+Todo pedido deberá levantarse de forma clara y completa, evitando errores que afecten la operación.
+
+III. Condiciones de venta
+Queda prohibido ofrecer condiciones distintas a las autorizadas, incluyendo:
+- Plazos de pago no autorizados
+- Precios especiales sin aprobación
+- Promesas de entrega fuera de capacidad
+
+IV. Responsabilidad sobre clientes
+El vendedor deberá dar seguimiento a sus clientes, incluyendo:
+- Pagos pendientes
+- Comportamiento de compra
+- Riesgo de cartera
+
+V. Incumplimientos
+Cualquier desviación en precios, condiciones o manejo de clientes podrá ser considerada falta grave.`,
+
 };
 
 // ═══ GENERADOR DE CONTRATO ═══
@@ -461,73 +669,82 @@ export async function generarAvisoPrivacidadPDF(params: { nombre_empleado: strin
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
-  const mL = 25;
-  const maxW = pageW - 50;
+  const mL = 22;
+  const maxW = pageW - 44;
   let y = addLogo(pdf, logoBase64, pageW);
 
   const addPage = () => { pdf.addPage(); y = 20; };
-  const checkPage = (n: number) => { if (y + n > pageH - 20) addPage(); };
+  const checkPage = (n: number) => { if (y + n > pageH - 18) addPage(); };
   const writeTitle = (t: string, s = 12) => { checkPage(10); pdf.setFont("helvetica", "bold"); pdf.setFontSize(s); pdf.text(t, pageW / 2, y, { align: "center" }); y += s * 0.5 + 2; };
-  const writeBold = (t: string, s = 9.5) => { pdf.setFont("helvetica", "bold"); pdf.setFontSize(s); for (const l of pdf.splitTextToSize(t, maxW)) { checkPage(5); pdf.text(l, mL, y); y += 4.5; } y += 1; };
-  const writeNormal = (t: string, s = 9.5) => { pdf.setFont("helvetica", "normal"); pdf.setFontSize(s); for (const l of pdf.splitTextToSize(t, maxW)) { checkPage(5); pdf.text(l, mL, y); y += 4.5; } y += 1; };
+  const writeBold = (t: string, s = 9) => { pdf.setFont("helvetica", "bold"); pdf.setFontSize(s); for (const l of pdf.splitTextToSize(t, maxW)) { checkPage(4.5); pdf.text(l, mL, y); y += 4; } y += 1; };
+  const writeNormal = (t: string, s = 9) => { pdf.setFont("helvetica", "normal"); pdf.setFontSize(s); for (const l of pdf.splitTextToSize(t, maxW)) { checkPage(4.5); pdf.text(l, mL, y); y += 4; } y += 1; };
 
-  writeTitle("AVISO DE PRIVACIDAD INTEGRAL", 13);
-  writeTitle("PARA EMPLEADOS Y CANDIDATOS", 11);
+  writeTitle("AVISO DE PRIVACIDAD PARA EMPLEADOS Y CANDIDATOS", 12);
   y += 3;
-
-  writeBold("RESPONSABLE DEL TRATAMIENTO DE DATOS PERSONALES");
-  writeNormal("ABARROTES LA MANITA, S.A. DE C.V., con domicilio en Melchor Ocampo 59, Magdalena Mixiuhca, Venustiano Carranza, C.P. 15850, Ciudad de México, es responsable del uso, tratamiento y protección de sus datos personales, de conformidad con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares y su Reglamento.");
+  writeNormal("AVISO DE PRIVACIDAD PARA EMPLEADOS Y CANDIDATOS");
+  writeNormal("ABARROTES LA MANITA, S.A. DE C.V. (\"LA EMPRESA\"), con domicilio en Melchor Ocampo #59, Magdalena Mixhuca, Venustiano Carranza, 15850, México está consciente de la importancia del tratamiento legítimo, controlado e informado de los datos personales del personal que los Prestadores de Servicios especializados ponen a su disposición. Es así que LA EMPRESA en este acto pone a su disposición el presente Aviso de Privacidad, a fin de que conozca cómo LA EMPRESA obtiene, usa, divulga y almacena sus datos personales.");
   y += 2;
-  writeBold("DATOS PERSONALES QUE SE RECABAN");
-  writeNormal("Para las finalidades señaladas en el presente aviso, se podrán recabar los siguientes datos personales:");
-  writeNormal("• Datos de identificación: nombre completo, fecha de nacimiento, CURP, RFC, INE, fotografía, estado civil.");
-  writeNormal("• Datos de contacto: domicilio, teléfono fijo y móvil, correo electrónico.");
-  writeNormal("• Datos laborales: historial laboral, puesto, antigüedad, evaluaciones de desempeño.");
-  writeNormal("• Datos financieros: cuenta bancaria, CLABE interbancaria para depósito de nómina.");
-  writeNormal("• Datos de seguridad social: número de seguridad social (NSS/IMSS).");
-  writeNormal("• Datos de beneficiarios: nombre y datos de contacto de beneficiarios designados.");
-  writeNormal("• Datos sensibles: tipo de sangre, alergias, información médica relevante para el desempeño del puesto.");
+  writeBold("Datos personales que se recaban");
+  writeNormal("Los datos personales que pudieran recabarse durante el curso de la prestación de los servicios pertenecerán a las siguientes categorías: (i) Datos de Identificación: nombre completo; género; fecha de nacimiento; estado civil; país de origen, ciudadanía y nacionalidad; clave del Registro Federal de Contribuyentes (RFC); Clave Única de Registro de Población (CURP); número de afiliación al Instituto Mexicano del Seguro Social (IMSS); imágenes; fotografías, identificaciones con fotografía; peso; altura; señas particulares; firma; (ii) Datos de Contacto: domicilio; números telefónicos; números celulares; correo electrónico.");
+  writeNormal("Además se podrán recabar y/o realizar exámenes y verificación de antecedentes de forma periódica para recabar Datos sensibles (que deberán entenderse incluidos dentro del término \"datos personales\") y que requieren de especial protección como resultados de evaluaciones y exámenes psicométricos; resultados de exámenes médicos, incluyendo exámenes de audiometría, exámenes de sangre, exámenes serológicos, radiografías, toma de temperatura y pruebas de visión; antecedentes médicos, incluyendo la información relacionada a la vacunación contra Covid-19, y familiares (si un familiar suyo tiene o ha tenido una enfermedad contagiosa, si son adultos mayores, embarazadas, con enfermedades crónicos o de inmunosupresión o cualquier otra condición que los coloque en situación de vulnerabilidad), penales, laborales; datos de salud y padecimientos; información sobre si es usted fumador.");
+  writeNormal("Adicionalmente, LA EMPRESA le podrá solicitar que muestre documentación en original y que entregue copia de la misma, como evidencia que respalde la información que haya proporcionado.");
   y += 2;
-  writeBold("FINALIDADES DEL TRATAMIENTO");
-  writeNormal("Sus datos personales serán utilizados para las siguientes finalidades primarias:");
-  writeNormal("I. Administración de la relación laboral (contratación, nómina, prestaciones).");
-  writeNormal("II. Inscripción y trámites ante el IMSS, SAT, INFONAVIT y demás instituciones.");
-  writeNormal("III. Elaboración de contratos, recibos de nómina y constancias laborales.");
-  writeNormal("IV. Cumplimiento de obligaciones fiscales y de seguridad social.");
-  writeNormal("V. Control de asistencia, puntualidad y evaluación de desempeño.");
-  writeNormal("VI. Comunicación interna y gestión de emergencias.");
-  writeNormal("VII. Contacto con beneficiarios en caso de emergencia o fallecimiento.");
-  writeNormal("Finalidades secundarias:");
-  writeNormal("VIII. Envío de comunicaciones internas, capacitaciones y eventos.");
-  writeNormal("IX. Elaboración de estadísticas y reportes internos.");
+  writeBold("Finalidades y/o usos de los datos personales");
+  writeNormal("Los datos personales que recaba LA EMPRESA pueden ser utilizados para las siguientes finalidades necesarias: (i) evaluación de su estado de salud y estado físico (ii) para el cumplimiento de cualquier obligación legal relacionada a la información proporcionada (iii) realización de exámenes médicos para la detección del uso de alcohol y drogas, interfaz biométrica, así como para la prevención y contención de enfermedades contagiosas; (iv) llevar a cabo estudios, análisis o revisiones (monitoreo), a fin de garantizar la seguridad de las personas que se encuentran dentro de las instalaciones de LA EMPRESA, y para la prevención o detección de la comisión de delitos. y en general, para el cumplimiento de obligaciones legales.");
+  writeNormal("Asimismo, los datos personales podrán utilizarse para finalidades no necesarias o secundarias tales como (i) comunicaciones (incluyendo correos electrónicos) relativas a LA EMPRESA; (ii) elaborar y mantener una base de datos para futuras oportunidades de empleo con LA EMPRESA; y (iii) proporcionar referencias laborales suyas a prospectos empleadores o agencias de reclutamiento.");
+  writeNormal("Para limitar o manifestar su negativa sobre el uso de estos fines no necesarios, puede presentar su solicitud ante nuestra área de Recursos Humanos y su solicitud quedará registrada en la Lista de Exclusión.");
   y += 2;
-  writeBold("TRANSFERENCIAS DE DATOS");
-  writeNormal("• IMSS, SAT, INFONAVIT — para cumplimiento de obligaciones legales.");
-  writeNormal("• Instituciones bancarias — para pago de nómina.");
-  writeNormal("• Aseguradoras — en caso de contar con seguro de vida o gastos médicos.");
-  writeNormal("• Autoridades competentes — cuando sea requerido por mandato judicial o legal.");
+  writeBold("Transferencia de sus datos personales – LA EMPRESA puede transferir a terceros, nacionales o extranjeros, sus datos personales y/o datos personales sensibles y/o financieros con el fin de cumplir con las finalidades descritas; asimismo, en caso de que exista una restructuración corporativa incluyendo la fusión, consolidación, venta o transferencia total o parcial de nuestro negocio o activos, podría ser necesaria la transferencia nacional o internacional de los datos personales. Los terceros a los que LA EMPRESA puede transferir sus datos personales son otras compañías afiliadas o subsidiarias que actúen bajo las mismas políticas y procedimientos que LA EMPRESA. Asimismo, LA EMPRESA podrá transferir sus datos al Prestador de Servicios Especializados con quien tenga celebrado un contrato, ello para mitigar cualquier riesgo de salud o accidente en sus instalaciones.");
+  writeNormal("LA EMPRESA se compromete a transferir solo aquella información que sea absoluta y estrictamente necesaria. Cuando LA EMPRESA comparta sus datos personales con terceros hará su mejor esfuerzo para asegurarse que dichos terceros tomen las medidas necesarias para proteger la confidencialidad y seguridad de sus datos personales. LA EMPRESA requerirá que dichos terceros cumplan con las leyes de protección de datos aplicables, las políticas y el Aviso de Privacidad de LA EMPRESA y les prohibirá utilizar sus datos personales para un fin distinto a aquel para el cual han sido contratados.");
+  writeNormal("LA EMPRESA se asegurará que dicha información sea resguardada de acuerdo a los principios de protección de datos personales reconocidos por la Ley Federal de Protección de Datos Personales en Posesión de los Particulares y su Reglamento (la \"Ley\") y que, en su caso, el receptor de los datos asuma las mismas obligaciones que LA EMPRESA.");
+  writeNormal("LA EMPRESA jamás vende datos personales, ni cede o transfiere sus datos personales a terceros ajenos a LA EMPRESA, sin su consentimiento previo, excepto en los casos antes citados. Sin embargo, LA EMPRESA podrá transferir sus datos personales cuando dicha transferencia esté prevista en la Ley.");
   y += 2;
-  writeBold("DERECHOS ARCO");
-  writeNormal("Usted tiene derecho a Acceder, Rectificar, Cancelar u Oponerse al tratamiento de sus datos personales (Derechos ARCO). Para ejercer estos derechos, deberá presentar una solicitud por escrito dirigida al área de Recursos Humanos de ABARROTES LA MANITA, S.A. DE C.V., en el domicilio señalado, o al correo electrónico: 1904@almasa.com.mx");
+  writeBold("Resguardo de sus datos personales");
+  writeNormal("LA EMPRESA ha adoptado las medidas de seguridad, administrativas, técnicas y físicas, que considera necesarias para proteger sus datos personales, los cuales estarán almacenados de forma segura en un banco de datos electrónico, contra daño, pérdida, alteración, destrucción o contra el uso, acceso o tratamiento no autorizado.");
+  writeNormal("El acceso a sus datos personales, en poder de LA EMPRESA, se limitará a las personas que necesiten tener acceso a dicha información, con el propósito de llevar a cabo las finalidades identificadas en este Aviso de Privacidad y durante la temporalidad necesaria para ello.");
   y += 2;
-  writeBold("MODIFICACIONES AL AVISO DE PRIVACIDAD");
-  writeNormal("El presente aviso de privacidad puede sufrir modificaciones, cambios o actualizaciones. Cualquier cambio será notificado personalmente o publicado en las instalaciones de la empresa.");
+  writeBold("Protección a menores, personas en estado de interdicción o incapacidad");
+  writeNormal("LA EMPRESA no recolecta ni trata datos personales de menores, personas en estado de interdicción o incapaces, a menos que hayan sido proporcionados por alguno de sus padres, su tutor o representante legal, según corresponda. En caso que LA EMPRESA considere que los datos personales han sido proporcionados por un menor, una persona incapaz o en estado de interdicción, en contravención al presente Aviso, procederemos a eliminar tales datos personales a la brevedad. Si tiene conocimiento de que algunos datos personales han sido proporcionados por un menor de 18 años, o por una persona incapaz o en estado de interdicción, por favor comuníquelo al área de Recursos Humanos de su oficina.");
   y += 2;
-  writeBold("CONSENTIMIENTO");
-  writeNormal(`Al firmar el presente documento, el C. ${params.nombre_empleado.toUpperCase()} manifiesta que:`);
+  writeBold("Derechos que le corresponden al titular de los datos personales");
+  writeNormal("Usted, como titular de datos personales podrá ejercitar ante el Oficial de Privacidad, el cual es el responsable de Protección de Datos Personales de LA EMPRESA, como más adelante se establece, los derechos de acceso, rectificación, cancelación y oposición (derechos \"ARCO\"), establecidos en la Ley. Asimismo, podrá revocar, en todo momento, el consentimiento que haya otorgado y que fuere necesario para el tratamiento de sus datos personales. Para revocar su consentimiento para el tratamiento de sus datos personales, deberá presentar su solicitud al área de Recursos Humanos de su oficina. Por favor tome en cuenta que en caso de revocar su consentimiento, LA EMPRESA no podrá cumplir con las finalidades antes descritas incluyendo obligaciones legales.");
+  writeNormal("LA EMPRESA tiene a su disposición el Formato para llevar a cabo las solicitudes de Derechos ARCO. Por favor contacte a nuestra área de Recursos Humanos de su oficina para obtener este formato.");
+  writeNormal("Para que la EMPRESA pueda darle seguimiento a su solicitud, usted o su representante legal, deberán acreditar correctamente su identidad, por lo que deberá acompañar su solicitud con copia de alguna identificación oficial vigente.");
+  writeNormal("En caso de que la información proporcionada en su solicitud sea errónea o insuficiente, o bien, no se acompañen los documentos de acreditación correspondientes, la EMPRESA, dentro de los cinco (5) días hábiles siguientes a la recepción de la solicitud, podrá requerirle que aporte los elementos o documentos necesarios para dar trámite a la misma. Usted contará con diez (10) días hábiles para atender el requerimiento, contados a partir del día siguiente en que lo haya recibido. De no dar respuesta en dicho plazo, se tendrá por no presentada la solicitud correspondiente.");
+  writeNormal("La EMPRESA le comunicará la respuesta en un plazo máximo de veinte (20) días hábiles contados desde la fecha en que se recibió la solicitud, a efecto de que, si resulta procedente, haga efectiva la misma dentro de los quince (15) días hábiles siguientes a que se comunique la respuesta. La respuesta se dará vía electrónica a la dirección de correo que se especifique en el en su solicitud.");
+  y += 2;
+  writeBold("Opciones para limitar el uso o divulgación de sus datos personales. Usted podrá limitar el uso o divulgación de sus datos personales para evitar que sean utilizados o divulgados.");
+  writeNormal("Si desea limitar el uso o divulgación de sus datos personales, deberá presentar su solicitud al área de Recursos Humanos de su oficina, en el entendido de que LA EMPRESA no podría cumplir con algunas de sus obligaciones si esto sucede.");
+  y += 2;
+  writeBold("Uso de Cookies y Otras Tecnologías de Rastreo. LA EMPRESA no utiliza directamente cookies u otras tecnologías de rastreo para recabar sus datos personales cuando usted accede al servicio de red interno, portal interno y/o sitio web.");
+  y += 2;
+  writeBold("Cambios al aviso de privacidad");
+  writeNormal("En caso de existir cambios o modificaciones al presente Aviso de Privacidad, se pondrá a su disposición la versión actualizada del mismo a través del área de Recursos Humanos.");
+  y += 2;
+  writeBold("Contacto");
+  writeNormal("En caso de tener dudas o comentarios respecto a este Aviso de Privacidad o si quisiera ejercitar cualquiera de los derechos que por la Ley le corresponden, le pedimos contacte al área de Recursos Humanos.");
+  y += 2;
+  writeBold("CONSENTIMIENTO EXPRESO DEL TITULAR");
+  writeNormal("Manifiesto que he leído y entiendo el presente Aviso de Privacidad y:");
+  checkPage(8);
+  pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
+  pdf.rect(mL, y - 3, 4, 4);
+  const linesSi = pdf.splitTextToSize("Sí otorgo mi consentimiento a fin de que se lleve a cabo el tratamiento y transferencia de mis datos personales, financieros y sensibles para las finalidades necesarias y no necesarias en los términos del presente.", maxW - 10);
+  for (const l of linesSi) { pdf.text(l, mL + 7, y); y += 4; }
   y += 3;
-  checkPage(15);
-  pdf.setFont("helvetica", "normal"); pdf.setFontSize(9.5);
+  checkPage(8);
+  pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
   pdf.rect(mL, y - 3, 4, 4);
-  pdf.text("Sí otorgo mi consentimiento para el tratamiento de mis datos personales conforme al presente aviso.", mL + 7, y);
-  y += 8;
-  pdf.rect(mL, y - 3, 4, 4);
-  pdf.text("No otorgo mi consentimiento para las finalidades secundarias (puntos VIII y IX).", mL + 7, y);
-  y += 12;
+  const linesNo = pdf.splitTextToSize("No otorgo mi consentimiento, a fin de que se lleve a cabo el tratamiento de mis datos personales en los términos del presente y entiendo que la Empresa no podrá cumplir con las obligaciones derivadas de una relación de trabajo.", maxW - 10);
+  for (const l of linesNo) { pdf.text(l, mL + 7, y); y += 4; }
+  y += 3;
+  writeNormal("De igual forma, confirmo que he informado a las personas de las cuales he proporcionado datos personales sobre el tratamiento que se dará a sus datos y que cuento con su autorización para proporcionarlos.");
   checkPage(30);
   pdf.text("Nombre: ________________________________________", mL, y); y += 10;
   pdf.text("Firma: _________________________________________", mL, y); y += 10;
-  pdf.text(`Fecha: ${params.fecha}`, mL, y);
+  pdf.text("Fecha: " + params.fecha, mL, y); y += 8;
+  y += 5;
+  writeNormal("En términos de la Ley Federal de Protección de Datos Personales en Posesión de los Particulares y su Reglamento, le informamos que, ante la negativa de respuesta a las solicitudes de derechos ARCO o inconformidad con la misma, usted puede presentar ante el Instituto Nacional de Transparencia, Acceso a la Información y Protección de Datos Personales, la correspondiente Solicitud de Protección de Derechos en los plazos y términos fijados por el capítulo VII de la Ley y otros relacionados, así como los correspondientes del Reglamento.");
 
   const filename = `Aviso_Privacidad_${params.nombre_empleado.replace(/\s+/g, "_")}.pdf`;
   pdf.save(filename);
