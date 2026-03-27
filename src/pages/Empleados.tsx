@@ -451,17 +451,27 @@ const Empleados = () => {
       }
 
       const payload = {
-        ...formData,
         nombre_completo: nombreCompleto,
+        nombre: formData.nombre || null,
+        primer_apellido: formData.primer_apellido || null,
+        segundo_apellido: formData.segundo_apellido || null,
         user_id: formData.user_id || null,
-        sueldo_bruto: formData.sueldo_bruto ? parseFloat(formData.sueldo_bruto) : null,
+        sueldo_bruto: formData.sueldo_bruto ? parseFloat(formData.sueldo_bruto as string) : null,
         periodo_pago: formData.periodo_pago || null,
         fecha_baja: formData.fecha_baja || null,
         motivo_baja: formData.motivo_baja || null,
-        numero_dependientes: formData.numero_dependientes ? parseInt(formData.numero_dependientes) : null,
+        numero_dependientes: formData.numero_dependientes ? parseInt(formData.numero_dependientes as string) : null,
         fecha_nacimiento: formData.fecha_nacimiento || null,
+        fecha_ingreso: formData.fecha_ingreso || null,
+        puesto: formData.puesto || null,
+        activo: formData.activo,
+        notas: formData.notas || null,
+        numero_seguro_social: formData.numero_seguro_social || null,
         rfc: formData.rfc || null,
         curp: formData.curp || null,
+        telefono: formData.telefono || null,
+        email: formData.email || null,
+        direccion: formData.direccion || null,
         contacto_emergencia_nombre: formData.contacto_emergencia_nombre || null,
         contacto_emergencia_telefono: formData.contacto_emergencia_telefono || null,
         tipo_sangre: formData.tipo_sangre || null,
@@ -469,6 +479,8 @@ const Empleados = () => {
         nivel_estudios: formData.nivel_estudios || null,
         cuenta_bancaria: formData.cuenta_bancaria || null,
         clabe_interbancaria: formData.clabe_interbancaria || null,
+        beneficiario: formData.beneficiario || null,
+        premio_asistencia_semanal: formData.premio_asistencia_semanal ? Number(formData.premio_asistencia_semanal) : null,
       };
 
       let empleadoId: string;
