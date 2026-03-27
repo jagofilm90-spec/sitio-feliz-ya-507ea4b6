@@ -21,7 +21,7 @@ const STORAGE_KEY = "dismissed-notifications";
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 export const CentroNotificaciones = () => {
-  const { alertasCaducidad, notificacionesStock, alertasLicencias, autorizacionesOC, autorizacionesCotizacion, confirmacionesProveedor, notificacionesPrecios, notificacionesPedidos, notificacionesRechazo, notificacionesCaducidadPush, notificacionesFumigacionPush, notificacionesPreciosVendedor, notificacionesProductoNuevo, totalCount, loading, marcarComoLeida, isAdmin } = useNotificaciones();
+  const { alertasCaducidad, notificacionesStock, alertasLicencias, autorizacionesOC, autorizacionesCotizacion, confirmacionesProveedor, notificacionesPrecios, notificacionesPedidos, notificacionesRechazo, notificacionesCaducidadPush, notificacionesFumigacionPush, notificacionesPreciosVendedor, notificacionesProductoNuevo, totalCount, loading, marcarComoLeida, marcarTodasComoLeidas, isAdmin } = useNotificaciones();
   const navigate = useNavigate();
   const [dismissedLicencias, setDismissedLicencias] = useState<string[]>([]);
   const [dismissedCaducidad, setDismissedCaducidad] = useState<string[]>([]);
@@ -128,9 +128,16 @@ export const CentroNotificaciones = () => {
       <PopoverContent className="w-96 p-0" align="end">
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="font-semibold">Notificaciones</h3>
-          {computedCount > 0 && (
-            <Badge variant="secondary">{computedCount}</Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {computedCount > 0 && (
+              <>
+                <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={() => marcarTodasComoLeidas()}>
+                  <CheckCircle2 className="h-3 w-3 mr-1" />Limpiar
+                </Button>
+                <Badge variant="secondary">{computedCount}</Badge>
+              </>
+            )}
+          </div>
         </div>
 
         <ScrollArea className="h-[400px]">

@@ -593,11 +593,25 @@ export const useNotificaciones = () => {
     }
   };
 
+  const marcarTodasComoLeidas = async () => {
+    try {
+      const { error } = await supabase
+        .from("notificaciones")
+        .update({ leida: true })
+        .eq("leida", false);
+      if (error) throw error;
+      await cargarNotificaciones();
+    } catch (error) {
+      console.error("Error marcando todas como leídas:", error);
+    }
+  };
+
   return {
     ...notificaciones,
     loading,
     isAdmin,
     marcarComoLeida,
+    marcarTodasComoLeidas,
     recargar: cargarNotificaciones,
   };
 };
