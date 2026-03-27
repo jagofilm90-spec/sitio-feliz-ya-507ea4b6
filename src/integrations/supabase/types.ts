@@ -1836,9 +1836,7 @@ export type Database = {
       empleados: {
         Row: {
           activo: boolean | null
-          beneficiario: string | null
           clabe_interbancaria: string | null
-          premio_asistencia_semanal: number | null
           contacto_emergencia_nombre: string | null
           contacto_emergencia_telefono: string | null
           created_at: string
@@ -1874,7 +1872,6 @@ export type Database = {
         }
         Insert: {
           activo?: boolean | null
-          beneficiario?: string | null
           clabe_interbancaria?: string | null
           contacto_emergencia_nombre?: string | null
           contacto_emergencia_telefono?: string | null
@@ -1911,7 +1908,6 @@ export type Database = {
         }
         Update: {
           activo?: boolean | null
-          beneficiario?: string | null
           clabe_interbancaria?: string | null
           contacto_emergencia_nombre?: string | null
           contacto_emergencia_telefono?: string | null
@@ -6011,7 +6007,6 @@ export type Database = {
         }
         Insert: {
           activo?: boolean | null
-          beneficiario?: string | null
           clabe_interbancaria?: string | null
           contacto_emergencia_nombre?: string | null
           contacto_emergencia_telefono?: string | null
@@ -6045,7 +6040,6 @@ export type Database = {
         }
         Update: {
           activo?: boolean | null
-          beneficiario?: string | null
           clabe_interbancaria?: string | null
           contacto_emergencia_nombre?: string | null
           contacto_emergencia_telefono?: string | null
