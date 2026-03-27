@@ -403,6 +403,23 @@ const Empleados = () => {
     e.preventDefault();
 
     try {
+      // Validación de campos obligatorios
+      const faltantes: string[] = [];
+      if (!formData.nombre?.trim()) faltantes.push("Nombre");
+      if (!formData.primer_apellido?.trim()) faltantes.push("Primer Apellido");
+      if (!formData.puesto) faltantes.push("Puesto");
+      if (!formData.fecha_ingreso) faltantes.push("Fecha de Ingreso");
+      if (!formData.fecha_nacimiento) faltantes.push("Fecha de Nacimiento");
+      if (!formData.sueldo_bruto) faltantes.push("Sueldo Bruto");
+      if (!formData.rfc?.trim()) faltantes.push("RFC");
+      if (!formData.curp?.trim()) faltantes.push("CURP");
+      if (!(formData as any).beneficiario?.trim()) faltantes.push("Beneficiario");
+      if ((formData.puesto === "Chofer" || formData.puesto === "Ayudante de Chofer") && !(formData as any).premio_asistencia_semanal) faltantes.push("Premio de Asistencia Semanal");
+      if (faltantes.length > 0) {
+        toast({ title: "Campos obligatorios faltantes", description: faltantes.join(", "), variant: "destructive" });
+        return;
+      }
+
       // Construir nombre_completo a partir de los campos separados
       const nombreCompleto = `${formData.nombre} ${formData.primer_apellido} ${formData.segundo_apellido}`.trim();
       
@@ -491,13 +508,24 @@ const Empleados = () => {
           description: "El empleado se actualizó correctamente",
         });
       } else {
-        // Crear empleado (acceso al sistema se da después desde la tabla con "Dar acceso")
-        const { error } = await supabase.from("empleados").insert([payload]);
+        // Crear empleado — insert sin campos nuevos que pueden no estar en cache
+        const { beneficiario: _b, premio_asistencia_semanal: _p, ...safePayload } = payload as any;
+        const { data: newEmp, error } = await supabase.from("empleados").insert([safePayload]).select("id").single();
         if (error) throw error;
+
+        // Update con campos opcionales por separado (tolerante a columnas faltantes)
+        if (newEmp?.id) {
+          try {
+            await supabase.from("empleados").update({
+              beneficiario: (formData as any).beneficiario || null,
+              premio_asistencia_semanal: (formData as any).premio_asistencia_semanal || null,
+            }).eq("id", newEmp.id);
+          } catch { /* columns may not exist yet */ }
+        }
 
         toast({
           title: "Empleado creado",
-          description: "El empleado se creó correctamente. Para dar acceso al sistema, usa el botón 'Dar acceso' en la tabla.",
+          description: "Para dar acceso al sistema, usa el botón 'Dar acceso' en la tabla.",
         });
       }
 
@@ -1267,38 +1295,52 @@ const Empleados = () => {
                   </div>
                 </div>
 
+                {/* Campos obligatorios visibles */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="rfc">RFC *</Label>
+                    <Input id="rfc" value={formData.rfc} onChange={(e) => setFormData({ ...formData, rfc: e.target.value.toUpperCase() })} placeholder="XXXX000000XXX" maxLength={13} autoComplete="off" />
+                  </div>
+                  <div>
+                    <Label htmlFor="curp">CURP *</Label>
+                    <Input id="curp" value={formData.curp} onChange={(e) => setFormData({ ...formData, curp: e.target.value.toUpperCase() })} placeholder="XXXX000000XXXXXXXX00" maxLength={18} autoComplete="off" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="fecha_nacimiento">Fecha de Nacimiento *</Label>
+                    <Input id="fecha_nacimiento" type="date" value={formData.fecha_nacimiento} onChange={(e) => setFormData({ ...formData, fecha_nacimiento: e.target.value })} autoComplete="off" />
+                  </div>
+                  <div>
+                    <Label htmlFor="sueldo_bruto">Sueldo Bruto Mensual *</Label>
+                    <Input id="sueldo_bruto" type="number" step="0.01" value={formData.sueldo_bruto} onChange={(e) => setFormData({ ...formData, sueldo_bruto: e.target.value } as any)} placeholder="$0.00" autoComplete="off" />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="beneficiario">Beneficiario *</Label>
+                  <Input id="beneficiario" value={(formData as any).beneficiario || ""} onChange={(e) => setFormData({ ...formData, beneficiario: e.target.value } as any)} placeholder="Nombre completo del beneficiario" autoComplete="off" />
+                </div>
+
                 {/* Premio de asistencia — solo chofer/ayudante */}
                 {(formData.puesto === "Chofer" || formData.puesto === "Ayudante de Chofer") && (
                   <div>
-                    <Label htmlFor="premio_asistencia_semanal">Premio de Asistencia Semanal</Label>
+                    <Label htmlFor="premio_asistencia_semanal">Premio de Asistencia Semanal *</Label>
                     <Input id="premio_asistencia_semanal" type="number" step="0.01"
                       value={(formData as any).premio_asistencia_semanal || (formData.puesto === "Ayudante de Chofer" ? 958 : 1262)}
                       onChange={(e) => setFormData({ ...formData, premio_asistencia_semanal: parseFloat(e.target.value) || 0 } as any)}
-                      placeholder={formData.puesto === "Ayudante de Chofer" ? "$958" : "$1,262"} autoComplete="off" />
-                    <p className="text-xs text-muted-foreground mt-1">Default: {formData.puesto === "Ayudante de Chofer" ? "$958" : "$1,262"} semanales. Se otorga sin falta injustificada ni 2 retardos.</p>
+                      autoComplete="off" />
+                    <p className="text-xs text-muted-foreground mt-1">Default: {formData.puesto === "Ayudante de Chofer" ? "$958" : "$1,262"} semanales</p>
                   </div>
                 )}
 
-                {/* Datos adicionales — colapsables */}
+                {/* Datos adicionales — colapsables (solo opcionales) */}
                 <details className="border rounded-lg">
                   <summary className="px-4 py-2.5 cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
-                    Datos adicionales (RFC, CURP, emergencia, bancarios...)
+                    Datos adicionales (emergencia, bancarios, dirección...)
                   </summary>
                   <div className="px-4 pb-4 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="rfc">RFC</Label>
-                        <Input id="rfc" value={formData.rfc} onChange={(e) => setFormData({ ...formData, rfc: e.target.value.toUpperCase() })} placeholder="XXXX000000XXX" maxLength={13} autoComplete="off" />
-                      </div>
-                      <div>
-                        <Label htmlFor="curp">CURP</Label>
-                        <Input id="curp" value={formData.curp} onChange={(e) => setFormData({ ...formData, curp: e.target.value.toUpperCase() })} placeholder="XXXX000000XXXXXXXX00" maxLength={18} autoComplete="off" />
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="fecha_nacimiento">Fecha de Nacimiento</Label>
-                      <Input id="fecha_nacimiento" type="date" value={formData.fecha_nacimiento} onChange={(e) => setFormData({ ...formData, fecha_nacimiento: e.target.value })} autoComplete="off" />
-                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="contacto_emergencia_nombre">Contacto Emergencia</Label>
@@ -1312,10 +1354,6 @@ const Empleados = () => {
                     <div>
                       <Label htmlFor="direccion">Dirección</Label>
                       <Input id="direccion" value={formData.direccion} onChange={(e) => setFormData({ ...formData, direccion: e.target.value })} placeholder="Calle, número, colonia..." autoComplete="off" />
-                    </div>
-                    <div>
-                      <Label htmlFor="beneficiario">Beneficiario (para contrato)</Label>
-                      <Input id="beneficiario" value={(formData as any).beneficiario || ""} onChange={(e) => setFormData({ ...formData, beneficiario: e.target.value } as any)} placeholder="Nombre del beneficiario" autoComplete="off" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>

@@ -220,6 +220,12 @@ export async function generarContratoPDF(datos: DatosContrato): Promise<{ filena
   const maxW = pageW - marginL - marginR;
   let y = addLogo(pdf, logoBase64, pageW);
 
+  // Uppercase for PDF rendering (originals preserved for logic)
+  const NOMBRE = emp.nombre_completo.toUpperCase();
+  const RFC = emp.rfc.toUpperCase();
+  const CURP = emp.curp.toUpperCase();
+  const BENEFICIARIO = emp.beneficiario.toUpperCase();
+  const PUESTO = emp.puesto.toUpperCase();
   const esChoferOAyudante = emp.puesto === "Chofer" || emp.puesto === "Ayudante de Chofer";
   const sueldoBase = esChoferOAyudante && emp.premio_asistencia ? emp.sueldo_bruto - emp.premio_asistencia : emp.sueldo_bruto;
 
@@ -259,27 +265,27 @@ export async function generarContratoPDF(datos: DatosContrato): Promise<{ filena
   writeTitle("CONTRATO INDIVIDUAL DE TRABAJO POR TIEMPO INDETERMINADO");
   y += 3;
 
-  writeNormal(`Contrato individual de trabajo por tiempo indeterminado que celebran por una parte ${empresa.razon_social}, representada por su Representante Legal, el C. ${empresa.representante_legal}, a quien en lo sucesivo se le denominará "LA EMPRESA", y por otra parte el C. ${emp.nombre_completo}, a quien se le denominará "EL TRABAJADOR", al tenor de las siguientes:`);
+  writeNormal(`Contrato individual de trabajo por tiempo indeterminado que celebran por una parte ${empresa.razon_social}, representada por su Representante Legal, el C. ${empresa.representante_legal}, a quien en lo sucesivo se le denominará "LA EMPRESA", y por otra parte el C. ${NOMBRE}, a quien se le denominará "EL TRABAJADOR", al tenor de las siguientes:`);
   y += 3;
 
   writeTitle("DECLARACIONES", 12);
   writeBold("I. Declara LA EMPRESA:");
   writeNormal(`a) Ser una persona moral constituida conforme a las leyes mexicanas, con RFC ${empresa.rfc} y domicilio en ${empresa.domicilio}.`);
   writeNormal(`b) Que su actividad principal es la compraventa y distribución de productos de abarrotes.`);
-  writeNormal(`c) Que requiere los servicios del TRABAJADOR en el puesto de ${emp.puesto}.`);
+  writeNormal(`c) Que requiere los servicios del TRABAJADOR en el puesto de ${PUESTO}.`);
   y += 2;
 
   writeBold("II. Declara EL TRABAJADOR:");
-  writeNormal(`a) Llamarse ${emp.nombre_completo}, con RFC ${emp.rfc} y CURP ${emp.curp}.`);
+  writeNormal(`a) Llamarse ${NOMBRE}, con RFC ${RFC} y CURP ${CURP}.`);
   writeNormal(`b) Tener la capacidad legal para trabajar y que los datos proporcionados son verídicos.`);
-  writeNormal(`c) Designar como beneficiario(a) al C. ${emp.beneficiario} para los efectos legales correspondientes.`);
+  writeNormal(`c) Designar como beneficiario(a) al C. ${BENEFICIARIO} para los efectos legales correspondientes.`);
   y += 3;
 
   writeTitle("CLÁUSULAS", 12);
 
   // PRIMERA
   writeBold("PRIMERA. OBJETO DEL CONTRATO.");
-  writeNormal(`LA EMPRESA contrata los servicios del TRABAJADOR para desempeñar el puesto de ${emp.puesto}, cuyas funciones específicas se describen en el Anexo A que forma parte integral del presente contrato.`);
+  writeNormal(`LA EMPRESA contrata los servicios del TRABAJADOR para desempeñar el puesto de ${PUESTO}, cuyas funciones específicas se describen en el Anexo A que forma parte integral del presente contrato.`);
   y += 2;
 
   // SEGUNDA
@@ -368,7 +374,7 @@ export async function generarContratoPDF(datos: DatosContrato): Promise<{ filena
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9);
   pdf.text(empresa.representante_legal, marginL + maxW * 0.25, y, { align: "center" });
-  pdf.text(emp.nombre_completo, marginL + maxW * 0.75, y, { align: "center" });
+  pdf.text(NOMBRE, marginL + maxW * 0.75, y, { align: "center" });
   y += 4;
   pdf.text("Representante Legal", marginL + maxW * 0.25, y, { align: "center" });
   y += 15;
@@ -421,7 +427,7 @@ export async function generarContratoPDF(datos: DatosContrato): Promise<{ filena
   y += 15;
   pdf.line(marginL + maxW * 0.3, y, marginL + maxW * 0.7, y);
   y += 5;
-  pdf.text(emp.nombre_completo, pageW / 2, y, { align: "center" });
+  pdf.text(NOMBRE, pageW / 2, y, { align: "center" });
 
   // Save
   const filename = `Contrato_${emp.nombre_completo.replace(/\s+/g, "_")}.pdf`;
@@ -503,7 +509,7 @@ export async function generarAvisoPrivacidadPDF(params: { nombre_empleado: strin
   y += 2;
 
   writeBold("CONSENTIMIENTO");
-  writeNormal(`Al firmar el presente documento, el C. ${params.nombre_empleado} manifiesta que:`);
+  writeNormal(`Al firmar el presente documento, el C. ${params.nombre_empleado.toUpperCase()} manifiesta que:`);
   y += 3;
 
   // Checkboxes visuales
