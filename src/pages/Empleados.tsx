@@ -284,7 +284,7 @@ const Empleados = () => {
         .order("nombre_completo");
 
       if (error) throw error;
-      setEmpleados((data || []) as Empleado[]);
+      setEmpleados((data || []) as unknown as Empleado[]);
 
       // Load documents for each employee
       if (data) {
@@ -451,27 +451,17 @@ const Empleados = () => {
       }
 
       const payload = {
+        ...formData,
         nombre_completo: nombreCompleto,
-        nombre: formData.nombre || null,
-        primer_apellido: formData.primer_apellido || null,
-        segundo_apellido: formData.segundo_apellido || null,
         user_id: formData.user_id || null,
-        sueldo_bruto: formData.sueldo_bruto ? parseFloat(formData.sueldo_bruto as string) : null,
+        sueldo_bruto: formData.sueldo_bruto ? parseFloat(formData.sueldo_bruto) : null,
         periodo_pago: formData.periodo_pago || null,
         fecha_baja: formData.fecha_baja || null,
         motivo_baja: formData.motivo_baja || null,
-        numero_dependientes: formData.numero_dependientes ? parseInt(formData.numero_dependientes as string) : null,
+        numero_dependientes: formData.numero_dependientes ? parseInt(formData.numero_dependientes) : null,
         fecha_nacimiento: formData.fecha_nacimiento || null,
-        fecha_ingreso: formData.fecha_ingreso || null,
-        puesto: formData.puesto || null,
-        activo: formData.activo,
-        notas: formData.notas || null,
-        numero_seguro_social: formData.numero_seguro_social || null,
         rfc: formData.rfc || null,
         curp: formData.curp || null,
-        telefono: formData.telefono || null,
-        email: formData.email || null,
-        direccion: formData.direccion || null,
         contacto_emergencia_nombre: formData.contacto_emergencia_nombre || null,
         contacto_emergencia_telefono: formData.contacto_emergencia_telefono || null,
         tipo_sangre: formData.tipo_sangre || null,
@@ -479,8 +469,6 @@ const Empleados = () => {
         nivel_estudios: formData.nivel_estudios || null,
         cuenta_bancaria: formData.cuenta_bancaria || null,
         clabe_interbancaria: formData.clabe_interbancaria || null,
-        beneficiario: formData.beneficiario || null,
-        premio_asistencia_semanal: formData.premio_asistencia_semanal ? Number(formData.premio_asistencia_semanal) : null,
       };
 
       let empleadoId: string;
@@ -604,6 +592,7 @@ const Empleados = () => {
       clabe_interbancaria: empleado.clabe_interbancaria || "",
       telefono: empleado.telefono || "",
       email: empleado.email || "",
+      direccion: empleado.direccion || "",
       fecha_ingreso: empleado.fecha_ingreso,
       puesto: empleado.puesto,
       user_id: empleado.user_id || "",
@@ -614,7 +603,6 @@ const Empleados = () => {
       periodo_pago: empleado.periodo_pago || "",
       fecha_baja: empleado.fecha_baja || "",
       motivo_baja: empleado.motivo_baja || "",
-      direccion: empleado.direccion || "",
       beneficiario: empleado.beneficiario || "",
       premio_asistencia_semanal: empleado.premio_asistencia_semanal || premioDefault,
     });
@@ -628,8 +616,8 @@ const Empleados = () => {
     }
     try {
       const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
-      const premio = (empleado as any).premio_asistencia_semanal || premioDefault;
-      const beneficiario = (empleado as any).beneficiario || "Por designar";
+      const premio = empleado.premio_asistencia_semanal || premioDefault;
+      const beneficiario = empleado.beneficiario || "Por designar";
       await generarContratoPDF({
         empleado: {
           nombre_completo: empleado.nombre_completo,
@@ -992,6 +980,7 @@ const Empleados = () => {
       clabe_interbancaria: "",
       telefono: "",
       email: "",
+      direccion: "",
       fecha_ingreso: new Date().toISOString().split("T")[0],
       puesto: "",
       user_id: "",
@@ -1002,6 +991,8 @@ const Empleados = () => {
       periodo_pago: "",
       fecha_baja: "",
       motivo_baja: "",
+      beneficiario: "",
+      premio_asistencia_semanal: "",
     });
     setCrearUsuario(false);
     setUsuarioFormData({
@@ -1333,7 +1324,7 @@ const Empleados = () => {
 
                 <div>
                   <Label htmlFor="beneficiario">Beneficiario *</Label>
-                  <Input id="beneficiario" value={(formData as any).beneficiario || ""} onChange={(e) => setFormData({ ...formData, beneficiario: e.target.value } as any)} placeholder="Nombre completo del beneficiario" autoComplete="off" />
+                  <Input id="beneficiario" value={formData.beneficiario || ""} onChange={(e) => setFormData({ ...formData, beneficiario: e.target.value })} placeholder="Nombre completo del beneficiario" autoComplete="off" />
                 </div>
 
                 {/* Premio de asistencia — solo chofer/ayudante */}
@@ -1341,8 +1332,8 @@ const Empleados = () => {
                   <div>
                     <Label htmlFor="premio_asistencia_semanal">Premio de Asistencia Semanal *</Label>
                     <Input id="premio_asistencia_semanal" type="number" step="0.01"
-                      value={(formData as any).premio_asistencia_semanal || (formData.puesto === "Ayudante de Chofer" ? 958 : 1262)}
-                      onChange={(e) => setFormData({ ...formData, premio_asistencia_semanal: parseFloat(e.target.value) || 0 } as any)}
+                      value={formData.premio_asistencia_semanal || (formData.puesto === "Ayudante de Chofer" ? 958 : 1262)}
+                      onChange={(e) => setFormData({ ...formData, premio_asistencia_semanal: parseFloat(e.target.value) || 0 })}
                       autoComplete="off" />
                     <p className="text-xs text-muted-foreground mt-1">Default: {formData.puesto === "Ayudante de Chofer" ? "$958" : "$1,262"} semanales</p>
                   </div>

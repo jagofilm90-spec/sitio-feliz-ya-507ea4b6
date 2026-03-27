@@ -71,7 +71,7 @@ export const SecretariaPedidosTab = () => {
         .order("fecha_pedido", { ascending: false })
         .limit(200);
 
-      if (statusFilter !== "all") query = query.eq("status", statusFilter);
+      if (statusFilter !== "all") query = query.eq("status", statusFilter as any);
 
       const { data, error } = await query;
       if (error) throw error;
