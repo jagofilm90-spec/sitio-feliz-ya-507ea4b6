@@ -613,6 +613,7 @@ const Empleados = () => {
 
     // Leer extras via RPC (bypasea schema cache)
     const { data: extras } = await supabase.rpc("get_empleado_extras", { p_empleado_id: empleado.id });
+    console.log("EXTRAS RPC:", extras);
     const benefFromDb = extras?.beneficiario || "";
     const premioFromDb = extras?.premio_asistencia_semanal || null;
     const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
