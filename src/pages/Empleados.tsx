@@ -1277,7 +1277,8 @@ const Empleados = () => {
                       value={formData.puesto}
                       onValueChange={(value) => {
                         const periodoPago = (value === "Chofer" || value === "Ayudante de Chofer") ? "semanal" : "quincenal";
-                        setFormData({ ...formData, puesto: value, periodo_pago: periodoPago } as any);
+                        const premio = value === "Ayudante de Chofer" ? 958 : value === "Chofer" ? 1262 : null;
+                        setFormData({ ...formData, puesto: value, periodo_pago: periodoPago, premio_asistencia_semanal: premio } as any);
                       }}
                     >
                       <SelectTrigger>
