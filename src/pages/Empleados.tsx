@@ -91,6 +91,8 @@ interface Empleado {
   numero_seguro_social: string | null;
   sueldo_bruto: number | null;
   periodo_pago: "semanal" | "quincenal" | null;
+  beneficiario: string | null;
+  premio_asistencia_semanal: number | null;
   fecha_baja: string | null;
   motivo_baja: "renuncia" | "despido" | "abandono" | null;
   created_at: string;
@@ -513,14 +515,15 @@ const Empleados = () => {
         const { data: newEmp, error } = await supabase.from("empleados").insert([safePayload]).select("id").single();
         if (error) throw error;
 
-        // Update con campos opcionales por separado (tolerante a columnas faltantes)
+        // Update con campos adicionales
         if (newEmp?.id) {
-          try {
-            await supabase.from("empleados").update({
-              beneficiario: (formData as any).beneficiario || null,
-              premio_asistencia_semanal: (formData as any).premio_asistencia_semanal || null,
-            }).eq("id", newEmp.id);
-          } catch { /* columns may not exist yet */ }
+          const { error: extraError } = await supabase.from("empleados").update({
+            beneficiario: (formData as any).beneficiario || null,
+            premio_asistencia_semanal: (formData as any).premio_asistencia_semanal || null,
+          }).eq("id", newEmp.id);
+          if (extraError) {
+            console.warn("No se pudieron guardar beneficiario/premio (columnas pueden no existir):", extraError.message);
+          }
         }
 
         toast({
@@ -617,7 +620,7 @@ const Empleados = () => {
     }
     try {
       const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
-      const premio = (empleado as any).premio_asistencia_semanal || premioDefault;
+      const premio = empleado.premio_asistencia_semanal || premioDefault;
       await generarContratoPDF({
         empleado: {
           nombre_completo: empleado.nombre_completo,
@@ -626,7 +629,7 @@ const Empleados = () => {
           puesto: empleado.puesto,
           sueldo_bruto: empleado.sueldo_bruto,
           premio_asistencia: premio,
-          beneficiario: (empleado as any).beneficiario || "Por designar",
+          beneficiario: empleado.beneficiario || "Por designar",
           fecha_ingreso: empleado.fecha_ingreso,
           fecha_contrato: new Date().toISOString().split("T")[0],
           direccion: empleado.direccion || null,

@@ -51,8 +51,10 @@ function numberToWords(n: number): string {
 }
 
 function formatFechaLarga(fecha: string): string {
-  const d = new Date(fecha + "T12:00:00");
-  return d.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
+  // Parse YYYY-MM-DD explicitly to avoid timezone issues
+  const [y, m, d] = fecha.split("-").map(Number);
+  const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  return `${d} de ${meses[m - 1]} de ${y}`;
 }
 
 // ═══ INTERFACES ═══
