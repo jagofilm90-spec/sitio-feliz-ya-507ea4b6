@@ -162,11 +162,7 @@ const App = () => (
                   <Empleados />
                 </ProtectedRoute>
               } />
-              <Route path="/usuarios" element={
-                <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
-                  <Usuarios />
-                </ProtectedRoute>
-              } />
+              <Route path="/usuarios" element={<Navigate to="/configuracion" replace />} />
               <Route path="/chat" element={
                 <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor', 'contadora', 'almacen', 'gerente_almacen']} redirectTo="/auth">
                   <Chat />

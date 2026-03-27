@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { EmpleadoCardMobile } from "@/components/empleados/EmpleadoCardMobile";
+import { DarAccesoSistemaDialog } from "@/components/empleados/DarAccesoSistemaDialog";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -197,6 +198,8 @@ const Empleados = () => {
   });
 
   const [crearUsuario, setCrearUsuario] = useState(false);
+  const [showDarAcceso, setShowDarAcceso] = useState(false);
+  const [accesoEmpleado, setAccesoEmpleado] = useState<Empleado | null>(null);
   const [usuarioFormData, setUsuarioFormData] = useState({
     password: "",
     role: "",
@@ -1883,9 +1886,13 @@ const Empleados = () => {
                               {new Date(empleado.fecha_ingreso).toLocaleDateString()}
                             </TableCell>
                             <TableCell>
-                              <span className="text-sm text-muted-foreground">
-                                {getUsuarioNombre(empleado.user_id)}
-                              </span>
+                              {empleado.user_id ? (
+                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">Con acceso</Badge>
+                              ) : (
+                                <Button variant="outline" size="sm" className="text-xs h-7" onClick={(e) => { e.stopPropagation(); setAccesoEmpleado(empleado); setShowDarAcceso(true); }}>
+                                  <UserPlus className="h-3 w-3 mr-1" />Dar acceso
+                                </Button>
+                              )}
                             </TableCell>
                             <TableCell>
                               {(() => {
@@ -2074,9 +2081,13 @@ const Empleados = () => {
                               {new Date(empleado.fecha_ingreso).toLocaleDateString()}
                             </TableCell>
                             <TableCell>
-                              <span className="text-sm text-muted-foreground">
-                                {getUsuarioNombre(empleado.user_id)}
-                              </span>
+                              {empleado.user_id ? (
+                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">Con acceso</Badge>
+                              ) : (
+                                <Button variant="outline" size="sm" className="text-xs h-7" onClick={(e) => { e.stopPropagation(); setAccesoEmpleado(empleado); setShowDarAcceso(true); }}>
+                                  <UserPlus className="h-3 w-3 mr-1" />Dar acceso
+                                </Button>
+                              )}
                             </TableCell>
                             <TableCell>
                               {(() => {
@@ -2264,9 +2275,13 @@ const Empleados = () => {
                               {new Date(empleado.fecha_ingreso).toLocaleDateString()}
                             </TableCell>
                             <TableCell>
-                              <span className="text-sm text-muted-foreground">
-                                {getUsuarioNombre(empleado.user_id)}
-                              </span>
+                              {empleado.user_id ? (
+                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">Con acceso</Badge>
+                              ) : (
+                                <Button variant="outline" size="sm" className="text-xs h-7" onClick={(e) => { e.stopPropagation(); setAccesoEmpleado(empleado); setShowDarAcceso(true); }}>
+                                  <UserPlus className="h-3 w-3 mr-1" />Dar acceso
+                                </Button>
+                              )}
                             </TableCell>
                             <TableCell>
                               {(() => {
@@ -2762,6 +2777,16 @@ const Empleados = () => {
           />
         )}
       </div>
+      {accesoEmpleado && (
+        <DarAccesoSistemaDialog
+          open={showDarAcceso}
+          onOpenChange={setShowDarAcceso}
+          empleadoId={accesoEmpleado.id}
+          empleadoNombre={accesoEmpleado.nombre_completo}
+          empleadoEmail={accesoEmpleado.email}
+          onCreated={() => { loadEmpleados(); loadUsuarios(); }}
+        />
+      )}
     </Layout>
   );
 };

@@ -505,13 +505,13 @@ export function UsuariosContent() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Gestión de Usuarios</h1>
-          <p className="text-muted-foreground">Administra usuarios y sus roles en el sistema</p>
+          <p className="text-muted-foreground">Usuarios con acceso al sistema · Para dar acceso a un empleado, ve a <a href="/empleados" className="text-primary underline font-medium">Empleados</a></p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button variant="outline" size="sm">
               <UserPlus className="mr-2 h-4 w-4" />
-              Nuevo Usuario
+              Crear usuario directo
             </Button>
           </DialogTrigger>
           <DialogContent>
