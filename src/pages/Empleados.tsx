@@ -609,7 +609,9 @@ const Empleados = () => {
       periodo_pago: empleado.periodo_pago || "",
       fecha_baja: empleado.fecha_baja || "",
       motivo_baja: empleado.motivo_baja || "",
-    });
+      beneficiario: empleado.beneficiario || "",
+      premio_asistencia_semanal: empleado.premio_asistencia_semanal || ((empleado.puesto === "Ayudante de Chofer") ? 958 : (empleado.puesto === "Chofer") ? 1262 : null),
+    } as any);
     setIsDialogOpen(true);
   };
 
