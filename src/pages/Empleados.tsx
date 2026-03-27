@@ -614,9 +614,10 @@ const Empleados = () => {
       periodo_pago: empleado.periodo_pago || "",
       fecha_baja: empleado.fecha_baja || "",
       motivo_baja: empleado.motivo_baja || "",
-      beneficiario: (empleado as any).beneficiario || "",
-      premio_asistencia_semanal: (empleado as any).premio_asistencia_semanal || premioDefault,
-    } as any);
+      direccion: empleado.direccion || "",
+      beneficiario: empleado.beneficiario || "",
+      premio_asistencia_semanal: empleado.premio_asistencia_semanal || premioDefault,
+    });
     setIsDialogOpen(true);
   };
 
