@@ -189,6 +189,7 @@ const Empleados = () => {
     clabe_interbancaria: "",
     telefono: "",
     email: "",
+    direccion: "",
     fecha_ingreso: new Date().toISOString().split("T")[0],
     puesto: "",
     user_id: "",
@@ -199,6 +200,8 @@ const Empleados = () => {
     periodo_pago: "",
     fecha_baja: "",
     motivo_baja: "",
+    beneficiario: "",
+    premio_asistencia_semanal: "" as string | number | null,
   });
 
   const [crearUsuario, setCrearUsuario] = useState(false);
