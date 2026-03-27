@@ -615,10 +615,9 @@ const Empleados = () => {
       return;
     }
     try {
-      const extras = await fetchEmpleadoExtras(empleado.id);
       const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
-      const premio = extras?.premio_asistencia_semanal || premioDefault;
-      const beneficiario = extras?.beneficiario || "Por designar";
+      const premio = empleado.premio_asistencia_semanal || premioDefault;
+      const beneficiario = empleado.beneficiario || "Por designar";
       await generarContratoPDF({
         empleado: {
           nombre_completo: empleado.nombre_completo,
