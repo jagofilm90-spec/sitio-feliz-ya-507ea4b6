@@ -71,16 +71,20 @@ Deno.serve(async (req) => {
       throw new Error('Failed to create user')
     }
 
-    // Actualizar teléfono si se proporcionó
-    if (phone) {
-      const { error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .update({ phone })
-        .eq('id', newUser.user.id)
+    // Crear o actualizar profile
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .upsert({
+        id: newUser.user.id,
+        email,
+        full_name,
+        phone: phone || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' })
 
-      if (profileError) {
-        console.error('Error updating phone:', profileError)
-      }
+    if (profileError) {
+      console.error('Error creating/updating profile:', profileError)
     }
 
     // Asignar rol
