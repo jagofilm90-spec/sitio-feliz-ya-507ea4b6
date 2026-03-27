@@ -629,8 +629,11 @@ const Empleados = () => {
       return;
     }
     try {
+      // Leer extras via RPC (bypasea schema cache)
+      const { data: extras } = await supabase.rpc("get_empleado_extras", { p_empleado_id: empleado.id });
       const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
-      const premio = empleado.premio_asistencia_semanal || premioDefault;
+      const premio = extras?.[0]?.premio_asistencia_semanal || empleado.premio_asistencia_semanal || premioDefault;
+      const beneficiario = extras?.[0]?.beneficiario || empleado.beneficiario || "Por designar";
       await generarContratoPDF({
         empleado: {
           nombre_completo: empleado.nombre_completo,
@@ -639,7 +642,7 @@ const Empleados = () => {
           puesto: empleado.puesto,
           sueldo_bruto: empleado.sueldo_bruto,
           premio_asistencia: premio,
-          beneficiario: empleado.beneficiario || "Por designar",
+          beneficiario,
           fecha_ingreso: empleado.fecha_ingreso,
           fecha_contrato: new Date().toISOString().split("T")[0],
           direccion: empleado.direccion || null,
@@ -1812,7 +1815,7 @@ const Empleados = () => {
                               </div>
                             </TableCell>
                             <TableCell>
-                              {new Date(empleado.fecha_ingreso).toLocaleDateString()}
+                              {empleado.fecha_ingreso.split("-").reverse().join("/")}
                             </TableCell>
                             <TableCell>
                               {empleado.user_id ? (
@@ -2025,7 +2028,7 @@ const Empleados = () => {
                               </div>
                             </TableCell>
                             <TableCell>
-                              {new Date(empleado.fecha_ingreso).toLocaleDateString()}
+                              {empleado.fecha_ingreso.split("-").reverse().join("/")}
                             </TableCell>
                             <TableCell>
                               {empleado.user_id ? (
@@ -2237,7 +2240,7 @@ const Empleados = () => {
                               </div>
                             </TableCell>
                             <TableCell>
-                              {new Date(empleado.fecha_ingreso).toLocaleDateString()}
+                              {empleado.fecha_ingreso.split("-").reverse().join("/")}
                             </TableCell>
                             <TableCell>
                               {empleado.user_id ? (
