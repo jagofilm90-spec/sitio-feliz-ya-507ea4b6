@@ -189,6 +189,7 @@ const Empleados = () => {
     clabe_interbancaria: "",
     telefono: "",
     email: "",
+    direccion: "",
     fecha_ingreso: new Date().toISOString().split("T")[0],
     puesto: "",
     user_id: "",
@@ -199,6 +200,8 @@ const Empleados = () => {
     periodo_pago: "",
     fecha_baja: "",
     motivo_baja: "",
+    beneficiario: "",
+    premio_asistencia_semanal: "" as string | number | null,
   });
 
   const [crearUsuario, setCrearUsuario] = useState(false);
@@ -415,8 +418,8 @@ const Empleados = () => {
       if (!formData.sueldo_bruto) faltantes.push("Sueldo Bruto");
       if (!formData.rfc?.trim()) faltantes.push("RFC");
       if (!formData.curp?.trim()) faltantes.push("CURP");
-      if (!(formData as any).beneficiario?.trim()) faltantes.push("Beneficiario");
-      if ((formData.puesto === "Chofer" || formData.puesto === "Ayudante de Chofer") && !(formData as any).premio_asistencia_semanal) faltantes.push("Premio de Asistencia Semanal");
+      if (!formData.beneficiario?.trim()) faltantes.push("Beneficiario");
+      if ((formData.puesto === "Chofer" || formData.puesto === "Ayudante de Chofer") && !formData.premio_asistencia_semanal) faltantes.push("Premio de Asistencia Semanal");
       if (faltantes.length > 0) {
         toast({ title: "Campos obligatorios faltantes", description: faltantes.join(", "), variant: "destructive" });
         return;
@@ -448,17 +451,27 @@ const Empleados = () => {
       }
 
       const payload = {
-        ...formData,
         nombre_completo: nombreCompleto,
+        nombre: formData.nombre || null,
+        primer_apellido: formData.primer_apellido || null,
+        segundo_apellido: formData.segundo_apellido || null,
         user_id: formData.user_id || null,
-        sueldo_bruto: formData.sueldo_bruto ? parseFloat(formData.sueldo_bruto) : null,
+        sueldo_bruto: formData.sueldo_bruto ? parseFloat(formData.sueldo_bruto as string) : null,
         periodo_pago: formData.periodo_pago || null,
         fecha_baja: formData.fecha_baja || null,
         motivo_baja: formData.motivo_baja || null,
-        numero_dependientes: formData.numero_dependientes ? parseInt(formData.numero_dependientes) : null,
+        numero_dependientes: formData.numero_dependientes ? parseInt(formData.numero_dependientes as string) : null,
         fecha_nacimiento: formData.fecha_nacimiento || null,
+        fecha_ingreso: formData.fecha_ingreso || null,
+        puesto: formData.puesto || null,
+        activo: formData.activo,
+        notas: formData.notas || null,
+        numero_seguro_social: formData.numero_seguro_social || null,
         rfc: formData.rfc || null,
         curp: formData.curp || null,
+        telefono: formData.telefono || null,
+        email: formData.email || null,
+        direccion: formData.direccion || null,
         contacto_emergencia_nombre: formData.contacto_emergencia_nombre || null,
         contacto_emergencia_telefono: formData.contacto_emergencia_telefono || null,
         tipo_sangre: formData.tipo_sangre || null,
@@ -466,6 +479,8 @@ const Empleados = () => {
         nivel_estudios: formData.nivel_estudios || null,
         cuenta_bancaria: formData.cuenta_bancaria || null,
         clabe_interbancaria: formData.clabe_interbancaria || null,
+        beneficiario: formData.beneficiario || null,
+        premio_asistencia_semanal: formData.premio_asistencia_semanal ? Number(formData.premio_asistencia_semanal) : null,
       };
 
       let empleadoId: string;
@@ -473,40 +488,10 @@ const Empleados = () => {
       if (editingEmpleado) {
         empleadoId = editingEmpleado.id;
 
-        // UPDATE completo via RPC JSON — bypasea PostgREST schema cache
-        const { error } = await supabase.rpc("update_empleado_json", {
-          p_id: empleadoId,
-          p_data: {
-            nombre_completo: nombreCompleto,
-            nombre: formData.nombre || null,
-            primer_apellido: formData.primer_apellido || null,
-            segundo_apellido: formData.segundo_apellido || null,
-            rfc: formData.rfc || null,
-            curp: formData.curp || null,
-            fecha_nacimiento: formData.fecha_nacimiento || null,
-            telefono: formData.telefono || null,
-            email: formData.email || null,
-            fecha_ingreso: formData.fecha_ingreso || null,
-            puesto: formData.puesto || null,
-            activo: formData.activo,
-            notas: formData.notas || null,
-            sueldo_bruto: formData.sueldo_bruto ? parseFloat(formData.sueldo_bruto) : null,
-            periodo_pago: formData.periodo_pago || null,
-            fecha_baja: formData.fecha_baja || null,
-            motivo_baja: formData.motivo_baja || null,
-            beneficiario: (formData as any).beneficiario || null,
-            premio_asistencia_semanal: (formData as any).premio_asistencia_semanal || null,
-            numero_seguro_social: formData.numero_seguro_social || null,
-            contacto_emergencia_nombre: formData.contacto_emergencia_nombre || null,
-            contacto_emergencia_telefono: formData.contacto_emergencia_telefono || null,
-            tipo_sangre: formData.tipo_sangre || null,
-            estado_civil: formData.estado_civil || null,
-            numero_dependientes: formData.numero_dependientes ? parseInt(formData.numero_dependientes) : null,
-            nivel_estudios: formData.nivel_estudios || null,
-            cuenta_bancaria: formData.cuenta_bancaria || null,
-            clabe_interbancaria: formData.clabe_interbancaria || null,
-          }
-        });
+        const { error } = await supabase
+          .from("empleados")
+          .update(payload)
+          .eq("id", empleadoId);
         if (error) throw error;
 
         // Si el empleado tiene usuario asociado, actualizar el nombre en profiles
@@ -540,20 +525,8 @@ const Empleados = () => {
           description: "El empleado se actualizó correctamente",
         });
       } else {
-        // Crear empleado — insert sin campos nuevos que pueden no estar en cache
-        const { beneficiario: _b, premio_asistencia_semanal: _p, ...safePayload } = payload as any;
-        const { data: newEmp, error } = await supabase.from("empleados").insert([safePayload]).select("id").single();
+        const { data: newEmp, error } = await supabase.from("empleados").insert([payload]).select("id").single();
         if (error) throw error;
-
-        // Update campos extras via RPC (bypasea schema cache)
-        if (newEmp?.id) {
-          const { error: rpcError } = await supabase.rpc("update_empleado_extras", {
-            p_empleado_id: newEmp.id,
-            p_beneficiario: (formData as any).beneficiario || null,
-            p_premio_asistencia_semanal: (formData as any).premio_asistencia_semanal || null,
-          });
-          if (rpcError) console.warn("RPC update_empleado_extras:", rpcError.message);
-        }
 
         toast({
           title: "Empleado creado",
@@ -608,34 +581,9 @@ const Empleados = () => {
     }
   };
 
-  // Fetch beneficiario y premio via fetch directo (bypasea PostgREST schema cache)
-  const fetchEmpleadoExtras = async (empleadoId: string) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return { beneficiario: null, premio_asistencia_semanal: null };
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/get_empleado_extras`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ p_empleado_id: empleadoId })
-        }
-      );
-      if (!response.ok) return { beneficiario: null, premio_asistencia_semanal: null };
-      return await response.json();
-    } catch {
-      return { beneficiario: null, premio_asistencia_semanal: null };
-    }
-  };
-
-  const handleEdit = async (empleado: Empleado) => {
+  const handleEdit = (empleado: Empleado) => {
     setEditingEmpleado(empleado);
 
-    const extras = await fetchEmpleadoExtras(empleado.id);
     const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
 
     setFormData({
@@ -666,9 +614,10 @@ const Empleados = () => {
       periodo_pago: empleado.periodo_pago || "",
       fecha_baja: empleado.fecha_baja || "",
       motivo_baja: empleado.motivo_baja || "",
-      beneficiario: extras?.beneficiario || "",
-      premio_asistencia_semanal: extras?.premio_asistencia_semanal || premioDefault,
-    } as any);
+      direccion: empleado.direccion || "",
+      beneficiario: empleado.beneficiario || "",
+      premio_asistencia_semanal: empleado.premio_asistencia_semanal || premioDefault,
+    });
     setIsDialogOpen(true);
   };
 
@@ -678,10 +627,9 @@ const Empleados = () => {
       return;
     }
     try {
-      const extras = await fetchEmpleadoExtras(empleado.id);
       const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
-      const premio = extras?.premio_asistencia_semanal || premioDefault;
-      const beneficiario = extras?.beneficiario || "Por designar";
+      const premio = (empleado as any).premio_asistencia_semanal || premioDefault;
+      const beneficiario = (empleado as any).beneficiario || "Por designar";
       await generarContratoPDF({
         empleado: {
           nombre_completo: empleado.nombre_completo,
