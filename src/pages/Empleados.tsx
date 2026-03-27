@@ -418,6 +418,7 @@ const Empleados = () => {
       if (!formData.sueldo_bruto) faltantes.push("Sueldo Bruto");
       if (!formData.rfc?.trim()) faltantes.push("RFC");
       if (!formData.curp?.trim()) faltantes.push("CURP");
+      if (!formData.email?.trim()) faltantes.push("Email");
       if (!formData.beneficiario?.trim()) faltantes.push("Beneficiario");
       if ((formData.puesto === "Chofer" || formData.puesto === "Ayudante de Chofer") && !formData.premio_asistencia_semanal) faltantes.push("Premio de Asistencia Semanal");
       if (faltantes.length > 0) {
@@ -1224,7 +1225,7 @@ const Empleados = () => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">Email *</Label>
                     <div className="flex gap-2">
                       <Input
                         id="email"
@@ -1445,25 +1446,6 @@ const Empleados = () => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="sueldo_bruto">Sueldo Bruto</Label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                          <Input
-                            id="sueldo_bruto"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={formData.sueldo_bruto}
-                            onChange={(e) =>
-                              setFormData({ ...formData, sueldo_bruto: e.target.value })
-                            }
-                            placeholder="0.00"
-                            className="pl-7"
-                            autoComplete="off"
-                          />
-                        </div>
-                      </div>
                       <div>
                         <Label htmlFor="periodo_pago">Periodo de Pago</Label>
                         <Select
