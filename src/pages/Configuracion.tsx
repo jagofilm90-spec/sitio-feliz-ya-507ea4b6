@@ -57,7 +57,7 @@ const sections: Section[] = [
   },
   {
     id: "usuarios",
-    label: "Usuarios",
+    label: "Acceso y Permisos",
     icon: Users,
     description: "Gestión de usuarios y permisos",
     roles: ["admin"],

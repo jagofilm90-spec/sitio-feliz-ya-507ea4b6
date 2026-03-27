@@ -489,116 +489,13 @@ const Empleados = () => {
           description: "El empleado se actualizó correctamente",
         });
       } else {
-        // Crear usuario del sistema si está marcada la opción
-        let nuevoUserId = null;
-        if (crearUsuario && !formData.email) {
-          toast({
-            title: "Error",
-            description: "Debes proporcionar un email para crear el usuario del sistema",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        if (crearUsuario && !usuarioFormData.password) {
-          toast({
-            title: "Error",
-            description: "Debes proporcionar una contraseña para el usuario del sistema",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        if (crearUsuario && !usuarioFormData.role) {
-          toast({
-            title: "Error",
-            description: "Debes seleccionar un rol para el usuario del sistema",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        if (crearUsuario) {
-          // Verificar si el email ya está registrado
-          const { data: existingUser, error: emailCheckError } = await supabase
-            .from("profiles")
-            .select("id, email, full_name")
-            .eq("email", formData.email)
-            .maybeSingle();
-
-          if (emailCheckError) {
-            toast({
-              title: "Error",
-              description: "Error al verificar el email",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          if (existingUser) {
-            toast({
-              title: "Email ya registrado",
-              description: `El email ${formData.email} ya está registrado con el usuario "${existingUser.full_name}". Por favor, selecciona ese usuario en lugar de crear uno nuevo.`,
-              variant: "destructive",
-            });
-            return;
-          }
-
-          try {
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            const nombreCompleto = `${formData.nombre} ${formData.primer_apellido} ${formData.segundo_apellido}`.trim();
-            
-            const response = await supabase.functions.invoke('create-user', {
-              body: {
-                email: formData.email,
-                password: usuarioFormData.password,
-                full_name: nombreCompleto,
-                phone: formData.telefono || null,
-                role: usuarioFormData.role,
-              },
-              headers: {
-                Authorization: `Bearer ${session?.access_token}`,
-              },
-            });
-
-            if (response.error) throw new Error(response.error.message);
-            if (response.data?.error) throw new Error(response.data.error);
-
-            nuevoUserId = response.data?.user?.id;
-            
-            if (!nuevoUserId) {
-              throw new Error("No se pudo obtener el ID del usuario creado");
-            }
-
-            toast({
-              title: "Usuario creado",
-              description: "El usuario del sistema se creó correctamente",
-            });
-          } catch (error: any) {
-            toast({
-              title: "Error al crear usuario",
-              description: error.message,
-              variant: "destructive",
-            });
-            return;
-          }
-        }
-
-        const empleadoPayload = {
-          ...payload,
-          user_id: nuevoUserId || payload.user_id,
-        };
-
-        const { error } = await supabase.from("empleados").insert([empleadoPayload]);
-
+        // Crear empleado (acceso al sistema se da después desde la tabla con "Dar acceso")
+        const { error } = await supabase.from("empleados").insert([payload]);
         if (error) throw error;
 
         toast({
           title: "Empleado creado",
-          description: crearUsuario 
-            ? "El empleado y su usuario del sistema se crearon correctamente"
-            : "El empleado se creó correctamente",
+          description: "El empleado se creó correctamente. Para dar acceso al sistema, usa el botón 'Dar acceso' en la tabla.",
         });
       }
 
@@ -1270,78 +1167,6 @@ const Empleados = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="rfc">RFC</Label>
-                    <Input
-                      id="rfc"
-                      value={formData.rfc}
-                      onChange={(e) =>
-                        setFormData({ ...formData, rfc: e.target.value.toUpperCase() })
-                      }
-                      placeholder="XXXX000000XXX"
-                      maxLength={13}
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="curp">CURP</Label>
-                    <Input
-                      id="curp"
-                      value={formData.curp}
-                      onChange={(e) =>
-                        setFormData({ ...formData, curp: e.target.value.toUpperCase() })
-                      }
-                      placeholder="XXXX000000XXXXXXXX00"
-                      maxLength={18}
-                      autoComplete="off"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="fecha_nacimiento">Fecha de Nacimiento</Label>
-                  <Input
-                    id="fecha_nacimiento"
-                    type="date"
-                    value={formData.fecha_nacimiento}
-                    onChange={(e) =>
-                      setFormData({ ...formData, fecha_nacimiento: e.target.value })
-                    }
-                    autoComplete="off"
-                  />
-                </div>
-
-                <div className="border-t pt-4">
-                  <h3 className="font-medium mb-3">Contacto de Emergencia</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="contacto_emergencia_nombre">Nombre del Contacto</Label>
-                      <Input
-                        id="contacto_emergencia_nombre"
-                        value={formData.contacto_emergencia_nombre}
-                        onChange={(e) =>
-                          setFormData({ ...formData, contacto_emergencia_nombre: e.target.value })
-                        }
-                        placeholder="Nombre completo"
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="contacto_emergencia_telefono">Número de Teléfono</Label>
-                      <Input
-                        id="contacto_emergencia_telefono"
-                        value={formData.contacto_emergencia_telefono}
-                        onChange={(e) =>
-                          setFormData({ ...formData, contacto_emergencia_telefono: e.target.value })
-                        }
-                        placeholder="10 dígitos"
-                        autoComplete="off"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
                     <Label htmlFor="telefono">Teléfono</Label>
                     <Input
                       id="telefono"
@@ -1428,30 +1253,52 @@ const Empleados = () => {
                   </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="user_id">Usuario en Sistema (opcional)</Label>
-                  <Select
-                    value={formData.user_id || "none"}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, user_id: value === "none" ? "" : value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sin usuario asignado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Sin usuario asignado</SelectItem>
-                      {usuariosDisponibles.map((usuario) => (
-                        <SelectItem key={usuario.id} value={usuario.id}>
-                          {usuario.full_name} ({usuario.email})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Vincula este empleado con su cuenta de usuario del sistema
-                  </p>
-                </div>
+                {/* Datos adicionales — colapsables */}
+                <details className="border rounded-lg">
+                  <summary className="px-4 py-2.5 cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
+                    Datos adicionales (RFC, CURP, emergencia, bancarios...)
+                  </summary>
+                  <div className="px-4 pb-4 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="rfc">RFC</Label>
+                        <Input id="rfc" value={formData.rfc} onChange={(e) => setFormData({ ...formData, rfc: e.target.value.toUpperCase() })} placeholder="XXXX000000XXX" maxLength={13} autoComplete="off" />
+                      </div>
+                      <div>
+                        <Label htmlFor="curp">CURP</Label>
+                        <Input id="curp" value={formData.curp} onChange={(e) => setFormData({ ...formData, curp: e.target.value.toUpperCase() })} placeholder="XXXX000000XXXXXXXX00" maxLength={18} autoComplete="off" />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="fecha_nacimiento">Fecha de Nacimiento</Label>
+                      <Input id="fecha_nacimiento" type="date" value={formData.fecha_nacimiento} onChange={(e) => setFormData({ ...formData, fecha_nacimiento: e.target.value })} autoComplete="off" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="contacto_emergencia_nombre">Contacto Emergencia</Label>
+                        <Input id="contacto_emergencia_nombre" value={formData.contacto_emergencia_nombre} onChange={(e) => setFormData({ ...formData, contacto_emergencia_nombre: e.target.value })} placeholder="Nombre" autoComplete="off" />
+                      </div>
+                      <div>
+                        <Label htmlFor="contacto_emergencia_telefono">Tel. Emergencia</Label>
+                        <Input id="contacto_emergencia_telefono" value={formData.contacto_emergencia_telefono} onChange={(e) => setFormData({ ...formData, contacto_emergencia_telefono: e.target.value })} placeholder="10 dígitos" autoComplete="off" />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="direccion">Dirección</Label>
+                      <Input id="direccion" value={formData.direccion} onChange={(e) => setFormData({ ...formData, direccion: e.target.value })} placeholder="Calle, número, colonia..." autoComplete="off" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="cuenta_bancaria">Cuenta Bancaria</Label>
+                        <Input id="cuenta_bancaria" value={formData.cuenta_bancaria} onChange={(e) => setFormData({ ...formData, cuenta_bancaria: e.target.value })} autoComplete="off" />
+                      </div>
+                      <div>
+                        <Label htmlFor="clabe_interbancaria">CLABE</Label>
+                        <Input id="clabe_interbancaria" value={formData.clabe_interbancaria} onChange={(e) => setFormData({ ...formData, clabe_interbancaria: e.target.value })} maxLength={18} autoComplete="off" />
+                      </div>
+                    </div>
+                  </div>
+                </details>
 
                 {/* Indicador de completitud de datos personales */}
                 <div className="border-t pt-4">
