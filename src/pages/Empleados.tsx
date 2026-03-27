@@ -276,7 +276,7 @@ const Empleados = () => {
   const loadEmpleados = async () => {
     try {
       const { data, error } = await supabase
-        .from("empleados")
+        .from("empleados_con_extras")
         .select("*")
         .order("nombre_completo");
 
@@ -608,14 +608,9 @@ const Empleados = () => {
     }
   };
 
-  const handleEdit = async (empleado: Empleado) => {
+  const handleEdit = (empleado: Empleado) => {
     setEditingEmpleado(empleado);
 
-    // Leer extras via RPC (bypasea schema cache)
-    const { data: extras } = await supabase.rpc("get_empleado_extras", { p_empleado_id: empleado.id });
-    console.log("EXTRAS RPC:", extras);
-    const benefFromDb = extras?.beneficiario || "";
-    const premioFromDb = extras?.premio_asistencia_semanal || null;
     const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
 
     setFormData({
@@ -646,8 +641,8 @@ const Empleados = () => {
       periodo_pago: empleado.periodo_pago || "",
       fecha_baja: empleado.fecha_baja || "",
       motivo_baja: empleado.motivo_baja || "",
-      beneficiario: benefFromDb || empleado.beneficiario || "",
-      premio_asistencia_semanal: premioFromDb || premioDefault,
+      beneficiario: (empleado as any).beneficiario || "",
+      premio_asistencia_semanal: (empleado as any).premio_asistencia_semanal || premioDefault,
     } as any);
     setIsDialogOpen(true);
   };
@@ -658,11 +653,9 @@ const Empleados = () => {
       return;
     }
     try {
-      // Leer extras via RPC (bypasea schema cache)
-      const { data: extras } = await supabase.rpc("get_empleado_extras", { p_empleado_id: empleado.id });
       const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
-      const premio = extras?.premio_asistencia_semanal || empleado.premio_asistencia_semanal || premioDefault;
-      const beneficiario = extras?.beneficiario || empleado.beneficiario || "Por designar";
+      const premio = (empleado as any).premio_asistencia_semanal || premioDefault;
+      const beneficiario = (empleado as any).beneficiario || "Por designar";
       await generarContratoPDF({
         empleado: {
           nombre_completo: empleado.nombre_completo,
