@@ -469,6 +469,8 @@ const Empleados = () => {
         nivel_estudios: formData.nivel_estudios || null,
         cuenta_bancaria: formData.cuenta_bancaria || null,
         clabe_interbancaria: formData.clabe_interbancaria || null,
+        beneficiario: formData.beneficiario || null,
+        premio_asistencia_semanal: formData.premio_asistencia_semanal ? Number(formData.premio_asistencia_semanal) : null,
       };
 
       let empleadoId: string;

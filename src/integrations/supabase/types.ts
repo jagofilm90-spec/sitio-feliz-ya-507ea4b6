@@ -1861,6 +1861,7 @@ export type Database = {
           periodo_comision: string | null
           periodo_pago: string | null
           porcentaje_comision: number | null
+          premio_asistencia_semanal: number | null
           primer_apellido: string | null
           puesto: string
           rfc: string | null
@@ -1898,6 +1899,7 @@ export type Database = {
           periodo_comision?: string | null
           periodo_pago?: string | null
           porcentaje_comision?: number | null
+          premio_asistencia_semanal?: number | null
           primer_apellido?: string | null
           puesto: string
           rfc?: string | null
@@ -1935,6 +1937,7 @@ export type Database = {
           periodo_comision?: string | null
           periodo_pago?: string | null
           porcentaje_comision?: number | null
+          premio_asistencia_semanal?: number | null
           primer_apellido?: string | null
           puesto?: string
           rfc?: string | null
