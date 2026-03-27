@@ -1332,8 +1332,8 @@ const Empleados = () => {
                   <div>
                     <Label htmlFor="premio_asistencia_semanal">Premio de Asistencia Semanal *</Label>
                     <Input id="premio_asistencia_semanal" type="number" step="0.01"
-                      value={(formData as any).premio_asistencia_semanal || (formData.puesto === "Ayudante de Chofer" ? 958 : 1262)}
-                      onChange={(e) => setFormData({ ...formData, premio_asistencia_semanal: parseFloat(e.target.value) || 0 } as any)}
+                      value={formData.premio_asistencia_semanal || (formData.puesto === "Ayudante de Chofer" ? 958 : 1262)}
+                      onChange={(e) => setFormData({ ...formData, premio_asistencia_semanal: parseFloat(e.target.value) || 0 })}
                       autoComplete="off" />
                     <p className="text-xs text-muted-foreground mt-1">Default: {formData.puesto === "Ayudante de Chofer" ? "$958" : "$1,262"} semanales</p>
                   </div>
