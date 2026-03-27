@@ -52,6 +52,32 @@ interface DatosContrato {
 
 const fmt = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`;
 
+function numberToWords(n: number): string {
+  const units = ["", "UN", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE"];
+  const teens = ["DIEZ", "ONCE", "DOCE", "TRECE", "CATORCE", "QUINCE", "DIECISÉIS", "DIECISIETE", "DIECIOCHO", "DIECINUEVE"];
+  const tens = ["", "", "VEINTE", "TREINTA", "CUARENTA", "CINCUENTA", "SESENTA", "SETENTA", "OCHENTA", "NOVENTA"];
+  const hundreds = ["", "CIENTO", "DOSCIENTOS", "TRESCIENTOS", "CUATROCIENTOS", "QUINIENTOS", "SEISCIENTOS", "SETECIENTOS", "OCHOCIENTOS", "NOVECIENTOS"];
+  const num = Math.floor(n);
+  if (num === 0) return "CERO";
+  if (num === 100) return "CIEN";
+  if (num >= 1000) {
+    const miles = Math.floor(num / 1000);
+    const resto = num % 1000;
+    const milesStr = miles === 1 ? "MIL" : `${numberToWords(miles)} MIL`;
+    return resto > 0 ? `${milesStr} ${numberToWords(resto)}` : milesStr;
+  }
+  if (num >= 100) {
+    const resto = num % 100;
+    return resto > 0 ? `${hundreds[Math.floor(num / 100)]} ${numberToWords(resto)}` : hundreds[Math.floor(num / 100)];
+  }
+  if (num >= 20) {
+    const u = num % 10;
+    return u > 0 ? `${tens[Math.floor(num / 10)]} Y ${units[u]}` : tens[Math.floor(num / 10)];
+  }
+  if (num >= 10) return teens[num - 10];
+  return units[num];
+}
+
 const ANEXOS: Record<string, string> = {
   "Ayudante de Chofer": `ANEXO A — DESCRIPCIÓN DE PUESTO: AYUDANTE DE CHOFER (MACHETERO)
 
@@ -269,7 +295,7 @@ export async function generarContratoPDF(datos: DatosContrato): Promise<{ filena
   // CUARTA — SALARIO
   writeBold("CUARTA. SALARIO.");
   if (esChoferOAyudante && emp.premio_asistencia) {
-    writeNormal(`EL TRABAJADOR percibirá como sueldo la cantidad bruta de ${fmt(sueldoBase)} (${sueldoBase > 0 ? "pesos" : ""}) mensuales, más un Premio de Asistencia semanal de ${fmt(emp.premio_asistencia)}, siempre y cuando no tenga falta injustificada ni acumule 2 retardos en la semana. El pago se realizará de forma semanal los días sábados.`);
+    writeNormal(`EL TRABAJADOR percibirá como sueldo la cantidad bruta de ${fmt(sueldoBase)} mensuales, más un Premio de Asistencia semanal equivalente a ${fmt(emp.premio_asistencia!)} (${numberToWords(emp.premio_asistencia!)} PESOS 00/100 M.N.), siempre y cuando no tenga falta injustificada ni acumule 2 retardos en la semana. El pago se realizará de forma semanal los días sábados.`);
   } else {
     writeNormal(`EL TRABAJADOR percibirá como sueldo la cantidad bruta de ${fmt(emp.sueldo_bruto)} (pesos) mensuales. El pago se realizará de forma quincenal.`);
   }

@@ -1838,6 +1838,7 @@ export type Database = {
           activo: boolean | null
           beneficiario: string | null
           clabe_interbancaria: string | null
+          premio_asistencia_semanal: number | null
           contacto_emergencia_nombre: string | null
           contacto_emergencia_telefono: string | null
           created_at: string

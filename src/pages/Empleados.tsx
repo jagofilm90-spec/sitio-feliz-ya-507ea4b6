@@ -588,7 +588,8 @@ const Empleados = () => {
       return;
     }
     try {
-      const esChofer = empleado.puesto === "Chofer" || empleado.puesto === "Ayudante de Chofer";
+      const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
+      const premio = (empleado as any).premio_asistencia_semanal || premioDefault;
       await generarContratoPDF({
         empleado: {
           nombre_completo: empleado.nombre_completo,
@@ -596,7 +597,7 @@ const Empleados = () => {
           curp: empleado.curp,
           puesto: empleado.puesto,
           sueldo_bruto: empleado.sueldo_bruto,
-          premio_asistencia: esChofer ? Math.round(empleado.sueldo_bruto * 0.15) : null,
+          premio_asistencia: premio,
           beneficiario: (empleado as any).beneficiario || "Por designar",
           fecha_ingreso: empleado.fecha_ingreso,
           fecha_contrato: new Date().toISOString().split("T")[0],
@@ -1264,6 +1265,18 @@ const Empleados = () => {
                     </Select>
                   </div>
                 </div>
+
+                {/* Premio de asistencia — solo chofer/ayudante */}
+                {(formData.puesto === "Chofer" || formData.puesto === "Ayudante de Chofer") && (
+                  <div>
+                    <Label htmlFor="premio_asistencia_semanal">Premio de Asistencia Semanal</Label>
+                    <Input id="premio_asistencia_semanal" type="number" step="0.01"
+                      value={(formData as any).premio_asistencia_semanal || (formData.puesto === "Ayudante de Chofer" ? 958 : 1262)}
+                      onChange={(e) => setFormData({ ...formData, premio_asistencia_semanal: parseFloat(e.target.value) || 0 } as any)}
+                      placeholder={formData.puesto === "Ayudante de Chofer" ? "$958" : "$1,262"} autoComplete="off" />
+                    <p className="text-xs text-muted-foreground mt-1">Default: {formData.puesto === "Ayudante de Chofer" ? "$958" : "$1,262"} semanales. Se otorga sin falta injustificada ni 2 retardos.</p>
+                  </div>
+                )}
 
                 {/* Datos adicionales — colapsables */}
                 <details className="border rounded-lg">
