@@ -471,28 +471,42 @@ const Empleados = () => {
       let empleadoId: string;
 
       if (editingEmpleado) {
-        // Strip extras from payload to avoid schema cache error
-        const { beneficiario: _b2, premio_asistencia_semanal: _p2, ...safeEditPayload } = payload as any;
-        const { error } = await supabase
-          .from("empleados")
-          .update(safeEditPayload)
-          .eq("id", editingEmpleado.id);
-
-        if (error) throw error;
         empleadoId = editingEmpleado.id;
 
-        // Update extras via RPC
-        console.log("RPC update_empleado_extras:", {
-          p_empleado_id: empleadoId,
-          p_beneficiario: (formData as any).beneficiario,
-          p_premio_asistencia_semanal: (formData as any).premio_asistencia_semanal,
-        });
-        const { error: rpcEditError } = await supabase.rpc("update_empleado_extras", {
-          p_empleado_id: empleadoId,
+        // UPDATE completo via RPC — bypasea PostgREST schema cache
+        const { error } = await supabase.rpc("update_empleado_completo", {
+          p_id: empleadoId,
+          p_nombre_completo: nombreCompleto,
+          p_nombre: formData.nombre || null,
+          p_primer_apellido: formData.primer_apellido || null,
+          p_segundo_apellido: formData.segundo_apellido || null,
+          p_rfc: formData.rfc || null,
+          p_curp: formData.curp || null,
+          p_fecha_nacimiento: formData.fecha_nacimiento || null,
+          p_telefono: formData.telefono || null,
+          p_email: formData.email || null,
+          p_fecha_ingreso: formData.fecha_ingreso || null,
+          p_puesto: formData.puesto || null,
+          p_activo: formData.activo,
+          p_notas: formData.notas || null,
+          p_user_id: formData.user_id || null,
+          p_sueldo_bruto: formData.sueldo_bruto ? parseFloat(formData.sueldo_bruto) : null,
+          p_periodo_pago: formData.periodo_pago || null,
+          p_fecha_baja: formData.fecha_baja || null,
+          p_motivo_baja: formData.motivo_baja || null,
           p_beneficiario: (formData as any).beneficiario || null,
           p_premio_asistencia_semanal: (formData as any).premio_asistencia_semanal || null,
+          p_numero_seguro_social: formData.numero_seguro_social || null,
+          p_contacto_emergencia_nombre: formData.contacto_emergencia_nombre || null,
+          p_contacto_emergencia_telefono: formData.contacto_emergencia_telefono || null,
+          p_tipo_sangre: formData.tipo_sangre || null,
+          p_estado_civil: formData.estado_civil || null,
+          p_numero_dependientes: formData.numero_dependientes ? parseInt(formData.numero_dependientes) : null,
+          p_nivel_estudios: formData.nivel_estudios || null,
+          p_cuenta_bancaria: formData.cuenta_bancaria || null,
+          p_clabe_interbancaria: formData.clabe_interbancaria || null,
         });
-        if (rpcEditError) console.error("ERROR RPC update:", rpcEditError);
+        if (error) throw error;
 
         // Si el empleado tiene usuario asociado, actualizar el nombre en profiles
         if (formData.user_id) {
