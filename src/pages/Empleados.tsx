@@ -276,7 +276,7 @@ const Empleados = () => {
   const loadEmpleados = async () => {
     try {
       const { data, error } = await supabase
-        .from("empleados_con_extras")
+        .from("empleados")
         .select("*")
         .order("nombre_completo");
 
