@@ -269,6 +269,24 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
           console.warn("[Firma] avisoResult.pdfBlob is undefined");
         }
 
+        // Register documents in empleados_documentos table so they appear in expediente
+        if (contratoUploaded) {
+          await supabase.from("empleados_documentos").insert({
+            empleado_id: empleado.id,
+            nombre_archivo: `contrato_firmado_${hoy}.pdf`,
+            ruta_storage: contratoPath,
+            tipo_documento: "contrato",
+          });
+        }
+        if (avisoUploaded) {
+          await supabase.from("empleados_documentos").insert({
+            empleado_id: empleado.id,
+            nombre_archivo: `aviso_privacidad_${hoy}.pdf`,
+            ruta_storage: avisoPath,
+            tipo_documento: "aviso_privacidad",
+          });
+        }
+
         // Update empleado record via RPC
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
