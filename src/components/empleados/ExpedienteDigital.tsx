@@ -34,7 +34,7 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
 
   const getSignedUrl = async (fileName: string) => {
     const { data } = await supabase.storage
-      .from("documentos-empleados")
+      .from("empleados-documentos")
       .createSignedUrl(`${empleadoId}/${fileName}`, 60 * 60); // 1 hour
     return data?.signedUrl || null;
   };

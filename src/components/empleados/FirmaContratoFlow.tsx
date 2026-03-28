@@ -259,7 +259,7 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
         }
 
         if (avisoResult.pdfBlob) {
-          const { error: upErr } = await supabase.storage.from("documentos-empleados").upload(avisoPath, avisoResult.pdfBlob, {
+          const { error: upErr } = await supabase.storage.from("empleados-documentos").upload(avisoPath, avisoResult.pdfBlob, {
             contentType: "application/pdf",
             upsert: true,
           });
