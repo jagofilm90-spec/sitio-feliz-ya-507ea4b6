@@ -18,6 +18,7 @@ interface ExpedienteDigitalProps {
 
 export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
   const { toast } = useToast();
+  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
   const [files, setFiles] = useState<StorageFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [emailDialog, setEmailDialog] = useState<{ open: boolean; fileName: string }>({ open: false, fileName: "" });
@@ -59,10 +60,10 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
   };
 
   const handleView = async (fileName: string) => {
+    if (previewBlobUrl) URL.revokeObjectURL(previewBlobUrl);
     const blob = await getFileBlob(fileName);
     if (blob) {
-      const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, "_blank");
+      setPreviewBlobUrl(URL.createObjectURL(blob));
     } else {
       toast({ title: "Error", description: "No se pudo abrir el documento", variant: "destructive" });
     }
@@ -83,14 +84,8 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
   };
 
   const handlePrint = async (fileName: string) => {
-    const blob = await getFileBlob(fileName);
-    if (blob) {
-      const blobUrl = URL.createObjectURL(blob);
-      const win = window.open(blobUrl, "_blank");
-      if (win) win.addEventListener("load", () => win.print());
-    } else {
-      toast({ title: "Error", description: "No se pudo imprimir el documento", variant: "destructive" });
-    }
+    await handleDownload(fileName);
+    toast({ title: "Documento descargado", description: "Abre el PDF descargado e imprímelo desde ahí." });
   };
 
   const handleSendEmail = async () => {
@@ -208,6 +203,18 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {previewBlobUrl && (
+          <div className="mt-4 border rounded-lg overflow-hidden">
+            <div className="flex justify-between items-center p-2 bg-muted">
+              <span className="text-sm font-medium">Vista previa</span>
+              <Button variant="ghost" size="sm" onClick={() => { URL.revokeObjectURL(previewBlobUrl); setPreviewBlobUrl(null); }}>
+                Cerrar
+              </Button>
+            </div>
+            <iframe src={previewBlobUrl} className="w-full h-[500px]" title="Preview" />
           </div>
         )}
       </div>
