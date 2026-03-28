@@ -31,16 +31,16 @@ function addMembrete(pdf: jsPDF, logoBase64: string | null, mL: number, mR: numb
   let y = 12;
   // Logo pequeño izquierda
   if (logoBase64) {
-    try { pdf.addImage(logoBase64, "PNG", mL, y, 20, 20); } catch {}
+    try { pdf.addImage(logoBase64, "PNG", mL, y, 28, 16); } catch {}
   }
   // Nombre empresa
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(11);
-  pdf.text("ABARROTES LA MANITA, S.A. DE C.V.", mL + 24, y + 8);
+  pdf.text("ABARROTES LA MANITA, S.A. DE C.V.", mL + 32, y + 8);
   pdf.setFont("helvetica", "italic");
   pdf.setFontSize(7);
   pdf.setTextColor(150);
-  pdf.text("Desde 1904", mL + 24, y + 13);
+  pdf.text("Desde 1904", mL + 32, y + 13);
   pdf.setTextColor(0);
   // Datos empresa a la derecha
   pdf.setFont("helvetica", "normal");
@@ -442,6 +442,55 @@ El vendedor deberá dar seguimiento a sus clientes, incluyendo:
 
 V. Incumplimientos
 Cualquier desviación en precios, condiciones o manejo de clientes podrá ser considerada falta grave.`,
+
+  "Gerente de Almacén": `Objeto del puesto:
+El trabajador será responsable de supervisar, coordinar y controlar todas las operaciones del almacén, incluyendo la recepción, almacenamiento, preparación y despacho de mercancía, asegurando el orden, la eficiencia operativa y la integridad del inventario.
+
+Funciones y responsabilidades:
+I. Supervisar y coordinar las actividades diarias del almacén, incluyendo recepción, acomodo, preparación de pedidos y despacho de mercancía.
+II. Verificar que la mercancía recibida coincida en cantidad, presentación y condiciones físicas con las órdenes de compra y documentos de entrada.
+III. Mantener actualizado el control de inventarios, realizando conteos periódicos y conciliando existencias físicas con el sistema.
+IV. Coordinar al personal de almacén (almacenistas y ayudantes), asignando tareas y supervisando su desempeño.
+V. Asegurar el correcto almacenamiento de los productos, respetando las condiciones de conservación y la rotación adecuada (PEPS).
+VI. Supervisar la preparación de pedidos, verificando que las cantidades y productos correspondan con las notas de salida.
+VII. Reportar faltantes, mermas, daños o cualquier anomalía detectada en el inventario a la dirección general.
+VIII. Coordinar con el área de compras la recepción programada de mercancía y con el área de ventas el despacho oportuno de pedidos.
+IX. Implementar y hacer cumplir las políticas y procedimientos operativos del almacén.
+X. Mantener el orden y limpieza general del almacén y sus áreas de trabajo.
+XI. Elaborar reportes periódicos de movimientos de almacén, mermas e inventario.
+XII. Supervisar el correcto uso y mantenimiento de los equipos de almacén (montacargas, básculas, tarimas).
+XIII. Capacitar al personal de nuevo ingreso en los procedimientos y políticas del almacén.
+
+RESPONSABILIDAD DEL PUESTO:
+El gerente de almacén será responsable directo de la integridad del inventario y de la eficiencia operativa del almacén.
+Cualquier pérdida, daño o diferencia en el inventario derivada de negligencia, falta de supervisión o incumplimiento de los procedimientos establecidos podrá generar responsabilidad conforme a las políticas internas de la empresa.
+
+CLÁUSULA ADICIONAL:
+El trabajador se obliga a cumplir con las funciones descritas y aquellas adicionales que le sean asignadas, siempre que sean acordes a la naturaleza de su puesto y necesarias para la operación de la empresa.
+
+CLÁUSULA DE RESPONSABILIDAD POR INVENTARIO:
+El trabajador reconoce que es responsable del control y resguardo del inventario almacenado.
+
+I. Control de inventario
+El gerente de almacén deberá mantener actualizado el registro de entradas y salidas de mercancía, verificando que las existencias físicas coincidan con el sistema.
+
+II. Recepción de mercancía
+Toda recepción deberá ser verificada en cantidad, presentación y condiciones antes de ser ingresada al sistema y almacenada.
+
+III. Despacho de mercancía
+El gerente de almacén deberá verificar que todo despacho cuente con la documentación correspondiente y esté debidamente autorizado.
+
+IV. Mermas y faltantes
+Cualquier diferencia detectada en el inventario deberá ser reportada de inmediato y documentada. Las mermas recurrentes o injustificadas podrán generar responsabilidad.
+
+V. Supervisión de personal
+El gerente de almacén es corresponsable de las acciones del personal a su cargo durante las operaciones del almacén.
+
+VI. Reportes
+Deberá presentar reportes periódicos de inventario, mermas y movimientos a la dirección general.
+
+VII. Seguridad
+Es responsable de que se cumplan las medidas de seguridad dentro del almacén, incluyendo el acceso restringido a personal no autorizado.`,
 
 };
 
