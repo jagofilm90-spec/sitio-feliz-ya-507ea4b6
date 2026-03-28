@@ -281,7 +281,7 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
         console.warn("Error subiendo PDFs al storage:", uploadErr);
       }
 
-      // Send welcome email with signed PDFs via Gmail API
+      // Send welcome email via gmail-api edge function
       if (empleado.email) {
         try {
           const contratoPath = `${empleado.id}/contrato_firmado_${hoy}.pdf`;
@@ -289,50 +289,29 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
           const { data: contratoUrlData } = await supabase.storage.from("documentos-empleados").createSignedUrl(contratoPath, 60 * 60 * 24 * 7);
           const { data: avisoUrlData } = await supabase.storage.from("documentos-empleados").createSignedUrl(avisoPath, 60 * 60 * 24 * 7);
 
-          const fechaIngresoFormateada = new Date(empleado.fecha_ingreso).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
-
-          const htmlBody = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background-color: #dc2626; padding: 20px; text-align: center;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">¡Bienvenido/a a ALMASA!</h1>
-              </div>
-              <div style="padding: 30px 20px; background-color: #ffffff;">
-                <p style="font-size: 16px; color: #333;">Estimado/a <strong>${empleado.nombre_completo}</strong>,</p>
-                <p style="font-size: 14px; color: #555; line-height: 1.6;">
-                  Es un gusto darte la bienvenida a <strong>Abarrotes La Manita, S.A. de C.V.</strong> 
-                  Te informamos que tu contrato individual de trabajo y aviso de privacidad han sido firmados exitosamente.
-                </p>
-                <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                  <tr>
-                    <td style="padding: 8px 12px; background-color: #f9fafb; border: 1px solid #e5e7eb; font-weight: bold; color: #374151;">Puesto</td>
-                    <td style="padding: 8px 12px; border: 1px solid #e5e7eb; color: #555;">${empleado.puesto}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 12px; background-color: #f9fafb; border: 1px solid #e5e7eb; font-weight: bold; color: #374151;">Fecha de ingreso</td>
-                    <td style="padding: 8px 12px; border: 1px solid #e5e7eb; color: #555;">${fechaIngresoFormateada}</td>
-                  </tr>
-                </table>
-                ${contratoUrlData?.signedUrl || avisoUrlData?.signedUrl ? `
-                <p style="font-size: 14px; color: #555;">Puedes descargar tus documentos firmados desde los siguientes enlaces (válidos por 7 días):</p>
-                <div style="margin: 15px 0;">
-                  ${contratoUrlData?.signedUrl ? `<p style="margin: 8px 0;"><a href="${contratoUrlData.signedUrl}" style="background-color: #dc2626; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-size: 14px;">📄 Descargar Contrato</a></p>` : ''}
-                  ${avisoUrlData?.signedUrl ? `<p style="margin: 8px 0;"><a href="${avisoUrlData.signedUrl}" style="background-color: #dc2626; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-size: 14px;">📄 Descargar Aviso de Privacidad</a></p>` : ''}
-                </div>` : ''}
-                <p style="font-size: 14px; color: #555; margin-top: 25px;">
-                  Te deseamos mucho éxito en esta nueva etapa. ¡Estamos contentos de tenerte en el equipo!
-                </p>
-              </div>
-              <div style="background-color: #f3f4f6; padding: 15px 20px; text-align: center; font-size: 12px; color: #9ca3af;">
-                Abarrotes La Manita, S.A. de C.V. — Departamento de Recursos Humanos
-              </div>
-            </div>`;
+          const fechaIngresoFmt = empleado.fecha_ingreso.split("-").reverse().join("/");
+          const htmlBody = `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0;font-family:Arial,Helvetica,sans-serif"><tr><td align="center"><table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;background:#fff;border-radius:4px;overflow:hidden;border:1px solid #e0e0e0">
+<tr><td style="padding:28px 36px;border-bottom:1px solid #eee;text-align:center"><p style="margin:0;color:#999;font-size:11px;font-style:italic;letter-spacing:1px">Desde 1904</p><img src="https://vrcyjmfpteoccqdmdmqn.supabase.co/storage/v1/object/public/email-assets/logo-almasa.png" alt="ALMASA" width="180" style="display:inline-block;max-width:180px;height:auto"/><p style="margin:4px 0 0;font-size:10px;color:#888;text-transform:uppercase;letter-spacing:2px;font-weight:600">Trabajando por un México mejor</p></td></tr>
+<tr><td style="padding:28px 36px">
+<h2 style="margin:0 0 20px;font-size:18px;color:#222;font-weight:700">¡Bienvenido/a a la familia ALMASA!</h2>
+<p style="color:#444;font-size:14px;line-height:1.6;margin:0 0 20px">Estimado/a <strong>${empleado.nombre_completo}</strong>, nos da mucho gusto que te incorpores a nuestro equipo como <strong>${empleado.puesto}</strong>.</p>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 20px">
+<tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0;width:140px">Puesto</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0;font-weight:700">${empleado.puesto}</td></tr>
+<tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0">Fecha de ingreso</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0">${fechaIngresoFmt}</td></tr>
+</table>
+${contratoUrlData?.signedUrl || avisoUrlData?.signedUrl ? `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 20px"><tr><td style="padding:8px 0;font-size:13px;font-weight:600;color:#222;border-bottom:1px solid #eee">Documentos firmados</td></tr>${contratoUrlData?.signedUrl ? `<tr><td style="padding:6px 0;font-size:13px"><a href="${contratoUrlData.signedUrl}" style="color:#222;text-decoration:underline">Descargar Contrato Individual</a></td></tr>` : ""}${avisoUrlData?.signedUrl ? `<tr><td style="padding:6px 0;font-size:13px"><a href="${avisoUrlData.signedUrl}" style="color:#222;text-decoration:underline">Descargar Aviso de Privacidad</a></td></tr>` : ""}<tr><td style="padding:4px 0;font-size:11px;color:#888">Los enlaces son válidos por 7 días.</td></tr></table>` : ""}
+<p style="color:#555;font-size:13px;margin:0 0 8px">Si tienes alguna duda, no dudes en contactarnos.</p>
+<p style="color:#222;font-size:16px;font-weight:700;margin:16px 0 0">¡Trabajando por un México mejor!</p>
+</td></tr>
+<tr><td style="padding:20px 36px;border-top:1px solid #eee"><p style="margin:0 0 4px;color:#666;font-size:11px;font-weight:600">José Antonio Gómez Ortega</p><p style="margin:0;color:#999;font-size:10px">Director General — ALMASA</p><p style="margin:4px 0 0;color:#999;font-size:10px;line-height:1.6">Melchor Ocampo #59, Col. Magdalena Mixiuhca, C.P. 15850, CDMX<br>Tel: 55 5552-0168 / 55 5552-7887</p></td></tr>
+</table></td></tr></table>`;
 
           const { error: emailError } = await supabase.functions.invoke("gmail-api", {
             body: {
               action: "send",
               email: "1904@almasa.com.mx",
               to: empleado.email,
-              subject: `¡Bienvenido/a a ALMASA! - ${empleado.nombre_completo}`,
+              subject: `¡Bienvenido/a a la familia ALMASA! — ${empleado.nombre_completo}`,
               body: htmlBody,
             },
           });
@@ -341,7 +320,7 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
             console.warn("Email de bienvenida no enviado:", emailError.message);
             toast({ title: "Documentos firmados y descargados", description: "No se pudo enviar el email de bienvenida, pero los documentos se guardaron correctamente." });
           } else {
-            toast({ title: "✅ Documentos firmados", description: `Email de bienvenida enviado a ${empleado.email}` });
+            toast({ title: "Documentos firmados", description: `Email de bienvenida enviado a ${empleado.email}` });
           }
         } catch (emailErr) {
           console.warn("Error enviando email de bienvenida:", emailErr);
