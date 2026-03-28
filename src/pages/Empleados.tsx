@@ -100,6 +100,7 @@ interface Empleado {
   premio_asistencia_semanal: number | null;
   fecha_baja: string | null;
   motivo_baja: "renuncia" | "despido" | "abandono" | null;
+  contrato_firmado_fecha: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -666,6 +667,14 @@ const Empleados = () => {
   const handleGenerarTodos = async (empleado: Empleado) => {
     await handleGenerarContrato(empleado);
     await handleGenerarAviso(empleado);
+  };
+
+  const handleFirmarContrato = (empleado: Empleado) => {
+    if (empleado.contrato_firmado_fecha) {
+      const fecha = new Date(empleado.contrato_firmado_fecha).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
+      if (!confirm(`Este empleado ya tiene un contrato firmado del ${fecha}. ¿Deseas generar uno nuevo? El anterior se reemplazará.`)) return;
+    }
+    setFirmaFlowEmpleado(empleado);
   };
 
   const handleQuitarAcceso = async (empleado: Empleado) => {
@@ -1852,7 +1861,14 @@ const Empleados = () => {
                         filteredEmpleados.map((empleado) => (
                           <TableRow key={empleado.id}>
                             <TableCell className="font-medium">
-                              {empleado.nombre_completo}
+                              <div className="flex items-center gap-2">
+                                {empleado.nombre_completo}
+                                {empleado.contrato_firmado_fecha ? (
+                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300 shrink-0">Firmado</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-300 shrink-0">Pendiente</Badge>
+                                )}
+                              </div>
                             </TableCell>
                             {tab === 'todos' && <TableCell><Badge variant="outline">{empleado.puesto}</Badge></TableCell>}
                             <TableCell>
@@ -1937,8 +1953,8 @@ const Empleados = () => {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => setFirmaFlowEmpleado(empleado)}>
-                                      Firmar Contrato
+                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleFirmarContrato(empleado)}>
+                                      {empleado.contrato_firmado_fecha ? "Volver a firmar" : "Firmar Contrato"}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarContrato(empleado)}>
                                       Contrato (vista previa)
@@ -2020,7 +2036,14 @@ const Empleados = () => {
                         return (
                           <TableRow key={empleado.id}>
                             <TableCell className="font-medium">
-                              {empleado.nombre_completo}
+                              <div className="flex items-center gap-2">
+                                {empleado.nombre_completo}
+                                {empleado.contrato_firmado_fecha ? (
+                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300 shrink-0">Firmado</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-300 shrink-0">Pendiente</Badge>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="text-sm">
@@ -2155,8 +2178,8 @@ const Empleados = () => {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => setFirmaFlowEmpleado(empleado)}>
-                                      Firmar Contrato
+                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleFirmarContrato(empleado)}>
+                                      {empleado.contrato_firmado_fecha ? "Volver a firmar" : "Firmar Contrato"}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarContrato(empleado)}>
                                       Contrato (vista previa)
@@ -2237,7 +2260,14 @@ const Empleados = () => {
                         return (
                           <TableRow key={empleado.id}>
                             <TableCell className="font-medium">
-                              {empleado.nombre_completo}
+                              <div className="flex items-center gap-2">
+                                {empleado.nombre_completo}
+                                {empleado.contrato_firmado_fecha ? (
+                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300 shrink-0">Firmado</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-300 shrink-0">Pendiente</Badge>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="text-sm">
@@ -2372,8 +2402,8 @@ const Empleados = () => {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => setFirmaFlowEmpleado(empleado)}>
-                                      Firmar Contrato
+                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleFirmarContrato(empleado)}>
+                                      {empleado.contrato_firmado_fecha ? "Volver a firmar" : "Firmar Contrato"}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarContrato(empleado)}>
                                       Contrato (vista previa)

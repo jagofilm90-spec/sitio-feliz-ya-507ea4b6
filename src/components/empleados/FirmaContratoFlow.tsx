@@ -360,6 +360,9 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
       } else {
         toast({ title: "Documentos firmados y descargados", description: "Contrato y Aviso de Privacidad generados con firmas digitales." });
       }
+      // Mark contract as signed
+      await supabase.from("empleados").update({ contrato_firmado_fecha: new Date().toISOString() } as any).eq("id", empleado.id);
+
       onSigned?.();
       onClose();
     } catch (e: any) {
