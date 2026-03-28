@@ -4,6 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { EmpleadoCardMobile } from "@/components/empleados/EmpleadoCardMobile";
 import { DarAccesoSistemaDialog } from "@/components/empleados/DarAccesoSistemaDialog";
 import { FirmaContratoFlow } from "@/components/empleados/FirmaContratoFlow";
+import { ExpedienteDigital } from "@/components/empleados/ExpedienteDigital";
 import { generarContratoPDF, generarAvisoPrivacidadPDF } from "@/lib/generarContratoPDF";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Layout from "@/components/Layout";
@@ -62,6 +63,8 @@ import {
   Bell,
   AlertTriangle,
   FileStack,
+  CheckCircle,
+  Clock,
 } from "lucide-react";
 
 interface Empleado {
@@ -168,6 +171,7 @@ const Empleados = () => {
   const [editingLicenseDoc, setEditingLicenseDoc] = useState<EmpleadoDocumento | null>(null);
   const [uploading, setUploading] = useState(false);
   const [firmaFlowEmpleado, setFirmaFlowEmpleado] = useState<Empleado | null>(null);
+  const [expedienteStatus, setExpedienteStatus] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<string>("todos");
   const [filtroPuesto, setFiltroPuesto] = useState<"todos" | "secretaria" | "vendedor" | "chofer" | "almacenista" | "gerente de almacén">("todos");
   const [filtroActivo, setFiltroActivo] = useState<"todos" | "activos" | "inactivos">("todos");
@@ -316,6 +320,17 @@ const Empleados = () => {
         
         setDocumentos(docsMap);
         setDocumentosPendientes(pendingDocsMap);
+
+        // Check expediente status (signed docs in storage)
+        const statusMap: Record<string, boolean> = {};
+        const statusChecks = data.map(async (emp) => {
+          const { data: files } = await supabase.storage
+            .from("documentos-empleados")
+            .list(emp.id, { limit: 1 });
+          statusMap[emp.id] = (files?.length ?? 0) > 0;
+        });
+        await Promise.all(statusChecks).catch(() => {});
+        setExpedienteStatus(statusMap);
       }
     } catch (error: any) {
       toast({
@@ -1893,8 +1908,13 @@ const Empleados = () => {
                                 </Button>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" title="Documentos">
+                                    <Button variant="ghost" size="sm" title="Documentos" className="relative">
                                       <FileText className="h-4 w-4" />
+                                      {expedienteStatus[empleado.id] ? (
+                                        <CheckCircle className="h-2.5 w-2.5 text-green-500 absolute -top-0.5 -right-0.5" />
+                                      ) : (
+                                        <Clock className="h-2.5 w-2.5 text-orange-400 absolute -top-0.5 -right-0.5" />
+                                      )}
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
@@ -2131,8 +2151,13 @@ const Empleados = () => {
                                 </Button>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" title="Documentos">
+                                    <Button variant="ghost" size="sm" title="Documentos" className="relative">
                                       <FileText className="h-4 w-4" />
+                                      {expedienteStatus[empleado.id] ? (
+                                        <CheckCircle className="h-2.5 w-2.5 text-green-500 absolute -top-0.5 -right-0.5" />
+                                      ) : (
+                                        <Clock className="h-2.5 w-2.5 text-orange-400 absolute -top-0.5 -right-0.5" />
+                                      )}
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
@@ -2368,8 +2393,13 @@ const Empleados = () => {
                                 </Button>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" title="Documentos">
+                                    <Button variant="ghost" size="sm" title="Documentos" className="relative">
                                       <FileText className="h-4 w-4" />
+                                      {expedienteStatus[empleado.id] ? (
+                                        <CheckCircle className="h-2.5 w-2.5 text-green-500 absolute -top-0.5 -right-0.5" />
+                                      ) : (
+                                        <Clock className="h-2.5 w-2.5 text-orange-400 absolute -top-0.5 -right-0.5" />
+                                      )}
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
@@ -2419,6 +2449,11 @@ const Empleados = () => {
             </DialogHeader>
 
             <div className="space-y-6">
+              {/* Expediente Digital — documentos firmados */}
+              {selectedEmpleado && (
+                <ExpedienteDigital empleadoId={selectedEmpleado} />
+              )}
+
               {/* Documentos pendientes */}
               {selectedEmpleado && documentosPendientes[selectedEmpleado]?.length > 0 && (
                 <div className="border border-destructive/50 rounded-lg p-4 bg-destructive/5">
@@ -2842,6 +2877,7 @@ const Empleados = () => {
         <FirmaContratoFlow
           open={!!firmaFlowEmpleado}
           onClose={() => setFirmaFlowEmpleado(null)}
+          onSigned={() => loadEmpleados()}
           empleado={{
             id: firmaFlowEmpleado.id,
             nombre_completo: firmaFlowEmpleado.nombre_completo,
@@ -2850,6 +2886,7 @@ const Empleados = () => {
             puesto: firmaFlowEmpleado.puesto,
             sueldo_bruto: firmaFlowEmpleado.sueldo_bruto || 0,
             fecha_ingreso: firmaFlowEmpleado.fecha_ingreso,
+            email: firmaFlowEmpleado.email,
             direccion: (firmaFlowEmpleado as any).direccion || null,
             beneficiario: (firmaFlowEmpleado as any).beneficiario,
             premio_asistencia_semanal: (firmaFlowEmpleado as any).premio_asistencia_semanal,

@@ -17,6 +17,7 @@ interface FirmaContratoFlowProps {
     puesto: string;
     sueldo_bruto: number;
     fecha_ingreso: string;
+    email?: string | null;
     direccion?: string | null;
     beneficiario?: string;
     premio_asistencia_semanal?: number | null;
@@ -280,7 +281,40 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
         console.warn("Error subiendo PDFs al storage:", uploadErr);
       }
 
-      toast({ title: "Documentos firmados y descargados", description: "Contrato y Aviso de Privacidad generados con firmas digitales." });
+      // TODO: Deploy edge function 'send-welcome-email' to enable email sending
+      // Send welcome email with signed PDFs
+      if (empleado.email) {
+        try {
+          const contratoPath = `${empleado.id}/contrato_firmado_${hoy}.pdf`;
+          const avisoPath = `${empleado.id}/aviso_privacidad_${hoy}.pdf`;
+          const { data: contratoUrlData } = await supabase.storage.from("documentos-empleados").createSignedUrl(contratoPath, 60 * 60 * 24 * 7); // 7 days
+          const { data: avisoUrlData } = await supabase.storage.from("documentos-empleados").createSignedUrl(avisoPath, 60 * 60 * 24 * 7);
+
+          const { error: emailError } = await supabase.functions.invoke("send-welcome-email", {
+            body: {
+              empleado_id: empleado.id,
+              email: empleado.email,
+              nombre: empleado.nombre_completo,
+              puesto: empleado.puesto,
+              fecha_ingreso: empleado.fecha_ingreso,
+              contrato_url: contratoUrlData?.signedUrl || null,
+              aviso_url: avisoUrlData?.signedUrl || null,
+            },
+          });
+
+          if (emailError) {
+            console.warn("Email de bienvenida no enviado:", emailError.message);
+            toast({ title: "Documentos firmados y descargados", description: "El email de bienvenida se enviará cuando el servicio de correo esté configurado." });
+          } else {
+            toast({ title: "Documentos firmados y descargados", description: `Email de bienvenida enviado a ${empleado.email}` });
+          }
+        } catch (emailErr) {
+          console.warn("Edge function send-welcome-email no disponible:", emailErr);
+          toast({ title: "Documentos firmados y descargados", description: "El email de bienvenida se enviará cuando el servicio de correo esté configurado." });
+        }
+      } else {
+        toast({ title: "Documentos firmados y descargados", description: "Contrato y Aviso de Privacidad generados con firmas digitales." });
+      }
       onSigned?.();
       onClose();
     } catch (e: any) {
