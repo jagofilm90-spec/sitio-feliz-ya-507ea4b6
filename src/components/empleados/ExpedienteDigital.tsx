@@ -141,7 +141,7 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
 // Helper to check if an employee has signed documents (for table indicator)
 export async function checkExpedienteStatus(empleadoId: string): Promise<boolean> {
   const { data } = await supabase.storage
-    .from("documentos-empleados")
+    .from("empleados-documentos")
     .list(empleadoId, { limit: 1 });
   return (data?.length ?? 0) > 0;
 }
