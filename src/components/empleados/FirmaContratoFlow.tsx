@@ -362,9 +362,10 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
         toast({ title: "Documentos firmados y descargados", description: "Contrato y Aviso de Privacidad generados con firmas digitales." });
       }
       // Mark contract as signed (direct fetch to bypass schema cache)
+      console.log("[Firma] Actualizando contrato_firmado_fecha para:", empleado.id);
       const { data: { session: signSession } } = await supabase.auth.getSession();
       if (signSession) {
-        await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados?id=eq.${empleado.id}`, {
+        const patchRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados?id=eq.${empleado.id}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -374,6 +375,7 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
           },
           body: JSON.stringify({ contrato_firmado_fecha: new Date().toISOString() }),
         });
+        console.log("[Firma] PATCH result:", patchRes.status, patchRes.statusText);
       }
 
       onSigned?.();

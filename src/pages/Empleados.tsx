@@ -290,6 +290,7 @@ const Empleados = () => {
       setEmpleados((data || []) as unknown as Empleado[]);
 
       // Fetch contrato_firmado_fecha via direct API (bypass schema cache)
+      console.log("[Empleados] Fetching contrato_firmado_fecha...");
       const { data: { session: s } } = await supabase.auth.getSession();
       if (s && data) {
         try {
@@ -300,6 +301,7 @@ const Empleados = () => {
             },
           });
           const fechas = await res.json();
+          console.log("[Empleados] Fechas:", fechas);
           if (Array.isArray(fechas)) {
             const updatedEmps = (data as any[]).map(emp => {
               const match = fechas.find((f: any) => f.id === emp.id);
@@ -307,7 +309,7 @@ const Empleados = () => {
             });
             setEmpleados(updatedEmps as unknown as Empleado[]);
           }
-        } catch {}
+        } catch (e) { console.error("[Empleados] Error fetching fechas:", e); }
       }
     } catch (error: any) {
       toast({
