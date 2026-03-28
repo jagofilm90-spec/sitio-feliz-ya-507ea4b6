@@ -76,7 +76,9 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
       const a = document.createElement("a");
       a.href = blobUrl;
       a.download = fileName;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
     } else {
       toast({ title: "Error", description: "No se pudo descargar el documento", variant: "destructive" });
