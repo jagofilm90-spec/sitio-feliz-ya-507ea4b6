@@ -1840,6 +1840,7 @@ export type Database = {
           clabe_interbancaria: string | null
           contacto_emergencia_nombre: string | null
           contacto_emergencia_telefono: string | null
+          contrato_firmado_fecha: string | null
           created_at: string
           cuenta_bancaria: string | null
           curp: string | null
@@ -1878,6 +1879,7 @@ export type Database = {
           clabe_interbancaria?: string | null
           contacto_emergencia_nombre?: string | null
           contacto_emergencia_telefono?: string | null
+          contrato_firmado_fecha?: string | null
           created_at?: string
           cuenta_bancaria?: string | null
           curp?: string | null
@@ -1916,6 +1918,7 @@ export type Database = {
           clabe_interbancaria?: string | null
           contacto_emergencia_nombre?: string | null
           contacto_emergencia_telefono?: string | null
+          contrato_firmado_fecha?: string | null
           created_at?: string
           cuenta_bancaria?: string | null
           curp?: string | null
