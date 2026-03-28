@@ -21,7 +21,7 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
     const load = async () => {
       setLoading(true);
       const { data, error } = await supabase.storage
-        .from("documentos-empleados")
+        .from("empleados-documentos")
         .list(empleadoId, { sortBy: { column: "created_at", order: "desc" } });
 
       if (!error && data) {
