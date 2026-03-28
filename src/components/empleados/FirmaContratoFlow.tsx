@@ -293,27 +293,22 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
         console.error("[Firma] Error en upload/RPC:", uploadErr);
       }
 
-      // Send welcome email via gmail-api edge function
+      // Send welcome email with PDFs attached via gmail-api
       if (empleado.email) {
         try {
-          // Create signed URLs only for successfully uploaded files
-          let contratoSignedUrl: string | null = null;
-          let avisoSignedUrl: string | null = null;
+          // Convert blobs to base64 for email attachments
+          const blobToBase64 = (blob: Blob): Promise<string> => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve((reader.result as string).split(",")[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
 
-          if (contratoUploaded) {
-            const { data } = await supabase.storage.from("documentos-empleados").createSignedUrl(contratoPath, 60 * 60 * 24 * 7);
-            contratoSignedUrl = data?.signedUrl || null;
-            console.log("[Firma] Contrato signed URL:", contratoSignedUrl ? "OK" : "null");
-          }
-          if (avisoUploaded) {
-            const { data } = await supabase.storage.from("documentos-empleados").createSignedUrl(avisoPath, 60 * 60 * 24 * 7);
-            avisoSignedUrl = data?.signedUrl || null;
-            console.log("[Firma] Aviso signed URL:", avisoSignedUrl ? "OK" : "null");
-          }
+          const contratoBase64 = contratoResult.pdfBlob ? await blobToBase64(contratoResult.pdfBlob) : null;
+          const avisoBase64 = avisoResult.pdfBlob ? await blobToBase64(avisoResult.pdfBlob) : null;
+          const nombreArchivo = empleado.nombre_completo.replace(/\s+/g, "_");
 
           const fechaIngresoFmt = empleado.fecha_ingreso.split("-").reverse().join("/");
-          const fechaPrueba = new Date(new Date(empleado.fecha_ingreso).getTime() + 90 * 24 * 60 * 60 * 1000);
-          const fechaPruebaFmt = fechaPrueba.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
 
           const htmlBody = `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0;font-family:Arial,Helvetica,sans-serif"><tr><td align="center"><table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;background:#fff;border-radius:4px;overflow:hidden;border:1px solid #e0e0e0">
 <tr><td style="padding:28px 36px;border-bottom:1px solid #eee;text-align:center"><p style="margin:0;color:#999;font-size:11px;font-style:italic;letter-spacing:1px">Desde 1904</p><img src="https://vrcyjmfpteoccqdmdmqn.supabase.co/storage/v1/object/public/email-assets/logo-almasa.png" alt="ALMASA" width="180" style="display:inline-block;max-width:180px;height:auto"/><p style="margin:4px 0 0;font-size:10px;color:#888;text-transform:uppercase;letter-spacing:2px;font-weight:600">Trabajando por un México mejor</p></td></tr>
@@ -329,14 +324,17 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
 <p style="color:#888;font-size:12px;margin:0">Director General</p>
 <p style="color:#888;font-size:12px;margin:0">Abarrotes La Manita, S.A. de C.V.</p>
 <div style="border-top:1px solid #eee;margin-top:28px;padding-top:20px">
-<p style="font-size:13px;font-weight:600;color:#222;margin:0 0 10px">Adjunto tus documentos firmados:</p>
-${contratoSignedUrl ? `<p style="font-size:13px;margin:6px 0"><a href="${contratoSignedUrl}" style="color:#222;text-decoration:underline">Contrato Individual de Trabajo</a></p>` : ""}
-${avisoSignedUrl ? `<p style="font-size:13px;margin:6px 0"><a href="${avisoSignedUrl}" style="color:#222;text-decoration:underline">Aviso de Privacidad</a></p>` : ""}
-<p style="font-size:11px;color:#888;margin:8px 0 0">Los enlaces son válidos por 7 días.</p>
+<p style="font-size:13px;font-weight:600;color:#222;margin:0 0 10px">Adjunto encontrarás tus documentos firmados:</p>
+<p style="font-size:13px;color:#555;margin:4px 0">• Contrato Individual de Trabajo</p>
+<p style="font-size:13px;color:#555;margin:4px 0">• Aviso de Privacidad</p>
 </div>
 </td></tr>
 <tr><td style="padding:16px 36px;border-top:1px solid #eee"><p style="margin:0;color:#999;font-size:10px;line-height:1.6">Abarrotes La Manita, S.A. de C.V. | Melchor Ocampo #59, Col. Magdalena Mixiuhca, C.P. 15850, CDMX | Tel: 55 5552-0168</p></td></tr>
 </table></td></tr></table>`;
+
+          const attachments: Array<{ filename: string; mimeType: string; content: string }> = [];
+          if (contratoBase64) attachments.push({ filename: `Contrato_${nombreArchivo}.pdf`, mimeType: "application/pdf", content: contratoBase64 });
+          if (avisoBase64) attachments.push({ filename: `Aviso_Privacidad_${nombreArchivo}.pdf`, mimeType: "application/pdf", content: avisoBase64 });
 
           const { error: emailError } = await supabase.functions.invoke("gmail-api", {
             body: {
@@ -345,6 +343,7 @@ ${avisoSignedUrl ? `<p style="font-size:13px;margin:6px 0"><a href="${avisoSigne
               to: empleado.email,
               subject: `¡Bienvenido/a a la familia ALMASA! — ${empleado.nombre_completo}`,
               body: htmlBody,
+              attachments,
             },
           });
 
