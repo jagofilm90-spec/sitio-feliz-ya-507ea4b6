@@ -290,20 +290,30 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
           const { data: avisoUrlData } = await supabase.storage.from("documentos-empleados").createSignedUrl(avisoPath, 60 * 60 * 24 * 7);
 
           const fechaIngresoFmt = empleado.fecha_ingreso.split("-").reverse().join("/");
+          const fechaPrueba = new Date(new Date(empleado.fecha_ingreso).getTime() + 90 * 24 * 60 * 60 * 1000);
+          const fechaPruebaFmt = fechaPrueba.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
+
           const htmlBody = `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0;font-family:Arial,Helvetica,sans-serif"><tr><td align="center"><table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;background:#fff;border-radius:4px;overflow:hidden;border:1px solid #e0e0e0">
 <tr><td style="padding:28px 36px;border-bottom:1px solid #eee;text-align:center"><p style="margin:0;color:#999;font-size:11px;font-style:italic;letter-spacing:1px">Desde 1904</p><img src="https://vrcyjmfpteoccqdmdmqn.supabase.co/storage/v1/object/public/email-assets/logo-almasa.png" alt="ALMASA" width="180" style="display:inline-block;max-width:180px;height:auto"/><p style="margin:4px 0 0;font-size:10px;color:#888;text-transform:uppercase;letter-spacing:2px;font-weight:600">Trabajando por un México mejor</p></td></tr>
-<tr><td style="padding:28px 36px">
-<h2 style="margin:0 0 20px;font-size:18px;color:#222;font-weight:700">¡Bienvenido/a a la familia ALMASA!</h2>
-<p style="color:#444;font-size:14px;line-height:1.6;margin:0 0 20px">Estimado/a <strong>${empleado.nombre_completo}</strong>, nos da mucho gusto que te incorpores a nuestro equipo como <strong>${empleado.puesto}</strong>.</p>
-<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 20px">
-<tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0;width:140px">Puesto</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0;font-weight:700">${empleado.puesto}</td></tr>
-<tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0">Fecha de ingreso</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0">${fechaIngresoFmt}</td></tr>
-</table>
-${contratoUrlData?.signedUrl || avisoUrlData?.signedUrl ? `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 20px"><tr><td style="padding:8px 0;font-size:13px;font-weight:600;color:#222;border-bottom:1px solid #eee">Documentos firmados</td></tr>${contratoUrlData?.signedUrl ? `<tr><td style="padding:6px 0;font-size:13px"><a href="${contratoUrlData.signedUrl}" style="color:#222;text-decoration:underline">Descargar Contrato Individual</a></td></tr>` : ""}${avisoUrlData?.signedUrl ? `<tr><td style="padding:6px 0;font-size:13px"><a href="${avisoUrlData.signedUrl}" style="color:#222;text-decoration:underline">Descargar Aviso de Privacidad</a></td></tr>` : ""}<tr><td style="padding:4px 0;font-size:11px;color:#888">Los enlaces son válidos por 7 días.</td></tr></table>` : ""}
-<p style="color:#555;font-size:13px;margin:0 0 8px">Si tienes alguna duda, no dudes en contactarnos.</p>
-<p style="color:#222;font-size:16px;font-weight:700;margin:16px 0 0">¡Trabajando por un México mejor!</p>
+<tr><td style="padding:32px 36px">
+<p style="color:#444;font-size:14px;line-height:1.8;margin:0 0 20px">Estimado/a <strong>${empleado.nombre_completo}</strong>,</p>
+<p style="color:#444;font-size:14px;line-height:1.8;margin:0 0 20px">Es un placer darte la bienvenida a <strong>Abarrotes La Manita, S.A. de C.V.</strong> Estamos muy contentos de que formes parte de la familia ALMASA.</p>
+<p style="color:#444;font-size:14px;line-height:1.8;margin:0 0 20px">Somos una empresa con más de 120 años de historia, fundada en 1904, donde el compromiso, la honestidad y el trabajo en equipo son los valores que nos han acompañado generación tras generación. Creemos que nuestra gente es lo más importante, y por eso nos esforzamos cada día en construir un lugar de trabajo donde todos crezcan.</p>
+<p style="color:#444;font-size:14px;line-height:1.8;margin:0 0 20px">A partir del <strong>${fechaIngresoFmt}</strong> te incorporas a nuestro equipo como <strong>${empleado.puesto}</strong>. Estamos seguros de que tu esfuerzo y dedicación serán una gran aportación para seguir trabajando por un México mejor.</p>
+<p style="color:#444;font-size:14px;line-height:1.8;margin:0 0 20px">Aquí encontrarás un equipo comprometido que te recibirá con los brazos abiertos. No dudes en acercarte a nosotros si necesitas algo.</p>
+<p style="color:#444;font-size:14px;line-height:1.8;margin:0 0 28px">Te deseamos mucho éxito en esta nueva etapa. Bienvenido a la familia.</p>
+<p style="color:#222;font-size:14px;margin:0 0 4px">Con gusto,</p>
+<p style="color:#222;font-size:14px;font-weight:700;margin:0 0 2px">José Antonio Gómez Ortega</p>
+<p style="color:#888;font-size:12px;margin:0">Director General</p>
+<p style="color:#888;font-size:12px;margin:0">Abarrotes La Manita, S.A. de C.V.</p>
+<div style="border-top:1px solid #eee;margin-top:28px;padding-top:20px">
+<p style="font-size:13px;font-weight:600;color:#222;margin:0 0 10px">Adjunto tus documentos firmados:</p>
+${contratoUrlData?.signedUrl ? `<p style="font-size:13px;margin:6px 0"><a href="${contratoUrlData.signedUrl}" style="color:#222;text-decoration:underline">Contrato Individual de Trabajo</a></p>` : ""}
+${avisoUrlData?.signedUrl ? `<p style="font-size:13px;margin:6px 0"><a href="${avisoUrlData.signedUrl}" style="color:#222;text-decoration:underline">Aviso de Privacidad</a></p>` : ""}
+<p style="font-size:11px;color:#888;margin:8px 0 0">Los enlaces son válidos por 7 días.</p>
+</div>
 </td></tr>
-<tr><td style="padding:20px 36px;border-top:1px solid #eee"><p style="margin:0 0 4px;color:#666;font-size:11px;font-weight:600">José Antonio Gómez Ortega</p><p style="margin:0;color:#999;font-size:10px">Director General — ALMASA</p><p style="margin:4px 0 0;color:#999;font-size:10px;line-height:1.6">Melchor Ocampo #59, Col. Magdalena Mixiuhca, C.P. 15850, CDMX<br>Tel: 55 5552-0168 / 55 5552-7887</p></td></tr>
+<tr><td style="padding:16px 36px;border-top:1px solid #eee"><p style="margin:0;color:#999;font-size:10px;line-height:1.6">Abarrotes La Manita, S.A. de C.V. | Melchor Ocampo #59, Col. Magdalena Mixiuhca, C.P. 15850, CDMX | Tel: 55 5552-0168</p></td></tr>
 </table></td></tr></table>`;
 
           const { error: emailError } = await supabase.functions.invoke("gmail-api", {
