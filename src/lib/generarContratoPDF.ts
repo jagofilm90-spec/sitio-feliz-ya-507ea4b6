@@ -446,6 +446,12 @@ export async function generarContratoPDF(datos: DatosContrato): Promise<{ filena
   const addFooter = () => {
     const prevSize = pdf.getFontSize();
     const prevFont = pdf.getFont();
+
+    // Si hay firma digital del empleado, insertarla pequeña en cada página
+    if (firmas?.empleado) {
+      try { pdf.addImage(firmas.empleado, "PNG", pageW - mR - 40, pageH - 22, 35, 12); } catch {}
+    }
+
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(7);
     pdf.setTextColor(150);
