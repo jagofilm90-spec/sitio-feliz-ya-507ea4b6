@@ -55,7 +55,38 @@ Deno.serve(async (req) => {
       throw new Error('Cannot delete your own account')
     }
 
-    // Eliminar usuario usando admin API
+    // Limpiar registros relacionados antes de eliminar el usuario de auth
+    // 1. Desvincular empleado (no eliminar, solo quitar referencia)
+    await supabaseAdmin
+      .from('empleados')
+      .update({ user_id: null })
+      .eq('user_id', userId)
+
+    // 2. Eliminar roles del usuario
+    await supabaseAdmin
+      .from('user_roles')
+      .delete()
+      .eq('user_id', userId)
+
+    // 3. Eliminar participaciones en conversaciones
+    await supabaseAdmin
+      .from('conversacion_participantes')
+      .delete()
+      .eq('user_id', userId)
+
+    // 4. Eliminar device tokens
+    await supabaseAdmin
+      .from('device_tokens')
+      .delete()
+      .eq('user_id', userId)
+
+    // 5. Eliminar perfil
+    await supabaseAdmin
+      .from('profiles')
+      .delete()
+      .eq('id', userId)
+
+    // 6. Eliminar usuario de auth
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
 
     if (deleteError) {
