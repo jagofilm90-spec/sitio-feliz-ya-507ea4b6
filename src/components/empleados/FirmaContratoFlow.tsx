@@ -330,7 +330,7 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
           const { error: emailError } = await supabase.functions.invoke("gmail-api", {
             body: {
               action: "send",
-              email: "compras@almasa.com.mx",
+              email: "1904@almasa.com.mx",
               to: empleado.email,
               subject: `¡Bienvenido/a a ALMASA! - ${empleado.nombre_completo}`,
               body: htmlBody,
