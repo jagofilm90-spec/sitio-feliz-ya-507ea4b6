@@ -1,0 +1,1 @@
+ALTER TABLE public.empleados ADD COLUMN contrato_firmado_fecha timestamptz DEFAULT NULL;
