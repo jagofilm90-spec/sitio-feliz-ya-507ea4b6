@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { EmpleadoCardMobile } from "@/components/empleados/EmpleadoCardMobile";
 import { DarAccesoSistemaDialog } from "@/components/empleados/DarAccesoSistemaDialog";
+import { FirmaContratoFlow } from "@/components/empleados/FirmaContratoFlow";
 import { generarContratoPDF, generarAvisoPrivacidadPDF } from "@/lib/generarContratoPDF";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Layout from "@/components/Layout";
@@ -166,6 +167,7 @@ const Empleados = () => {
   const [selectedEmpleado, setSelectedEmpleado] = useState<string | null>(null);
   const [editingLicenseDoc, setEditingLicenseDoc] = useState<EmpleadoDocumento | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [firmaFlowEmpleado, setFirmaFlowEmpleado] = useState<Empleado | null>(null);
   const [activeTab, setActiveTab] = useState<string>("todos");
   const [filtroPuesto, setFiltroPuesto] = useState<"todos" | "secretaria" | "vendedor" | "chofer" | "almacenista" | "gerente de almacén">("todos");
   const [filtroActivo, setFiltroActivo] = useState<"todos" | "activos" | "inactivos">("todos");
@@ -1858,14 +1860,17 @@ const Empleados = () => {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
+                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => setFirmaFlowEmpleado(empleado)}>
+                                      Firmar Contrato
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarContrato(empleado)}>
-                                      Contrato Individual
+                                      Contrato (vista previa)
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleGenerarAviso(empleado)}>
-                                      Aviso de Privacidad
+                                      Aviso de Privacidad (vista previa)
                                     </DropdownMenuItem>
                                     <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarTodos(empleado)}>
-                                      Todos los documentos
+                                      Todos sin firma
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
@@ -2071,14 +2076,17 @@ const Empleados = () => {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
+                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => setFirmaFlowEmpleado(empleado)}>
+                                      Firmar Contrato
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarContrato(empleado)}>
-                                      Contrato Individual
+                                      Contrato (vista previa)
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleGenerarAviso(empleado)}>
-                                      Aviso de Privacidad
+                                      Aviso de Privacidad (vista previa)
                                     </DropdownMenuItem>
                                     <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarTodos(empleado)}>
-                                      Todos los documentos
+                                      Todos sin firma
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
@@ -2283,14 +2291,17 @@ const Empleados = () => {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
+                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => setFirmaFlowEmpleado(empleado)}>
+                                      Firmar Contrato
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarContrato(empleado)}>
-                                      Contrato Individual
+                                      Contrato (vista previa)
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleGenerarAviso(empleado)}>
-                                      Aviso de Privacidad
+                                      Aviso de Privacidad (vista previa)
                                     </DropdownMenuItem>
                                     <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarTodos(empleado)}>
-                                      Todos los documentos
+                                      Todos sin firma
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
@@ -2742,6 +2753,31 @@ const Empleados = () => {
           empleadoNombre={accesoEmpleado.nombre_completo}
           empleadoEmail={accesoEmpleado.email}
           onCreated={() => { loadEmpleados(); loadUsuarios(); }}
+        />
+      )}
+
+      {firmaFlowEmpleado && (
+        <FirmaContratoFlow
+          open={!!firmaFlowEmpleado}
+          onClose={() => setFirmaFlowEmpleado(null)}
+          empleado={{
+            id: firmaFlowEmpleado.id,
+            nombre_completo: firmaFlowEmpleado.nombre_completo,
+            rfc: firmaFlowEmpleado.rfc || "",
+            curp: firmaFlowEmpleado.curp || "",
+            puesto: firmaFlowEmpleado.puesto,
+            sueldo_bruto: firmaFlowEmpleado.sueldo_bruto || 0,
+            fecha_ingreso: firmaFlowEmpleado.fecha_ingreso,
+            direccion: (firmaFlowEmpleado as any).direccion || null,
+            beneficiario: (firmaFlowEmpleado as any).beneficiario,
+            premio_asistencia_semanal: (firmaFlowEmpleado as any).premio_asistencia_semanal,
+          }}
+          empresa={{
+            representante_legal: "JOSE ANTONIO GOMEZ ORTEGA",
+            razon_social: "ABARROTES LA MANITA, S.A. DE C.V.",
+            rfc: "AMA 700701GI8",
+            domicilio: "MELCHOR OCAMPO 59, MAGDALENA MIXIHUCA, VENUSTIANO CARRANZA, 15850, CIUDAD DE MEXICO",
+          }}
         />
       )}
     </Layout>

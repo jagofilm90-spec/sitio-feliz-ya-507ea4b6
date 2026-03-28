@@ -78,6 +78,10 @@ interface DatosContrato {
     rfc: string;
     domicilio: string;
   };
+  firmas?: {
+    empleado: string; // base64 PNG
+    admin: string;    // base64 PNG
+  };
 }
 
 // ═══ ANEXOS POR PUESTO ═══
@@ -410,7 +414,7 @@ Cualquier desviación en precios, condiciones o manejo de clientes podrá ser co
 // ═══ GENERADOR DE CONTRATO ═══
 
 export async function generarContratoPDF(datos: DatosContrato): Promise<{ filename: string }> {
-  const { empleado: emp, empresa } = datos;
+  const { empleado: emp, empresa, firmas } = datos;
   const logoBase64 = await loadLogoBase64();
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
   const pageW = pdf.internal.pageSize.getWidth();
@@ -603,7 +607,15 @@ export async function generarContratoPDF(datos: DatosContrato): Promise<{ filena
   pdf.setFont("helvetica", "bold"); pdf.setFontSize(10);
   pdf.text('"EMPRESA"', mL + maxW * 0.25, y, { align: "center" });
   pdf.text('"EMPLEADO"', mL + maxW * 0.75, y, { align: "center" });
-  y += 18;
+  y += 3;
+  // Insert signature images if available
+  if (firmas?.admin) {
+    try { pdf.addImage(firmas.admin, "PNG", mL + maxW * 0.05, y, maxW * 0.35, 15); } catch {}
+  }
+  if (firmas?.empleado) {
+    try { pdf.addImage(firmas.empleado, "PNG", mL + maxW * 0.6, y, maxW * 0.35, 15); } catch {}
+  }
+  y += 15;
   pdf.line(mL, y, mL + maxW * 0.4, y);
   pdf.line(mL + maxW * 0.6, y, mL + maxW, y);
   y += 4;
@@ -650,7 +662,14 @@ export async function generarContratoPDF(datos: DatosContrato): Promise<{ filena
   pdf.setFont("helvetica", "bold"); pdf.setFontSize(9);
   pdf.text("LA EMPRESA", mL + maxW * 0.25, y, { align: "center" });
   pdf.text("EL EMPLEADO", mL + maxW * 0.75, y, { align: "center" });
-  y += 15;
+  y += 2;
+  if (firmas?.admin) {
+    try { pdf.addImage(firmas.admin, "PNG", mL + maxW * 0.05, y, maxW * 0.35, 13); } catch {}
+  }
+  if (firmas?.empleado) {
+    try { pdf.addImage(firmas.empleado, "PNG", mL + maxW * 0.6, y, maxW * 0.35, 13); } catch {}
+  }
+  y += 13;
   pdf.line(mL, y, mL + maxW * 0.4, y);
   pdf.line(mL + maxW * 0.6, y, mL + maxW, y);
   y += 4;
@@ -670,7 +689,13 @@ export async function generarContratoPDF(datos: DatosContrato): Promise<{ filena
 
 // ═══ AVISO DE PRIVACIDAD ═══
 
-export async function generarAvisoPrivacidadPDF(params: { nombre_empleado: string; fecha: string }): Promise<{ filename: string }> {
+export async function generarAvisoPrivacidadPDF(params: {
+  nombre_empleado: string;
+  fecha: string;
+  firma_empleado?: string;
+  checkbox_si?: boolean;
+  checkbox_no?: boolean;
+}): Promise<{ filename: string }> {
   const logoBase64 = await loadLogoBase64();
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
   const pageW = pdf.internal.pageSize.getWidth();
@@ -735,19 +760,36 @@ export async function generarAvisoPrivacidadPDF(params: { nombre_empleado: strin
   checkPage(8);
   pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
   pdf.rect(mL, y - 3, 4, 4);
+  if (params.checkbox_si) {
+    pdf.setFont("helvetica", "bold");
+    pdf.text("X", mL + 0.8, y, { align: "left" });
+    pdf.setFont("helvetica", "normal");
+  }
   const linesSi = pdf.splitTextToSize("Sí otorgo mi consentimiento a fin de que se lleve a cabo el tratamiento y transferencia de mis datos personales, financieros y sensibles para las finalidades necesarias y no necesarias en los términos del presente.", maxW - 10);
   for (const l of linesSi) { pdf.text(l, mL + 7, y); y += 4; }
   y += 3;
   checkPage(8);
   pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
   pdf.rect(mL, y - 3, 4, 4);
+  if (params.checkbox_no) {
+    pdf.setFont("helvetica", "bold");
+    pdf.text("X", mL + 0.8, y, { align: "left" });
+    pdf.setFont("helvetica", "normal");
+  }
   const linesNo = pdf.splitTextToSize("No otorgo mi consentimiento, a fin de que se lleve a cabo el tratamiento de mis datos personales en los términos del presente y entiendo que la Empresa no podrá cumplir con las obligaciones derivadas de una relación de trabajo.", maxW - 10);
   for (const l of linesNo) { pdf.text(l, mL + 7, y); y += 4; }
   y += 3;
   writeNormal("De igual forma, confirmo que he informado a las personas de las cuales he proporcionado datos personales sobre el tratamiento que se dará a sus datos y que cuento con su autorización para proporcionarlos.");
-  checkPage(30);
-  pdf.text("Nombre: ________________________________________", mL, y); y += 10;
-  pdf.text("Firma: _________________________________________", mL, y); y += 10;
+  checkPage(45);
+  pdf.text(`Nombre: ${params.nombre_empleado}`, mL, y); y += 6;
+  // Signature area
+  if (params.firma_empleado) {
+    pdf.text("Firma:", mL, y);
+    try { pdf.addImage(params.firma_empleado, "PNG", mL + 15, y - 8, 50, 18); } catch {}
+    y += 12;
+  } else {
+    pdf.text("Firma: _________________________________________", mL, y); y += 10;
+  }
   pdf.text("Fecha: " + params.fecha, mL, y); y += 8;
   y += 5;
   writeNormal("En términos de la Ley Federal de Protección de Datos Personales en Posesión de los Particulares y su Reglamento, le informamos que, ante la negativa de respuesta a las solicitudes de derechos ARCO o inconformidad con la misma, usted puede presentar ante el Instituto Nacional de Transparencia, Acceso a la Información y Protección de Datos Personales, la correspondiente Solicitud de Protección de Derechos en los plazos y términos fijados por el capítulo VII de la Ley y otros relacionados, así como los correspondientes del Reglamento.");
