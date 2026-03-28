@@ -1,6 +1,4 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { createRoot } from "react-dom/client";
-import { flushSync } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -16,17 +14,13 @@ import { captureDeviceInfo, getPublicIP } from "@/lib/auditoria-pedidos";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { CheckCircle2, ExternalLink, FileEdit, Trash2, ArrowRight, Store, Clock } from "lucide-react";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
-
 // Wizard components
 import { StepIndicator } from "./pedido-wizard/StepIndicator";
 import { PasoCliente } from "./pedido-wizard/PasoCliente";
 import { PasoProductosInline } from "./pedido-wizard/PasoProductosInline";
 import { PasoConfirmar } from "./pedido-wizard/PasoConfirmar";
 import { SolicitudDescuentoDialog } from "./SolicitudDescuentoDialog";
-import { PedidoPrintTemplate, DatosPedidoPrint } from "@/components/pedidos/PedidoPrintTemplate";
-import { HojaCargaUnificadaTemplate, DatosHojaCargaUnificada } from "@/components/pedidos/HojaCargaUnificadaTemplate";
+import { DatosPedidoPrint } from "@/components/pedidos/PedidoPrintTemplate";
 import { getDisplayName } from "@/lib/productUtils";
 import type { Cliente, Sucursal, Producto, LineaPedido, TotalesCalculados } from "./pedido-wizard/types";
 
@@ -883,99 +877,15 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
             notas: notas || undefined,
           };
 
-          const renderToCanvas = async (element: React.ReactElement, scale = 3): Promise<HTMLCanvasElement> => {
-            const container = document.createElement('div');
-            container.style.position = 'absolute';
-            container.style.left = '-9999px';
-            container.style.top = '0';
-            container.style.width = '8.5in';
-            container.style.backgroundColor = '#ffffff';
-            document.body.appendChild(container);
+          // Generar ambos PDFs usando las mismas funciones que el flujo de autorización
+          // Interno: 2 páginas landscape (Original + Hoja de Carga)
+          // Cliente: 1 página landscape (Confirmación)
+          const { generarNotaInternaPDF, generarConfirmacionClientePDF } = await import("@/lib/generarNotaPDF");
 
-            const root = createRoot(container);
-            flushSync(() => { root.render(element); });
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            const canvas = await html2canvas(container, {
-              scale, useCORS: true, logging: false, backgroundColor: '#ffffff'
-            });
-
-            root.unmount();
-            document.body.removeChild(container);
-            return canvas;
-          };
-
-          const canvasToPage = (pdf: jsPDF, canvas: HTMLCanvasElement, useJpeg = false) => {
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const ratio = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
-            const imgX = (pdfWidth - canvas.width * ratio) / 2;
-            const format = useJpeg ? 'JPEG' : 'PNG';
-            const imgData = useJpeg ? canvas.toDataURL('image/jpeg', 0.85) : canvas.toDataURL('image/png');
-            pdf.addImage(imgData, format, imgX, 5, canvas.width * ratio, canvas.height * ratio);
-          };
-
-          const generatePdfFromTemplate = async (hideQR: boolean): Promise<string> => {
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
-            // Internal PDF uses scale 2 + JPEG to keep file size small (~1-2MB vs ~10MB)
-            const isInternal = !hideQR;
-            const scale = isInternal ? 2 : 3;
-
-            // Page 1: Remisión
-            const canvas1 = await renderToCanvas(<PedidoPrintTemplate datos={datosPrintFinal} hideQR={hideQR} />, scale);
-            canvasToPage(pdf, canvas1, isInternal);
-
-            // For internal PDF (hideQR=false): add pages 2, 3, 4
-            if (isInternal) {
-              const datosHojaCarga: DatosHojaCargaUnificada = {
-                pedidoId: pedido.id,
-                folio,
-                numeroDia: pedido.numero_dia,
-                fecha: new Date().toISOString(),
-                cliente: { nombre: selectedCliente?.nombre || "" },
-                sucursal: (() => {
-                  const suc = sucursales.find(s => s.id === selectedSucursalId);
-                  return suc ? { nombre: suc.nombre, direccion: suc.direccion || undefined } : undefined;
-                })(),
-                direccionEntrega: (() => {
-                  const suc = sucursales.find(s => s.id === selectedSucursalId);
-                  return suc?.direccion || (selectedCliente as any)?.direccion || undefined;
-                })(),
-                productos: lineas.map(l => ({
-                  cantidad: l.cantidad,
-                  descripcion: getDisplayName(l.producto),
-                  pesoTotal: (l.producto.peso_kg || 0) > 0 ? l.cantidad * (l.producto.peso_kg || 0) : null,
-                  unidad: l.producto.unidad || 'PZA',
-                })),
-                pesoTotalKg: totales.pesoTotalKg,
-                total: totales.total,
-                notas: notas || undefined,
-              };
-
-              // Page 2: ORIGINAL (con QR)
-              const canvas2 = await renderToCanvas(<HojaCargaUnificadaTemplate datos={datosHojaCarga} variante="ORIGINAL" />, scale);
-              pdf.addPage();
-              canvasToPage(pdf, canvas2, true);
-
-              // Page 3: CLIENTE (sin QR)
-              const canvas3 = await renderToCanvas(<HojaCargaUnificadaTemplate datos={datosHojaCarga} variante="CLIENTE" />, scale);
-              pdf.addPage();
-              canvasToPage(pdf, canvas3, true);
-
-              // Page 4: ALMACÉN (sin QR)
-              const canvas4 = await renderToCanvas(<HojaCargaUnificadaTemplate datos={datosHojaCarga} variante="ALMACÉN" />, scale);
-              pdf.addPage();
-              canvasToPage(pdf, canvas4, true);
-            }
-
-            return pdf.output('datauristring').split(',')[1];
-          };
-
-          // Generar ambos PDFs en paralelo
-          console.log("[PDF] Generating internal (4-page) and client PDFs...");
+          console.log("[PDF] Generating internal (2-page) and client (1-page) PDFs...");
           const pdfPromise = Promise.all([
-            generatePdfFromTemplate(false).then(b64 => { console.log(`[PDF] Internal PDF size: ${(b64.length / 1024 / 1024).toFixed(2)}MB`); return b64; }),
-            generatePdfFromTemplate(true).then(b64 => { console.log(`[PDF] Client PDF size: ${(b64.length / 1024 / 1024).toFixed(2)}MB`); return b64; }),
+            generarNotaInternaPDF(datosPrintFinal).then(r => { console.log(`[PDF] Internal PDF size: ${(r.base64.length / 1024 / 1024).toFixed(2)}MB`); return r.base64; }).catch(e => { console.error("PDF interno error:", e); return null; }),
+            generarConfirmacionClientePDF(datosPrintFinal).then(r => { console.log(`[PDF] Client PDF size: ${(r.base64.length / 1024 / 1024).toFixed(2)}MB`); return r.base64; }).catch(e => { console.error("PDF cliente error:", e); return null; }),
           ]).catch(e => { console.error("PDF gen error:", e); return [null, null] as (string | null)[]; });
 
           // Esperar notificaciones y PDFs en paralelo
