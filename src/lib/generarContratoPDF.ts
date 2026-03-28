@@ -27,6 +27,40 @@ function addLogo(pdf: jsPDF, logoBase64: string | null, pageW: number): number {
   } catch { return 20; }
 }
 
+function addMembrete(pdf: jsPDF, logoBase64: string | null, mL: number, mR: number, pageW: number): number {
+  let y = 12;
+  // Logo pequeño izquierda
+  if (logoBase64) {
+    try { pdf.addImage(logoBase64, "PNG", mL, y, 20, 20); } catch {}
+  }
+  // Nombre empresa
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(11);
+  pdf.text("ABARROTES LA MANITA, S.A. DE C.V.", mL + 24, y + 8);
+  pdf.setFont("helvetica", "italic");
+  pdf.setFontSize(7);
+  pdf.setTextColor(150);
+  pdf.text("Desde 1904", mL + 24, y + 13);
+  pdf.setTextColor(0);
+  // Datos empresa a la derecha
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(7);
+  pdf.setTextColor(100);
+  const rX = pageW - mR;
+  pdf.text("RFC: AMA 700701GI8", rX, y + 4, { align: "right" });
+  pdf.text("Melchor Ocampo #59, Col. Magdalena Mixiuhca", rX, y + 8, { align: "right" });
+  pdf.text("C.P. 15850, Ciudad de México", rX, y + 12, { align: "right" });
+  pdf.text("Tel: 55 5552-0168", rX, y + 16, { align: "right" });
+  pdf.setTextColor(0);
+  // Línea gruesa
+  y += 22;
+  pdf.setLineWidth(0.5);
+  pdf.line(mL, y, pageW - mR, y);
+  pdf.setLineWidth(0.2);
+  y += 8;
+  return y;
+}
+
 const fmt$ = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`;
 
 function numberToWords(n: number): string {
@@ -421,7 +455,7 @@ export async function generarContratoPDF(datos: DatosContrato): Promise<{ filena
   const pageH = pdf.internal.pageSize.getHeight();
   const mL = 22, mR = 22;
   const maxW = pageW - mL - mR;
-  let y = addLogo(pdf, logoBase64, pageW);
+  let y = addMembrete(pdf, logoBase64, mL, mR, pageW);
   let pageNum = 1;
 
   // Uppercase for PDF
@@ -708,8 +742,9 @@ export async function generarAvisoPrivacidadPDF(params: {
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
   const mL = 22;
-  const maxW = pageW - 44;
-  let y = addLogo(pdf, logoBase64, pageW);
+  const mR = 22;
+  const maxW = pageW - mL - mR;
+  let y = addMembrete(pdf, logoBase64, mL, mR, pageW);
 
   const addPage = () => { pdf.addPage(); y = 20; };
   const checkPage = (n: number) => { if (y + n > pageH - 18) addPage(); };
