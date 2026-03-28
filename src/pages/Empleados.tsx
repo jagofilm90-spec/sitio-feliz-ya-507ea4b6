@@ -466,14 +466,14 @@ const Empleados = () => {
         // Record salary change in history
         if (sueldoCambio || premioCambio) {
           const { data: { user } } = await supabase.auth.getUser();
-          await supabase.from("empleados_historial_sueldo").insert({
+          await (supabase.from("empleados_historial_sueldo" as any).insert({
             empleado_id: empleadoId,
             sueldo_anterior: sueldoAnterior,
             sueldo_nuevo: sueldoNuevo,
             premio_anterior: premioAnterior,
             premio_nuevo: premioNuevo,
             cambiado_por: user?.id || null,
-          }).then(({ error: hErr }) => {
+          } as any) as any).then(({ error: hErr }: any) => {
             if (hErr) console.warn("Error guardando historial sueldo:", hErr.message);
           });
         }
