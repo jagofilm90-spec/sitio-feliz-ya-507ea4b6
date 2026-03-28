@@ -29,6 +29,7 @@ import { useDashboardData, type Periodo } from "@/components/dashboard/useDashbo
 import { EntregasEnDescargaWidget } from "@/components/dashboard/EntregasEnDescargaWidget";
 import { ResumenDiaWidget } from "@/components/dashboard/ResumenDiaWidget";
 import { COMPANY_DATA } from "@/constants/companyData";
+import { EmpleadosPruebaAlert } from "@/components/dashboard/EmpleadosPruebaAlert";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -127,6 +128,9 @@ const Dashboard = () => {
 
         {/* Alertas Urgentes - solo si hay */}
         {dashData && <AlertasUrgentes alertas={dashData.alertas} />}
+
+        {/* Empleados con periodo de prueba por vencer */}
+        {isAdmin && <EmpleadosPruebaAlert />}
 
         {/* Descargas en curso + completadas hoy */}
         {(dashData?.kpis?.entregasEnDescarga > 0 || (dashData?.kpis?.entregasCompletadasHoyDetalle?.length || 0) > 0) && (

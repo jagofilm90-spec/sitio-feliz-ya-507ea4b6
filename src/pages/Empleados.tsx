@@ -1123,6 +1123,22 @@ const Empleados = () => {
     }).format(amount);
   };
 
+  // Periodo de prueba: 90 días desde fecha_ingreso
+  const getPeriodoPrueba = (empleado: Empleado) => {
+    if (!empleado.activo) return null;
+    const [y, m, d] = empleado.fecha_ingreso.split("-").map(Number);
+    const ingreso = new Date(y, m - 1, d);
+    const vencimiento = new Date(ingreso);
+    vencimiento.setDate(vencimiento.getDate() + 90);
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const diasRestantes = Math.ceil((vencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+    const fechaStr = `${vencimiento.getDate()}/${vencimiento.getMonth() + 1 < 10 ? "0" : ""}${vencimiento.getMonth() + 1}/${vencimiento.getFullYear()}`;
+    if (diasRestantes <= 0) return { tipo: "indefinido" as const, fecha: fechaStr, dias: 0 };
+    if (diasRestantes <= 7) return { tipo: "urgente" as const, fecha: fechaStr, dias: diasRestantes };
+    return { tipo: "prueba" as const, fecha: fechaStr, dias: diasRestantes };
+  };
+
   const getTipoDocumentoLabel = (tipo: EmpleadoDocumento["tipo_documento"]) => {
     const labels: Record<EmpleadoDocumento["tipo_documento"], string> = {
       contrato_laboral: "Contrato Laboral",
@@ -1832,16 +1848,38 @@ const Empleados = () => {
                             </TableCell>
                             <TableCell>
                               <div className="space-y-1">
-                                <Badge variant={empleado.activo ? "default" : "secondary"}>
-                                  {empleado.activo ? "Activo" : "Inactivo"}
-                                </Badge>
-                                {!empleado.activo && empleado.motivo_baja && (
-                                  <div className="text-xs text-muted-foreground">
-                                    {empleado.motivo_baja === "renuncia" && "Renuncia"}
-                                    {empleado.motivo_baja === "despido" && "Despido"}
-                                    {empleado.motivo_baja === "abandono" && "Abandono"}
-                                  </div>
-                                )}
+                                {(() => {
+                                  if (!empleado.activo) {
+                                    return (
+                                      <>
+                                        <Badge variant="secondary">Inactivo</Badge>
+                                        {empleado.motivo_baja && (
+                                          <div className="text-xs text-muted-foreground">
+                                            {empleado.motivo_baja === "renuncia" && "Renuncia"}
+                                            {empleado.motivo_baja === "despido" && "Despido"}
+                                            {empleado.motivo_baja === "abandono" && "Abandono"}
+                                          </div>
+                                        )}
+                                      </>
+                                    );
+                                  }
+                                  const pp = getPeriodoPrueba(empleado);
+                                  if (!pp || pp.tipo === "indefinido") {
+                                    return <Badge variant="default">Activo</Badge>;
+                                  }
+                                  if (pp.tipo === "urgente") {
+                                    return (
+                                      <Badge variant="destructive" className="animate-pulse">
+                                        Vence pronto {pp.fecha}
+                                      </Badge>
+                                    );
+                                  }
+                                  return (
+                                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+                                      En prueba — {pp.fecha}
+                                    </Badge>
+                                  );
+                                })()}
                               </div>
                             </TableCell>
                             <TableCell className="text-right">
@@ -2048,16 +2086,38 @@ const Empleados = () => {
                             </TableCell>
                             <TableCell>
                               <div className="space-y-1">
-                                <Badge variant={empleado.activo ? "default" : "secondary"}>
-                                  {empleado.activo ? "Activo" : "Inactivo"}
-                                </Badge>
-                                {!empleado.activo && empleado.motivo_baja && (
-                                  <div className="text-xs text-muted-foreground">
-                                    {empleado.motivo_baja === "renuncia" && "Renuncia"}
-                                    {empleado.motivo_baja === "despido" && "Despido"}
-                                    {empleado.motivo_baja === "abandono" && "Abandono"}
-                                  </div>
-                                )}
+                                {(() => {
+                                  if (!empleado.activo) {
+                                    return (
+                                      <>
+                                        <Badge variant="secondary">Inactivo</Badge>
+                                        {empleado.motivo_baja && (
+                                          <div className="text-xs text-muted-foreground">
+                                            {empleado.motivo_baja === "renuncia" && "Renuncia"}
+                                            {empleado.motivo_baja === "despido" && "Despido"}
+                                            {empleado.motivo_baja === "abandono" && "Abandono"}
+                                          </div>
+                                        )}
+                                      </>
+                                    );
+                                  }
+                                  const pp = getPeriodoPrueba(empleado);
+                                  if (!pp || pp.tipo === "indefinido") {
+                                    return <Badge variant="default">Activo</Badge>;
+                                  }
+                                  if (pp.tipo === "urgente") {
+                                    return (
+                                      <Badge variant="destructive" className="animate-pulse">
+                                        Vence pronto {pp.fecha}
+                                      </Badge>
+                                    );
+                                  }
+                                  return (
+                                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+                                      En prueba — {pp.fecha}
+                                    </Badge>
+                                  );
+                                })()}
                               </div>
                             </TableCell>
                             <TableCell className="text-right">
@@ -2263,16 +2323,38 @@ const Empleados = () => {
                             </TableCell>
                             <TableCell>
                               <div className="space-y-1">
-                                <Badge variant={empleado.activo ? "default" : "secondary"}>
-                                  {empleado.activo ? "Activo" : "Inactivo"}
-                                </Badge>
-                                {!empleado.activo && empleado.motivo_baja && (
-                                  <div className="text-xs text-muted-foreground">
-                                    {empleado.motivo_baja === "renuncia" && "Renuncia"}
-                                    {empleado.motivo_baja === "despido" && "Despido"}
-                                    {empleado.motivo_baja === "abandono" && "Abandono"}
-                                  </div>
-                                )}
+                                {(() => {
+                                  if (!empleado.activo) {
+                                    return (
+                                      <>
+                                        <Badge variant="secondary">Inactivo</Badge>
+                                        {empleado.motivo_baja && (
+                                          <div className="text-xs text-muted-foreground">
+                                            {empleado.motivo_baja === "renuncia" && "Renuncia"}
+                                            {empleado.motivo_baja === "despido" && "Despido"}
+                                            {empleado.motivo_baja === "abandono" && "Abandono"}
+                                          </div>
+                                        )}
+                                      </>
+                                    );
+                                  }
+                                  const pp = getPeriodoPrueba(empleado);
+                                  if (!pp || pp.tipo === "indefinido") {
+                                    return <Badge variant="default">Activo</Badge>;
+                                  }
+                                  if (pp.tipo === "urgente") {
+                                    return (
+                                      <Badge variant="destructive" className="animate-pulse">
+                                        Vence pronto {pp.fecha}
+                                      </Badge>
+                                    );
+                                  }
+                                  return (
+                                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+                                      En prueba — {pp.fecha}
+                                    </Badge>
+                                  );
+                                })()}
                               </div>
                             </TableCell>
                             <TableCell className="text-right">

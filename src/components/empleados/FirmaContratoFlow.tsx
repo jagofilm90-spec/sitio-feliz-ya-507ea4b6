@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface FirmaContratoFlowProps {
   open: boolean;
   onClose: () => void;
+  onSigned?: () => void;
   empleado: {
     id: string;
     nombre_completo: string;
@@ -32,14 +33,16 @@ interface FirmaContratoFlowProps {
 
 function SignatureCanvas({
   label,
-  onSignatureChange,
+  canvasRef,
+  onDraw,
+  onClear,
 }: {
   label: string;
-  onSignatureChange: (hasSignature: boolean, getImage: () => string) => void;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  onDraw: () => void;
+  onClear: () => void;
 }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
-  const hasDrawn = useRef(false);
 
   const getCtx = () => canvasRef.current?.getContext("2d") ?? null;
 
@@ -77,34 +80,27 @@ function SignatureCanvas({
     ctx.strokeStyle = "#000";
     ctx.lineTo(x, y);
     ctx.stroke();
-    if (!hasDrawn.current) {
-      hasDrawn.current = true;
-      onSignatureChange(true, () => canvasRef.current?.toDataURL("image/png") ?? "");
-    }
+    onDraw();
   };
 
-  const stopDraw = () => {
-    isDrawing.current = false;
-  };
+  const stopDraw = () => { isDrawing.current = false; };
 
-  const clear = () => {
+  const handleClear = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    hasDrawn.current = false;
-    onSignatureChange(false, () => "");
+    onClear();
   };
 
-  // Set canvas size to match CSS size (1:1 mapping, no dpr scaling)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width;
     canvas.height = rect.height;
-  }, []);
+  }, [canvasRef]);
 
   return (
     <div className="space-y-1">
@@ -121,7 +117,7 @@ function SignatureCanvas({
         onTouchMove={draw}
         onTouchEnd={stopDraw}
       />
-      <Button type="button" variant="outline" size="sm" onClick={clear}>
+      <Button type="button" variant="outline" size="sm" onClick={handleClear}>
         Limpiar firma
       </Button>
     </div>
@@ -130,27 +126,38 @@ function SignatureCanvas({
 
 // ═══ COMPONENTE PRINCIPAL ═══
 
-export function FirmaContratoFlow({ open, onClose, empleado, empresa }: FirmaContratoFlowProps) {
+export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }: FirmaContratoFlowProps) {
   const { toast } = useToast();
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
 
-  // Step 1 signatures
-  const [firmaEmpleado1, setFirmaEmpleado1] = useState<{ has: boolean; get: () => string }>({ has: false, get: () => "" });
-  const [firmaAdmin, setFirmaAdmin] = useState<{ has: boolean; get: () => string }>({ has: false, get: () => "" });
+  // Track whether each canvas has been drawn on
+  const [hasEmpleado1, setHasEmpleado1] = useState(false);
+  const [hasAdmin, setHasAdmin] = useState(false);
+  const [hasEmpleado2, setHasEmpleado2] = useState(false);
+
+  // Step 1 saved signature images (captured when moving to step 2)
+  const [firmaEmpleadoImg, setFirmaEmpleadoImg] = useState("");
+  const [firmaAdminImg, setFirmaAdminImg] = useState("");
 
   // Step 2
   const [consentimientoSi, setConsentimientoSi] = useState(true);
-  const [firmaEmpleado2, setFirmaEmpleado2] = useState<{ has: boolean; get: () => string }>({ has: false, get: () => "" });
+
+  // Canvas refs — we read toDataURL directly from them
+  const canvasEmpleado1Ref = useRef<HTMLCanvasElement>(null);
+  const canvasAdminRef = useRef<HTMLCanvasElement>(null);
+  const canvasEmpleado2Ref = useRef<HTMLCanvasElement>(null);
 
   // Reset when opened
   useEffect(() => {
     if (open) {
       setStep(1);
       setConsentimientoSi(true);
-      setFirmaEmpleado1({ has: false, get: () => "" });
-      setFirmaAdmin({ has: false, get: () => "" });
-      setFirmaEmpleado2({ has: false, get: () => "" });
+      setHasEmpleado1(false);
+      setHasAdmin(false);
+      setHasEmpleado2(false);
+      setFirmaEmpleadoImg("");
+      setFirmaAdminImg("");
     }
   }, [open]);
 
@@ -178,12 +185,17 @@ export function FirmaContratoFlow({ open, onClose, empleado, empresa }: FirmaCon
   }, [empleado.id]);
 
   const handleStep1Continue = () => {
-    if (!firmaEmpleado1.has || !firmaAdmin.has) return;
+    if (!hasEmpleado1 || !hasAdmin) return;
+    // Capture signature images from canvases before transitioning
+    const empImg = canvasEmpleado1Ref.current?.toDataURL("image/png") ?? "";
+    const admImg = canvasAdminRef.current?.toDataURL("image/png") ?? "";
+    setFirmaEmpleadoImg(empImg);
+    setFirmaAdminImg(admImg);
     setStep(2);
   };
 
   const handleFinalize = async () => {
-    if (!firmaEmpleado2.has) return;
+    if (!hasEmpleado2) return;
     setLoading(true);
 
     try {
@@ -191,9 +203,10 @@ export function FirmaContratoFlow({ open, onClose, empleado, empresa }: FirmaCon
       const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
       const premio = extras?.premio_asistencia_semanal || empleado.premio_asistencia_semanal || premioDefault;
       const beneficiario = extras?.beneficiario || empleado.beneficiario || "Por designar";
+      const firmaEmpleado2Img = canvasEmpleado2Ref.current?.toDataURL("image/png") ?? "";
 
       // Generate signed contract PDF
-      await generarContratoPDF({
+      const contratoResult = await generarContratoPDF({
         empleado: {
           nombre_completo: empleado.nombre_completo,
           rfc: empleado.rfc,
@@ -208,21 +221,67 @@ export function FirmaContratoFlow({ open, onClose, empleado, empresa }: FirmaCon
         },
         empresa,
         firmas: {
-          empleado: firmaEmpleado1.get(),
-          admin: firmaAdmin.get(),
+          empleado: firmaEmpleadoImg,
+          admin: firmaAdminImg,
         },
       });
 
       // Generate signed privacy notice PDF
-      await generarAvisoPrivacidadPDF({
+      const avisoResult = await generarAvisoPrivacidadPDF({
         nombre_empleado: empleado.nombre_completo,
         fecha: new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" }),
-        firma_empleado: firmaEmpleado2.get(),
+        firma_empleado: firmaEmpleado2Img,
         checkbox_si: consentimientoSi,
         checkbox_no: !consentimientoSi,
       });
 
+      // Upload to Supabase Storage
+      const hoy = new Date().toISOString().split("T")[0];
+      try {
+        // Ensure bucket exists (will silently fail if already exists)
+        await supabase.storage.createBucket("documentos-empleados", { public: false }).catch(() => {});
+
+        // Upload contract
+        if (contratoResult.pdfBlob) {
+          const contratoPath = `${empleado.id}/contrato_firmado_${hoy}.pdf`;
+          await supabase.storage.from("documentos-empleados").upload(contratoPath, contratoResult.pdfBlob, {
+            contentType: "application/pdf",
+            upsert: true,
+          });
+        }
+
+        // Upload aviso
+        if (avisoResult.pdfBlob) {
+          const avisoPath = `${empleado.id}/aviso_privacidad_${hoy}.pdf`;
+          await supabase.storage.from("documentos-empleados").upload(avisoPath, avisoResult.pdfBlob, {
+            contentType: "application/pdf",
+            upsert: true,
+          });
+        }
+
+        // Update empleado record with firma dates via RPC
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/update_empleado_extras`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              p_empleado_id: empleado.id,
+              p_beneficiario: beneficiario,
+              p_premio_asistencia_semanal: premio,
+            }),
+          });
+        }
+      } catch (uploadErr) {
+        console.warn("Error subiendo PDFs al storage:", uploadErr);
+      }
+
       toast({ title: "Documentos firmados y descargados", description: "Contrato y Aviso de Privacidad generados con firmas digitales." });
+      onSigned?.();
       onClose();
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
@@ -232,7 +291,7 @@ export function FirmaContratoFlow({ open, onClose, empleado, empresa }: FirmaCon
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o && !loading) onClose(); }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         {step === 1 && (
           <>
@@ -246,11 +305,15 @@ export function FirmaContratoFlow({ open, onClose, empleado, empresa }: FirmaCon
             <div className="space-y-4 mt-4">
               <SignatureCanvas
                 label="Firma del empleado"
-                onSignatureChange={(has, get) => setFirmaEmpleado1({ has, get })}
+                canvasRef={canvasEmpleado1Ref}
+                onDraw={() => setHasEmpleado1(true)}
+                onClear={() => setHasEmpleado1(false)}
               />
               <SignatureCanvas
                 label="Firma del representante legal"
-                onSignatureChange={(has, get) => setFirmaAdmin({ has, get })}
+                canvasRef={canvasAdminRef}
+                onDraw={() => setHasAdmin(true)}
+                onClear={() => setHasAdmin(false)}
               />
             </div>
 
@@ -258,7 +321,7 @@ export function FirmaContratoFlow({ open, onClose, empleado, empresa }: FirmaCon
               <Button variant="outline" onClick={onClose}>Cancelar</Button>
               <Button
                 onClick={handleStep1Continue}
-                disabled={!firmaEmpleado1.has || !firmaAdmin.has}
+                disabled={!hasEmpleado1 || !hasAdmin}
               >
                 Firmar y continuar
               </Button>
@@ -278,7 +341,8 @@ export function FirmaContratoFlow({ open, onClose, empleado, empresa }: FirmaCon
             <div className="space-y-3">
               <label className="flex items-start gap-2 cursor-pointer">
                 <input
-                  type="checkbox"
+                  type="radio"
+                  name="consentimiento"
                   checked={consentimientoSi}
                   onChange={() => setConsentimientoSi(true)}
                   className="mt-1"
@@ -290,7 +354,8 @@ export function FirmaContratoFlow({ open, onClose, empleado, empresa }: FirmaCon
 
               <label className="flex items-start gap-2 cursor-pointer">
                 <input
-                  type="checkbox"
+                  type="radio"
+                  name="consentimiento"
                   checked={!consentimientoSi}
                   onChange={() => setConsentimientoSi(false)}
                   className="mt-1"
@@ -309,17 +374,19 @@ export function FirmaContratoFlow({ open, onClose, empleado, empresa }: FirmaCon
             <div className="mt-4">
               <SignatureCanvas
                 label="Firma del empleado"
-                onSignatureChange={(has, get) => setFirmaEmpleado2({ has, get })}
+                canvasRef={canvasEmpleado2Ref}
+                onDraw={() => setHasEmpleado2(true)}
+                onClear={() => setHasEmpleado2(false)}
               />
             </div>
 
             <div className="flex justify-between mt-4">
               <Button variant="outline" onClick={() => setStep(1)}>Volver</Button>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={onClose}>Cancelar</Button>
+                <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
                 <Button
                   onClick={handleFinalize}
-                  disabled={!firmaEmpleado2.has || loading}
+                  disabled={!hasEmpleado2 || loading}
                 >
                   {loading ? "Generando..." : "Firmar y finalizar"}
                 </Button>

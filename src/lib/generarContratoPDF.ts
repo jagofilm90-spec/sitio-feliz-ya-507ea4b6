@@ -413,7 +413,7 @@ Cualquier desviación en precios, condiciones o manejo de clientes podrá ser co
 
 // ═══ GENERADOR DE CONTRATO ═══
 
-export async function generarContratoPDF(datos: DatosContrato): Promise<{ filename: string }> {
+export async function generarContratoPDF(datos: DatosContrato): Promise<{ filename: string; pdfBlob: Blob }> {
   const { empleado: emp, empresa, firmas } = datos;
   const logoBase64 = await loadLogoBase64();
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
@@ -683,8 +683,9 @@ export async function generarContratoPDF(datos: DatosContrato): Promise<{ filena
   addFooter();
 
   const filename = `Contrato_${emp.nombre_completo.replace(/\s+/g, "_")}.pdf`;
+  const pdfBlob = pdf.output("blob");
   pdf.save(filename);
-  return { filename };
+  return { filename, pdfBlob };
 }
 
 // ═══ AVISO DE PRIVACIDAD ═══
@@ -695,7 +696,7 @@ export async function generarAvisoPrivacidadPDF(params: {
   firma_empleado?: string;
   checkbox_si?: boolean;
   checkbox_no?: boolean;
-}): Promise<{ filename: string }> {
+}): Promise<{ filename: string; pdfBlob: Blob }> {
   const logoBase64 = await loadLogoBase64();
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
   const pageW = pdf.internal.pageSize.getWidth();
@@ -795,6 +796,7 @@ export async function generarAvisoPrivacidadPDF(params: {
   writeNormal("En términos de la Ley Federal de Protección de Datos Personales en Posesión de los Particulares y su Reglamento, le informamos que, ante la negativa de respuesta a las solicitudes de derechos ARCO o inconformidad con la misma, usted puede presentar ante el Instituto Nacional de Transparencia, Acceso a la Información y Protección de Datos Personales, la correspondiente Solicitud de Protección de Derechos en los plazos y términos fijados por el capítulo VII de la Ley y otros relacionados, así como los correspondientes del Reglamento.");
 
   const filename = `Aviso_Privacidad_${params.nombre_empleado.replace(/\s+/g, "_")}.pdf`;
+  const pdfBlob = pdf.output("blob");
   pdf.save(filename);
-  return { filename };
+  return { filename, pdfBlob };
 }
