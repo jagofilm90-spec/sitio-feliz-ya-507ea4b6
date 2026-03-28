@@ -692,7 +692,24 @@ const Empleados = () => {
     }
 
     try {
-      // Primero eliminar todos los documentos del empleado del storage
+      // Si tiene acceso al sistema, eliminar usuario de auth
+      if (empleado.user_id) {
+        const { data, error: delErr } = await supabase.functions.invoke("delete-user", {
+          body: { userId: empleado.user_id },
+        });
+        if (delErr) console.warn("Error eliminando usuario:", delErr.message);
+        else if (data?.error) console.warn("Error eliminando usuario:", data.error);
+      }
+
+      // Si es Chofer, desasignar vehículo
+      if (empleado.puesto === "Chofer") {
+        await supabase
+          .from("vehiculos")
+          .update({ chofer_asignado_id: null })
+          .eq("chofer_asignado_id", empleado.id);
+      }
+
+      // Eliminar documentos del empleado del storage
       if (documentos[empleado.id]?.length > 0) {
         const filePaths = documentos[empleado.id].map(
           (doc) => `${empleado.id}/${doc.ruta_storage}`
