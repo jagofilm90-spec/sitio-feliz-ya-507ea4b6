@@ -668,6 +668,24 @@ const Empleados = () => {
     await handleGenerarAviso(empleado);
   };
 
+  const handleQuitarAcceso = async (empleado: Empleado) => {
+    if (!empleado.user_id) return;
+    if (!confirm(`¿Quitar acceso al sistema a ${empleado.nombre_completo}? Ya no podrá iniciar sesión.`)) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-user", {
+        body: { userId: empleado.user_id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      await supabase.from("empleados").update({ user_id: null }).eq("id", empleado.id);
+      toast({ title: "Acceso eliminado", description: `${empleado.nombre_completo} ya no puede iniciar sesión.` });
+      loadEmpleados();
+      loadUsuarios();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
   const handleDelete = async (empleado: Empleado) => {
     if (!confirm(`¿Estás seguro de eliminar a ${empleado.nombre_completo}? Esta acción no se puede deshacer.`)) {
       return;
@@ -1833,7 +1851,17 @@ const Empleados = () => {
                             </TableCell>
                             <TableCell>
                               {empleado.user_id ? (
-                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">Con acceso</Badge>
+                                <div className="flex flex-col items-start gap-1">
+                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">Con acceso</Badge>
+                                  {isAdmin && (
+                                    <button
+                                      className="text-xs text-destructive hover:underline cursor-pointer"
+                                      onClick={(e) => { e.stopPropagation(); handleQuitarAcceso(empleado); }}
+                                    >
+                                      Quitar acceso
+                                    </button>
+                                  )}
+                                </div>
                               ) : (
                                 <Button variant="outline" size="sm" className="text-xs h-7" onClick={(e) => { e.stopPropagation(); setAccesoEmpleado(empleado); setShowDarAcceso(true); }}>
                                   <UserPlus className="h-3 w-3 mr-1" />Dar acceso
@@ -2041,7 +2069,17 @@ const Empleados = () => {
                             </TableCell>
                             <TableCell>
                               {empleado.user_id ? (
-                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">Con acceso</Badge>
+                                <div className="flex flex-col items-start gap-1">
+                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">Con acceso</Badge>
+                                  {isAdmin && (
+                                    <button
+                                      className="text-xs text-destructive hover:underline cursor-pointer"
+                                      onClick={(e) => { e.stopPropagation(); handleQuitarAcceso(empleado); }}
+                                    >
+                                      Quitar acceso
+                                    </button>
+                                  )}
+                                </div>
                               ) : (
                                 <Button variant="outline" size="sm" className="text-xs h-7" onClick={(e) => { e.stopPropagation(); setAccesoEmpleado(empleado); setShowDarAcceso(true); }}>
                                   <UserPlus className="h-3 w-3 mr-1" />Dar acceso
@@ -2248,7 +2286,17 @@ const Empleados = () => {
                             </TableCell>
                             <TableCell>
                               {empleado.user_id ? (
-                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">Con acceso</Badge>
+                                <div className="flex flex-col items-start gap-1">
+                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">Con acceso</Badge>
+                                  {isAdmin && (
+                                    <button
+                                      className="text-xs text-destructive hover:underline cursor-pointer"
+                                      onClick={(e) => { e.stopPropagation(); handleQuitarAcceso(empleado); }}
+                                    >
+                                      Quitar acceso
+                                    </button>
+                                  )}
+                                </div>
                               ) : (
                                 <Button variant="outline" size="sm" className="text-xs h-7" onClick={(e) => { e.stopPropagation(); setAccesoEmpleado(empleado); setShowDarAcceso(true); }}>
                                   <UserPlus className="h-3 w-3 mr-1" />Dar acceso
