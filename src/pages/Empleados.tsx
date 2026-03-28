@@ -158,20 +158,10 @@ const Empleados = () => {
   const [searchParams] = useSearchParams();
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [usuarios, setUsuarios] = useState<UserProfile[]>([]);
-  const [documentos, setDocumentos] = useState<Record<string, EmpleadoDocumento[]>>({});
-  const [documentosPendientes, setDocumentosPendientes] = useState<Record<string, EmpleadoDocumentoPendiente[]>>({});
-  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isDocDialogOpen, setIsDocDialogOpen] = useState(false);
-  const [isPendingDialogOpen, setIsPendingDialogOpen] = useState(false);
-  const [isEditLicenseExpiryOpen, setIsEditLicenseExpiryOpen] = useState(false);
   const [editingEmpleado, setEditingEmpleado] = useState<Empleado | null>(null);
-  const [selectedEmpleado, setSelectedEmpleado] = useState<string | null>(null);
-  const [editingLicenseDoc, setEditingLicenseDoc] = useState<EmpleadoDocumento | null>(null);
-  const [uploading, setUploading] = useState(false);
   const [firmaFlowEmpleado, setFirmaFlowEmpleado] = useState<Empleado | null>(null);
-  const [expedienteStatus, setExpedienteStatus] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<string>("todos");
   const [filtroPuesto, setFiltroPuesto] = useState<"todos" | "secretaria" | "vendedor" | "chofer" | "almacenista" | "gerente de almacén">("todos");
   const [filtroActivo, setFiltroActivo] = useState<"todos" | "activos" | "inactivos">("todos");
@@ -275,13 +265,6 @@ const Empleados = () => {
     }
   }, [searchParams]);
 
-  // Resetear el formulario de documento cuando se abre el diálogo
-  useEffect(() => {
-    if (isDocDialogOpen) {
-      setDocFormData({ tipo_documento: "", file: null });
-    }
-  }, [isDocDialogOpen]);
-
   const loadEmpleados = async () => {
     try {
       const { data, error } = await supabase
@@ -291,47 +274,6 @@ const Empleados = () => {
 
       if (error) throw error;
       setEmpleados((data || []) as unknown as Empleado[]);
-
-      // Load documents for each employee
-      if (data) {
-        const docsPromises = data.map(emp =>
-          supabase
-            .from("empleados_documentos")
-            .select("*")
-            .eq("empleado_id", emp.id)
-        );
-        const pendingDocsPromises = data.map(emp =>
-          supabase
-            .from("empleados_documentos_pendientes")
-            .select("*")
-            .eq("empleado_id", emp.id)
-        );
-        
-        const docsResults = await Promise.all(docsPromises);
-        const pendingDocsResults = await Promise.all(pendingDocsPromises);
-        
-        const docsMap: Record<string, EmpleadoDocumento[]> = {};
-        const pendingDocsMap: Record<string, EmpleadoDocumentoPendiente[]> = {};
-        
-        data.forEach((emp, idx) => {
-          docsMap[emp.id] = (docsResults[idx].data || []) as EmpleadoDocumento[];
-          pendingDocsMap[emp.id] = (pendingDocsResults[idx].data || []) as EmpleadoDocumentoPendiente[];
-        });
-        
-        setDocumentos(docsMap);
-        setDocumentosPendientes(pendingDocsMap);
-
-        // Check expediente status (signed docs in storage)
-        const statusMap: Record<string, boolean> = {};
-        const statusChecks = data.map(async (emp) => {
-          const { data: files } = await supabase.storage
-            .from("documentos-empleados")
-            .list(emp.id, { limit: 1 });
-          statusMap[emp.id] = (files?.length ?? 0) > 0;
-        });
-        await Promise.all(statusChecks).catch(() => {});
-        setExpedienteStatus(statusMap);
-      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -1790,8 +1732,6 @@ const Empleados = () => {
                         <TableHead>Contacto</TableHead>
                         <TableHead>Fecha Ingreso</TableHead>
                         <TableHead>Usuario Sistema</TableHead>
-                        <TableHead>Información</TableHead>
-                        <TableHead>Documentos</TableHead>
                         <TableHead>Estado</TableHead>
                         <TableHead className="text-right">Acciones</TableHead>
                       </TableRow>
@@ -1829,37 +1769,6 @@ const Empleados = () => {
                                   <UserPlus className="h-3 w-3 mr-1" />Dar acceso
                                 </Button>
                               )}
-                            </TableCell>
-                            <TableCell>
-                              {(() => {
-                                const info = getInformacionCompleta(empleado);
-                                const todoCompleto = info.completos === info.total;
-                                return (
-                                  <Badge variant={todoCompleto ? "default" : "secondary"}>
-                                    {info.completos}/{info.total}
-                                  </Badge>
-                                );
-                              })()}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col gap-1">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedEmpleado(empleado.id);
-                                    setIsDocDialogOpen(true);
-                                  }}
-                                >
-                                  <FileText className="h-4 w-4 mr-2" />
-                                  {getDocumentosSubidos(empleado.id)}/{getDocumentosEsperados(empleado.puesto)}
-                                </Button>
-                                {documentosPendientes[empleado.id]?.length > 0 && (
-                                  <Badge variant="destructive" className="text-xs">
-                                    {documentosPendientes[empleado.id].length} pendientes
-                                  </Badge>
-                                )}
-                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="space-y-1">
@@ -1908,13 +1817,8 @@ const Empleados = () => {
                                 </Button>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" title="Documentos" className="relative">
+                                    <Button variant="ghost" size="sm" title="Documentos">
                                       <FileText className="h-4 w-4" />
-                                      {expedienteStatus[empleado.id] ? (
-                                        <CheckCircle className="h-2.5 w-2.5 text-green-500 absolute -top-0.5 -right-0.5" />
-                                      ) : (
-                                        <Clock className="h-2.5 w-2.5 text-orange-400 absolute -top-0.5 -right-0.5" />
-                                      )}
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
@@ -1932,14 +1836,6 @@ const Empleados = () => {
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDelete(empleado)}
-                                  className="text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -1975,8 +1871,6 @@ const Empleados = () => {
                       <TableHead>Vencimiento Licencia</TableHead>
                       <TableHead>Fecha Ingreso</TableHead>
                       <TableHead>Usuario Sistema</TableHead>
-                      <TableHead>Información</TableHead>
-                      <TableHead>Documentos</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
@@ -2074,37 +1968,6 @@ const Empleados = () => {
                               )}
                             </TableCell>
                             <TableCell>
-                              {(() => {
-                                const info = getInformacionCompleta(empleado);
-                                const todoCompleto = info.completos === info.total;
-                                return (
-                                  <Badge variant={todoCompleto ? "default" : "secondary"}>
-                                    {info.completos}/{info.total}
-                                  </Badge>
-                                );
-                              })()}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col gap-1">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedEmpleado(empleado.id);
-                                    setIsDocDialogOpen(true);
-                                  }}
-                                >
-                                  <FileText className="h-4 w-4 mr-2" />
-                                  {getDocumentosSubidos(empleado.id)}/{getDocumentosEsperados(empleado.puesto)}
-                                </Button>
-                                {documentosPendientes[empleado.id]?.length > 0 && (
-                                  <Badge variant="destructive" className="text-xs">
-                                    {documentosPendientes[empleado.id].length} pendientes
-                                  </Badge>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
                               <div className="space-y-1">
                                 {(() => {
                                   if (!empleado.activo) {
@@ -2151,13 +2014,8 @@ const Empleados = () => {
                                 </Button>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" title="Documentos" className="relative">
+                                    <Button variant="ghost" size="sm" title="Documentos">
                                       <FileText className="h-4 w-4" />
-                                      {expedienteStatus[empleado.id] ? (
-                                        <CheckCircle className="h-2.5 w-2.5 text-green-500 absolute -top-0.5 -right-0.5" />
-                                      ) : (
-                                        <Clock className="h-2.5 w-2.5 text-orange-400 absolute -top-0.5 -right-0.5" />
-                                      )}
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
@@ -2175,14 +2033,6 @@ const Empleados = () => {
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDelete(empleado)}
-                                  className="text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -2217,8 +2067,6 @@ const Empleados = () => {
                       <TableHead>Vencimiento Licencia</TableHead>
                       <TableHead>Fecha Ingreso</TableHead>
                       <TableHead>Usuario Sistema</TableHead>
-                      <TableHead>Información</TableHead>
-                      <TableHead>Documentos</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
@@ -2316,37 +2164,6 @@ const Empleados = () => {
                               )}
                             </TableCell>
                             <TableCell>
-                              {(() => {
-                                const info = getInformacionCompleta(empleado);
-                                const todoCompleto = info.completos === info.total;
-                                return (
-                                  <Badge variant={todoCompleto ? "default" : "secondary"}>
-                                    {info.completos}/{info.total}
-                                  </Badge>
-                                );
-                              })()}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col gap-1">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedEmpleado(empleado.id);
-                                    setIsDocDialogOpen(true);
-                                  }}
-                                >
-                                  <FileText className="h-4 w-4 mr-2" />
-                                  {getDocumentosSubidos(empleado.id)}/{getDocumentosEsperados(empleado.puesto)}
-                                </Button>
-                                {documentosPendientes[empleado.id]?.length > 0 && (
-                                  <Badge variant="destructive" className="text-xs">
-                                    {documentosPendientes[empleado.id].length} pendientes
-                                  </Badge>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
                               <div className="space-y-1">
                                 {(() => {
                                   if (!empleado.activo) {
@@ -2393,13 +2210,8 @@ const Empleados = () => {
                                 </Button>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" title="Documentos" className="relative">
+                                    <Button variant="ghost" size="sm" title="Documentos">
                                       <FileText className="h-4 w-4" />
-                                      {expedienteStatus[empleado.id] ? (
-                                        <CheckCircle className="h-2.5 w-2.5 text-green-500 absolute -top-0.5 -right-0.5" />
-                                      ) : (
-                                        <Clock className="h-2.5 w-2.5 text-orange-400 absolute -top-0.5 -right-0.5" />
-                                      )}
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
@@ -2417,14 +2229,6 @@ const Empleados = () => {
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDelete(empleado)}
-                                  className="text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -2438,408 +2242,6 @@ const Empleados = () => {
           </Tabs>
         </Card>
 
-        {/* Dialog para documentos */}
-        <Dialog open={isDocDialogOpen} onOpenChange={setIsDocDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Documentos del Empleado</DialogTitle>
-              <DialogDescription>
-                Gestiona documentos subidos y marca documentos faltantes
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-6">
-              {/* Expediente Digital — documentos firmados */}
-              {selectedEmpleado && (
-                <ExpedienteDigital empleadoId={selectedEmpleado} />
-              )}
-
-              {/* Documentos pendientes */}
-              {selectedEmpleado && documentosPendientes[selectedEmpleado]?.length > 0 && (
-                <div className="border border-destructive/50 rounded-lg p-4 bg-destructive/5">
-                  <h3 className="font-medium mb-3 text-destructive flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Documentos Faltantes ({documentosPendientes[selectedEmpleado].length})
-                  </h3>
-                  <div className="space-y-2">
-                    {documentosPendientes[selectedEmpleado].map((pendingDoc) => (
-                      <div
-                        key={pendingDoc.id}
-                        className="flex items-start justify-between p-3 bg-background rounded-lg border"
-                      >
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">
-                            {getTipoDocumentoLabel(pendingDoc.tipo_documento)}
-                          </p>
-                          {pendingDoc.notas && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {pendingDoc.notas}
-                            </p>
-                          )}
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Marcado: {new Date(pendingDoc.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeletePendingDocument(pendingDoc)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Agregar documento pendiente */}
-              <div className="border-b pb-4 flex gap-2 flex-wrap">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsPendingDialogOpen(true)}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Marcar Documento Faltante
-                </Button>
-                
-                {/* Botón para subir expediente completo con IA */}
-                <div className="relative">
-                  <input
-                    type="file"
-                    id="expediente-file-input"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    accept=".pdf,.jpg,.jpeg,.png,.webp"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      
-                      // Convertir a base64
-                      const reader = new FileReader();
-                      reader.onload = () => {
-                        const base64 = (reader.result as string).split(",")[1];
-                        setExpedientePdfBase64(base64);
-                        setExpedienteFileName(file.name);
-                        setIsExpedienteDialogOpen(true);
-                      };
-                      reader.readAsDataURL(file);
-                      e.target.value = ""; // Reset input
-                    }}
-                  />
-                  <Button
-                    variant="default"
-                    size="sm"
-                    type="button"
-                  >
-                    <FileStack className="h-4 w-4 mr-2" />
-                    Subir Expediente Completo (IA)
-                  </Button>
-                </div>
-              </div>
-
-              {/* Upload form */}
-              <form onSubmit={handleUploadDocument} className="space-y-4 border-b pb-4">
-                <h3 className="font-medium">Subir Documento</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="tipo_documento">Tipo de Documento</Label>
-                    <Select
-                      value={docFormData.tipo_documento}
-                      onValueChange={(value: any) =>
-                        setDocFormData({ ...docFormData, tipo_documento: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona tipo de documento" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {/* Filtrar tipos de documento según el estado del empleado */}
-                        {selectedEmpleado && (() => {
-                          const empleado = empleados.find(e => e.id === selectedEmpleado);
-                          const tiposSubidos = documentos[selectedEmpleado]?.map(doc => doc.tipo_documento) || [];
-                          
-                          // Tipos de documento normales (sin terminación)
-                          const tiposNormales: Array<{ value: EmpleadoDocumento["tipo_documento"], label: string }> = [
-                            { value: "contrato_laboral", label: "Contrato Laboral" },
-                            { value: "ine", label: "INE / Identificación" },
-                            { value: "licencia_conducir", label: "Licencia de Conducir" },
-                            { value: "carta_seguro_social", label: "Carta del Seguro Social" },
-                            { value: "constancia_situacion_fiscal", label: "Constancia de Situación Fiscal" },
-                            { value: "acta_nacimiento", label: "Acta de Nacimiento" },
-                            { value: "comprobante_domicilio", label: "Comprobante de Domicilio" },
-                            { value: "curp", label: "CURP" },
-                            { value: "rfc", label: "RFC" },
-                            { value: "otro", label: "Otro" },
-                          ];
-
-                          // Tipos de documento de terminación (solo si el empleado está inactivo)
-                          const tiposTerminacion: Array<{ value: EmpleadoDocumento["tipo_documento"], label: string }> = [];
-                          if (empleado && !empleado.activo && empleado.motivo_baja) {
-                            if (empleado.motivo_baja === "renuncia") {
-                              tiposTerminacion.push(
-                                { value: "carta_renuncia", label: "Carta de Renuncia" },
-                                { value: "comprobante_finiquito", label: "Comprobante de Finiquito" }
-                              );
-                            } else if (empleado.motivo_baja === "despido") {
-                              tiposTerminacion.push(
-                                { value: "carta_despido", label: "Carta de Despido" },
-                                { value: "comprobante_finiquito", label: "Comprobante de Finiquito" }
-                              );
-                            }
-                            // Para abandono, solo pueden usar "otro" que ya está en tipos normales
-                          }
-
-                          const todosTipos = [...tiposNormales, ...tiposTerminacion];
-                          const tiposDisponibles = todosTipos.filter(tipo => !tiposSubidos.includes(tipo.value));
-                          
-                          if (tiposDisponibles.length === 0) {
-                            return (
-                              <SelectItem value="no-disponibles" disabled>
-                                Todos los documentos han sido subidos
-                              </SelectItem>
-                            );
-                          }
-                          
-                          return tiposDisponibles.map(tipo => (
-                            <SelectItem key={tipo.value} value={tipo.value}>
-                              {tipo.label}
-                            </SelectItem>
-                          ));
-                        })()}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="file">
-                      {docFormData.tipo_documento === 'licencia_conducir' ? 'Archivo (PDF o imagen)' : 'Archivo PDF'}
-                    </Label>
-                    <Input
-                      id="file"
-                      type="file"
-                      accept={docFormData.tipo_documento === 'licencia_conducir' ? '.pdf,.jpg,.jpeg,.png,.webp' : '.pdf'}
-                      onChange={(e) =>
-                        setDocFormData({
-                          ...docFormData,
-                          file: e.target.files?.[0] || null,
-                        })
-                      }
-                      required
-                    />
-                  </div>
-                </div>
-                <Button type="submit" disabled={uploading}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  {uploading ? "Subiendo..." : "Subir Documento"}
-                </Button>
-              </form>
-
-              {/* Documents list */}
-              <div>
-                <h3 className="font-medium mb-3 flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Documentos guardados
-                </h3>
-                {selectedEmpleado && documentos[selectedEmpleado]?.length > 0 ? (
-                  <div className="space-y-2">
-                    {documentos[selectedEmpleado].map((doc) => (
-                      <div
-                        key={doc.id}
-                        className="flex items-center justify-between p-3 border rounded-lg"
-                      >
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                              <p className="font-medium text-sm">{doc.nombre_archivo}</p>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                                <Badge variant="outline" className="text-xs">
-                                  {getTipoDocumentoLabel(doc.tipo_documento)}
-                                </Badge>
-                                <span>
-                                  Subido: {new Date(doc.created_at).toLocaleDateString()}
-                                </span>
-                                {doc.fecha_vencimiento && (
-                                  <>
-                                    <span className="text-muted-foreground">•</span>
-                                    <Badge 
-                                      variant={
-                                        (() => {
-                                          const diasRestantes = Math.ceil((new Date(doc.fecha_vencimiento).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                                          if (diasRestantes < 0) return "destructive";
-                                          if (diasRestantes <= 30) return "destructive";
-                                          return "secondary";
-                                        })()
-                                      }
-                                      className="text-xs"
-                                    >
-                                      Vence: {new Date(doc.fecha_vencimiento).toLocaleDateString()}
-                                    </Badge>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDownloadDocument(doc)}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteDocument(doc)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    No hay documentos guardados
-                  </p>
-                )}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Dialog para marcar documento pendiente */}
-        <Dialog open={isPendingDialogOpen} onOpenChange={setIsPendingDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Marcar Documento Faltante</DialogTitle>
-              <DialogDescription>
-                Registra qué documento necesita entregar el empleado
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleAddPendingDocument} className="space-y-4">
-              <div>
-                <Label htmlFor="pending_tipo">Tipo de Documento *</Label>
-                <Select
-                  value={pendingDocFormData.tipo_documento}
-                  onValueChange={(value: any) =>
-                    setPendingDocFormData({ ...pendingDocFormData, tipo_documento: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="contrato_laboral">Contrato Laboral</SelectItem>
-                    <SelectItem value="ine">INE / Identificación</SelectItem>
-                    <SelectItem value="carta_seguro_social">Carta del Seguro Social</SelectItem>
-                    <SelectItem value="constancia_situacion_fiscal">Constancia de Situación Fiscal</SelectItem>
-                    <SelectItem value="acta_nacimiento">Acta de Nacimiento</SelectItem>
-                    <SelectItem value="comprobante_domicilio">Comprobante de Domicilio</SelectItem>
-                    <SelectItem value="curp">CURP</SelectItem>
-                    <SelectItem value="rfc">RFC</SelectItem>
-                    <SelectItem value="carta_renuncia">Carta de Renuncia</SelectItem>
-                    <SelectItem value="carta_despido">Carta de Despido</SelectItem>
-                    <SelectItem value="comprobante_finiquito">Comprobante de Finiquito</SelectItem>
-                    <SelectItem value="otro">Otro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="pending_notas">Notas (opcional)</Label>
-                <Textarea
-                  id="pending_notas"
-                  value={pendingDocFormData.notas}
-                  onChange={(e) =>
-                    setPendingDocFormData({ ...pendingDocFormData, notas: e.target.value })
-                  }
-                  placeholder="ej: Tráelo mañana"
-                  rows={2}
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsPendingDialogOpen(false);
-                    setPendingDocFormData({ tipo_documento: "contrato_laboral", notas: "" });
-                  }}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit">Marcar como Faltante</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Dialog para editar fecha de vencimiento de licencia */}
-        <Dialog open={isEditLicenseExpiryOpen} onOpenChange={setIsEditLicenseExpiryOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Editar Fecha de Vencimiento</DialogTitle>
-              <DialogDescription>
-                Modifica manualmente la fecha de vencimiento de la licencia de conducir
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSaveLicenseExpiry} className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="es_permanente"
-                    checked={licenseExpiryFormData.es_permanente}
-                    onChange={(e) => {
-                      setLicenseExpiryFormData({
-                        ...licenseExpiryFormData,
-                        es_permanente: e.target.checked,
-                        fecha_vencimiento: e.target.checked ? "" : licenseExpiryFormData.fecha_vencimiento,
-                      });
-                    }}
-                    className="h-4 w-4"
-                  />
-                  <Label htmlFor="es_permanente" className="text-sm font-medium cursor-pointer">
-                    Licencia Permanente
-                  </Label>
-                </div>
-              </div>
-
-              {!licenseExpiryFormData.es_permanente && (
-                <div>
-                  <Label htmlFor="fecha_vencimiento">Fecha de Vencimiento</Label>
-                  <Input
-                    type="date"
-                    id="fecha_vencimiento"
-                    value={licenseExpiryFormData.fecha_vencimiento}
-                    onChange={(e) =>
-                      setLicenseExpiryFormData({
-                        ...licenseExpiryFormData,
-                        fecha_vencimiento: e.target.value,
-                      })
-                    }
-                    required={!licenseExpiryFormData.es_permanente}
-                  />
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditLicenseExpiryOpen(false);
-                    setEditingLicenseDoc(null);
-                    setLicenseExpiryFormData({ fecha_vencimiento: "", es_permanente: false });
-                  }}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit">Guardar Cambios</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
 
         {/* Dialog para análisis de expediente completo con IA */}
         {selectedEmpleado && (
