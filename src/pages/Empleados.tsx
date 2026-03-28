@@ -569,13 +569,13 @@ const Empleados = () => {
     setEditingEmpleado(empleado);
 
     // Load salary history
-    supabase
-      .from("empleados_historial_sueldo")
+    (supabase
+      .from("empleados_historial_sueldo" as any)
       .select("id, sueldo_anterior, sueldo_nuevo, premio_anterior, premio_nuevo, fecha_cambio")
       .eq("empleado_id", empleado.id)
       .order("fecha_cambio", { ascending: false })
-      .limit(10)
-      .then(({ data }) => setHistorialSueldo(data || []));
+      .limit(10) as any)
+      .then(({ data }: any) => setHistorialSueldo(data || []));
 
     const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
 
