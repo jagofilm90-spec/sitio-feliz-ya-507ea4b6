@@ -241,6 +241,12 @@ const Empleados = () => {
     es_permanente: false,
   });
 
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [isDocDialogOpen, setIsDocDialogOpen] = useState(false);
+  const [isPendingDialogOpen, setIsPendingDialogOpen] = useState(false);
+  const [isEditLicenseExpiryOpen, setIsEditLicenseExpiryOpen] = useState(false);
+
   // Estado para el análisis de expediente completo
   const [isExpedienteDialogOpen, setIsExpedienteDialogOpen] = useState(false);
   const [expedientePdfBase64, setExpedientePdfBase64] = useState<string>("");
@@ -460,14 +466,14 @@ const Empleados = () => {
         // Record salary change in history
         if (sueldoCambio || premioCambio) {
           const { data: { user } } = await supabase.auth.getUser();
-          await supabase.from("empleados_historial_sueldo").insert({
+          await (supabase.from("empleados_historial_sueldo" as any).insert({
             empleado_id: empleadoId,
             sueldo_anterior: sueldoAnterior,
             sueldo_nuevo: sueldoNuevo,
             premio_anterior: premioAnterior,
             premio_nuevo: premioNuevo,
             cambiado_por: user?.id || null,
-          }).then(({ error: hErr }) => {
+          } as any) as any).then(({ error: hErr }: any) => {
             if (hErr) console.warn("Error guardando historial sueldo:", hErr.message);
           });
         }
@@ -563,13 +569,13 @@ const Empleados = () => {
     setEditingEmpleado(empleado);
 
     // Load salary history
-    supabase
-      .from("empleados_historial_sueldo")
+    (supabase
+      .from("empleados_historial_sueldo" as any)
       .select("id, sueldo_anterior, sueldo_nuevo, premio_anterior, premio_nuevo, fecha_cambio")
       .eq("empleado_id", empleado.id)
       .order("fecha_cambio", { ascending: false })
-      .limit(10)
-      .then(({ data }) => setHistorialSueldo(data || []));
+      .limit(10) as any)
+      .then(({ data }: any) => setHistorialSueldo(data || []));
 
     const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
 
