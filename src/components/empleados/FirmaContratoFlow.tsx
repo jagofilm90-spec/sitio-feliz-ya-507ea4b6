@@ -97,18 +97,13 @@ function SignatureCanvas({
     onSignatureChange(false, () => "");
   };
 
-  // Draw placeholder
+  // Set canvas size to match CSS size (1:1 mapping, no dpr scaling)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    // Set high-res canvas
-    const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
+    canvas.width = rect.width;
+    canvas.height = rect.height;
   }, []);
 
   return (
