@@ -165,55 +165,27 @@ function buildRawEmail(from: string, to: string, subject: string, htmlBody: stri
 const LOGO_URL = "https://vrcyjmfpteoccqdmdmqn.supabase.co/storage/v1/object/public/email-assets/logo-almasa.png";
 
 function wrapEmailTemplate(title: string, bodyContent: string): string {
-  return `<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;">
-    <tr><td align="center" style="padding:30px 15px;">
-      <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-        <!-- Logo Header -->
-        <tr><td style="background:linear-gradient(135deg,#B22234 0%,#8B0000 100%);padding:28px 30px;text-align:center;">
-          <img src="${LOGO_URL}" alt="ALMASA" width="180" style="display:block;margin:0 auto;max-width:180px;height:auto;" />
-          <p style="color:rgba(255,255,255,0.85);margin:10px 0 0;font-size:13px;letter-spacing:0.5px;">Abarrotes La Manita, S.A. de C.V.</p>
-        </td></tr>
-        <!-- Title bar -->
-        <tr><td style="background:#1f2937;padding:14px 30px;text-align:center;">
-          <p style="color:#ffffff;margin:0;font-size:16px;font-weight:600;letter-spacing:0.3px;">${title}</p>
-        </td></tr>
-        <!-- Body -->
-        <tr><td style="padding:30px;">
-          ${bodyContent}
-        </td></tr>
-        <!-- Footer -->
-        <tr><td style="background:#f9fafb;padding:20px 30px;border-top:1px solid #e5e7eb;">
-          <p style="margin:0;color:#9ca3af;font-size:11px;text-align:center;line-height:1.5;">
-            Este correo fue enviado automáticamente por ALMASA.<br>
-            Por favor no responda directamente a este mensaje.
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`;
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0;font-family:Arial,Helvetica,sans-serif"><tr><td align="center"><table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;background:#fff;border-radius:4px;overflow:hidden;border:1px solid #e0e0e0">
+<tr><td style="padding:28px 36px;border-bottom:1px solid #eee;text-align:center"><p style="margin:0 0 0;color:#999;font-size:11px;font-style:italic;letter-spacing:1px">Desde 1904</p><img src="${LOGO_URL}" alt="ALMASA" width="180" style="display:inline-block;max-width:180px;height:auto"/><p style="margin:4px 0 0;font-size:10px;color:#888;text-transform:uppercase;letter-spacing:2px;font-weight:600">Trabajando por un México mejor</p></td></tr>
+<tr><td style="padding:28px 36px">
+<h2 style="margin:0 0 20px;font-size:18px;color:#222;font-weight:700">${title}</h2>
+${bodyContent}
+</td></tr>
+<tr><td style="padding:20px 36px;border-top:1px solid #eee"><p style="margin:0 0 4px;color:#666;font-size:11px;font-weight:600">Departamento de Pedidos</p><p style="margin:0;color:#999;font-size:10px;line-height:1.6">Melchor Ocampo #59, Col. Magdalena Mixiuhca, C.P. 15850, CDMX<br>Tel: 55 5552-0168 / 55 5552-7887 &bull; pedidos@almasa.com.mx</p><p style="margin:6px 0 0;color:#bbb;font-size:10px">Correo generado automáticamente. No responder.</p></td></tr>
+</table></td></tr></table>`;
 }
 
 function generateEmailContent(tipo: NotificationType, data: NotificationRequest["data"], clienteNombre: string): { subject: string; html: string } {
   switch (tipo) {
     case "pedido_confirmado":
       return {
-        subject: `✅ Pedido ${data.pedidoFolio} confirmado — ALMASA`,
-        html: wrapEmailTemplate("🛒 Pedido Confirmado", `
-          <p style="font-size:15px;color:#333;margin:0 0 16px;">Estimado/a <strong>${clienteNombre}</strong>,</p>
-          <p style="font-size:14px;color:#555;margin:0 0 20px;">Su pedido ha sido confirmado exitosamente y está siendo preparado.</p>
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ecfdf5;border-radius:8px;border-left:4px solid #10b981;margin:0 0 20px;">
-            <tr><td style="padding:16px 20px;">
-              <p style="margin:0 0 6px;font-size:14px;"><strong>Folio:</strong> ${data.pedidoFolio}</p>
-              ${data.total ? `<p style="margin:0;font-size:14px;"><strong>Total:</strong> $${data.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>` : ''}
-            </td></tr>
-          </table>
-          <p style="font-size:14px;color:#555;margin:0 0 8px;">Le notificaremos cuando su pedido esté en camino.</p>
-          <p style="font-size:14px;color:#555;margin:0;">¡Gracias por su preferencia!</p>
+        subject: `Pedido Confirmado — ${data.pedidoFolio} — ALMASA`,
+        html: wrapEmailTemplate("Pedido Confirmado", `
+          <p style="font-size:14px;color:#444;margin:0 0 6px;">${data.pedidoFolio}</p>
+          <p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 20px;">Estimado/a <strong>${clienteNombre}</strong>, su pedido ha sido confirmado y será programado para entrega.</p>
+          ${data.total ? `<table width="100%" style="margin:0 0 20px"><tr><td style="border-top:2px solid #222;padding:12px 0"><table width="100%"><tr><td style="font-size:18px;font-weight:800;color:#222">Total</td><td style="text-align:right;font-size:18px;font-weight:800;color:#222">$${data.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td></tr></table></td></tr></table>` : ''}
+          <p style="font-size:13px;color:#555;margin:0 0 8px;">Se le notificará vía correo electrónico cuando su pedido haya salido a ruta.</p>
+          <p style="font-size:13px;color:#888;margin:0;">Si tiene alguna pregunta sobre su pedido, no dude en contactarnos.</p>
         `),
       };
 
@@ -223,173 +195,144 @@ function generateEmailContent(tipo: NotificationType, data: NotificationRequest[
 
       let modificacionesHtml = "";
       if (hasModificaciones) {
-        const rows = data.modificaciones!.map(m =>
-          `<tr>
-            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#333;">${m.producto}</td>
-            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#333;text-align:center;">${m.cantidadOriginal}</td>
-            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#333;text-align:center;font-weight:600;">${m.cantidadNueva}</td>
-            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;color:${m.cantidadNueva < m.cantidadOriginal ? '#dc2626' : '#16a34a'};text-align:center;font-weight:600;">${m.cantidadNueva - m.cantidadOriginal}</td>
+        const rows = data.modificaciones!.map((m, i) =>
+          `<tr style="${i%2 ? "background:#fafafa;" : ""}">
+            <td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px">${m.producto}</td>
+            <td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:center">${m.cantidadOriginal}</td>
+            <td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:center;font-weight:600">${m.cantidadNueva}</td>
+            <td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:center;font-weight:600">${m.cantidadNueva - m.cantidadOriginal}</td>
           </tr>`
         ).join("");
 
         modificacionesHtml = `
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fef9c3;border-radius:8px;border-left:4px solid #eab308;margin:0 0 16px;">
-            <tr><td style="padding:14px 16px;">
-              <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#92400e;">⚠️ Ajustes en su pedido</p>
-              <p style="margin:0;font-size:13px;color:#78350f;">Durante la preparación se realizaron los siguientes cambios:</p>
-            </td></tr>
-          </table>
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e5e7eb;border-radius:8px;margin:0 0 16px;overflow:hidden;">
-            <thead>
-              <tr style="background:#f3f4f6;">
-                <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#374151;border-bottom:2px solid #d1d5db;">Producto</th>
-                <th style="padding:10px 12px;text-align:center;font-size:12px;font-weight:600;color:#374151;border-bottom:2px solid #d1d5db;">Original</th>
-                <th style="padding:10px 12px;text-align:center;font-size:12px;font-weight:600;color:#374151;border-bottom:2px solid #d1d5db;">Enviado</th>
-                <th style="padding:10px 12px;text-align:center;font-size:12px;font-weight:600;color:#374151;border-bottom:2px solid #d1d5db;">Dif.</th>
-              </tr>
-            </thead>
+          <p style="font-size:13px;font-weight:600;color:#222;margin:0 0 8px">Ajustes en su pedido:</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 16px">
+            <thead><tr style="border-bottom:2px solid #222">
+              <th style="padding:8px 10px;text-align:left;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Producto</th>
+              <th style="padding:8px 10px;text-align:center;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Original</th>
+              <th style="padding:8px 10px;text-align:center;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Enviado</th>
+              <th style="padding:8px 10px;text-align:center;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Dif.</th>
+            </tr></thead>
             <tbody>${rows}</tbody>
           </table>
           ${data.totalAnterior && data.totalNuevo ? `
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0f9ff;border-radius:8px;border-left:4px solid #3b82f6;margin:0 0 16px;">
-            <tr><td style="padding:14px 16px;">
-              <p style="margin:0 0 4px;font-size:13px;color:#555;"><strong>Total anterior:</strong> <span style="text-decoration:line-through;">${formatMoney(data.totalAnterior)}</span></p>
-              <p style="margin:0;font-size:15px;color:#1e40af;font-weight:700;"><strong>Nuevo total:</strong> ${formatMoney(data.totalNuevo)}</p>
-            </td></tr>
-          </table>` : ""}
+          <table width="100%" style="margin:0 0 16px"><tr><td style="border-top:2px solid #222;padding:12px 0"><table width="100%">
+            <tr><td style="color:#888;font-size:13px;padding:2px 0">Total anterior</td><td style="text-align:right;font-size:13px;color:#888;padding:2px 0;text-decoration:line-through">${formatMoney(data.totalAnterior)}</td></tr>
+            <tr><td style="font-size:16px;font-weight:800;color:#222;padding:4px 0">Nuevo total</td><td style="text-align:right;font-size:16px;font-weight:800;color:#222;padding:4px 0">${formatMoney(data.totalNuevo)}</td></tr>
+          </table></td></tr></table>` : ""}
         `;
       }
 
       return {
         subject: hasModificaciones
-          ? `🚚 Pedido ${data.pedidoFolio} en camino (con ajustes) — ALMASA`
-          : `🚚 Pedido ${data.pedidoFolio} en camino — ALMASA`,
-        html: wrapEmailTemplate("🚚 ¡Su Pedido Está en Camino!", `
-          <p style="font-size:15px;color:#333;margin:0 0 16px;">Estimado/a <strong>${clienteNombre}</strong>,</p>
-          <p style="font-size:14px;color:#555;margin:0 0 20px;">¡Buenas noticias! Su pedido ya salió de nuestro almacén y va en camino hacia usted.</p>
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fef3c7;border-radius:8px;border-left:4px solid #f59e0b;margin:0 0 20px;">
-            <tr><td style="padding:16px 20px;">
-              <p style="margin:0 0 6px;font-size:14px;"><strong>Folio:</strong> ${data.pedidoFolio}</p>
-              ${data.choferNombre ? `<p style="margin:0 0 6px;font-size:14px;"><strong>Chofer:</strong> ${data.choferNombre}</p>` : ''}
-              ${data.vehiculoNombre ? `<p style="margin:0 0 6px;font-size:14px;"><strong>Unidad:</strong> ${data.vehiculoNombre}</p>` : ''}
-              ${data.horaEstimada ? `<p style="margin:0;font-size:14px;"><strong>Hora estimada:</strong> ${data.horaEstimada}</p>` : ''}
-            </td></tr>
+          ? `Pedido ${data.pedidoFolio} en camino (con ajustes) — ALMASA`
+          : `Pedido ${data.pedidoFolio} en camino — ALMASA`,
+        html: wrapEmailTemplate("Su pedido está en camino", `
+          <p style="font-size:14px;color:#444;margin:0 0 6px;">${data.pedidoFolio}</p>
+          <p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 20px;">Estimado/a <strong>${clienteNombre}</strong>, su pedido ya salió de nuestro almacén y va en camino.</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 20px">
+            <tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0;width:140px">Folio</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0;font-weight:700">${data.pedidoFolio}</td></tr>
+            ${data.choferNombre ? `<tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0">Chofer</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0">${data.choferNombre}</td></tr>` : ''}
+            ${data.vehiculoNombre ? `<tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0">Unidad</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0">${data.vehiculoNombre}</td></tr>` : ''}
+            ${data.horaEstimada ? `<tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0">Hora estimada</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0">${data.horaEstimada}</td></tr>` : ''}
           </table>
           ${modificacionesHtml}
-          <p style="font-size:14px;color:#555;margin:0 0 8px;">Por favor asegúrese de tener a alguien disponible para recibir el pedido.</p>
-          <p style="font-size:14px;color:#555;margin:0;">¡Gracias por su preferencia!</p>
+          <p style="font-size:13px;color:#555;margin:0 0 8px;">Por favor asegúrese de tener a alguien disponible para recibir el pedido.</p>
+          <p style="font-size:13px;color:#888;margin:0;">¡Gracias por su preferencia!</p>
         `),
       };
     }
 
     case "entregado":
       return {
-        subject: `✓ Pedido ${data.pedidoFolio} entregado — ALMASA`,
-        html: wrapEmailTemplate("✓ Pedido Entregado", `
-          <p style="font-size:15px;color:#333;margin:0 0 16px;">Estimado/a <strong>${clienteNombre}</strong>,</p>
-          <p style="font-size:14px;color:#555;margin:0 0 20px;">Confirmamos que su pedido ha sido entregado exitosamente. ¡Gracias por confiar en Almasa!</p>
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ecfdf5;border-radius:8px;border-left:4px solid #10b981;margin:0 0 20px;">
-            <tr><td style="padding:16px 20px;">
-              <p style="margin:0 0 6px;font-size:14px;"><strong>Folio:</strong> ${data.pedidoFolio}</p>
-              ${data.nombreReceptor ? `<p style="margin:0 0 6px;font-size:14px;"><strong>Recibió:</strong> ${data.nombreReceptor}</p>` : ''}
-              ${data.horaEntrega ? `<p style="margin:0;font-size:14px;"><strong>Hora:</strong> ${new Date(data.horaEntrega).toLocaleString('es-MX')}</p>` : ''}
-            </td></tr>
+        subject: `Pedido ${data.pedidoFolio} entregado — ALMASA`,
+        html: wrapEmailTemplate("Pedido Entregado", `
+          <p style="font-size:14px;color:#444;margin:0 0 6px;">${data.pedidoFolio}</p>
+          <p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 20px;">Estimado/a <strong>${clienteNombre}</strong>, confirmamos que su pedido ha sido entregado.</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 20px">
+            ${data.nombreReceptor ? `<tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0;width:140px">Recibió</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0">${data.nombreReceptor}</td></tr>` : ''}
+            ${data.horaEntrega ? `<tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0">Hora</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0">${new Date(data.horaEntrega).toLocaleString('es-MX')}</td></tr>` : ''}
           </table>
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0f9ff;border-radius:8px;border-left:4px solid #3b82f6;margin:0 0 20px;">
-            <tr><td style="padding:16px 20px;">
-              <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#1e40af;">Datos Bancarios para Pago</p>
-              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>Beneficiario:</strong> ABARROTES LA MANITA, S.A. DE C.V.</p>
-              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>Banco:</strong> BBVA BANCOMER, S.A.</p>
-              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>Cuenta:</strong> 0442413388</p>
-              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>CLABE:</strong> 012180004424133881</p>
-              <p style="margin:0;font-size:11px;color:#888;">Enviar comprobante a: pagos@almasa.com.mx</p>
-            </td></tr>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 20px">
+            <tr><td style="padding:8px 0;font-size:13px;font-weight:600;color:#222;border-bottom:1px solid #eee">Datos Bancarios para Pago</td></tr>
+            <tr><td style="padding:4px 0;font-size:12px;color:#555"><strong>Beneficiario:</strong> ABARROTES LA MANITA, S.A. DE C.V.</td></tr>
+            <tr><td style="padding:4px 0;font-size:12px;color:#555"><strong>Banco:</strong> BBVA BANCOMER, S.A.</td></tr>
+            <tr><td style="padding:4px 0;font-size:12px;color:#555"><strong>Cuenta:</strong> 0442413388</td></tr>
+            <tr><td style="padding:4px 0;font-size:12px;color:#555"><strong>CLABE:</strong> 012180004424133881</td></tr>
+            <tr><td style="padding:4px 0;font-size:11px;color:#888">Enviar comprobante a: pagos@almasa.com.mx</td></tr>
           </table>
-          <p style="font-size:14px;color:#555;margin:0;">¡Gracias por su preferencia!</p>
+          <p style="font-size:13px;color:#888;margin:0;">¡Gracias por su preferencia!</p>
         `),
       };
 
     case "pedido_conciliado":
       return {
-        subject: `📄 Su pedido ${data.pedidoFolio} ha sido entregado — ALMASA`,
-        html: wrapEmailTemplate("📄 Pedido Entregado y Conciliado", `
-          <p style="font-size:15px;color:#333;margin:0 0 16px;">Estimado/a <strong>${clienteNombre}</strong>,</p>
-          <p style="font-size:14px;color:#555;margin:0 0 20px;">Su pedido ya fue entregado. Adjuntamos su documento final con precios, cantidades y el total definitivo.</p>
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ecfdf5;border-radius:8px;border-left:4px solid #10b981;margin:0 0 20px;">
-            <tr><td style="padding:16px 20px;">
-              <p style="margin:0 0 6px;font-size:14px;"><strong>Folio:</strong> ${data.pedidoFolio}</p>
-              ${data.total ? `<p style="margin:0 0 6px;font-size:14px;"><strong>Total:</strong> $${data.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>` : ''}
-              ${data.fechaEntrega ? `<p style="margin:0 0 6px;font-size:14px;"><strong>Fecha de entrega:</strong> ${data.fechaEntrega}</p>` : ''}
-              ${data.diasCredito ? `<p style="margin:0;font-size:14px;"><strong>Días de crédito:</strong> ${data.diasCredito}</p>` : ''}
-            </td></tr>
+        subject: `Pedido ${data.pedidoFolio} entregado — ALMASA`,
+        html: wrapEmailTemplate("Pedido Entregado y Conciliado", `
+          <p style="font-size:14px;color:#444;margin:0 0 6px;">${data.pedidoFolio}</p>
+          <p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 20px;">Estimado/a <strong>${clienteNombre}</strong>, su pedido ya fue entregado. Adjuntamos su documento final con precios, cantidades y el total definitivo.</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 16px">
+            ${data.total ? `<tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0;width:140px">Total</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0;font-weight:700">$${data.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td></tr>` : ''}
+            ${data.fechaEntrega ? `<tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0">Fecha entrega</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0">${data.fechaEntrega}</td></tr>` : ''}
+            ${data.diasCredito ? `<tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0">Días de crédito</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0">${data.diasCredito}</td></tr>` : ''}
           </table>
           <p style="font-size:13px;color:#555;margin:0 0 16px;">A partir de la fecha de entrega comienzan a contar los días de crédito acordados.</p>
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0f9ff;border-radius:8px;border-left:4px solid #3b82f6;margin:0 0 20px;">
-            <tr><td style="padding:16px 20px;">
-              <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#1e40af;">Datos Bancarios para Pago</p>
-              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>Beneficiario:</strong> ABARROTES LA MANITA, S.A. DE C.V.</p>
-              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>Banco:</strong> BBVA BANCOMER, S.A.</p>
-              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>Cuenta:</strong> 0442413388</p>
-              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>CLABE:</strong> 012180004424133881</p>
-              <p style="margin:0;font-size:11px;color:#888;">Enviar comprobante a: pagos@almasa.com.mx</p>
-            </td></tr>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 20px">
+            <tr><td style="padding:8px 0;font-size:13px;font-weight:600;color:#222;border-bottom:1px solid #eee">Datos Bancarios para Pago</td></tr>
+            <tr><td style="padding:4px 0;font-size:12px;color:#555"><strong>Beneficiario:</strong> ABARROTES LA MANITA, S.A. DE C.V.</td></tr>
+            <tr><td style="padding:4px 0;font-size:12px;color:#555"><strong>Banco:</strong> BBVA BANCOMER, S.A.</td></tr>
+            <tr><td style="padding:4px 0;font-size:12px;color:#555"><strong>Cuenta:</strong> 0442413388</td></tr>
+            <tr><td style="padding:4px 0;font-size:12px;color:#555"><strong>CLABE:</strong> 012180004424133881</td></tr>
+            <tr><td style="padding:4px 0;font-size:11px;color:#888">Enviar comprobante a: pagos@almasa.com.mx</td></tr>
           </table>
-          <p style="font-size:14px;color:#555;margin:0;">¡Gracias por confiar en Almasa!</p>
+          <p style="font-size:13px;color:#888;margin:0;">¡Gracias por confiar en Almasa!</p>
         `),
       };
 
     case "pedido_conciliado_ajustado":
       return {
-        subject: `📄 Su pedido ${data.pedidoFolio} ha sido ajustado — ALMASA`,
-        html: wrapEmailTemplate("📄 Pedido Ajustado tras Entrega", `
-          <p style="font-size:15px;color:#333;margin:0 0 16px;">Estimado/a <strong>${clienteNombre}</strong>,</p>
-          <p style="font-size:14px;color:#555;margin:0 0 20px;">Su pedido fue ajustado de acuerdo a la devolución o faltante registrado durante la entrega. El total global ya está calculado y es el definitivo.</p>
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fef3c7;border-radius:8px;border-left:4px solid #f59e0b;margin:0 0 20px;">
-            <tr><td style="padding:16px 20px;">
-              <p style="margin:0 0 6px;font-size:14px;"><strong>Folio:</strong> ${data.pedidoFolio}</p>
-              ${data.total ? `<p style="margin:0 0 6px;font-size:14px;"><strong>Total ajustado:</strong> $${data.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>` : ''}
-              ${data.fechaEntrega ? `<p style="margin:0 0 6px;font-size:14px;"><strong>Fecha de entrega:</strong> ${data.fechaEntrega}</p>` : ''}
-              ${data.diasCredito ? `<p style="margin:0;font-size:14px;"><strong>Días de crédito:</strong> ${data.diasCredito}</p>` : ''}
-            </td></tr>
+        subject: `Pedido ${data.pedidoFolio} ajustado — ALMASA`,
+        html: wrapEmailTemplate("Pedido Ajustado tras Entrega", `
+          <p style="font-size:14px;color:#444;margin:0 0 6px;">${data.pedidoFolio}</p>
+          <p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 20px;">Estimado/a <strong>${clienteNombre}</strong>, su pedido fue ajustado de acuerdo a la devolución o faltante registrado durante la entrega. Adjuntamos el documento con el detalle actualizado.</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 16px">
+            ${data.total ? `<tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0;width:140px">Total ajustado</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0;font-weight:700">$${data.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td></tr>` : ''}
+            ${data.fechaEntrega ? `<tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0">Fecha entrega</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0">${data.fechaEntrega}</td></tr>` : ''}
+            ${data.diasCredito ? `<tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0">Días de crédito</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0">${data.diasCredito}</td></tr>` : ''}
           </table>
-          <p style="font-size:13px;color:#555;margin:0 0 16px;">A partir de la fecha de entrega comienzan a contar los días de crédito acordados. Adjuntamos el documento con el detalle actualizado.</p>
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0f9ff;border-radius:8px;border-left:4px solid #3b82f6;margin:0 0 20px;">
-            <tr><td style="padding:16px 20px;">
-              <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#1e40af;">Datos Bancarios para Pago</p>
-              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>Beneficiario:</strong> ABARROTES LA MANITA, S.A. DE C.V.</p>
-              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>Banco:</strong> BBVA BANCOMER, S.A.</p>
-              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>Cuenta:</strong> 0442413388</p>
-              <p style="margin:0 0 4px;font-size:12px;color:#555;"><strong>CLABE:</strong> 012180004424133881</p>
-              <p style="margin:0;font-size:11px;color:#888;">Enviar comprobante a: pagos@almasa.com.mx</p>
-            </td></tr>
+          <p style="font-size:13px;color:#555;margin:0 0 16px;">A partir de la fecha de entrega comienzan a contar los días de crédito acordados.</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 20px">
+            <tr><td style="padding:8px 0;font-size:13px;font-weight:600;color:#222;border-bottom:1px solid #eee">Datos Bancarios para Pago</td></tr>
+            <tr><td style="padding:4px 0;font-size:12px;color:#555"><strong>Beneficiario:</strong> ABARROTES LA MANITA, S.A. DE C.V.</td></tr>
+            <tr><td style="padding:4px 0;font-size:12px;color:#555"><strong>Banco:</strong> BBVA BANCOMER, S.A.</td></tr>
+            <tr><td style="padding:4px 0;font-size:12px;color:#555"><strong>Cuenta:</strong> 0442413388</td></tr>
+            <tr><td style="padding:4px 0;font-size:12px;color:#555"><strong>CLABE:</strong> 012180004424133881</td></tr>
+            <tr><td style="padding:4px 0;font-size:11px;color:#888">Enviar comprobante a: pagos@almasa.com.mx</td></tr>
           </table>
-          <p style="font-size:14px;color:#555;margin:0;">¡Gracias por confiar en Almasa!</p>
+          <p style="font-size:13px;color:#888;margin:0;">¡Gracias por confiar en Almasa!</p>
         `),
       };
 
     case "vencimiento_proximo":
       return {
-        subject: `⚠️ Factura ${data.facturaFolio} vence en ${data.diasRestantes} días — ALMASA`,
-        html: wrapEmailTemplate("⚠️ Recordatorio de Pago", `
-          <p style="font-size:15px;color:#333;margin:0 0 16px;">Estimado/a <strong>${clienteNombre}</strong>,</p>
-          <p style="font-size:14px;color:#555;margin:0 0 20px;">Le recordamos que su factura está próxima a vencer.</p>
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fee2e2;border-radius:8px;border-left:4px solid #ef4444;margin:0 0 20px;">
-            <tr><td style="padding:16px 20px;">
-              <p style="margin:0 0 6px;font-size:14px;"><strong>Factura:</strong> ${data.facturaFolio}</p>
-              <p style="margin:0 0 6px;font-size:14px;"><strong>Monto:</strong> $${data.total?.toLocaleString('es-MX', { minimumFractionDigits: 2 }) || '0.00'}</p>
-              <p style="margin:0 0 6px;font-size:14px;"><strong>Vencimiento:</strong> ${data.fechaVencimiento}</p>
-              <p style="margin:0;font-size:14px;font-weight:600;color:#dc2626;"><strong>Días restantes:</strong> ${data.diasRestantes}</p>
-            </td></tr>
+        subject: `Factura ${data.facturaFolio} vence en ${data.diasRestantes} días — ALMASA`,
+        html: wrapEmailTemplate("Recordatorio de Pago", `
+          <p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 20px;">Estimado/a <strong>${clienteNombre}</strong>, le recordamos que su factura está próxima a vencer.</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 20px">
+            <tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0;width:140px">Factura</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0;font-weight:700">${data.facturaFolio}</td></tr>
+            <tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0">Monto</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0">$${data.total?.toLocaleString('es-MX', { minimumFractionDigits: 2 }) || '0.00'}</td></tr>
+            <tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0">Vencimiento</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0">${data.fechaVencimiento}</td></tr>
+            <tr><td style="padding:6px 0;color:#888;font-size:13px;border-bottom:1px solid #f0f0f0">Días restantes</td><td style="padding:6px 0;color:#222;font-size:14px;border-bottom:1px solid #f0f0f0;font-weight:700">${data.diasRestantes}</td></tr>
           </table>
-          <p style="font-size:14px;color:#555;margin:0 0 8px;">Le invitamos a realizar su pago antes de la fecha de vencimiento.</p>
-          <p style="font-size:13px;color:#999;margin:0;">Si ya realizó su pago, por favor ignore este mensaje.</p>
+          <p style="font-size:13px;color:#555;margin:0 0 8px;">Le invitamos a realizar su pago antes de la fecha de vencimiento.</p>
+          <p style="font-size:13px;color:#888;margin:0;">Si ya realizó su pago, por favor ignore este mensaje.</p>
         `),
       };
 
     default:
       return {
-        subject: "Notificación de ALMASA",
-        html: wrapEmailTemplate("Notificación", `<p style="font-size:14px;color:#555;">Notificación del sistema</p>`),
+        subject: "Notificación — ALMASA",
+        html: wrapEmailTemplate("Notificación", `<p style="font-size:14px;color:#444;">Notificación del sistema.</p>`),
       };
   }
 }

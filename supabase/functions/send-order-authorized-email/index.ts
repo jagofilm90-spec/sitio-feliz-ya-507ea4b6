@@ -54,11 +54,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (ajustesPrecio > 0) subj = `Pedido Confirmado (${ajustesPrecio} ajuste${ajustesPrecio > 1 ? "s" : ""}) — ${pedidoFolio}`;
 
     let alertHtml = "";
-    if (ajustesPrecio > 0) alertHtml = `<p style="margin:16px 0;padding:10px 14px;background:#fafafa;border-left:3px solid #C8102E;font-size:13px;color:#555">Se realizaron ${ajustesPrecio} ajuste${ajustesPrecio > 1 ? "s" : ""} de precio. Los productos ajustados estan marcados abajo.</p>`;
+    if (ajustesPrecio > 0) alertHtml = `<p style="margin:0 0 16px;font-size:13px;color:#555">Se realizaron ${ajustesPrecio} ajuste${ajustesPrecio > 1 ? "s" : ""} de precio. Los productos ajustados están marcados con *.</p>`;
 
     const hasKg = detalles.some(d => d.kgTotales && d.kgTotales > 0);
     const rows = detalles.map((d, i) => {
-      const bg = d.fueAjustado ? "background:#fff8f0;" : (i % 2 ? "background:#fafafa;" : "");
+      const bg = i % 2 ? "background:#fafafa;" : "";
       const price = d.fueAjustado && d.precioAnterior ? `<span style="text-decoration:line-through;color:#bbb;font-size:12px">${fmt(d.precioAnterior)}</span> ${fmt(d.precioUnitario)}` : `${fmt(d.precioUnitario)}${d.precioPorKilo ? "/kg" : ""}`;
       const kgCell = hasKg ? `<td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:right;color:#666">${d.kgTotales ? d.kgTotales.toLocaleString("es-MX") + " kg" : ""}</td>` : "";
       return `<tr style="${bg}"><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px">${d.producto}${d.fueAjustado ? " *" : ""}</td><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:center">${d.cantidad} ${d.unidad}</td>${kgCell}<td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:right">${price}</td><td style="padding:7px 10px;border-bottom:1px solid #eee;font-size:13px;text-align:right;font-weight:600">${fmt(d.subtotal)}</td></tr>`;
@@ -70,14 +70,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
 <tr><td style="padding:28px 36px">
 <h2 style="margin:0 0 6px;font-size:18px;color:#222;font-weight:700">Pedido Confirmado</h2>
 <p style="margin:0 0 20px;color:#888;font-size:14px">${pedidoFolio}</p>
-<p style="color:#444;font-size:14px;line-height:1.6;margin:0 0 20px">Estimado(a) <strong>${clienteNombre}</strong>, su pedido ha sido confirmado y sera programado para entrega.</p>
+<p style="color:#444;font-size:14px;line-height:1.6;margin:0 0 20px">Estimado/a <strong>${clienteNombre}</strong>, su pedido ha sido confirmado y será programado para entrega.</p>
 ${alertHtml}
-<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:20px 0"><thead><tr style="border-bottom:2px solid #C8102E"><th style="padding:8px 10px;text-align:left;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Producto</th><th style="padding:8px 10px;text-align:center;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Cant.</th>${kgHeader}<th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Precio</th><th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Importe</th></tr></thead><tbody>${rows}</tbody></table>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:20px 0"><thead><tr style="border-bottom:2px solid #222"><th style="padding:8px 10px;text-align:left;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Producto</th><th style="padding:8px 10px;text-align:center;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Cant.</th>${kgHeader}<th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Precio</th><th style="padding:8px 10px;text-align:right;font-size:11px;color:#888;text-transform:uppercase;font-weight:600">Importe</th></tr></thead><tbody>${rows}</tbody></table>
 <table width="100%" style="margin-top:8px"><tr><td style="border-top:2px solid #222;padding:12px 0"><table width="100%"><tr><td style="font-size:18px;font-weight:800;color:#222">Total</td><td style="text-align:right;font-size:18px;font-weight:800;color:#222">${fmt(total)}</td></tr></table></td></tr></table>
-<p style="color:#555;font-size:13px;margin:24px 0 0;line-height:1.5;padding:10px 14px;background:#f0f9ff;border-left:3px solid #2563eb;border-radius:2px">Se le notificará vía correo electrónico cuando su pedido haya salido a ruta.</p>
+<p style="color:#555;font-size:13px;margin:24px 0 0;line-height:1.5">Se le notificará vía correo electrónico cuando su pedido haya salido a ruta.</p>
 <p style="color:#888;font-size:13px;margin:16px 0 0;line-height:1.5">Si tiene alguna pregunta sobre su pedido, no dude en contactarnos.</p>
 </td></tr>
-<tr><td style="padding:20px 36px;border-top:1px solid #eee"><p style="margin:0 0 4px;color:#666;font-size:11px;font-weight:600">Departamento de Pedidos</p><p style="margin:0;color:#999;font-size:10px;line-height:1.6">Melchor Ocampo #59, Col. Magdalena Mixiuhca, C.P. 15850, CDMX<br>Tel: 55 5552-0168 / 55 5552-7887 &bull; pedidos@almasa.com.mx</p><p style="margin:6px 0 0;color:#bbb;font-size:10px">Correo generado automaticamente. No responder.</p></td></tr>
+<tr><td style="padding:20px 36px;border-top:1px solid #eee"><p style="margin:0 0 4px;color:#666;font-size:11px;font-weight:600">Departamento de Pedidos</p><p style="margin:0;color:#999;font-size:10px;line-height:1.6">Melchor Ocampo #59, Col. Magdalena Mixiuhca, C.P. 15850, CDMX<br>Tel: 55 5552-0168 / 55 5552-7887 &bull; pedidos@almasa.com.mx</p><p style="margin:6px 0 0;color:#bbb;font-size:10px">Correo generado automáticamente. No responder.</p></td></tr>
 </table></td></tr></table>`;
 
     const raw = rawEmail(sender, clienteEmail, subj, emailHtml, pdfBase64, pdfFilename);
