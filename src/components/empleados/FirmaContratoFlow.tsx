@@ -281,36 +281,71 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
         console.warn("Error subiendo PDFs al storage:", uploadErr);
       }
 
-      // TODO: Deploy edge function 'send-welcome-email' to enable email sending
-      // Send welcome email with signed PDFs
+      // Send welcome email with signed PDFs via Gmail API
       if (empleado.email) {
         try {
           const contratoPath = `${empleado.id}/contrato_firmado_${hoy}.pdf`;
           const avisoPath = `${empleado.id}/aviso_privacidad_${hoy}.pdf`;
-          const { data: contratoUrlData } = await supabase.storage.from("documentos-empleados").createSignedUrl(contratoPath, 60 * 60 * 24 * 7); // 7 days
+          const { data: contratoUrlData } = await supabase.storage.from("documentos-empleados").createSignedUrl(contratoPath, 60 * 60 * 24 * 7);
           const { data: avisoUrlData } = await supabase.storage.from("documentos-empleados").createSignedUrl(avisoPath, 60 * 60 * 24 * 7);
 
-          const { error: emailError } = await supabase.functions.invoke("send-welcome-email", {
+          const fechaIngresoFormateada = new Date(empleado.fecha_ingreso).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
+
+          const htmlBody = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background-color: #dc2626; padding: 20px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">¡Bienvenido/a a ALMASA!</h1>
+              </div>
+              <div style="padding: 30px 20px; background-color: #ffffff;">
+                <p style="font-size: 16px; color: #333;">Estimado/a <strong>${empleado.nombre_completo}</strong>,</p>
+                <p style="font-size: 14px; color: #555; line-height: 1.6;">
+                  Es un gusto darte la bienvenida a <strong>Abarrotes La Manita, S.A. de C.V.</strong> 
+                  Te informamos que tu contrato individual de trabajo y aviso de privacidad han sido firmados exitosamente.
+                </p>
+                <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                  <tr>
+                    <td style="padding: 8px 12px; background-color: #f9fafb; border: 1px solid #e5e7eb; font-weight: bold; color: #374151;">Puesto</td>
+                    <td style="padding: 8px 12px; border: 1px solid #e5e7eb; color: #555;">${empleado.puesto}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 12px; background-color: #f9fafb; border: 1px solid #e5e7eb; font-weight: bold; color: #374151;">Fecha de ingreso</td>
+                    <td style="padding: 8px 12px; border: 1px solid #e5e7eb; color: #555;">${fechaIngresoFormateada}</td>
+                  </tr>
+                </table>
+                ${contratoUrlData?.signedUrl || avisoUrlData?.signedUrl ? `
+                <p style="font-size: 14px; color: #555;">Puedes descargar tus documentos firmados desde los siguientes enlaces (válidos por 7 días):</p>
+                <div style="margin: 15px 0;">
+                  ${contratoUrlData?.signedUrl ? `<p style="margin: 8px 0;"><a href="${contratoUrlData.signedUrl}" style="background-color: #dc2626; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-size: 14px;">📄 Descargar Contrato</a></p>` : ''}
+                  ${avisoUrlData?.signedUrl ? `<p style="margin: 8px 0;"><a href="${avisoUrlData.signedUrl}" style="background-color: #dc2626; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-size: 14px;">📄 Descargar Aviso de Privacidad</a></p>` : ''}
+                </div>` : ''}
+                <p style="font-size: 14px; color: #555; margin-top: 25px;">
+                  Te deseamos mucho éxito en esta nueva etapa. ¡Estamos contentos de tenerte en el equipo!
+                </p>
+              </div>
+              <div style="background-color: #f3f4f6; padding: 15px 20px; text-align: center; font-size: 12px; color: #9ca3af;">
+                Abarrotes La Manita, S.A. de C.V. — Departamento de Recursos Humanos
+              </div>
+            </div>`;
+
+          const { error: emailError } = await supabase.functions.invoke("gmail-api", {
             body: {
-              empleado_id: empleado.id,
-              email: empleado.email,
-              nombre: empleado.nombre_completo,
-              puesto: empleado.puesto,
-              fecha_ingreso: empleado.fecha_ingreso,
-              contrato_url: contratoUrlData?.signedUrl || null,
-              aviso_url: avisoUrlData?.signedUrl || null,
+              action: "send",
+              email: "compras@almasa.com.mx",
+              to: empleado.email,
+              subject: `¡Bienvenido/a a ALMASA! - ${empleado.nombre_completo}`,
+              body: htmlBody,
             },
           });
 
           if (emailError) {
             console.warn("Email de bienvenida no enviado:", emailError.message);
-            toast({ title: "Documentos firmados y descargados", description: "El email de bienvenida se enviará cuando el servicio de correo esté configurado." });
+            toast({ title: "Documentos firmados y descargados", description: "No se pudo enviar el email de bienvenida, pero los documentos se guardaron correctamente." });
           } else {
-            toast({ title: "Documentos firmados y descargados", description: `Email de bienvenida enviado a ${empleado.email}` });
+            toast({ title: "✅ Documentos firmados", description: `Email de bienvenida enviado a ${empleado.email}` });
           }
         } catch (emailErr) {
-          console.warn("Edge function send-welcome-email no disponible:", emailErr);
-          toast({ title: "Documentos firmados y descargados", description: "El email de bienvenida se enviará cuando el servicio de correo esté configurado." });
+          console.warn("Error enviando email de bienvenida:", emailErr);
+          toast({ title: "Documentos firmados y descargados", description: "No se pudo enviar el email de bienvenida, pero los documentos se guardaron correctamente." });
         }
       } else {
         toast({ title: "Documentos firmados y descargados", description: "Contrato y Aviso de Privacidad generados con firmas digitales." });
