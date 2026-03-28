@@ -37,11 +37,13 @@ function SignatureCanvas({
   canvasRef,
   onDraw,
   onClear,
+  height = 120,
 }: {
   label: string;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   onDraw: () => void;
   onClear: () => void;
+  height?: number;
 }) {
   const isDrawing = useRef(false);
 
@@ -98,10 +100,16 @@ function SignatureCanvas({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
-  }, [canvasRef]);
+    // Small delay to ensure DOM has rendered with correct dimensions
+    const timer = setTimeout(() => {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [canvasRef, height]);
 
   return (
     <div className="space-y-1">
@@ -109,7 +117,7 @@ function SignatureCanvas({
       <canvas
         ref={canvasRef}
         className="w-full border-2 border-dashed border-gray-300 rounded-lg cursor-crosshair bg-white touch-none"
-        style={{ height: 120 }}
+        style={{ height }}
         onMouseDown={startDraw}
         onMouseMove={draw}
         onMouseUp={stopDraw}
@@ -129,34 +137,28 @@ function SignatureCanvas({
 
 export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }: FirmaContratoFlowProps) {
   const { toast } = useToast();
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
 
-  // Track whether each canvas has been drawn on
-  const [hasEmpleado1, setHasEmpleado1] = useState(false);
-  const [hasAdmin, setHasAdmin] = useState(false);
-  const [hasEmpleado2, setHasEmpleado2] = useState(false);
+  // Track whether current canvas has been drawn on
+  const [hasSignature, setHasSignature] = useState(false);
 
-  // Step 1 saved signature images (captured when moving to step 2)
+  // Saved signature images
   const [firmaEmpleadoImg, setFirmaEmpleadoImg] = useState("");
   const [firmaAdminImg, setFirmaAdminImg] = useState("");
 
-  // Step 2
+  // Step 3
   const [consentimientoSi, setConsentimientoSi] = useState(true);
 
-  // Canvas refs — we read toDataURL directly from them
-  const canvasEmpleado1Ref = useRef<HTMLCanvasElement>(null);
-  const canvasAdminRef = useRef<HTMLCanvasElement>(null);
-  const canvasEmpleado2Ref = useRef<HTMLCanvasElement>(null);
+  // One canvas ref per step
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Reset when opened
   useEffect(() => {
     if (open) {
       setStep(1);
       setConsentimientoSi(true);
-      setHasEmpleado1(false);
-      setHasAdmin(false);
-      setHasEmpleado2(false);
+      setHasSignature(false);
       setFirmaEmpleadoImg("");
       setFirmaAdminImg("");
     }
@@ -185,18 +187,17 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
     }
   }, [empleado.id]);
 
-  const handleStep1Continue = () => {
-    if (!hasEmpleado1 || !hasAdmin) return;
-    // Capture signature images from canvases before transitioning
-    const empImg = canvasEmpleado1Ref.current?.toDataURL("image/png") ?? "";
-    const admImg = canvasAdminRef.current?.toDataURL("image/png") ?? "";
-    setFirmaEmpleadoImg(empImg);
-    setFirmaAdminImg(admImg);
-    setStep(2);
+  const captureAndNext = (nextStep: 2 | 3) => {
+    if (!hasSignature) return;
+    const img = canvasRef.current?.toDataURL("image/png") ?? "";
+    if (step === 1) setFirmaEmpleadoImg(img);
+    if (step === 2) setFirmaAdminImg(img);
+    setHasSignature(false);
+    setStep(nextStep);
   };
 
   const handleFinalize = async () => {
-    if (!hasEmpleado2) return;
+    if (!hasSignature) return;
     setLoading(true);
 
     try {
@@ -204,7 +205,7 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
       const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
       const premio = extras?.premio_asistencia_semanal || empleado.premio_asistencia_semanal || premioDefault;
       const beneficiario = extras?.beneficiario || empleado.beneficiario || "Por designar";
-      const firmaEmpleado2Img = canvasEmpleado2Ref.current?.toDataURL("image/png") ?? "";
+      const firmaEmpleado2Img = canvasRef.current?.toDataURL("image/png") ?? "";
 
       // Generate signed contract PDF
       const contratoResult = await generarContratoPDF({
@@ -378,35 +379,23 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
         {step === 1 && (
           <>
             <DialogHeader>
-              <DialogTitle>Paso 1 de 2 — Firma del Contrato Individual</DialogTitle>
+              <DialogTitle>Paso 1 de 3 — Firma del Empleado</DialogTitle>
             </DialogHeader>
             <p className="text-sm text-muted-foreground">
-              El empleado <strong>{empleado.nombre_completo}</strong> firma el contrato para el puesto de <strong>{empleado.puesto}</strong>.
+              <strong>{empleado.nombre_completo}</strong> firma su contrato individual de trabajo.
             </p>
-
-            <div className="space-y-4 mt-4">
+            <div className="mt-4">
               <SignatureCanvas
                 label="Firma del empleado"
-                canvasRef={canvasEmpleado1Ref}
-                onDraw={() => setHasEmpleado1(true)}
-                onClear={() => setHasEmpleado1(false)}
-              />
-              <SignatureCanvas
-                label="Firma del representante legal"
-                canvasRef={canvasAdminRef}
-                onDraw={() => setHasAdmin(true)}
-                onClear={() => setHasAdmin(false)}
+                canvasRef={canvasRef}
+                onDraw={() => setHasSignature(true)}
+                onClear={() => setHasSignature(false)}
+                height={250}
               />
             </div>
-
             <div className="flex justify-end gap-2 mt-4">
               <Button variant="outline" onClick={onClose}>Cancelar</Button>
-              <Button
-                onClick={handleStep1Continue}
-                disabled={!hasEmpleado1 || !hasAdmin}
-              >
-                Firmar y continuar
-              </Button>
+              <Button onClick={() => captureAndNext(2)} disabled={!hasSignature}>Siguiente</Button>
             </div>
           </>
         )}
@@ -414,62 +403,60 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
         {step === 2 && (
           <>
             <DialogHeader>
-              <DialogTitle>Paso 2 de 2 — Aviso de Privacidad</DialogTitle>
+              <DialogTitle>Paso 2 de 3 — Firma del Representante Legal</DialogTitle>
             </DialogHeader>
-            <p className="text-sm text-muted-foreground mb-2">
-              Consentimiento expreso del titular de los datos personales.
+            <p className="text-sm text-muted-foreground">
+              <strong>José Antonio Gómez Ortega</strong> firma como representante de la empresa.
             </p>
+            <div className="mt-4">
+              <SignatureCanvas
+                label="Firma del representante legal"
+                canvasRef={canvasRef}
+                onDraw={() => setHasSignature(true)}
+                onClear={() => setHasSignature(false)}
+                height={250}
+              />
+            </div>
+            <div className="flex justify-between mt-4">
+              <Button variant="outline" onClick={() => { setHasSignature(false); setStep(1); }}>Volver</Button>
+              <Button onClick={() => captureAndNext(3)} disabled={!hasSignature}>Siguiente</Button>
+            </div>
+          </>
+        )}
 
+        {step === 3 && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Paso 3 de 3 — Aviso de Privacidad</DialogTitle>
+            </DialogHeader>
             <div className="space-y-3">
               <label className="flex items-start gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="consentimiento"
-                  checked={consentimientoSi}
-                  onChange={() => setConsentimientoSi(true)}
-                  className="mt-1"
-                />
-                <span className="text-sm">
-                  Sí otorgo mi consentimiento a fin de que se lleve a cabo el tratamiento y transferencia de mis datos personales, financieros y sensibles para las finalidades necesarias y no necesarias en los términos del presente.
-                </span>
+                <input type="radio" name="consentimiento" checked={consentimientoSi} onChange={() => setConsentimientoSi(true)} className="mt-1" />
+                <span className="text-sm">Sí otorgo mi consentimiento a fin de que se lleve a cabo el tratamiento y transferencia de mis datos personales, financieros y sensibles para las finalidades necesarias y no necesarias en los términos del presente.</span>
               </label>
-
               <label className="flex items-start gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="consentimiento"
-                  checked={!consentimientoSi}
-                  onChange={() => setConsentimientoSi(false)}
-                  className="mt-1"
-                />
-                <span className="text-sm">
-                  No otorgo mi consentimiento, a fin de que se lleve a cabo el tratamiento de mis datos personales en los términos del presente y entiendo que la Empresa no podrá cumplir con las obligaciones derivadas de una relación de trabajo.
-                </span>
+                <input type="radio" name="consentimiento" checked={!consentimientoSi} onChange={() => setConsentimientoSi(false)} className="mt-1" />
+                <span className="text-sm">No otorgo mi consentimiento, a fin de que se lleve a cabo el tratamiento de mis datos personales en los términos del presente y entiendo que la Empresa no podrá cumplir con las obligaciones derivadas de una relación de trabajo.</span>
               </label>
             </div>
-
             <div className="mt-2">
               <p className="text-sm"><strong>Nombre:</strong> {empleado.nombre_completo}</p>
               <p className="text-sm text-muted-foreground">Fecha: {new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}</p>
             </div>
-
             <div className="mt-4">
               <SignatureCanvas
                 label="Firma del empleado"
-                canvasRef={canvasEmpleado2Ref}
-                onDraw={() => setHasEmpleado2(true)}
-                onClear={() => setHasEmpleado2(false)}
+                canvasRef={canvasRef}
+                onDraw={() => setHasSignature(true)}
+                onClear={() => setHasSignature(false)}
+                height={250}
               />
             </div>
-
             <div className="flex justify-between mt-4">
-              <Button variant="outline" onClick={() => setStep(1)}>Volver</Button>
+              <Button variant="outline" onClick={() => { setHasSignature(false); setStep(2); }}>Volver</Button>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
-                <Button
-                  onClick={handleFinalize}
-                  disabled={!hasEmpleado2 || loading}
-                >
+                <Button onClick={handleFinalize} disabled={!hasSignature || loading}>
                   {loading ? "Generando..." : "Firmar y finalizar"}
                 </Button>
               </div>
