@@ -241,6 +241,12 @@ const Empleados = () => {
     es_permanente: false,
   });
 
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [isDocDialogOpen, setIsDocDialogOpen] = useState(false);
+  const [isPendingDialogOpen, setIsPendingDialogOpen] = useState(false);
+  const [isEditLicenseExpiryOpen, setIsEditLicenseExpiryOpen] = useState(false);
+
   // Estado para el análisis de expediente completo
   const [isExpedienteDialogOpen, setIsExpedienteDialogOpen] = useState(false);
   const [expedientePdfBase64, setExpedientePdfBase64] = useState<string>("");
