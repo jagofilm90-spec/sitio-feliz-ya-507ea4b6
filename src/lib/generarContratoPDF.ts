@@ -27,37 +27,29 @@ function addLogo(pdf: jsPDF, logoBase64: string | null, pageW: number): number {
   } catch { return 20; }
 }
 
-function addMembrete(pdf: jsPDF, logoBase64: string | null, mL: number, mR: number, pageW: number): number {
+function addMembrete(pdf: jsPDF, _logoBase64: string | null, mL: number, mR: number, pageW: number): number {
   let y = 12;
-  // Logo pequeño izquierda
-  if (logoBase64) {
-    try { pdf.addImage(logoBase64, "PNG", mL, y, 28, 16); } catch {}
-  }
-  // Nombre empresa
+  // Header formal centrado — sin logo
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(11);
-  pdf.text("ABARROTES LA MANITA, S.A. DE C.V.", mL + 32, y + 8);
+  pdf.setFontSize(13);
+  pdf.text("ABARROTES LA MANITA, S.A. DE C.V.", pageW / 2, y + 6, { align: "center" });
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(8);
+  pdf.setTextColor(80);
+  pdf.text("RFC: AMA 700701GI8  |  Melchor Ocampo #59, Magdalena Mixiuhca, Venustiano Carranza, C.P. 15850, Ciudad de México", pageW / 2, y + 12, { align: "center" });
   pdf.setFont("helvetica", "italic");
   pdf.setFontSize(7);
-  pdf.setTextColor(150);
-  pdf.text("Desde 1904", mL + 32, y + 13);
+  pdf.setTextColor(130);
+  pdf.text("Desde 1904 — Trabajando por un México mejor", pageW / 2, y + 17, { align: "center" });
   pdf.setTextColor(0);
-  // Datos empresa a la derecha
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(7);
-  pdf.setTextColor(100);
-  const rX = pageW - mR;
-  pdf.text("RFC: AMA 700701GI8", rX, y + 4, { align: "right" });
-  pdf.text("Melchor Ocampo #59, Col. Magdalena Mixiuhca", rX, y + 8, { align: "right" });
-  pdf.text("C.P. 15850, Ciudad de México", rX, y + 12, { align: "right" });
-  pdf.text("Tel: 55 5552-0168", rX, y + 16, { align: "right" });
-  pdf.setTextColor(0);
-  // Línea gruesa
-  y += 22;
-  pdf.setLineWidth(0.5);
+  // Línea divisora
+  y += 20;
+  pdf.setLineWidth(0.3);
+  pdf.setDrawColor(150);
   pdf.line(mL, y, pageW - mR, y);
+  pdf.setDrawColor(0);
   pdf.setLineWidth(0.2);
-  y += 8;
+  y += 10;
   return y;
 }
 
