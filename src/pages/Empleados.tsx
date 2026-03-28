@@ -158,9 +158,13 @@ const Empleados = () => {
   const [searchParams] = useSearchParams();
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [usuarios, setUsuarios] = useState<UserProfile[]>([]);
+  const [documentos] = useState<Record<string, EmpleadoDocumento[]>>({});
+  const [documentosPendientes] = useState<Record<string, EmpleadoDocumentoPendiente[]>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEmpleado, setEditingEmpleado] = useState<Empleado | null>(null);
+  const [selectedEmpleado, setSelectedEmpleado] = useState<string | null>(null);
+  const [editingLicenseDoc, setEditingLicenseDoc] = useState<EmpleadoDocumento | null>(null);
   const [firmaFlowEmpleado, setFirmaFlowEmpleado] = useState<Empleado | null>(null);
   const [activeTab, setActiveTab] = useState<string>("todos");
   const [filtroPuesto, setFiltroPuesto] = useState<"todos" | "secretaria" | "vendedor" | "chofer" | "almacenista" | "gerente de almacén">("todos");
