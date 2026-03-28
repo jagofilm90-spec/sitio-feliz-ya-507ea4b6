@@ -245,10 +245,10 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
       let avisoUploaded = false;
 
       try {
-        await supabase.storage.createBucket("documentos-empleados", { public: false }).catch(() => {});
+        // Bucket already exists as "empleados-documentos"
 
         if (contratoResult.pdfBlob) {
-          const { error: upErr } = await supabase.storage.from("documentos-empleados").upload(contratoPath, contratoResult.pdfBlob, {
+          const { error: upErr } = await supabase.storage.from("empleados-documentos").upload(contratoPath, contratoResult.pdfBlob, {
             contentType: "application/pdf",
             upsert: true,
           });
@@ -259,7 +259,7 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
         }
 
         if (avisoResult.pdfBlob) {
-          const { error: upErr } = await supabase.storage.from("documentos-empleados").upload(avisoPath, avisoResult.pdfBlob, {
+          const { error: upErr } = await supabase.storage.from("empleados-documentos").upload(avisoPath, avisoResult.pdfBlob, {
             contentType: "application/pdf",
             upsert: true,
           });

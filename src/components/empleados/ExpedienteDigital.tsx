@@ -21,7 +21,7 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
     const load = async () => {
       setLoading(true);
       const { data, error } = await supabase.storage
-        .from("documentos-empleados")
+        .from("empleados-documentos")
         .list(empleadoId, { sortBy: { column: "created_at", order: "desc" } });
 
       if (!error && data) {
@@ -34,7 +34,7 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
 
   const getSignedUrl = async (fileName: string) => {
     const { data } = await supabase.storage
-      .from("documentos-empleados")
+      .from("empleados-documentos")
       .createSignedUrl(`${empleadoId}/${fileName}`, 60 * 60); // 1 hour
     return data?.signedUrl || null;
   };
@@ -141,7 +141,7 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
 // Helper to check if an employee has signed documents (for table indicator)
 export async function checkExpedienteStatus(empleadoId: string): Promise<boolean> {
   const { data } = await supabase.storage
-    .from("documentos-empleados")
+    .from("empleados-documentos")
     .list(empleadoId, { limit: 1 });
   return (data?.length ?? 0) > 0;
 }
