@@ -59,30 +59,37 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
   };
 
   const handleView = async (fileName: string) => {
-    const url = await getSignedUrl(fileName);
-    if (url) window.open(url, "_blank");
-    else toast({ title: "Error", description: "No se pudo obtener la URL del documento", variant: "destructive" });
+    const blob = await getFileBlob(fileName);
+    if (blob) {
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, "_blank");
+    } else {
+      toast({ title: "Error", description: "No se pudo abrir el documento", variant: "destructive" });
+    }
   };
 
   const handleDownload = async (fileName: string) => {
     const blob = await getFileBlob(fileName);
     if (blob) {
-      const url = URL.createObjectURL(blob);
+      const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
+      a.href = blobUrl;
       a.download = fileName;
       a.click();
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(blobUrl);
     } else {
       toast({ title: "Error", description: "No se pudo descargar el documento", variant: "destructive" });
     }
   };
 
   const handlePrint = async (fileName: string) => {
-    const url = await getSignedUrl(fileName);
-    if (url) {
-      const win = window.open(url, "_blank");
+    const blob = await getFileBlob(fileName);
+    if (blob) {
+      const blobUrl = URL.createObjectURL(blob);
+      const win = window.open(blobUrl, "_blank");
       if (win) win.addEventListener("load", () => win.print());
+    } else {
+      toast({ title: "Error", description: "No se pudo imprimir el documento", variant: "destructive" });
     }
   };
 
