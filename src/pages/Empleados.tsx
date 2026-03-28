@@ -166,6 +166,7 @@ const Empleados = () => {
   const [selectedEmpleado, setSelectedEmpleado] = useState<string | null>(null);
   const [editingLicenseDoc, setEditingLicenseDoc] = useState<EmpleadoDocumento | null>(null);
   const [firmaFlowEmpleado, setFirmaFlowEmpleado] = useState<Empleado | null>(null);
+  const [historialSueldo, setHistorialSueldo] = useState<Array<{ id: string; sueldo_anterior: number | null; sueldo_nuevo: number | null; premio_anterior: number | null; premio_nuevo: number | null; fecha_cambio: string }>>([]);
   const [activeTab, setActiveTab] = useState<string>("todos");
   const [filtroPuesto, setFiltroPuesto] = useState<"todos" | "secretaria" | "vendedor" | "chofer" | "almacenista" | "gerente de almacén">("todos");
   const [filtroActivo, setFiltroActivo] = useState<"todos" | "activos" | "inactivos">("todos");
@@ -442,11 +443,34 @@ const Empleados = () => {
       if (editingEmpleado) {
         empleadoId = editingEmpleado.id;
 
+        // Detect salary changes for history tracking
+        const sueldoAnterior = editingEmpleado.sueldo_bruto;
+        const sueldoNuevo = payload.sueldo_bruto ? Number(payload.sueldo_bruto) : null;
+        const premioAnterior = editingEmpleado.premio_asistencia_semanal;
+        const premioNuevo = payload.premio_asistencia_semanal ? Number(payload.premio_asistencia_semanal) : null;
+        const sueldoCambio = sueldoAnterior !== sueldoNuevo;
+        const premioCambio = premioAnterior !== premioNuevo;
+
         const { error } = await supabase
           .from("empleados")
           .update(payload)
           .eq("id", empleadoId);
         if (error) throw error;
+
+        // Record salary change in history
+        if (sueldoCambio || premioCambio) {
+          const { data: { user } } = await supabase.auth.getUser();
+          await supabase.from("empleados_historial_sueldo").insert({
+            empleado_id: empleadoId,
+            sueldo_anterior: sueldoAnterior,
+            sueldo_nuevo: sueldoNuevo,
+            premio_anterior: premioAnterior,
+            premio_nuevo: premioNuevo,
+            cambiado_por: user?.id || null,
+          }).then(({ error: hErr }) => {
+            if (hErr) console.warn("Error guardando historial sueldo:", hErr.message);
+          });
+        }
 
         // Si el empleado tiene usuario asociado, actualizar el nombre en profiles
         if (formData.user_id) {
@@ -537,6 +561,15 @@ const Empleados = () => {
 
   const handleEdit = (empleado: Empleado) => {
     setEditingEmpleado(empleado);
+
+    // Load salary history
+    supabase
+      .from("empleados_historial_sueldo")
+      .select("id, sueldo_anterior, sueldo_nuevo, premio_anterior, premio_nuevo, fecha_cambio")
+      .eq("empleado_id", empleado.id)
+      .order("fecha_cambio", { ascending: false })
+      .limit(10)
+      .then(({ data }) => setHistorialSueldo(data || []));
 
     const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
 
@@ -1303,6 +1336,31 @@ const Empleados = () => {
                     <Input id="sueldo_bruto" type="number" step="0.01" value={formData.sueldo_bruto} onChange={(e) => setFormData({ ...formData, sueldo_bruto: e.target.value } as any)} placeholder="$0.00" autoComplete="off" />
                   </div>
                 </div>
+
+                {/* Historial de sueldos — solo al editar */}
+                {editingEmpleado && historialSueldo.length > 0 && (
+                  <details className="border rounded-md p-2 bg-muted/30">
+                    <summary className="text-xs font-medium cursor-pointer text-muted-foreground">
+                      Historial de sueldos ({historialSueldo.length})
+                    </summary>
+                    <div className="mt-2 space-y-1">
+                      {historialSueldo.map((h) => {
+                        const fecha = new Date(h.fecha_cambio).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
+                        return (
+                          <div key={h.id} className="text-xs flex gap-2 items-center py-1 border-b last:border-0">
+                            <span className="text-muted-foreground">{fecha}</span>
+                            {h.sueldo_anterior !== h.sueldo_nuevo && (
+                              <span>Sueldo: ${h.sueldo_anterior?.toLocaleString()} → <strong>${h.sueldo_nuevo?.toLocaleString()}</strong></span>
+                            )}
+                            {h.premio_anterior !== h.premio_nuevo && (
+                              <span>Premio: ${h.premio_anterior?.toLocaleString() || "—"} → <strong>${h.premio_nuevo?.toLocaleString() || "—"}</strong></span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </details>
+                )}
 
                 <div>
                   <Label htmlFor="beneficiario">Beneficiario *</Label>
