@@ -288,6 +288,27 @@ const Empleados = () => {
 
       if (error) throw error;
       setEmpleados((data || []) as unknown as Empleado[]);
+
+      // Fetch contrato_firmado_fecha via direct API (bypass schema cache)
+      const { data: { session: s } } = await supabase.auth.getSession();
+      if (s && data) {
+        try {
+          const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados?select=id,contrato_firmado_fecha`, {
+            headers: {
+              "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              "Authorization": `Bearer ${s.access_token}`,
+            },
+          });
+          const fechas = await res.json();
+          if (Array.isArray(fechas)) {
+            const updatedEmps = (data as any[]).map(emp => {
+              const match = fechas.find((f: any) => f.id === emp.id);
+              return { ...emp, contrato_firmado_fecha: match?.contrato_firmado_fecha || null };
+            });
+            setEmpleados(updatedEmps as unknown as Empleado[]);
+          }
+        } catch {}
+      }
     } catch (error: any) {
       toast({
         title: "Error",
