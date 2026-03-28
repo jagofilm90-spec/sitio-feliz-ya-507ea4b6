@@ -248,7 +248,6 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
         await supabase.storage.createBucket("documentos-empleados", { public: false }).catch(() => {});
 
         if (contratoResult.pdfBlob) {
-          console.log("[Firma] Uploading contrato, blob size:", contratoResult.pdfBlob.size);
           const { error: upErr } = await supabase.storage.from("documentos-empleados").upload(contratoPath, contratoResult.pdfBlob, {
             contentType: "application/pdf",
             upsert: true,
@@ -260,7 +259,6 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
         }
 
         if (avisoResult.pdfBlob) {
-          console.log("[Firma] Uploading aviso, blob size:", avisoResult.pdfBlob.size);
           const { error: upErr } = await supabase.storage.from("documentos-empleados").upload(avisoPath, avisoResult.pdfBlob, {
             contentType: "application/pdf",
             upsert: true,
@@ -270,8 +268,6 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
         } else {
           console.warn("[Firma] avisoResult.pdfBlob is undefined");
         }
-
-        console.log("[Firma] Upload results — contrato:", contratoUploaded, "aviso:", avisoUploaded);
 
         // Update empleado record via RPC
         const { data: { session } } = await supabase.auth.getSession();
@@ -362,10 +358,9 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
         toast({ title: "Documentos firmados y descargados", description: "Contrato y Aviso de Privacidad generados con firmas digitales." });
       }
       // Mark contract as signed (direct fetch to bypass schema cache)
-      console.log("[Firma] Actualizando contrato_firmado_fecha para:", empleado.id);
       const { data: { session: signSession } } = await supabase.auth.getSession();
       if (signSession) {
-        const patchRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados?id=eq.${empleado.id}`, {
+        await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados?id=eq.${empleado.id}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -375,7 +370,6 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
           },
           body: JSON.stringify({ contrato_firmado_fecha: new Date().toISOString() }),
         });
-        console.log("[Firma] PATCH result:", patchRes.status, patchRes.statusText);
       }
 
       onSigned?.();

@@ -6,7 +6,7 @@ import { EmpleadoCardMobile } from "@/components/empleados/EmpleadoCardMobile";
 import { DarAccesoSistemaDialog } from "@/components/empleados/DarAccesoSistemaDialog";
 import { FirmaContratoFlow } from "@/components/empleados/FirmaContratoFlow";
 import { ExpedienteDigital } from "@/components/empleados/ExpedienteDigital";
-import { generarContratoPDF, generarAvisoPrivacidadPDF } from "@/lib/generarContratoPDF";
+import { generarContratoPDF, generarAvisoPrivacidadPDF, generarAddendumPDF } from "@/lib/generarContratoPDF";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -169,6 +169,7 @@ const Empleados = () => {
   const [selectedEmpleado, setSelectedEmpleado] = useState<string | null>(null);
   const [editingLicenseDoc, setEditingLicenseDoc] = useState<EmpleadoDocumento | null>(null);
   const [firmaFlowEmpleado, setFirmaFlowEmpleado] = useState<Empleado | null>(null);
+  const [expedienteEmpleadoId, setExpedienteEmpleadoId] = useState<string | null>(null);
   const [historialSueldo, setHistorialSueldo] = useState<Array<{ id: string; sueldo_anterior: number | null; sueldo_nuevo: number | null; premio_anterior: number | null; premio_nuevo: number | null; fecha_cambio: string }>>([]);
   const [activeTab, setActiveTab] = useState<string>("todos");
   const [filtroPuesto, setFiltroPuesto] = useState<"todos" | "secretaria" | "vendedor" | "chofer" | "almacenista" | "gerente de almacén">("todos");
@@ -290,7 +291,6 @@ const Empleados = () => {
       setEmpleados((data || []) as unknown as Empleado[]);
 
       // Fetch contrato_firmado_fecha via direct API (bypass schema cache)
-      console.log("[Empleados] Fetching contrato_firmado_fecha...");
       const { data: { session: s } } = await supabase.auth.getSession();
       if (s && data) {
         try {
@@ -301,7 +301,6 @@ const Empleados = () => {
             },
           });
           const fechas = await res.json();
-          console.log("[Empleados] Fechas:", fechas);
           if (Array.isArray(fechas)) {
             const updatedEmps = (data as any[]).map(emp => {
               const match = fechas.find((f: any) => f.id === emp.id);
@@ -502,6 +501,7 @@ const Empleados = () => {
           } as any) as any).then(({ error: hErr }: any) => {
             if (hErr) console.warn("Error guardando historial sueldo:", hErr.message);
           });
+          toast({ title: "Sueldo actualizado", description: "Se recomienda generar un addendum al contrato desde el menú de documentos." });
         }
 
         // Si el empleado tiene usuario asociado, actualizar el nombre en profiles
@@ -690,6 +690,35 @@ const Empleados = () => {
   const handleGenerarTodos = async (empleado: Empleado) => {
     await handleGenerarContrato(empleado);
     await handleGenerarAviso(empleado);
+  };
+
+  const handleGenerarAddendum = async (empleado: Empleado) => {
+    if (!empleado.sueldo_bruto) {
+      toast({ title: "Sin sueldo", description: "El empleado no tiene sueldo registrado.", variant: "destructive" });
+      return;
+    }
+    // Get latest salary history
+    const { data: hist } = await (supabase.from("empleados_historial_sueldo" as any).select("sueldo_anterior, sueldo_nuevo, premio_anterior, premio_nuevo").eq("empleado_id", empleado.id).order("fecha_cambio", { ascending: false }).limit(1) as any);
+    if (!hist?.length) {
+      toast({ title: "Sin cambios de sueldo", description: "No hay historial de cambios de sueldo para generar un addendum.", variant: "destructive" });
+      return;
+    }
+    const h = hist[0];
+    try {
+      await generarAddendumPDF({
+        empleado_nombre: empleado.nombre_completo,
+        puesto: empleado.puesto,
+        fecha_contrato: empleado.fecha_ingreso,
+        sueldo_anterior: h.sueldo_anterior || empleado.sueldo_bruto,
+        sueldo_nuevo: h.sueldo_nuevo || empleado.sueldo_bruto,
+        premio_anterior: h.premio_anterior,
+        premio_nuevo: h.premio_nuevo,
+        empresa_representante: "JOSE ANTONIO GOMEZ ORTEGA",
+      });
+      toast({ title: "Addendum generado", description: `PDF descargado para ${empleado.nombre_completo}` });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
   };
 
   const handleFirmarContrato = (empleado: Empleado) => {
@@ -1988,6 +2017,12 @@ const Empleados = () => {
                                     <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarTodos(empleado)}>
                                       Todos sin firma
                                     </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setExpedienteEmpleadoId(empleado.id)}>
+                                      Ver expediente
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleGenerarAddendum(empleado)}>
+                                      Generar Addendum
+                                    </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                                 {isAdmin && (
@@ -2213,6 +2248,12 @@ const Empleados = () => {
                                     <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarTodos(empleado)}>
                                       Todos sin firma
                                     </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setExpedienteEmpleadoId(empleado.id)}>
+                                      Ver expediente
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleGenerarAddendum(empleado)}>
+                                      Generar Addendum
+                                    </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                                 {isAdmin && (
@@ -2437,6 +2478,12 @@ const Empleados = () => {
                                     <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarTodos(empleado)}>
                                       Todos sin firma
                                     </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setExpedienteEmpleadoId(empleado.id)}>
+                                      Ver expediente
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleGenerarAddendum(empleado)}>
+                                      Generar Addendum
+                                    </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                                 {isAdmin && (
@@ -2521,6 +2568,15 @@ const Empleados = () => {
             domicilio: "MELCHOR OCAMPO 59, MAGDALENA MIXIHUCA, VENUSTIANO CARRANZA, 15850, CIUDAD DE MEXICO",
           }}
         />
+      )}
+
+      {expedienteEmpleadoId && (
+        <Dialog open={!!expedienteEmpleadoId} onOpenChange={(o) => { if (!o) setExpedienteEmpleadoId(null); }}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader><DialogTitle>Expediente Digital</DialogTitle></DialogHeader>
+            <ExpedienteDigital empleadoId={expedienteEmpleadoId} />
+          </DialogContent>
+        </Dialog>
       )}
     </Layout>
   );

@@ -882,3 +882,92 @@ export async function generarAvisoPrivacidadPDF(params: {
   pdf.save(filename);
   return { filename, pdfBlob };
 }
+
+// ═══ ADDENDUM DE CAMBIO DE SUELDO ═══
+
+export async function generarAddendumPDF(params: {
+  empleado_nombre: string;
+  puesto: string;
+  fecha_contrato: string;
+  sueldo_anterior: number;
+  sueldo_nuevo: number;
+  premio_anterior?: number | null;
+  premio_nuevo?: number | null;
+  empresa_representante: string;
+}): Promise<{ filename: string; pdfBlob: Blob }> {
+  const logoBase64 = await loadLogoBase64();
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
+  const pageW = pdf.internal.pageSize.getWidth();
+  const mL = 22, mR = 22;
+  const maxW = pageW - mL - mR;
+  let y = addMembrete(pdf, logoBase64, mL, mR, pageW);
+
+  const NOM = params.empleado_nombre.toUpperCase();
+  const fechaContrato = formatFechaLarga(params.fecha_contrato);
+  const hoy = formatFechaLarga(new Date().toISOString().split("T")[0]);
+
+  const write = (text: string, size = 9.5, bold = false) => {
+    pdf.setFont("helvetica", bold ? "bold" : "normal"); pdf.setFontSize(size);
+    const lines = pdf.splitTextToSize(text, maxW);
+    for (const l of lines) { pdf.text(l, mL, y); y += 4; }
+    y += 1.5;
+  };
+  const writeBold = (t: string, s = 9.5) => write(t, s, true);
+  const writeCenter = (text: string, size = 11, bold = true) => {
+    pdf.setFont("helvetica", bold ? "bold" : "normal"); pdf.setFontSize(size);
+    pdf.text(text, pageW / 2, y, { align: "center" }); y += size * 0.42 + 2;
+  };
+
+  writeCenter("ADDENDUM AL CONTRATO INDIVIDUAL DE TRABAJO", 12);
+  y += 4;
+
+  write(`Por medio del presente, las partes:`);
+  y += 2;
+  writeBold(`ABARROTES LA MANITA, S.A. DE C.V. (en lo sucesivo "LA EMPRESA"), representada por ${params.empresa_representante}`);
+  y += 2;
+  writeBold(`${NOM} (en lo sucesivo "EL EMPLEADO"), con puesto de ${params.puesto.toUpperCase()}`);
+  y += 4;
+
+  write(`Acuerdan modificar la Cláusula CUARTA (SALARIO) del Contrato Individual de Trabajo por Tiempo Indeterminado celebrado el día ${fechaContrato}, quedando de la siguiente manera:`);
+  y += 4;
+
+  writeBold("CLÁUSULA CUARTA. SALARIO (MODIFICADA):");
+  y += 2;
+
+  write(`Salario anterior: ${fmt$(params.sueldo_anterior)} (${numberToWords(params.sueldo_anterior)})`);
+  write(`Nuevo salario: ${fmt$(params.sueldo_nuevo)} (${numberToWords(params.sueldo_nuevo)})`);
+
+  if (params.premio_anterior != null || params.premio_nuevo != null) {
+    y += 2;
+    if (params.premio_anterior) write(`Premio de asistencia anterior: ${fmt$(params.premio_anterior)} semanales`);
+    if (params.premio_nuevo) write(`Nuevo premio de asistencia: ${fmt$(params.premio_nuevo)} semanales`);
+    if (!params.premio_nuevo && params.premio_anterior) write("El premio de asistencia queda sin efecto.");
+  }
+
+  y += 4;
+  write("Las demás cláusulas del Contrato Individual de Trabajo permanecen vigentes y sin modificación alguna.");
+  y += 2;
+  write(`El presente addendum entra en vigor a partir del día ${hoy}.`);
+  y += 2;
+  write(`Leído que fue el presente addendum, y conformes las partes con su contenido, lo firman en la Ciudad de México el día ${hoy}.`);
+  y += 12;
+
+  // Firmas
+  pdf.setFont("helvetica", "bold"); pdf.setFontSize(10);
+  pdf.text('"LA EMPRESA"', mL + maxW * 0.25, y, { align: "center" });
+  pdf.text('"EL EMPLEADO"', mL + maxW * 0.75, y, { align: "center" });
+  y += 20;
+  pdf.line(mL, y, mL + maxW * 0.4, y);
+  pdf.line(mL + maxW * 0.6, y, mL + maxW, y);
+  y += 4;
+  pdf.setFont("helvetica", "normal"); pdf.setFontSize(8);
+  pdf.text(params.empresa_representante, mL + maxW * 0.25, y, { align: "center" });
+  pdf.text(NOM, mL + maxW * 0.75, y, { align: "center" });
+  y += 4;
+  pdf.text("Representante Legal", mL + maxW * 0.25, y, { align: "center" });
+
+  const filename = `Addendum_${params.empleado_nombre.replace(/\s+/g, "_")}.pdf`;
+  const pdfBlob = pdf.output("blob");
+  pdf.save(filename);
+  return { filename, pdfBlob };
+}
