@@ -238,29 +238,41 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
 
       // Upload to Supabase Storage
       const hoy = new Date().toISOString().split("T")[0];
+      const contratoPath = `${empleado.id}/contrato_firmado_${hoy}.pdf`;
+      const avisoPath = `${empleado.id}/aviso_privacidad_${hoy}.pdf`;
+      let contratoUploaded = false;
+      let avisoUploaded = false;
+
       try {
-        // Ensure bucket exists (will silently fail if already exists)
         await supabase.storage.createBucket("documentos-empleados", { public: false }).catch(() => {});
 
-        // Upload contract
         if (contratoResult.pdfBlob) {
-          const contratoPath = `${empleado.id}/contrato_firmado_${hoy}.pdf`;
-          await supabase.storage.from("documentos-empleados").upload(contratoPath, contratoResult.pdfBlob, {
+          console.log("[Firma] Uploading contrato, blob size:", contratoResult.pdfBlob.size);
+          const { error: upErr } = await supabase.storage.from("documentos-empleados").upload(contratoPath, contratoResult.pdfBlob, {
             contentType: "application/pdf",
             upsert: true,
           });
+          if (upErr) console.error("[Firma] Error upload contrato:", upErr);
+          else contratoUploaded = true;
+        } else {
+          console.warn("[Firma] contratoResult.pdfBlob is undefined");
         }
 
-        // Upload aviso
         if (avisoResult.pdfBlob) {
-          const avisoPath = `${empleado.id}/aviso_privacidad_${hoy}.pdf`;
-          await supabase.storage.from("documentos-empleados").upload(avisoPath, avisoResult.pdfBlob, {
+          console.log("[Firma] Uploading aviso, blob size:", avisoResult.pdfBlob.size);
+          const { error: upErr } = await supabase.storage.from("documentos-empleados").upload(avisoPath, avisoResult.pdfBlob, {
             contentType: "application/pdf",
             upsert: true,
           });
+          if (upErr) console.error("[Firma] Error upload aviso:", upErr);
+          else avisoUploaded = true;
+        } else {
+          console.warn("[Firma] avisoResult.pdfBlob is undefined");
         }
 
-        // Update empleado record with firma dates via RPC
+        console.log("[Firma] Upload results — contrato:", contratoUploaded, "aviso:", avisoUploaded);
+
+        // Update empleado record via RPC
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/update_empleado_extras`, {
@@ -278,16 +290,26 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
           });
         }
       } catch (uploadErr) {
-        console.warn("Error subiendo PDFs al storage:", uploadErr);
+        console.error("[Firma] Error en upload/RPC:", uploadErr);
       }
 
       // Send welcome email via gmail-api edge function
       if (empleado.email) {
         try {
-          const contratoPath = `${empleado.id}/contrato_firmado_${hoy}.pdf`;
-          const avisoPath = `${empleado.id}/aviso_privacidad_${hoy}.pdf`;
-          const { data: contratoUrlData } = await supabase.storage.from("documentos-empleados").createSignedUrl(contratoPath, 60 * 60 * 24 * 7);
-          const { data: avisoUrlData } = await supabase.storage.from("documentos-empleados").createSignedUrl(avisoPath, 60 * 60 * 24 * 7);
+          // Create signed URLs only for successfully uploaded files
+          let contratoSignedUrl: string | null = null;
+          let avisoSignedUrl: string | null = null;
+
+          if (contratoUploaded) {
+            const { data } = await supabase.storage.from("documentos-empleados").createSignedUrl(contratoPath, 60 * 60 * 24 * 7);
+            contratoSignedUrl = data?.signedUrl || null;
+            console.log("[Firma] Contrato signed URL:", contratoSignedUrl ? "OK" : "null");
+          }
+          if (avisoUploaded) {
+            const { data } = await supabase.storage.from("documentos-empleados").createSignedUrl(avisoPath, 60 * 60 * 24 * 7);
+            avisoSignedUrl = data?.signedUrl || null;
+            console.log("[Firma] Aviso signed URL:", avisoSignedUrl ? "OK" : "null");
+          }
 
           const fechaIngresoFmt = empleado.fecha_ingreso.split("-").reverse().join("/");
           const fechaPrueba = new Date(new Date(empleado.fecha_ingreso).getTime() + 90 * 24 * 60 * 60 * 1000);
@@ -308,8 +330,8 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
 <p style="color:#888;font-size:12px;margin:0">Abarrotes La Manita, S.A. de C.V.</p>
 <div style="border-top:1px solid #eee;margin-top:28px;padding-top:20px">
 <p style="font-size:13px;font-weight:600;color:#222;margin:0 0 10px">Adjunto tus documentos firmados:</p>
-${contratoUrlData?.signedUrl ? `<p style="font-size:13px;margin:6px 0"><a href="${contratoUrlData.signedUrl}" style="color:#222;text-decoration:underline">Contrato Individual de Trabajo</a></p>` : ""}
-${avisoUrlData?.signedUrl ? `<p style="font-size:13px;margin:6px 0"><a href="${avisoUrlData.signedUrl}" style="color:#222;text-decoration:underline">Aviso de Privacidad</a></p>` : ""}
+${contratoSignedUrl ? `<p style="font-size:13px;margin:6px 0"><a href="${contratoSignedUrl}" style="color:#222;text-decoration:underline">Contrato Individual de Trabajo</a></p>` : ""}
+${avisoSignedUrl ? `<p style="font-size:13px;margin:6px 0"><a href="${avisoSignedUrl}" style="color:#222;text-decoration:underline">Aviso de Privacidad</a></p>` : ""}
 <p style="font-size:11px;color:#888;margin:8px 0 0">Los enlaces son válidos por 7 días.</p>
 </div>
 </td></tr>
