@@ -44,9 +44,9 @@ const fmt$ = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigit
 function Row({ label, value }: { label: string; value: string | null | undefined }) {
   if (!value) return null;
   return (
-    <div className="flex justify-between py-1 border-b border-muted/50 last:border-0">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-xs font-medium text-right">{value}</span>
+    <div className="flex justify-between gap-3 py-1 border-b border-muted/50 last:border-0">
+      <span className="text-xs text-muted-foreground shrink-0">{label}</span>
+      <span className="text-xs font-medium text-right break-all min-w-0">{value}</span>
     </div>
   );
 }
@@ -75,19 +75,19 @@ export function EmpleadoCard({ empleado: e, foto, onClose, onEditar, onExpedient
 
   return (
     <Dialog open onOpenChange={o => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overflow-x-hidden p-0">
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center gap-4 mb-4">
             {foto ? (
-              <img src={foto} className="w-[120px] h-[120px] rounded-full object-cover shrink-0" />
+              <img src={foto} className="w-20 h-20 rounded-full object-cover shrink-0" />
             ) : (
-              <div className="w-[120px] h-[120px] rounded-full flex items-center justify-center text-white text-3xl font-bold shrink-0" style={{ backgroundColor: getColor(e.nombre_completo) }}>
+              <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold shrink-0" style={{ backgroundColor: getColor(e.nombre_completo) }}>
                 {getInitials(e.nombre_completo)}
               </div>
             )}
-            <div className="min-w-0">
-              <h2 className="text-lg font-bold truncate">{e.nombre_completo}</h2>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg font-bold break-words">{e.nombre_completo}</h2>
               <p className="text-sm text-muted-foreground">{e.puesto}</p>
               <div className="flex flex-wrap gap-1 mt-2">
                 <Badge variant={e.activo ? "default" : "secondary"}>{e.activo ? "Activo" : "Inactivo"}</Badge>
