@@ -1621,7 +1621,7 @@ const Empleados = () => {
                         </div>
                         <div>
                           <Label htmlFor="licencia_tipo">Tipo</Label>
-                          <Select value={(formData as any).licencia_tipo || ""} onValueChange={(v) => setFormData({ ...formData, licencia_tipo: v } as any)}>
+                          <Select value={formData.licencia_tipo || ""} onValueChange={(v) => setFormData({ ...formData, licencia_tipo: v })}>
                             <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="A">A</SelectItem>
