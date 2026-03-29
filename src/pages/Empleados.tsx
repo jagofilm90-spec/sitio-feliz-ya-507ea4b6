@@ -6,6 +6,7 @@ import { EmpleadoCardMobile } from "@/components/empleados/EmpleadoCardMobile";
 import { DarAccesoSistemaDialog } from "@/components/empleados/DarAccesoSistemaDialog";
 import { FirmaContratoFlow } from "@/components/empleados/FirmaContratoFlow";
 import { ExpedienteDigital } from "@/components/empleados/ExpedienteDigital";
+import { EmpleadoCard } from "@/components/empleados/EmpleadoCard";
 import { DocumentosChecklist } from "@/components/empleados/DocumentosChecklist";
 import { FirmaAddendumFlow } from "@/components/empleados/FirmaAddendumFlow";
 import { ActasAdministrativas } from "@/components/empleados/ActasAdministrativas";
@@ -187,6 +188,7 @@ const Empleados = () => {
   const [actasEmpleado, setActasEmpleado] = useState<Empleado | null>(null);
   const [bajaEmpleado, setBajaEmpleado] = useState<Empleado | null>(null);
   const [vacacionesEmpleado, setVacacionesEmpleado] = useState<Empleado | null>(null);
+  const [cardEmpleado, setCardEmpleado] = useState<Empleado | null>(null);
   const [addendumEmpleado, setAddendumEmpleado] = useState<Empleado | null>(null);
   const [addendumHistorial, setAddendumHistorial] = useState<any>(null);
   const [historialSueldo, setHistorialSueldo] = useState<Array<{ id: string; sueldo_anterior: number | null; sueldo_nuevo: number | null; premio_anterior: number | null; premio_nuevo: number | null; fecha_cambio: string }>>([]);
@@ -2073,13 +2075,15 @@ const Empleados = () => {
                           <TableRow key={empleado.id}>
                             <TableCell className="font-medium">
                               <div className="flex items-center gap-2">
-                                {fotos[empleado.id] ? (
-                                  <img src={fotos[empleado.id]} className="w-8 h-8 rounded-full object-cover shrink-0" />
-                                ) : (
-                                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ backgroundColor: getAvatarColor(empleado.nombre_completo) }}>
-                                    {getInitials(empleado.nombre_completo)}
-                                  </div>
-                                )}
+                                <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setCardEmpleado(empleado); }}>
+                                  {fotos[empleado.id] ? (
+                                    <img src={fotos[empleado.id]} className="w-8 h-8 rounded-full object-cover shrink-0 hover:ring-2 hover:ring-primary" />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 hover:ring-2 hover:ring-primary" style={{ backgroundColor: getAvatarColor(empleado.nombre_completo) }}>
+                                      {getInitials(empleado.nombre_completo)}
+                                    </div>
+                                  )}
+                                </div>
                                 {empleado.nombre_completo}
                                 {empleado.contrato_firmado_fecha ? (
                                   <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300 shrink-0">Firmado</Badge>
@@ -2278,13 +2282,15 @@ const Empleados = () => {
                           <TableRow key={empleado.id}>
                             <TableCell className="font-medium">
                               <div className="flex items-center gap-2">
-                                {fotos[empleado.id] ? (
-                                  <img src={fotos[empleado.id]} className="w-8 h-8 rounded-full object-cover shrink-0" />
-                                ) : (
-                                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ backgroundColor: getAvatarColor(empleado.nombre_completo) }}>
-                                    {getInitials(empleado.nombre_completo)}
-                                  </div>
-                                )}
+                                <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setCardEmpleado(empleado); }}>
+                                  {fotos[empleado.id] ? (
+                                    <img src={fotos[empleado.id]} className="w-8 h-8 rounded-full object-cover shrink-0 hover:ring-2 hover:ring-primary" />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 hover:ring-2 hover:ring-primary" style={{ backgroundColor: getAvatarColor(empleado.nombre_completo) }}>
+                                      {getInitials(empleado.nombre_completo)}
+                                    </div>
+                                  )}
+                                </div>
                                 {empleado.nombre_completo}
                                 {empleado.contrato_firmado_fecha ? (
                                   <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300 shrink-0">Firmado</Badge>
@@ -2532,13 +2538,15 @@ const Empleados = () => {
                           <TableRow key={empleado.id}>
                             <TableCell className="font-medium">
                               <div className="flex items-center gap-2">
-                                {fotos[empleado.id] ? (
-                                  <img src={fotos[empleado.id]} className="w-8 h-8 rounded-full object-cover shrink-0" />
-                                ) : (
-                                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ backgroundColor: getAvatarColor(empleado.nombre_completo) }}>
-                                    {getInitials(empleado.nombre_completo)}
-                                  </div>
-                                )}
+                                <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setCardEmpleado(empleado); }}>
+                                  {fotos[empleado.id] ? (
+                                    <img src={fotos[empleado.id]} className="w-8 h-8 rounded-full object-cover shrink-0 hover:ring-2 hover:ring-primary" />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 hover:ring-2 hover:ring-primary" style={{ backgroundColor: getAvatarColor(empleado.nombre_completo) }}>
+                                      {getInitials(empleado.nombre_completo)}
+                                    </div>
+                                  )}
+                                </div>
                                 {empleado.nombre_completo}
                                 {empleado.contrato_firmado_fecha ? (
                                   <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300 shrink-0">Firmado</Badge>
@@ -2798,6 +2806,18 @@ const Empleados = () => {
             rfc: "AMA 700701GI8",
             domicilio: "MELCHOR OCAMPO 59, MAGDALENA MIXIHUCA, VENUSTIANO CARRANZA, 15850, CIUDAD DE MEXICO",
           }}
+        />
+      )}
+
+      {cardEmpleado && (
+        <EmpleadoCard
+          empleado={cardEmpleado as any}
+          foto={fotos[cardEmpleado.id]}
+          onClose={() => setCardEmpleado(null)}
+          onEditar={() => { const emp = cardEmpleado; setCardEmpleado(null); handleEdit(emp); }}
+          onExpediente={() => { setCardEmpleado(null); setExpedienteEmpleadoId(cardEmpleado.id); }}
+          onDocumentos={() => { const emp = cardEmpleado; setCardEmpleado(null); setChecklistEmpleado(emp); }}
+          onActas={() => { const emp = cardEmpleado; setCardEmpleado(null); setActasEmpleado(emp); }}
         />
       )}
 
