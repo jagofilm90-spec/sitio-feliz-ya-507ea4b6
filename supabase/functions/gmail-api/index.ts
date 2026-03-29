@@ -151,10 +151,9 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } }
     });
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await authSupabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      console.error("JWT validation failed:", claimsError?.message);
+    const { data: userData, error: userError } = await authSupabase.auth.getUser();
+    if (userError || !userData?.user) {
+      console.error("JWT validation failed:", userError);
       return new Response(
         JSON.stringify({ code: 401, message: 'Invalid JWT' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
