@@ -1488,21 +1488,37 @@ const Empleados = () => {
                     <div>
                       <input
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg,image/png,image/heic,image/heif,.heic"
                         id="foto-upload"
                         className="hidden"
                         onChange={async (e) => {
-                          const file = e.target.files?.[0];
+                          let file = e.target.files?.[0];
                           if (!file || !editingEmpleado) return;
-                          // Resize to 200x200
+                          // Convert HEIC to JPEG if needed
+                          if (file.type === "image/heic" || file.type === "image/heif" || file.name.toLowerCase().endsWith(".heic")) {
+                            try {
+                              const heic2any = (await import("heic2any")).default;
+                              const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+                              file = new File([converted as Blob], file.name.replace(/\.heic$/i, ".jpg"), { type: "image/jpeg" });
+                            } catch (err) {
+                              console.error("Error convirtiendo HEIC:", err);
+                              toast({ title: "Error", description: "No se pudo procesar la imagen HEIC", variant: "destructive" });
+                              e.target.value = "";
+                              return;
+                            }
+                          }
+                          // Resize to 200x200 center crop
                           const img = new Image();
                           img.src = URL.createObjectURL(file);
                           await new Promise(r => { img.onload = r; });
                           const canvas = document.createElement("canvas");
                           canvas.width = 200; canvas.height = 200;
                           const ctx = canvas.getContext("2d")!;
+                          ctx.fillStyle = "#FFFFFF";
+                          ctx.fillRect(0, 0, 200, 200);
                           const size = Math.min(img.width, img.height);
                           ctx.drawImage(img, (img.width - size) / 2, (img.height - size) / 2, size, size, 0, 0, 200, 200);
+                          URL.revokeObjectURL(img.src);
                           canvas.toBlob(async (blob) => {
                             if (!blob) return;
                             await supabase.storage.from("empleados-documentos").upload(
