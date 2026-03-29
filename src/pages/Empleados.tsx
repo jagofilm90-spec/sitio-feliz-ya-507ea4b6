@@ -499,6 +499,9 @@ const Empleados = () => {
         clabe_interbancaria: formData.clabe_interbancaria || null,
         beneficiario: formData.beneficiario || null,
         premio_asistencia_semanal: formData.premio_asistencia_semanal ? Number(formData.premio_asistencia_semanal) : null,
+        licencia_numero: formData.licencia_numero || null,
+        licencia_tipo: formData.licencia_tipo || null,
+        licencia_vencimiento: formData.licencia_vencimiento || null,
       };
 
       let empleadoId: string;
