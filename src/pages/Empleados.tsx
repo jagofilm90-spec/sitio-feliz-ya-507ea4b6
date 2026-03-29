@@ -6,6 +6,7 @@ import { EmpleadoCardMobile } from "@/components/empleados/EmpleadoCardMobile";
 import { DarAccesoSistemaDialog } from "@/components/empleados/DarAccesoSistemaDialog";
 import { FirmaContratoFlow } from "@/components/empleados/FirmaContratoFlow";
 import { ExpedienteDigital } from "@/components/empleados/ExpedienteDigital";
+import { DocumentosChecklist } from "@/components/empleados/DocumentosChecklist";
 import { FirmaAddendumFlow } from "@/components/empleados/FirmaAddendumFlow";
 import { generarContratoPDF, generarAvisoPrivacidadPDF, hoyMexico } from "@/lib/generarContratoPDF";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -171,6 +172,7 @@ const Empleados = () => {
   const [editingLicenseDoc, setEditingLicenseDoc] = useState<EmpleadoDocumento | null>(null);
   const [firmaFlowEmpleado, setFirmaFlowEmpleado] = useState<Empleado | null>(null);
   const [expedienteEmpleadoId, setExpedienteEmpleadoId] = useState<string | null>(null);
+  const [checklistEmpleado, setChecklistEmpleado] = useState<Empleado | null>(null);
   const [addendumEmpleado, setAddendumEmpleado] = useState<Empleado | null>(null);
   const [addendumHistorial, setAddendumHistorial] = useState<any>(null);
   const [historialSueldo, setHistorialSueldo] = useState<Array<{ id: string; sueldo_anterior: number | null; sueldo_nuevo: number | null; premio_anterior: number | null; premio_nuevo: number | null; fecha_cambio: string }>>([]);
@@ -2032,6 +2034,9 @@ const Empleados = () => {
                                     <DropdownMenuItem onClick={() => setExpedienteEmpleadoId(empleado.id)}>
                                       Ver expediente
                                     </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setChecklistEmpleado(empleado)}>
+                                      Documentos pendientes
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleGenerarAddendum(empleado)}>
                                       Generar Addendum
                                     </DropdownMenuItem>
@@ -2266,6 +2271,9 @@ const Empleados = () => {
                                     <DropdownMenuItem onClick={() => setExpedienteEmpleadoId(empleado.id)}>
                                       Ver expediente
                                     </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setChecklistEmpleado(empleado)}>
+                                      Documentos pendientes
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleGenerarAddendum(empleado)}>
                                       Generar Addendum
                                     </DropdownMenuItem>
@@ -2499,6 +2507,9 @@ const Empleados = () => {
                                     <DropdownMenuItem onClick={() => setExpedienteEmpleadoId(empleado.id)}>
                                       Ver expediente
                                     </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setChecklistEmpleado(empleado)}>
+                                      Documentos pendientes
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleGenerarAddendum(empleado)}>
                                       Generar Addendum
                                     </DropdownMenuItem>
@@ -2595,6 +2606,15 @@ const Empleados = () => {
           onClose={() => { setAddendumEmpleado(null); setAddendumHistorial(null); }}
           onSigned={() => loadEmpleados()}
         />
+      )}
+
+      {checklistEmpleado && (
+        <Dialog open={!!checklistEmpleado} onOpenChange={(o) => { if (!o) setChecklistEmpleado(null); }}>
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Documentos — {checklistEmpleado.nombre_completo}</DialogTitle></DialogHeader>
+            <DocumentosChecklist empleadoId={checklistEmpleado.id} empleadoNombre={checklistEmpleado.nombre_completo} />
+          </DialogContent>
+        </Dialog>
       )}
 
       {expedienteEmpleadoId && (
