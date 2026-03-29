@@ -31,7 +31,6 @@ import { ResumenDiaWidget } from "@/components/dashboard/ResumenDiaWidget";
 import { COMPANY_DATA } from "@/constants/companyData";
 import { EmpleadosPruebaAlert } from "@/components/dashboard/EmpleadosPruebaAlert";
 import { CumpleanosWidget } from "@/components/dashboard/CumpleanosWidget";
-import { DocumentosPendientesAlert } from "@/components/dashboard/DocumentosPendientesAlert";
 import { LicenciasVencimientoAlert } from "@/components/dashboard/LicenciasVencimientoAlert";
 
 const Dashboard = () => {
@@ -138,8 +137,7 @@ const Dashboard = () => {
         {/* Cumpleaños y aniversarios */}
         {isAdmin && <CumpleanosWidget />}
 
-        {/* Documentos pendientes + Licencias */}
-        {isAdmin && <DocumentosPendientesAlert />}
+        {/* Licencias por vencer */}
         {isAdmin && <LicenciasVencimientoAlert />}
 
         {/* Descargas en curso + completadas hoy */}

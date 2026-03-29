@@ -177,6 +177,7 @@ const Empleados = () => {
   const [documentos] = useState<Record<string, EmpleadoDocumento[]>>({});
   const [documentosPendientes] = useState<Record<string, EmpleadoDocumentoPendiente[]>>({});
   const [fotos, setFotos] = useState<Record<string, string>>({});
+  const [docsCount, setDocsCount] = useState<Record<string, number>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEmpleado, setEditingEmpleado] = useState<Empleado | null>(null);
@@ -334,15 +335,24 @@ const Empleados = () => {
           }
         } catch (e) { console.error("[Empleados] Error fetching fechas:", e); }
       }
-      // Load employee photos
+      // Load employee photos + docs count
       if (data) {
+        const DOCS_KEYS = ["ine", "curp", "rfc", "acta_nacimiento", "comprobante_domicilio", "nss", "cuenta_bancaria", "fotos"];
         const fotosMap: Record<string, string> = {};
-        const photoChecks = data.slice(0, 50).map(async (emp: any) => {
-          const { data: blob } = await supabase.storage.from("empleados-documentos").download(`${emp.id}/foto.jpg`);
-          if (blob) fotosMap[emp.id] = URL.createObjectURL(blob);
+        const counts: Record<string, number> = {};
+        const checks = data.slice(0, 50).map(async (emp: any) => {
+          const [photoRes, docsRes] = await Promise.allSettled([
+            supabase.storage.from("empleados-documentos").download(`${emp.id}/foto.jpg`),
+            supabase.storage.from("empleados-documentos").list(`${emp.id}/docs`),
+          ]);
+          if (photoRes.status === "fulfilled" && photoRes.value.data) fotosMap[emp.id] = URL.createObjectURL(photoRes.value.data);
+          if (docsRes.status === "fulfilled" && docsRes.value.data) {
+            counts[emp.id] = DOCS_KEYS.filter(key => docsRes.value.data!.some((f: any) => f.name.startsWith(key + "_"))).length;
+          } else { counts[emp.id] = 0; }
         });
-        await Promise.allSettled(photoChecks);
+        await Promise.allSettled(checks);
         setFotos(fotosMap);
+        setDocsCount(counts);
       }
     } catch (error: any) {
       toast({
@@ -2053,6 +2063,7 @@ const Empleados = () => {
                         <TableHead>Fecha Ingreso</TableHead>
                         <TableHead>Usuario Sistema</TableHead>
                         <TableHead>Estado</TableHead>
+                        <TableHead>Docs</TableHead>
                         <TableHead className="text-right">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -2155,6 +2166,15 @@ const Empleados = () => {
                                 })()}
                               </div>
                             </TableCell>
+                            <TableCell>
+                              {docsCount[empleado.id] !== undefined ? (
+                                <Badge variant="outline" className={`text-xs ${docsCount[empleado.id] >= 8 ? "bg-green-50 text-green-700 border-green-300" : docsCount[empleado.id] >= 4 ? "bg-yellow-50 text-yellow-700 border-yellow-300" : "bg-red-50 text-red-700 border-red-300"}`}>
+                                  {docsCount[empleado.id]}/8
+                                </Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">...</span>
+                              )}
+                            </TableCell>
                             <TableCell className="text-right">
                               <div className="flex gap-2 justify-end">
                                 <Button
@@ -2252,6 +2272,7 @@ const Empleados = () => {
                       <TableHead>Fecha Ingreso</TableHead>
                       <TableHead>Usuario Sistema</TableHead>
                       <TableHead>Estado</TableHead>
+                      <TableHead>Docs</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -2412,6 +2433,15 @@ const Empleados = () => {
                                 })()}
                               </div>
                             </TableCell>
+                            <TableCell>
+                              {docsCount[empleado.id] !== undefined ? (
+                                <Badge variant="outline" className={`text-xs ${docsCount[empleado.id] >= 8 ? "bg-green-50 text-green-700 border-green-300" : docsCount[empleado.id] >= 4 ? "bg-yellow-50 text-yellow-700 border-yellow-300" : "bg-red-50 text-red-700 border-red-300"}`}>
+                                  {docsCount[empleado.id]}/8
+                                </Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">...</span>
+                              )}
+                            </TableCell>
                             <TableCell className="text-right">
                               <div className="flex gap-2 justify-end">
                                 <Button
@@ -2508,6 +2538,7 @@ const Empleados = () => {
                       <TableHead>Fecha Ingreso</TableHead>
                       <TableHead>Usuario Sistema</TableHead>
                       <TableHead>Estado</TableHead>
+                      <TableHead>Docs</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -2667,6 +2698,15 @@ const Empleados = () => {
                                   );
                                 })()}
                               </div>
+                            </TableCell>
+                            <TableCell>
+                              {docsCount[empleado.id] !== undefined ? (
+                                <Badge variant="outline" className={`text-xs ${docsCount[empleado.id] >= 8 ? "bg-green-50 text-green-700 border-green-300" : docsCount[empleado.id] >= 4 ? "bg-yellow-50 text-yellow-700 border-yellow-300" : "bg-red-50 text-red-700 border-red-300"}`}>
+                                  {docsCount[empleado.id]}/8
+                                </Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">...</span>
+                              )}
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex gap-2 justify-end">
