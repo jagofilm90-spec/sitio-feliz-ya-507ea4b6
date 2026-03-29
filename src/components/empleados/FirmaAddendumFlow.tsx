@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { generarAddendumPDF } from "@/lib/generarContratoPDF";
+import { generarAddendumPDF, hoyMexico } from "@/lib/generarContratoPDF";
 import { supabase } from "@/integrations/supabase/client";
 
 interface FirmaAddendumFlowProps {
@@ -111,7 +111,7 @@ export function FirmaAddendumFlow({ empleado, historial, onClose, onSigned }: Fi
       });
 
       // Upload to storage
-      const hoy = new Date().toISOString().split("T")[0];
+      const hoy = hoyMexico();
       if (result.pdfBlob) {
         await supabase.storage.from("empleados-documentos").upload(
           `${empleado.id}/addendum_sueldo_${hoy}.pdf`, result.pdfBlob,

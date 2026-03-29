@@ -53,6 +53,9 @@ function addMembrete(pdf: jsPDF, _logoBase64: string | null, mL: number, mR: num
   return y;
 }
 
+// Fecha actual en zona horaria de México (YYYY-MM-DD)
+export const hoyMexico = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" });
+
 const fmt$ = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`;
 
 function numberToWords(n: number): string {
@@ -906,7 +909,7 @@ export async function generarAddendumPDF(params: {
 
   const NOM = params.empleado_nombre.toUpperCase();
   const fechaContrato = formatFechaLarga(params.fecha_contrato);
-  const hoy = formatFechaLarga(new Date().toISOString().split("T")[0]);
+  const hoy = formatFechaLarga(hoyMexico());
 
   const write = (text: string, size = 9.5, bold = false) => {
     pdf.setFont("helvetica", bold ? "bold" : "normal"); pdf.setFontSize(size);

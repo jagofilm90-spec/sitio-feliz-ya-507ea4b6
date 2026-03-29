@@ -7,7 +7,7 @@ import { DarAccesoSistemaDialog } from "@/components/empleados/DarAccesoSistemaD
 import { FirmaContratoFlow } from "@/components/empleados/FirmaContratoFlow";
 import { ExpedienteDigital } from "@/components/empleados/ExpedienteDigital";
 import { FirmaAddendumFlow } from "@/components/empleados/FirmaAddendumFlow";
-import { generarContratoPDF, generarAvisoPrivacidadPDF } from "@/lib/generarContratoPDF";
+import { generarContratoPDF, generarAvisoPrivacidadPDF, hoyMexico } from "@/lib/generarContratoPDF";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -198,7 +198,7 @@ const Empleados = () => {
     telefono: "",
     email: "",
     direccion: "",
-    fecha_ingreso: new Date().toISOString().split("T")[0],
+    fecha_ingreso: hoyMexico(),
     puesto: "",
     user_id: "",
     activo: true,
@@ -670,7 +670,7 @@ const Empleados = () => {
           premio_asistencia: premio,
           beneficiario,
           fecha_ingreso: empleado.fecha_ingreso,
-          fecha_contrato: new Date().toISOString().split("T")[0],
+          fecha_contrato: hoyMexico(),
           direccion: empleado.direccion || null,
         },
         empresa: {
@@ -690,7 +690,7 @@ const Empleados = () => {
     try {
       await generarAvisoPrivacidadPDF({
         nombre_empleado: empleado.nombre_completo,
-        fecha: new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" }),
+        fecha: new Date().toLocaleDateString("es-MX", { timeZone: "America/Mexico_City", day: "numeric", month: "long", year: "numeric" }),
       });
       toast({ title: "Aviso de privacidad generado", description: `PDF descargado` });
     } catch (e: any) {
@@ -725,7 +725,7 @@ const Empleados = () => {
 
   const handleFirmarContrato = (empleado: Empleado) => {
     if (empleado.contrato_firmado_fecha) {
-      const fecha = new Date(empleado.contrato_firmado_fecha).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
+      const fecha = new Date(empleado.contrato_firmado_fecha).toLocaleDateString("es-MX", { timeZone: "America/Mexico_City", day: "numeric", month: "long", year: "numeric" });
       if (!confirm(`Este empleado ya tiene un contrato firmado del ${fecha}. ¿Deseas generar uno nuevo? El anterior se reemplazará.`)) return;
     }
     setFirmaFlowEmpleado(empleado);
@@ -1086,7 +1086,7 @@ const Empleados = () => {
       telefono: "",
       email: "",
       direccion: "",
-      fecha_ingreso: new Date().toISOString().split("T")[0],
+      fecha_ingreso: hoyMexico(),
       puesto: "",
       user_id: "",
       activo: true,
@@ -1451,7 +1451,7 @@ const Empleados = () => {
                     </summary>
                     <div className="mt-2 space-y-1">
                       {historialSueldo.map((h) => {
-                        const fecha = new Date(h.fecha_cambio).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
+                        const fecha = new Date(h.fecha_cambio).toLocaleDateString("es-MX", { timeZone: "America/Mexico_City", day: "2-digit", month: "short", year: "numeric" });
                         return (
                           <div key={h.id} className="text-xs flex gap-2 items-center py-1 border-b last:border-0">
                             <span className="text-muted-foreground">{fecha}</span>
@@ -1686,7 +1686,7 @@ const Empleados = () => {
                                       <div>
                                         <p className="text-sm font-medium">{docExistente.nombre_archivo}</p>
                                         <p className="text-xs text-muted-foreground">
-                                          Subido: {new Date(docExistente.created_at).toLocaleDateString('es-MX')}
+                                          Subido: {new Date(docExistente.created_at).toLocaleDateString("es-MX", { timeZone: "America/Mexico_City" })}
                                         </p>
                                       </div>
                                     </div>
@@ -1737,7 +1737,7 @@ const Empleados = () => {
                                       <div>
                                         <p className="text-sm font-medium">{docExistente.nombre_archivo}</p>
                                         <p className="text-xs text-muted-foreground">
-                                          Subido: {new Date(docExistente.created_at).toLocaleDateString('es-MX')}
+                                          Subido: {new Date(docExistente.created_at).toLocaleDateString("es-MX", { timeZone: "America/Mexico_City" })}
                                         </p>
                                       </div>
                                     </div>
@@ -2141,7 +2141,7 @@ const Empleados = () => {
                                     
                                     return (
                                       <Badge variant="secondary" className={badgeClass}>
-                                        {new Date(licenciaDoc.fecha_vencimiento).toLocaleDateString('es-MX')}
+                                        {new Date(licenciaDoc.fecha_vencimiento).toLocaleDateString("es-MX", { timeZone: "America/Mexico_City" })}
                                         {diasRestantes !== null && diasRestantes < 0 && " (Vencida)"}
                                         {diasRestantes !== null && diasRestantes >= 0 && diasRestantes <= 30 && ` (${diasRestantes}d)`}
                                       </Badge>
@@ -2371,7 +2371,7 @@ const Empleados = () => {
                                     
                                     return (
                                       <Badge variant="secondary" className={badgeClass}>
-                                        {new Date(licenciaDoc.fecha_vencimiento).toLocaleDateString('es-MX')}
+                                        {new Date(licenciaDoc.fecha_vencimiento).toLocaleDateString("es-MX", { timeZone: "America/Mexico_City" })}
                                         {diasRestantes !== null && diasRestantes < 0 && " (Vencida)"}
                                         {diasRestantes !== null && diasRestantes >= 0 && diasRestantes <= 30 && ` (${diasRestantes}d)`}
                                       </Badge>

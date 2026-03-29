@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { generarContratoPDF, generarAvisoPrivacidadPDF } from "@/lib/generarContratoPDF";
+import { generarContratoPDF, generarAvisoPrivacidadPDF, hoyMexico } from "@/lib/generarContratoPDF";
 import { supabase } from "@/integrations/supabase/client";
 
 interface FirmaContratoFlowProps {
@@ -218,7 +218,7 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
           premio_asistencia: premio,
           beneficiario,
           fecha_ingreso: empleado.fecha_ingreso,
-          fecha_contrato: new Date().toISOString().split("T")[0],
+          fecha_contrato: hoyMexico(),
           direccion: empleado.direccion || null,
         },
         empresa,
@@ -231,14 +231,14 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
       // Generate signed privacy notice PDF
       const avisoResult = await generarAvisoPrivacidadPDF({
         nombre_empleado: empleado.nombre_completo,
-        fecha: new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" }),
+        fecha: new Date().toLocaleDateString("es-MX", { timeZone: "America/Mexico_City", day: "numeric", month: "long", year: "numeric" }),
         firma_empleado: firmaEmpleado2Img,
         checkbox_si: consentimientoSi,
         checkbox_no: !consentimientoSi,
       });
 
       // Upload to Supabase Storage
-      const hoy = new Date().toISOString().split("T")[0];
+      const hoy = hoyMexico();
       const contratoPath = `${empleado.id}/contrato_firmado_${hoy}.pdf`;
       const avisoPath = `${empleado.id}/aviso_privacidad_${hoy}.pdf`;
       let contratoUploaded = false;
@@ -467,7 +467,7 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
             </div>
             <div className="mt-2">
               <p className="text-sm"><strong>Nombre:</strong> {empleado.nombre_completo}</p>
-              <p className="text-sm text-muted-foreground">Fecha: {new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}</p>
+              <p className="text-sm text-muted-foreground">Fecha: {new Date().toLocaleDateString("es-MX", { timeZone: "America/Mexico_City", day: "numeric", month: "long", year: "numeric" })}</p>
             </div>
             <div className="mt-4">
               <SignatureCanvas
