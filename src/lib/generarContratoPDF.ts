@@ -894,6 +894,8 @@ export async function generarAddendumPDF(params: {
   premio_anterior?: number | null;
   premio_nuevo?: number | null;
   empresa_representante: string;
+  firmaEmpleado?: string;
+  firmaRepresentante?: string;
 }): Promise<{ filename: string; pdfBlob: Blob }> {
   const logoBase64 = await loadLogoBase64();
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
@@ -956,7 +958,14 @@ export async function generarAddendumPDF(params: {
   pdf.setFont("helvetica", "bold"); pdf.setFontSize(10);
   pdf.text('"LA EMPRESA"', mL + maxW * 0.25, y, { align: "center" });
   pdf.text('"EL EMPLEADO"', mL + maxW * 0.75, y, { align: "center" });
-  y += 20;
+  y += 3;
+  if (params.firmaRepresentante) {
+    try { pdf.addImage(params.firmaRepresentante, "PNG", mL + maxW * 0.05, y, maxW * 0.35, 15); } catch {}
+  }
+  if (params.firmaEmpleado) {
+    try { pdf.addImage(params.firmaEmpleado, "PNG", mL + maxW * 0.55, y, maxW * 0.35, 15); } catch {}
+  }
+  y += 17;
   pdf.line(mL, y, mL + maxW * 0.4, y);
   pdf.line(mL + maxW * 0.6, y, mL + maxW, y);
   y += 4;

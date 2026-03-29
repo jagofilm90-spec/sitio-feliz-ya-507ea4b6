@@ -6,7 +6,8 @@ import { EmpleadoCardMobile } from "@/components/empleados/EmpleadoCardMobile";
 import { DarAccesoSistemaDialog } from "@/components/empleados/DarAccesoSistemaDialog";
 import { FirmaContratoFlow } from "@/components/empleados/FirmaContratoFlow";
 import { ExpedienteDigital } from "@/components/empleados/ExpedienteDigital";
-import { generarContratoPDF, generarAvisoPrivacidadPDF, generarAddendumPDF } from "@/lib/generarContratoPDF";
+import { FirmaAddendumFlow } from "@/components/empleados/FirmaAddendumFlow";
+import { generarContratoPDF, generarAvisoPrivacidadPDF } from "@/lib/generarContratoPDF";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -170,6 +171,8 @@ const Empleados = () => {
   const [editingLicenseDoc, setEditingLicenseDoc] = useState<EmpleadoDocumento | null>(null);
   const [firmaFlowEmpleado, setFirmaFlowEmpleado] = useState<Empleado | null>(null);
   const [expedienteEmpleadoId, setExpedienteEmpleadoId] = useState<string | null>(null);
+  const [addendumEmpleado, setAddendumEmpleado] = useState<Empleado | null>(null);
+  const [addendumHistorial, setAddendumHistorial] = useState<any>(null);
   const [historialSueldo, setHistorialSueldo] = useState<Array<{ id: string; sueldo_anterior: number | null; sueldo_nuevo: number | null; premio_anterior: number | null; premio_nuevo: number | null; fecha_cambio: string }>>([]);
   const [activeTab, setActiveTab] = useState<string>("todos");
   const [filtroPuesto, setFiltroPuesto] = useState<"todos" | "secretaria" | "vendedor" | "chofer" | "almacenista" | "gerente de almacén">("todos");
@@ -705,36 +708,19 @@ const Empleados = () => {
       toast({ title: "Sin sueldo", description: "El empleado no tiene sueldo registrado.", variant: "destructive" });
       return;
     }
-    // Get latest salary history via direct fetch
     const { data: { session: addSession } } = await supabase.auth.getSession();
-    let hist: any[] | null = null;
-    if (addSession) {
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados_historial_sueldo?empleado_id=eq.${empleado.id}&select=sueldo_anterior,sueldo_nuevo,premio_anterior,premio_nuevo&order=fecha_cambio.desc&limit=1`, {
-        headers: { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Authorization": `Bearer ${addSession.access_token}` },
-      });
-      const json = await res.json();
-      hist = Array.isArray(json) ? json : null;
-    }
+    if (!addSession) return;
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados_historial_sueldo?empleado_id=eq.${empleado.id}&select=sueldo_anterior,sueldo_nuevo,premio_anterior,premio_nuevo&order=fecha_cambio.desc&limit=1`, {
+      headers: { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Authorization": `Bearer ${addSession.access_token}` },
+    });
+    const json = await res.json();
+    const hist = Array.isArray(json) ? json : null;
     if (!hist?.length) {
       toast({ title: "Sin cambios de sueldo", description: "No hay historial de cambios de sueldo para generar un addendum.", variant: "destructive" });
       return;
     }
-    const h = hist[0];
-    try {
-      await generarAddendumPDF({
-        empleado_nombre: empleado.nombre_completo,
-        puesto: empleado.puesto,
-        fecha_contrato: empleado.fecha_ingreso,
-        sueldo_anterior: h.sueldo_anterior || empleado.sueldo_bruto,
-        sueldo_nuevo: h.sueldo_nuevo || empleado.sueldo_bruto,
-        premio_anterior: h.premio_anterior,
-        premio_nuevo: h.premio_nuevo,
-        empresa_representante: "JOSE ANTONIO GOMEZ ORTEGA",
-      });
-      toast({ title: "Addendum generado", description: `PDF descargado para ${empleado.nombre_completo}` });
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
-    }
+    setAddendumEmpleado(empleado);
+    setAddendumHistorial(hist[0]);
   };
 
   const handleFirmarContrato = (empleado: Empleado) => {
@@ -2583,6 +2569,15 @@ const Empleados = () => {
             rfc: "AMA 700701GI8",
             domicilio: "MELCHOR OCAMPO 59, MAGDALENA MIXIHUCA, VENUSTIANO CARRANZA, 15850, CIUDAD DE MEXICO",
           }}
+        />
+      )}
+
+      {addendumEmpleado && addendumHistorial && (
+        <FirmaAddendumFlow
+          empleado={{ id: addendumEmpleado.id, nombre_completo: addendumEmpleado.nombre_completo, puesto: addendumEmpleado.puesto, fecha_ingreso: addendumEmpleado.fecha_ingreso, email: addendumEmpleado.email }}
+          historial={addendumHistorial}
+          onClose={() => { setAddendumEmpleado(null); setAddendumHistorial(null); }}
+          onSigned={() => loadEmpleados()}
         />
       )}
 
