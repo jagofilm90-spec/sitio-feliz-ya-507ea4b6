@@ -226,6 +226,9 @@ const Empleados = () => {
     motivo_baja: "",
     beneficiario: "",
     premio_asistencia_semanal: "" as string | number | null,
+    licencia_numero: "",
+    licencia_tipo: "",
+    licencia_vencimiento: "",
   });
 
   const [crearUsuario, setCrearUsuario] = useState(false);
