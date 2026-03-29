@@ -490,17 +490,26 @@ const Empleados = () => {
 
         // Record salary change in history
         if (sueldoCambio || premioCambio) {
-          const { data: { user } } = await supabase.auth.getUser();
-          await (supabase.from("empleados_historial_sueldo" as any).insert({
-            empleado_id: empleadoId,
-            sueldo_anterior: sueldoAnterior,
-            sueldo_nuevo: sueldoNuevo,
-            premio_anterior: premioAnterior,
-            premio_nuevo: premioNuevo,
-            cambiado_por: user?.id || null,
-          } as any) as any).then(({ error: hErr }: any) => {
-            if (hErr) console.warn("Error guardando historial sueldo:", hErr.message);
-          });
+          const { data: { session: histSession } } = await supabase.auth.getSession();
+          if (histSession) {
+            await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados_historial_sueldo`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                "Authorization": `Bearer ${histSession.access_token}`,
+                "Prefer": "return=minimal",
+              },
+              body: JSON.stringify({
+                empleado_id: empleadoId,
+                sueldo_anterior: sueldoAnterior,
+                sueldo_nuevo: sueldoNuevo,
+                premio_anterior: premioAnterior,
+                premio_nuevo: premioNuevo,
+                cambiado_por: histSession.user.id,
+              }),
+            });
+          }
           toast({ title: "Sueldo actualizado", description: "Se recomienda generar un addendum al contrato desde el menú de documentos." });
         }
 
@@ -594,14 +603,13 @@ const Empleados = () => {
   const handleEdit = (empleado: Empleado) => {
     setEditingEmpleado(empleado);
 
-    // Load salary history
-    (supabase
-      .from("empleados_historial_sueldo" as any)
-      .select("id, sueldo_anterior, sueldo_nuevo, premio_anterior, premio_nuevo, fecha_cambio")
-      .eq("empleado_id", empleado.id)
-      .order("fecha_cambio", { ascending: false })
-      .limit(10) as any)
-      .then(({ data }: any) => setHistorialSueldo(data || []));
+    // Load salary history via direct fetch
+    supabase.auth.getSession().then(({ data: { session: hs } }) => {
+      if (!hs) return;
+      fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados_historial_sueldo?empleado_id=eq.${empleado.id}&select=id,sueldo_anterior,sueldo_nuevo,premio_anterior,premio_nuevo,fecha_cambio&order=fecha_cambio.desc&limit=10`, {
+        headers: { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Authorization": `Bearer ${hs.access_token}` },
+      }).then(r => r.json()).then(d => setHistorialSueldo(Array.isArray(d) ? d : [])).catch(() => setHistorialSueldo([]));
+    });
 
     const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
 
@@ -697,8 +705,16 @@ const Empleados = () => {
       toast({ title: "Sin sueldo", description: "El empleado no tiene sueldo registrado.", variant: "destructive" });
       return;
     }
-    // Get latest salary history
-    const { data: hist } = await (supabase.from("empleados_historial_sueldo" as any).select("sueldo_anterior, sueldo_nuevo, premio_anterior, premio_nuevo").eq("empleado_id", empleado.id).order("fecha_cambio", { ascending: false }).limit(1) as any);
+    // Get latest salary history via direct fetch
+    const { data: { session: addSession } } = await supabase.auth.getSession();
+    let hist: any[] | null = null;
+    if (addSession) {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados_historial_sueldo?empleado_id=eq.${empleado.id}&select=sueldo_anterior,sueldo_nuevo,premio_anterior,premio_nuevo&order=fecha_cambio.desc&limit=1`, {
+        headers: { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Authorization": `Bearer ${addSession.access_token}` },
+      });
+      const json = await res.json();
+      hist = Array.isArray(json) ? json : null;
+    }
     if (!hist?.length) {
       toast({ title: "Sin cambios de sueldo", description: "No hay historial de cambios de sueldo para generar un addendum.", variant: "destructive" });
       return;
