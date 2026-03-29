@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Circle, Upload, Download, AlertCircle } from "lucide-react";
+import { CheckCircle, Circle, Upload, Download, AlertCircle, X } from "lucide-react";
 
 const DOCUMENTOS_REQUERIDOS = [
   { key: "ine", nombre: "Identificación oficial (INE)", obligatorio: true },
@@ -97,6 +97,13 @@ export function DocumentosChecklist({ empleadoId, empleadoNombre }: Props) {
     URL.revokeObjectURL(url);
   };
 
+  const handleDeleteDoc = async (fileName: string, docNombre: string) => {
+    if (!confirm(`¿Eliminar "${docNombre}"?`)) return;
+    const { error } = await supabase.storage.from("empleados-documentos").remove([`${empleadoId}/docs/${fileName}`]);
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else { toast({ title: "Eliminado" }); await loadDocs(); }
+  };
+
   const obligatorios = DOCUMENTOS_REQUERIDOS.filter(d => d.obligatorio);
   const entregados = obligatorios.filter(d => getDocForKey(d.key));
   const progreso = obligatorios.length > 0 ? Math.round((entregados.length / obligatorios.length) * 100) : 0;
@@ -143,6 +150,9 @@ export function DocumentosChecklist({ empleadoId, empleadoNombre }: Props) {
                 {archivo ? (
                   <Button variant="ghost" size="sm" onClick={() => handleDownload(archivo.fileName)} title="Descargar">
                     <Download className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteDoc(archivo.fileName, doc.nombre)} title="Eliminar">
+                    <X className="h-3.5 w-3.5" />
                   </Button>
                 ) : (
                   <>

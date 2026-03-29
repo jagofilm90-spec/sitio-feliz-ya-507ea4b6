@@ -1506,9 +1506,20 @@ const Empleados = () => {
                           e.target.value = "";
                         }}
                       />
-                      <Button variant="outline" size="sm" onClick={() => document.getElementById("foto-upload")?.click()}>
-                        Subir foto
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => document.getElementById("foto-upload")?.click()}>
+                          Subir foto
+                        </Button>
+                        {fotos[editingEmpleado.id] && (
+                          <Button variant="outline" size="sm" className="text-destructive" onClick={async () => {
+                            await supabase.storage.from("empleados-documentos").remove([`${editingEmpleado.id}/foto.jpg`]);
+                            setFotos(prev => { const n = { ...prev }; delete n[editingEmpleado.id]; return n; });
+                            toast({ title: "Foto eliminada" });
+                          }}>
+                            Eliminar foto
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -2814,7 +2825,7 @@ const Empleados = () => {
         <Dialog open={!!expedienteEmpleadoId} onOpenChange={(o) => { if (!o) setExpedienteEmpleadoId(null); }}>
           <DialogContent className="max-w-2xl">
             <DialogHeader><DialogTitle>Expediente Digital</DialogTitle></DialogHeader>
-            <ExpedienteDigital empleadoId={expedienteEmpleadoId} />
+            <ExpedienteDigital empleadoId={expedienteEmpleadoId} isAdmin={isAdmin} />
           </DialogContent>
         </Dialog>
       )}

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { Download, Printer, FileText, Mail, Loader2 } from "lucide-react";
+import { Download, Printer, FileText, Mail, Loader2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface StorageFile {
@@ -15,9 +15,10 @@ interface StorageFile {
 
 interface ExpedienteDigitalProps {
   empleadoId: string;
+  isAdmin?: boolean;
 }
 
-export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
+export function ExpedienteDigital({ empleadoId, isAdmin }: ExpedienteDigitalProps) {
   const { toast } = useToast();
   const [files, setFiles] = useState<StorageFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +74,27 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
     } else {
       toast({ title: "Error", description: "No se pudo descargar el documento", variant: "destructive" });
     }
+  };
+
+  const handleDelete = async (fullPath: string, label: string) => {
+    if (!confirm(`¿Eliminar "${label}"? No se puede deshacer.`)) return;
+    const { error } = await supabase.storage.from("empleados-documentos").remove([`${empleadoId}/${fullPath}`]);
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else { toast({ title: "Eliminado" }); loadDocs(); }
+  };
+
+  const loadDocs = () => {
+    // Re-trigger the load effect
+    setLoading(true);
+    Promise.all([
+      supabase.storage.from("empleados-documentos").list(empleadoId, { sortBy: { column: "created_at", order: "desc" } }),
+      supabase.storage.from("empleados-documentos").list(`${empleadoId}/docs`, { sortBy: { column: "created_at", order: "desc" } }),
+    ]).then(([rootRes, docsRes]) => {
+      const rootFiles = (rootRes.data || []).filter(f => f.name.endsWith(".pdf") || f.name.endsWith(".jpg") || f.name.endsWith(".png")).map(f => ({ ...f, fullPath: f.name }));
+      const docsFiles = (docsRes.data || []).filter(f => f.name && !f.name.startsWith(".")).map(f => ({ ...f, fullPath: `docs/${f.name}` }));
+      setFiles([...rootFiles, ...docsFiles] as any);
+      setLoading(false);
+    });
   };
 
   const handlePrint = async (fileName: string) => {
@@ -201,6 +223,11 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
                   <Button variant="ghost" size="sm" onClick={() => { setEmailDialog({ open: true, fileName: file.fullPath }); setEmailTo(""); }} title="Enviar por correo">
                     <Mail className="h-3.5 w-3.5" />
                   </Button>
+                  {isAdmin && (
+                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(file.fullPath, getDocLabel(file.name))} title="Eliminar">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
