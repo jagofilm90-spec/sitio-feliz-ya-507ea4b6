@@ -96,6 +96,7 @@ interface Empleado {
   telefono: string | null;
   email: string | null;
   direccion: string | null;
+  foto_url: string | null;
   fecha_ingreso: string;
   puesto: string;
   activo: boolean;
