@@ -609,7 +609,7 @@ const Empleados = () => {
 
         toast({
           title: "Empleado creado",
-          description: "Para dar acceso al sistema, usa el botón 'Dar acceso' en la tabla.",
+          description: "Recuerda tomar la foto del empleado y firmar su contrato.",
         });
       }
 
@@ -2364,7 +2364,7 @@ const Empleados = () => {
                           doc => doc.tipo_documento === 'licencia_conducir'
                         );
                         const diasRestantes = licenciaDoc?.fecha_vencimiento 
-                          ? Math.ceil((new Date(licenciaDoc.fecha_vencimiento).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                          ? Math.ceil((new Date(licenciaDoc.fecha_vencimiento).getTime() - new Date(new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City" })).getTime()) / (1000 * 60 * 60 * 24))
                           : null;
 
                         return (
@@ -2636,7 +2636,7 @@ const Empleados = () => {
                           doc => doc.tipo_documento === 'licencia_conducir'
                         );
                         const diasRestantes = licenciaDoc?.fecha_vencimiento 
-                          ? Math.ceil((new Date(licenciaDoc.fecha_vencimiento).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                          ? Math.ceil((new Date(licenciaDoc.fecha_vencimiento).getTime() - new Date(new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City" })).getTime()) / (1000 * 60 * 60 * 24))
                           : null;
 
                         return (
