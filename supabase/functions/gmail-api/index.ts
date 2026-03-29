@@ -160,7 +160,7 @@ serve(async (req) => {
       );
     }
     
-    const userId = claimsData.claims.sub;
+    const userId = userData.user.id;
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
