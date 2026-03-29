@@ -1534,7 +1534,7 @@ const Empleados = () => {
                         }}
                       />
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => document.getElementById("foto-upload")?.click()}>
+                        <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById("foto-upload")?.click()}>
                           Subir foto
                         </Button>
                         {fotos[editingEmpleado.id] && (
