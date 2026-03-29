@@ -226,6 +226,9 @@ const Empleados = () => {
     motivo_baja: "",
     beneficiario: "",
     premio_asistencia_semanal: "" as string | number | null,
+    licencia_numero: "",
+    licencia_tipo: "",
+    licencia_vencimiento: "",
   });
 
   const [crearUsuario, setCrearUsuario] = useState(false);
@@ -1127,6 +1130,9 @@ const Empleados = () => {
       motivo_baja: "",
       beneficiario: "",
       premio_asistencia_semanal: "",
+      licencia_numero: "",
+      licencia_tipo: "",
+      licencia_vencimiento: "",
     });
     setCrearUsuario(false);
     setUsuarioFormData({
@@ -1611,11 +1617,11 @@ const Empleados = () => {
                       <div className="grid grid-cols-3 gap-4">
                         <div>
                           <Label htmlFor="licencia_numero">No. Licencia</Label>
-                          <Input id="licencia_numero" value={(formData as any).licencia_numero || ""} onChange={(e) => setFormData({ ...formData, licencia_numero: e.target.value } as any)} autoComplete="off" />
+                          <Input id="licencia_numero" value={formData.licencia_numero || ""} onChange={(e) => setFormData({ ...formData, licencia_numero: e.target.value })} autoComplete="off" />
                         </div>
                         <div>
                           <Label htmlFor="licencia_tipo">Tipo</Label>
-                          <Select value={(formData as any).licencia_tipo || ""} onValueChange={(v) => setFormData({ ...formData, licencia_tipo: v } as any)}>
+                          <Select value={formData.licencia_tipo || ""} onValueChange={(v) => setFormData({ ...formData, licencia_tipo: v })}>
                             <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="A">A</SelectItem>
@@ -1628,7 +1634,7 @@ const Empleados = () => {
                         </div>
                         <div>
                           <Label htmlFor="licencia_vencimiento">Vencimiento</Label>
-                          <Input id="licencia_vencimiento" type="date" value={(formData as any).licencia_vencimiento || ""} onChange={(e) => setFormData({ ...formData, licencia_vencimiento: e.target.value } as any)} />
+                          <Input id="licencia_vencimiento" type="date" value={formData.licencia_vencimiento || ""} onChange={(e) => setFormData({ ...formData, licencia_vencimiento: e.target.value })} />
                         </div>
                       </div>
                     )}

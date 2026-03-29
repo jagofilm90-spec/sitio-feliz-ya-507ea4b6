@@ -1852,6 +1852,9 @@ export type Database = {
           fecha_nacimiento: string | null
           foto_url: string | null
           id: string
+          licencia_numero: string | null
+          licencia_tipo: string | null
+          licencia_vencimiento: string | null
           motivo_baja: string | null
           nivel_estudios: string | null
           nombre: string | null
@@ -1891,6 +1894,9 @@ export type Database = {
           fecha_nacimiento?: string | null
           foto_url?: string | null
           id?: string
+          licencia_numero?: string | null
+          licencia_tipo?: string | null
+          licencia_vencimiento?: string | null
           motivo_baja?: string | null
           nivel_estudios?: string | null
           nombre?: string | null
@@ -1930,6 +1936,9 @@ export type Database = {
           fecha_nacimiento?: string | null
           foto_url?: string | null
           id?: string
+          licencia_numero?: string | null
+          licencia_tipo?: string | null
+          licencia_vencimiento?: string | null
           motivo_baja?: string | null
           nivel_estudios?: string | null
           nombre?: string | null
