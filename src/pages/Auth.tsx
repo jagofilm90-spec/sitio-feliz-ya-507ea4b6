@@ -22,6 +22,8 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -228,9 +230,31 @@ const Auth = () => {
                 {loading ? <><Loader2 className="animate-spin" /> Iniciando sesión...</> : "Iniciar Sesión"}
               </Button>
             </form>
-            <p className="mt-4 text-center text-xs text-muted-foreground">
-              ¿Necesitas acceso? Contacta al administrador del sistema
-            </p>
+            {!showReset ? (
+              <div className="mt-4 text-center space-y-2">
+                <button type="button" className="text-xs text-primary hover:underline" onClick={() => setShowReset(true)}>
+                  ¿Olvidaste tu contraseña?
+                </button>
+                <p className="text-xs text-muted-foreground">¿Necesitas acceso? Contacta al administrador</p>
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3 p-3 border rounded-md bg-muted/30">
+                <p className="text-sm font-medium">Recuperar contraseña</p>
+                <Input type="email" placeholder="Tu correo electrónico" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => setShowReset(false)}>Cancelar</Button>
+                  <Button size="sm" className="flex-1" disabled={!email || resetLoading} onClick={async () => {
+                    setResetLoading(true);
+                    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/reset-password" });
+                    setResetLoading(false);
+                    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); }
+                    else { toast({ title: "Enlace enviado", description: "Revisa tu correo para restablecer tu contraseña." }); setShowReset(false); }
+                  }}>
+                    {resetLoading ? "Enviando..." : "Enviar enlace"}
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

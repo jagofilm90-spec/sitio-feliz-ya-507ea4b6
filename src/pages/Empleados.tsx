@@ -791,6 +791,23 @@ const Empleados = () => {
     setFirmaFlowEmpleado(empleado);
   };
 
+  const handleResetPassword = async (empleado: Empleado) => {
+    if (!empleado.user_id) return;
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+    const tempPass = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    try {
+      const { data, error } = await supabase.functions.invoke("reset-user-password", {
+        body: { userId: empleado.user_id, newPassword: tempPass },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      prompt(`Contraseña temporal para ${empleado.nombre_completo}. Cópiala y compártela:`, tempPass);
+      toast({ title: "Contraseña reseteada", description: `Nueva contraseña temporal asignada a ${empleado.nombre_completo}.` });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
   const handleQuitarAcceso = async (empleado: Empleado) => {
     if (!empleado.user_id) return;
     if (!confirm(`¿Quitar acceso al sistema a ${empleado.nombre_completo}? Ya no podrá iniciar sesión.`)) return;
@@ -2174,6 +2191,12 @@ const Empleados = () => {
                                     >
                                       Quitar acceso
                                     </button>
+                                    <button
+                                      className="text-xs text-primary hover:underline cursor-pointer"
+                                      onClick={(e) => { e.stopPropagation(); handleResetPassword(empleado); }}
+                                    >
+                                      Resetear contraseña
+                                    </button>
                                   )}
                                 </div>
                               ) : (
@@ -2441,6 +2464,12 @@ const Empleados = () => {
                                     >
                                       Quitar acceso
                                     </button>
+                                    <button
+                                      className="text-xs text-primary hover:underline cursor-pointer"
+                                      onClick={(e) => { e.stopPropagation(); handleResetPassword(empleado); }}
+                                    >
+                                      Resetear contraseña
+                                    </button>
                                   )}
                                 </div>
                               ) : (
@@ -2706,6 +2735,12 @@ const Empleados = () => {
                                       onClick={(e) => { e.stopPropagation(); handleQuitarAcceso(empleado); }}
                                     >
                                       Quitar acceso
+                                    </button>
+                                    <button
+                                      className="text-xs text-primary hover:underline cursor-pointer"
+                                      onClick={(e) => { e.stopPropagation(); handleResetPassword(empleado); }}
+                                    >
+                                      Resetear contraseña
                                     </button>
                                   )}
                                 </div>
