@@ -470,6 +470,7 @@ const Empleados = () => {
       if (!formData.rfc?.trim()) faltantes.push("RFC");
       if (!formData.curp?.trim()) faltantes.push("CURP");
       if (!formData.email?.trim()) faltantes.push("Email");
+      else if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) faltantes.push("Email (formato inválido)");
       if (!formData.beneficiario?.trim()) faltantes.push("Beneficiario");
       if ((formData.puesto === "Chofer" || formData.puesto === "Ayudante de Chofer") && !formData.premio_asistencia_semanal) faltantes.push("Premio de Asistencia Semanal");
       if (faltantes.length > 0) {
@@ -2134,16 +2135,16 @@ const Empleados = () => {
                                   {fotos[empleado.id] ? (
                                     <img src={fotos[empleado.id]} className="w-8 h-8 rounded-full object-cover shrink-0 hover:ring-2 hover:ring-primary" />
                                   ) : (
-                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 hover:ring-2 hover:ring-primary" style={{ backgroundColor: getAvatarColor(empleado.nombre_completo) }}>
+                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 hover:ring-2 hover:ring-primary border-2 border-dashed border-red-300" style={{ backgroundColor: getAvatarColor(empleado.nombre_completo) }}>
                                       {getInitials(empleado.nombre_completo)}
                                     </div>
                                   )}
                                 </div>
                                 {empleado.nombre_completo}
                                 {empleado.contrato_firmado_fecha ? (
-                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300 shrink-0">Firmado</Badge>
+                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300 shrink-0">Contrato vigente</Badge>
                                 ) : (
-                                  <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-300 shrink-0">Pendiente</Badge>
+                                  <Badge variant="destructive" className="text-xs shrink-0">Sin contrato</Badge>
                                 )}
                                 {esCumpleHoy(empleado) && (
                                   <Badge className="text-xs bg-amber-100 text-amber-800 border-amber-300 shrink-0">Hoy</Badge>
@@ -2245,13 +2246,13 @@ const Empleados = () => {
                                     <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleFirmarContrato(empleado)}>
                                       {empleado.contrato_firmado_fecha ? "Volver a firmar" : "Firmar Contrato"}
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarContrato(empleado)}>
+                                    <DropdownMenuItem disabled={!empleado.contrato_firmado_fecha} onClick={() => handleGenerarContrato(empleado)}>
                                       Contrato (vista previa)
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleGenerarAviso(empleado)}>
+                                    <DropdownMenuItem disabled={!empleado.contrato_firmado_fecha} onClick={() => handleGenerarAviso(empleado)}>
                                       Aviso de Privacidad (vista previa)
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarTodos(empleado)}>
+                                    <DropdownMenuItem disabled={!empleado.contrato_firmado_fecha} onClick={() => handleGenerarTodos(empleado)}>
                                       Todos sin firma
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setExpedienteEmpleadoId(empleado.id)}>
@@ -2351,16 +2352,16 @@ const Empleados = () => {
                                   {fotos[empleado.id] ? (
                                     <img src={fotos[empleado.id]} className="w-8 h-8 rounded-full object-cover shrink-0 hover:ring-2 hover:ring-primary" />
                                   ) : (
-                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 hover:ring-2 hover:ring-primary" style={{ backgroundColor: getAvatarColor(empleado.nombre_completo) }}>
+                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 hover:ring-2 hover:ring-primary border-2 border-dashed border-red-300" style={{ backgroundColor: getAvatarColor(empleado.nombre_completo) }}>
                                       {getInitials(empleado.nombre_completo)}
                                     </div>
                                   )}
                                 </div>
                                 {empleado.nombre_completo}
                                 {empleado.contrato_firmado_fecha ? (
-                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300 shrink-0">Firmado</Badge>
+                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300 shrink-0">Contrato vigente</Badge>
                                 ) : (
-                                  <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-300 shrink-0">Pendiente</Badge>
+                                  <Badge variant="destructive" className="text-xs shrink-0">Sin contrato</Badge>
                                 )}
                                 {esCumpleHoy(empleado) && (
                                   <Badge className="text-xs bg-amber-100 text-amber-800 border-amber-300 shrink-0">Hoy</Badge>
@@ -2512,13 +2513,13 @@ const Empleados = () => {
                                     <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleFirmarContrato(empleado)}>
                                       {empleado.contrato_firmado_fecha ? "Volver a firmar" : "Firmar Contrato"}
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarContrato(empleado)}>
+                                    <DropdownMenuItem disabled={!empleado.contrato_firmado_fecha} onClick={() => handleGenerarContrato(empleado)}>
                                       Contrato (vista previa)
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleGenerarAviso(empleado)}>
+                                    <DropdownMenuItem disabled={!empleado.contrato_firmado_fecha} onClick={() => handleGenerarAviso(empleado)}>
                                       Aviso de Privacidad (vista previa)
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarTodos(empleado)}>
+                                    <DropdownMenuItem disabled={!empleado.contrato_firmado_fecha} onClick={() => handleGenerarTodos(empleado)}>
                                       Todos sin firma
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setExpedienteEmpleadoId(empleado.id)}>
@@ -2617,16 +2618,16 @@ const Empleados = () => {
                                   {fotos[empleado.id] ? (
                                     <img src={fotos[empleado.id]} className="w-8 h-8 rounded-full object-cover shrink-0 hover:ring-2 hover:ring-primary" />
                                   ) : (
-                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 hover:ring-2 hover:ring-primary" style={{ backgroundColor: getAvatarColor(empleado.nombre_completo) }}>
+                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 hover:ring-2 hover:ring-primary border-2 border-dashed border-red-300" style={{ backgroundColor: getAvatarColor(empleado.nombre_completo) }}>
                                       {getInitials(empleado.nombre_completo)}
                                     </div>
                                   )}
                                 </div>
                                 {empleado.nombre_completo}
                                 {empleado.contrato_firmado_fecha ? (
-                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300 shrink-0">Firmado</Badge>
+                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300 shrink-0">Contrato vigente</Badge>
                                 ) : (
-                                  <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-300 shrink-0">Pendiente</Badge>
+                                  <Badge variant="destructive" className="text-xs shrink-0">Sin contrato</Badge>
                                 )}
                                 {esCumpleHoy(empleado) && (
                                   <Badge className="text-xs bg-amber-100 text-amber-800 border-amber-300 shrink-0">Hoy</Badge>
@@ -2778,13 +2779,13 @@ const Empleados = () => {
                                     <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleFirmarContrato(empleado)}>
                                       {empleado.contrato_firmado_fecha ? "Volver a firmar" : "Firmar Contrato"}
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarContrato(empleado)}>
+                                    <DropdownMenuItem disabled={!empleado.contrato_firmado_fecha} onClick={() => handleGenerarContrato(empleado)}>
                                       Contrato (vista previa)
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleGenerarAviso(empleado)}>
+                                    <DropdownMenuItem disabled={!empleado.contrato_firmado_fecha} onClick={() => handleGenerarAviso(empleado)}>
                                       Aviso de Privacidad (vista previa)
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarTodos(empleado)}>
+                                    <DropdownMenuItem disabled={!empleado.contrato_firmado_fecha} onClick={() => handleGenerarTodos(empleado)}>
                                       Todos sin firma
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setExpedienteEmpleadoId(empleado.id)}>
@@ -2919,7 +2920,7 @@ const Empleados = () => {
         <Dialog open={!!actasEmpleado} onOpenChange={o => { if (!o) { setActasEmpleado(null); if (volverATarjeta) { setCardEmpleado(volverATarjeta); setVolverATarjeta(null); } } }}>
           <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Actas — {actasEmpleado.nombre_completo}</DialogTitle></DialogHeader>
-            <ActasAdministrativas empleadoId={actasEmpleado.id} empleadoNombre={actasEmpleado.nombre_completo} empleadoPuesto={actasEmpleado.puesto} />
+            <ActasAdministrativas empleadoId={actasEmpleado.id} empleadoNombre={actasEmpleado.nombre_completo} empleadoPuesto={actasEmpleado.puesto} empleadoEmail={actasEmpleado.email} />
           </DialogContent>
         </Dialog>
       )}

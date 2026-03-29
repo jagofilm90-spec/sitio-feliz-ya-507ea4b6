@@ -70,14 +70,25 @@ export function VacacionesEmpleado({ empleadoId, empleadoNombre, fechaIngreso, i
       await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados_vacaciones`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Authorization": `Bearer ${session.access_token}`, "Prefer": "return=minimal" },
-        body: JSON.stringify({ empleado_id: empleadoId, fecha_inicio: form.fecha_inicio, fecha_fin: form.fecha_fin, dias, notas: form.notas || null }),
+        body: JSON.stringify({ empleado_id: empleadoId, fecha_inicio: form.fecha_inicio, fecha_fin: form.fecha_fin, dias, status: "tomada", notas: form.notas || null }),
       });
-      toast({ title: "Solicitud enviada" });
+      toast({ title: "Vacaciones registradas" });
       setForm({ fecha_inicio: "", fecha_fin: "", notas: "" });
       setShowForm(false);
       await loadVacaciones();
     } catch (e: any) { toast({ title: "Error", description: e.message, variant: "destructive" }); }
     finally { setLoading(false); }
+  };
+
+  const handleDelete = async (vacId: string) => {
+    if (!confirm("¿Eliminar este registro de vacaciones?")) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados_vacaciones?id=eq.${vacId}`, {
+      method: "DELETE", headers: { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Authorization": `Bearer ${session.access_token}` },
+    });
+    toast({ title: "Eliminado" });
+    await loadVacaciones();
   };
 
   const handleAction = async (vacId: string, status: string) => {
@@ -104,7 +115,7 @@ export function VacacionesEmpleado({ empleadoId, empleadoNombre, fechaIngreso, i
 
       <div className="flex justify-between items-center">
         <p className="text-sm font-medium">Solicitudes</p>
-        <Button size="sm" variant="outline" onClick={() => setShowForm(!showForm)}><Plus className="h-3 w-3 mr-1" />{showForm ? "Cancelar" : "Solicitar"}</Button>
+        <Button size="sm" variant="outline" onClick={() => setShowForm(!showForm)}><Plus className="h-3 w-3 mr-1" />{showForm ? "Cancelar" : "Registrar"}</Button>
       </div>
 
       {showForm && (
@@ -115,7 +126,7 @@ export function VacacionesEmpleado({ empleadoId, empleadoNombre, fechaIngreso, i
           </div>
           {calcDias() > 0 && <p className="text-sm">Días solicitados: <strong>{calcDias()}</strong></p>}
           <div><Label>Notas</Label><Input value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} /></div>
-          <Button onClick={handleSolicitar} disabled={loading || calcDias() <= 0}>{loading ? "Enviando..." : "Enviar solicitud"}</Button>
+          <Button onClick={handleSolicitar} disabled={loading || calcDias() <= 0}>{loading ? "Guardando..." : "Registrar vacaciones"}</Button>
         </div>
       )}
 
@@ -131,11 +142,8 @@ export function VacacionesEmpleado({ empleadoId, empleadoNombre, fechaIngreso, i
                 </div>
                 {v.notas && <p className="text-xs text-muted-foreground mt-1">{v.notas}</p>}
               </div>
-              {isAdmin && v.status === "pendiente" && (
-                <div className="flex gap-1 shrink-0">
-                  <Button size="sm" variant="ghost" className="text-green-600 h-7" onClick={() => handleAction(v.id, "aprobada")}><Check className="h-3 w-3" /></Button>
-                  <Button size="sm" variant="ghost" className="text-red-600 h-7" onClick={() => handleAction(v.id, "rechazada")}><X className="h-3 w-3" /></Button>
-                </div>
+              {isAdmin && (
+                <Button size="sm" variant="ghost" className="text-destructive h-7 shrink-0" onClick={() => handleDelete(v.id)}><X className="h-3 w-3" /></Button>
               )}
             </div>
           ))}

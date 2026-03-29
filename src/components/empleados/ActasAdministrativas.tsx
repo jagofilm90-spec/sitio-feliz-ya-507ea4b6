@@ -12,11 +12,11 @@ import { Plus, Download } from "lucide-react";
 import { hoyMexico } from "@/lib/generarContratoPDF";
 
 interface Acta { id: string; tipo: string; descripcion: string; fecha: string; testigo_1: string | null; testigo_2: string | null; firmada: boolean; }
-interface Props { empleadoId: string; empleadoNombre: string; empleadoPuesto: string; }
+interface Props { empleadoId: string; empleadoNombre: string; empleadoPuesto: string; empleadoEmail?: string | null; }
 
 const TIPOS: Record<string, string> = { falta: "Falta injustificada", retardo: "Retardo", conducta: "Conducta inapropiada", otro: "Otro" };
 
-export function ActasAdministrativas({ empleadoId, empleadoNombre, empleadoPuesto }: Props) {
+export function ActasAdministrativas({ empleadoId, empleadoNombre, empleadoPuesto, empleadoEmail }: Props) {
   const { toast } = useToast();
   const [actas, setActas] = useState<Acta[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -89,6 +89,13 @@ export function ActasAdministrativas({ empleadoId, empleadoNombre, empleadoPuest
       `${empleadoId}/acta_${acta.tipo}_${acta.fecha}.pdf`, pdfBlob,
       { contentType: "application/pdf", upsert: true }
     ).catch(() => {});
+    // Send email to employee
+    if (empleadoEmail) {
+      const b64 = await new Promise<string>((res) => { const r = new FileReader(); r.onloadend = () => res((r.result as string).split(",")[1]); r.readAsDataURL(pdfBlob); });
+      await supabase.functions.invoke("gmail-api", {
+        body: { action: "send", email: "1904@almasa.com.mx", to: empleadoEmail, subject: `Acta administrativa — ${TIPOS[acta.tipo] || acta.tipo} — ALMASA`, body: `<p>Estimado/a ${empleadoNombre}, se adjunta el acta administrativa levantada el día ${acta.fecha.split("-").reverse().join("/")}.</p><p style="color:#888">Abarrotes La Manita, S.A. de C.V.</p>`, attachments: [{ filename: `Acta_${acta.tipo}_${acta.fecha}.pdf`, content: b64, mimeType: "application/pdf" }] },
+      }).catch(() => {});
+    }
   };
 
   return (

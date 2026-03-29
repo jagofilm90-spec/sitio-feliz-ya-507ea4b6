@@ -23,6 +23,8 @@ export function ExpedienteDigital({ empleadoId, isAdmin }: ExpedienteDigitalProp
   const [files, setFiles] = useState<StorageFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [emailDialog, setEmailDialog] = useState<{ open: boolean; fileName: string }>({ open: false, fileName: "" });
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sendingMulti, setSendingMulti] = useState(false);
   const [emailTo, setEmailTo] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -100,6 +102,35 @@ export function ExpedienteDigital({ empleadoId, isAdmin }: ExpedienteDigitalProp
   const handlePrint = async (fileName: string) => {
     await handleDownload(fileName);
     toast({ title: "Documento descargado", description: "Abre el PDF descargado e imprímelo desde ahí." });
+  };
+
+  const toggleSelect = (fp: string) => {
+    const s = new Set(selected);
+    s.has(fp) ? s.delete(fp) : s.add(fp);
+    setSelected(s);
+  };
+
+  const handleSendMulti = async () => {
+    if (selected.size === 0) return;
+    const emailTo = prompt("¿A qué correo enviar los documentos seleccionados?");
+    if (!emailTo?.trim()) return;
+    setSendingMulti(true);
+    try {
+      const attachments: Array<{ filename: string; content: string; mimeType: string }> = [];
+      for (const fp of selected) {
+        const blob = await getFileBlob(fp);
+        if (!blob) continue;
+        const b64 = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onloadend = () => res((r.result as string).split(",")[1]); r.onerror = rej; r.readAsDataURL(blob); });
+        const name = fp.includes("/") ? fp.split("/").pop()! : fp;
+        attachments.push({ filename: name, content: b64, mimeType: "application/pdf" });
+      }
+      await supabase.functions.invoke("gmail-api", {
+        body: { action: "send", email: "1904@almasa.com.mx", to: emailTo.trim(), subject: `Documentos del expediente — ALMASA`, body: `<p>Adjunto ${attachments.length} documento${attachments.length > 1 ? "s" : ""} del expediente.</p><p style="color:#888">Abarrotes La Manita, S.A. de C.V.</p>`, attachments },
+      });
+      toast({ title: "Enviado", description: `${attachments.length} documento(s) enviado(s) a ${emailTo}` });
+      setSelected(new Set());
+    } catch (e: any) { toast({ title: "Error", description: e.message, variant: "destructive" }); }
+    finally { setSendingMulti(false); }
   };
 
   const handleSendEmail = async () => {
@@ -201,6 +232,15 @@ export function ExpedienteDigital({ empleadoId, isAdmin }: ExpedienteDigitalProp
           )}
         </h3>
 
+        {selected.size > 0 && (
+          <div className="flex items-center gap-2 mb-2">
+            <Button size="sm" variant="outline" onClick={handleSendMulti} disabled={sendingMulti}>
+              {sendingMulti ? "Enviando..." : `Enviar seleccionados (${selected.size})`}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Deseleccionar</Button>
+          </div>
+        )}
+
         {files.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No hay documentos firmados. Use &quot;Firmar Contrato&quot; para generar los documentos.
@@ -209,6 +249,7 @@ export function ExpedienteDigital({ empleadoId, isAdmin }: ExpedienteDigitalProp
           <div className="space-y-2">
             {files.map((file) => (
               <div key={file.name} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                <input type="checkbox" className="shrink-0 mr-2" checked={selected.has(file.fullPath)} onChange={() => toggleSelect(file.fullPath)} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{getDocLabel(file.name)}</p>
                   <p className="text-xs text-muted-foreground">{getDocDate(file.name)}</p>

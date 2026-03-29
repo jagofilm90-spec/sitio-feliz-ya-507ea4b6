@@ -176,12 +176,9 @@ export function EmpleadoCard({ empleado: e, foto, onClose, onEditar, onExpedient
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex gap-2 mt-4 pt-3 border-t">
-            <Button size="sm" variant="outline" className="flex-1" onClick={onEditar}><Edit className="h-3 w-3 mr-1" />Editar</Button>
-            <Button size="sm" variant="outline" className="flex-1" onClick={onExpediente}><FolderOpen className="h-3 w-3 mr-1" />Expediente</Button>
-            <Button size="sm" variant="outline" className="flex-1" onClick={onDocumentos}><FileText className="h-3 w-3 mr-1" />Docs</Button>
-            <Button size="sm" variant="outline" className="flex-1" onClick={onActas}><FileWarning className="h-3 w-3 mr-1" />Actas</Button>
+          {/* Action */}
+          <div className="mt-4 pt-3 border-t">
+            <Button size="sm" variant="outline" className="w-full" onClick={onEditar}><Edit className="h-3 w-3 mr-1" />Ver perfil completo</Button>
           </div>
         </div>
       </DialogContent>
