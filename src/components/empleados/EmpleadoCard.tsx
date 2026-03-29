@@ -75,7 +75,7 @@ export function EmpleadoCard({ empleado: e, foto, onClose, onEditar, onExpedient
 
   return (
     <Dialog open onOpenChange={o => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-md p-0 overflow-hidden">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0">
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center gap-4 mb-4">
