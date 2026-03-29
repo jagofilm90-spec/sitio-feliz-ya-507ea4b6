@@ -106,23 +106,6 @@ export function CumpleanosWidget() {
                 },
               });
             }
-            // Notify all other employees
-            const allRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados?activo=eq.true&select=email&email=not.is.null&id=neq.${emp.id}`, {
-              headers: { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Authorization": `Bearer ${session.access_token}` },
-            });
-            const allEmps = await allRes.json();
-            if (Array.isArray(allEmps)) {
-              for (const other of allEmps) {
-                if (!other.email) continue;
-                await supabase.functions.invoke("gmail-api", {
-                  body: {
-                    action: "send", email: "1904@almasa.com.mx", to: other.email,
-                    subject: `🎂 ¡Hoy es cumpleaños de ${emp.nombre_completo}! 🎉 — ALMASA`,
-                    body: WRAP(`<p style="text-align:center;font-size:48px;margin:0 0 16px">🎉</p><p style="color:#444;font-size:14px;line-height:1.6;margin:0 0 16px">¡Hoy <strong>${emp.nombre_completo}</strong> de <strong>${emp.puesto}</strong> cumple años! 🎂 ¡Felicítalo/a! 🥳</p><p style="color:#888;font-size:12px;margin:0">Abarrotes La Manita, S.A. de C.V.</p>`),
-                  },
-                });
-              }
-            }
             localStorage.setItem(lsKey("cumple", emp.id), "1");
             setEnviados(prev => new Set([...prev, lsKey("cumple", emp.id)]));
           } catch (e) { console.warn("Error auto-send cumple:", e); }
