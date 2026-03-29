@@ -1,7 +1,8 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, FileText, FolderOpen, FileWarning } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Edit, FileText, FolderOpen, FileWarning, Pencil } from "lucide-react";
 
 interface Empleado {
   id: string;
@@ -34,6 +35,7 @@ interface Props {
   onExpediente: () => void;
   onDocumentos: () => void;
   onActas: () => void;
+  onFotoChanged?: (newUrl: string) => void;
 }
 
 const colors = ["#E24B4A", "#D85A30", "#BA7517", "#639922", "#1D9E75", "#378ADD", "#7F77DD", "#D4537E"];
@@ -51,7 +53,7 @@ function Row({ label, value }: { label: string; value: string | null | undefined
   );
 }
 
-export function EmpleadoCard({ empleado: e, foto, onClose, onEditar, onExpediente, onDocumentos, onActas }: Props) {
+export function EmpleadoCard({ empleado: e, foto, onClose, onEditar, onExpediente, onDocumentos, onActas, onFotoChanged }: Props) {
   const hoy = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City" }));
   const [iy, im, id] = e.fecha_ingreso.split("-").map(Number);
   const ingreso = new Date(iy, im - 1, id);
@@ -79,13 +81,38 @@ export function EmpleadoCard({ empleado: e, foto, onClose, onEditar, onExpedient
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center gap-4 mb-4">
-            {foto ? (
-              <img src={foto} className="w-20 h-20 rounded-full object-cover shrink-0" />
-            ) : (
-              <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold shrink-0" style={{ backgroundColor: getColor(e.nombre_completo) }}>
-                {getInitials(e.nombre_completo)}
-              </div>
-            )}
+            <div className="relative shrink-0">
+              {foto ? (
+                <img src={foto} className="w-20 h-20 rounded-full object-cover" />
+              ) : (
+                <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold" style={{ backgroundColor: getColor(e.nombre_completo) }}>
+                  {getInitials(e.nombre_completo)}
+                </div>
+              )}
+              <label htmlFor="card-foto-upload" className="absolute bottom-0 right-0 w-7 h-7 bg-white border border-gray-200 rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-50 shadow-sm">
+                <Pencil className="h-3.5 w-3.5 text-gray-600" />
+              </label>
+              <input type="file" id="card-foto-upload" accept="image/*" className="hidden" onChange={async (ev) => {
+                const file = ev.target.files?.[0];
+                if (!file) return;
+                const img = new Image();
+                img.src = URL.createObjectURL(file);
+                try { await new Promise((res, rej) => { img.onload = res; img.onerror = rej; }); } catch { return; }
+                const canvas = document.createElement("canvas");
+                canvas.width = 200; canvas.height = 200;
+                const ctx = canvas.getContext("2d")!;
+                ctx.fillStyle = "#FFF"; ctx.fillRect(0, 0, 200, 200);
+                const sz = Math.min(img.width, img.height);
+                ctx.drawImage(img, (img.width - sz) / 2, (img.height - sz) / 2, sz, sz, 0, 0, 200, 200);
+                URL.revokeObjectURL(img.src);
+                canvas.toBlob(async (blob) => {
+                  if (!blob) return;
+                  const { error } = await supabase.storage.from("empleados-documentos").upload(`${e.id}/foto.jpg`, blob, { contentType: "image/jpeg", upsert: true });
+                  if (!error && onFotoChanged) onFotoChanged(URL.createObjectURL(blob));
+                }, "image/jpeg", 0.85);
+                ev.target.value = "";
+              }} />
+            </div>
             <div className="min-w-0 flex-1">
               <h2 className="text-lg font-bold break-words">{e.nombre_completo}</h2>
               <p className="text-sm text-muted-foreground">{e.puesto}</p>

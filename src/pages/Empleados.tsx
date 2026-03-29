@@ -1537,7 +1537,7 @@ const Empleados = () => {
 
                             const { error: updateError } = await supabase
                               .from("empleados")
-                              .update({ foto_url: publicUrl })
+                              .update({ foto_url: publicUrl } as any)
                               .eq("id", editingEmpleado.id);
 
                             if (updateError) throw updateError;
@@ -1546,9 +1546,6 @@ const Empleados = () => {
                               ...prev,
                               [editingEmpleado.id]: `${publicUrl}?t=${Date.now()}`,
                             }));
-                            setEmpleados(prev => prev.map(emp =>
-                              emp.id === editingEmpleado.id ? { ...emp, foto_url: publicUrl } : emp
-                            ));
                             toast({ title: "Foto actualizada" });
                           } catch (error: any) {
                             console.error("[Empleados] Error subiendo foto:", error);
@@ -2889,6 +2886,7 @@ const Empleados = () => {
           onExpediente={() => { setCardEmpleado(null); setExpedienteEmpleadoId(cardEmpleado.id); }}
           onDocumentos={() => { const emp = cardEmpleado; setCardEmpleado(null); setChecklistEmpleado(emp); }}
           onActas={() => { const emp = cardEmpleado; setCardEmpleado(null); setActasEmpleado(emp); }}
+          onFotoChanged={(url) => setFotos(prev => ({ ...prev, [cardEmpleado.id]: url }))}
         />
       )}
 
