@@ -1634,7 +1634,7 @@ const Empleados = () => {
                         </div>
                         <div>
                           <Label htmlFor="licencia_vencimiento">Vencimiento</Label>
-                          <Input id="licencia_vencimiento" type="date" value={(formData as any).licencia_vencimiento || ""} onChange={(e) => setFormData({ ...formData, licencia_vencimiento: e.target.value } as any)} />
+                          <Input id="licencia_vencimiento" type="date" value={formData.licencia_vencimiento || ""} onChange={(e) => setFormData({ ...formData, licencia_vencimiento: e.target.value })} />
                         </div>
                       </div>
                     )}
