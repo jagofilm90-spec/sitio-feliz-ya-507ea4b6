@@ -101,8 +101,8 @@ export function CumpleanosWidget() {
               await supabase.functions.invoke("gmail-api", {
                 body: {
                   action: "send", email: "1904@almasa.com.mx", to: emp.email,
-                  subject: `¡Feliz cumpleaños, ${emp.nombre_completo}! — ALMASA`,
-                  body: WRAP(`<p style="color:#444;font-size:14px;line-height:1.8;margin:0 0 20px">Estimado/a <strong>${emp.nombre_completo}</strong>,</p><p style="color:#444;font-size:14px;line-height:1.8;margin:0 0 20px">En nombre de toda la familia ALMASA, te deseamos un muy feliz cumpleaños.</p><p style="color:#444;font-size:14px;line-height:1.8;margin:0 0 20px">Agradecemos tu esfuerzo y dedicación como <strong>${emp.puesto}</strong>. Esperamos que este día esté lleno de alegría y que sigas cosechando éxitos con nosotros.</p><p style="color:#444;font-size:14px;line-height:1.8;margin:0 0 28px">¡Muchas felicidades!</p>${FIRMA}`),
+                  subject: `🎂 ¡Feliz cumpleaños, ${emp.nombre_completo}! 🎉 — ALMASA`,
+                  body: WRAP(`<p style="text-align:center;font-size:48px;margin:0 0 16px">🎂</p><p style="color:#444;font-size:14px;line-height:1.8;margin:0 0 20px">Estimado/a <strong>${emp.nombre_completo}</strong>,</p><p style="color:#444;font-size:14px;line-height:1.8;margin:0 0 20px">En nombre de toda la familia ALMASA, te deseamos un muy feliz cumpleaños.</p><p style="color:#444;font-size:14px;line-height:1.8;margin:0 0 20px">Agradecemos tu esfuerzo y dedicación como <strong>${emp.puesto}</strong>. Esperamos que este día esté lleno de alegría y que sigas cosechando éxitos con nosotros.</p><p style="color:#444;font-size:14px;line-height:1.8;margin:0 0 28px">¡Muchas felicidades! 🎉🥳🎊</p>${FIRMA}`),
                 },
               });
             }
@@ -117,8 +117,8 @@ export function CumpleanosWidget() {
                 await supabase.functions.invoke("gmail-api", {
                   body: {
                     action: "send", email: "1904@almasa.com.mx", to: other.email,
-                    subject: `¡Hoy es cumpleaños de ${emp.nombre_completo}! — ALMASA`,
-                    body: WRAP(`<p style="color:#444;font-size:14px;line-height:1.6;margin:0 0 16px">¡Hoy <strong>${emp.nombre_completo}</strong> de <strong>${emp.puesto}</strong> cumple años! Felicítalo/a.</p><p style="color:#888;font-size:12px;margin:0">Abarrotes La Manita, S.A. de C.V.</p>`),
+                    subject: `🎂 ¡Hoy es cumpleaños de ${emp.nombre_completo}! 🎉 — ALMASA`,
+                    body: WRAP(`<p style="text-align:center;font-size:48px;margin:0 0 16px">🎉</p><p style="color:#444;font-size:14px;line-height:1.6;margin:0 0 16px">¡Hoy <strong>${emp.nombre_completo}</strong> de <strong>${emp.puesto}</strong> cumple años! 🎂 ¡Felicítalo/a! 🥳</p><p style="color:#888;font-size:12px;margin:0">Abarrotes La Manita, S.A. de C.V.</p>`),
                   },
                 });
               }
