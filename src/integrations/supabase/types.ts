@@ -2037,6 +2037,57 @@ export type Database = {
           },
         ]
       }
+      empleados_historial_sueldo: {
+        Row: {
+          cambiado_por: string | null
+          created_at: string | null
+          empleado_id: string
+          fecha_cambio: string | null
+          id: string
+          premio_anterior: number | null
+          premio_nuevo: number | null
+          sueldo_anterior: number | null
+          sueldo_nuevo: number | null
+        }
+        Insert: {
+          cambiado_por?: string | null
+          created_at?: string | null
+          empleado_id: string
+          fecha_cambio?: string | null
+          id?: string
+          premio_anterior?: number | null
+          premio_nuevo?: number | null
+          sueldo_anterior?: number | null
+          sueldo_nuevo?: number | null
+        }
+        Update: {
+          cambiado_por?: string | null
+          created_at?: string | null
+          empleado_id?: string
+          fecha_cambio?: string | null
+          id?: string
+          premio_anterior?: number | null
+          premio_nuevo?: number | null
+          sueldo_anterior?: number | null
+          sueldo_nuevo?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empleados_historial_sueldo_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empleados_historial_sueldo_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entregas: {
         Row: {
           carga_confirmada: boolean | null
