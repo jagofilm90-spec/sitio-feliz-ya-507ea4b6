@@ -1490,29 +1490,22 @@ const Empleados = () => {
                     <div>
                       <input
                         type="file"
-                        accept="image/jpeg,image/png,image/heic,image/heif,.heic"
+                        accept="image/*"
                         id="foto-upload"
                         className="hidden"
                         onChange={async (e) => {
-                          let file = e.target.files?.[0];
+                          const file = e.target.files?.[0];
                           if (!file || !editingEmpleado) return;
-                          // Convert HEIC to JPEG if needed
-                          if (file.type === "image/heic" || file.type === "image/heif" || file.name.toLowerCase().endsWith(".heic")) {
-                            try {
-                              const heic2any = (await import("heic2any")).default;
-                              const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
-                              file = new File([converted as Blob], file.name.replace(/\.heic$/i, ".jpg"), { type: "image/jpeg" });
-                            } catch (err) {
-                              console.error("Error convirtiendo HEIC:", err);
-                              toast({ title: "Error", description: "No se pudo procesar la imagen HEIC", variant: "destructive" });
-                              e.target.value = "";
-                              return;
-                            }
-                          }
-                          // Resize to 200x200 center crop
+                          // Load image (modern browsers handle most formats)
                           const img = new Image();
                           img.src = URL.createObjectURL(file);
-                          await new Promise(r => { img.onload = r; });
+                          try {
+                            await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
+                          } catch {
+                            toast({ title: "Formato no soportado", description: "Tu navegador no soporta este formato. Toma la foto como JPG o convierte la imagen antes de subirla.", variant: "destructive" });
+                            e.target.value = "";
+                            return;
+                          }
                           const canvas = document.createElement("canvas");
                           canvas.width = 200; canvas.height = 200;
                           const ctx = canvas.getContext("2d")!;
