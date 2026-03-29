@@ -1617,7 +1617,7 @@ const Empleados = () => {
                       <div className="grid grid-cols-3 gap-4">
                         <div>
                           <Label htmlFor="licencia_numero">No. Licencia</Label>
-                          <Input id="licencia_numero" value={(formData as any).licencia_numero || ""} onChange={(e) => setFormData({ ...formData, licencia_numero: e.target.value } as any)} autoComplete="off" />
+                          <Input id="licencia_numero" value={formData.licencia_numero || ""} onChange={(e) => setFormData({ ...formData, licencia_numero: e.target.value })} autoComplete="off" />
                         </div>
                         <div>
                           <Label htmlFor="licencia_tipo">Tipo</Label>
