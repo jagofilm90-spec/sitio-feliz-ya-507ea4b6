@@ -192,12 +192,14 @@ const Empleados = () => {
   const [bajaEmpleado, setBajaEmpleado] = useState<Empleado | null>(null);
   const [vacacionesEmpleado, setVacacionesEmpleado] = useState<Empleado | null>(null);
   const [cardEmpleado, setCardEmpleado] = useState<Empleado | null>(null);
+  const [volverATarjeta, setVolverATarjeta] = useState<Empleado | null>(null);
   const [addendumEmpleado, setAddendumEmpleado] = useState<Empleado | null>(null);
   const [addendumHistorial, setAddendumHistorial] = useState<any>(null);
   const [historialSueldo, setHistorialSueldo] = useState<Array<{ id: string; sueldo_anterior: number | null; sueldo_nuevo: number | null; premio_anterior: number | null; premio_nuevo: number | null; fecha_cambio: string }>>([]);
   const [activeTab, setActiveTab] = useState<string>("todos");
   const [filtroPuesto, setFiltroPuesto] = useState<"todos" | "secretaria" | "vendedor" | "chofer" | "almacenista" | "gerente de almacén">("todos");
   const [filtroActivo, setFiltroActivo] = useState<"todos" | "activos" | "inactivos">("todos");
+  const [filtroDocs, setFiltroDocs] = useState("todos");
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -1246,7 +1248,12 @@ const Empleados = () => {
       filtroPuesto === "todos" ||
       emp.puesto.toLowerCase() === filtroPuesto;
 
-    return matchesSearch && matchesActivo && matchesPuesto;
+    const matchesDocs =
+      filtroDocs === "todos" ||
+      (filtroDocs === "completo" && (docsCount[emp.id] || 0) >= 8) ||
+      (filtroDocs === "incompleto" && (docsCount[emp.id] || 0) < 8);
+
+    return matchesSearch && matchesActivo && matchesPuesto && matchesDocs;
   });
 
   const getEmpleadosPorPuesto = (puesto: string) => {
@@ -1347,7 +1354,7 @@ const Empleados = () => {
               Gestión completa de empleados con documentos
             </p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(o) => { setIsDialogOpen(o); if (!o && volverATarjeta) { setCardEmpleado(volverATarjeta); setVolverATarjeta(null); } }}>
             <DialogTrigger asChild>
               <Button onClick={() => resetForm()}>
                 <UserPlus className="h-4 w-4 mr-2" />
@@ -2003,18 +2010,27 @@ const Empleados = () => {
         </div>
 
         <Card className="p-6">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Buscar por nombre, puesto o email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Buscar por nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
             </div>
+            <Select value={filtroActivo} onValueChange={(v: any) => setFiltroActivo(v)}>
+              <SelectTrigger className="w-[130px]"><SelectValue placeholder="Estado" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="activos">Activos</SelectItem>
+                <SelectItem value="inactivos">Inactivos</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filtroDocs} onValueChange={setFiltroDocs}>
+              <SelectTrigger className="w-[160px]"><SelectValue placeholder="Documentos" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="completo">Exp. completo</SelectItem>
+                <SelectItem value="incompleto">Exp. incompleto</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <Tabs value={activeTab} className="space-y-4" onValueChange={(v) => {
@@ -2882,10 +2898,10 @@ const Empleados = () => {
           empleado={cardEmpleado as any}
           foto={fotos[cardEmpleado.id]}
           onClose={() => setCardEmpleado(null)}
-          onEditar={() => { const emp = cardEmpleado; setCardEmpleado(null); handleEdit(emp); }}
-          onExpediente={() => { setCardEmpleado(null); setExpedienteEmpleadoId(cardEmpleado.id); }}
-          onDocumentos={() => { const emp = cardEmpleado; setCardEmpleado(null); setChecklistEmpleado(emp); }}
-          onActas={() => { const emp = cardEmpleado; setCardEmpleado(null); setActasEmpleado(emp); }}
+          onEditar={() => { const emp = cardEmpleado; setVolverATarjeta(emp); setCardEmpleado(null); handleEdit(emp); }}
+          onExpediente={() => { setVolverATarjeta(cardEmpleado); setCardEmpleado(null); setExpedienteEmpleadoId(cardEmpleado.id); }}
+          onDocumentos={() => { const emp = cardEmpleado; setVolverATarjeta(emp); setCardEmpleado(null); setChecklistEmpleado(emp); }}
+          onActas={() => { const emp = cardEmpleado; setVolverATarjeta(emp); setCardEmpleado(null); setActasEmpleado(emp); }}
           onFotoChanged={(url) => setFotos(prev => ({ ...prev, [cardEmpleado.id]: url }))}
         />
       )}
@@ -2900,7 +2916,7 @@ const Empleados = () => {
       )}
 
       {actasEmpleado && (
-        <Dialog open={!!actasEmpleado} onOpenChange={o => { if (!o) setActasEmpleado(null); }}>
+        <Dialog open={!!actasEmpleado} onOpenChange={o => { if (!o) { setActasEmpleado(null); if (volverATarjeta) { setCardEmpleado(volverATarjeta); setVolverATarjeta(null); } } }}>
           <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Actas — {actasEmpleado.nombre_completo}</DialogTitle></DialogHeader>
             <ActasAdministrativas empleadoId={actasEmpleado.id} empleadoNombre={actasEmpleado.nombre_completo} empleadoPuesto={actasEmpleado.puesto} />
@@ -2938,6 +2954,7 @@ const Empleados = () => {
                 setDocsCount(prev => ({ ...prev, [empId]: count }));
               }
             });
+            if (volverATarjeta) { setCardEmpleado(volverATarjeta); setVolverATarjeta(null); }
           }
         }}>
           <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
@@ -2948,7 +2965,7 @@ const Empleados = () => {
       )}
 
       {expedienteEmpleadoId && (
-        <Dialog open={!!expedienteEmpleadoId} onOpenChange={(o) => { if (!o) setExpedienteEmpleadoId(null); }}>
+        <Dialog open={!!expedienteEmpleadoId} onOpenChange={(o) => { if (!o) { setExpedienteEmpleadoId(null); if (volverATarjeta) { setCardEmpleado(volverATarjeta); setVolverATarjeta(null); } } }}>
           <DialogContent className="max-w-2xl">
             <DialogHeader><DialogTitle>Expediente Digital</DialogTitle></DialogHeader>
             <ExpedienteDigital empleadoId={expedienteEmpleadoId} isAdmin={isAdmin} />
