@@ -2891,7 +2891,19 @@ const Empleados = () => {
       )}
 
       {checklistEmpleado && (
-        <Dialog open={!!checklistEmpleado} onOpenChange={(o) => { if (!o) setChecklistEmpleado(null); }}>
+        <Dialog open={!!checklistEmpleado} onOpenChange={(o) => {
+          if (!o) {
+            const empId = checklistEmpleado.id;
+            setChecklistEmpleado(null);
+            const DOCS_KEYS = ["ine", "curp", "rfc", "acta_nacimiento", "comprobante_domicilio", "nss", "cuenta_bancaria", "fotos"];
+            supabase.storage.from("empleados-documentos").list(`${empId}/docs`).then(({ data }) => {
+              if (data) {
+                const count = DOCS_KEYS.filter(key => data.some((f: any) => f.name.startsWith(key + "_"))).length;
+                setDocsCount(prev => ({ ...prev, [empId]: count }));
+              }
+            });
+          }
+        }}>
           <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Documentos — {checklistEmpleado.nombre_completo}</DialogTitle></DialogHeader>
             <DocumentosChecklist empleadoId={checklistEmpleado.id} empleadoNombre={checklistEmpleado.nombre_completo} />
