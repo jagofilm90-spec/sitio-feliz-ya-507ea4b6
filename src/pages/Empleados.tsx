@@ -662,6 +662,9 @@ const Empleados = () => {
       motivo_baja: empleado.motivo_baja || "",
       beneficiario: empleado.beneficiario || "",
       premio_asistencia_semanal: empleado.premio_asistencia_semanal || premioDefault,
+      licencia_numero: empleado.licencia_numero || "",
+      licencia_tipo: empleado.licencia_tipo || "",
+      licencia_vencimiento: empleado.licencia_vencimiento || "",
     });
     setIsDialogOpen(true);
   };
@@ -1523,6 +1526,34 @@ const Empleados = () => {
                         <Input id="contacto_emergencia_telefono" value={formData.contacto_emergencia_telefono} onChange={(e) => setFormData({ ...formData, contacto_emergencia_telefono: e.target.value })} placeholder="10 dígitos" autoComplete="off" />
                       </div>
                     </div>
+
+                    {/* Licencia de conducir — solo choferes */}
+                    {(formData.puesto === "Chofer" || formData.puesto === "Ayudante de Chofer") && (
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <Label htmlFor="licencia_numero">No. Licencia</Label>
+                          <Input id="licencia_numero" value={(formData as any).licencia_numero || ""} onChange={(e) => setFormData({ ...formData, licencia_numero: e.target.value } as any)} autoComplete="off" />
+                        </div>
+                        <div>
+                          <Label htmlFor="licencia_tipo">Tipo</Label>
+                          <Select value={(formData as any).licencia_tipo || ""} onValueChange={(v) => setFormData({ ...formData, licencia_tipo: v } as any)}>
+                            <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="A">A</SelectItem>
+                              <SelectItem value="B">B</SelectItem>
+                              <SelectItem value="C">C</SelectItem>
+                              <SelectItem value="D">D</SelectItem>
+                              <SelectItem value="E">E</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="licencia_vencimiento">Vencimiento</Label>
+                          <Input id="licencia_vencimiento" type="date" value={(formData as any).licencia_vencimiento || ""} onChange={(e) => setFormData({ ...formData, licencia_vencimiento: e.target.value } as any)} />
+                        </div>
+                      </div>
+                    )}
+
                     <div>
                       <Label htmlFor="direccion">Dirección</Label>
                       <Input id="direccion" value={formData.direccion} onChange={(e) => setFormData({ ...formData, direccion: e.target.value })} placeholder="Calle, número, colonia..." autoComplete="off" />

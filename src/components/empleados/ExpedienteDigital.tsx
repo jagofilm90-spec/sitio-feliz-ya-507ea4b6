@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 interface StorageFile {
   name: string;
   created_at: string;
+  fullPath: string;
 }
 
 interface ExpedienteDigitalProps {
@@ -27,14 +28,14 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const { data, error } = await supabase.storage
-        .from("empleados-documentos")
-        .list(empleadoId, { sortBy: { column: "created_at", order: "desc" } });
-
-      console.log("[Expediente] list result:", { data: data?.length, error: error?.message });
-      if (!error && data) {
-        setFiles(data.filter((f) => f.name.endsWith(".pdf")));
-      }
+      // List root (signed contracts/aviso) + docs subfolder (checklist uploads)
+      const [rootRes, docsRes] = await Promise.all([
+        supabase.storage.from("empleados-documentos").list(empleadoId, { sortBy: { column: "created_at", order: "desc" } }),
+        supabase.storage.from("empleados-documentos").list(`${empleadoId}/docs`, { sortBy: { column: "created_at", order: "desc" } }),
+      ]);
+      const rootFiles = (rootRes.data || []).filter(f => f.name.endsWith(".pdf") || f.name.endsWith(".jpg") || f.name.endsWith(".png")).map(f => ({ ...f, fullPath: f.name }));
+      const docsFiles = (docsRes.data || []).filter(f => f.name && !f.name.startsWith(".")).map(f => ({ ...f, fullPath: `docs/${f.name}` }));
+      setFiles([...rootFiles, ...docsFiles] as any);
       setLoading(false);
     };
     if (empleadoId) load();
@@ -49,8 +50,8 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
     return data?.signedUrl || null;
   };
 
-  const getFileBlob = async (fileName: string): Promise<Blob | null> => {
-    const path = `${empleadoId}/${fileName}`;
+  const getFileBlob = async (fullPath: string): Promise<Blob | null> => {
+    const path = `${empleadoId}/${fullPath}`;
     const { data, error } = await supabase.storage
       .from("empleados-documentos")
       .download(path);
@@ -127,9 +128,21 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
   };
 
   const getDocLabel = (name: string) => {
-    if (name.includes("contrato_firmado")) return "Contrato Individual (firmado)";
-    if (name.includes("aviso_privacidad")) return "Aviso de Privacidad (firmado)";
-    return name.replace(/_/g, " ").replace(".pdf", "");
+    const base = name.replace("docs/", "");
+    if (base.includes("contrato_firmado")) return "Contrato Individual (firmado)";
+    if (base.includes("aviso_privacidad")) return "Aviso de Privacidad (firmado)";
+    if (base.includes("addendum")) return "Addendum de sueldo";
+    if (base.startsWith("ine_")) return "INE";
+    if (base.startsWith("curp_")) return "CURP";
+    if (base.startsWith("rfc_")) return "RFC";
+    if (base.startsWith("acta_nacimiento_")) return "Acta de nacimiento";
+    if (base.startsWith("comprobante_domicilio_")) return "Comprobante de domicilio";
+    if (base.startsWith("nss_")) return "NSS/IMSS";
+    if (base.startsWith("cuenta_bancaria_")) return "Cuenta bancaria";
+    if (base.startsWith("fotos_")) return "Fotografías";
+    if (base.startsWith("carta_recomendacion_")) return "Carta de recomendación";
+    if (base.startsWith("comprobante_estudios_")) return "Comprobante de estudios";
+    return base.replace(/_/g, " ").replace(/\.\w+$/, "");
   };
 
   const getDocDate = (name: string) => {
@@ -179,13 +192,13 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
                   <p className="text-xs text-muted-foreground">{getDocDate(file.name)}</p>
                 </div>
                 <div className="flex gap-1 shrink-0">
-                  <Button variant="ghost" size="sm" onClick={() => handleDownload(file.name)} title="Descargar">
+                  <Button variant="ghost" size="sm" onClick={() => handleDownload(file.fullPath)} title="Descargar">
                     <Download className="h-3.5 w-3.5" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handlePrint(file.name)} title="Imprimir">
+                  <Button variant="ghost" size="sm" onClick={() => handlePrint(file.fullPath)} title="Imprimir">
                     <Printer className="h-3.5 w-3.5" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => { setEmailDialog({ open: true, fileName: file.name }); setEmailTo(""); }} title="Enviar por correo">
+                  <Button variant="ghost" size="sm" onClick={() => { setEmailDialog({ open: true, fileName: file.fullPath }); setEmailTo(""); }} title="Enviar por correo">
                     <Mail className="h-3.5 w-3.5" />
                   </Button>
                 </div>
