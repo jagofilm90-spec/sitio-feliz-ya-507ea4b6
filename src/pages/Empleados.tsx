@@ -1224,6 +1224,13 @@ const Empleados = () => {
   };
 
   // Periodo de prueba: 90 días desde fecha_ingreso
+  const esCumpleHoy = (empleado: Empleado): boolean => {
+    if (!empleado.fecha_nacimiento) return false;
+    const [, m, d] = empleado.fecha_nacimiento.split("-").map(Number);
+    const mx = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City" }));
+    return mx.getMonth() + 1 === m && mx.getDate() === d;
+  };
+
   const getPeriodoPrueba = (empleado: Empleado) => {
     if (!empleado.activo) return null;
     const [y, m, d] = empleado.fecha_ingreso.split("-").map(Number);
@@ -1922,6 +1929,9 @@ const Empleados = () => {
                                 ) : (
                                   <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-300 shrink-0">Pendiente</Badge>
                                 )}
+                                {esCumpleHoy(empleado) && (
+                                  <Badge className="text-xs bg-amber-100 text-amber-800 border-amber-300 shrink-0">Hoy</Badge>
+                                )}
                               </div>
                             </TableCell>
                             {tab === 'todos' && <TableCell><Badge variant="outline">{empleado.puesto}</Badge></TableCell>}
@@ -2102,6 +2112,9 @@ const Empleados = () => {
                                   <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300 shrink-0">Firmado</Badge>
                                 ) : (
                                   <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-300 shrink-0">Pendiente</Badge>
+                                )}
+                                {esCumpleHoy(empleado) && (
+                                  <Badge className="text-xs bg-amber-100 text-amber-800 border-amber-300 shrink-0">Hoy</Badge>
                                 )}
                               </div>
                             </TableCell>
@@ -2332,6 +2345,9 @@ const Empleados = () => {
                                   <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300 shrink-0">Firmado</Badge>
                                 ) : (
                                   <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-300 shrink-0">Pendiente</Badge>
+                                )}
+                                {esCumpleHoy(empleado) && (
+                                  <Badge className="text-xs bg-amber-100 text-amber-800 border-amber-300 shrink-0">Hoy</Badge>
                                 )}
                               </div>
                             </TableCell>

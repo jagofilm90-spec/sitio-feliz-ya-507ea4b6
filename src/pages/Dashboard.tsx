@@ -30,6 +30,7 @@ import { EntregasEnDescargaWidget } from "@/components/dashboard/EntregasEnDesca
 import { ResumenDiaWidget } from "@/components/dashboard/ResumenDiaWidget";
 import { COMPANY_DATA } from "@/constants/companyData";
 import { EmpleadosPruebaAlert } from "@/components/dashboard/EmpleadosPruebaAlert";
+import { CumpleanosWidget } from "@/components/dashboard/CumpleanosWidget";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -131,6 +132,9 @@ const Dashboard = () => {
 
         {/* Empleados con periodo de prueba por vencer */}
         {isAdmin && <EmpleadosPruebaAlert />}
+
+        {/* Cumpleaños y aniversarios */}
+        {isAdmin && <CumpleanosWidget />}
 
         {/* Descargas en curso + completadas hoy */}
         {(dashData?.kpis?.entregasEnDescarga > 0 || (dashData?.kpis?.entregasCompletadasHoyDetalle?.length || 0) > 0) && (

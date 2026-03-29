@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState, useMemo } from "react";
+import { ReactNode, useEffect, useState, useMemo, lazy, Suspense } from "react";
 import { useNavigate, Link, useLocation, Navigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,6 +58,9 @@ interface MenuCategory {
   label: string;
   items: MenuItem[];
 }
+
+const CumpleanosBannerComponent = lazy(() => import("./CumpleanosBanner").then(m => ({ default: m.CumpleanosBanner })));
+const CumpleanosBannerLazy = () => <Suspense fallback={null}><CumpleanosBannerComponent /></Suspense>;
 
 const Layout = ({ children }: LayoutProps) => {
   const [user, setUser] = useState<any>(null);
@@ -522,6 +525,8 @@ const Layout = ({ children }: LayoutProps) => {
           </div>
         )}
 
+        {/* Birthday Banner */}
+        <CumpleanosBannerLazy />
         {/* Main Content */}
         <main className="flex-1 p-6 overflow-auto min-h-0">{children}</main>
       </div>
