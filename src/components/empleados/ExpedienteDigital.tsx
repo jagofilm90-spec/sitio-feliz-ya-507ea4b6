@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { Download, Eye, Printer, FileText, Mail, Loader2 } from "lucide-react";
+import { Download, Printer, FileText, Mail, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface StorageFile {
@@ -18,7 +18,6 @@ interface ExpedienteDigitalProps {
 
 export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
   const { toast } = useToast();
-  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
   const [files, setFiles] = useState<StorageFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [emailDialog, setEmailDialog] = useState<{ open: boolean; fileName: string }>({ open: false, fileName: "" });
@@ -57,16 +56,6 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
       .download(path);
     if (error || !data) return null;
     return data;
-  };
-
-  const handleView = async (fileName: string) => {
-    if (previewBlobUrl) URL.revokeObjectURL(previewBlobUrl);
-    const blob = await getFileBlob(fileName);
-    if (blob) {
-      setPreviewBlobUrl(URL.createObjectURL(blob));
-    } else {
-      toast({ title: "Error", description: "No se pudo abrir el documento", variant: "destructive" });
-    }
   };
 
   const handleDownload = async (fileName: string) => {
@@ -190,9 +179,6 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
                   <p className="text-xs text-muted-foreground">{getDocDate(file.name)}</p>
                 </div>
                 <div className="flex gap-1 shrink-0">
-                  <Button variant="ghost" size="sm" onClick={() => handleView(file.name)} title="Ver">
-                    <Eye className="h-3.5 w-3.5" />
-                  </Button>
                   <Button variant="ghost" size="sm" onClick={() => handleDownload(file.name)} title="Descargar">
                     <Download className="h-3.5 w-3.5" />
                   </Button>
@@ -208,17 +194,6 @@ export function ExpedienteDigital({ empleadoId }: ExpedienteDigitalProps) {
           </div>
         )}
 
-        {previewBlobUrl && (
-          <div className="mt-4 border rounded-lg overflow-hidden">
-            <div className="flex justify-between items-center p-2 bg-muted">
-              <span className="text-sm font-medium">Vista previa</span>
-              <Button variant="ghost" size="sm" onClick={() => { URL.revokeObjectURL(previewBlobUrl); setPreviewBlobUrl(null); }}>
-                Cerrar
-              </Button>
-            </div>
-            <iframe src={previewBlobUrl} className="w-full h-[500px]" title="Preview" />
-          </div>
-        )}
       </div>
 
       <Dialog open={emailDialog.open} onOpenChange={(o) => { if (!o) setEmailDialog({ open: false, fileName: "" }); }}>
