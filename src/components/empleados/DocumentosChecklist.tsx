@@ -148,12 +148,14 @@ export function DocumentosChecklist({ empleadoId, empleadoNombre }: Props) {
               </div>
               <div className="flex gap-1 shrink-0">
                 {archivo ? (
-                  <Button variant="ghost" size="sm" onClick={() => handleDownload(archivo.fileName)} title="Descargar">
-                    <Download className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteDoc(archivo.fileName, doc.nombre)} title="Eliminar">
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
+                  <>
+                    <Button variant="ghost" size="sm" onClick={() => handleDownload(archivo.fileName)} title="Descargar">
+                      <Download className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteDoc(archivo.fileName, doc.nombre)} title="Eliminar">
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </>
                 ) : (
                   <>
                     <input
