@@ -175,6 +175,7 @@ const Empleados = () => {
   const [usuarios, setUsuarios] = useState<UserProfile[]>([]);
   const [documentos] = useState<Record<string, EmpleadoDocumento[]>>({});
   const [documentosPendientes] = useState<Record<string, EmpleadoDocumentoPendiente[]>>({});
+  const [fotos, setFotos] = useState<Record<string, string>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEmpleado, setEditingEmpleado] = useState<Empleado | null>(null);
@@ -327,6 +328,16 @@ const Empleados = () => {
             setEmpleados(updatedEmps as unknown as Empleado[]);
           }
         } catch (e) { console.error("[Empleados] Error fetching fechas:", e); }
+      }
+      // Load employee photos
+      if (data) {
+        const fotosMap: Record<string, string> = {};
+        const photoChecks = data.slice(0, 50).map(async (emp: any) => {
+          const { data: blob } = await supabase.storage.from("empleados-documentos").download(`${emp.id}/foto.jpg`);
+          if (blob) fotosMap[emp.id] = URL.createObjectURL(blob);
+        });
+        await Promise.allSettled(photoChecks);
+        setFotos(fotosMap);
       }
     } catch (error: any) {
       toast({
@@ -1242,6 +1253,16 @@ const Empleados = () => {
   };
 
   // Periodo de prueba: 90 días desde fecha_ingreso
+  const getAvatarColor = (name: string) => {
+    const colors = ["#E24B4A", "#D85A30", "#BA7517", "#639922", "#1D9E75", "#378ADD", "#7F77DD", "#D4537E"];
+    return colors[name.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length];
+  };
+
+  const getInitials = (name: string) => {
+    const parts = name.split(" ").filter(Boolean);
+    return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : name.substring(0, 2).toUpperCase();
+  };
+
   const esCumpleHoy = (empleado: Empleado): boolean => {
     if (!empleado.fecha_nacimiento) return false;
     const [, m, d] = empleado.fecha_nacimiento.split("-").map(Number);
@@ -1444,6 +1465,53 @@ const Empleados = () => {
                     </Select>
                   </div>
                 </div>
+
+                {/* Foto del empleado */}
+                {editingEmpleado && (
+                  <div className="flex items-center gap-4 mb-2">
+                    {fotos[editingEmpleado.id] ? (
+                      <img src={fotos[editingEmpleado.id]} className="w-20 h-20 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-xl font-bold" style={{ backgroundColor: getAvatarColor(editingEmpleado.nombre_completo) }}>
+                        {getInitials(editingEmpleado.nombre_completo)}
+                      </div>
+                    )}
+                    <div>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png"
+                        id="foto-upload"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file || !editingEmpleado) return;
+                          // Resize to 200x200
+                          const img = new Image();
+                          img.src = URL.createObjectURL(file);
+                          await new Promise(r => { img.onload = r; });
+                          const canvas = document.createElement("canvas");
+                          canvas.width = 200; canvas.height = 200;
+                          const ctx = canvas.getContext("2d")!;
+                          const size = Math.min(img.width, img.height);
+                          ctx.drawImage(img, (img.width - size) / 2, (img.height - size) / 2, size, size, 0, 0, 200, 200);
+                          canvas.toBlob(async (blob) => {
+                            if (!blob) return;
+                            await supabase.storage.from("empleados-documentos").upload(
+                              `${editingEmpleado.id}/foto.jpg`, blob,
+                              { contentType: "image/jpeg", upsert: true }
+                            );
+                            setFotos(prev => ({ ...prev, [editingEmpleado.id]: URL.createObjectURL(blob) }));
+                            toast({ title: "Foto actualizada" });
+                          }, "image/jpeg", 0.85);
+                          e.target.value = "";
+                        }}
+                      />
+                      <Button variant="outline" size="sm" onClick={() => document.getElementById("foto-upload")?.click()}>
+                        Subir foto
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Campos obligatorios visibles */}
                 <div className="grid grid-cols-2 gap-4">
@@ -1969,6 +2037,13 @@ const Empleados = () => {
                           <TableRow key={empleado.id}>
                             <TableCell className="font-medium">
                               <div className="flex items-center gap-2">
+                                {fotos[empleado.id] ? (
+                                  <img src={fotos[empleado.id]} className="w-8 h-8 rounded-full object-cover shrink-0" />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ backgroundColor: getAvatarColor(empleado.nombre_completo) }}>
+                                    {getInitials(empleado.nombre_completo)}
+                                  </div>
+                                )}
                                 {empleado.nombre_completo}
                                 {empleado.contrato_firmado_fecha ? (
                                   <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300 shrink-0">Firmado</Badge>
@@ -2167,6 +2242,13 @@ const Empleados = () => {
                           <TableRow key={empleado.id}>
                             <TableCell className="font-medium">
                               <div className="flex items-center gap-2">
+                                {fotos[empleado.id] ? (
+                                  <img src={fotos[empleado.id]} className="w-8 h-8 rounded-full object-cover shrink-0" />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ backgroundColor: getAvatarColor(empleado.nombre_completo) }}>
+                                    {getInitials(empleado.nombre_completo)}
+                                  </div>
+                                )}
                                 {empleado.nombre_completo}
                                 {empleado.contrato_firmado_fecha ? (
                                   <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300 shrink-0">Firmado</Badge>
@@ -2414,6 +2496,13 @@ const Empleados = () => {
                           <TableRow key={empleado.id}>
                             <TableCell className="font-medium">
                               <div className="flex items-center gap-2">
+                                {fotos[empleado.id] ? (
+                                  <img src={fotos[empleado.id]} className="w-8 h-8 rounded-full object-cover shrink-0" />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ backgroundColor: getAvatarColor(empleado.nombre_completo) }}>
+                                    {getInitials(empleado.nombre_completo)}
+                                  </div>
+                                )}
                                 {empleado.nombre_completo}
                                 {empleado.contrato_firmado_fecha ? (
                                   <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300 shrink-0">Firmado</Badge>

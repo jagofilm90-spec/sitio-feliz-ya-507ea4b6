@@ -54,7 +54,7 @@ export function ActasAdministrativas({ empleadoId, empleadoNombre, empleadoPuest
     finally { setLoading(false); }
   };
 
-  const generarPDF = (acta: Acta) => {
+  const generarPDF = async (acta: Acta) => {
     const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
     const w = pdf.internal.pageSize.getWidth(), mL = 22, mR = 22, maxW = w - mL - mR;
     let y = 20;
@@ -82,7 +82,13 @@ export function ActasAdministrativas({ empleadoId, empleadoNombre, empleadoPuest
       pdf.text(acta.testigo_1 || "Testigo 1", mL + 30, y, { align: "center" });
       pdf.text(acta.testigo_2 || "Testigo 2", w - mR - 30, y, { align: "center" });
     }
+    const pdfBlob = pdf.output("blob");
     pdf.save(`Acta_${empleadoNombre.replace(/\s+/g, "_")}_${acta.fecha}.pdf`);
+    // Upload to storage for expediente
+    await supabase.storage.from("empleados-documentos").upload(
+      `${empleadoId}/acta_${acta.tipo}_${acta.fecha}.pdf`, pdfBlob,
+      { contentType: "application/pdf", upsert: true }
+    ).catch(() => {});
   };
 
   return (
