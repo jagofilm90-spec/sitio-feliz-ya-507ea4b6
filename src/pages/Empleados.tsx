@@ -8,6 +8,9 @@ import { FirmaContratoFlow } from "@/components/empleados/FirmaContratoFlow";
 import { ExpedienteDigital } from "@/components/empleados/ExpedienteDigital";
 import { DocumentosChecklist } from "@/components/empleados/DocumentosChecklist";
 import { FirmaAddendumFlow } from "@/components/empleados/FirmaAddendumFlow";
+import { ActasAdministrativas } from "@/components/empleados/ActasAdministrativas";
+import { ProcesoBaja } from "@/components/empleados/ProcesoBaja";
+import { VacacionesEmpleado } from "@/components/empleados/VacacionesEmpleado";
 import { generarContratoPDF, generarAvisoPrivacidadPDF, hoyMexico } from "@/lib/generarContratoPDF";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Layout from "@/components/Layout";
@@ -102,6 +105,13 @@ interface Empleado {
   premio_asistencia_semanal: number | null;
   fecha_baja: string | null;
   motivo_baja: "renuncia" | "despido" | "abandono" | null;
+  notas_baja: string | null;
+  licencia_numero: string | null;
+  licencia_tipo: string | null;
+  licencia_vencimiento: string | null;
+  emergencia_nombre: string | null;
+  emergencia_telefono: string | null;
+  emergencia_parentesco: string | null;
   contrato_firmado_fecha: string | null;
   created_at: string;
   updated_at: string;
@@ -173,6 +183,9 @@ const Empleados = () => {
   const [firmaFlowEmpleado, setFirmaFlowEmpleado] = useState<Empleado | null>(null);
   const [expedienteEmpleadoId, setExpedienteEmpleadoId] = useState<string | null>(null);
   const [checklistEmpleado, setChecklistEmpleado] = useState<Empleado | null>(null);
+  const [actasEmpleado, setActasEmpleado] = useState<Empleado | null>(null);
+  const [bajaEmpleado, setBajaEmpleado] = useState<Empleado | null>(null);
+  const [vacacionesEmpleado, setVacacionesEmpleado] = useState<Empleado | null>(null);
   const [addendumEmpleado, setAddendumEmpleado] = useState<Empleado | null>(null);
   const [addendumHistorial, setAddendumHistorial] = useState<any>(null);
   const [historialSueldo, setHistorialSueldo] = useState<Array<{ id: string; sueldo_anterior: number | null; sueldo_nuevo: number | null; premio_anterior: number | null; premio_nuevo: number | null; fecha_cambio: string }>>([]);
@@ -2040,6 +2053,17 @@ const Empleados = () => {
                                     <DropdownMenuItem onClick={() => handleGenerarAddendum(empleado)}>
                                       Generar Addendum
                                     </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setActasEmpleado(empleado)}>
+                                      Actas administrativas
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setVacacionesEmpleado(empleado)}>
+                                      Vacaciones
+                                    </DropdownMenuItem>
+                                    {isAdmin && empleado.activo && (
+                                      <DropdownMenuItem className="text-destructive" onClick={() => setBajaEmpleado(empleado)}>
+                                        Dar de baja
+                                      </DropdownMenuItem>
+                                    )}
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                                 {isAdmin && (
@@ -2277,6 +2301,17 @@ const Empleados = () => {
                                     <DropdownMenuItem onClick={() => handleGenerarAddendum(empleado)}>
                                       Generar Addendum
                                     </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setActasEmpleado(empleado)}>
+                                      Actas administrativas
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setVacacionesEmpleado(empleado)}>
+                                      Vacaciones
+                                    </DropdownMenuItem>
+                                    {isAdmin && empleado.activo && (
+                                      <DropdownMenuItem className="text-destructive" onClick={() => setBajaEmpleado(empleado)}>
+                                        Dar de baja
+                                      </DropdownMenuItem>
+                                    )}
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                                 {isAdmin && (
@@ -2513,6 +2548,17 @@ const Empleados = () => {
                                     <DropdownMenuItem onClick={() => handleGenerarAddendum(empleado)}>
                                       Generar Addendum
                                     </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setActasEmpleado(empleado)}>
+                                      Actas administrativas
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setVacacionesEmpleado(empleado)}>
+                                      Vacaciones
+                                    </DropdownMenuItem>
+                                    {isAdmin && empleado.activo && (
+                                      <DropdownMenuItem className="text-destructive" onClick={() => setBajaEmpleado(empleado)}>
+                                        Dar de baja
+                                      </DropdownMenuItem>
+                                    )}
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                                 {isAdmin && (
@@ -2605,6 +2651,33 @@ const Empleados = () => {
           historial={addendumHistorial}
           onClose={() => { setAddendumEmpleado(null); setAddendumHistorial(null); }}
           onSigned={() => loadEmpleados()}
+        />
+      )}
+
+      {actasEmpleado && (
+        <Dialog open={!!actasEmpleado} onOpenChange={o => { if (!o) setActasEmpleado(null); }}>
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Actas — {actasEmpleado.nombre_completo}</DialogTitle></DialogHeader>
+            <ActasAdministrativas empleadoId={actasEmpleado.id} empleadoNombre={actasEmpleado.nombre_completo} empleadoPuesto={actasEmpleado.puesto} />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {vacacionesEmpleado && (
+        <Dialog open={!!vacacionesEmpleado} onOpenChange={o => { if (!o) setVacacionesEmpleado(null); }}>
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Vacaciones — {vacacionesEmpleado.nombre_completo}</DialogTitle></DialogHeader>
+            <VacacionesEmpleado empleadoId={vacacionesEmpleado.id} empleadoNombre={vacacionesEmpleado.nombre_completo} fechaIngreso={vacacionesEmpleado.fecha_ingreso} isAdmin={isAdmin} />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {bajaEmpleado && (
+        <ProcesoBaja
+          empleado={{ id: bajaEmpleado.id, nombre_completo: bajaEmpleado.nombre_completo, puesto: bajaEmpleado.puesto, user_id: bajaEmpleado.user_id, fecha_ingreso: bajaEmpleado.fecha_ingreso }}
+          open={!!bajaEmpleado}
+          onClose={() => setBajaEmpleado(null)}
+          onCompleted={() => loadEmpleados()}
         />
       )}
 

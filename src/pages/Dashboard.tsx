@@ -32,6 +32,7 @@ import { COMPANY_DATA } from "@/constants/companyData";
 import { EmpleadosPruebaAlert } from "@/components/dashboard/EmpleadosPruebaAlert";
 import { CumpleanosWidget } from "@/components/dashboard/CumpleanosWidget";
 import { DocumentosPendientesAlert } from "@/components/dashboard/DocumentosPendientesAlert";
+import { LicenciasVencimientoAlert } from "@/components/dashboard/LicenciasVencimientoAlert";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -137,8 +138,9 @@ const Dashboard = () => {
         {/* Cumpleaños y aniversarios */}
         {isAdmin && <CumpleanosWidget />}
 
-        {/* Documentos pendientes */}
+        {/* Documentos pendientes + Licencias */}
         {isAdmin && <DocumentosPendientesAlert />}
+        {isAdmin && <LicenciasVencimientoAlert />}
 
         {/* Descargas en curso + completadas hoy */}
         {(dashData?.kpis?.entregasEnDescarga > 0 || (dashData?.kpis?.entregasCompletadasHoyDetalle?.length || 0) > 0) && (
