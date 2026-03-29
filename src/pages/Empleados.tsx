@@ -58,6 +58,7 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import ExpedienteAnalysisDialog from "@/components/empleados/ExpedienteAnalysisDialog";
+import { compressImageForUpload } from "@/lib/imageUtils";
 import {
   UserPlus,
   Search,
@@ -342,10 +343,18 @@ const Empleados = () => {
         const counts: Record<string, number> = {};
         const checks = data.slice(0, 50).map(async (emp: any) => {
           const [photoRes, docsRes] = await Promise.allSettled([
-            supabase.storage.from("empleados-documentos").download(`${emp.id}/foto.jpg`),
+            emp.foto_url
+              ? Promise.resolve({ data: null })
+              : supabase.storage.from("empleados-documentos").download(`${emp.id}/foto.jpg`),
             supabase.storage.from("empleados-documentos").list(`${emp.id}/docs`),
           ]);
-          if (photoRes.status === "fulfilled" && photoRes.value.data) fotosMap[emp.id] = URL.createObjectURL(photoRes.value.data);
+
+          if (emp.foto_url) {
+            fotosMap[emp.id] = emp.foto_url;
+          } else if (photoRes.status === "fulfilled" && photoRes.value.data) {
+            fotosMap[emp.id] = URL.createObjectURL(photoRes.value.data);
+          }
+
           if (docsRes.status === "fulfilled" && docsRes.value.data) {
             counts[emp.id] = DOCS_KEYS.filter(key => docsRes.value.data!.some((f: any) => f.name.startsWith(key + "_"))).length;
           } else { counts[emp.id] = 0; }
@@ -1506,34 +1515,50 @@ const Empleados = () => {
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file || !editingEmpleado) return;
-                          // Load image (modern browsers handle most formats)
-                          const img = new Image();
-                          img.src = URL.createObjectURL(file);
                           try {
-                            await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
-                          } catch {
-                            toast({ title: "Formato no soportado", description: "Tu navegador no soporta este formato. Toma la foto como JPG o convierte la imagen antes de subirla.", variant: "destructive" });
-                            e.target.value = "";
-                            return;
-                          }
-                          const canvas = document.createElement("canvas");
-                          canvas.width = 200; canvas.height = 200;
-                          const ctx = canvas.getContext("2d")!;
-                          ctx.fillStyle = "#FFFFFF";
-                          ctx.fillRect(0, 0, 200, 200);
-                          const size = Math.min(img.width, img.height);
-                          ctx.drawImage(img, (img.width - size) / 2, (img.height - size) / 2, size, size, 0, 0, 200, 200);
-                          URL.revokeObjectURL(img.src);
-                          canvas.toBlob(async (blob) => {
-                            if (!blob) return;
-                            await supabase.storage.from("empleados-documentos").upload(
-                              `${editingEmpleado.id}/foto.jpg`, blob,
-                              { contentType: "image/jpeg", upsert: true }
-                            );
-                            setFotos(prev => ({ ...prev, [editingEmpleado.id]: URL.createObjectURL(blob) }));
+                            const compressedFile = await compressImageForUpload(file, "thumbnail");
+                            const fileName = `${editingEmpleado.id}-${Date.now()}.jpg`;
+
+                            const { error: uploadError } = await supabase.storage
+                              .from("empleados-fotos")
+                              .upload(fileName, compressedFile, {
+                                contentType: "image/jpeg",
+                                upsert: true,
+                              });
+
+                            if (uploadError) throw uploadError;
+
+                            const { data: publicData } = supabase.storage
+                              .from("empleados-fotos")
+                              .getPublicUrl(fileName);
+
+                            const publicUrl = publicData.publicUrl;
+
+                            const { error: updateError } = await supabase
+                              .from("empleados")
+                              .update({ foto_url: publicUrl })
+                              .eq("id", editingEmpleado.id);
+
+                            if (updateError) throw updateError;
+
+                            setFotos(prev => ({
+                              ...prev,
+                              [editingEmpleado.id]: `${publicUrl}?t=${Date.now()}`,
+                            }));
+                            setEmpleados(prev => prev.map(emp =>
+                              emp.id === editingEmpleado.id ? { ...emp, foto_url: publicUrl } : emp
+                            ));
                             toast({ title: "Foto actualizada" });
-                          }, "image/jpeg", 0.85);
-                          e.target.value = "";
+                          } catch (error: any) {
+                            console.error("[Empleados] Error subiendo foto:", error);
+                            toast({
+                              title: "No se pudo subir la foto",
+                              description: error?.message || "Intenta de nuevo con otra imagen.",
+                              variant: "destructive",
+                            });
+                          } finally {
+                            e.target.value = "";
+                          }
                         }}
                       />
                       <div className="flex gap-2">
@@ -1541,9 +1566,21 @@ const Empleados = () => {
                           Subir foto
                         </Button>
                         {fotos[editingEmpleado.id] && (
-                          <Button variant="outline" size="sm" className="text-destructive" onClick={async () => {
-                            await supabase.storage.from("empleados-documentos").remove([`${editingEmpleado.id}/foto.jpg`]);
+                          <Button type="button" variant="outline" size="sm" className="text-destructive" onClick={async () => {
+                            const fotoActual = empleados.find(emp => emp.id === editingEmpleado.id)?.foto_url || fotos[editingEmpleado.id];
+                            const rutaBucket = fotoActual?.includes("/empleados-fotos/")
+                              ? fotoActual.split("/empleados-fotos/")[1]?.split("?")[0]
+                              : null;
+
+                            if (rutaBucket) {
+                              await supabase.storage.from("empleados-fotos").remove([rutaBucket]);
+                            }
+
+                            await supabase.from("empleados").update({ foto_url: null }).eq("id", editingEmpleado.id);
                             setFotos(prev => { const n = { ...prev }; delete n[editingEmpleado.id]; return n; });
+                            setEmpleados(prev => prev.map(emp =>
+                              emp.id === editingEmpleado.id ? { ...emp, foto_url: null } : emp
+                            ));
                             toast({ title: "Foto eliminada" });
                           }}>
                             Eliminar foto
