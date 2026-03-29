@@ -2184,7 +2184,7 @@ const Empleados = () => {
                               {empleado.user_id ? (
                                 <div className="flex flex-col items-start gap-1">
                                   <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">Con acceso</Badge>
-                                  {isAdmin && (
+                                  {isAdmin && (<>
                                     <button
                                       className="text-xs text-destructive hover:underline cursor-pointer"
                                       onClick={(e) => { e.stopPropagation(); handleQuitarAcceso(empleado); }}
@@ -2197,7 +2197,7 @@ const Empleados = () => {
                                     >
                                       Resetear contraseña
                                     </button>
-                                  )}
+                                  </>)}
                                 </div>
                               ) : (
                                 <Button variant="outline" size="sm" className="text-xs h-7" onClick={(e) => { e.stopPropagation(); setAccesoEmpleado(empleado); setShowDarAcceso(true); }}>
@@ -2457,7 +2457,7 @@ const Empleados = () => {
                               {empleado.user_id ? (
                                 <div className="flex flex-col items-start gap-1">
                                   <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">Con acceso</Badge>
-                                  {isAdmin && (
+                                  {isAdmin && (<>
                                     <button
                                       className="text-xs text-destructive hover:underline cursor-pointer"
                                       onClick={(e) => { e.stopPropagation(); handleQuitarAcceso(empleado); }}
@@ -2470,7 +2470,7 @@ const Empleados = () => {
                                     >
                                       Resetear contraseña
                                     </button>
-                                  )}
+                                  </>)}
                                 </div>
                               ) : (
                                 <Button variant="outline" size="sm" className="text-xs h-7" onClick={(e) => { e.stopPropagation(); setAccesoEmpleado(empleado); setShowDarAcceso(true); }}>
@@ -2729,7 +2729,7 @@ const Empleados = () => {
                               {empleado.user_id ? (
                                 <div className="flex flex-col items-start gap-1">
                                   <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">Con acceso</Badge>
-                                  {isAdmin && (
+                                  {isAdmin && (<>
                                     <button
                                       className="text-xs text-destructive hover:underline cursor-pointer"
                                       onClick={(e) => { e.stopPropagation(); handleQuitarAcceso(empleado); }}
@@ -2742,7 +2742,7 @@ const Empleados = () => {
                                     >
                                       Resetear contraseña
                                     </button>
-                                  )}
+                                  </>)}
                                 </div>
                               ) : (
                                 <Button variant="outline" size="sm" className="text-xs h-7" onClick={(e) => { e.stopPropagation(); setAccesoEmpleado(empleado); setShowDarAcceso(true); }}>
