@@ -1485,7 +1485,7 @@ const Empleados = () => {
                     <div>
                       <input
                         type="file"
-                        accept="image/jpeg,image/png"
+                        accept="image/*"
                         id="foto-upload"
                         className="hidden"
                         onChange={async (e) => {

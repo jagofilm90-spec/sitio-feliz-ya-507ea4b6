@@ -163,8 +163,9 @@ export function revokeImagePreview(url: string): void {
  * Valida si un archivo es una imagen válida
  */
 export function isValidImage(file: File): boolean {
-  const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-  return validTypes.includes(file.type);
+  const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
+  // Also accept if type starts with 'image/' (covers edge cases on iOS)
+  return validTypes.includes(file.type) || file.type.startsWith('image/');
 }
 
 /**
