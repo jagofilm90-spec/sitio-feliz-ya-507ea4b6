@@ -1237,7 +1237,7 @@ const Empleados = () => {
     const ingreso = new Date(y, m - 1, d);
     const vencimiento = new Date(ingreso);
     vencimiento.setDate(vencimiento.getDate() + 90);
-    const hoy = new Date();
+    const hoy = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City" }));
     hoy.setHours(0, 0, 0, 0);
     const diasRestantes = Math.ceil((vencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
     const fechaStr = `${vencimiento.getDate()}/${vencimiento.getMonth() + 1 < 10 ? "0" : ""}${vencimiento.getMonth() + 1}/${vencimiento.getFullYear()}`;
