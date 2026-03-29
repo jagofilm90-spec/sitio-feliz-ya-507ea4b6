@@ -1130,6 +1130,9 @@ const Empleados = () => {
       motivo_baja: "",
       beneficiario: "",
       premio_asistencia_semanal: "",
+      licencia_numero: "",
+      licencia_tipo: "",
+      licencia_vencimiento: "",
     });
     setCrearUsuario(false);
     setUsuarioFormData({
