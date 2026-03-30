@@ -3,25 +3,22 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { z } from "zod";
-import { Loader2 } from "lucide-react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { Loader2, ArrowLeft } from "lucide-react";
 import logoAlmasa from "@/assets/logo-almasa.png";
-import { COMPANY_DATA } from "@/constants/companyData";
 
-const authSchema = z.object({
-  email: z.string().email({ message: "Email inválido" }),
-  password: z.string().min(6, { message: "La contraseña debe tener al menos 6 caracteres" }),
-});
+const colors = ["#E24B4A", "#D85A30", "#BA7517", "#639922", "#1D9E75", "#378ADD", "#7F77DD", "#D4537E"];
+const getColor = (n: string) => colors[n.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length];
+const getInitials = (n: string) => { const p = n.split(" ").filter(Boolean); return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : n.substring(0, 2).toUpperCase(); };
 
 const Auth = () => {
+  const [step, setStep] = useState<1 | 2>(1);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [userName, setUserName] = useState("");
+  const [userFoto, setUserFoto] = useState<string | null>(null);
   const [showReset, setShowReset] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const navigate = useNavigate();
@@ -29,226 +26,167 @@ const Auth = () => {
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        await checkUserRoleAndRedirect(session.user.id);
-      }
+      if (session) await checkUserRoleAndRedirect(session.user.id);
     });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session) {
-        setTimeout(async () => {
-          await checkUserRoleAndRedirect(session.user.id);
-        }, 100);
+        setTimeout(async () => { await checkUserRoleAndRedirect(session.user.id); }, 100);
       }
-      // Si el token no se pudo refrescar, limpiar sesión corrupta
       if (!session && event !== "SIGNED_OUT" && event !== "INITIAL_SESSION") {
         await supabase.auth.signOut();
       }
     });
-
     return () => subscription.unsubscribe();
   }, [navigate]);
 
   const checkUserRoleAndRedirect = async (userId: string, retries = 3): Promise<void> => {
     try {
-      // Verificar si es cliente portal
-      const { data: cliente } = await supabase
-        .from("clientes")
-        .select("id")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (cliente) {
-        navigate("/portal-cliente", { replace: true });
-        return;
-      }
-
-      // Verificar roles del usuario con retry logic
-      const { data: userRoles, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId);
-
-      // Si hay error o no hay roles, reintentar
+      const { data: cliente } = await supabase.from("clientes").select("id").eq("user_id", userId).maybeSingle();
+      if (cliente) { navigate("/portal-cliente", { replace: true }); return; }
+      const { data: userRoles, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
       if (error || !userRoles || userRoles.length === 0) {
-        console.warn("Roles query issue, attempt:", 4 - retries, { error, userRoles });
-        if (retries > 0) {
-          await new Promise(r => setTimeout(r, 500));
-          return checkUserRoleAndRedirect(userId, retries - 1);
-        }
-        // Si agotamos reintentos, ir a dashboard
-        console.warn("Exhausted retries, defaulting to dashboard");
-        navigate("/dashboard", { replace: true });
-        return;
+        if (retries > 0) { await new Promise(r => setTimeout(r, 500)); return checkUserRoleAndRedirect(userId, retries - 1); }
+        navigate("/dashboard", { replace: true }); return;
       }
-
       const roles = userRoles.map(r => r.role);
-      console.log("User roles for redirect:", roles);
-      
-      // ==========================================
-      // REDIRECCIÓN AUTOMÁTICA POR ROL
-      // Cada rol operativo va a su panel dedicado
-      // ==========================================
-
-      // 1. Solo Almacén o Gerente Almacén -> Almacén Tablet
-      const isOnlyAlmacen = roles.length === 1 && roles[0] === "almacen";
-      const isOnlyGerenteAlmacen = roles.length === 1 && roles[0] === "gerente_almacen";
-      if (isOnlyAlmacen || isOnlyGerenteAlmacen) {
-        console.log("Redirecting almacen/gerente to /almacen-tablet");
-        navigate("/almacen-tablet", { replace: true });
-        return;
-      }
-
-      // 2. Solo Chofer -> Panel Chofer
-      const isOnlyChofer = roles.length === 1 && roles[0] === "chofer";
-      if (isOnlyChofer) {
-        console.log("Redirecting chofer to /chofer");
-        navigate("/chofer", { replace: true });
-        return;
-      }
-
-      // 3. Solo Vendedor (sin admin ni secretaria) -> Panel Vendedor
-      const isOnlyVendedor = roles.includes("vendedor") && 
-        !roles.includes("admin") && !roles.includes("secretaria");
-      if (isOnlyVendedor) {
-        console.log("Redirecting vendedor to /vendedor");
-        navigate("/vendedor", { replace: true });
-        return;
-      }
-
-      // 4. Solo Secretaria (sin admin) -> Panel Secretaria
-      const isOnlySecretaria = roles.includes("secretaria") && !roles.includes("admin");
-      if (isOnlySecretaria) {
-        console.log("Redirecting secretaria to /secretaria");
-        navigate("/secretaria", { replace: true });
-        return;
-      }
-
-      // 5. Admin, Contadora, o roles mixtos -> Dashboard ejecutivo
-      console.log("Redirecting to executive dashboard");
+      if (roles.length === 1 && (roles[0] === "almacen" || roles[0] === "gerente_almacen")) { navigate("/almacen-tablet", { replace: true }); return; }
+      if (roles.length === 1 && roles[0] === "chofer") { navigate("/chofer", { replace: true }); return; }
+      if (roles.includes("vendedor") && !roles.includes("admin") && !roles.includes("secretaria")) { navigate("/vendedor", { replace: true }); return; }
+      if (roles.includes("secretaria") && !roles.includes("admin")) { navigate("/secretaria", { replace: true }); return; }
       navigate("/dashboard", { replace: true });
-    } catch (error) {
-      console.error("Error checking user role:", error);
-      if (retries > 0) {
-        await new Promise(r => setTimeout(r, 500));
-        return checkUserRoleAndRedirect(userId, retries - 1);
-      }
+    } catch {
+      if (retries > 0) { await new Promise(r => setTimeout(r, 500)); return checkUserRoleAndRedirect(userId, retries - 1); }
       navigate("/dashboard", { replace: true });
     }
   };
 
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleContinue = async () => {
+    if (!email || !email.includes("@")) { toast({ title: "Email inválido", variant: "destructive" }); return; }
     setLoading(true);
-
+    // Try to find user profile + photo
     try {
-      const validation = authSchema.safeParse({ email, password });
-
-      if (!validation.success) {
-        toast({
-          title: "Error de validación",
-          description: validation.error.errors[0].message,
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name").eq("email", email).limit(1);
+      if (profiles && profiles[0]) {
+        setUserName(profiles[0].full_name || email.split("@")[0]);
+        // Try to find employee linked to this profile
+        try {
+          const { data: emps } = await supabase.from("empleados").select("id, nombre_completo").eq("user_id", profiles[0].id).limit(1);
+          if (emps && emps[0]) {
+            setUserName(emps[0].nombre_completo);
+            const { data: blob } = await supabase.storage.from("empleados-documentos").download(`${emps[0].id}/foto.jpg`);
+            if (blob) setUserFoto(URL.createObjectURL(blob));
+          }
+        } catch {}
+      } else {
+        setUserName(email.split("@")[0]);
       }
+    } catch {
+      setUserName(email.split("@")[0]);
+    }
+    setLoading(false);
+    setStep(2);
+  };
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password.length < 6) { toast({ title: "Error", description: "La contraseña debe tener al menos 6 caracteres", variant: "destructive" }); return; }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        if (error.message.includes("Invalid login credentials")) {
-          throw new Error("Credenciales inválidas");
-        }
+        if (error.message.includes("Invalid login credentials")) throw new Error("Credenciales inválidas");
         throw error;
       }
-
-      toast({
-        title: "Bienvenido",
-        description: "Sesión iniciada correctamente",
-      });
+      toast({ title: "Bienvenido", description: "Sesión iniciada correctamente" });
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Ocurrió un error, intenta de nuevo",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleBack = () => {
+    setStep(1); setPassword(""); setUserFoto(null); setUserName(""); setShowReset(false);
+  };
+
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4 overflow-hidden">
-      <div className="w-full max-w-md space-y-4">
-        <div className="text-center mb-8 animate-fade-in">
-          <img src={logoAlmasa} alt="ALMASA" className="h-16 mx-auto mb-4" />
-          <p className="text-lg font-medium text-foreground">Abarrotes la Manita SA de CV</p>
+    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-b from-white to-gray-50 p-4">
+      <div className="w-full max-w-sm space-y-6">
+        {/* Logo */}
+        <div className="text-center">
+          <img src={logoAlmasa} alt="ALMASA" className="h-20 mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">Sistema de Gestión Empresarial</p>
-          <p className="text-xs italic text-muted-foreground mt-1">"{COMPANY_DATA.slogan}"</p>
-          <p className="text-sm text-muted-foreground mt-3 capitalize">
-            Bienvenido, {format(new Date(), "EEEE d 'de' MMMM 'de' yyyy", { locale: es })}
-          </p>
         </div>
-        <Card className="w-full opacity-0 animate-fade-in-scale" style={{ animationDelay: "150ms" }}>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">
-              Iniciar Sesión
-            </CardTitle>
-            <CardDescription className="text-center">
-              Ingresa tus credenciales para acceder al sistema
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleAuth} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Correo Electrónico</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="tu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+
+        <Card className="shadow-lg border-0">
+          <CardContent className="pt-6">
+            {step === 1 && (
+              <div className="space-y-4">
+                <div>
+                  <Input
+                    type="email"
+                    placeholder="Correo electrónico"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleContinue(); }}
+                    autoFocus
+                    className="h-11"
+                  />
+                </div>
+                <Button className="w-full h-11" onClick={handleContinue} disabled={loading || !email}>
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continuar"}
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">¿Necesitas acceso? Contacta al administrador</p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
+            )}
+
+            {step === 2 && !showReset && (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="text-center mb-2">
+                  {userFoto ? (
+                    <img src={userFoto} className="w-20 h-20 rounded-full object-cover mx-auto mb-2" />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-2" style={{ backgroundColor: getColor(userName || email) }}>
+                      {getInitials(userName || email)}
+                    </div>
+                  )}
+                  <p className="font-semibold">{userName}</p>
+                  <p className="text-xs text-muted-foreground">{email}</p>
+                </div>
                 <Input
-                  id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Contraseña"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
+                  autoFocus
+                  className="h-11"
                 />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? <><Loader2 className="animate-spin" /> Iniciando sesión...</> : "Iniciar Sesión"}
-              </Button>
-            </form>
-            {!showReset ? (
-              <div className="mt-4 text-center space-y-2">
-                <button type="button" className="text-xs text-primary hover:underline" onClick={() => setShowReset(true)}>
-                  ¿Olvidaste tu contraseña?
-                </button>
-                <p className="text-xs text-muted-foreground">¿Necesitas acceso? Contacta al administrador</p>
-              </div>
-            ) : (
-              <div className="mt-4 space-y-3 p-3 border rounded-md bg-muted/30">
+                <Button type="submit" className="w-full h-11" disabled={loading}>
+                  {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Iniciando sesión...</> : "Iniciar Sesión"}
+                </Button>
+                <div className="flex justify-between text-xs">
+                  <button type="button" className="text-muted-foreground hover:text-foreground flex items-center gap-1" onClick={handleBack}>
+                    <ArrowLeft className="h-3 w-3" /> Cambiar cuenta
+                  </button>
+                  <button type="button" className="text-primary hover:underline" onClick={() => setShowReset(true)}>
+                    ¿Olvidaste tu contraseña?
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {step === 2 && showReset && (
+              <div className="space-y-4">
                 <p className="text-sm font-medium">Recuperar contraseña</p>
-                <Input type="email" placeholder="Tu correo electrónico" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <p className="text-xs text-muted-foreground">Enviaremos un enlace a <strong>{email}</strong></p>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" className="flex-1" onClick={() => setShowReset(false)}>Cancelar</Button>
-                  <Button size="sm" className="flex-1" disabled={!email || resetLoading} onClick={async () => {
+                  <Button size="sm" className="flex-1" disabled={resetLoading} onClick={async () => {
                     setResetLoading(true);
                     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/reset-password" });
                     setResetLoading(false);
-                    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); }
-                    else { toast({ title: "Enlace enviado", description: "Revisa tu correo para restablecer tu contraseña." }); setShowReset(false); }
+                    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+                    else { toast({ title: "Enlace enviado", description: "Revisa tu correo." }); setShowReset(false); }
                   }}>
                     {resetLoading ? "Enviando..." : "Enviar enlace"}
                   </Button>
@@ -257,6 +195,8 @@ const Auth = () => {
             )}
           </CardContent>
         </Card>
+
+        <p className="text-center text-xs text-muted-foreground italic">Desde 1904 — Trabajando por un México mejor</p>
       </div>
     </div>
   );
