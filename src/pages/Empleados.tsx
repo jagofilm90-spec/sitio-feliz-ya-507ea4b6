@@ -744,9 +744,9 @@ const Empleados = () => {
         },
         preview: true,
       });
-      const reader = new FileReader();
-      reader.onload = () => setPdfPreviewUrl(reader.result as string);
-      reader.readAsDataURL(result.pdfBlob);
+      const url = URL.createObjectURL(result.pdfBlob);
+      window.open(url, '_blank');
+      toast({ title: "Contrato generado", description: `PDF abierto en nueva pestaña` });
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
