@@ -32,6 +32,7 @@ import { COMPANY_DATA } from "@/constants/companyData";
 import { EmpleadosPruebaAlert } from "@/components/dashboard/EmpleadosPruebaAlert";
 import { CumpleanosWidget } from "@/components/dashboard/CumpleanosWidget";
 import { LicenciasVencimientoAlert } from "@/components/dashboard/LicenciasVencimientoAlert";
+import { VacacionesHoyWidget } from "@/components/dashboard/VacacionesHoyWidget";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -137,7 +138,8 @@ const Dashboard = () => {
         {/* Cumpleaños y aniversarios */}
         {isAdmin && <CumpleanosWidget />}
 
-        {/* Licencias por vencer */}
+        {/* Vacaciones + Licencias */}
+        {isAdmin && <VacacionesHoyWidget />}
         {isAdmin && <LicenciasVencimientoAlert />}
 
         {/* Descargas en curso + completadas hoy */}

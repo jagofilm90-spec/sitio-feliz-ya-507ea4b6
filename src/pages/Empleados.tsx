@@ -181,6 +181,7 @@ const Empleados = () => {
   const [documentosPendientes] = useState<Record<string, EmpleadoDocumentoPendiente[]>>({});
   const [fotos, setFotos] = useState<Record<string, string>>({});
   const [docsCount, setDocsCount] = useState<Record<string, number>>({});
+  const [empleadosVacaciones, setEmpleadosVacaciones] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEmpleado, setEditingEmpleado] = useState<Empleado | null>(null);
@@ -372,6 +373,17 @@ const Empleados = () => {
         await Promise.allSettled(checks);
         setFotos(fotosMap);
         setDocsCount(counts);
+      }
+      // Check who's on vacation today
+      if (s) {
+        try {
+          const hoyStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" });
+          const vacRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados_vacaciones?status=eq.tomada&fecha_inicio=lte.${hoyStr}&fecha_fin=gte.${hoyStr}&select=empleado_id`, {
+            headers: { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Authorization": `Bearer ${s.access_token}` },
+          });
+          const vacData = await vacRes.json();
+          if (Array.isArray(vacData)) setEmpleadosVacaciones(new Set(vacData.map((v: any) => v.empleado_id)));
+        } catch {}
       }
     } catch (error: any) {
       toast({
@@ -2185,6 +2197,9 @@ const Empleados = () => {
                                 {esCumpleHoy(empleado) && (
                                   <Badge className="text-xs bg-amber-100 text-amber-800 border-amber-300 shrink-0">Hoy</Badge>
                                 )}
+                                {empleadosVacaciones.has(empleado.id) && (
+                                  <Badge className="text-xs bg-blue-100 text-blue-800 border-blue-300 shrink-0">Vacaciones</Badge>
+                                )}
                               </div>
                             </TableCell>
                             {tab === 'todos' && <TableCell><Badge variant="outline">{empleado.puesto}</Badge></TableCell>}
@@ -2407,6 +2422,9 @@ const Empleados = () => {
                                 )}
                                 {esCumpleHoy(empleado) && (
                                   <Badge className="text-xs bg-amber-100 text-amber-800 border-amber-300 shrink-0">Hoy</Badge>
+                                )}
+                                {empleadosVacaciones.has(empleado.id) && (
+                                  <Badge className="text-xs bg-blue-100 text-blue-800 border-blue-300 shrink-0">Vacaciones</Badge>
                                 )}
                               </div>
                             </TableCell>
@@ -2679,6 +2697,9 @@ const Empleados = () => {
                                 )}
                                 {esCumpleHoy(empleado) && (
                                   <Badge className="text-xs bg-amber-100 text-amber-800 border-amber-300 shrink-0">Hoy</Badge>
+                                )}
+                                {empleadosVacaciones.has(empleado.id) && (
+                                  <Badge className="text-xs bg-blue-100 text-blue-800 border-blue-300 shrink-0">Vacaciones</Badge>
                                 )}
                               </div>
                             </TableCell>
