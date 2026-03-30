@@ -1,15 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-interface LookupRequest {
-  email?: string;
-}
-
-interface LookupResponse {
-  nombre: string;
-  puesto: string | null;
-  foto_url: string | null;
-}
+const ROLE_LABELS: Record<string, string> = {
+  admin: "Director General",
+  secretaria: "Secretaria",
+  vendedor: "Vendedor",
+  contadora: "Contadora",
+  almacen: "Almacén",
+  gerente_almacen: "Gerente de Almacén",
+  chofer: "Chofer",
+  cliente: "Cliente",
+};
 
 const getFallbackName = (email: string) => email.split("@")[0] || "Usuario";
 
@@ -19,7 +20,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email }: LookupRequest = await req.json();
+    const { email } = await req.json();
     const normalizedEmail = email?.trim().toLowerCase();
 
     if (!normalizedEmail || !normalizedEmail.includes("@")) {
@@ -34,7 +35,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const response: LookupResponse = {
+    const response: { nombre: string; puesto: string | null; foto_url: string | null } = {
       nombre: getFallbackName(normalizedEmail),
       puesto: null,
       foto_url: null,
@@ -42,32 +43,47 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     const resolveEmployeePhoto = async (empleadoId: string, existingPhotoUrl: string | null) => {
       if (existingPhotoUrl) return existingPhotoUrl;
-
       const { data } = await supabase.storage
         .from("empleados-documentos")
-        .createSignedUrl(`${empleadoId}/foto.jpg`, 60 * 10);
-
+        .createSignedUrl(`${empleadoId}/foto.jpg`, 600);
       return data?.signedUrl ?? null;
     };
 
     const resolveProfilePhoto = async (profileId: string) => {
       const { data } = await supabase.storage
         .from("empleados-documentos")
-        .createSignedUrl(`profiles/${profileId}/foto.jpg`, 60 * 10);
-
+        .createSignedUrl(`profiles/${profileId}/foto.jpg`, 600);
       return data?.signedUrl ?? null;
     };
 
-    const { data: employeeByEmail } = await supabase
+    const resolveRoleLabel = async (userId: string): Promise<string | null> => {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+      if (!roles || roles.length === 0) return null;
+      // Prefer admin label, then first role
+      const adminRole = roles.find((r: any) => r.role === "admin");
+      const role = adminRole ? adminRole.role : roles[0].role;
+      return ROLE_LABELS[role] || role;
+    };
+
+    // 1. Try employee by email
+    const { data: empByEmail } = await supabase
       .from("empleados")
-      .select("id, nombre_completo, puesto, foto_url")
+      .select("id, nombre_completo, puesto, foto_url, user_id")
       .eq("email", normalizedEmail)
       .maybeSingle();
 
-    if (employeeByEmail) {
-      response.nombre = employeeByEmail.nombre_completo || response.nombre;
-      response.puesto = employeeByEmail.puesto || null;
-      response.foto_url = await resolveEmployeePhoto(employeeByEmail.id, employeeByEmail.foto_url);
+    if (empByEmail) {
+      response.nombre = empByEmail.nombre_completo || response.nombre;
+      response.puesto = empByEmail.puesto || null;
+      response.foto_url = await resolveEmployeePhoto(empByEmail.id, empByEmail.foto_url);
+
+      // If puesto is missing, try role label
+      if (!response.puesto && empByEmail.user_id) {
+        response.puesto = await resolveRoleLabel(empByEmail.user_id);
+      }
 
       return new Response(JSON.stringify(response), {
         status: 200,
@@ -75,6 +91,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       });
     }
 
+    // 2. Try profile by email
     const { data: profile } = await supabase
       .from("profiles")
       .select("id, full_name")
@@ -84,18 +101,23 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (profile) {
       response.nombre = profile.full_name || response.nombre;
 
-      const { data: employeeByUser } = await supabase
+      const { data: empByUser } = await supabase
         .from("empleados")
         .select("id, nombre_completo, puesto, foto_url")
         .eq("user_id", profile.id)
         .maybeSingle();
 
-      if (employeeByUser) {
-        response.nombre = employeeByUser.nombre_completo || response.nombre;
-        response.puesto = employeeByUser.puesto || null;
-        response.foto_url = await resolveEmployeePhoto(employeeByUser.id, employeeByUser.foto_url);
+      if (empByUser) {
+        response.nombre = empByUser.nombre_completo || response.nombre;
+        response.puesto = empByUser.puesto || null;
+        response.foto_url = await resolveEmployeePhoto(empByUser.id, empByUser.foto_url);
       } else {
         response.foto_url = await resolveProfilePhoto(profile.id);
+      }
+
+      // If puesto still missing, get role label
+      if (!response.puesto) {
+        response.puesto = await resolveRoleLabel(profile.id);
       }
     }
 
