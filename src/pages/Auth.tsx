@@ -18,6 +18,7 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [userName, setUserName] = useState("");
+  const [userPuesto, setUserPuesto] = useState("");
   const [userFoto, setUserFoto] = useState<string | null>(null);
   const [showReset, setShowReset] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
@@ -63,22 +64,36 @@ const Auth = () => {
   const handleContinue = async () => {
     if (!email || !email.includes("@")) { toast({ title: "Email inválido", variant: "destructive" }); return; }
     setLoading(true);
-    // Try to find user profile + photo
+    setUserFoto(null); setUserName(""); setUserPuesto("");
     try {
-      const { data: profiles } = await supabase.from("profiles").select("id, full_name").eq("email", email).limit(1);
-      if (profiles && profiles[0]) {
-        setUserName(profiles[0].full_name || email.split("@")[0]);
-        // Try to find employee linked to this profile
-        try {
-          const { data: emps } = await supabase.from("empleados").select("id, nombre_completo").eq("user_id", profiles[0].id).limit(1);
-          if (emps && emps[0]) {
-            setUserName(emps[0].nombre_completo);
-            const { data: blob } = await supabase.storage.from("empleados-documentos").download(`${emps[0].id}/foto.jpg`);
+      // 1. Try finding employee by personal email
+      const { data: empsByEmail } = await supabase.from("empleados").select("id, nombre_completo, puesto, foto_url").eq("email", email).limit(1);
+      if (empsByEmail && empsByEmail[0]) {
+        const emp = empsByEmail[0];
+        setUserName(emp.nombre_completo); setUserPuesto(emp.puesto);
+        const { data: blob } = await supabase.storage.from("empleados-documentos").download(`${emp.id}/foto.jpg`);
+        if (blob) setUserFoto(URL.createObjectURL(blob));
+        else if (emp.foto_url) setUserFoto(emp.foto_url);
+      } else {
+        // 2. Try finding profile by login email → then employee by user_id
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name").eq("email", email).limit(1);
+        if (profiles && profiles[0]) {
+          setUserName(profiles[0].full_name || email.split("@")[0]);
+          const { data: empsByUser } = await supabase.from("empleados").select("id, nombre_completo, puesto, foto_url").eq("user_id", profiles[0].id).limit(1);
+          if (empsByUser && empsByUser[0]) {
+            const emp = empsByUser[0];
+            setUserName(emp.nombre_completo); setUserPuesto(emp.puesto);
+            const { data: blob } = await supabase.storage.from("empleados-documentos").download(`${emp.id}/foto.jpg`);
+            if (blob) setUserFoto(URL.createObjectURL(blob));
+            else if (emp.foto_url) setUserFoto(emp.foto_url);
+          } else {
+            // No employee, try profile photo
+            const { data: blob } = await supabase.storage.from("empleados-documentos").download(`profiles/${profiles[0].id}/foto.jpg`);
             if (blob) setUserFoto(URL.createObjectURL(blob));
           }
-        } catch {}
-      } else {
-        setUserName(email.split("@")[0]);
+        } else {
+          setUserName(email.split("@")[0]);
+        }
       }
     } catch {
       setUserName(email.split("@")[0]);
@@ -106,16 +121,17 @@ const Auth = () => {
   };
 
   const handleBack = () => {
-    setStep(1); setPassword(""); setUserFoto(null); setUserName(""); setShowReset(false);
+    setStep(1); setPassword(""); setUserFoto(null); setUserName(""); setUserPuesto(""); setShowReset(false);
   };
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-b from-white to-gray-50 p-4">
       <div className="w-full max-w-sm space-y-6">
-        {/* Logo */}
+        {/* Branding */}
         <div className="text-center">
-          <img src={logoAlmasa} alt="ALMASA" className="h-20 mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">Sistema de Gestión Empresarial</p>
+          <p className="text-xs text-muted-foreground tracking-widest uppercase">Desde 1904</p>
+          <img src={logoAlmasa} alt="ALMASA" className="h-20 mx-auto my-2" />
+          <p className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">Trabajando por un México mejor</p>
         </div>
 
         <Card className="shadow-lg border-0">
@@ -142,16 +158,17 @@ const Auth = () => {
 
             {step === 2 && !showReset && (
               <form onSubmit={handleLogin} className="space-y-4">
-                <div className="text-center mb-2">
+                <div className="text-center mb-4">
                   {userFoto ? (
-                    <img src={userFoto} className="w-20 h-20 rounded-full object-cover mx-auto mb-2" />
+                    <img src={userFoto} className="w-20 h-20 rounded-full object-cover mx-auto mb-3" />
                   ) : (
-                    <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-2" style={{ backgroundColor: getColor(userName || email) }}>
+                    <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-3" style={{ backgroundColor: getColor(userName || email) }}>
                       {getInitials(userName || email)}
                     </div>
                   )}
-                  <p className="font-semibold">{userName}</p>
-                  <p className="text-xs text-muted-foreground">{email}</p>
+                  <p className="text-lg font-semibold text-muted-foreground">Bienvenido</p>
+                  <p className="font-bold text-xl">{userName}</p>
+                  <p className="text-sm text-muted-foreground">{userPuesto || email}</p>
                 </div>
                 <Input
                   type="password"
@@ -196,7 +213,6 @@ const Auth = () => {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-muted-foreground italic">Desde 1904 — Trabajando por un México mejor</p>
       </div>
     </div>
   );
