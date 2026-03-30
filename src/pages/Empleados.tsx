@@ -2939,7 +2939,7 @@ const Empleados = () => {
       )}
 
       {pdfPreviewUrl && (
-        <Dialog open={!!pdfPreviewUrl} onOpenChange={o => { if (!o) { URL.revokeObjectURL(pdfPreviewUrl!); setPdfPreviewUrl(null); } }}>
+        <Dialog open={!!pdfPreviewUrl} onOpenChange={o => { if (!o) setPdfPreviewUrl(null); }}>
           <DialogContent className="max-w-4xl max-h-[90vh] p-0">
             <div className="flex justify-between items-center p-4 border-b">
               <h3 className="font-medium">Vista previa del documento</h3>
