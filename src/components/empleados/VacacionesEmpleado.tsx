@@ -110,12 +110,16 @@ export function VacacionesEmpleado({ empleadoId, empleadoNombre, fechaIngreso, i
       <div className="grid grid-cols-3 gap-3 text-center">
         <div className="p-3 rounded-md bg-muted/50"><p className="text-xs text-muted-foreground">Corresponden</p><p className="text-lg font-bold">{diasCorresponden}</p><p className="text-xs text-muted-foreground">{anosAntig} año{anosAntig !== 1 ? "s" : ""} antig.</p></div>
         <div className="p-3 rounded-md bg-muted/50"><p className="text-xs text-muted-foreground">Tomados</p><p className="text-lg font-bold">{diasTomados}</p></div>
-        <div className={`p-3 rounded-md ${diasPendientes > 0 ? "bg-green-50" : "bg-muted/50"}`}><p className="text-xs text-muted-foreground">Pendientes</p><p className="text-lg font-bold">{diasPendientes}</p></div>
+        <div className={`p-3 rounded-md ${diasPendientes > 0 ? "bg-green-50" : "bg-red-50"}`}><p className="text-xs text-muted-foreground">Disponibles</p><p className={`text-lg font-bold ${diasPendientes <= 0 ? "text-red-600" : "text-green-700"}`}>{diasPendientes}</p></div>
       </div>
 
       <div className="flex justify-between items-center">
-        <p className="text-sm font-medium">Solicitudes</p>
-        <Button size="sm" variant="outline" onClick={() => setShowForm(!showForm)}><Plus className="h-3 w-3 mr-1" />{showForm ? "Cancelar" : "Registrar"}</Button>
+        <p className="text-sm font-medium">Registros</p>
+        {diasPendientes > 0 ? (
+          <Button size="sm" variant="outline" onClick={() => setShowForm(!showForm)}><Plus className="h-3 w-3 mr-1" />{showForm ? "Cancelar" : "Registrar"}</Button>
+        ) : (
+          <p className="text-xs text-red-600">Ya utilizó todos sus días de vacaciones este año.</p>
+        )}
       </div>
 
       {showForm && (
@@ -124,9 +128,14 @@ export function VacacionesEmpleado({ empleadoId, empleadoNombre, fechaIngreso, i
             <div><Label>Inicio</Label><Input type="date" value={form.fecha_inicio} onChange={e => setForm({ ...form, fecha_inicio: e.target.value })} /></div>
             <div><Label>Fin</Label><Input type="date" value={form.fecha_fin} onChange={e => setForm({ ...form, fecha_fin: e.target.value })} /></div>
           </div>
-          {calcDias() > 0 && <p className="text-sm">Días solicitados: <strong>{calcDias()}</strong></p>}
+          {calcDias() > 0 && (
+            <p className={`text-sm ${calcDias() > diasPendientes ? "text-red-600 font-medium" : ""}`}>
+              Días solicitados: <strong>{calcDias()}</strong>
+              {calcDias() > diasPendientes && ` — Solo tiene ${diasPendientes} día${diasPendientes !== 1 ? "s" : ""} disponible${diasPendientes !== 1 ? "s" : ""}`}
+            </p>
+          )}
           <div><Label>Notas</Label><Input value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} /></div>
-          <Button onClick={handleSolicitar} disabled={loading || calcDias() <= 0}>{loading ? "Guardando..." : "Registrar vacaciones"}</Button>
+          <Button onClick={handleSolicitar} disabled={loading || calcDias() <= 0 || calcDias() > diasPendientes}>{loading ? "Guardando..." : "Registrar vacaciones"}</Button>
         </div>
       )}
 
