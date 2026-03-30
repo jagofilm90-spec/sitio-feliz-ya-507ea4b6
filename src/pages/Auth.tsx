@@ -148,7 +148,7 @@ const Auth = () => {
                   )}
                   <p className="text-lg font-semibold text-muted-foreground">Bienvenido</p>
                   <p className="font-bold text-xl">{userName}</p>
-                  <p className="text-sm text-muted-foreground">{userPuesto || email}</p>
+                  {userPuesto && <p className="text-sm text-muted-foreground">{userPuesto}</p>}
                 </div>
                 <Input
                   type="password"
