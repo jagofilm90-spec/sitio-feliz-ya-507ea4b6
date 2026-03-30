@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      asistencia: {
+        Row: {
+          created_at: string
+          dispositivo: string
+          empleado_id: string | null
+          fecha: string | null
+          fecha_hora: string
+          hora: string | null
+          id: string
+          tipo: string | null
+          zk_status: number | null
+          zk_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dispositivo: string
+          empleado_id?: string | null
+          fecha?: string | null
+          fecha_hora: string
+          hora?: string | null
+          id?: string
+          tipo?: string | null
+          zk_status?: number | null
+          zk_user_id: string
+        }
+        Update: {
+          created_at?: string
+          dispositivo?: string
+          empleado_id?: string | null
+          fecha?: string | null
+          fecha_hora?: string
+          hora?: string | null
+          id?: string
+          tipo?: string | null
+          zk_status?: number | null
+          zk_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asistencia_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asistencia_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ayudantes_externos: {
         Row: {
           activo: boolean | null
