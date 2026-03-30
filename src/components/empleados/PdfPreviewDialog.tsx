@@ -66,7 +66,7 @@ export function PdfPreviewDialog({
           canvas.width = Math.ceil(viewport.width);
           canvas.height = Math.ceil(viewport.height);
 
-          await page.render({ canvasContext: context, viewport }).promise;
+          await page.render({ canvas, canvasContext: context, viewport }).promise;
 
           renderedPages.push({
             pageNumber,

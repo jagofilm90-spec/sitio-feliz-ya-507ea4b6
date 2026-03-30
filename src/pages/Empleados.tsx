@@ -248,7 +248,7 @@ const Empleados = () => {
   const [crearUsuario, setCrearUsuario] = useState(false);
   const [showDarAcceso, setShowDarAcceso] = useState(false);
   const [accesoEmpleado, setAccesoEmpleado] = useState<Empleado | null>(null);
-  const [usuarioFormData] = useState({
+  const [usuarioFormData, setUsuarioFormData] = useState({
     password: "",
     role: "",
   });
