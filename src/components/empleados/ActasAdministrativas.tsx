@@ -24,7 +24,10 @@ export function ActasAdministrativas({ empleadoId, empleadoNombre, empleadoPuest
   const [form, setForm] = useState({ tipo: "", descripcion: "", testigo_1: "", testigo_2: "" });
   const [loading, setLoading] = useState(false);
   const [showFirma, setShowFirma] = useState(false);
+  const [firmaStep, setFirmaStep] = useState<1 | 2 | 3>(1);
   const [hasSignature, setHasSignature] = useState(false);
+  const [firmaEmpleadoImg, setFirmaEmpleadoImg] = useState("");
+  const [firmaRepImg, setFirmaRepImg] = useState("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
 
@@ -69,23 +72,36 @@ export function ActasAdministrativas({ empleadoId, empleadoNombre, empleadoPuest
     if (!showFirma) return;
     const t = setTimeout(() => {
       const c = canvasRef.current; if (!c) return;
+      c.getContext("2d")?.clearRect(0, 0, c.width, c.height);
       const r = c.getBoundingClientRect();
       if (r.width > 0) { c.width = r.width; c.height = r.height; }
     }, 100);
     return () => clearTimeout(t);
-  }, [showFirma]);
+  }, [showFirma, firmaStep]);
+
+  const captureAndNext = (nextStep: 2 | 3) => {
+    if (!hasSignature) return;
+    const img = canvasRef.current?.toDataURL("image/png") ?? "";
+    if (firmaStep === 1) setFirmaEmpleadoImg(img);
+    if (firmaStep === 2) setFirmaRepImg(img);
+    setHasSignature(false);
+    setFirmaStep(nextStep);
+  };
 
   const handleOpenFirma = () => {
     if (!form.tipo || !form.descripcion) { toast({ title: "Campos requeridos", description: "Tipo y descripción son obligatorios.", variant: "destructive" }); return; }
     setShowFirma(true);
+    setFirmaStep(1);
     setHasSignature(false);
+    setFirmaEmpleadoImg("");
+    setFirmaRepImg("");
   };
 
   const handleFirmarYGuardar = async () => {
     if (!hasSignature) return;
     setLoading(true);
     try {
-      const firmaImg = canvasRef.current?.toDataURL("image/png") ?? "";
+      const firmaJefeImg = canvasRef.current?.toDataURL("image/png") ?? "";
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Sin sesión");
       const fecha = hoyMexico();
@@ -98,7 +114,7 @@ export function ActasAdministrativas({ empleadoId, empleadoNombre, empleadoPuest
       });
 
       // Generate PDF with signature
-      const pdfBlob = generarPDFConFirma({ tipo: form.tipo, descripcion: form.descripcion, fecha, testigo_1: form.testigo_1, testigo_2: form.testigo_2 }, firmaImg);
+      const pdfBlob = generarPDFConFirma({ tipo: form.tipo, descripcion: form.descripcion, fecha, testigo_1: form.testigo_1, testigo_2: form.testigo_2 }, firmaEmpleadoImg, firmaRepImg, firmaJefeImg);
 
       // Save + download
       const link = URL.createObjectURL(pdfBlob);
@@ -124,7 +140,7 @@ export function ActasAdministrativas({ empleadoId, empleadoNombre, empleadoPuest
     finally { setLoading(false); }
   };
 
-  const generarPDFConFirma = (acta: { tipo: string; descripcion: string; fecha: string; testigo_1: string; testigo_2: string }, firmaImg?: string): Blob => {
+  const generarPDFConFirma = (acta: { tipo: string; descripcion: string; fecha: string; testigo_1: string; testigo_2: string }, firmaEmpleado?: string, firmaRep?: string, firmaJefe?: string): Blob => {
     const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
     const w = pdf.internal.pageSize.getWidth(), mL = 22, mR = 22, maxW = w - mL - mR;
     let y = 20;
@@ -152,25 +168,31 @@ export function ActasAdministrativas({ empleadoId, empleadoNombre, empleadoPuest
     pdf.text("Se le hace saber que de reincidir podrá hacerse acreedor a sanciones mayores conforme a la Ley Federal del Trabajo.", mL, y); y += 8;
     pdf.setFontSize(9);
     pdf.text("Con mi firma confirmo estar enterado/a del contenido de la presente acta.", mL, y); y += 12;
-    // Signatures
+    // Row 1: Empleado + Representante legal
     pdf.setFont("helvetica", "bold"); pdf.setFontSize(9);
     pdf.text("TRABAJADOR", mL + maxW * 0.25, y, { align: "center" });
-    pdf.text("REPRESENTANTE", mL + maxW * 0.75, y, { align: "center" }); y += 3;
-    if (firmaImg) { try { pdf.addImage(firmaImg, "PNG", mL + maxW * 0.05, y, maxW * 0.35, 15); } catch {} }
+    pdf.text("REPRESENTANTE LEGAL", mL + maxW * 0.75, y, { align: "center" }); y += 3;
+    if (firmaEmpleado) { try { pdf.addImage(firmaEmpleado, "PNG", mL + maxW * 0.05, y, maxW * 0.35, 15); } catch {} }
+    if (firmaRep) { try { pdf.addImage(firmaRep, "PNG", mL + maxW * 0.55, y, maxW * 0.35, 15); } catch {} }
     y += 15;
     pdf.line(mL, y, mL + maxW * 0.4, y); pdf.line(mL + maxW * 0.6, y, mL + maxW, y); y += 4;
     pdf.setFont("helvetica", "normal"); pdf.setFontSize(8);
     pdf.text(empleadoNombre, mL + maxW * 0.25, y, { align: "center" });
     pdf.text("JOSE ANTONIO GOMEZ ORTEGA", mL + maxW * 0.75, y, { align: "center" }); y += 12;
-    // Testigos
-    if (acta.testigo_1 || acta.testigo_2) {
-      pdf.setFont("helvetica", "bold"); pdf.setFontSize(9);
-      pdf.text("TESTIGOS", w / 2, y, { align: "center" }); y += 12;
-      pdf.line(mL, y, mL + maxW * 0.4, y); pdf.line(mL + maxW * 0.6, y, mL + maxW, y); y += 4;
-      pdf.setFont("helvetica", "normal"); pdf.setFontSize(8);
-      pdf.text(acta.testigo_1 || "Testigo 1", mL + maxW * 0.25, y, { align: "center" });
-      pdf.text(acta.testigo_2 || "Testigo 2", mL + maxW * 0.75, y, { align: "center" });
-    }
+    // Row 2: Jefe directo + Testigos
+    pdf.setFont("helvetica", "bold"); pdf.setFontSize(9);
+    pdf.text("JEFE DIRECTO / ENCARGADO", mL + maxW * 0.25, y, { align: "center" });
+    if (acta.testigo_1 || acta.testigo_2) pdf.text("TESTIGOS", mL + maxW * 0.75, y, { align: "center" });
+    y += 3;
+    if (firmaJefe) { try { pdf.addImage(firmaJefe, "PNG", mL + maxW * 0.05, y, maxW * 0.35, 15); } catch {} }
+    y += 15;
+    pdf.line(mL, y, mL + maxW * 0.4, y);
+    if (acta.testigo_1 || acta.testigo_2) pdf.line(mL + maxW * 0.6, y, mL + maxW, y);
+    y += 4;
+    pdf.setFont("helvetica", "normal"); pdf.setFontSize(8);
+    pdf.text("Nombre y firma", mL + maxW * 0.25, y, { align: "center" });
+    if (acta.testigo_1) pdf.text(acta.testigo_1, mL + maxW * 0.75, y, { align: "center" });
+    if (acta.testigo_2) { y += 10; pdf.line(mL + maxW * 0.6, y, mL + maxW, y); y += 4; pdf.text(acta.testigo_2, mL + maxW * 0.75, y, { align: "center" }); }
     return pdf.output("blob");
   };
 
@@ -215,25 +237,38 @@ export function ActasAdministrativas({ empleadoId, empleadoNombre, empleadoPuest
         )}
       </div>
 
-      {/* Signature dialog */}
-      <Dialog open={showFirma} onOpenChange={o => { if (!o) setShowFirma(false); }}>
+      {/* 3-step signature dialog */}
+      <Dialog open={showFirma} onOpenChange={o => { if (!o && !loading) setShowFirma(false); }}>
         <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Firma del empleado — Enterado del acta</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">{empleadoNombre} firma confirmando estar enterado/a del contenido del acta.</p>
+          {firmaStep === 1 && (<>
+            <DialogHeader><DialogTitle>Paso 1 de 3 — Firma del empleado</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground"><strong>{empleadoNombre}</strong> firma confirmando estar enterado/a del contenido del acta.</p>
+          </>)}
+          {firmaStep === 2 && (<>
+            <DialogHeader><DialogTitle>Paso 2 de 3 — Firma del representante legal</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground"><strong>José Antonio Gómez Ortega</strong> firma como representante de la empresa.</p>
+          </>)}
+          {firmaStep === 3 && (<>
+            <DialogHeader><DialogTitle>Paso 3 de 3 — Firma del jefe directo</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground">El encargado del área firma como testigo.</p>
+          </>)}
           <div className="space-y-1 mt-2">
-            <p className="text-sm font-medium">Firma del empleado</p>
             <canvas ref={canvasRef} className="w-full border-2 border-dashed border-gray-300 rounded-lg cursor-crosshair bg-white touch-none" style={{ height: 200 }}
               onMouseDown={startDraw} onMouseMove={draw} onMouseUp={stopDraw} onMouseLeave={stopDraw}
               onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={stopDraw} />
             <Button type="button" variant="outline" size="sm" onClick={clearCanvas}>Limpiar</Button>
           </div>
-          <div className="flex justify-end gap-2 mt-2">
-            <Button variant="outline" onClick={() => setShowFirma(false)}>Cancelar</Button>
-            <Button onClick={handleFirmarYGuardar} disabled={!hasSignature || loading}>
-              {loading ? "Guardando..." : "Firmar y guardar"}
-            </Button>
+          <div className="flex justify-between mt-2">
+            {firmaStep === 1 ? (
+              <Button variant="outline" onClick={() => setShowFirma(false)}>Cancelar</Button>
+            ) : (
+              <Button variant="outline" onClick={() => { setHasSignature(false); setFirmaStep((firmaStep - 1) as 1 | 2); }}>Volver</Button>
+            )}
+            {firmaStep < 3 ? (
+              <Button onClick={() => captureAndNext((firmaStep + 1) as 2 | 3)} disabled={!hasSignature}>Siguiente</Button>
+            ) : (
+              <Button onClick={handleFirmarYGuardar} disabled={!hasSignature || loading}>{loading ? "Guardando..." : "Firmar y guardar"}</Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
