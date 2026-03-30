@@ -2944,7 +2944,7 @@ const Empleados = () => {
                 document.body.appendChild(a); a.click(); document.body.removeChild(a);
               }}>Descargar</Button>
             </div>
-            <iframe src={pdfPreviewUrl} className="w-full" style={{ height: "80vh" }} title="Vista previa PDF" />
+            <embed src={pdfPreviewUrl} type="application/pdf" className="w-full" style={{ height: "80vh" }} />
           </DialogContent>
         </Dialog>
       )}
