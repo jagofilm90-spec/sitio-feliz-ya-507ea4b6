@@ -6348,6 +6348,7 @@ export type Database = {
         Args: { p_cantidad: number; p_lote_id: string }
         Returns: undefined
       }
+      lookup_employee_by_email: { Args: { p_email: string }; Returns: Json }
       obtener_termino_credito: {
         Args: { p_cliente_id: string; p_producto_id: string }
         Returns: Database["public"]["Enums"]["credit_term"]

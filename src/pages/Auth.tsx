@@ -66,34 +66,18 @@ const Auth = () => {
     setLoading(true);
     setUserFoto(null); setUserName(""); setUserPuesto("");
     try {
-      // 1. Try finding employee by personal email
-      const { data: empsByEmail } = await supabase.from("empleados").select("id, nombre_completo, puesto, foto_url").eq("email", email).limit(1);
-      if (empsByEmail && empsByEmail[0]) {
-        const emp = empsByEmail[0];
-        setUserName(emp.nombre_completo); setUserPuesto(emp.puesto);
-        const { data: blob } = await supabase.storage.from("empleados-documentos").download(`${emp.id}/foto.jpg`);
-        if (blob) setUserFoto(URL.createObjectURL(blob));
-        else if (emp.foto_url) setUserFoto(emp.foto_url);
-      } else {
-        // 2. Try finding profile by login email → then employee by user_id
-        const { data: profiles } = await supabase.from("profiles").select("id, full_name").eq("email", email).limit(1);
-        if (profiles && profiles[0]) {
-          setUserName(profiles[0].full_name || email.split("@")[0]);
-          const { data: empsByUser } = await supabase.from("empleados").select("id, nombre_completo, puesto, foto_url").eq("user_id", profiles[0].id).limit(1);
-          if (empsByUser && empsByUser[0]) {
-            const emp = empsByUser[0];
-            setUserName(emp.nombre_completo); setUserPuesto(emp.puesto);
-            const { data: blob } = await supabase.storage.from("empleados-documentos").download(`${emp.id}/foto.jpg`);
-            if (blob) setUserFoto(URL.createObjectURL(blob));
-            else if (emp.foto_url) setUserFoto(emp.foto_url);
-          } else {
-            // No employee, try profile photo
-            const { data: blob } = await supabase.storage.from("empleados-documentos").download(`profiles/${profiles[0].id}/foto.jpg`);
-            if (blob) setUserFoto(URL.createObjectURL(blob));
-          }
-        } else {
-          setUserName(email.split("@")[0]);
+      const { data: result } = await supabase.rpc("lookup_employee_by_email", { p_email: email });
+      if (result) {
+        const info = result as { nombre: string; puesto: string | null; empleado_id: string | null; foto_url: string | null };
+        setUserName(info.nombre || email.split("@")[0]);
+        setUserPuesto(info.puesto || "");
+        if (info.empleado_id) {
+          const { data: blob } = await supabase.storage.from("empleados-documentos").download(`${info.empleado_id}/foto.jpg`);
+          if (blob) setUserFoto(URL.createObjectURL(blob));
+          else if (info.foto_url) setUserFoto(info.foto_url);
         }
+      } else {
+        setUserName(email.split("@")[0]);
       }
     } catch {
       setUserName(email.split("@")[0]);
