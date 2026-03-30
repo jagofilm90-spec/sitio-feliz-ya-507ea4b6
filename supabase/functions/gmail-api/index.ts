@@ -172,7 +172,7 @@ serve(async (req) => {
     let cuenta = null;
     let cuentaError = null;
     
-    for (let retryAttempt = 0; retryAttempt < 3; retryAttempt++) {
+    for (let retryAttempt = 0; retryAttempt < 5; retryAttempt++) {
       const { data, error } = await supabase
         .from("gmail_cuentas")
         .select("*")
@@ -183,21 +183,27 @@ serve(async (req) => {
       cuenta = data;
       cuentaError = error;
       
-      if (cuenta || (cuentaError && !cuentaError.message?.includes('connection'))) {
+      if (cuenta) {
         break;
       }
       
-      // Wait before retry on connection issues
-      if (retryAttempt < 2) {
-        console.log(`DB query retry ${retryAttempt + 1} for ${email}`);
-        await new Promise(resolve => setTimeout(resolve, 200 * (retryAttempt + 1)));
+      // If we got a hard error that's not connection-related and not transient, stop retrying
+      if (cuentaError && !cuentaError.message?.includes('connection') && !cuentaError.message?.includes('timeout') && !cuentaError.message?.includes('fetch')) {
+        break;
+      }
+      
+      // Wait before retry (account might exist but query failed transiently)
+      if (retryAttempt < 4) {
+        const delay = 300 * (retryAttempt + 1);
+        console.log(`DB query retry ${retryAttempt + 1} for ${email}, waiting ${delay}ms`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
 
     console.log("Query result:", { found: !!cuenta, error: cuentaError?.message, emailSearched: email });
 
     if (cuentaError || !cuenta) {
-      throw new Error(`Cuenta ${email} no encontrada o no activa`);
+      throw new Error(`Cuenta ${email} no encontrada o no activa (intentos agotados)`);
     }
 
     const accessToken = await getValidAccessToken(supabase, cuenta);
