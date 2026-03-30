@@ -24,13 +24,20 @@ interface Props {
   empleadoId: string;
   empleadoNombre: string;
   empleadoEmail: string | null;
+  empleadoPuesto?: string;
   onCreated: () => void;
 }
 
-export const DarAccesoSistemaDialog = ({ open, onOpenChange, empleadoId, empleadoNombre, empleadoEmail, onCreated }: Props) => {
+const PUESTO_TO_ROLE: Record<string, string> = {
+  "Vendedor": "vendedor", "Secretaria": "secretaria", "Chofer": "chofer",
+  "Almacenista": "almacen", "Gerente de Almacén": "gerente_almacen",
+  "Ayudante de Chofer": "chofer",
+};
+
+export const DarAccesoSistemaDialog = ({ open, onOpenChange, empleadoId, empleadoNombre, empleadoEmail, empleadoPuesto, onCreated }: Props) => {
   const [email, setEmail] = useState(empleadoEmail || "");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("vendedor");
+  const [role, setRole] = useState(empleadoPuesto ? (PUESTO_TO_ROLE[empleadoPuesto] || "vendedor") : "vendedor");
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
@@ -40,7 +47,7 @@ export const DarAccesoSistemaDialog = ({ open, onOpenChange, empleadoId, emplead
     if (open) {
       setEmail(empleadoEmail || "");
       setPassword("");
-      setRole("vendedor");
+      setRole(empleadoPuesto ? (PUESTO_TO_ROLE[empleadoPuesto] || "vendedor") : "vendedor");
     }
     onOpenChange(open);
   };
@@ -97,8 +104,9 @@ export const DarAccesoSistemaDialog = ({ open, onOpenChange, empleadoId, emplead
 
         <div className="space-y-3">
           <div className="space-y-1">
-            <Label className="text-xs">Email</Label>
+            <Label className="text-xs">Email de acceso al sistema</Label>
             <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="usuario@almasa.com.mx" />
+            <p className="text-xs text-muted-foreground">Puede ser diferente al email personal del empleado</p>
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Contraseña</Label>

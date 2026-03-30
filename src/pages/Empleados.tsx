@@ -2951,6 +2951,7 @@ const Empleados = () => {
           empleadoId={accesoEmpleado.id}
           empleadoNombre={accesoEmpleado.nombre_completo}
           empleadoEmail={accesoEmpleado.email}
+          empleadoPuesto={accesoEmpleado.puesto}
           onCreated={() => { loadEmpleados(); loadUsuarios(); }}
         />
       )}
