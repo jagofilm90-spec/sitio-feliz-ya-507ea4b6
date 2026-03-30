@@ -110,7 +110,7 @@ export function ActasAdministrativas({ empleadoId, empleadoNombre, empleadoPuest
       await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados_actas`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Authorization": `Bearer ${session.access_token}`, "Prefer": "return=minimal" },
-        body: JSON.stringify({ empleado_id: empleadoId, tipo: form.tipo, descripcion: form.descripcion, fecha, testigo_1: form.testigo_1 || null, testigo_2: form.testigo_2 || null, firmada: true, created_by: session.user.id }),
+        body: JSON.stringify({ empleado_id: empleadoId, tipo: form.tipo, descripcion: form.descripcion, fecha, testigo_1: form.testigo_1 || null, testigo_2: form.testigo_2 || null, firmada: firmaEmpleadoImg !== "NEGADO", created_by: session.user.id }),
       });
 
       // Generate PDF with signature
@@ -172,7 +172,11 @@ export function ActasAdministrativas({ empleadoId, empleadoNombre, empleadoPuest
     pdf.setFont("helvetica", "bold"); pdf.setFontSize(9);
     pdf.text("TRABAJADOR", mL + maxW * 0.25, y, { align: "center" });
     pdf.text("REPRESENTANTE LEGAL", mL + maxW * 0.75, y, { align: "center" }); y += 3;
-    if (firmaEmpleado) { try { pdf.addImage(firmaEmpleado, "PNG", mL + maxW * 0.05, y, maxW * 0.35, 15); } catch {} }
+    if (firmaEmpleado === "NEGADO") {
+      pdf.setTextColor(200, 0, 0); pdf.setFont("helvetica", "bold"); pdf.setFontSize(9);
+      pdf.text("SE NEGÓ A FIRMAR", mL + maxW * 0.25, y + 8, { align: "center" });
+      pdf.setTextColor(0); pdf.setFont("helvetica", "normal");
+    } else if (firmaEmpleado) { try { pdf.addImage(firmaEmpleado, "PNG", mL + maxW * 0.05, y, maxW * 0.35, 15); } catch {} }
     if (firmaRep) { try { pdf.addImage(firmaRep, "PNG", mL + maxW * 0.55, y, maxW * 0.35, 15); } catch {} }
     y += 15;
     pdf.line(mL, y, mL + maxW * 0.4, y); pdf.line(mL + maxW * 0.6, y, mL + maxW, y); y += 4;
@@ -260,7 +264,10 @@ export function ActasAdministrativas({ empleadoId, empleadoNombre, empleadoPuest
           </div>
           <div className="flex justify-between mt-2">
             {firmaStep === 1 ? (
-              <Button variant="outline" onClick={() => setShowFirma(false)}>Cancelar</Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setShowFirma(false)}>Cancelar</Button>
+                <Button variant="destructive" size="sm" onClick={() => { setFirmaEmpleadoImg("NEGADO"); setHasSignature(false); setFirmaStep(2); }}>Se negó a firmar</Button>
+              </div>
             ) : (
               <Button variant="outline" onClick={() => { setHasSignature(false); setFirmaStep((firmaStep - 1) as 1 | 2); }}>Volver</Button>
             )}
