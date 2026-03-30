@@ -1962,6 +1962,60 @@ export type Database = {
         }
         Relationships: []
       }
+      empleados_actas: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          descripcion: string
+          empleado_id: string
+          fecha: string
+          firmada: boolean | null
+          id: string
+          testigo_1: string | null
+          testigo_2: string | null
+          tipo: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          descripcion: string
+          empleado_id: string
+          fecha?: string
+          firmada?: boolean | null
+          id?: string
+          testigo_1?: string | null
+          testigo_2?: string | null
+          tipo: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string
+          empleado_id?: string
+          fecha?: string
+          firmada?: boolean | null
+          id?: string
+          testigo_1?: string | null
+          testigo_2?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empleados_actas_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empleados_actas_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       empleados_documentos: {
         Row: {
           created_at: string
