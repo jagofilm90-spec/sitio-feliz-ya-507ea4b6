@@ -194,6 +194,7 @@ const Empleados = () => {
   const [cardEmpleado, setCardEmpleado] = useState<Empleado | null>(null);
   const [volverATarjeta, setVolverATarjeta] = useState<Empleado | null>(null);
   const [addendumEmpleado, setAddendumEmpleado] = useState<Empleado | null>(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [addendumHistorial, setAddendumHistorial] = useState<any>(null);
   const [historialSueldo, setHistorialSueldo] = useState<Array<{ id: string; sueldo_anterior: number | null; sueldo_nuevo: number | null; premio_anterior: number | null; premio_nuevo: number | null; fecha_cambio: string }>>([]);
   const [activeTab, setActiveTab] = useState<string>("todos");
@@ -722,7 +723,7 @@ const Empleados = () => {
       const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
       const premio = empleado.premio_asistencia_semanal || premioDefault;
       const beneficiario = empleado.beneficiario || "Por designar";
-      await generarContratoPDF({
+      const result = await generarContratoPDF({
         empleado: {
           nombre_completo: empleado.nombre_completo,
           rfc: empleado.rfc,
@@ -741,8 +742,9 @@ const Empleados = () => {
           rfc: "AMA 700701GI8",
           domicilio: "MELCHOR OCAMPO 59, MAGDALENA MIXIHUCA, VENUSTIANO CARRANZA, 15850, CIUDAD DE MEXICO",
         },
+        preview: true,
       });
-      toast({ title: "Contrato generado", description: `PDF descargado para ${empleado.nombre_completo}` });
+      setPdfPreviewUrl(URL.createObjectURL(result.pdfBlob));
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
@@ -750,11 +752,12 @@ const Empleados = () => {
 
   const handleGenerarAviso = async (empleado: Empleado) => {
     try {
-      await generarAvisoPrivacidadPDF({
+      const result = await generarAvisoPrivacidadPDF({
         nombre_empleado: empleado.nombre_completo,
         fecha: new Date().toLocaleDateString("es-MX", { timeZone: "America/Mexico_City", day: "numeric", month: "long", year: "numeric" }),
+        preview: true,
       });
-      toast({ title: "Aviso de privacidad generado", description: `PDF descargado` });
+      setPdfPreviewUrl(URL.createObjectURL(result.pdfBlob));
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
@@ -2929,6 +2932,21 @@ const Empleados = () => {
             domicilio: "MELCHOR OCAMPO 59, MAGDALENA MIXIHUCA, VENUSTIANO CARRANZA, 15850, CIUDAD DE MEXICO",
           }}
         />
+      )}
+
+      {pdfPreviewUrl && (
+        <Dialog open={!!pdfPreviewUrl} onOpenChange={o => { if (!o) { URL.revokeObjectURL(pdfPreviewUrl!); setPdfPreviewUrl(null); } }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="font-medium">Vista previa del documento</h3>
+              <Button variant="outline" size="sm" onClick={() => {
+                const a = document.createElement("a"); a.href = pdfPreviewUrl!; a.download = "documento.pdf";
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+              }}>Descargar</Button>
+            </div>
+            <iframe src={pdfPreviewUrl} className="w-full" style={{ height: "80vh" }} title="Vista previa PDF" />
+          </DialogContent>
+        </Dialog>
       )}
 
       {cardEmpleado && (

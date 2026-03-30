@@ -111,6 +111,7 @@ interface DatosContrato {
     empleado: string; // base64 PNG
     admin: string;    // base64 PNG
   };
+  preview?: boolean;
 }
 
 // ═══ ANEXOS POR PUESTO ═══
@@ -768,7 +769,7 @@ export async function generarContratoPDF(datos: DatosContrato): Promise<{ filena
 
   const filename = `Contrato_${emp.nombre_completo.replace(/\s+/g, "_")}.pdf`;
   const pdfBlob = pdf.output("blob");
-  pdf.save(filename);
+  if (!datos.preview) pdf.save(filename);
   return { filename, pdfBlob };
 }
 
@@ -780,6 +781,7 @@ export async function generarAvisoPrivacidadPDF(params: {
   firma_empleado?: string;
   checkbox_si?: boolean;
   checkbox_no?: boolean;
+  preview?: boolean;
 }): Promise<{ filename: string; pdfBlob: Blob }> {
   const logoBase64 = await loadLogoBase64();
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
@@ -882,7 +884,7 @@ export async function generarAvisoPrivacidadPDF(params: {
 
   const filename = `Aviso_Privacidad_${params.nombre_empleado.replace(/\s+/g, "_")}.pdf`;
   const pdfBlob = pdf.output("blob");
-  pdf.save(filename);
+  if (!params.preview) pdf.save(filename);
   return { filename, pdfBlob };
 }
 
