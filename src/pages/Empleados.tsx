@@ -759,9 +759,9 @@ const Empleados = () => {
         fecha: new Date().toLocaleDateString("es-MX", { timeZone: "America/Mexico_City", day: "numeric", month: "long", year: "numeric" }),
         preview: true,
       });
-      const reader = new FileReader();
-      reader.onload = () => setPdfPreviewUrl(reader.result as string);
-      reader.readAsDataURL(result.pdfBlob);
+      const url = URL.createObjectURL(result.pdfBlob);
+      window.open(url, '_blank');
+      toast({ title: "Aviso generado", description: `PDF abierto en nueva pestaña` });
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
