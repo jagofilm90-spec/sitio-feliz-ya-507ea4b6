@@ -604,7 +604,9 @@ const Empleados = () => {
           description: "El empleado se actualizó correctamente",
         });
       } else {
-        const { data: newEmp, error } = await supabase.from("empleados").insert([payload]).select("id").single();
+        // Strip user_id for new employees — access is granted separately
+        const { user_id: _uid, ...createPayload } = payload;
+        const { data: newEmp, error } = await supabase.from("empleados").insert([{ ...createPayload, user_id: null }]).select("id").single();
         if (error) throw error;
 
         toast({
