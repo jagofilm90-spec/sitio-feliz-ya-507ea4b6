@@ -185,6 +185,11 @@ export function ExpedienteDigital({ empleadoId, isAdmin }: ExpedienteDigitalProp
     if (base.includes("contrato_firmado")) return "Contrato Individual (firmado)";
     if (base.includes("aviso_privacidad")) return "Aviso de Privacidad (firmado)";
     if (base.includes("addendum")) return "Addendum de sueldo";
+    if (base.startsWith("acta_")) {
+      const tipo = base.split("_")[1];
+      const tipos: Record<string, string> = { falta: "Acta — Falta", retardo: "Acta — Retardo", conducta: "Acta — Conducta", otro: "Acta — Otro" };
+      return tipos[tipo] || "Acta administrativa";
+    }
     if (base.startsWith("ine_")) return "INE";
     if (base.startsWith("curp_")) return "CURP";
     if (base.startsWith("rfc_")) return "RFC";

@@ -38,6 +38,7 @@ export function ActasAdministrativas({ empleadoId, empleadoNombre, empleadoPuest
       headers: { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Authorization": `Bearer ${session.access_token}` },
     });
     const data = await res.json();
+    console.log("ACTAS: response", res.status, data);
     if (Array.isArray(data)) setActas(data);
   };
 
