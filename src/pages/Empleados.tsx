@@ -194,7 +194,7 @@ const Empleados = () => {
   const [cardEmpleado, setCardEmpleado] = useState<Empleado | null>(null);
   const [volverATarjeta, setVolverATarjeta] = useState<Empleado | null>(null);
   const [addendumEmpleado, setAddendumEmpleado] = useState<Empleado | null>(null);
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  
   const [addendumHistorial, setAddendumHistorial] = useState<any>(null);
   const [historialSueldo, setHistorialSueldo] = useState<Array<{ id: string; sueldo_anterior: number | null; sueldo_nuevo: number | null; premio_anterior: number | null; premio_nuevo: number | null; fecha_cambio: string }>>([]);
   const [activeTab, setActiveTab] = useState<string>("todos");
@@ -744,9 +744,9 @@ const Empleados = () => {
         },
         preview: true,
       });
-      const reader = new FileReader();
-      reader.onload = () => setPdfPreviewUrl(reader.result as string);
-      reader.readAsDataURL(result.pdfBlob);
+      const url = URL.createObjectURL(result.pdfBlob);
+      window.open(url, '_blank');
+      toast({ title: "Contrato generado", description: `PDF abierto en nueva pestaña` });
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
@@ -759,9 +759,9 @@ const Empleados = () => {
         fecha: new Date().toLocaleDateString("es-MX", { timeZone: "America/Mexico_City", day: "numeric", month: "long", year: "numeric" }),
         preview: true,
       });
-      const reader = new FileReader();
-      reader.onload = () => setPdfPreviewUrl(reader.result as string);
-      reader.readAsDataURL(result.pdfBlob);
+      const url = URL.createObjectURL(result.pdfBlob);
+      window.open(url, '_blank');
+      toast({ title: "Aviso generado", description: `PDF abierto en nueva pestaña` });
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
@@ -2938,20 +2938,6 @@ const Empleados = () => {
         />
       )}
 
-      {pdfPreviewUrl && (
-        <Dialog open={!!pdfPreviewUrl} onOpenChange={o => { if (!o) setPdfPreviewUrl(null); }}>
-          <DialogContent className="max-w-4xl max-h-[90vh] p-0">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="font-medium">Vista previa del documento</h3>
-              <Button variant="outline" size="sm" onClick={() => {
-                const a = document.createElement("a"); a.href = pdfPreviewUrl!; a.download = "documento.pdf";
-                document.body.appendChild(a); a.click(); document.body.removeChild(a);
-              }}>Descargar</Button>
-            </div>
-            <embed src={pdfPreviewUrl} type="application/pdf" className="w-full" style={{ height: "80vh" }} />
-          </DialogContent>
-        </Dialog>
-      )}
 
       {cardEmpleado && (
         <EmpleadoCard
