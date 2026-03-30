@@ -2271,10 +2271,10 @@ const Empleados = () => {
                                     <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleFirmarContrato(empleado)}>
                                       {empleado.contrato_firmado_fecha ? "Volver a firmar" : "Firmar Contrato"}
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem disabled={!empleado.contrato_firmado_fecha} onClick={() => handleGenerarContrato(empleado)}>
+                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarContrato(empleado)}>
                                       Contrato (vista previa)
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem disabled={!empleado.contrato_firmado_fecha} onClick={() => handleGenerarAviso(empleado)}>
+                                    <DropdownMenuItem onClick={() => handleGenerarAviso(empleado)}>
                                       Aviso de Privacidad (vista previa)
                                     </DropdownMenuItem>
                                     <DropdownMenuItem disabled={!empleado.contrato_firmado_fecha} onClick={() => handleGenerarTodos(empleado)}>
@@ -2544,10 +2544,10 @@ const Empleados = () => {
                                     <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleFirmarContrato(empleado)}>
                                       {empleado.contrato_firmado_fecha ? "Volver a firmar" : "Firmar Contrato"}
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem disabled={!empleado.contrato_firmado_fecha} onClick={() => handleGenerarContrato(empleado)}>
+                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarContrato(empleado)}>
                                       Contrato (vista previa)
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem disabled={!empleado.contrato_firmado_fecha} onClick={() => handleGenerarAviso(empleado)}>
+                                    <DropdownMenuItem onClick={() => handleGenerarAviso(empleado)}>
                                       Aviso de Privacidad (vista previa)
                                     </DropdownMenuItem>
                                     <DropdownMenuItem disabled={!empleado.contrato_firmado_fecha} onClick={() => handleGenerarTodos(empleado)}>
@@ -2816,10 +2816,10 @@ const Empleados = () => {
                                     <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleFirmarContrato(empleado)}>
                                       {empleado.contrato_firmado_fecha ? "Volver a firmar" : "Firmar Contrato"}
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem disabled={!empleado.contrato_firmado_fecha} onClick={() => handleGenerarContrato(empleado)}>
+                                    <DropdownMenuItem disabled={!empleado.rfc || !empleado.curp || !empleado.sueldo_bruto} onClick={() => handleGenerarContrato(empleado)}>
                                       Contrato (vista previa)
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem disabled={!empleado.contrato_firmado_fecha} onClick={() => handleGenerarAviso(empleado)}>
+                                    <DropdownMenuItem onClick={() => handleGenerarAviso(empleado)}>
                                       Aviso de Privacidad (vista previa)
                                     </DropdownMenuItem>
                                     <DropdownMenuItem disabled={!empleado.contrato_firmado_fecha} onClick={() => handleGenerarTodos(empleado)}>
