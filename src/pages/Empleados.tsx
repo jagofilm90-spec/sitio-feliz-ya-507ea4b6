@@ -759,7 +759,9 @@ const Empleados = () => {
         fecha: new Date().toLocaleDateString("es-MX", { timeZone: "America/Mexico_City", day: "numeric", month: "long", year: "numeric" }),
         preview: true,
       });
-      setPdfPreviewUrl(URL.createObjectURL(result.pdfBlob));
+      const reader = new FileReader();
+      reader.onload = () => setPdfPreviewUrl(reader.result as string);
+      reader.readAsDataURL(result.pdfBlob);
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
