@@ -12,6 +12,7 @@ import { FirmaAddendumFlow } from "@/components/empleados/FirmaAddendumFlow";
 import { ActasAdministrativas } from "@/components/empleados/ActasAdministrativas";
 import { ProcesoBaja } from "@/components/empleados/ProcesoBaja";
 import { VacacionesEmpleado } from "@/components/empleados/VacacionesEmpleado";
+import { PdfPreviewDialog } from "@/components/empleados/PdfPreviewDialog";
 import { generarContratoPDF, generarAvisoPrivacidadPDF, hoyMexico } from "@/lib/generarContratoPDF";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Layout from "@/components/Layout";
@@ -194,6 +195,11 @@ const Empleados = () => {
   const [cardEmpleado, setCardEmpleado] = useState<Empleado | null>(null);
   const [volverATarjeta, setVolverATarjeta] = useState<Empleado | null>(null);
   const [addendumEmpleado, setAddendumEmpleado] = useState<Empleado | null>(null);
+  const [pdfPreviewData, setPdfPreviewData] = useState<{
+    blob: Blob;
+    filename: string;
+    title: string;
+  } | null>(null);
   
   const [addendumHistorial, setAddendumHistorial] = useState<any>(null);
   const [historialSueldo, setHistorialSueldo] = useState<Array<{ id: string; sueldo_anterior: number | null; sueldo_nuevo: number | null; premio_anterior: number | null; premio_nuevo: number | null; fecha_cambio: string }>>([]);
@@ -242,7 +248,7 @@ const Empleados = () => {
   const [crearUsuario, setCrearUsuario] = useState(false);
   const [showDarAcceso, setShowDarAcceso] = useState(false);
   const [accesoEmpleado, setAccesoEmpleado] = useState<Empleado | null>(null);
-  const [usuarioFormData, setUsuarioFormData] = useState({
+  const [usuarioFormData] = useState({
     password: "",
     role: "",
   });
@@ -744,9 +750,11 @@ const Empleados = () => {
         },
         preview: true,
       });
-      const url = URL.createObjectURL(result.pdfBlob);
-      window.open(url, '_blank');
-      toast({ title: "Contrato generado", description: `PDF abierto en nueva pestaña` });
+      setPdfPreviewData({
+        blob: result.pdfBlob,
+        filename: result.filename,
+        title: `Contrato — ${empleado.nombre_completo}`,
+      });
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
@@ -759,9 +767,11 @@ const Empleados = () => {
         fecha: new Date().toLocaleDateString("es-MX", { timeZone: "America/Mexico_City", day: "numeric", month: "long", year: "numeric" }),
         preview: true,
       });
-      const url = URL.createObjectURL(result.pdfBlob);
-      window.open(url, '_blank');
-      toast({ title: "Aviso generado", description: `PDF abierto en nueva pestaña` });
+      setPdfPreviewData({
+        blob: result.pdfBlob,
+        filename: result.filename,
+        title: `Aviso de privacidad — ${empleado.nombre_completo}`,
+      });
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
@@ -2899,6 +2909,19 @@ const Empleados = () => {
             }}
           />
         )}
+
+        {pdfPreviewData && (
+          <PdfPreviewDialog
+            open={!!pdfPreviewData}
+            onOpenChange={(open) => {
+              if (!open) setPdfPreviewData(null);
+            }}
+            blob={pdfPreviewData.blob}
+            filename={pdfPreviewData.filename}
+            title={pdfPreviewData.title}
+          />
+        )}
+
       </div>
       {accesoEmpleado && (
         <DarAccesoSistemaDialog
@@ -2937,7 +2960,6 @@ const Empleados = () => {
           }}
         />
       )}
-
 
       {cardEmpleado && (
         <EmpleadoCard
