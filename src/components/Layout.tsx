@@ -461,9 +461,9 @@ const Layout = ({ children }: LayoutProps) => {
                 Mi Tarjeta
               </Button>
             </Link>
-            <span className="text-sm text-muted-foreground hidden lg:inline max-w-[150px] truncate">
+            <Link to="/mi-perfil" className="text-sm text-muted-foreground hidden lg:inline max-w-[150px] truncate hover:text-foreground hover:underline cursor-pointer">
               {user?.email}
-            </span>
+            </Link>
             <Button variant="outline" size="icon" className="sm:hidden" onClick={handleLogout}>
               <LogOut className="h-4 w-4" />
             </Button>
