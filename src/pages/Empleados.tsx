@@ -2938,20 +2938,6 @@ const Empleados = () => {
         />
       )}
 
-      {pdfPreviewUrl && (
-        <Dialog open={!!pdfPreviewUrl} onOpenChange={o => { if (!o) setPdfPreviewUrl(null); }}>
-          <DialogContent className="max-w-4xl max-h-[90vh] p-0">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="font-medium">Vista previa del documento</h3>
-              <Button variant="outline" size="sm" onClick={() => {
-                const a = document.createElement("a"); a.href = pdfPreviewUrl!; a.download = "documento.pdf";
-                document.body.appendChild(a); a.click(); document.body.removeChild(a);
-              }}>Descargar</Button>
-            </div>
-            <embed src={pdfPreviewUrl} type="application/pdf" className="w-full" style={{ height: "80vh" }} />
-          </DialogContent>
-        </Dialog>
-      )}
 
       {cardEmpleado && (
         <EmpleadoCard
