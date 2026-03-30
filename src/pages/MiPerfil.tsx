@@ -50,6 +50,11 @@ export default function MiPerfil() {
           // Try employee photo
           const { data: blob } = await supabase.storage.from("empleados-documentos").download(`${emps[0].id}/foto.jpg`);
           if (blob) setFotoUrl(URL.createObjectURL(blob));
+          else if (emps[0].foto_url) setFotoUrl(emps[0].foto_url);
+        } else {
+          // No employee — try profile photo
+          const { data: blob } = await supabase.storage.from("empleados-documentos").download(`profiles/${u.id}/foto.jpg`);
+          if (blob) setFotoUrl(URL.createObjectURL(blob));
         }
       }
     };

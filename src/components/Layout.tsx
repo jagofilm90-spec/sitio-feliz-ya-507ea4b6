@@ -64,6 +64,7 @@ const CumpleanosBannerLazy = () => <Suspense fallback={null}><CumpleanosBannerCo
 
 const Layout = ({ children }: LayoutProps) => {
   const [user, setUser] = useState<any>(null);
+  const [userFoto, setUserFoto] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [emailMenuOpen, setEmailMenuOpen] = useState(false);
@@ -84,6 +85,21 @@ const Layout = ({ children }: LayoutProps) => {
       if (session) {
         setUser(session.user);
         setLoading(false);
+        // Load user photo
+        try {
+          const empRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados?user_id=eq.${session.user.id}&select=id,foto_url&limit=1`, {
+            headers: { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Authorization": `Bearer ${session.access_token}` },
+          });
+          const emps = await empRes.json();
+          if (Array.isArray(emps) && emps[0]) {
+            const { data: blob } = await supabase.storage.from("empleados-documentos").download(`${emps[0].id}/foto.jpg`);
+            if (blob) setUserFoto(URL.createObjectURL(blob));
+            else if (emps[0].foto_url) setUserFoto(emps[0].foto_url);
+          } else {
+            const { data: blob } = await supabase.storage.from("empleados-documentos").download(`profiles/${session.user.id}/foto.jpg`);
+            if (blob) setUserFoto(URL.createObjectURL(blob));
+          }
+        } catch {}
       } else if (!refreshAttempted) {
         refreshAttempted = true;
         const { data: refreshed } = await supabase.auth.refreshSession();
@@ -461,8 +477,15 @@ const Layout = ({ children }: LayoutProps) => {
                 Mi Tarjeta
               </Button>
             </Link>
-            <Link to="/mi-perfil" className="text-sm text-muted-foreground hidden lg:inline max-w-[150px] truncate hover:text-foreground hover:underline cursor-pointer">
-              {user?.email}
+            <Link to="/mi-perfil" className="hidden lg:flex items-center gap-2 hover:opacity-80">
+              {userFoto ? (
+                <img src={userFoto} className="w-7 h-7 rounded-full object-cover" />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
+                  {user?.email?.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <span className="text-sm text-muted-foreground max-w-[130px] truncate">{user?.email}</span>
             </Link>
             <Button variant="outline" size="icon" className="sm:hidden" onClick={handleLogout}>
               <LogOut className="h-4 w-4" />
