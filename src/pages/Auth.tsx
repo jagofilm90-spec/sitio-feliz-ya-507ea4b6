@@ -66,19 +66,15 @@ const Auth = () => {
     setLoading(true);
     setUserFoto(null); setUserName(""); setUserPuesto("");
     try {
-      const { data: result } = await supabase.rpc("lookup_employee_by_email", { p_email: email });
-      if (result) {
-        const info = result as { nombre: string; puesto: string | null; empleado_id: string | null; foto_url: string | null };
-        setUserName(info.nombre || email.split("@")[0]);
-        setUserPuesto(info.puesto || "");
-        if (info.empleado_id) {
-          const { data: blob } = await supabase.storage.from("empleados-documentos").download(`${info.empleado_id}/foto.jpg`);
-          if (blob) setUserFoto(URL.createObjectURL(blob));
-          else if (info.foto_url) setUserFoto(info.foto_url);
-        }
-      } else {
-        setUserName(email.split("@")[0]);
-      }
+      const { data, error } = await supabase.functions.invoke("lookup-login-user", {
+        body: { email },
+      });
+      if (error) throw error;
+
+      const info = data as { nombre?: string; puesto?: string | null; foto_url?: string | null } | null;
+      setUserName(info?.nombre || email.split("@")[0]);
+      setUserPuesto(info?.puesto || "");
+      setUserFoto(info?.foto_url || null);
     } catch {
       setUserName(email.split("@")[0]);
     }
