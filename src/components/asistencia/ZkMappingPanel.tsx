@@ -43,12 +43,16 @@ export function ZkMappingPanel() {
       .select("zk_user_id, dispositivo, empleado_id, created_at")
       .order("created_at", { ascending: false });
 
-    // Get all active employees
-    const { data: empData } = await (supabase as any)
-      .from("empleados")
-      .select("id, nombre_completo, puesto, zk_id, zk_dispositivo")
-      .eq("activo", true)
-      .order("nombre_completo");
+    // Get all active employees via direct fetch (bypass schema cache for zk_dispositivo)
+    const { data: { session } } = await supabase.auth.getSession();
+    let empData: any[] | null = null;
+    if (session) {
+      const empRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados?activo=eq.true&select=id,nombre_completo,puesto,zk_id,zk_dispositivo&order=nombre_completo`, {
+        headers: { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Authorization": `Bearer ${session.access_token}` },
+      });
+      empData = await empRes.json();
+      if (!Array.isArray(empData)) empData = null;
+    }
 
     const empleadosList = (empData || []) as Empleado[];
     setEmpleados(empleadosList);
@@ -101,7 +105,17 @@ export function ZkMappingPanel() {
     // Pre-populate selections from existing mappings
     const sels: Record<string, string> = {};
     for (const emp of empleadosList) {
-      if (emp.zk_id) sels[`${emp.zk_id}_${emp.zk_dispositivo || "oficina"}`] = emp.id;
+      // Compatible with old data (no zk_dispositivo) — match any dispositivo
+      if (emp.zk_id) {
+        if (emp.zk_dispositivo) {
+          sels[`${emp.zk_id}_${emp.zk_dispositivo}`] = emp.id;
+        } else {
+          // Old data without dispositivo — try to match any existing key
+          for (const mapping of sorted) {
+            if (mapping.zk_user_id === emp.zk_id) sels[mapping.key] = emp.id;
+          }
+        }
+      }
     }
     setSelections(sels);
 
@@ -116,12 +130,14 @@ export function ZkMappingPanel() {
 
     setSaving(mapping.key);
     try {
-      const { error } = await (supabase as any)
-        .from("empleados")
-        .update({ zk_id: mapping.zk_user_id, zk_dispositivo: mapping.dispositivo })
-        .eq("id", empleadoId);
-
-      if (error) throw error;
+      const { data: { session: s } } = await supabase.auth.getSession();
+      if (!s) throw new Error("Sin sesión");
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados?id=eq.${empleadoId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Authorization": `Bearer ${s.access_token}`, "Prefer": "return=minimal" },
+        body: JSON.stringify({ zk_id: mapping.zk_user_id, zk_dispositivo: mapping.dispositivo }),
+      });
+      if (!res.ok) throw new Error(await res.text());
 
       toast({ title: "Vinculado", description: `ZK ID ${mapping.zk_user_id} (${mapping.dispositivo}) vinculado` });
       await loadData();
@@ -136,11 +152,14 @@ export function ZkMappingPanel() {
     if (!confirm("¿Desvincular este empleado del checador?")) return;
     setSaving(zkId);
     try {
-      const { error } = await (supabase as any)
-        .from("empleados")
-        .update({ zk_id: null, zk_dispositivo: null })
-        .eq("id", empId);
-      if (error) throw error;
+      const { data: { session: s } } = await supabase.auth.getSession();
+      if (!s) throw new Error("Sin sesión");
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/empleados?id=eq.${empId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Authorization": `Bearer ${s.access_token}`, "Prefer": "return=minimal" },
+        body: JSON.stringify({ zk_id: null, zk_dispositivo: null }),
+      });
+      if (!res.ok) throw new Error(await res.text());
       toast({ title: "Desvinculado" });
       await loadData();
     } catch (err: any) {
@@ -190,7 +209,7 @@ export function ZkMappingPanel() {
             </TableHeader>
             <TableBody>
               {mappings.map((m) => {
-                const linkedEmp = empleados.find(e => e.zk_id === m.zk_user_id && (e.zk_dispositivo || "oficina") === m.dispositivo);
+                const linkedEmp = empleados.find(e => e.zk_id === m.zk_user_id && (e.zk_dispositivo === m.dispositivo || !e.zk_dispositivo));
                 const isLinked = !!linkedEmp;
                 return (
                   <TableRow key={m.key}>
