@@ -23,6 +23,7 @@ interface Empleado {
   nombre_completo: string;
   puesto: string;
   zk_id: string | null;
+  zk_dispositivo: string | null;
 }
 
 export function ZkMappingPanel() {
@@ -45,7 +46,7 @@ export function ZkMappingPanel() {
     // Get all active employees
     const { data: empData } = await (supabase as any)
       .from("empleados")
-      .select("id, nombre_completo, puesto, zk_id")
+      .select("id, nombre_completo, puesto, zk_id, zk_dispositivo")
       .eq("activo", true)
       .order("nombre_completo");
 
@@ -73,14 +74,15 @@ export function ZkMappingPanel() {
       zkMap.get(key)!.count++;
     }
 
-    // Also check empleados with zk_id set (add as "oficina" default)
+    // Also check empleados with zk_id set
     for (const emp of empleadosList) {
       if (emp.zk_id) {
-        const key = `${emp.zk_id}_oficina`;
+        const disp = emp.zk_dispositivo || "oficina";
+        const key = `${emp.zk_id}_${disp}`;
         if (!zkMap.has(key)) {
           zkMap.set(key, {
             zk_user_id: emp.zk_id,
-            dispositivo: "oficina",
+            dispositivo: disp,
             key,
             count: 0,
             last_seen: "",
@@ -96,10 +98,10 @@ export function ZkMappingPanel() {
     );
     setMappings(sorted);
 
-    // Pre-populate selections from existing mappings (use key)
+    // Pre-populate selections from existing mappings
     const sels: Record<string, string> = {};
     for (const emp of empleadosList) {
-      if (emp.zk_id) sels[`${emp.zk_id}_oficina`] = emp.id;
+      if (emp.zk_id) sels[`${emp.zk_id}_${emp.zk_dispositivo || "oficina"}`] = emp.id;
     }
     setSelections(sels);
 
@@ -108,21 +110,38 @@ export function ZkMappingPanel() {
 
   useEffect(() => { loadData(); }, []);
 
-  const handleSave = async (zkUserId: string) => {
-    const empleadoId = selections[zkUserId];
+  const handleSave = async (mapping: ZkMapping) => {
+    const empleadoId = selections[mapping.key];
     if (!empleadoId) return;
 
-    setSaving(zkUserId);
+    setSaving(mapping.key);
     try {
-      // Update empleado's zk_id
       const { error } = await (supabase as any)
         .from("empleados")
-        .update({ zk_id: zkUserId })
+        .update({ zk_id: mapping.zk_user_id, zk_dispositivo: mapping.dispositivo })
         .eq("id", empleadoId);
 
       if (error) throw error;
 
-      toast({ title: "Vinculado", description: `ZK ID ${zkUserId} vinculado exitosamente` });
+      toast({ title: "Vinculado", description: `ZK ID ${mapping.zk_user_id} (${mapping.dispositivo}) vinculado` });
+      await loadData();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const handleUnlink = async (empId: string, zkId: string) => {
+    if (!confirm("¿Desvincular este empleado del checador?")) return;
+    setSaving(zkId);
+    try {
+      const { error } = await (supabase as any)
+        .from("empleados")
+        .update({ zk_id: null, zk_dispositivo: null })
+        .eq("id", empId);
+      if (error) throw error;
+      toast({ title: "Desvinculado" });
       await loadData();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -171,7 +190,8 @@ export function ZkMappingPanel() {
             </TableHeader>
             <TableBody>
               {mappings.map((m) => {
-                const isLinked = !!empleados.find(e => e.zk_id === m.zk_user_id);
+                const linkedEmp = empleados.find(e => e.zk_id === m.zk_user_id && (e.zk_dispositivo || "oficina") === m.dispositivo);
+                const isLinked = !!linkedEmp;
                 return (
                   <TableRow key={m.key}>
                     <TableCell className="font-mono font-bold text-lg">{m.zk_user_id}</TableCell>
@@ -183,7 +203,10 @@ export function ZkMappingPanel() {
                     <TableCell>{m.count}</TableCell>
                     <TableCell>
                       {isLinked ? (
-                        <span className="text-sm font-medium">{m.empleado_nombre}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{linkedEmp?.nombre_completo || m.empleado_nombre}</span>
+                          <button className="text-xs text-destructive hover:underline" onClick={() => handleUnlink(linkedEmp!.id, m.zk_user_id)}>Desvincular</button>
+                        </div>
                       ) : (
                         <Select
                           value={selections[m.key] || ""}
@@ -221,10 +244,10 @@ export function ZkMappingPanel() {
                         <Button
                           size="sm"
                           className="h-7 text-xs"
-                          onClick={() => handleSave(m.zk_user_id)}
-                          disabled={saving === m.zk_user_id}
+                          onClick={() => handleSave(m)}
+                          disabled={saving === m.key}
                         >
-                          {saving === m.zk_user_id ? (
+                          {saving === m.key ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
                           ) : "Guardar"}
                         </Button>
