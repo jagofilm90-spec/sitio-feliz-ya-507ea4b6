@@ -1533,7 +1533,10 @@ const Empleados = () => {
                       value={formData.puesto}
                       onValueChange={(value) => {
                         const periodoPago = (value === "Chofer" || value === "Ayudante de Chofer") ? "semanal" : "quincenal";
-                        setFormData({ ...formData, puesto: value, periodo_pago: periodoPago } as any);
+                        const diasLab = (value === "Almacenista" || value === "Chofer" || value === "Ayudante de Chofer" || value === "Gerente de Almacén")
+                          ? ["lun","mar","mie","jue","vie","sab"]
+                          : ["lun","mar","mie","jue","vie"];
+                        setFormData({ ...formData, puesto: value, periodo_pago: periodoPago, dias_laborales: diasLab } as any);
                       }}
                     >
                       <SelectTrigger>
