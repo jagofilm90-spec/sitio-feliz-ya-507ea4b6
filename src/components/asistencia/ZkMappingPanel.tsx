@@ -105,6 +105,14 @@ export function ZkMappingPanel() {
     setSaving(key);
     try {
       const h = await getHeaders();
+      const mapeo = getMapeo(zkId, disp);
+      // Clear empleado's zk_id
+      if (mapeo) {
+        await fetch(`${API}/rest/v1/empleados?id=eq.${mapeo.empleado_id}`, {
+          method: "PATCH", headers: { ...h, "Prefer": "return=minimal" },
+          body: JSON.stringify({ zk_id: null }),
+        });
+      }
       await fetch(`${API}/rest/v1/zk_mapeo?zk_user_id=eq.${zkId}&dispositivo=eq.${disp}`, {
         method: "DELETE", headers: h,
       });
