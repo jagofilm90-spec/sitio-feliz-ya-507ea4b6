@@ -1679,6 +1679,37 @@ const Empleados = () => {
                   </div>
                 )}
 
+                {/* Días laborales */}
+                <div>
+                  <Label className="mb-2 block">Días laborales</Label>
+                  <div className="flex flex-wrap gap-3">
+                    {[
+                      { key: "lun", label: "Lun" },
+                      { key: "mar", label: "Mar" },
+                      { key: "mie", label: "Mie" },
+                      { key: "jue", label: "Jue" },
+                      { key: "vie", label: "Vie" },
+                      { key: "sab", label: "Sáb" },
+                      { key: "dom", label: "Dom" },
+                    ].map((d) => (
+                      <label key={d.key} className="flex items-center gap-1.5 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={formData.dias_laborales.includes(d.key)}
+                          onChange={(e) => {
+                            const dias = e.target.checked
+                              ? [...formData.dias_laborales, d.key]
+                              : formData.dias_laborales.filter((x: string) => x !== d.key);
+                            setFormData({ ...formData, dias_laborales: dias } as any);
+                          }}
+                          className="rounded border-primary"
+                        />
+                        {d.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Datos adicionales — colapsables (solo opcionales) */}
                 <details className="border rounded-lg">
                   <summary className="px-4 py-2.5 cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
