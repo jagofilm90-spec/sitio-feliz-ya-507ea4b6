@@ -41,6 +41,7 @@ import {
   DollarSign,
   Settings,
   UserCog,
+  Clock,
   LucideIcon,
 } from "lucide-react";
 
