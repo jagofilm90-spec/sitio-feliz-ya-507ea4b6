@@ -83,7 +83,7 @@ export function ReporteAsistenciaMensual() {
       const mappedIds = new Set((mapeoData || []).map((m: any) => m.empleado_id));
       const filtered = (empData || []).filter((e: any) => e.zk_id || mappedIds.has(e.id));
 
-      setEmpleados((empData || []) as Empleado[]);
+      setEmpleados((filtered || []) as Empleado[]);
       setRegistros((asistData || []) as AsistenciaRow[]);
       setLoading(false);
     };
