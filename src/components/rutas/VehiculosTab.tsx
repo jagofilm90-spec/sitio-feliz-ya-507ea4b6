@@ -878,61 +878,69 @@ const VehiculosTab = () => {
                 </div>
               </div>
 
-              {/* Basic Info */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Datos básicos */}
+              <div className="space-y-2">
+                <Label htmlFor="nombre" className="text-base font-bold"># Económico *</Label>
+                <Input
+                  id="nombre"
+                  value={formData.nombre}
+                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                  placeholder="Ej: 27, 50"
+                  required autoComplete="off"
+                  className="text-2xl font-black h-14 text-center"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="nombre">Nombre / No. Económico *</Label>
-                  <Input
-                    id="nombre"
-                    value={formData.nombre}
-                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                    placeholder="Ej: Unidad 01"
-                    required
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tipo">Tipo *</Label>
-                  <Select
-                    value={formData.tipo}
-                    onValueChange={(value) => setFormData({ ...formData, tipo: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Label>Tipo *</Label>
+                  <Select value={formData.tipo} onValueChange={(v) => setFormData({ ...formData, tipo: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="camioneta">Camioneta</SelectItem>
-                      <SelectItem value="urvan">Urvan</SelectItem>
-                      <SelectItem value="rabon">Rabón</SelectItem>
                       <SelectItem value="torton">Tortón</SelectItem>
+                      <SelectItem value="rabon">Rabón</SelectItem>
+                      <SelectItem value="mini_rabon">Mini Rabón</SelectItem>
+                      <SelectItem value="urvan">Urvan</SelectItem>
+                      <SelectItem value="camion">Camión</SelectItem>
                       <SelectItem value="trailer">Tráiler</SelectItem>
+                      <SelectItem value="otro">Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Combustible</Label>
+                  <Select value={formData.tipo_combustible} onValueChange={(v) => setFormData({ ...formData, tipo_combustible: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="diesel">Diésel</SelectItem>
+                      <SelectItem value="gasolina">Gasolina</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Chofer</Label>
+                  <Select value={formData.chofer_asignado_id} onValueChange={(v) => setFormData({ ...formData, chofer_asignado_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Sin asignar</SelectItem>
+                      {choferes.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre_completo}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="placa">Placa</Label>
-                  <Input
-                    id="placa"
-                    value={formData.placa}
-                    onChange={(e) => setFormData({ ...formData, placa: e.target.value })}
-                    placeholder="ABC-123"
-                    autoComplete="off"
-                  />
+              <details className="border rounded-md p-3">
+                <summary className="text-sm font-medium cursor-pointer text-muted-foreground">Datos del vehículo (opcionales)</summary>
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div className="space-y-1"><Label className="text-xs">Marca</Label><Input value={formData.marca} onChange={(e) => setFormData({ ...formData, marca: e.target.value })} placeholder="Ford, Isuzu..." autoComplete="off" /></div>
+                  <div className="space-y-1"><Label className="text-xs">Modelo</Label><Input value={formData.modelo} onChange={(e) => setFormData({ ...formData, modelo: e.target.value })} placeholder="F-350, NPR..." autoComplete="off" /></div>
+                  <div className="space-y-1"><Label className="text-xs">Año</Label><Input value={formData.anio} onChange={(e) => setFormData({ ...formData, anio: e.target.value })} placeholder="2024" autoComplete="off" /></div>
+                  <div className="space-y-1"><Label className="text-xs">Placas</Label><Input value={formData.placa} onChange={(e) => setFormData({ ...formData, placa: e.target.value })} placeholder="ABC-123" autoComplete="off" /></div>
+                  <div className="space-y-1"><Label className="text-xs">Color</Label><Input value={formData.color} onChange={(e) => setFormData({ ...formData, color: e.target.value })} placeholder="Blanco" autoComplete="off" /></div>
+                  <div className="space-y-1"><Label className="text-xs">No. Serie (VIN)</Label><Input value={formData.numero_serie} onChange={(e) => setFormData({ ...formData, numero_serie: e.target.value })} placeholder="17 caracteres" autoComplete="off" /></div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="numero_serie">Serie Vehicular (NIV)</Label>
-                  <Input
-                    id="numero_serie"
-                    value={formData.numero_serie}
-                    onChange={(e) => setFormData({ ...formData, numero_serie: e.target.value })}
-                    placeholder="17 caracteres"
-                    autoComplete="off"
-                  />
-                </div>
-              </div>
+              </details>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
@@ -1533,29 +1541,26 @@ const VehiculosTab = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nombre</TableHead>
+                <TableHead># Económico</TableHead>
                 <TableHead>Tipo</TableHead>
-                <TableHead>Placa</TableHead>
+                <TableHead>Combustible</TableHead>
+                <TableHead>Placas</TableHead>
                 <TableHead>Chofer Asignado</TableHead>
-                <TableHead>Marca/Modelo</TableHead>
-                <TableHead>Local (kg)</TableHead>
-                <TableHead>Foránea (kg)</TableHead>
-                <TableHead>Tarjeta Circ.</TableHead>
-                <TableHead>Póliza Seguro</TableHead>
                 <TableHead>Estado</TableHead>
+                <TableHead>Docs</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center">
+                  <TableCell colSpan={8} className="text-center">
                     Cargando...
                   </TableCell>
                 </TableRow>
               ) : vehiculos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center">
+                  <TableCell colSpan={8} className="text-center">
                     <div className="py-8 flex flex-col items-center gap-2">
                       <Truck className="h-8 w-8 text-muted-foreground" />
                       <p>No hay vehículos registrados</p>
@@ -1568,29 +1573,30 @@ const VehiculosTab = () => {
               ) : (
                 vehiculos.map((vehiculo) => (
                   <TableRow key={vehiculo.id}>
-                    <TableCell className="font-medium">{vehiculo.nombre}</TableCell>
+                    <TableCell>
+                      <span className="text-lg font-black">{vehiculo.nombre}</span>
+                      {vehiculo.marca && <span className="text-xs text-muted-foreground ml-2">{[vehiculo.marca, vehiculo.modelo].filter(Boolean).join(" ")}{vehiculo.anio ? ` ${vehiculo.anio}` : ""}</span>}
+                    </TableCell>
                     <TableCell className="capitalize">{vehiculo.tipo}</TableCell>
+                    <TableCell className="capitalize">{vehiculo.tipo_combustible || "—"}</TableCell>
                     <TableCell>{vehiculo.placa || "—"}</TableCell>
                     <TableCell>
                       {getChoferName(vehiculo.chofer_asignado_id) ? (
                         <div className="flex items-center gap-1.5">
                           <User className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span>{getChoferName(vehiculo.chofer_asignado_id)}</span>
+                          <span className="text-sm">{getChoferName(vehiculo.chofer_asignado_id)}</span>
                         </div>
                       ) : (
-                        <span className="text-muted-foreground text-sm">Sin asignar</span>
+                        <span className="text-muted-foreground text-xs">Sin asignar</span>
                       )}
                     </TableCell>
-                    <TableCell>
-                      {vehiculo.marca || vehiculo.modelo ? (
-                        <span>{[vehiculo.marca, vehiculo.modelo].filter(Boolean).join(" ")}</span>
-                      ) : "—"}
-                    </TableCell>
-                    <TableCell>{vehiculo.peso_maximo_local_kg.toLocaleString()}</TableCell>
-                    <TableCell>{vehiculo.peso_maximo_foraneo_kg.toLocaleString()}</TableCell>
-                    <TableCell>{getExpirationBadge(vehiculo.tarjeta_circulacion_vencimiento, "tarjeta", vehiculo.tipo_tarjeta_circulacion)}</TableCell>
-                    <TableCell>{getExpirationBadge(vehiculo.poliza_seguro_vencimiento, "póliza")}</TableCell>
                     <TableCell>{getStatusBadge(vehiculo.status)}</TableCell>
+                    <TableCell>
+                      {(() => {
+                        const docs = [vehiculo.tarjeta_circulacion_url, vehiculo.poliza_seguro_url, vehiculo.factura_url].filter(Boolean).length;
+                        return <Badge variant="outline" className={`text-xs ${docs >= 3 ? "bg-green-50 text-green-700 border-green-300" : docs >= 1 ? "bg-yellow-50 text-yellow-700 border-yellow-300" : "bg-red-50 text-red-700 border-red-300"}`}>{docs}/3</Badge>;
+                      })()}
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(vehiculo)}>
