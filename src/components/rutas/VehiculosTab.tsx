@@ -920,7 +920,7 @@ const VehiculosTab = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Chofer</Label>
-                  <Select value={formData.chofer_asignado_id} onValueChange={(v) => setFormData({ ...formData, chofer_asignado_id: v })}>
+                  <Select value={formData.chofer_asignado_id || "none"} onValueChange={(v) => setFormData({ ...formData, chofer_asignado_id: v === "none" ? "" : v })}>
                     <SelectTrigger><SelectValue placeholder="Sin asignar" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Sin asignar</SelectItem>
