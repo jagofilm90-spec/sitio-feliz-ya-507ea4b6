@@ -1,12 +1,12 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Clock, UserCheck, UserX } from "lucide-react";
-import { format, parseISO, differenceInMinutes } from "date-fns";
+import { Loader2, Clock, Users } from "lucide-react";
+import { format, parseISO, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { es } from "date-fns/locale";
 
 interface AsistenciaRow {
@@ -25,251 +25,222 @@ interface Empleado {
   puesto: string;
   activo: boolean;
   zk_id: string | null;
+  foto_url: string | null;
 }
 
-interface ResumenDia {
-  empleado_id: string;
-  nombre: string;
-  puesto: string;
-  fecha: string;
-  entrada: string | null;
-  salida: string | null;
-  horas: string | null;
-  retardo: boolean;
+function formatTime12(hora: string | null): string {
+  if (!hora) return "";
+  const [h, m] = hora.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
 
-const HORA_ENTRADA = 8 * 60; // 8:00 AM in minutes
-
-function timeToMinutes(time: string): number {
-  const [h, m] = time.split(":").map(Number);
-  return h * 60 + m;
-}
-
-function formatHoras(minutos: number): string {
-  const h = Math.floor(minutos / 60);
-  const m = minutos % 60;
-  return `${h}h ${m}m`;
+function getInitials(name: string): string {
+  return name.split(" ").slice(0, 2).map(n => n[0]).join("").toUpperCase();
 }
 
 export function AsistenciaView() {
   const [registros, setRegistros] = useState<AsistenciaRow[]>([]);
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fechaDesde, setFechaDesde] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    return d.toISOString().split("T")[0];
-  });
-  const [fechaHasta, setFechaHasta] = useState(() => new Date().toISOString().split("T")[0]);
-  const [filtroEmpleado, setFiltroEmpleado] = useState<string>("todos");
+  const [selectedEmpleado, setSelectedEmpleado] = useState<Empleado | null>(null);
+
+  const hoy = new Date().toISOString().split("T")[0];
 
   const loadData = async () => {
     setLoading(true);
 
-    const { data: empData } = await (supabase as any)
-      .from("empleados")
-      .select("id, nombre_completo, puesto, activo, zk_id")
-      .eq("activo", true)
-      .order("nombre_completo");
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const weekStartStr = weekStart.toISOString().split("T")[0];
+
+    const [{ data: empData }, { data: asistData }] = await Promise.all([
+      (supabase as any)
+        .from("empleados")
+        .select("id, nombre_completo, puesto, activo, zk_id, foto_url")
+        .eq("activo", true)
+        .order("nombre_completo"),
+      supabase
+        .from("asistencia")
+        .select("id, zk_user_id, empleado_id, fecha, hora, tipo, fecha_hora")
+        .gte("fecha", weekStartStr)
+        .lte("fecha", hoy)
+        .order("fecha", { ascending: false })
+        .order("hora", { ascending: true }),
+    ]);
 
     setEmpleados((empData || []) as Empleado[]);
-
-    const { data: asistData } = await supabase
-      .from("asistencia")
-      .select("id, zk_user_id, empleado_id, fecha, hora, tipo, fecha_hora")
-      .gte("fecha", fechaDesde)
-      .lte("fecha", fechaHasta)
-      .order("fecha", { ascending: false })
-      .order("hora", { ascending: true });
-
     setRegistros((asistData || []) as AsistenciaRow[]);
     setLoading(false);
   };
 
-  useEffect(() => { loadData(); }, [fechaDesde, fechaHasta]);
+  useEffect(() => { loadData(); }, []);
 
-  const empMap = useMemo(() => new Map(empleados.map(e => [e.id, e])), [empleados]);
-
-  // Build daily summaries
-  const resumen = useMemo(() => {
-    const byDay = new Map<string, AsistenciaRow[]>();
-
-    for (const r of registros) {
-      if (!r.empleado_id || !r.fecha) continue;
-      const key = `${r.empleado_id}|${r.fecha}`;
-      if (!byDay.has(key)) byDay.set(key, []);
-      byDay.get(key)!.push(r);
-    }
-
-    const rows: ResumenDia[] = [];
-    for (const [key, recs] of byDay) {
-      const [empId, fecha] = key.split("|");
-      const emp = empMap.get(empId);
-      if (!emp) continue;
-
-      // Sort by hora
-      const sorted = recs.sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
-      const entrada = sorted[0]?.hora || null;
-      const salida = sorted.length > 1 ? sorted[sorted.length - 1]?.hora || null : null;
-
-      let horas: string | null = null;
-      if (entrada && salida) {
-        const mins = timeToMinutes(salida) - timeToMinutes(entrada);
-        horas = mins > 0 ? formatHoras(mins) : null;
-      }
-
-      const retardo = entrada ? timeToMinutes(entrada) > HORA_ENTRADA : false;
-
-      rows.push({ empleado_id: empId, nombre: emp.nombre_completo, puesto: emp.puesto, fecha, entrada, salida, horas, retardo });
-    }
-
-    return rows.sort((a, b) => b.fecha.localeCompare(a.fecha) || a.nombre.localeCompare(b.nombre));
-  }, [registros, empMap]);
-
-  // Today's presence
-  const hoy = new Date().toISOString().split("T")[0];
+  // Map: empleado_id → first check-in time today
   const presentesHoy = useMemo(() => {
-    const ids = new Set<string>();
+    const map = new Map<string, string>();
     for (const r of registros) {
-      if (r.empleado_id && r.fecha === hoy) ids.add(r.empleado_id);
+      if (r.empleado_id && r.fecha === hoy && !map.has(r.empleado_id)) {
+        map.set(r.empleado_id, r.hora || "");
+      }
     }
-    return ids;
+    return map;
   }, [registros, hoy]);
 
-  const filtered = useMemo(() => {
-    if (filtroEmpleado === "todos") return resumen;
-    return resumen.filter(r => r.empleado_id === filtroEmpleado);
-  }, [resumen, filtroEmpleado]);
+  // Weekly history for selected employee
+  const historialSemana = useMemo(() => {
+    if (!selectedEmpleado) return [];
+    const now = new Date();
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+    const days = eachDayOfInterval({ start: weekStart, end: now > weekEnd ? weekEnd : now });
+
+    return days.map(day => {
+      const dateStr = day.toISOString().split("T")[0];
+      const dayRecords = registros
+        .filter(r => r.empleado_id === selectedEmpleado.id && r.fecha === dateStr)
+        .sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
+
+      const entrada = dayRecords[0]?.hora || null;
+      const salida = dayRecords.length > 1 ? dayRecords[dayRecords.length - 1]?.hora || null : null;
+
+      return { fecha: dateStr, dia: format(day, "EEEE", { locale: es }), entrada, salida };
+    });
+  }, [selectedEmpleado, registros]);
 
   const empleadosConZk = empleados.filter(e => e.zk_id);
+  const presenteCount = empleadosConZk.filter(e => presentesHoy.has(e.id)).length;
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      {/* Status badges */}
-      <div className="flex flex-wrap gap-2">
+      {/* Summary */}
+      <div className="flex items-center gap-3">
+        <Badge variant="secondary" className="text-sm px-3 py-1">
+          <Users className="h-4 w-4 mr-1.5" />
+          {presenteCount} de {empleadosConZk.length} presentes
+        </Badge>
+      </div>
+
+      {/* Employee Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
         {empleadosConZk.map(emp => {
-          const presente = presentesHoy.has(emp.id);
+          const horaEntrada = presentesHoy.get(emp.id);
+          const presente = horaEntrada !== undefined;
+
           return (
-            <Badge
+            <Card
               key={emp.id}
-              className={presente
-                ? "bg-green-500/10 text-green-700 border-green-300"
-                : "bg-red-500/10 text-red-700 border-red-300"
-              }
+              className={`cursor-pointer transition-all hover:shadow-md ${
+                presente
+                  ? "border-green-300 bg-green-50 dark:bg-green-950/20 dark:border-green-800"
+                  : "border-border bg-muted/30"
+              }`}
+              onClick={() => setSelectedEmpleado(emp)}
             >
-              {presente ? <UserCheck className="h-3 w-3 mr-1" /> : <UserX className="h-3 w-3 mr-1" />}
-              {emp.nombre_completo.split(" ")[0]}
-              {presente ? " - Presente" : " - Ausente"}
-            </Badge>
+              <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                <Avatar className="h-16 w-16">
+                  {emp.foto_url ? (
+                    <AvatarImage src={emp.foto_url} alt={emp.nombre_completo} />
+                  ) : null}
+                  <AvatarFallback className={`text-lg font-bold ${
+                    presente 
+                      ? "bg-green-200 text-green-800 dark:bg-green-900 dark:text-green-200" 
+                      : "bg-muted text-muted-foreground"
+                  }`}>
+                    {getInitials(emp.nombre_completo)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium text-sm leading-tight">{emp.nombre_completo.split(" ").slice(0, 2).join(" ")}</p>
+                  <p className="text-xs text-muted-foreground">{emp.puesto}</p>
+                </div>
+                {presente ? (
+                  <Badge className="bg-green-500/15 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 text-xs">
+                    <Clock className="h-3 w-3 mr-1" />
+                    {formatTime12(horaEntrada)}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-xs text-muted-foreground">
+                    Sin registro
+                  </Badge>
+                )}
+              </CardContent>
+            </Card>
           );
         })}
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex flex-wrap gap-3 items-end">
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Desde</label>
-              <Input
-                type="date"
-                value={fechaDesde}
-                onChange={(e) => setFechaDesde(e.target.value)}
-                className="w-40 h-8 text-sm"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Hasta</label>
-              <Input
-                type="date"
-                value={fechaHasta}
-                onChange={(e) => setFechaHasta(e.target.value)}
-                className="w-40 h-8 text-sm"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Empleado</label>
-              <Select value={filtroEmpleado} onValueChange={setFiltroEmpleado}>
-                <SelectTrigger className="w-48 h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  {empleadosConZk.map(e => (
-                    <SelectItem key={e.id} value={e.id}>{e.nombre_completo}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Absent list */}
+      {empleadosConZk.some(e => !presentesHoy.has(e.id)) && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              No han llegado hoy
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            {empleadosConZk.filter(e => !presentesHoy.has(e.id)).map(emp => (
+              <Badge key={emp.id} variant="outline" className="text-xs">
+                {emp.nombre_completo.split(" ").slice(0, 2).join(" ")}
+              </Badge>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Table */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Registros de Asistencia
-            <Badge variant="secondary" className="ml-2">{filtered.length}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : filtered.length === 0 ? (
-            <p className="text-muted-foreground text-sm text-center py-4">
-              No hay registros en el rango seleccionado
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Empleado</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Entrada</TableHead>
-                  <TableHead>Salida</TableHead>
-                  <TableHead>Horas</TableHead>
-                  <TableHead>Retardo</TableHead>
+      {/* Weekly history dialog */}
+      <Dialog open={!!selectedEmpleado} onOpenChange={(open) => !open && setSelectedEmpleado(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <Avatar className="h-10 w-10">
+                {selectedEmpleado?.foto_url ? (
+                  <AvatarImage src={selectedEmpleado.foto_url} alt={selectedEmpleado.nombre_completo} />
+                ) : null}
+                <AvatarFallback>{selectedEmpleado ? getInitials(selectedEmpleado.nombre_completo) : ""}</AvatarFallback>
+              </Avatar>
+              <div>
+                <p>{selectedEmpleado?.nombre_completo}</p>
+                <p className="text-sm font-normal text-muted-foreground">{selectedEmpleado?.puesto}</p>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Día</TableHead>
+                <TableHead>Entrada</TableHead>
+                <TableHead>Salida</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {historialSemana.map(row => (
+                <TableRow key={row.fecha}>
+                  <TableCell className="capitalize">{row.dia}</TableCell>
+                  <TableCell className="font-mono text-sm">
+                    {row.entrada ? formatTime12(row.entrada) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="font-mono text-sm">
+                    {row.salida ? formatTime12(row.salida) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((r, i) => (
-                  <TableRow key={`${r.empleado_id}-${r.fecha}-${i}`}>
-                    <TableCell className="font-medium">
-                      <div>{r.nombre}</div>
-                      <span className="text-xs text-muted-foreground">{r.puesto}</span>
-                    </TableCell>
-                    <TableCell>
-                      {r.fecha ? format(parseISO(r.fecha), "EEE dd/MM", { locale: es }) : "-"}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {r.entrada ? r.entrada.substring(0, 5) : "-"}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {r.salida ? r.salida.substring(0, 5) : "-"}
-                    </TableCell>
-                    <TableCell>{r.horas || "-"}</TableCell>
-                    <TableCell>
-                      {r.retardo ? (
-                        <Badge className="bg-amber-500/10 text-amber-700 border-amber-300">
-                          Retardo
-                        </Badge>
-                      ) : r.entrada ? (
-                        <Badge className="bg-green-500/10 text-green-700 border-green-300">
-                          A tiempo
-                        </Badge>
-                      ) : null}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+              ))}
+            </TableBody>
+          </Table>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
