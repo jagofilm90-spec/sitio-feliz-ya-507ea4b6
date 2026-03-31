@@ -44,6 +44,7 @@ import TestFirma from "./pages/TestFirma";
 import Precios from "./pages/Precios";
 import Configuracion from "./pages/Configuracion";
 import Asistencia from "./pages/Asistencia";
+import VehiculosPage from "./pages/VehiculosPage";
 import PushDiagnosticsPage from "./pages/PushDiagnosticsPage";
 
 import PushNotificationsGate from "./components/PushNotificationsGate";
@@ -170,6 +171,11 @@ const App = () => (
               <Route path="/asistencia" element={
                 <ProtectedRoute allowedRoles={['admin', 'secretaria']} redirectTo="/auth">
                   <Asistencia />
+                </ProtectedRoute>
+              } />
+              <Route path="/vehiculos" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'gerente_almacen']} redirectTo="/auth">
+                  <VehiculosPage />
                 </ProtectedRoute>
               } />
               <Route path="/usuarios" element={<Navigate to="/configuracion" replace />} />
