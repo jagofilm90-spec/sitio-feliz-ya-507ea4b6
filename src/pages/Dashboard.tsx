@@ -184,7 +184,8 @@ const Dashboard = () => {
         {dashData && <ResumenFinancieroPanel data={dashData.resumenFinanciero} />}
 
         {/* Crédito Excedido, Vendedores, Entregas e Inventario */}
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+          {isAdmin && <AsistenciaHoyWidget />}
           <div className="cursor-pointer" onClick={() => navigate('/clientes')}>
             <CreditoExcedidoAlert />
           </div>
