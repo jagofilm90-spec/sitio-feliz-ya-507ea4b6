@@ -42,7 +42,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import VehiculosTab from "@/components/rutas/VehiculosTab";
+
 import ZonasTab from "@/components/rutas/ZonasTab";
 import PlanificadorRutas from "@/components/rutas/PlanificadorRutas";
 import RutaKilometrajeDialog from "@/components/rutas/RutaKilometrajeDialog";
