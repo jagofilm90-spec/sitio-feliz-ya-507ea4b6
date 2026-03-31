@@ -2,8 +2,9 @@ import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ZkMappingPanel } from "@/components/asistencia/ZkMappingPanel";
 import { AsistenciaView } from "@/components/asistencia/AsistenciaView";
+import { ReporteAsistenciaMensual } from "@/components/asistencia/ReporteAsistenciaMensual";
 import { useUserRoles } from "@/hooks/useUserRoles";
-import { Clock, Link2 } from "lucide-react";
+import { Clock, Link2, BarChart3 } from "lucide-react";
 
 export default function Asistencia() {
   const { isAdmin } = useUserRoles();
@@ -20,7 +21,11 @@ export default function Asistencia() {
           <TabsList>
             <TabsTrigger value="registros" className="gap-1.5">
               <Clock className="h-4 w-4" />
-              Registros
+              Hoy
+            </TabsTrigger>
+            <TabsTrigger value="reportes" className="gap-1.5">
+              <BarChart3 className="h-4 w-4" />
+              Reportes
             </TabsTrigger>
             {isAdmin && (
               <TabsTrigger value="mapeo" className="gap-1.5">
@@ -31,6 +36,9 @@ export default function Asistencia() {
           </TabsList>
           <TabsContent value="registros">
             <AsistenciaView />
+          </TabsContent>
+          <TabsContent value="reportes">
+            <ReporteAsistenciaMensual />
           </TabsContent>
           {isAdmin && (
             <TabsContent value="mapeo">
