@@ -43,6 +43,7 @@ function getInitials(name: string): string {
 export function AsistenciaView() {
   const [registros, setRegistros] = useState<AsistenciaRow[]>([]);
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
+  const [mappedEmployeeIds, setMappedEmployeeIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [selectedEmpleado, setSelectedEmpleado] = useState<Empleado | null>(null);
 
@@ -54,7 +55,7 @@ export function AsistenciaView() {
     const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
     const weekStartStr = weekStart.toISOString().split("T")[0];
 
-    const [{ data: empData }, { data: asistData }] = await Promise.all([
+    const [{ data: empData }, { data: asistData }, { data: mapeoData }] = await Promise.all([
       (supabase as any)
         .from("empleados")
         .select("id, nombre_completo, puesto, activo, zk_id, foto_url")
@@ -67,10 +68,14 @@ export function AsistenciaView() {
         .lte("fecha", hoy)
         .order("fecha", { ascending: false })
         .order("hora", { ascending: true }),
+      (supabase as any)
+        .from("zk_mapeo")
+        .select("empleado_id"),
     ]);
 
     setEmpleados((empData || []) as Empleado[]);
     setRegistros((asistData || []) as AsistenciaRow[]);
+    setMappedEmployeeIds(new Set((mapeoData || []).map((m: any) => m.empleado_id)));
     setLoading(false);
   };
 
