@@ -1,0 +1,1 @@
+ALTER TABLE empleados ADD COLUMN IF NOT EXISTS dias_laborales text[] DEFAULT '{lun,mar,mie,jue,vie,sab}';
