@@ -595,9 +595,6 @@ const RutasContent = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="vehiculos">
-            <VehiculosTab />
-          </TabsContent>
 
           <TabsContent value="zonas">
             <ZonasTab />

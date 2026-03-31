@@ -923,7 +923,7 @@ const VehiculosTab = () => {
                   <Select value={formData.chofer_asignado_id} onValueChange={(v) => setFormData({ ...formData, chofer_asignado_id: v })}>
                     <SelectTrigger><SelectValue placeholder="Sin asignar" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Sin asignar</SelectItem>
+                      <SelectItem value="none">Sin asignar</SelectItem>
                       {choferes.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre_completo}</SelectItem>)}
                     </SelectContent>
                   </Select>
