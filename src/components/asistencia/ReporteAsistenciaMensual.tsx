@@ -5,15 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, Download, CalendarDays } from "lucide-react";
-import { format, getDaysInMonth, eachDayOfInterval, startOfMonth, endOfMonth, isWeekend } from "date-fns";
+import { format, eachDayOfInterval, startOfMonth, endOfMonth, isAfter } from "date-fns";
 import { es } from "date-fns/locale";
 import { exportToExcel } from "@/utils/exportData";
+
+const DIA_MAP: Record<number, string> = { 1: "lun", 2: "mar", 3: "mie", 4: "jue", 5: "vie", 6: "sab", 0: "dom" };
 
 interface Empleado {
   id: string;
   nombre_completo: string;
   puesto: string;
-  zk_id: string | null;
+  dias_laborales: string[] | null;
 }
 
 interface AsistenciaRow {
@@ -66,7 +68,7 @@ export function ReporteAsistenciaMensual() {
       const [{ data: empData }, { data: asistData }, { data: mapeoData }] = await Promise.all([
         (supabase as any)
           .from("empleados")
-          .select("id, nombre_completo, puesto")
+          .select("id, nombre_completo, puesto, dias_laborales")
           .eq("activo", true)
           .order("nombre_completo"),
         supabase
@@ -93,18 +95,19 @@ export function ReporteAsistenciaMensual() {
     const start = startOfMonth(new Date(year, month - 1));
     const end = endOfMonth(start);
     const today = new Date();
-    const effectiveEnd = end > today ? today : end;
+    const effectiveEnd = isAfter(end, today) ? today : end;
     const allDays = eachDayOfInterval({ start, end: effectiveEnd });
-    const diasHabiles = allDays.filter(d => !isWeekend(d));
-    const totalDiasHabiles = diasHabiles.length;
 
     return empleados.map(emp => {
+      const diasLab = emp.dias_laborales || ["lun", "mar", "mie", "jue", "vie", "sab"];
+      const diasHabiles = allDays.filter(d => diasLab.includes(DIA_MAP[d.getDay()]));
+      const totalDiasHabiles = diasHabiles.length;
+
       const empRegistros = registros.filter(r => r.empleado_id === emp.id);
       const diasConRegistro = new Set(empRegistros.map(r => r.fecha).filter(Boolean));
       const diasAsistidos = diasConRegistro.size;
-      const diasAusente = totalDiasHabiles - diasAsistidos;
+      const diasAusente = Math.max(0, totalDiasHabiles - diasAsistidos);
 
-      // Average arrival time
       const primerasEntradas: number[] = [];
       for (const fecha of diasConRegistro) {
         const regs = empRegistros.filter(r => r.fecha === fecha && r.hora).sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));

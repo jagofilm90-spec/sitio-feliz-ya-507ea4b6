@@ -247,6 +247,7 @@ const Empleados = () => {
     licencia_numero: "",
     licencia_tipo: "",
     licencia_vencimiento: "",
+    dias_laborales: ["lun","mar","mie","jue","vie","sab"] as string[],
   });
 
   const [crearUsuario, setCrearUsuario] = useState(false);
@@ -548,6 +549,7 @@ const Empleados = () => {
         licencia_numero: formData.licencia_numero || null,
         licencia_tipo: formData.licencia_tipo || null,
         licencia_vencimiento: formData.licencia_vencimiento || null,
+        dias_laborales: formData.dias_laborales,
       };
 
       let empleadoId: string;
@@ -728,6 +730,7 @@ const Empleados = () => {
       licencia_numero: empleado.licencia_numero || "",
       licencia_tipo: empleado.licencia_tipo || "",
       licencia_vencimiento: empleado.licencia_vencimiento || "",
+      dias_laborales: (empleado as any).dias_laborales || ["lun","mar","mie","jue","vie","sab"],
     });
     setIsDialogOpen(true);
   };
@@ -1208,6 +1211,7 @@ const Empleados = () => {
       licencia_numero: "",
       licencia_tipo: "",
       licencia_vencimiento: "",
+      dias_laborales: ["lun","mar","mie","jue","vie","sab"],
     });
     setCrearUsuario(false);
     setUsuarioFormData({
@@ -1533,7 +1537,10 @@ const Empleados = () => {
                       value={formData.puesto}
                       onValueChange={(value) => {
                         const periodoPago = (value === "Chofer" || value === "Ayudante de Chofer") ? "semanal" : "quincenal";
-                        setFormData({ ...formData, puesto: value, periodo_pago: periodoPago } as any);
+                        const diasLab = (value === "Almacenista" || value === "Chofer" || value === "Ayudante de Chofer" || value === "Gerente de Almacén")
+                          ? ["lun","mar","mie","jue","vie","sab"]
+                          : ["lun","mar","mie","jue","vie"];
+                        setFormData({ ...formData, puesto: value, periodo_pago: periodoPago, dias_laborales: diasLab } as any);
                       }}
                     >
                       <SelectTrigger>
@@ -1671,6 +1678,37 @@ const Empleados = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Días laborales */}
+                <div>
+                  <Label className="mb-2 block">Días laborales</Label>
+                  <div className="flex flex-wrap gap-3">
+                    {[
+                      { key: "lun", label: "Lun" },
+                      { key: "mar", label: "Mar" },
+                      { key: "mie", label: "Mie" },
+                      { key: "jue", label: "Jue" },
+                      { key: "vie", label: "Vie" },
+                      { key: "sab", label: "Sáb" },
+                      { key: "dom", label: "Dom" },
+                    ].map((d) => (
+                      <label key={d.key} className="flex items-center gap-1.5 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={formData.dias_laborales.includes(d.key)}
+                          onChange={(e) => {
+                            const dias = e.target.checked
+                              ? [...formData.dias_laborales, d.key]
+                              : formData.dias_laborales.filter((x: string) => x !== d.key);
+                            setFormData({ ...formData, dias_laborales: dias } as any);
+                          }}
+                          className="rounded border-primary"
+                        />
+                        {d.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
                 {/* Datos adicionales — colapsables (solo opcionales) */}
                 <details className="border rounded-lg">

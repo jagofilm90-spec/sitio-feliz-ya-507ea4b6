@@ -1898,6 +1898,7 @@ export type Database = {
           created_at: string
           cuenta_bancaria: string | null
           curp: string | null
+          dias_laborales: string[] | null
           direccion: string | null
           email: string | null
           estado_civil: string | null
@@ -1941,6 +1942,7 @@ export type Database = {
           created_at?: string
           cuenta_bancaria?: string | null
           curp?: string | null
+          dias_laborales?: string[] | null
           direccion?: string | null
           email?: string | null
           estado_civil?: string | null
@@ -1984,6 +1986,7 @@ export type Database = {
           created_at?: string
           cuenta_bancaria?: string | null
           curp?: string | null
+          dias_laborales?: string[] | null
           direccion?: string | null
           email?: string | null
           estado_civil?: string | null
