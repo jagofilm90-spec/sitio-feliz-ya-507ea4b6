@@ -729,6 +729,7 @@ const Empleados = () => {
       licencia_numero: empleado.licencia_numero || "",
       licencia_tipo: empleado.licencia_tipo || "",
       licencia_vencimiento: empleado.licencia_vencimiento || "",
+      dias_laborales: (empleado as any).dias_laborales || ["lun","mar","mie","jue","vie","sab"],
     });
     setIsDialogOpen(true);
   };
