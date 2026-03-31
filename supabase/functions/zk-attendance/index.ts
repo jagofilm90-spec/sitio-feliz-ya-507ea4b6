@@ -53,15 +53,56 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const rows = registros.map((r: any) => ({
-      zk_user_id: r.zk_user_id,
-      dispositivo: r.dispositivo,
-      fecha_hora: r.fecha_hora,
-      fecha: r.fecha || null,
-      hora: r.hora || null,
-      tipo: r.tipo || null,
-      zk_status: r.zk_status ?? null,
-    }));
+    // Collect unique zk_user_id + dispositivo pairs to lookup mappings
+    const pairsSet = new Set<string>();
+    for (const r of registros) {
+      pairsSet.add(`${r.zk_user_id}||${r.dispositivo}`);
+    }
+
+    // Fetch all relevant mappings in one query
+    const zkIds = [...new Set(registros.map((r: any) => r.zk_user_id))];
+    const { data: mapeos } = await supabase
+      .from("zk_mapeo")
+      .select("zk_user_id,dispositivo,empleado_id")
+      .in("zk_user_id", zkIds);
+
+    // Build lookup map: "zkId||dispositivo" -> empleado_id
+    const mapeoLookup = new Map<string, string>();
+    if (mapeos) {
+      for (const m of mapeos) {
+        mapeoLookup.set(`${m.zk_user_id}||${m.dispositivo}`, m.empleado_id);
+      }
+    }
+
+    // Fallback: fetch empleados with zk_id for unmapped records
+    const { data: empleadosZk } = await supabase
+      .from("empleados")
+      .select("id,zk_id")
+      .in("zk_id", zkIds);
+
+    const zkIdToEmpleado = new Map<string, string>();
+    if (empleadosZk) {
+      for (const e of empleadosZk) {
+        if (e.zk_id && !zkIdToEmpleado.has(e.zk_id)) {
+          zkIdToEmpleado.set(e.zk_id, e.id);
+        }
+      }
+    }
+
+    const rows = registros.map((r: any) => {
+      const key = `${r.zk_user_id}||${r.dispositivo}`;
+      const empleadoId = mapeoLookup.get(key) || zkIdToEmpleado.get(r.zk_user_id) || null;
+      return {
+        zk_user_id: r.zk_user_id,
+        dispositivo: r.dispositivo,
+        fecha_hora: r.fecha_hora,
+        fecha: r.fecha || null,
+        hora: r.hora || null,
+        tipo: r.tipo || null,
+        zk_status: r.zk_status ?? null,
+        empleado_id: empleadoId,
+      };
+    });
 
     const { data, error } = await supabase
       .from("asistencia")
