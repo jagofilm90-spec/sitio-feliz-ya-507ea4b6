@@ -1210,6 +1210,7 @@ const Empleados = () => {
       licencia_numero: "",
       licencia_tipo: "",
       licencia_vencimiento: "",
+      dias_laborales: ["lun","mar","mie","jue","vie","sab"],
     });
     setCrearUsuario(false);
     setUsuarioFormData({
