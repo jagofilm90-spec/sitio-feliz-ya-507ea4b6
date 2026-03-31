@@ -83,6 +83,11 @@ export function ZkMappingPanel() {
         body: JSON.stringify({ zk_user_id: zkId, dispositivo: disp, empleado_id: empId }),
       });
       if (!res.ok) throw new Error(await res.text());
+      // Update empleado's zk_id field
+      await fetch(`${API}/rest/v1/empleados?id=eq.${empId}`, {
+        method: "PATCH", headers: { ...h, "Prefer": "return=minimal" },
+        body: JSON.stringify({ zk_id: zkId }),
+      });
       // Update asistencia records
       await fetch(`${API}/rest/v1/asistencia?zk_user_id=eq.${zkId}&dispositivo=eq.${disp}&empleado_id=is.null`, {
         method: "PATCH", headers: { ...h, "Prefer": "return=minimal" },
@@ -100,6 +105,14 @@ export function ZkMappingPanel() {
     setSaving(key);
     try {
       const h = await getHeaders();
+      const mapeo = getMapeo(zkId, disp);
+      // Clear empleado's zk_id
+      if (mapeo) {
+        await fetch(`${API}/rest/v1/empleados?id=eq.${mapeo.empleado_id}`, {
+          method: "PATCH", headers: { ...h, "Prefer": "return=minimal" },
+          body: JSON.stringify({ zk_id: null }),
+        });
+      }
       await fetch(`${API}/rest/v1/zk_mapeo?zk_user_id=eq.${zkId}&dispositivo=eq.${disp}`, {
         method: "DELETE", headers: h,
       });
