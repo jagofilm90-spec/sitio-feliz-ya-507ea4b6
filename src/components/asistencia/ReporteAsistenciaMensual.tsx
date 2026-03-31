@@ -63,12 +63,11 @@ export function ReporteAsistenciaMensual() {
       const fechaDesde = format(start, "yyyy-MM-dd");
       const fechaHasta = format(end, "yyyy-MM-dd");
 
-      const [{ data: empData }, { data: asistData }] = await Promise.all([
+      const [{ data: empData }, { data: asistData }, { data: mapeoData }] = await Promise.all([
         (supabase as any)
           .from("empleados")
           .select("id, nombre_completo, puesto, zk_id")
           .eq("activo", true)
-          .not("zk_id", "is", null)
           .order("nombre_completo"),
         supabase
           .from("asistencia")
@@ -76,7 +75,13 @@ export function ReporteAsistenciaMensual() {
           .gte("fecha", fechaDesde)
           .lte("fecha", fechaHasta)
           .order("hora", { ascending: true }),
+        (supabase as any)
+          .from("zk_mapeo")
+          .select("empleado_id"),
       ]);
+
+      const mappedIds = new Set((mapeoData || []).map((m: any) => m.empleado_id));
+      const filtered = (empData || []).filter((e: any) => e.zk_id || mappedIds.has(e.id));
 
       setEmpleados((empData || []) as Empleado[]);
       setRegistros((asistData || []) as AsistenciaRow[]);
