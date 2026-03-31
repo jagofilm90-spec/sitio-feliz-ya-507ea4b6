@@ -235,6 +235,7 @@ const Layout = ({ children }: LayoutProps) => {
       label: "RRHH",
       items: [
         { icon: UserCog, label: "Empleados", path: "/empleados" },
+        { icon: Clock, label: "Asistencia", path: "/asistencia" },
       ]
     },
     {
