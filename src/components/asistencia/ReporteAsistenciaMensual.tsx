@@ -66,7 +66,7 @@ export function ReporteAsistenciaMensual() {
       const [{ data: empData }, { data: asistData }, { data: mapeoData }] = await Promise.all([
         (supabase as any)
           .from("empleados")
-          .select("id, nombre_completo, puesto, zk_id")
+          .select("id, nombre_completo, puesto")
           .eq("activo", true)
           .order("nombre_completo"),
         supabase
@@ -79,11 +79,9 @@ export function ReporteAsistenciaMensual() {
           .from("zk_mapeo")
           .select("empleado_id"),
       ]);
-
       const mappedIds = new Set((mapeoData || []).map((m: any) => m.empleado_id));
-      const filtered = (empData || []).filter((e: any) => e.zk_id || mappedIds.has(e.id));
-
-      setEmpleados((filtered || []) as Empleado[]);
+      const filtered = (empData || []).filter((e: any) => mappedIds.has(e.id));
+      setEmpleados(filtered as Empleado[]);
       setRegistros((asistData || []) as AsistenciaRow[]);
       setLoading(false);
     };

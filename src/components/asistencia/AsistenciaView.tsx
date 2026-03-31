@@ -43,22 +43,31 @@ function getInitials(name: string): string {
 export function AsistenciaView() {
   const [registros, setRegistros] = useState<AsistenciaRow[]>([]);
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
-  const [mappedEmployeeIds, setMappedEmployeeIds] = useState<Set<string>>(new Set());
+  const [mappedIds, setMappedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [selectedEmpleado, setSelectedEmpleado] = useState<Empleado | null>(null);
 
-  const hoy = new Date().toISOString().split("T")[0];
+  const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" });
 
   const loadData = async () => {
     setLoading(true);
 
     const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-    const weekStartStr = weekStart.toISOString().split("T")[0];
+    const weekStartStr = format(weekStart, "yyyy-MM-dd");
+
+    // Load mapped employee IDs from zk_mapeo via fetch
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const h = { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Authorization": `Bearer ${session.access_token}` };
+      const mapRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/zk_mapeo?select=empleado_id`, { headers: h });
+      const mapData = await mapRes.json();
+      if (Array.isArray(mapData)) setMappedIds(new Set(mapData.map((m: any) => m.empleado_id)));
+    }
 
     const [{ data: empData }, { data: asistData }, { data: mapeoData }] = await Promise.all([
       (supabase as any)
         .from("empleados")
-        .select("id, nombre_completo, puesto, activo, zk_id, foto_url")
+        .select("id, nombre_completo, puesto, activo, foto_url")
         .eq("activo", true)
         .order("nombre_completo"),
       supabase
@@ -75,7 +84,7 @@ export function AsistenciaView() {
 
     setEmpleados((empData || []) as Empleado[]);
     setRegistros((asistData || []) as AsistenciaRow[]);
-    setMappedEmployeeIds(new Set((mapeoData || []).map((m: any) => m.empleado_id)));
+    setMappedIds(new Set((mapeoData || []).map((m: any) => m.empleado_id)));
     setLoading(false);
   };
 
@@ -113,8 +122,7 @@ export function AsistenciaView() {
     });
   }, [selectedEmpleado, registros]);
 
-  // Show employees that have zk_id OR are in zk_mapeo
-  const empleadosConZk = empleados.filter(e => e.zk_id || mappedEmployeeIds.has(e.id));
+  const empleadosConZk = empleados.filter(e => mappedIds.has(e.id));
   const presenteCount = empleadosConZk.filter(e => presentesHoy.has(e.id)).length;
 
   if (loading) {

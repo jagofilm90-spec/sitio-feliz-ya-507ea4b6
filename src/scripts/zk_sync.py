@@ -87,10 +87,33 @@ def leer_registros_zk(dispositivo):
 
     return registros
 
-def subir_a_supabase(registros):
+def cargar_mapeos():
+    """Carga mapeos zk_user_id+dispositivo → empleado_id desde zk_mapeo."""
+    url = f"{SUPABASE_URL}/rest/v1/zk_mapeo?select=zk_user_id,dispositivo,empleado_id"
+    headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
+    try:
+        resp = requests.get(url, headers=headers, timeout=15)
+        if resp.status_code == 200:
+            data = resp.json()
+            mapeo = {}
+            for row in data:
+                key = f"{row['zk_user_id']}_{row['dispositivo']}"
+                mapeo[key] = row["empleado_id"]
+            log(f"  Mapeos cargados: {len(mapeo)}")
+            return mapeo
+    except Exception as e:
+        log(f"  ERROR cargando mapeos: {e}")
+    return {}
+
+def subir_a_supabase(registros, mapeos):
     """Sube registros a Supabase via REST API con upsert (evita duplicados)."""
     if not registros:
         return 0
+
+    # Enriquecer registros con empleado_id desde mapeos
+    for reg in registros:
+        key = f"{reg['zk_user_id']}_{reg['dispositivo']}"
+        reg["empleado_id"] = mapeos.get(key)
 
     url = f"{SUPABASE_URL}/rest/v1/asistencia"
     headers = {
@@ -110,7 +133,6 @@ def subir_a_supabase(registros):
             if resp.status_code in (200, 201):
                 total_subidos += len(batch)
             elif resp.status_code == 409:
-                # Duplicados — ya existen, no es error
                 total_subidos += len(batch)
             else:
                 log(f"  ERROR Supabase: {resp.status_code} — {resp.text[:200]}")
@@ -124,6 +146,9 @@ def sincronizar():
     log("=" * 50)
     log("Iniciando sincronización...")
 
+    # Cargar mapeos una vez por ciclo
+    mapeos = cargar_mapeos()
+
     resumen = {}
 
     for dispositivo in DISPOSITIVOS:
@@ -131,7 +156,7 @@ def sincronizar():
         registros = leer_registros_zk(dispositivo)
 
         if registros:
-            subidos = subir_a_supabase(registros)
+            subidos = subir_a_supabase(registros, mapeos)
             resumen[nombre] = subidos
             log(f"  {nombre}: {subidos} registros sincronizados")
         else:
