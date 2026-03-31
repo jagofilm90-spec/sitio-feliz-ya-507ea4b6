@@ -549,6 +549,7 @@ const Empleados = () => {
         licencia_numero: formData.licencia_numero || null,
         licencia_tipo: formData.licencia_tipo || null,
         licencia_vencimiento: formData.licencia_vencimiento || null,
+        dias_laborales: formData.dias_laborales,
       };
 
       let empleadoId: string;
