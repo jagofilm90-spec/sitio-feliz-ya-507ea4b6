@@ -10,6 +10,8 @@ import { Link2, Check, Loader2 } from "lucide-react";
 
 interface ZkMapping {
   zk_user_id: string;
+  dispositivo: string;
+  key: string; // zk_user_id + dispositivo
   count: number;
   last_seen: string;
   empleado_id: string | null;
@@ -34,10 +36,10 @@ export function ZkMappingPanel() {
   const loadData = async () => {
     setLoading(true);
 
-    // Get unique zk_user_ids with stats
+    // Get unique zk_user_ids with dispositivo
     const { data: zkData } = await supabase
       .from("asistencia")
-      .select("zk_user_id, empleado_id, created_at")
+      .select("zk_user_id, dispositivo, empleado_id, created_at")
       .order("created_at", { ascending: false });
 
     // Get all active employees
@@ -50,45 +52,54 @@ export function ZkMappingPanel() {
     const empleadosList = (empData || []) as Empleado[];
     setEmpleados(empleadosList);
 
-    // Aggregate zk_user_ids
+    // Aggregate by zk_user_id + dispositivo
     const zkMap = new Map<string, ZkMapping>();
     const empleadoNames = new Map(empleadosList.map(e => [e.id, e.nombre_completo]));
 
     for (const row of zkData || []) {
-      if (!zkMap.has(row.zk_user_id)) {
-        zkMap.set(row.zk_user_id, {
+      const disp = row.dispositivo || "desconocido";
+      const key = `${row.zk_user_id}_${disp}`;
+      if (!zkMap.has(key)) {
+        zkMap.set(key, {
           zk_user_id: row.zk_user_id,
+          dispositivo: disp,
+          key,
           count: 0,
           last_seen: row.created_at,
           empleado_id: row.empleado_id,
           empleado_nombre: row.empleado_id ? (empleadoNames.get(row.empleado_id) || null) : null,
         });
       }
-      zkMap.get(row.zk_user_id)!.count++;
+      zkMap.get(key)!.count++;
     }
 
-    // Also check empleados with zk_id set
+    // Also check empleados with zk_id set (add as "oficina" default)
     for (const emp of empleadosList) {
-      if (emp.zk_id && !zkMap.has(emp.zk_id)) {
-        zkMap.set(emp.zk_id, {
-          zk_user_id: emp.zk_id,
-          count: 0,
-          last_seen: "",
-          empleado_id: emp.id,
-          empleado_nombre: emp.nombre_completo,
-        });
+      if (emp.zk_id) {
+        const key = `${emp.zk_id}_oficina`;
+        if (!zkMap.has(key)) {
+          zkMap.set(key, {
+            zk_user_id: emp.zk_id,
+            dispositivo: "oficina",
+            key,
+            count: 0,
+            last_seen: "",
+            empleado_id: emp.id,
+            empleado_nombre: emp.nombre_completo,
+          });
+        }
       }
     }
 
-    const sorted = Array.from(zkMap.values()).sort((a, b) => 
-      Number(a.zk_user_id) - Number(b.zk_user_id)
+    const sorted = Array.from(zkMap.values()).sort((a, b) =>
+      Number(a.zk_user_id) - Number(b.zk_user_id) || a.dispositivo.localeCompare(b.dispositivo)
     );
     setMappings(sorted);
 
-    // Pre-populate selections from existing mappings
+    // Pre-populate selections from existing mappings (use key)
     const sels: Record<string, string> = {};
     for (const emp of empleadosList) {
-      if (emp.zk_id) sels[emp.zk_id] = emp.id;
+      if (emp.zk_id) sels[`${emp.zk_id}_oficina`] = emp.id;
     }
     setSelections(sels);
 
@@ -150,7 +161,8 @@ export function ZkMappingPanel() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-24">ZK ID</TableHead>
+                <TableHead className="w-20">ZK ID</TableHead>
+                <TableHead className="w-24">Dispositivo</TableHead>
                 <TableHead className="w-20">Registros</TableHead>
                 <TableHead>Empleado</TableHead>
                 <TableHead className="w-20">Estado</TableHead>
@@ -161,16 +173,21 @@ export function ZkMappingPanel() {
               {mappings.map((m) => {
                 const isLinked = !!empleados.find(e => e.zk_id === m.zk_user_id);
                 return (
-                  <TableRow key={m.zk_user_id}>
-                    <TableCell className="font-mono font-bold">{m.zk_user_id}</TableCell>
+                  <TableRow key={m.key}>
+                    <TableCell className="font-mono font-bold text-lg">{m.zk_user_id}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={`text-xs capitalize ${m.dispositivo === "oficina" ? "bg-blue-50 text-blue-700 border-blue-300" : "bg-orange-50 text-orange-700 border-orange-300"}`}>
+                        {m.dispositivo}
+                      </Badge>
+                    </TableCell>
                     <TableCell>{m.count}</TableCell>
                     <TableCell>
                       {isLinked ? (
                         <span className="text-sm font-medium">{m.empleado_nombre}</span>
                       ) : (
                         <Select
-                          value={selections[m.zk_user_id] || ""}
-                          onValueChange={(v) => setSelections(prev => ({ ...prev, [m.zk_user_id]: v }))}
+                          value={selections[m.key] || ""}
+                          onValueChange={(v) => setSelections(prev => ({ ...prev, [m.key]: v }))}
                         >
                           <SelectTrigger className="h-8">
                             <SelectValue placeholder="Seleccionar empleado..." />
@@ -200,7 +217,7 @@ export function ZkMappingPanel() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {!isLinked && selections[m.zk_user_id] && (
+                      {!isLinked && selections[m.key] && (
                         <Button
                           size="sm"
                           className="h-7 text-xs"
