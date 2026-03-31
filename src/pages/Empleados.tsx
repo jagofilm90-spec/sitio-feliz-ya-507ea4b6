@@ -12,6 +12,7 @@ import { FirmaAddendumFlow } from "@/components/empleados/FirmaAddendumFlow";
 import { ActasAdministrativas } from "@/components/empleados/ActasAdministrativas";
 import { ProcesoBaja } from "@/components/empleados/ProcesoBaja";
 import { VacacionesEmpleado } from "@/components/empleados/VacacionesEmpleado";
+import { FotoCropDialog } from "@/components/empleados/FotoCropDialog";
 import { PdfPreviewDialog } from "@/components/empleados/PdfPreviewDialog";
 import { generarContratoPDF, generarAvisoPrivacidadPDF, hoyMexico } from "@/lib/generarContratoPDF";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -203,6 +204,8 @@ const Empleados = () => {
   } | null>(null);
   
   const [addendumHistorial, setAddendumHistorial] = useState<any>(null);
+  const [cropImageUrl, setCropImageUrl] = useState<string | null>(null);
+  const [cropForEmpleadoId, setCropForEmpleadoId] = useState<string | null>(null);
   const [historialSueldo, setHistorialSueldo] = useState<Array<{ id: string; sueldo_anterior: number | null; sueldo_nuevo: number | null; premio_anterior: number | null; premio_nuevo: number | null; fecha_cambio: string }>>([]);
   const [activeTab, setActiveTab] = useState<string>("todos");
   const [filtroPuesto, setFiltroPuesto] = useState<"todos" | "secretaria" | "vendedor" | "chofer" | "almacenista" | "gerente de almacén">("todos");
@@ -1569,50 +1572,12 @@ const Empleados = () => {
                         accept="image/*"
                         id="foto-upload"
                         className="hidden"
-                        onChange={async (e) => {
+                        onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (!file || !editingEmpleado) return;
-                          try {
-                            const compressedFile = await compressImageForUpload(file, "thumbnail");
-                            const fileName = `${editingEmpleado.id}-${Date.now()}.jpg`;
-
-                            const { error: uploadError } = await supabase.storage
-                              .from("empleados-fotos")
-                              .upload(fileName, compressedFile, {
-                                contentType: "image/jpeg",
-                                upsert: true,
-                              });
-
-                            if (uploadError) throw uploadError;
-
-                            const { data: publicData } = supabase.storage
-                              .from("empleados-fotos")
-                              .getPublicUrl(fileName);
-
-                            const publicUrl = publicData.publicUrl;
-
-                            const { error: updateError } = await supabase
-                              .from("empleados")
-                              .update({ foto_url: publicUrl } as any)
-                              .eq("id", editingEmpleado.id);
-
-                            if (updateError) throw updateError;
-
-                            setFotos(prev => ({
-                              ...prev,
-                              [editingEmpleado.id]: `${publicUrl}?t=${Date.now()}`,
-                            }));
-                            toast({ title: "Foto actualizada" });
-                          } catch (error: any) {
-                            console.error("[Empleados] Error subiendo foto:", error);
-                            toast({
-                              title: "No se pudo subir la foto",
-                              description: error?.message || "Intenta de nuevo con otra imagen.",
-                              variant: "destructive",
-                            });
-                          } finally {
-                            e.target.value = "";
-                          }
+                          setCropImageUrl(URL.createObjectURL(file));
+                          setCropForEmpleadoId(editingEmpleado.id);
+                          e.target.value = "";
                         }}
                       />
                       <div className="flex gap-2">
@@ -3029,6 +2994,28 @@ const Empleados = () => {
           open={!!bajaEmpleado}
           onClose={() => setBajaEmpleado(null)}
           onCompleted={() => loadEmpleados()}
+        />
+      )}
+
+      {cropImageUrl && cropForEmpleadoId && (
+        <FotoCropDialog
+          imageUrl={cropImageUrl}
+          open={!!cropImageUrl}
+          onClose={() => { if (cropImageUrl) URL.revokeObjectURL(cropImageUrl); setCropImageUrl(null); setCropForEmpleadoId(null); }}
+          onCropped={async (blob) => {
+            const empId = cropForEmpleadoId;
+            try {
+              const fileName = `${empId}-${Date.now()}.jpg`;
+              const { error } = await supabase.storage.from("empleados-fotos").upload(fileName, blob, { contentType: "image/jpeg", upsert: true });
+              if (error) throw error;
+              const { data: pub } = supabase.storage.from("empleados-fotos").getPublicUrl(fileName);
+              await supabase.from("empleados").update({ foto_url: pub.publicUrl } as any).eq("id", empId);
+              setFotos(prev => ({ ...prev, [empId]: `${pub.publicUrl}?t=${Date.now()}` }));
+              toast({ title: "Foto actualizada" });
+            } catch (err: any) { toast({ title: "Error", description: err.message, variant: "destructive" }); }
+            if (cropImageUrl) URL.revokeObjectURL(cropImageUrl);
+            setCropImageUrl(null); setCropForEmpleadoId(null);
+          }}
         />
       )}
 

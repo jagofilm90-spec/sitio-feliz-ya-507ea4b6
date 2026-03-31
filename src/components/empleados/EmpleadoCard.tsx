@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Edit, FileText, FolderOpen, FileWarning, Pencil } from "lucide-react";
+import { Edit, Pencil } from "lucide-react";
+import { FotoCropDialog } from "./FotoCropDialog";
 
 interface Empleado {
   id: string;
@@ -54,6 +56,7 @@ function Row({ label, value }: { label: string; value: string | null | undefined
 }
 
 export function EmpleadoCard({ empleado: e, foto, onClose, onEditar, onExpediente, onDocumentos, onActas, onFotoChanged }: Props) {
+  const [cropUrl, setCropUrl] = useState<string | null>(null);
   const hoy = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City" }));
   const [iy, im, id] = e.fecha_ingreso.split("-").map(Number);
   const ingreso = new Date(iy, im - 1, id);
@@ -92,26 +95,24 @@ export function EmpleadoCard({ empleado: e, foto, onClose, onEditar, onExpedient
               <label htmlFor="card-foto-upload" className="absolute bottom-0 right-0 w-7 h-7 bg-white border border-gray-200 rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-50 shadow-sm">
                 <Pencil className="h-3.5 w-3.5 text-gray-600" />
               </label>
-              <input type="file" id="card-foto-upload" accept="image/*" className="hidden" onChange={async (ev) => {
+              <input type="file" id="card-foto-upload" accept="image/*" className="hidden" onChange={(ev) => {
                 const file = ev.target.files?.[0];
-                if (!file) return;
-                const img = new Image();
-                img.src = URL.createObjectURL(file);
-                try { await new Promise((res, rej) => { img.onload = res; img.onerror = rej; }); } catch { return; }
-                const canvas = document.createElement("canvas");
-                canvas.width = 200; canvas.height = 200;
-                const ctx = canvas.getContext("2d")!;
-                ctx.fillStyle = "#FFF"; ctx.fillRect(0, 0, 200, 200);
-                const sz = Math.min(img.width, img.height);
-                ctx.drawImage(img, (img.width - sz) / 2, (img.height - sz) / 2, sz, sz, 0, 0, 200, 200);
-                URL.revokeObjectURL(img.src);
-                canvas.toBlob(async (blob) => {
-                  if (!blob) return;
-                  const { error } = await supabase.storage.from("empleados-documentos").upload(`${e.id}/foto.jpg`, blob, { contentType: "image/jpeg", upsert: true });
-                  if (!error && onFotoChanged) onFotoChanged(URL.createObjectURL(blob));
-                }, "image/jpeg", 0.85);
+                if (file) setCropUrl(URL.createObjectURL(file));
                 ev.target.value = "";
               }} />
+              {cropUrl && (
+                <FotoCropDialog imageUrl={cropUrl} open={!!cropUrl}
+                  onClose={() => { URL.revokeObjectURL(cropUrl); setCropUrl(null); }}
+                  onCropped={async (blob) => {
+                    const fileName = `${e.id}-${Date.now()}.jpg`;
+                    await supabase.storage.from("empleados-fotos").upload(fileName, blob, { contentType: "image/jpeg", upsert: true });
+                    const { data: pub } = supabase.storage.from("empleados-fotos").getPublicUrl(fileName);
+                    await supabase.from("empleados").update({ foto_url: pub.publicUrl } as any).eq("id", e.id);
+                    if (onFotoChanged) onFotoChanged(`${pub.publicUrl}?t=${Date.now()}`);
+                    URL.revokeObjectURL(cropUrl); setCropUrl(null);
+                  }}
+                />
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <h2 className="text-lg font-bold break-words">{e.nombre_completo}</h2>
