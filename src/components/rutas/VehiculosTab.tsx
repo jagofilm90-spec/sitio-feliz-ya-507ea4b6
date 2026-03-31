@@ -939,76 +939,20 @@ const VehiculosTab = () => {
                   <div className="space-y-1"><Label className="text-xs">Placas</Label><Input value={formData.placa} onChange={(e) => setFormData({ ...formData, placa: e.target.value })} placeholder="ABC-123" autoComplete="off" /></div>
                   <div className="space-y-1"><Label className="text-xs">Color</Label><Input value={formData.color} onChange={(e) => setFormData({ ...formData, color: e.target.value })} placeholder="Blanco" autoComplete="off" /></div>
                   <div className="space-y-1"><Label className="text-xs">No. Serie (VIN)</Label><Input value={formData.numero_serie} onChange={(e) => setFormData({ ...formData, numero_serie: e.target.value })} placeholder="17 caracteres" autoComplete="off" /></div>
+                  <div className="space-y-1"><Label className="text-xs">No. Motor</Label><Input value={formData.numero_motor} onChange={(e) => setFormData({ ...formData, numero_motor: e.target.value })} placeholder="No. motor" autoComplete="off" /></div>
+                  {isFederalCard && <div className="space-y-1"><Label className="text-xs">Permiso SCT</Label><Input value={formData.permiso_ruta} onChange={(e) => setFormData({ ...formData, permiso_ruta: e.target.value })} placeholder="No. permiso" autoComplete="off" /></div>}
                 </div>
               </details>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="numero_motor">Número de Motor</Label>
-                  <Input
-                    id="numero_motor"
-                    value={formData.numero_motor}
-                    onChange={(e) => setFormData({ ...formData, numero_motor: e.target.value })}
-                    placeholder="No. Motor"
-                    autoComplete="off"
-                  />
-                </div>
-                {!isFederalCard && (
-                  <div className="space-y-2">
-                    <Label htmlFor="cilindros">Cilindros</Label>
-                    <Input
-                      id="cilindros"
-                      value={formData.cilindros}
-                      onChange={(e) => setFormData({ ...formData, cilindros: e.target.value })}
-                      placeholder="4, 6, 8..."
-                      autoComplete="off"
-                    />
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="modelo">Modelo (Año)</Label>
-                  <Input
-                    id="modelo"
-                    value={formData.modelo}
-                    onChange={(e) => setFormData({ ...formData, modelo: e.target.value })}
-                    placeholder="2024"
-                    autoComplete="off"
-                  />
-                </div>
-              </div>
-
-              {!isFederalCard && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="clave_vehicular">Clave Vehicular</Label>
-                    <Input
-                      id="clave_vehicular"
-                      value={formData.clave_vehicular}
-                      onChange={(e) => setFormData({ ...formData, clave_vehicular: e.target.value })}
-                      placeholder="Clave oficial"
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="clase_tipo">Clase y Tipo</Label>
-                    <Input
-                      id="clase_tipo"
-                      value={formData.clase_tipo}
-                      onChange={(e) => setFormData({ ...formData, clase_tipo: e.target.value })}
-                      placeholder="Ej: Camioneta Pick Up"
-                      autoComplete="off"
-                    />
-                  </div>
-                </div>
-              )}
+              {/* Datos extraídos de tarjeta/factura se auto-llenan en Sección 2 */}
 
               {/* Federal Card Specific Fields */}
               {isFederalCard && (
-                <div className="border-t pt-4 mt-4 space-y-4">
-                  <h3 className="font-medium flex items-center gap-2">
-                    <Badge variant="default">Federal</Badge>
+                <details className="border rounded-md p-3">
+                  <summary className="text-sm font-medium cursor-pointer text-muted-foreground flex items-center gap-2">
+                    <Badge variant="default" className="text-xs">Federal</Badge>
                     Datos de Tarjeta Federal (SICT)
-                  </h3>
+                  </summary>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-2">
@@ -1136,98 +1080,8 @@ const VehiculosTab = () => {
                       />
                     </div>
                   </div>
-                </div>
+                </details>
               )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="tipo_combustible">Tipo de Combustible</Label>
-                  <Select
-                    value={formData.tipo_combustible}
-                    onValueChange={(value) => setFormData({ ...formData, tipo_combustible: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="diesel">Diésel</SelectItem>
-                      <SelectItem value="gasolina">Gasolina</SelectItem>
-                      <SelectItem value="gas">Gas LP</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="status">Estado</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) => setFormData({ ...formData, status: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="disponible">Disponible</SelectItem>
-                      <SelectItem value="en_ruta">En Ruta</SelectItem>
-                      <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Chofer Asignado */}
-              <div className="space-y-2">
-                <Label htmlFor="chofer_asignado_id" className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Chofer Asignado al Vehículo
-                </Label>
-                <Select
-                  value={formData.chofer_asignado_id}
-                  onValueChange={(value) => setFormData({ ...formData, chofer_asignado_id: value === "none" ? "" : value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar chofer..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sin asignar</SelectItem>
-                    {choferes.map((chofer) => (
-                      <SelectItem key={chofer.id} value={chofer.id}>
-                        {chofer.nombre_completo}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  El chofer que normalmente opera este vehículo
-                </p>
-              </div>
-
-              {/* Capacity */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="peso_maximo_local_kg">Capacidad Local (kg) *</Label>
-                  <Input
-                    id="peso_maximo_local_kg"
-                    type="number"
-                    value={formData.peso_maximo_local_kg}
-                    onChange={(e) => setFormData({ ...formData, peso_maximo_local_kg: e.target.value })}
-                    required
-                    autoComplete="off"
-                  />
-                  <p className="text-xs text-muted-foreground">CDMX y zona metropolitana</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="peso_maximo_foraneo_kg">Capacidad Foránea (kg) *</Label>
-                  <Input
-                    id="peso_maximo_foraneo_kg"
-                    type="number"
-                    value={formData.peso_maximo_foraneo_kg}
-                    onChange={(e) => setFormData({ ...formData, peso_maximo_foraneo_kg: e.target.value })}
-                    required
-                    autoComplete="off"
-                  />
-                  <p className="text-xs text-muted-foreground">Estados fuera de CDMX</p>
-                </div>
-              </div>
 
               {/* Dates from Tarjeta */}
               <div className="grid grid-cols-2 gap-4">
@@ -1441,39 +1295,13 @@ const VehiculosTab = () => {
                   </div>
                 </div>
 
-                {/* Color and Year fields */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="color" className="text-sm">Color</Label>
-                    <Input
-                      id="color"
-                      value={formData.color}
-                      onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                      placeholder="Blanco"
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="anio" className="text-sm">Año</Label>
-                    <Input
-                      id="anio"
-                      type="number"
-                      value={formData.anio}
-                      onChange={(e) => setFormData({ ...formData, anio: e.target.value })}
-                      placeholder="2024"
-                      autoComplete="off"
-                    />
-                  </div>
-                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="notas">Notas</Label>
+              <div className="space-y-2 hidden">
                 <Input
                   id="notas"
                   value={formData.notas}
                   onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
-                  placeholder="Notas adicionales..."
                   autoComplete="off"
                 />
               </div>
