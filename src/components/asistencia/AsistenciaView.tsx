@@ -108,7 +108,8 @@ export function AsistenciaView() {
     });
   }, [selectedEmpleado, registros]);
 
-  const empleadosConZk = empleados.filter(e => e.zk_id);
+  // Show employees that have attendance records OR have zk_id set
+  const empleadosConZk = empleados.filter(e => e.zk_id || presentesHoy.has(e.id));
   const presenteCount = empleadosConZk.filter(e => presentesHoy.has(e.id)).length;
 
   if (loading) {
