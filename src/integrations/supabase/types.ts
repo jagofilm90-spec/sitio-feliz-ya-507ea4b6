@@ -6116,6 +6116,42 @@ export type Database = {
           },
         ]
       }
+      zk_mapeo: {
+        Row: {
+          created_at: string | null
+          dispositivo: string
+          empleado_id: string
+          zk_user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dispositivo: string
+          empleado_id: string
+          zk_user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          dispositivo?: string
+          empleado_id?: string
+          zk_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zk_mapeo_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zk_mapeo_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       zonas: {
         Row: {
           activo: boolean
