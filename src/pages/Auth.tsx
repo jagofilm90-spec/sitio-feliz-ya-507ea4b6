@@ -105,7 +105,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-b from-white to-gray-50 p-4">
+    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-b from-background to-muted p-4">
       <div className="w-full max-w-sm space-y-6">
         {/* Branding */}
         <div className="text-center">
