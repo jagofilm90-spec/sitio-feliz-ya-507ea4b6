@@ -494,7 +494,6 @@ const Empleados = () => {
       if (!formData.email?.trim()) faltantes.push("Email");
       else if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) faltantes.push("Email (formato inválido)");
       if (!formData.beneficiario?.trim()) faltantes.push("Beneficiario");
-      if ((formData.puesto === "Chofer" || formData.puesto === "Ayudante de Chofer") && !formData.premio_asistencia_semanal) faltantes.push("Premio de Asistencia Semanal");
       if (faltantes.length > 0) {
         toast({ title: "Campos obligatorios faltantes", description: faltantes.join(", "), variant: "destructive" });
         return;
@@ -695,8 +694,6 @@ const Empleados = () => {
       }).then(r => r.json()).then(d => setHistorialSueldo(Array.isArray(d) ? d : [])).catch(() => setHistorialSueldo([]));
     });
 
-    const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
-
     setFormData({
       nombre_completo: empleado.nombre_completo,
       nombre: empleado.nombre || "",
@@ -727,7 +724,7 @@ const Empleados = () => {
       fecha_baja: empleado.fecha_baja || "",
       motivo_baja: empleado.motivo_baja || "",
       beneficiario: empleado.beneficiario || "",
-      premio_asistencia_semanal: empleado.premio_asistencia_semanal || premioDefault,
+      premio_asistencia_semanal: empleado.premio_asistencia_semanal || "",
       licencia_numero: empleado.licencia_numero || "",
       licencia_tipo: empleado.licencia_tipo || "",
       licencia_vencimiento: empleado.licencia_vencimiento || "",
@@ -741,8 +738,7 @@ const Empleados = () => {
       return;
     }
     try {
-      const premioDefault = empleado.puesto === "Ayudante de Chofer" ? 958 : empleado.puesto === "Chofer" ? 1262 : null;
-      const premio = empleado.premio_asistencia_semanal || premioDefault;
+      const premio = empleado.premio_asistencia_semanal || null;
       const beneficiario = empleado.beneficiario || "Por designar";
       const result = await generarContratoPDF({
         empleado: {
@@ -1537,8 +1533,7 @@ const Empleados = () => {
                       value={formData.puesto}
                       onValueChange={(value) => {
                         const periodoPago = (value === "Chofer" || value === "Ayudante de Chofer") ? "semanal" : "quincenal";
-                        const premio = value === "Ayudante de Chofer" ? 958 : value === "Chofer" ? 1262 : null;
-                        setFormData({ ...formData, puesto: value, periodo_pago: periodoPago, premio_asistencia_semanal: premio } as any);
+                        setFormData({ ...formData, puesto: value, periodo_pago: periodoPago } as any);
                       }}
                     >
                       <SelectTrigger>
@@ -1666,12 +1661,14 @@ const Empleados = () => {
                 {/* Premio de asistencia — solo chofer/ayudante */}
                 {(formData.puesto === "Chofer" || formData.puesto === "Ayudante de Chofer") && (
                   <div>
-                    <Label htmlFor="premio_asistencia_semanal">Premio de Asistencia Semanal *</Label>
-                    <Input id="premio_asistencia_semanal" type="number" step="0.01"
-                      value={formData.premio_asistencia_semanal || (formData.puesto === "Ayudante de Chofer" ? 958 : 1262)}
-                      onChange={(e) => setFormData({ ...formData, premio_asistencia_semanal: parseFloat(e.target.value) || 0 })}
-                      autoComplete="off" />
-                    <p className="text-xs text-muted-foreground mt-1">Default: {formData.puesto === "Ayudante de Chofer" ? "$958" : "$1,262"} semanales</p>
+                    <Label htmlFor="premio_asistencia_semanal">Premio de Asistencia Semanal</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <Input id="premio_asistencia_semanal" type="number" step="0.01" className="pl-7"
+                        value={formData.premio_asistencia_semanal || ""}
+                        onChange={(e) => setFormData({ ...formData, premio_asistencia_semanal: e.target.value ? parseFloat(e.target.value) : "" } as any)}
+                        placeholder="0.00" autoComplete="off" />
+                    </div>
                   </div>
                 )}
 
