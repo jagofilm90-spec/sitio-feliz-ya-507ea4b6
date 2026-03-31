@@ -356,11 +356,6 @@ const RutasContent = () => {
                 <Truck className="h-4 w-4" />
                 Rutas
               </TabsTrigger>
-              <TabsTrigger value="vehiculos" className="flex items-center gap-1.5 px-2 sm:px-3">
-                <Truck className="h-4 w-4" />
-                <span className="hidden sm:inline">Vehículos</span>
-                <span className="sm:hidden">Veh</span>
-              </TabsTrigger>
               <TabsTrigger value="zonas" className="flex items-center gap-1.5 px-2 sm:px-3">
                 <MapPin className="h-4 w-4" />
                 Zonas
