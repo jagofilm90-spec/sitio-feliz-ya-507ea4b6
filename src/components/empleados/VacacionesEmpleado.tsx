@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { hoyMexico } from "@/lib/generarContratoPDF";
+import { contarDiasVacaciones } from "@/lib/vacaciones";
 import { Plus, Check, X } from "lucide-react";
 
 interface Vacacion { id: string; fecha_inicio: string; fecha_fin: string; dias: number; status: string; notas: string | null; }
@@ -53,19 +54,7 @@ export function VacacionesEmpleado({ empleadoId, empleadoNombre, fechaIngreso, i
 
   useEffect(() => { loadVacaciones(); }, [empleadoId]);
 
-  const calcDias = () => {
-    if (!form.fecha_inicio || !form.fecha_fin) return 0;
-    const ini = new Date(form.fecha_inicio + "T00:00:00");
-    const fin = new Date(form.fecha_fin + "T00:00:00");
-    if (fin < ini) return 0;
-    let count = 0;
-    const d = new Date(ini);
-    while (d <= fin) {
-      if (d.getDay() !== 0) count++; // exclude Sundays only
-      d.setDate(d.getDate() + 1);
-    }
-    return count;
-  };
+  const calcDias = () => contarDiasVacaciones(form.fecha_inicio, form.fecha_fin);
 
   const handleSolicitar = async () => {
     const dias = calcDias();

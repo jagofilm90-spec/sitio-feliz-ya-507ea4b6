@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { contarDiasVacaciones } from "@/lib/vacaciones";
 import { Palmtree, Loader2 } from "lucide-react";
 
 const API = import.meta.env.VITE_SUPABASE_URL;
@@ -37,19 +38,7 @@ export function VacacionesMasivasDialog({ open, onClose }: { open: boolean; onCl
     })();
   }, [open]);
 
-  const dias = (() => {
-    if (!fechaInicio || !fechaFin) return 0;
-    const ini = new Date(fechaInicio + "T00:00:00");
-    const fin = new Date(fechaFin + "T00:00:00");
-    if (fin < ini) return 0;
-    let count = 0;
-    const d = new Date(ini);
-    while (d <= fin) {
-      if (d.getDay() !== 0) count++; // exclude Sundays only
-      d.setDate(d.getDate() + 1);
-    }
-    return count;
-  })();
+  const dias = contarDiasVacaciones(fechaInicio, fechaFin);
 
   const toggleAll = () => {
     if (selectAll) { setSelected(new Set()); setSelectAll(false); }
