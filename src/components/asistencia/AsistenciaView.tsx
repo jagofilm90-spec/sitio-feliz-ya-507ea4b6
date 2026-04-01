@@ -155,17 +155,32 @@ export function AsistenciaView() {
       {/* Employee Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
         {empleadosConZk.map(emp => {
-          const horaEntrada = presentesHoy.get(emp.id);
-          const presente = horaEntrada !== undefined;
+          const reg = registrosHoy.get(emp.id);
+          const presente = !!reg;
+          const tieneSalida = reg?.salida != null;
+          // status: working (green), left (blue), absent (red), pending (gray)
+          const status = presente
+            ? (tieneSalida ? "left" : "working")
+            : (pasadaHoraLimite ? "absent" : "pending");
+
+          const borderClass = {
+            working: "border-green-300 bg-green-50 dark:bg-green-950/20 dark:border-green-800",
+            left: "border-blue-300 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800",
+            absent: "border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800",
+            pending: "border-border bg-muted/30",
+          }[status];
+
+          const avatarClass = {
+            working: "bg-green-200 text-green-800 dark:bg-green-900 dark:text-green-200",
+            left: "bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+            absent: "bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-200",
+            pending: "bg-muted text-muted-foreground",
+          }[status];
 
           return (
             <Card
               key={emp.id}
-              className={`cursor-pointer transition-all hover:shadow-md ${
-                presente
-                  ? "border-green-300 bg-green-50 dark:bg-green-950/20 dark:border-green-800"
-                  : "border-border bg-muted/30"
-              }`}
+              className={`cursor-pointer transition-all hover:shadow-md ${borderClass}`}
               onClick={() => setSelectedEmpleado(emp)}
             >
               <CardContent className="p-4 flex flex-col items-center text-center gap-2">
@@ -173,11 +188,7 @@ export function AsistenciaView() {
                   {emp.foto_url ? (
                     <AvatarImage src={emp.foto_url} alt={emp.nombre_completo} />
                   ) : null}
-                  <AvatarFallback className={`text-lg font-bold ${
-                    presente 
-                      ? "bg-green-200 text-green-800 dark:bg-green-900 dark:text-green-200" 
-                      : "bg-muted text-muted-foreground"
-                  }`}>
+                  <AvatarFallback className={`text-lg font-bold ${avatarClass}`}>
                     {getInitials(emp.nombre_completo)}
                   </AvatarFallback>
                 </Avatar>
@@ -185,14 +196,33 @@ export function AsistenciaView() {
                   <p className="font-medium text-sm leading-tight">{emp.nombre_completo.split(" ").slice(0, 2).join(" ")}</p>
                   <p className="text-xs text-muted-foreground">{emp.puesto}</p>
                 </div>
-                {presente ? (
-                  <Badge className="bg-green-500/15 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 text-xs">
-                    <Clock className="h-3 w-3 mr-1" />
-                    {formatTime12(horaEntrada)}
-                  </Badge>
-                ) : (
+                {status === "working" && reg && (
+                  <div className="flex flex-col items-center gap-0.5">
+                    <Badge className="bg-green-500/15 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 text-xs">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {formatTime12(reg.entrada)}
+                    </Badge>
+                    <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">Trabajando</span>
+                  </div>
+                )}
+                {status === "left" && reg && (
+                  <div className="flex flex-col items-center gap-0.5">
+                    <div className="flex items-center gap-1 text-xs">
+                      <span className="text-green-600 dark:text-green-400 font-mono">{formatTime12(reg.entrada)}</span>
+                      <span className="text-muted-foreground">→</span>
+                      <span className="text-blue-600 dark:text-blue-400 font-mono">{formatTime12(reg.salida)}</span>
+                    </div>
+                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Salió</span>
+                  </div>
+                )}
+                {status === "pending" && (
                   <Badge variant="secondary" className="text-xs text-muted-foreground">
-                    Sin registro
+                    No ha llegado
+                  </Badge>
+                )}
+                {status === "absent" && (
+                  <Badge className="bg-red-500/15 text-red-700 dark:text-red-400 border-red-300 dark:border-red-700 text-xs">
+                    Ausente
                   </Badge>
                 )}
               </CardContent>
