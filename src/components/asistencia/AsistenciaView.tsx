@@ -132,7 +132,7 @@ export function AsistenciaView() {
   }, [selectedEmpleado, registros]);
 
   const empleadosConZk = empleados.filter(e => mappedIds.has(e.id));
-  const presenteCount = empleadosConZk.filter(e => presentesHoy.has(e.id)).length;
+  const presenteCount = empleadosConZk.filter(e => registrosHoy.has(e.id)).length;
 
   if (loading) {
     return (
