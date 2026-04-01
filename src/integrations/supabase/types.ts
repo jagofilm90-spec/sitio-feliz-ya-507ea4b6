@@ -2211,6 +2211,60 @@ export type Database = {
           },
         ]
       }
+      empleados_vacaciones: {
+        Row: {
+          aprobada_por: string | null
+          created_at: string
+          dias: number
+          empleado_id: string
+          fecha_fin: string
+          fecha_inicio: string
+          id: string
+          notas: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          aprobada_por?: string | null
+          created_at?: string
+          dias: number
+          empleado_id: string
+          fecha_fin: string
+          fecha_inicio: string
+          id?: string
+          notas?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          aprobada_por?: string | null
+          created_at?: string
+          dias?: number
+          empleado_id?: string
+          fecha_fin?: string
+          fecha_inicio?: string
+          id?: string
+          notas?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empleados_vacaciones_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empleados_vacaciones_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entregas: {
         Row: {
           carga_confirmada: boolean | null
