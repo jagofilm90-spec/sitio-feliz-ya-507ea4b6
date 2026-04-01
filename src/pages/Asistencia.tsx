@@ -7,17 +7,28 @@ import { ReporteSemanal } from "@/components/asistencia/ReporteSemanal";
 import { ReporteQuincenal } from "@/components/asistencia/ReporteQuincenal";
 import { ReporteAsistenciaMensual } from "@/components/asistencia/ReporteAsistenciaMensual";
 import { useUserRoles } from "@/hooks/useUserRoles";
-import { Clock, Link2, BarChart3, Calendar, CalendarDays } from "lucide-react";
+import { Clock, Link2, BarChart3, Calendar, CalendarDays, Palmtree } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { VacacionesMasivasDialog } from "@/components/asistencia/VacacionesMasivasDialog";
 
 export default function Asistencia() {
   const { isAdmin } = useUserRoles();
+  const [showVacMasivas, setShowVacMasivas] = useState(false);
 
   return (
     <Layout>
       <div className="space-y-4">
-        <div>
-          <h1 className="text-2xl font-bold">Asistencia</h1>
-          <p className="text-muted-foreground text-sm">Control de entradas y salidas</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Asistencia</h1>
+            <p className="text-muted-foreground text-sm">Control de entradas y salidas</p>
+          </div>
+          {isAdmin && (
+            <Button variant="outline" size="sm" onClick={() => setShowVacMasivas(true)}>
+              <Palmtree className="h-4 w-4 mr-1" />Vacaciones masivas
+            </Button>
+          )}
         </div>
 
         <Tabs defaultValue="registros">
@@ -64,6 +75,7 @@ export default function Asistencia() {
           )}
         </Tabs>
       </div>
+      <VacacionesMasivasDialog open={showVacMasivas} onClose={() => setShowVacMasivas(false)} />
     </Layout>
   );
 }

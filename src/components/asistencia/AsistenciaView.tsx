@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Users } from "lucide-react";
+import { Loader2, Users, Palmtree } from "lucide-react";
 import { format, startOfWeek, eachDayOfInterval } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -32,6 +32,7 @@ export function AsistenciaView() {
   const [registros, setRegistros] = useState<AsistenciaRow[]>([]);
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [mappedIds, setMappedIds] = useState<Set<string>>(new Set());
+  const [cierreMotivo, setCierreMotivo] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedEmpleado, setSelectedEmpleado] = useState<Empleado | null>(null);
   const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" });
@@ -48,6 +49,17 @@ export function AsistenciaView() {
       setEmpleados((e || []) as Empleado[]);
       setRegistros((a || []) as AsistenciaRow[]);
       setMappedIds(new Set((m || []).map((x: any) => x.empleado_id)));
+      // Check if today is a company-wide closure (most employees have vacation with same notas)
+      const { data: vacHoy } = await supabase.from("empleados_vacaciones").select("empleado_id, notas").eq("status", "tomada").lte("fecha_inicio", hoy).gte("fecha_fin", hoy);
+      if (vacHoy && vacHoy.length > 0) {
+        const activeCount = (e || []).length;
+        const vacCount = new Set(vacHoy.map((v: any) => v.empleado_id)).size;
+        if (vacCount >= activeCount * 0.7) { // 70%+ employees on same vacation = company closure
+          const motivos = vacHoy.map((v: any) => v.notas).filter(Boolean);
+          const moda = motivos.sort((a: string, b: string) => motivos.filter((v: string) => v === b).length - motivos.filter((v: string) => v === a).length)[0];
+          setCierreMotivo(moda || "Cierre de empresa");
+        }
+      }
       setLoading(false);
     })();
   }, []);
@@ -66,13 +78,19 @@ export function AsistenciaView() {
 
   const empsZk = empleados.filter(e => mappedIds.has(e.id));
   const presCount = empsZk.filter(e => datosHoy.has(e.id)).length;
-  const getStatus = (e: Empleado) => { const d = datosHoy.get(e.id); if (!d) return horaActual >= 9 ? "ausente" : "no_llegado"; return d.salida ? "salio" : "trabajando"; };
+  const getStatus = (e: Empleado) => { const d = datosHoy.get(e.id); if (!d) return (cierreMotivo || horaActual < 9) ? "no_llegado" : "ausente"; return d.salida ? "salio" : "trabajando"; };
   const sCfg: Record<string, { label: string; cls: string }> = { trabajando: { label: "Trabajando", cls: "bg-green-100 text-green-700 border-green-300" }, salio: { label: "Salió", cls: "bg-blue-100 text-blue-700 border-blue-300" }, no_llegado: { label: "No ha llegado", cls: "bg-gray-100 text-gray-600 border-gray-300" }, ausente: { label: "Ausente", cls: "bg-red-100 text-red-700 border-red-300" } };
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
 
   return (
     <div className="space-y-6">
+      {cierreMotivo && (
+        <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm font-medium flex items-center gap-2">
+          <Palmtree className="h-5 w-5 shrink-0" />
+          La empresa está cerrada hoy: {cierreMotivo}
+        </div>
+      )}
       <Badge variant="secondary" className="text-sm px-3 py-1"><Users className="h-4 w-4 mr-1.5" />{presCount} de {empsZk.length} presentes</Badge>
 
       {AREAS.map(area => {
