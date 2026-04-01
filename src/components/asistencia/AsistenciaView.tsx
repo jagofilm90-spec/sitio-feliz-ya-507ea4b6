@@ -232,16 +232,16 @@ export function AsistenciaView() {
       </div>
 
       {/* Absent list */}
-      {empleadosConZk.some(e => !presentesHoy.has(e.id)) && (
+      {empleadosConZk.some(e => !registrosHoy.has(e.id)) && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              No han llegado hoy
+              {pasadaHoraLimite ? "Ausentes hoy" : "No han llegado hoy"}
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
-            {empleadosConZk.filter(e => !presentesHoy.has(e.id)).map(emp => (
-              <Badge key={emp.id} variant="outline" className="text-xs">
+            {empleadosConZk.filter(e => !registrosHoy.has(e.id)).map(emp => (
+              <Badge key={emp.id} variant={pasadaHoraLimite ? "destructive" : "outline"} className="text-xs">
                 {emp.nombre_completo.split(" ").slice(0, 2).join(" ")}
               </Badge>
             ))}
