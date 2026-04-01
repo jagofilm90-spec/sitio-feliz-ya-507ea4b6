@@ -55,9 +55,16 @@ export function VacacionesEmpleado({ empleadoId, empleadoNombre, fechaIngreso, i
 
   const calcDias = () => {
     if (!form.fecha_inicio || !form.fecha_fin) return 0;
-    const ini = new Date(form.fecha_inicio);
-    const fin = new Date(form.fecha_fin);
-    return Math.max(0, Math.ceil((fin.getTime() - ini.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+    const ini = new Date(form.fecha_inicio + "T00:00:00");
+    const fin = new Date(form.fecha_fin + "T00:00:00");
+    if (fin < ini) return 0;
+    let count = 0;
+    const d = new Date(ini);
+    while (d <= fin) {
+      if (d.getDay() !== 0) count++; // exclude Sundays only
+      d.setDate(d.getDate() + 1);
+    }
+    return count;
   };
 
   const handleSolicitar = async () => {

@@ -39,8 +39,16 @@ export function VacacionesMasivasDialog({ open, onClose }: { open: boolean; onCl
 
   const dias = (() => {
     if (!fechaInicio || !fechaFin) return 0;
-    const d = Math.ceil((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    return Math.max(0, d);
+    const ini = new Date(fechaInicio + "T00:00:00");
+    const fin = new Date(fechaFin + "T00:00:00");
+    if (fin < ini) return 0;
+    let count = 0;
+    const d = new Date(ini);
+    while (d <= fin) {
+      if (d.getDay() !== 0) count++; // exclude Sundays only
+      d.setDate(d.getDate() + 1);
+    }
+    return count;
   })();
 
   const toggleAll = () => {

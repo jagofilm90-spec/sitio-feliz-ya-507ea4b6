@@ -50,7 +50,7 @@ export function AsistenciaView() {
       setRegistros((a || []) as AsistenciaRow[]);
       setMappedIds(new Set((m || []).map((x: any) => x.empleado_id)));
       // Check if today is a company-wide closure (most employees have vacation with same notas)
-      const { data: vacHoy } = await supabase.from("empleados_vacaciones").select("empleado_id, notas").eq("status", "tomada").lte("fecha_inicio", hoy).gte("fecha_fin", hoy);
+      const { data: vacHoy } = await (supabase as any).from("empleados_vacaciones").select("empleado_id, notas").eq("status", "tomada").lte("fecha_inicio", hoy).gte("fecha_fin", hoy);
       if (vacHoy && vacHoy.length > 0) {
         const activeCount = (e || []).length;
         const vacCount = new Set(vacHoy.map((v: any) => v.empleado_id)).size;
