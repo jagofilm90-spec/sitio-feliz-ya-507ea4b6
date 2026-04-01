@@ -5,40 +5,28 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Clock, Users } from "lucide-react";
-import { format, parseISO, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
+import { Loader2, Users } from "lucide-react";
+import { format, startOfWeek, eachDayOfInterval } from "date-fns";
 import { es } from "date-fns/locale";
 
-interface AsistenciaRow {
-  id: string;
-  zk_user_id: string;
-  empleado_id: string | null;
-  fecha: string | null;
-  hora: string | null;
-  tipo: string | null;
-  fecha_hora: string;
-}
-
-interface Empleado {
-  id: string;
-  nombre_completo: string;
-  puesto: string;
-  activo: boolean;
-  zk_id: string | null;
-  foto_url: string | null;
-}
+interface AsistenciaRow { id: string; zk_user_id: string; empleado_id: string | null; fecha: string | null; hora: string | null; tipo: string | null; fecha_hora: string; }
+interface Empleado { id: string; nombre_completo: string; puesto: string; activo: boolean; foto_url: string | null; }
 
 function formatTime12(hora: string | null): string {
   if (!hora) return "";
   const [h, m] = hora.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  const h12 = h % 12 || 12;
-  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
 }
+function getInitials(name: string): string { return name.split(" ").slice(0, 2).map(n => n[0]).join("").toUpperCase(); }
 
-function getInitials(name: string): string {
-  return name.split(" ").slice(0, 2).map(n => n[0]).join("").toUpperCase();
-}
+const AREAS = [
+  { label: "ALMACÉN", puestos: ["Almacenista", "Gerente de Almacén"] },
+  { label: "CHOFERES", puestos: ["Chofer"] },
+  { label: "AYUDANTES", puestos: ["Ayudante de Chofer"] },
+  { label: "OFICINA", puestos: ["Secretaria", "Vendedor", "Contadora"] },
+];
+const colors = ["#E24B4A", "#D85A30", "#BA7517", "#639922", "#1D9E75", "#378ADD", "#7F77DD", "#D4537E"];
+const getColor = (n: string) => colors[n.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length];
 
 export function AsistenciaView() {
   const [registros, setRegistros] = useState<AsistenciaRow[]>([]);
@@ -46,252 +34,74 @@ export function AsistenciaView() {
   const [mappedIds, setMappedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [selectedEmpleado, setSelectedEmpleado] = useState<Empleado | null>(null);
-
   const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" });
+  const horaActual = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City" })).getHours();
 
-  const loadData = async () => {
-    setLoading(true);
+  useEffect(() => {
+    (async () => {
+      const ws = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
+      const [{ data: e }, { data: a }, { data: m }] = await Promise.all([
+        (supabase as any).from("empleados").select("id,nombre_completo,puesto,activo,foto_url").eq("activo", true).order("nombre_completo"),
+        supabase.from("asistencia").select("id,zk_user_id,empleado_id,fecha,hora,tipo,fecha_hora").gte("fecha", ws).lte("fecha", hoy).order("hora", { ascending: true }),
+        (supabase as any).from("zk_mapeo").select("empleado_id"),
+      ]);
+      setEmpleados((e || []) as Empleado[]);
+      setRegistros((a || []) as AsistenciaRow[]);
+      setMappedIds(new Set((m || []).map((x: any) => x.empleado_id)));
+      setLoading(false);
+    })();
+  }, []);
 
-    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-    const weekStartStr = format(weekStart, "yyyy-MM-dd");
-
-    // Load mapped employee IDs from zk_mapeo via fetch
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      const h = { "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Authorization": `Bearer ${session.access_token}` };
-      const mapRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/zk_mapeo?select=empleado_id`, { headers: h });
-      const mapData = await mapRes.json();
-      if (Array.isArray(mapData)) setMappedIds(new Set(mapData.map((m: any) => m.empleado_id)));
-    }
-
-    const [{ data: empData }, { data: asistData }, { data: mapeoData }] = await Promise.all([
-      (supabase as any)
-        .from("empleados")
-        .select("id, nombre_completo, puesto, activo, foto_url")
-        .eq("activo", true)
-        .order("nombre_completo"),
-      supabase
-        .from("asistencia")
-        .select("id, zk_user_id, empleado_id, fecha, hora, tipo, fecha_hora")
-        .gte("fecha", weekStartStr)
-        .lte("fecha", hoy)
-        .order("fecha", { ascending: false })
-        .order("hora", { ascending: true }),
-      (supabase as any)
-        .from("zk_mapeo")
-        .select("empleado_id"),
-    ]);
-
-    setEmpleados((empData || []) as Empleado[]);
-    setRegistros((asistData || []) as AsistenciaRow[]);
-    setMappedIds(new Set((mapeoData || []).map((m: any) => m.empleado_id)));
-    setLoading(false);
-  };
-
-  useEffect(() => { loadData(); }, []);
-
-  // Map: empleado_id → { entrada, salida }
-  const registrosHoy = useMemo(() => {
-    const map = new Map<string, { entrada: string; salida: string | null }>();
-    for (const r of registros) {
-      if (!r.empleado_id || r.fecha !== hoy) continue;
-      const existing = map.get(r.empleado_id);
-      if (!existing) {
-        map.set(r.empleado_id, { entrada: r.hora || "", salida: null });
-      } else {
-        // Update salida to latest record
-        existing.salida = r.hora || "";
-      }
-    }
-    return map;
+  const datosHoy = useMemo(() => {
+    const r = new Map<string, { entrada: string | null; salida: string | null }>();
+    for (const x of registros) { if (!x.empleado_id || x.fecha !== hoy) continue; if (!r.has(x.empleado_id)) r.set(x.empleado_id, { entrada: x.hora, salida: null }); else r.get(x.empleado_id)!.salida = x.hora; }
+    return r;
   }, [registros, hoy]);
 
-  const horaLimite = 9; // 9:00 AM
-  const horaActual = new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City", hour: "numeric", hour12: false });
-  const pasadaHoraLimite = parseInt(horaActual) >= horaLimite;
-
-  // Weekly history for selected employee
-  const historialSemana = useMemo(() => {
+  const historial = useMemo(() => {
     if (!selectedEmpleado) return [];
-    const now = new Date();
-    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
-    const days = eachDayOfInterval({ start: weekStart, end: now > weekEnd ? weekEnd : now });
-
-    return days.map(day => {
-      const dateStr = day.toISOString().split("T")[0];
-      const dayRecords = registros
-        .filter(r => r.empleado_id === selectedEmpleado.id && r.fecha === dateStr)
-        .sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
-
-      const entrada = dayRecords[0]?.hora || null;
-      const salida = dayRecords.length > 1 ? dayRecords[dayRecords.length - 1]?.hora || null : null;
-
-      return { fecha: dateStr, dia: format(day, "EEEE", { locale: es }), entrada, salida };
-    });
+    const days = eachDayOfInterval({ start: startOfWeek(new Date(), { weekStartsOn: 1 }), end: new Date() });
+    return days.map(d => { const ds = format(d, "yyyy-MM-dd"); const rs = registros.filter(r => r.empleado_id === selectedEmpleado.id && r.fecha === ds).sort((a, b) => (a.hora || "").localeCompare(b.hora || "")); return { fecha: ds, dia: format(d, "EEEE", { locale: es }), entrada: rs[0]?.hora || null, salida: rs.length > 1 ? rs[rs.length - 1]?.hora || null : null }; });
   }, [selectedEmpleado, registros]);
 
-  const empleadosConZk = empleados.filter(e => mappedIds.has(e.id));
-  const presenteCount = empleadosConZk.filter(e => registrosHoy.has(e.id)).length;
+  const empsZk = empleados.filter(e => mappedIds.has(e.id));
+  const presCount = empsZk.filter(e => datosHoy.has(e.id)).length;
+  const getStatus = (e: Empleado) => { const d = datosHoy.get(e.id); if (!d) return horaActual >= 9 ? "ausente" : "no_llegado"; return d.salida ? "salio" : "trabajando"; };
+  const sCfg: Record<string, { label: string; cls: string }> = { trabajando: { label: "Trabajando", cls: "bg-green-100 text-green-700 border-green-300" }, salio: { label: "Salió", cls: "bg-blue-100 text-blue-700 border-blue-300" }, no_llegado: { label: "No ha llegado", cls: "bg-gray-100 text-gray-600 border-gray-300" }, ausente: { label: "Ausente", cls: "bg-red-100 text-red-700 border-red-300" } };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
 
   return (
-    <div className="space-y-4">
-      {/* Summary */}
-      <div className="flex items-center gap-3">
-        <Badge variant="secondary" className="text-sm px-3 py-1">
-          <Users className="h-4 w-4 mr-1.5" />
-          {presenteCount} de {empleadosConZk.length} presentes
-        </Badge>
-      </div>
+    <div className="space-y-6">
+      <Badge variant="secondary" className="text-sm px-3 py-1"><Users className="h-4 w-4 mr-1.5" />{presCount} de {empsZk.length} presentes</Badge>
 
-      {/* Employee Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-        {empleadosConZk.map(emp => {
-          const reg = registrosHoy.get(emp.id);
-          const presente = !!reg;
-          const tieneSalida = reg?.salida != null;
-          // status: working (green), left (blue), absent (red), pending (gray)
-          const status = presente
-            ? (tieneSalida ? "left" : "working")
-            : (pasadaHoraLimite ? "absent" : "pending");
+      {AREAS.map(area => {
+        const ae = empsZk.filter(e => area.puestos.includes(e.puesto));
+        if (!ae.length) return null;
+        return (
+          <div key={area.label}>
+            <div className="flex items-center gap-2 mb-2"><h3 className="text-sm font-bold text-muted-foreground tracking-wide">{area.label}</h3><Badge variant="outline" className="text-xs">{ae.filter(e => datosHoy.has(e.id)).length}/{ae.length}</Badge></div>
+            <div className="space-y-1">
+              {ae.map(emp => { const d = datosHoy.get(emp.id); const s = getStatus(emp); const c = sCfg[s]; return (
+                <div key={emp.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer" onClick={() => setSelectedEmpleado(emp)}>
+                  <Avatar className="h-10 w-10 shrink-0">{emp.foto_url ? <AvatarImage src={emp.foto_url} /> : null}<AvatarFallback style={{ backgroundColor: getColor(emp.nombre_completo) }} className="text-white text-sm font-bold">{getInitials(emp.nombre_completo)}</AvatarFallback></Avatar>
+                  <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{emp.nombre_completo}</p></div>
+                  <span className="text-xs font-mono text-muted-foreground shrink-0">{d ? `${formatTime12(d.entrada)}${d.salida ? ` → ${formatTime12(d.salida)}` : ""}` : "—"}</span>
+                  <Badge variant="outline" className={`text-xs shrink-0 ${c.cls}`}>{c.label}</Badge>
+                </div>); })}
+            </div>
+          </div>);
+      })}
 
-          const borderClass = {
-            working: "border-green-300 bg-green-50 dark:bg-green-950/20 dark:border-green-800",
-            left: "border-blue-300 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800",
-            absent: "border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800",
-            pending: "border-border bg-muted/30",
-          }[status];
+      {horaActual >= 9 && (() => { const aus = empsZk.filter(e => !datosHoy.has(e.id)); if (!aus.length) return null; return (
+        <Card className="border-red-200"><CardHeader className="pb-2"><CardTitle className="text-sm font-bold text-red-600">AUSENTES HOY ({aus.length})</CardTitle></CardHeader>
+          <CardContent className="space-y-1">{aus.map(e => (
+            <div key={e.id} className="flex items-center gap-3 p-1"><Avatar className="h-8 w-8">{e.foto_url ? <AvatarImage src={e.foto_url} /> : null}<AvatarFallback style={{ backgroundColor: getColor(e.nombre_completo) }} className="text-white text-xs font-bold">{getInitials(e.nombre_completo)}</AvatarFallback></Avatar><span className="text-sm">{e.nombre_completo}</span><span className="text-xs text-muted-foreground">— {e.puesto}</span></div>
+          ))}</CardContent></Card>); })()}
 
-          const avatarClass = {
-            working: "bg-green-200 text-green-800 dark:bg-green-900 dark:text-green-200",
-            left: "bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-            absent: "bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-200",
-            pending: "bg-muted text-muted-foreground",
-          }[status];
-
-          return (
-            <Card
-              key={emp.id}
-              className={`cursor-pointer transition-all hover:shadow-md ${borderClass}`}
-              onClick={() => setSelectedEmpleado(emp)}
-            >
-              <CardContent className="p-4 flex flex-col items-center text-center gap-2">
-                <Avatar className="h-16 w-16">
-                  {emp.foto_url ? (
-                    <AvatarImage src={emp.foto_url} alt={emp.nombre_completo} />
-                  ) : null}
-                  <AvatarFallback className={`text-lg font-bold ${avatarClass}`}>
-                    {getInitials(emp.nombre_completo)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium text-sm leading-tight">{emp.nombre_completo.split(" ").slice(0, 2).join(" ")}</p>
-                  <p className="text-xs text-muted-foreground">{emp.puesto}</p>
-                </div>
-                {status === "working" && reg && (
-                  <div className="flex flex-col items-center gap-0.5">
-                    <Badge className="bg-green-500/15 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 text-xs">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {formatTime12(reg.entrada)}
-                    </Badge>
-                    <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">Trabajando</span>
-                  </div>
-                )}
-                {status === "left" && reg && (
-                  <div className="flex flex-col items-center gap-0.5">
-                    <div className="flex items-center gap-1 text-xs">
-                      <span className="text-green-600 dark:text-green-400 font-mono">{formatTime12(reg.entrada)}</span>
-                      <span className="text-muted-foreground">→</span>
-                      <span className="text-blue-600 dark:text-blue-400 font-mono">{formatTime12(reg.salida)}</span>
-                    </div>
-                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Salió</span>
-                  </div>
-                )}
-                {status === "pending" && (
-                  <Badge variant="secondary" className="text-xs text-muted-foreground">
-                    No ha llegado
-                  </Badge>
-                )}
-                {status === "absent" && (
-                  <Badge className="bg-red-500/15 text-red-700 dark:text-red-400 border-red-300 dark:border-red-700 text-xs">
-                    Ausente
-                  </Badge>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Absent list */}
-      {empleadosConZk.some(e => !registrosHoy.has(e.id)) && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {pasadaHoraLimite ? "Ausentes hoy" : "No han llegado hoy"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            {empleadosConZk.filter(e => !registrosHoy.has(e.id)).map(emp => (
-              <Badge key={emp.id} variant={pasadaHoraLimite ? "destructive" : "outline"} className="text-xs">
-                {emp.nombre_completo.split(" ").slice(0, 2).join(" ")}
-              </Badge>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Weekly history dialog */}
-      <Dialog open={!!selectedEmpleado} onOpenChange={(open) => !open && setSelectedEmpleado(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                {selectedEmpleado?.foto_url ? (
-                  <AvatarImage src={selectedEmpleado.foto_url} alt={selectedEmpleado.nombre_completo} />
-                ) : null}
-                <AvatarFallback>{selectedEmpleado ? getInitials(selectedEmpleado.nombre_completo) : ""}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p>{selectedEmpleado?.nombre_completo}</p>
-                <p className="text-sm font-normal text-muted-foreground">{selectedEmpleado?.puesto}</p>
-              </div>
-            </DialogTitle>
-          </DialogHeader>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Día</TableHead>
-                <TableHead>Entrada</TableHead>
-                <TableHead>Salida</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {historialSemana.map(row => (
-                <TableRow key={row.fecha}>
-                  <TableCell className="capitalize">{row.dia}</TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {row.entrada ? formatTime12(row.entrada) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {row.salida ? formatTime12(row.salida) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+      <Dialog open={!!selectedEmpleado} onOpenChange={o => !o && setSelectedEmpleado(null)}>
+        <DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle className="flex items-center gap-3"><Avatar className="h-10 w-10">{selectedEmpleado?.foto_url ? <AvatarImage src={selectedEmpleado.foto_url} /> : null}<AvatarFallback>{selectedEmpleado ? getInitials(selectedEmpleado.nombre_completo) : ""}</AvatarFallback></Avatar><div><p>{selectedEmpleado?.nombre_completo}</p><p className="text-sm font-normal text-muted-foreground">{selectedEmpleado?.puesto}</p></div></DialogTitle></DialogHeader>
+          <Table><TableHeader><TableRow><TableHead>Día</TableHead><TableHead>Entrada</TableHead><TableHead>Salida</TableHead></TableRow></TableHeader><TableBody>{historial.map(r => (<TableRow key={r.fecha}><TableCell className="capitalize">{r.dia}</TableCell><TableCell className="font-mono text-sm">{r.entrada ? formatTime12(r.entrada) : "—"}</TableCell><TableCell className="font-mono text-sm">{r.salida ? formatTime12(r.salida) : "—"}</TableCell></TableRow>))}</TableBody></Table>
         </DialogContent>
       </Dialog>
     </div>
