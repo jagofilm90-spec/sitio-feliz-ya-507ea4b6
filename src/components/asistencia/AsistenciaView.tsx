@@ -90,16 +90,25 @@ export function AsistenciaView() {
 
   useEffect(() => { loadData(); }, []);
 
-  // Map: empleado_id → first check-in time today
-  const presentesHoy = useMemo(() => {
-    const map = new Map<string, string>();
+  // Map: empleado_id → { entrada, salida }
+  const registrosHoy = useMemo(() => {
+    const map = new Map<string, { entrada: string; salida: string | null }>();
     for (const r of registros) {
-      if (r.empleado_id && r.fecha === hoy && !map.has(r.empleado_id)) {
-        map.set(r.empleado_id, r.hora || "");
+      if (!r.empleado_id || r.fecha !== hoy) continue;
+      const existing = map.get(r.empleado_id);
+      if (!existing) {
+        map.set(r.empleado_id, { entrada: r.hora || "", salida: null });
+      } else {
+        // Update salida to latest record
+        existing.salida = r.hora || "";
       }
     }
     return map;
   }, [registros, hoy]);
+
+  const horaLimite = 9; // 9:00 AM
+  const horaActual = new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City", hour: "numeric", hour12: false });
+  const pasadaHoraLimite = parseInt(horaActual) >= horaLimite;
 
   // Weekly history for selected employee
   const historialSemana = useMemo(() => {
