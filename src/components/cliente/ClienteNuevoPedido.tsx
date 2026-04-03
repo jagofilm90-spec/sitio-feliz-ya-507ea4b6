@@ -113,6 +113,7 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
         .from("productos")
         .select("id, nombre, codigo, unidad, precio_venta, stock_actual, aplica_iva, aplica_ieps, peso_kg, precio_por_kilo")
         .eq("activo", true)
+        .neq("bloqueado_venta", true)
         .gt("stock_actual", 0)
         .order("nombre");
 

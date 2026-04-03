@@ -417,6 +417,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
         .from("productos")
         .select("id, codigo, nombre, especificaciones, marca, contenido_empaque, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
         .eq("activo", true)
+        .neq("bloqueado_venta", true)
         .order("nombre");
 
       setProductos(productosData || []);
@@ -486,7 +487,8 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
         .from("productos")
         .select("id, codigo, nombre, especificaciones, marca, contenido_empaque, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
         .in("id", topProductoIds)
-        .eq("activo", true);
+        .eq("activo", true)
+        .neq("bloqueado_venta", true);
 
       const sortedProductos = topProductoIds
         .map(id => productosFrec?.find(p => p.id === id))
@@ -746,12 +748,13 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
           subtotal: totales.subtotal,
           impuestos: totales.impuestos,
           total: totales.total,
-          status: lineas.some(l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente') 
-            ? "por_autorizar" 
+          status: lineas.some(l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente')
+            ? "por_autorizar"
             : "pendiente",
           notas: notas || null,
           termino_credito: terminoCredito as any,
           requiere_factura: requiereFactura,
+          peso_total_kg: totales.pesoTotalKg > 0 ? totales.pesoTotalKg : null,
         })
         .select()
         .single();

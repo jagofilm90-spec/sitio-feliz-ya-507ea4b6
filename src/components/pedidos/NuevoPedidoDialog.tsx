@@ -164,6 +164,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
       .from("productos")
       .select("id, codigo, nombre, especificaciones, marca, contenido_empaque, precio_venta, unidad, aplica_iva, aplica_ieps, stock_actual, precio_por_kilo, peso_kg")
       .eq("activo", true)
+      .neq("bloqueado_venta", true)
       .order("nombre");
 
     if (!error && data) {

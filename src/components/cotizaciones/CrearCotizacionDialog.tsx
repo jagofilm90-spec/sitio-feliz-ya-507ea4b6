@@ -192,6 +192,7 @@ const CrearCotizacionDialog = ({
       .from("productos")
       .select("id, nombre, codigo, unidad, marca, precio_venta, stock_actual, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg")
       .eq("activo", true)
+      .neq("bloqueado_venta", true)
       .order("nombre");
 
     if (!error && data) {

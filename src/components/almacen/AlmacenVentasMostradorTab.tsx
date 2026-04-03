@@ -73,6 +73,7 @@ export const AlmacenVentasMostradorTab = ({ empleadoId, onStatsUpdate }: Almacen
         .from("productos")
         .select("id, codigo, nombre, precio_venta, stock_actual, aplica_iva, aplica_ieps, unidad")
         .eq("activo", true)
+        .neq("bloqueado_venta", true)
         .or("solo_uso_interno.is.null,solo_uso_interno.eq.false")
         .order("nombre");
       setProductos(data || []);
@@ -277,6 +278,7 @@ export const AlmacenVentasMostradorTab = ({ empleadoId, onStatsUpdate }: Almacen
         .from("productos")
         .select("id, codigo, nombre, precio_venta, stock_actual, aplica_iva, aplica_ieps, unidad")
         .eq("activo", true)
+        .neq("bloqueado_venta", true)
         .or("solo_uso_interno.is.null,solo_uso_interno.eq.false")
         .order("nombre");
       setProductos(refreshed || []);
