@@ -55,7 +55,8 @@ interface Producto {
   descripcion_promocion: string | null;
   producto_base_id: string | null;
   bloqueado_venta: boolean;
-  // Campos de costos para calculadora
+  aplica_iva: boolean | null;
+  aplica_ieps: boolean | null;
   ultimo_costo_compra: number | null;
   costo_promedio_ponderado: number | null;
 }
