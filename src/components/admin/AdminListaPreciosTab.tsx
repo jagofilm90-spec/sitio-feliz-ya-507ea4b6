@@ -56,6 +56,7 @@ interface Producto {
   marca: string | null;
   categoria: string | null;
   peso_kg: number | null;
+  contenido_empaque: string | null;
   unidad: string;
   precio_venta: number;
   precio_por_kilo: boolean;
@@ -63,6 +64,11 @@ interface Producto {
   activo: boolean;
   ultimo_costo_compra: number | null;
   costo_promedio_ponderado: number | null;
+  aplica_iva: boolean | null;
+  aplica_ieps: boolean | null;
+  es_promocion: boolean | null;
+  descripcion_promocion: string | null;
+  bloqueado_venta: boolean | null;
 }
 
 interface ProductoConAnalisis extends Producto {
