@@ -34,6 +34,7 @@ import { CumpleanosWidget } from "@/components/dashboard/CumpleanosWidget";
 import { LicenciasVencimientoAlert } from "@/components/dashboard/LicenciasVencimientoAlert";
 import { VacacionesHoyWidget } from "@/components/dashboard/VacacionesHoyWidget";
 import { AsistenciaHoyWidget } from "@/components/dashboard/AsistenciaHoyWidget";
+import { VentasBajoCostoWidget } from "@/components/dashboard/VentasBajoCostoWidget";
 
 const Dashboard = () => {
   const navigate = useNavigate();
