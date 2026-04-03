@@ -25,6 +25,7 @@ interface AsistenciaRow {
   empleado_id: string | null;
   fecha: string | null;
   hora: string | null;
+  dispositivo: string | null;
 }
 
 function timeToAMPM(time: string): string {
@@ -74,7 +75,7 @@ export function ReporteSemanal() {
           .order("nombre_completo"),
         supabase
           .from("asistencia")
-          .select("empleado_id, fecha, hora")
+          .select("empleado_id, fecha, hora, dispositivo")
           .gte("fecha", fechaDesde)
           .lte("fecha", fechaHasta)
           .order("hora", { ascending: true }),
@@ -105,6 +106,17 @@ export function ReporteSemanal() {
     return days;
   }, [semanaSeleccionada, semanas]);
 
+  // Set of manual records: "fecha:empleado_id"
+  const manualesSemana = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of registros) {
+      if (r.dispositivo === "manual" && r.empleado_id && r.fecha) {
+        s.add(`${r.fecha}:${r.empleado_id}`);
+      }
+    }
+    return s;
+  }, [registros]);
+
   const reporte = useMemo(() => {
     const today = new Date();
     return empleados.map(emp => {
@@ -116,16 +128,19 @@ export function ReporteSemanal() {
         const regs = empRegistros.filter(r => r.fecha === dia.dateStr && r.hora).sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
         const asistio = regs.length > 0;
         const horaEntrada = regs[0]?.hora ? timeToAMPM(regs[0].hora) : null;
-        return { ...dia, debeTrabjar, asistio, horaEntrada, isFuture };
+        const isManual = manualesSemana.has(`${dia.dateStr}:${emp.id}`);
+        return { ...dia, debeTrabjar, asistio, horaEntrada, isFuture, isManual };
       });
 
       const diasQueTocaba = diasInfo.filter(d => d.debeTrabjar && !d.isFuture);
       const diasTrabajados = diasInfo.filter(d => d.asistio).length;
-      const diasFaltados = diasQueTocaba.filter(d => !d.asistio).length;
+      const totalDiasLab = 6;
+      const premioPorDia = (emp.premio_asistencia_semanal || 0) / totalDiasLab;
+      const diasConPremio = diasInfo.filter(d => d.debeTrabjar && d.asistio).length;
+      const premioGanado = Math.round(premioPorDia * diasConPremio * 100) / 100;
       const sueldoDiario = emp.sueldo_bruto ? emp.sueldo_bruto / 30 : 0;
-      const premioAplica = diasFaltados === 0 && diasQueTocaba.length > 0;
-      const premio = premioAplica ? (emp.premio_asistencia_semanal || 0) : 0;
-      const totalPagar = (sueldoDiario * diasTrabajados) + premio;
+      const sueldoSemanal = Math.round(sueldoDiario * diasTrabajados * 100) / 100;
+      const totalPagar = sueldoSemanal + premioGanado;
 
       return {
         empleado_id: emp.id,
@@ -133,25 +148,30 @@ export function ReporteSemanal() {
         puesto: emp.puesto,
         diasInfo,
         diasTrabajados,
+        totalDiasLab: diasQueTocaba.length,
         sueldoDiario,
-        premioAplica,
-        premio,
+        sueldoSemanal,
+        premioPorDia,
+        diasConPremio,
+        premioGanado,
         totalPagar,
       };
     });
-  }, [empleados, registros, diasSemana]);
+  }, [empleados, registros, diasSemana, manualesSemana]);
 
   const handleExport = () => {
     const exportData = reporte.map(r => {
       const row: Record<string, any> = { Empleado: r.nombre };
       diasSemana.forEach((dia, i) => {
         const info = r.diasInfo[i];
-        row[dia.label] = info.asistio ? (info.horaEntrada || "✓") : (info.debeTrabjar && !info.isFuture ? "✗" : "—");
+        const marker = info.isManual ? "*" : "";
+        row[dia.label] = info.asistio ? `${marker}${info.horaEntrada || "✓"}` : (info.debeTrabjar && !info.isFuture ? "✗" : "—");
       });
-      row["Total días"] = r.diasTrabajados;
-      row["Sueldo diario"] = r.sueldoDiario.toFixed(2);
-      row["Premio"] = r.premioAplica ? r.premio.toFixed(2) : "—";
-      row["Total a pagar"] = r.totalPagar.toFixed(2);
+      row["Días"] = `${r.diasTrabajados}/${r.totalDiasLab}`;
+      row["Sueldo semanal"] = r.sueldoSemanal.toFixed(2);
+      row["Premio/día"] = r.premioPorDia.toFixed(2);
+      row["Premio ganado"] = r.premioGanado.toFixed(2);
+      row["Total"] = r.totalPagar.toFixed(2);
       return row;
     });
     const sem = semanas.find(s => s.value === semanaSeleccionada);
@@ -205,8 +225,9 @@ export function ReporteSemanal() {
                     <TableHead key={d.dateStr} className="text-center text-xs whitespace-nowrap">{d.label}</TableHead>
                   ))}
                   <TableHead className="text-center">Días</TableHead>
-                  <TableHead className="text-right">S. Diario</TableHead>
-                  <TableHead className="text-right">Premio</TableHead>
+                  <TableHead className="text-right">Sueldo sem.</TableHead>
+                  <TableHead className="text-right">Premio/día</TableHead>
+                  <TableHead className="text-right">Premio ganado</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                 </TableRow>
               </TableHeader>
@@ -219,7 +240,10 @@ export function ReporteSemanal() {
                         {d.asistio ? (
                           <div className="flex flex-col items-center">
                             <Check className="h-4 w-4 text-green-600" />
-                            <span className="text-[10px] text-muted-foreground">{d.horaEntrada}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {d.isManual && <span className="text-orange-500">*</span>}
+                              {d.horaEntrada}
+                            </span>
                           </div>
                         ) : d.isFuture ? (
                           <span className="text-muted-foreground">—</span>
@@ -230,25 +254,29 @@ export function ReporteSemanal() {
                         )}
                       </TableCell>
                     ))}
-                    <TableCell className="text-center font-mono">{r.diasTrabajados}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">{fmt$(r.sueldoDiario)}</TableCell>
+                    <TableCell className="text-center font-mono">{r.diasTrabajados}/{r.totalDiasLab}</TableCell>
+                    <TableCell className="text-right font-mono text-sm">{fmt$(r.sueldoSemanal)}</TableCell>
+                    <TableCell className="text-right font-mono text-sm">{fmt$(r.premioPorDia)}</TableCell>
                     <TableCell className="text-right font-mono text-sm">
-                      {r.premioAplica ? <span className="text-green-600">{fmt$(r.premio)}</span> : <span className="text-muted-foreground">—</span>}
+                      {r.premioGanado > 0 ? <span className="text-green-600">{fmt$(r.premioGanado)}</span> : <span className="text-muted-foreground">$0</span>}
                     </TableCell>
                     <TableCell className="text-right font-mono font-semibold">{fmt$(r.totalPagar)}</TableCell>
                   </TableRow>
                 ))}
-                {/* Totals row */}
                 <TableRow className="border-t-2 font-semibold">
                   <TableCell className="sticky left-0 bg-background z-10">TOTAL</TableCell>
                   {diasSemana.map((_, i) => <TableCell key={i} />)}
                   <TableCell className="text-center font-mono">{reporte.reduce((s, r) => s + r.diasTrabajados, 0)}</TableCell>
                   <TableCell />
-                  <TableCell className="text-right font-mono">{fmt$(reporte.reduce((s, r) => s + r.premio, 0))}</TableCell>
+                  <TableCell />
+                  <TableCell className="text-right font-mono">{fmt$(reporte.reduce((s, r) => s + r.premioGanado, 0))}</TableCell>
                   <TableCell className="text-right font-mono">{fmt$(reporte.reduce((s, r) => s + r.totalPagar, 0))}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
+            {reporte.some(r => r.diasInfo.some(d => d.isManual && d.asistio)) && (
+              <p className="text-xs text-muted-foreground mt-2"><span className="text-orange-500">*</span> Registro manual</p>
+            )}
           </div>
         )}
       </CardContent>
