@@ -543,35 +543,34 @@ export const SecretariaListaPreciosTab = () => {
                     className="flex justify-between items-center py-1.5 px-3 border-b hover:bg-muted/30"
                   >
                     <div className="min-w-0 flex-1 pr-2">
-                      <p className="text-sm font-medium truncate leading-tight">
-                        {producto.nombre}
-                        {producto.especificaciones && (
-                          <span className="text-purple-600 dark:text-purple-400 font-medium ml-1">
-                            {producto.especificaciones}
-                          </span>
+                      <p className="text-sm leading-tight">
+                        {getDisplayName(producto)}
+                        {producto.es_promocion && (
+                          <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 ml-1 shrink-0 inline-flex">
+                            🎁 PROMO
+                          </Badge>
+                        )}
+                        {producto.bloqueado_venta && (
+                          <span className="text-[8px] text-red-600 dark:text-red-400 ml-1" title="Requiere autorización">🔒</span>
                         )}
                       </p>
-                      {(producto.marca || producto.contenido_empaque) && (
-                        <p className="text-[10px] text-muted-foreground truncate leading-tight">
-                          {producto.marca && (
-                            <span className="text-blue-600 dark:text-blue-400 font-medium">{producto.marca}</span>
-                          )}
-                          {producto.marca && producto.contenido_empaque && " • "}
-                          {producto.contenido_empaque}
-                        </p>
-                      )}
-                      <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
                         <span className="font-mono">{producto.codigo}</span>
-                        {producto.precio_por_kilo && (
-                          <span className="bg-muted px-0.5 rounded text-[8px]">/kg</span>
-                        )}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="text-right shrink-0">
+                      <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
                         <p className="font-bold text-sm leading-tight">
-                          {formatCurrency(producto.precio_venta)}
+                          {formatCurrency(producto.precio_venta)}{producto.precio_por_kilo && '/kg'}
                         </p>
+                        <div className="flex gap-0.5">
+                          {producto.aplica_iva && (
+                            <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-blue-300 text-blue-600 dark:border-blue-700 dark:text-blue-400">IVA</Badge>
+                          )}
+                          {producto.aplica_ieps && (
+                            <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400">IEPS</Badge>
+                          )}
+                        </div>
                         {producto.descuento_maximo && producto.descuento_maximo > 0 && (
                           <>
                             <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium leading-tight">
