@@ -347,12 +347,13 @@ export function AutorizacionRapidaSheet({
               return (
                 <div
                   key={detalle.id}
-                  className={`p-3 rounded-lg space-y-2 ${porDebajoMinimo ? "bg-destructive/10 border border-destructive/30" : "bg-muted/50"}`}
+                  className={`p-3 rounded-lg space-y-2 ${abajoCosto ? "bg-destructive/10 border border-destructive/40" : porDebajoMinimo ? "bg-destructive/10 border border-destructive/30" : "bg-muted/50"}`}
                 >
                   {/* Nombre y cantidad */}
                   <div>
-                    <p className="font-medium text-sm line-clamp-2">
+                    <p className="font-medium text-sm line-clamp-2 flex items-center gap-1.5 flex-wrap">
                       {detalle.productos?.nombre}
+                      {abajoCosto && <Badge variant="destructive" className="text-[9px]">ABAJO DEL COSTO</Badge>}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {detalle.cantidad} {detalle.productos?.unidad}
