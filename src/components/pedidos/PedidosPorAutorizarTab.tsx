@@ -694,15 +694,18 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                   const precioMinimo = listPrice - descuentoMax;
                   const diferencia = currentPrice - precioMinimo;
                   const costo = detalle.productos?.ultimo_costo_compra || detalle.productos?.costo_promedio_ponderado || 0;
-                  const margenPct = costo > 0 ? ((currentPrice - costo) / costo) * 100 : 0;
+                  const margenPct = currentPrice > 0 && costo > 0 ? ((currentPrice - costo) / currentPrice) * 100 : 0;
                   const porDebajoMinimo = currentPrice < precioMinimo;
+                  const abajoCosto = costo > 0 && currentPrice < costo;
 
                   return (
-                    <div key={detalle.id} className={`border rounded-lg p-3 space-y-2 ${porDebajoMinimo ? "border-destructive/30" : ""}`}>
+                    <div key={detalle.id} className={`border rounded-lg p-3 space-y-2 ${abajoCosto ? "border-destructive/50 bg-destructive/5" : porDebajoMinimo ? "border-destructive/30" : ""}`}>
                       <div className="min-w-0">
                         <p className="font-medium text-sm line-clamp-2 flex items-center gap-1.5">
-                          {porDebajoMinimo && <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />}
+                          {abajoCosto && <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />}
+                          {!abajoCosto && porDebajoMinimo && <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />}
                           {detalle.productos?.nombre}
+                          {abajoCosto && <Badge variant="destructive" className="text-[9px] ml-1">ABAJO DEL COSTO</Badge>}
                         </p>
                         <p className="text-xs text-muted-foreground">{detalle.productos?.codigo} · {detalle.cantidad} {detalle.productos?.unidad}</p>
                       </div>
