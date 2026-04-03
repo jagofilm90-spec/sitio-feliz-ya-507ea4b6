@@ -12,6 +12,7 @@ interface ProductoRecibido {
   id: string;
   codigo: string;
   nombre: string;
+  especificaciones?: string | null;
   marca?: string | null;
   cantidadOrdenada: number;
   cantidadRecibida: number;
@@ -242,10 +243,9 @@ export const generarReporteRecepcionesDiaPDF = async (
       doc.text(producto.codigo.substring(0, 10), xPos, y + 4);
       xPos += colWidths[0];
 
-      // Nombre (truncado)
-      const nombreDisplay = producto.marca
-        ? `${producto.nombre} - ${producto.marca}`
-        : producto.nombre;
+      // Nombre (truncado): nombre + especificaciones + marca
+      const nombreParts = [producto.nombre, producto.especificaciones, producto.marca].filter(Boolean);
+      const nombreDisplay = nombreParts.join(' ');
       doc.text(nombreDisplay.substring(0, 35), xPos, y + 4);
       xPos += colWidths[1];
 
