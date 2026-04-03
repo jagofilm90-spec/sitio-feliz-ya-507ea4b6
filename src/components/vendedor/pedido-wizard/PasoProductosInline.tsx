@@ -208,6 +208,9 @@ function FilaProducto({
             </span>
           )}
         </div>
+        {enCarrito && cantidad > producto.stock_actual && (
+          <p className="text-xs text-destructive">⚠️ Solo hay {producto.stock_actual} en stock, estás pidiendo {cantidad}</p>
+        )}
 
         {excedeLimite && linea && linea.autorizacionStatus !== 'aprobado' && (
           <div className="flex items-center gap-2 pt-1">
@@ -287,6 +290,9 @@ function FilaProducto({
             }
           }}
         />
+        {enCarrito && cantidad > producto.stock_actual && (
+          <p className="text-[10px] text-destructive leading-tight mt-0.5">⚠️ Stock: {producto.stock_actual}</p>
+        )}
       </td>
       <td className="py-2 px-1">
         <Input

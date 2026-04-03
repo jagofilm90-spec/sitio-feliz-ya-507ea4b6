@@ -67,7 +67,7 @@ const Rentabilidad = () => {
 
       const productosConMargen: ProductoRentabilidad[] = (data || []).map((p) => {
         const margen_pesos = p.precio_venta - p.precio_compra;
-        const margen_porcentaje = (margen_pesos / p.precio_compra) * 100;
+        const margen_porcentaje = (margen_pesos / p.precio_venta) * 100;
         const valor_inventario = p.stock_actual * p.precio_compra;
 
         return {

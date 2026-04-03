@@ -739,31 +739,53 @@ const Productos = () => {
                       </p>
                     )}
 
-                    {/* Fila 3: Precio venta + Descuento máximo */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="precio_venta">
-                          {formData.precio_por_kilo ? "Precio por kg ($/kg) *" : "Precio por unidad *"}
-                        </Label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                          <Input
-                            id="precio_venta" type="number" step="0.01" value={formData.precio_venta}
-                            onChange={(e) => setFormData({ ...formData, precio_venta: e.target.value })}
-                            placeholder="0.00" required className="pl-7" autoComplete="off"
-                          />
-                        </div>
-                        {formData.precio_por_kilo && precioVenta > 0 && pesoKg > 0 && (
-                          <p className="text-xs text-blue-600 dark:text-blue-400">
-                            = {formatCurrency(precioVenta * pesoKg)} por {formData.unidad}
-                          </p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-1">
-                          <Label htmlFor="descuento_maximo">
-                            {formData.precio_por_kilo ? "Descuento máximo ($/kg)" : "Descuento máximo"}
-                          </Label>
+                     {/* Fila 3: Precio venta + Costo compra */}
+                     <div className="grid grid-cols-2 gap-3">
+                       <div className="space-y-2">
+                         <Label htmlFor="precio_venta">
+                           {formData.precio_por_kilo ? "Precio por kg ($/kg) *" : "Precio por unidad *"}
+                         </Label>
+                         <div className="relative">
+                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                           <Input
+                             id="precio_venta" type="number" step="0.01" value={formData.precio_venta}
+                             onChange={(e) => setFormData({ ...formData, precio_venta: e.target.value })}
+                             placeholder="0.00" required className="pl-7" autoComplete="off"
+                           />
+                         </div>
+                         {formData.precio_por_kilo && precioVenta > 0 && pesoKg > 0 && (
+                           <p className="text-xs text-blue-600 dark:text-blue-400">
+                             = {formatCurrency(precioVenta * pesoKg)} por {formData.unidad}
+                           </p>
+                         )}
+                       </div>
+                       {canSeeCosts && (
+                         <div className="space-y-2">
+                           <Label htmlFor="precio_compra">Costo de compra (sin impuestos)</Label>
+                           <div className="relative">
+                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                             <Input
+                               id="precio_compra" type="number" step="0.01" value={formData.precio_compra}
+                               onChange={(e) => setFormData({ ...formData, precio_compra: e.target.value })}
+                               placeholder="0.00" className="pl-7" autoComplete="off"
+                             />
+                           </div>
+                           {precioVenta > 0 && precioCompra > 0 && (() => {
+                             const margen = ((precioVenta - precioCompra) / precioVenta * 100);
+                             const color = margen < 5 ? "text-destructive" : margen < 10 ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400";
+                             return <p className={`text-xs font-medium ${color}`}>Margen: {margen.toFixed(1)}%</p>;
+                           })()}
+                         </div>
+                       )}
+                     </div>
+
+                     {/* Fila 4: Descuento máximo */}
+                     <div className="grid grid-cols-2 gap-3">
+                       <div className="space-y-2">
+                         <div className="flex items-center gap-1">
+                           <Label htmlFor="descuento_maximo">
+                             {formData.precio_por_kilo ? "Descuento máximo ($/kg)" : "Descuento máximo"}
+                           </Label>
                           <Tooltip>
                             <TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger>
                             <TooltipContent><p className="text-xs max-w-[200px]">El vendedor puede dar hasta este descuento sin pedir autorización</p></TooltipContent>

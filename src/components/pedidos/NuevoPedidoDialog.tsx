@@ -559,19 +559,22 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
             {searchProducto && filteredProductos.length > 0 && (
               <div className="border rounded-md max-h-40 overflow-y-auto">
                 {filteredProductos.slice(0, 10).map(p => (
-                  <button
-                    key={p.id}
-                    onClick={() => addProducto(p)}
-                    className="w-full px-3 py-2 text-left hover:bg-muted flex justify-between items-center"
-                  >
-                    <span>
-                      <span className="font-mono text-xs mr-2">{p.codigo}</span>
-                      {getDisplayName(p)}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      {formatCurrency(p.precio_venta)} / {p.unidad}
-                    </span>
-                  </button>
+                   <button
+                     key={p.id}
+                     onClick={() => addProducto(p)}
+                     className="w-full px-3 py-2 text-left hover:bg-muted flex justify-between items-center"
+                   >
+                     <div>
+                       <span>
+                         <span className="font-mono text-xs mr-2">{p.codigo}</span>
+                         {getDisplayName(p)}
+                       </span>
+                       <span className="text-xs text-muted-foreground ml-2">— Stock: {p.stock_actual}</span>
+                     </div>
+                     <span className="text-sm text-muted-foreground">
+                       {formatCurrency(p.precio_venta)} / {p.unidad}
+                     </span>
+                   </button>
                 ))}
               </div>
             )}
@@ -608,6 +611,9 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
                                 <Input type="number" min={1} value={d.cantidad} onChange={(e) => updateDetalle(idx, "cantidad", Number(e.target.value))} className="h-8" />
                                 <span className="text-xs text-muted-foreground shrink-0">{d.producto.unidad}</span>
                               </div>
+                              {d.cantidad > d.producto.stock_actual && (
+                                <p className="text-xs text-destructive mt-0.5">⚠️ Stock: {d.producto.stock_actual}</p>
+                              )}
                             </div>
                             <div>
                               <Label className="text-xs text-muted-foreground">Precio</Label>
@@ -676,6 +682,9 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
                               />
                               <span className="text-xs text-muted-foreground">{d.producto.unidad}</span>
                             </div>
+                            {d.cantidad > d.producto.stock_actual && (
+                              <p className="text-xs text-destructive">⚠️ Solo hay {d.producto.stock_actual} en stock</p>
+                            )}
                           </TableCell>
                           <TableCell>
                             {esPorKilo && d.kilos_totales !== null ? (
