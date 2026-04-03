@@ -645,7 +645,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                 </CardContent>
               </Card>
 
-              {/* Resumen — solo si hay productos que requieren autorización */}
+              {/* Resumen — alertas de precio */}
               {(() => {
                 const total = selectedPedido.pedidos_detalles.length;
                 const requieren = selectedPedido.pedidos_detalles.filter(d => {
@@ -653,12 +653,34 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                   const descMax = d.productos?.descuento_maximo ?? 0;
                   return (editingPrices[d.id] ?? d.precio_unitario) < (listPrice - descMax);
                 }).length;
-                return requieren > 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    <AlertTriangle className="h-3.5 w-3.5 text-destructive inline mr-1" />
-                    {requieren} de {total} producto{total > 1 ? "s" : ""} por debajo del precio mínimo
-                  </p>
-                ) : null;
+                const bajoCosto = selectedPedido.pedidos_detalles.filter(d => {
+                  const price = editingPrices[d.id] ?? d.precio_unitario;
+                  const costo = d.productos?.ultimo_costo_compra || d.productos?.costo_promedio_ponderado || 0;
+                  return costo > 0 && price < costo;
+                }).length;
+                return (
+                  <div className="space-y-1">
+                    {requieren > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        <AlertTriangle className="h-3.5 w-3.5 text-destructive inline mr-1" />
+                        {requieren} de {total} producto{total > 1 ? "s" : ""} por debajo del precio mínimo
+                      </p>
+                    )}
+                    {bajoCosto > 0 && (
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30">
+                        <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-semibold text-destructive text-sm">
+                            ⚠️ {bajoCosto} producto{bajoCosto > 1 ? "s" : ""} ABAJO DEL COSTO
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Al autorizar se pedirá un motivo obligatorio para el registro.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
               })()}
 
               {/* Productos - Cards en móvil, Tabla en desktop */}
