@@ -105,6 +105,17 @@ export function ReporteSemanal() {
     return days;
   }, [semanaSeleccionada, semanas]);
 
+  // Set of manual records: "fecha:empleado_id"
+  const manualesSemana = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of registros) {
+      if ((r as any).dispositivo === "manual" && r.empleado_id && r.fecha) {
+        s.add(`${r.fecha}:${r.empleado_id}`);
+      }
+    }
+    return s;
+  }, [registros]);
+
   const reporte = useMemo(() => {
     const today = new Date();
     return empleados.map(emp => {
@@ -116,16 +127,19 @@ export function ReporteSemanal() {
         const regs = empRegistros.filter(r => r.fecha === dia.dateStr && r.hora).sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
         const asistio = regs.length > 0;
         const horaEntrada = regs[0]?.hora ? timeToAMPM(regs[0].hora) : null;
-        return { ...dia, debeTrabjar, asistio, horaEntrada, isFuture };
+        const isManual = manualesSemana.has(`${dia.dateStr}:${emp.id}`);
+        return { ...dia, debeTrabjar, asistio, horaEntrada, isFuture, isManual };
       });
 
       const diasQueTocaba = diasInfo.filter(d => d.debeTrabjar && !d.isFuture);
       const diasTrabajados = diasInfo.filter(d => d.asistio).length;
-      const diasFaltados = diasQueTocaba.filter(d => !d.asistio).length;
+      const totalDiasLab = 6; // premio se divide entre 6
+      const premioPorDia = (emp.premio_asistencia_semanal || 0) / totalDiasLab;
+      const diasConPremio = diasInfo.filter(d => d.debeTrabjar && d.asistio).length;
+      const premioGanado = premioPorDia * diasConPremio;
       const sueldoDiario = emp.sueldo_bruto ? emp.sueldo_bruto / 30 : 0;
-      const premioAplica = diasFaltados === 0 && diasQueTocaba.length > 0;
-      const premio = premioAplica ? (emp.premio_asistencia_semanal || 0) : 0;
-      const totalPagar = (sueldoDiario * diasTrabajados) + premio;
+      const sueldoSemanal = sueldoDiario * diasTrabajados;
+      const totalPagar = sueldoSemanal + premioGanado;
 
       return {
         empleado_id: emp.id,
@@ -133,13 +147,16 @@ export function ReporteSemanal() {
         puesto: emp.puesto,
         diasInfo,
         diasTrabajados,
+        totalDiasLab: diasQueTocaba.length,
         sueldoDiario,
-        premioAplica,
-        premio,
+        sueldoSemanal,
+        premioPorDia,
+        diasConPremio,
+        premioGanado,
         totalPagar,
       };
     });
-  }, [empleados, registros, diasSemana]);
+  }, [empleados, registros, diasSemana, manualesSemana]);
 
   const handleExport = () => {
     const exportData = reporte.map(r => {
