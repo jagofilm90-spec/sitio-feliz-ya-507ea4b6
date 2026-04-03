@@ -130,9 +130,6 @@ export function AutorizacionRapidaSheet({
     setEditingPrices((prev) => ({ ...prev, [detalleId]: numValue }));
   };
 
-  const motivoBajoCostoValido2 = motivoBajoCostoValido; // keep reference
-    ? true
-    : motivoBajoCosto.trim().length > 0;
 
   const calculateNewTotal = () => {
     if (!pedido) return 0;
