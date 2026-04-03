@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -81,8 +81,39 @@ export function AutorizacionRapidaSheet({
   const [editingPrices, setEditingPrices] = useState<Record<string, number>>({});
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [showBajoCostoForm, setShowBajoCostoForm] = useState(false);
+  const [motivoBajoCostoRapido, setMotivoBajoCostoRapido] = useState("");
+  const [motivoBajoCosto, setMotivoBajoCosto] = useState("");
+  const motivoBajoCostoRef = useRef("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const tieneProductosBajoCosto = () => {
+    if (!pedido) return false;
+    return pedido.pedidos_detalles.some(d => {
+      const price = editingPrices[d.id] ?? d.precio_unitario;
+      const costo = d.productos?.ultimo_costo_compra || d.productos?.costo_promedio_ponderado || 0;
+      return costo > 0 && price < costo;
+    });
+  };
+
+  const handleAutorizarClick = () => {
+    if (tieneProductosBajoCosto()) {
+      setShowBajoCostoForm(true);
+      setMotivoBajoCosto("");
+      setMotivoBajoCostoRapido("");
+    } else {
+      motivoBajoCostoRef.current = "";
+      authorizeMutation.mutate();
+    }
+  };
+
+  const handleConfirmBajoCosto = () => {
+    const motivo = motivoBajoCostoRapido === "Otro" ? motivoBajoCosto : (motivoBajoCostoRapido || motivoBajoCosto);
+    motivoBajoCostoRef.current = motivo;
+    setShowBajoCostoForm(false);
+    authorizeMutation.mutate();
+  };
 
   const handleStartEditing = () => {
     if (!pedido) return;
@@ -98,6 +129,9 @@ export function AutorizacionRapidaSheet({
     const numValue = parseFloat(value) || 0;
     setEditingPrices((prev) => ({ ...prev, [detalleId]: numValue }));
   };
+  const motivoBajoCostoValido = motivoBajoCostoRapido && motivoBajoCostoRapido !== "Otro"
+    ? true
+    : motivoBajoCosto.trim().length > 0;
 
   const calculateNewTotal = () => {
     if (!pedido) return 0;
@@ -134,22 +168,26 @@ export function AutorizacionRapidaSheet({
         const newTotal = detalles?.reduce((sum, d) => sum + d.subtotal, 0) || 0;
         const pesoTotal = calcularPesoTotal(pedido.pedidos_detalles);
 
-        await supabase
-          .from("pedidos")
-          .update({
+        const updateData: any = {
             total: newTotal,
             status: "pendiente",
             peso_total_kg: pesoTotal > 0 ? pesoTotal : null,
-          })
+          };
+        if (motivoBajoCostoRef.current) updateData.motivo_venta_bajo_costo = motivoBajoCostoRef.current;
+        await supabase
+          .from("pedidos")
+          .update(updateData)
           .eq("id", pedido.id);
       } else {
         const pesoTotal = calcularPesoTotal(pedido.pedidos_detalles);
-        await supabase
-          .from("pedidos")
-          .update({
+        const updateData: any = {
             status: "pendiente",
             peso_total_kg: pesoTotal > 0 ? pesoTotal : null,
-          })
+          };
+        if (motivoBajoCostoRef.current) updateData.motivo_venta_bajo_costo = motivoBajoCostoRef.current;
+        await supabase
+          .from("pedidos")
+          .update(updateData)
           .eq("id", pedido.id);
       }
 
@@ -304,19 +342,20 @@ export function AutorizacionRapidaSheet({
               const diferencia = currentPrice - precioMinimo;
               const costo = detalle.productos?.ultimo_costo_compra || detalle.productos?.costo_promedio_ponderado || 0;
               const ganancia = costo > 0 ? currentPrice - costo : 0;
-              const margenPct = costo > 0 ? ((currentPrice - costo) / costo) * 100 : 0;
+              const margenPct = currentPrice > 0 && costo > 0 ? ((currentPrice - costo) / currentPrice) * 100 : 0;
               const porDebajoMinimo = currentPrice < precioMinimo;
-              const gananciasBajas = costo > 0 && margenPct < 10;
+              const abajoCosto = costo > 0 && currentPrice < costo;
 
               return (
                 <div
                   key={detalle.id}
-                  className={`p-3 rounded-lg space-y-2 ${porDebajoMinimo ? "bg-destructive/10 border border-destructive/30" : "bg-muted/50"}`}
+                  className={`p-3 rounded-lg space-y-2 ${abajoCosto ? "bg-destructive/10 border border-destructive/40" : porDebajoMinimo ? "bg-destructive/10 border border-destructive/30" : "bg-muted/50"}`}
                 >
                   {/* Nombre y cantidad */}
                   <div>
-                    <p className="font-medium text-sm line-clamp-2">
+                    <p className="font-medium text-sm line-clamp-2 flex items-center gap-1.5 flex-wrap">
                       {detalle.productos?.nombre}
+                      {abajoCosto && <Badge variant="destructive" className="text-[9px]">ABAJO DEL COSTO</Badge>}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {detalle.cantidad} {detalle.productos?.unidad}
@@ -400,7 +439,58 @@ export function AutorizacionRapidaSheet({
 
         {/* Footer con total y acciones */}
         <div className="border-t p-4 space-y-3 bg-background">
-          {showRejectForm ? (
+          {showBajoCostoForm ? (
+            /* Footer en modo motivo bajo costo */
+            <div className="space-y-3">
+              <p className="font-semibold text-sm text-destructive flex items-center gap-1.5">
+                <AlertTriangle className="h-4 w-4" />
+                Venta abajo del costo
+              </p>
+              <p className="text-xs text-muted-foreground">Indica el motivo para autorizar:</p>
+              <div className="flex flex-wrap gap-2">
+                {["Precio de mercado bajó", "Competencia", "Liquidar inventario", "Otro"].map(opt => (
+                  <Button
+                    key={opt}
+                    variant={motivoBajoCostoRapido === opt ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setMotivoBajoCostoRapido(opt);
+                      if (opt !== "Otro") setMotivoBajoCosto(opt);
+                    }}
+                  >
+                    {opt}
+                  </Button>
+                ))}
+              </div>
+              {motivoBajoCostoRapido === "Otro" && (
+                <Textarea
+                  placeholder="Escribe el motivo..."
+                  value={motivoBajoCosto}
+                  onChange={(e) => setMotivoBajoCosto(e.target.value)}
+                  autoFocus
+                />
+              )}
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setShowBajoCostoForm(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleConfirmBajoCosto}
+                  disabled={!motivoBajoCostoValido || authorizeMutation.isPending}
+                >
+                  {authorizeMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                      Autorizar
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : showRejectForm ? (
             /* Footer en modo rechazo */
             <div className="space-y-3">
               <p className="font-medium text-sm">Motivo de rechazo:</p>
@@ -455,7 +545,7 @@ export function AutorizacionRapidaSheet({
                       Ajustar precios
                     </Button>
                     <Button
-                      onClick={() => authorizeMutation.mutate()}
+                      onClick={handleAutorizarClick}
                       disabled={authorizeMutation.isPending}
                       className="gap-2 bg-emerald-600 hover:bg-emerald-700"
                     >
@@ -475,7 +565,7 @@ export function AutorizacionRapidaSheet({
                       Cancelar
                     </Button>
                     <Button
-                      onClick={() => authorizeMutation.mutate()}
+                      onClick={handleAutorizarClick}
                       disabled={authorizeMutation.isPending}
                       className="gap-2 bg-emerald-600 hover:bg-emerald-700"
                     >

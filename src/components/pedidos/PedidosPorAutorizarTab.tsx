@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -113,9 +113,47 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
   const [expandedHistorial, setExpandedHistorial] = useState<string | null>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [selectedMobileIndex, setSelectedMobileIndex] = useState(0);
+  const [showBajoCostoDialog, setShowBajoCostoDialog] = useState(false);
+  const [motivoBajoCosto, setMotivoBajoCosto] = useState("");
+  const [motivoBajoCostoRapido, setMotivoBajoCostoRapido] = useState("");
+  const motivoBajoCostoRef = useRef("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
+
+  // Helper to detect if order has below-cost items
+  const tieneProductosBajoCosto = (pedido: PedidoPorAutorizar | null) => {
+    if (!pedido) return false;
+    return pedido.pedidos_detalles.some(d => {
+      const price = editingPrices[d.id] ?? d.precio_unitario;
+      const costo = d.productos?.ultimo_costo_compra || d.productos?.costo_promedio_ponderado || 0;
+      return costo > 0 && price < costo;
+    });
+  };
+
+  const handleAutorizarClick = () => {
+    if (!selectedPedido) return;
+    if (tieneProductosBajoCosto(selectedPedido)) {
+      setShowBajoCostoDialog(true);
+      setMotivoBajoCosto("");
+      setMotivoBajoCostoRapido("");
+    } else {
+      motivoBajoCostoRef.current = "";
+      authorizeMutation.mutate(selectedPedido.id);
+    }
+  };
+
+  const handleConfirmBajoCosto = () => {
+    if (!selectedPedido) return;
+    const motivo = motivoBajoCostoRapido === "Otro" ? motivoBajoCosto : (motivoBajoCostoRapido || motivoBajoCosto);
+    motivoBajoCostoRef.current = motivo;
+    setShowBajoCostoDialog(false);
+    authorizeMutation.mutate(selectedPedido.id);
+  };
+
+  const motivoBajoCostoValido = motivoBajoCostoRapido && motivoBajoCostoRapido !== "Otro" 
+    ? true 
+    : motivoBajoCosto.trim().length > 0;
 
   // Fetch pedidos por autorizar
   const { data: pedidos, isLoading } = useQuery({
@@ -260,7 +298,11 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
       const newTotal = detalles?.reduce((sum, d) => sum + d.subtotal, 0) || 0;
       const pesoTotal = calcularPesoTotalPedido(selectedPedido.pedidos_detalles);
 
-      await supabase.from("pedidos").update({ total: newTotal, status: "pendiente", peso_total_kg: pesoTotal > 0 ? pesoTotal : null }).eq("id", pedidoId);
+      const updateData: any = { total: newTotal, status: "pendiente", peso_total_kg: pesoTotal > 0 ? pesoTotal : null };
+      if (motivoBajoCostoRef.current) {
+        updateData.motivo_venta_bajo_costo = motivoBajoCostoRef.current;
+      }
+      await supabase.from("pedidos").update(updateData).eq("id", pedidoId);
 
       // Vendor notification
       if (selectedPedido?.vendedor_id) {
@@ -603,7 +645,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                 </CardContent>
               </Card>
 
-              {/* Resumen — solo si hay productos que requieren autorización */}
+              {/* Resumen — alertas de precio */}
               {(() => {
                 const total = selectedPedido.pedidos_detalles.length;
                 const requieren = selectedPedido.pedidos_detalles.filter(d => {
@@ -611,12 +653,34 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                   const descMax = d.productos?.descuento_maximo ?? 0;
                   return (editingPrices[d.id] ?? d.precio_unitario) < (listPrice - descMax);
                 }).length;
-                return requieren > 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    <AlertTriangle className="h-3.5 w-3.5 text-destructive inline mr-1" />
-                    {requieren} de {total} producto{total > 1 ? "s" : ""} por debajo del precio mínimo
-                  </p>
-                ) : null;
+                const bajoCosto = selectedPedido.pedidos_detalles.filter(d => {
+                  const price = editingPrices[d.id] ?? d.precio_unitario;
+                  const costo = d.productos?.ultimo_costo_compra || d.productos?.costo_promedio_ponderado || 0;
+                  return costo > 0 && price < costo;
+                }).length;
+                return (
+                  <div className="space-y-1">
+                    {requieren > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        <AlertTriangle className="h-3.5 w-3.5 text-destructive inline mr-1" />
+                        {requieren} de {total} producto{total > 1 ? "s" : ""} por debajo del precio mínimo
+                      </p>
+                    )}
+                    {bajoCosto > 0 && (
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30">
+                        <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-semibold text-destructive text-sm">
+                            ⚠️ {bajoCosto} producto{bajoCosto > 1 ? "s" : ""} ABAJO DEL COSTO
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Al autorizar se pedirá un motivo obligatorio para el registro.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
               })()}
 
               {/* Productos - Cards en móvil, Tabla en desktop */}
@@ -652,15 +716,18 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                   const precioMinimo = listPrice - descuentoMax;
                   const diferencia = currentPrice - precioMinimo;
                   const costo = detalle.productos?.ultimo_costo_compra || detalle.productos?.costo_promedio_ponderado || 0;
-                  const margenPct = costo > 0 ? ((currentPrice - costo) / costo) * 100 : 0;
+                  const margenPct = currentPrice > 0 && costo > 0 ? ((currentPrice - costo) / currentPrice) * 100 : 0;
                   const porDebajoMinimo = currentPrice < precioMinimo;
+                  const abajoCosto = costo > 0 && currentPrice < costo;
 
                   return (
-                    <div key={detalle.id} className={`border rounded-lg p-3 space-y-2 ${porDebajoMinimo ? "border-destructive/30" : ""}`}>
+                    <div key={detalle.id} className={`border rounded-lg p-3 space-y-2 ${abajoCosto ? "border-destructive/50 bg-destructive/5" : porDebajoMinimo ? "border-destructive/30" : ""}`}>
                       <div className="min-w-0">
                         <p className="font-medium text-sm line-clamp-2 flex items-center gap-1.5">
-                          {porDebajoMinimo && <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />}
+                          {abajoCosto && <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />}
+                          {!abajoCosto && porDebajoMinimo && <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />}
                           {detalle.productos?.nombre}
+                          {abajoCosto && <Badge variant="destructive" className="text-[9px] ml-1">ABAJO DEL COSTO</Badge>}
                         </p>
                         <p className="text-xs text-muted-foreground">{detalle.productos?.codigo} · {detalle.cantidad} {detalle.productos?.unidad}</p>
                       </div>
@@ -799,19 +866,21 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                       const precioMinimo = listPrice - descuentoMax;
                       const diferencia = currentPrice - precioMinimo;
                       const costo = detalle.productos?.ultimo_costo_compra || detalle.productos?.costo_promedio_ponderado || 0;
-                      const margenPct = costo > 0 ? ((currentPrice - costo) / costo) * 100 : 0;
+                      const margenPct = currentPrice > 0 && costo > 0 ? ((currentPrice - costo) / currentPrice) * 100 : 0;
                       const porDebajoMinimo = currentPrice < precioMinimo;
+                      const abajoCosto = costo > 0 && currentPrice < costo;
 
                       return (
                         <>
-                          <TableRow key={detalle.id}>
+                          <TableRow key={detalle.id} className={abajoCosto ? "bg-destructive/5" : ""}>
                             <TableCell>
                               <div className="flex items-center gap-1.5">
-                                {porDebajoMinimo && <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />}
+                                {(abajoCosto || porDebajoMinimo) && <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />}
                                 <span className="font-medium">{detalle.productos?.nombre}</span>
                                 <span className="text-xs text-muted-foreground ml-1">
                                   {detalle.productos?.codigo}
                                 </span>
+                                {abajoCosto && <Badge variant="destructive" className="text-[9px] ml-1">ABAJO DEL COSTO</Badge>}
                               </div>
                             </TableCell>
                             <TableCell className="text-right font-mono">
@@ -960,7 +1029,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                   Rechazar
                 </Button>
                 <Button
-                  onClick={() => authorizeMutation.mutate(selectedPedido.id)}
+                  onClick={handleAutorizarClick}
                   disabled={authorizeMutation.isPending}
                   className="w-full sm:w-auto"
                 >
@@ -1002,6 +1071,61 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Confirmar Rechazo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog motivo venta abajo del costo */}
+      <AlertDialog open={showBajoCostoDialog} onOpenChange={setShowBajoCostoDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Venta abajo del costo
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Este pedido tiene productos con precio por debajo del costo. Puedes autorizarlo, pero debes indicar el motivo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Motivo de venta abajo del costo:</p>
+            <div className="flex flex-wrap gap-2">
+              {["Precio de mercado bajó", "Competencia", "Liquidar inventario", "Otro"].map(opt => (
+                <Button
+                  key={opt}
+                  variant={motivoBajoCostoRapido === opt ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setMotivoBajoCostoRapido(opt);
+                    if (opt !== "Otro") setMotivoBajoCosto(opt);
+                  }}
+                >
+                  {opt}
+                </Button>
+              ))}
+            </div>
+            {motivoBajoCostoRapido === "Otro" && (
+              <Textarea
+                placeholder="Escribe el motivo..."
+                value={motivoBajoCosto}
+                onChange={(e) => setMotivoBajoCosto(e.target.value)}
+                autoFocus
+              />
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmBajoCosto}
+              disabled={!motivoBajoCostoValido || authorizeMutation.isPending}
+            >
+              {authorizeMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+              )}
+              Autorizar de todas formas
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
