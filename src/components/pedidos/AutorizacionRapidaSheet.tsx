@@ -115,7 +115,22 @@ export function AutorizacionRapidaSheet({
     authorizeMutation.mutate();
   };
 
-  const motivoBajoCostoValido = motivoBajoCostoRapido && motivoBajoCostoRapido !== "Otro"
+  const handleStartEditing = () => {
+    if (!pedido) return;
+    const prices: Record<string, number> = {};
+    pedido.pedidos_detalles.forEach((d) => {
+      prices[d.id] = d.precio_unitario;
+    });
+    setEditingPrices(prices);
+    setIsEditing(true);
+  };
+
+  const handlePriceChange = (detalleId: string, value: string) => {
+    const numValue = parseFloat(value) || 0;
+    setEditingPrices((prev) => ({ ...prev, [detalleId]: numValue }));
+  };
+
+  const motivoBajoCostoValido2 = motivoBajoCostoValido; // keep reference
     ? true
     : motivoBajoCosto.trim().length > 0;
 
