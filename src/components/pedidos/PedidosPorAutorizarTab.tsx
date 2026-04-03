@@ -1007,7 +1007,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                   Rechazar
                 </Button>
                 <Button
-                  onClick={() => authorizeMutation.mutate(selectedPedido.id)}
+                  onClick={handleAutorizarClick}
                   disabled={authorizeMutation.isPending}
                   className="w-full sm:w-auto"
                 >
