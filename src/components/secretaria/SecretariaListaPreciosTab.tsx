@@ -77,14 +77,16 @@ const formatCurrency = (amount: number) => {
 };
 
 const getDisplayName = (producto: Producto) => {
-  let name = producto.nombre;
-  if (producto.especificaciones) {
-    name += ` ${producto.especificaciones}`;
-  }
-  if (producto.marca) {
-    name += ` - ${producto.marca}`;
-  }
-  return name;
+  return getDisplayNameUtil({
+    nombre: producto.nombre,
+    marca: producto.marca,
+    especificaciones: producto.especificaciones,
+    unidad: producto.unidad,
+    contenido_empaque: producto.contenido_empaque,
+    peso_kg: producto.peso_kg,
+    es_promocion: producto.es_promocion ?? false,
+    descripcion_promocion: producto.descripcion_promocion,
+  });
 };
 
 export const SecretariaListaPreciosTab = () => {
