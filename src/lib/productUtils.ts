@@ -60,32 +60,32 @@ export interface ProductoBase {
 
 /**
  * Genera el Display Name completo del producto siguiendo el formato:
- * {Nombre base} {Marca} {Variantes} — {Unidad} {Contenido} (PROMO: descripción)
- * 
+ * {Nombre base} {Especificaciones} {Marca} — {Unidad} {Contenido} (PROMO: descripción)
+ *
  * Ejemplos:
- * - Azúcar refinada Potrero — Bulto 25 kg
- * - Ciruela pasa Huertos Monserrat 30/40 — Caja 10 kg
- * - Piña rodaja en almíbar Agrover (14 rodajas) — Caja 24×800 g
- * - CatChow 20kg + 3kg gratis (PROMO)
+ * - Ciruela Pasa 30/40 Huertos Monserrat — Caja 10 kg
+ * - Veladora Santo Cristo Cono Rosa San Felipe — Caja 40 pz
+ * - Azúcar Estándar — Costal 50 kg
+ * - Arroz Uruguayo Cinta Azul Saman — Bulto 25 kg
  * 
  * @param producto - Objeto con datos del producto
  * @param options - Opciones adicionales
  * @param options.includePromo - Si es true, incluye indicador de promoción en el nombre
  */
 export function getDisplayName(
-  producto: ProductoBase, 
+  producto: ProductoBase,
   options?: { includePromo?: boolean }
 ): string {
   const parts: string[] = [producto.nombre];
-  
-  // Agregar marca si existe
-  if (producto.marca) {
-    parts.push(producto.marca);
-  }
-  
-  // Agregar especificaciones/variantes si existen
+
+  // Agregar especificaciones/variantes primero (ej: "30/40", "Cono Rosa")
   if (producto.especificaciones) {
     parts.push(producto.especificaciones);
+  }
+
+  // Agregar marca después (ej: "Huertos Monserrat", "San Felipe")
+  if (producto.marca) {
+    parts.push(producto.marca);
   }
   
   // Construir parte del empaque
@@ -150,18 +150,18 @@ export function getDisplayNameWithBrand(producto: ProductoBase): string {
 
 /**
  * Genera una versión compacta del nombre para espacios muy reducidos (tablets, listas móviles):
- * {Nombre base} {Marca} {Especificaciones} {Contenido}
+ * {Nombre base} {Especificaciones} {Marca} {Contenido}
  * Sin el separador "—"
  */
 export function getCompactDisplayName(producto: ProductoBase): string {
   const parts: string[] = [producto.nombre];
-  
-  if (producto.marca) {
-    parts.push(producto.marca);
-  }
-  
+
   if (producto.especificaciones) {
     parts.push(producto.especificaciones);
+  }
+
+  if (producto.marca) {
+    parts.push(producto.marca);
   }
   
   // Agregar empaque compacto
