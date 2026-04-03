@@ -1053,6 +1053,61 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog motivo venta abajo del costo */}
+      <AlertDialog open={showBajoCostoDialog} onOpenChange={setShowBajoCostoDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Venta abajo del costo
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Este pedido tiene productos con precio por debajo del costo. Puedes autorizarlo, pero debes indicar el motivo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Motivo de venta abajo del costo:</p>
+            <div className="flex flex-wrap gap-2">
+              {["Precio de mercado bajó", "Competencia", "Liquidar inventario", "Otro"].map(opt => (
+                <Button
+                  key={opt}
+                  variant={motivoBajoCostoRapido === opt ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setMotivoBajoCostoRapido(opt);
+                    if (opt !== "Otro") setMotivoBajoCosto(opt);
+                  }}
+                >
+                  {opt}
+                </Button>
+              ))}
+            </div>
+            {motivoBajoCostoRapido === "Otro" && (
+              <Textarea
+                placeholder="Escribe el motivo..."
+                value={motivoBajoCosto}
+                onChange={(e) => setMotivoBajoCosto(e.target.value)}
+                autoFocus
+              />
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmBajoCosto}
+              disabled={!motivoBajoCostoValido || authorizeMutation.isPending}
+            >
+              {authorizeMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+              )}
+              Autorizar de todas formas
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
