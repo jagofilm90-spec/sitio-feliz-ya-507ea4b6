@@ -116,6 +116,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
   const [showBajoCostoDialog, setShowBajoCostoDialog] = useState(false);
   const [motivoBajoCosto, setMotivoBajoCosto] = useState("");
   const [motivoBajoCostoRapido, setMotivoBajoCostoRapido] = useState("");
+  const motivoBajoCostoRef = useRef("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
@@ -137,6 +138,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
       setMotivoBajoCosto("");
       setMotivoBajoCostoRapido("");
     } else {
+      motivoBajoCostoRef.current = "";
       authorizeMutation.mutate(selectedPedido.id);
     }
   };
@@ -144,13 +146,14 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
   const handleConfirmBajoCosto = () => {
     if (!selectedPedido) return;
     const motivo = motivoBajoCostoRapido === "Otro" ? motivoBajoCosto : (motivoBajoCostoRapido || motivoBajoCosto);
-    authorizeMutation.mutate(selectedPedido.id, { onSuccess: undefined } as any);
-    // We pass the motivo through a ref-like approach
-    pendingMotivoBajoCosto.current = motivo;
+    motivoBajoCostoRef.current = motivo;
+    setShowBajoCostoDialog(false);
     authorizeMutation.mutate(selectedPedido.id);
   };
 
-  const pendingMotivoBajoCosto = { current: "" } as { current: string };
+  const motivoBajoCostoValido = motivoBajoCostoRapido && motivoBajoCostoRapido !== "Otro" 
+    ? true 
+    : motivoBajoCosto.trim().length > 0;
 
   // Fetch pedidos por autorizar
   const { data: pedidos, isLoading } = useQuery({
