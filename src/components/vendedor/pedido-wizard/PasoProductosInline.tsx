@@ -287,6 +287,9 @@ function FilaProducto({
             }
           }}
         />
+        {enCarrito && cantidad > producto.stock_actual && (
+          <p className="text-[10px] text-destructive leading-tight mt-0.5">⚠️ Stock: {producto.stock_actual}</p>
+        )}
       </td>
       <td className="py-2 px-1">
         <Input
