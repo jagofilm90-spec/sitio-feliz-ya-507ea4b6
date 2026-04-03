@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { getDisplayName } from "@/lib/productUtils";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { 
@@ -18,8 +19,17 @@ interface ProductoConAnalisis {
   especificaciones: string | null;
   marca: string | null;
   categoria: string | null;
+  peso_kg: number | null;
+  contenido_empaque: string | null;
+  unidad: string;
   precio_venta: number;
+  precio_por_kilo: boolean;
   descuento_maximo: number | null;
+  aplica_iva: boolean | null;
+  aplica_ieps: boolean | null;
+  es_promocion: boolean | null;
+  descripcion_promocion: string | null;
+  bloqueado_venta: boolean | null;
   analisis: {
     costo_referencia: number;
     precio_venta: number;
@@ -106,18 +116,15 @@ export const ProductoPrecioCardMobile = ({
               </span>
             </div>
             <h3 className="font-medium text-sm leading-tight">
-              {producto.nombre}
-              {producto.especificaciones && (
-                <span className="text-purple-600 dark:text-purple-400 ml-1">
-                  {producto.especificaciones}
-                </span>
-              )}
+              {getDisplayName({
+                nombre: producto.nombre,
+                marca: producto.marca,
+                especificaciones: producto.especificaciones,
+                unidad: producto.unidad,
+                contenido_empaque: producto.contenido_empaque,
+                peso_kg: producto.peso_kg,
+              })}
             </h3>
-            {producto.marca && (
-              <span className="text-xs text-blue-600 dark:text-blue-400">
-                {producto.marca}
-              </span>
-            )}
           </div>
         </div>
 

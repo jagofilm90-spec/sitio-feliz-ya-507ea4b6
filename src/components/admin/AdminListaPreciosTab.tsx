@@ -4,6 +4,7 @@ import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { notificarCambioPrecio } from "@/lib/notificarVendedores";
+import { getDisplayName as getDisplayNameUtil } from "@/lib/productUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +56,7 @@ interface Producto {
   marca: string | null;
   categoria: string | null;
   peso_kg: number | null;
+  contenido_empaque: string | null;
   unidad: string;
   precio_venta: number;
   precio_por_kilo: boolean;
@@ -62,6 +64,11 @@ interface Producto {
   activo: boolean;
   ultimo_costo_compra: number | null;
   costo_promedio_ponderado: number | null;
+  aplica_iva: boolean | null;
+  aplica_ieps: boolean | null;
+  es_promocion: boolean | null;
+  descripcion_promocion: string | null;
+  bloqueado_venta: boolean | null;
 }
 
 interface ProductoConAnalisis extends Producto {
@@ -85,14 +92,16 @@ const formatCurrency = (amount: number) => {
 };
 
 const getDisplayName = (producto: Producto) => {
-  let name = producto.nombre;
-  if (producto.especificaciones) {
-    name += ` ${producto.especificaciones}`;
-  }
-  if (producto.marca) {
-    name += ` - ${producto.marca}`;
-  }
-  return name;
+  return getDisplayNameUtil({
+    nombre: producto.nombre,
+    marca: producto.marca,
+    especificaciones: producto.especificaciones,
+    unidad: producto.unidad,
+    contenido_empaque: producto.contenido_empaque,
+    peso_kg: producto.peso_kg,
+    es_promocion: producto.es_promocion ?? false,
+    descripcion_promocion: producto.descripcion_promocion,
+  });
 };
 
 const getEstadoBadge = (estado: 'perdida' | 'critico' | 'bajo' | 'saludable') => {
@@ -336,7 +345,7 @@ export const AdminListaPreciosTab = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, especificaciones, marca, categoria, peso_kg, unidad, precio_venta, precio_por_kilo, descuento_maximo, activo, ultimo_costo_compra, costo_promedio_ponderado")
+        .select("id, codigo, nombre, especificaciones, marca, categoria, peso_kg, contenido_empaque, unidad, precio_venta, precio_por_kilo, descuento_maximo, activo, ultimo_costo_compra, costo_promedio_ponderado, aplica_iva, aplica_ieps, es_promocion, descripcion_promocion, bloqueado_venta")
         .eq("activo", true)
         .or("solo_uso_interno.is.null,solo_uso_interno.eq.false")
         .order("categoria")
@@ -949,8 +958,8 @@ export const AdminListaPreciosTab = () => {
                   {sortField === 'nombre' && <ArrowUpDown className="h-3 w-3" />}
                 </div>
               </TableHead>
-              <TableHead className="w-[65px] py-2 px-1.5 text-[10px]">
-                Marca
+              <TableHead className="w-[65px] py-2 px-1.5 text-[10px] text-right">
+                IVA/IEPS
               </TableHead>
               <TableHead 
                 className="w-[65px] py-2 px-1.5 text-[10px] text-right cursor-pointer hover:bg-muted/50"
@@ -1017,23 +1026,30 @@ export const AdminListaPreciosTab = () => {
                     {producto.codigo}
                   </TableCell>
                   <TableCell className="py-1 px-1.5">
-                    <span className="text-xs">
-                      {producto.nombre}
-                      {producto.especificaciones && (
-                        <span className="text-purple-600 dark:text-purple-400 ml-1">
-                          {producto.especificaciones}
-                        </span>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <span className="text-xs">{getDisplayName(producto)}</span>
+                      {producto.es_promocion && (
+                        <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
+                          🎁 PROMO
+                        </Badge>
                       )}
-                    </span>
+                      {producto.bloqueado_venta && (
+                        <span className="text-[8px] text-red-600 dark:text-red-400 shrink-0" title="Requiere autorización">🔒</span>
+                      )}
+                    </div>
                   </TableCell>
-                  <TableCell className="py-1 px-1.5">
-                    {producto.marca ? (
-                      <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                        {producto.marca}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
+                  <TableCell className="py-1 px-1.5 text-center">
+                    <div className="flex items-center justify-center gap-0.5">
+                      {producto.aplica_iva && (
+                        <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-blue-300 text-blue-600 dark:border-blue-700 dark:text-blue-400">IVA</Badge>
+                      )}
+                      {producto.aplica_ieps && (
+                        <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400">IEPS</Badge>
+                      )}
+                      {!producto.aplica_iva && !producto.aplica_ieps && (
+                        <span className="text-[9px] text-muted-foreground">—</span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="py-1 px-1.5 text-right">
                     <span className="text-xs font-medium text-muted-foreground">
@@ -1054,7 +1070,7 @@ export const AdminListaPreciosTab = () => {
                           </Tooltip>
                         </TooltipProvider>
                       )}
-                      {formatCurrency(producto.precio_venta)}
+                      {formatCurrency(producto.precio_venta)}{producto.precio_por_kilo && '/kg'}
                     </span>
                   </TableCell>
                   <TableCell className="py-1 px-1.5 text-right">
