@@ -3,9 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Search, Package } from "lucide-react";
+import { Search, Package, Filter } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { getShortDisplayName } from "@/lib/productUtils";
+import { getDisplayName } from "@/lib/productUtils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -31,12 +38,38 @@ interface Producto {
   es_promocion: boolean | null;
   descripcion_promocion: string | null;
   bloqueado_venta: boolean | null;
+  aplica_iva: boolean | null;
+  aplica_ieps: boolean | null;
 }
+
+function buildFullProductName(p: Producto): string {
+  return getDisplayName({
+    nombre: p.nombre,
+    marca: p.marca,
+    especificaciones: p.especificaciones,
+    unidad: p.unidad,
+    contenido_empaque: p.contenido_empaque,
+    peso_kg: p.peso_kg,
+    es_promocion: p.es_promocion ?? false,
+    descripcion_promocion: p.descripcion_promocion,
+  });
+}
+
+function formatPrice(p: Producto): string {
+  const price = formatCurrency(p.precio_venta || 0);
+  return p.precio_por_kilo ? `${price}/kg` : price;
+}
+
+type TaxFilter = "todos" | "iva" | "ieps" | "sin_impuesto";
+type PriceFilter = "todos" | "con_precio" | "sin_precio";
 
 export function VendedorListaPreciosTab() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [categoriaFilter, setCategoriaFilter] = useState<string>("todas");
+  const [taxFilter, setTaxFilter] = useState<TaxFilter>("todos");
+  const [priceFilter, setPriceFilter] = useState<PriceFilter>("todos");
 
   useEffect(() => {
     fetchProductos();
@@ -48,21 +81,10 @@ export function VendedorListaPreciosTab() {
       const { data, error } = await supabase
         .from("productos")
         .select(`
-          id,
-          codigo,
-          nombre,
-          especificaciones,
-          marca,
-          categoria,
-          precio_venta,
-          unidad,
-          peso_kg,
-          contenido_empaque,
-          precio_por_kilo,
-          descuento_maximo,
-          es_promocion,
-          descripcion_promocion,
-          bloqueado_venta
+          id, codigo, nombre, especificaciones, marca, categoria,
+          precio_venta, unidad, peso_kg, contenido_empaque,
+          precio_por_kilo, descuento_maximo, es_promocion,
+          descripcion_promocion, bloqueado_venta, aplica_iva, aplica_ieps
         `)
         .eq("activo", true)
         .or("solo_uso_interno.is.null,solo_uso_interno.eq.false")
@@ -78,16 +100,47 @@ export function VendedorListaPreciosTab() {
     }
   };
 
+  const categorias = useMemo(() => {
+    const cats = new Set<string>();
+    productos.forEach((p) => cats.add(p.categoria || "Sin categoría"));
+    return Array.from(cats).sort();
+  }, [productos]);
+
   const filteredProductos = useMemo(() => {
-    if (!searchTerm.trim()) return productos;
-    const term = searchTerm.toLowerCase();
-    return productos.filter(
-      (p) =>
-        p.codigo?.toLowerCase().includes(term) ||
-        p.nombre?.toLowerCase().includes(term) ||
-        p.marca?.toLowerCase().includes(term)
-    );
-  }, [productos, searchTerm]);
+    let result = productos;
+
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.codigo?.toLowerCase().includes(term) ||
+          p.nombre?.toLowerCase().includes(term) ||
+          p.marca?.toLowerCase().includes(term)
+      );
+    }
+
+    if (categoriaFilter !== "todas") {
+      result = result.filter(
+        (p) => (p.categoria || "Sin categoría") === categoriaFilter
+      );
+    }
+
+    if (taxFilter === "iva") {
+      result = result.filter((p) => p.aplica_iva);
+    } else if (taxFilter === "ieps") {
+      result = result.filter((p) => p.aplica_ieps);
+    } else if (taxFilter === "sin_impuesto") {
+      result = result.filter((p) => !p.aplica_iva && !p.aplica_ieps);
+    }
+
+    if (priceFilter === "con_precio") {
+      result = result.filter((p) => p.precio_venta && p.precio_venta > 0);
+    } else if (priceFilter === "sin_precio") {
+      result = result.filter((p) => !p.precio_venta || p.precio_venta === 0);
+    }
+
+    return result;
+  }, [productos, searchTerm, categoriaFilter, taxFilter, priceFilter]);
 
   const productosPorCategoria = useMemo(() => {
     const grupos: Record<string, Producto[]> = {};
@@ -112,18 +165,53 @@ export function VendedorListaPreciosTab() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
-      {/* Header compacto con búsqueda */}
-      <div className="pb-3 border-b bg-background sticky top-0 z-20">
+      {/* Header con búsqueda y filtros */}
+      <div className="pb-3 border-b bg-background sticky top-0 z-20 space-y-2">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar producto o código..."
+            placeholder="Buscar producto, código o marca..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-8 h-9"
           />
         </div>
-        <p className="text-[10px] text-muted-foreground mt-1">
+        <div className="flex gap-2 flex-wrap">
+          <Select value={categoriaFilter} onValueChange={setCategoriaFilter}>
+            <SelectTrigger className="h-8 text-xs w-auto min-w-[140px]">
+              <Filter className="h-3 w-3 mr-1" />
+              <SelectValue placeholder="Categoría" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas las categorías</SelectItem>
+              {categorias.map((cat) => (
+                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={priceFilter} onValueChange={(v) => setPriceFilter(v as PriceFilter)}>
+            <SelectTrigger className="h-8 text-xs w-auto min-w-[110px]">
+              <SelectValue placeholder="Precio" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="con_precio">Con precio</SelectItem>
+              <SelectItem value="sin_precio">Sin precio</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={taxFilter} onValueChange={(v) => setTaxFilter(v as TaxFilter)}>
+            <SelectTrigger className="h-8 text-xs w-auto min-w-[110px]">
+              <SelectValue placeholder="Impuesto" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="iva">Solo IVA</SelectItem>
+              <SelectItem value="ieps">Solo IEPS</SelectItem>
+              <SelectItem value="sin_impuesto">Sin impuesto</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <p className="text-[10px] text-muted-foreground">
           {filteredProductos.length} productos
         </p>
       </div>
@@ -135,94 +223,60 @@ export function VendedorListaPreciosTab() {
         </div>
       ) : (
         <>
-          {/* Tabla compacta - Desktop */}
+          {/* Desktop table */}
           <div className="hidden md:block flex-1 overflow-auto">
             <Table className="table-fixed w-full">
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-[55px] py-2 px-1.5 text-[10px]">Código</TableHead>
-                  <TableHead className="py-2 px-1.5 text-[10px]">Producto</TableHead>
-                  <TableHead className="w-[70px] py-2 px-1.5 text-[10px]">Marca</TableHead>
-                  <TableHead className="w-[65px] py-2 px-1.5 text-[10px] text-right">Precio</TableHead>
-                  <TableHead className="w-[85px] py-2 px-1.5 text-[10px] text-right">Descuento</TableHead>
+                  <TableHead className="w-[70px] py-2 px-2 text-[10px]">Código</TableHead>
+                  <TableHead className="py-2 px-2 text-[10px]">Producto</TableHead>
+                  <TableHead className="w-[120px] py-2 px-2 text-[10px] text-right">Precio</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {productosPorCategoria.map(([categoria, prods]) => (
                   <>
-                    {/* Separador de categoría */}
                     <TableRow key={`cat-${categoria}`} className="bg-muted/60 hover:bg-muted/60">
-                      <TableCell colSpan={5} className="py-1 px-2 font-semibold text-[10px] uppercase tracking-wide text-muted-foreground">
-                        {categoria} ({prods.length})
+                      <TableCell colSpan={3} className="py-1.5 px-2 font-bold text-[11px] uppercase tracking-wider text-muted-foreground">
+                        ═══ {categoria} ({prods.length}) ═══
                       </TableCell>
                     </TableRow>
-                    {/* Productos */}
                     {prods.map((producto) => (
                       <TableRow key={producto.id} className="h-8 hover:bg-muted/30">
                         <TableCell className="py-1 px-2 text-[10px] font-mono text-muted-foreground">
                           {producto.codigo}
                         </TableCell>
                         <TableCell className="py-1 px-2">
-                          <div>
-                            <div className="flex items-center gap-1 flex-wrap">
-                              <span className="text-xs">
-                                {producto.nombre}
-                                {producto.especificaciones && (
-                                  <span className="text-purple-600 dark:text-purple-400 font-medium ml-1">
-                                    {producto.especificaciones}
-                                  </span>
-                                )}
-                              </span>
-                              {producto.es_promocion && (
-                                <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
-                                  🎁 PROMO
-                                </Badge>
-                              )}
-                              {producto.bloqueado_venta && (
-                                <span className="text-[8px] text-red-600 dark:text-red-400 shrink-0" title="Requiere autorización para vender">🔒</span>
-                              )}
-                              {producto.precio_por_kilo && (
-                                <span className="text-[8px] text-muted-foreground bg-muted px-1 rounded shrink-0">
-                                  /kg
-                                </span>
-                              )}
-                            </div>
-                            {producto.es_promocion && producto.descripcion_promocion && (
-                              <div className="text-[9px] text-amber-700 dark:text-amber-400 font-medium">
-                                {producto.descripcion_promocion}
-                              </div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs">
+                              {buildFullProductName(producto)}
+                            </span>
+                            {producto.es_promocion && (
+                              <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
+                                🎁 PROMO
+                              </Badge>
                             )}
-                            {producto.contenido_empaque && (
-                              <div className="text-[10px] text-muted-foreground">
-                                {producto.contenido_empaque}
-                              </div>
+                            {producto.bloqueado_venta && (
+                              <span className="text-[8px] text-red-600 dark:text-red-400 shrink-0" title="Requiere autorización para vender">🔒</span>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="py-1 px-2">
-                          {producto.marca ? (
-                            <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                              {producto.marca}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-1 px-2 text-right font-semibold text-xs">
-                          {formatCurrency(producto.precio_venta || 0)}
-                        </TableCell>
                         <TableCell className="py-1 px-2 text-right">
-                          {producto.descuento_maximo && producto.descuento_maximo > 0 ? (
-                            <span className="text-[10px] font-medium">
-                              <span className="text-emerald-600 dark:text-emerald-400">-${producto.descuento_maximo.toFixed(0)}</span>
-                              <span className="text-muted-foreground mx-0.5">→</span>
-                              <span className="text-amber-600 dark:text-amber-400 font-semibold">
-                                {formatCurrency((producto.precio_venta || 0) - producto.descuento_maximo)}
-                              </span>
+                          <div className="flex items-center justify-end gap-1">
+                            <span className="font-semibold text-xs">
+                              {formatPrice(producto)}
                             </span>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground">—</span>
-                          )}
+                            {producto.aplica_iva && (
+                              <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-blue-300 text-blue-600 dark:border-blue-700 dark:text-blue-400 shrink-0">
+                                IVA
+                              </Badge>
+                            )}
+                            {producto.aplica_ieps && (
+                              <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400 shrink-0">
+                                IEPS
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -232,76 +286,52 @@ export function VendedorListaPreciosTab() {
             </Table>
           </div>
 
-          {/* Vista móvil ultra compacta */}
+          {/* Mobile view */}
           <div className="md:hidden flex-1 overflow-auto">
             {productosPorCategoria.map(([categoria, prods]) => (
               <div key={categoria}>
-                {/* Separador de categoría sticky */}
-                <div className="sticky top-0 bg-muted/90 backdrop-blur-sm py-1 px-3 border-b z-10">
-                  <span className="font-semibold text-[10px] uppercase tracking-wide text-muted-foreground">
-                    {categoria} ({prods.length})
+                <div className="sticky top-0 bg-muted/90 backdrop-blur-sm py-1.5 px-3 border-b z-10">
+                  <span className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">
+                    ═══ {categoria} ({prods.length}) ═══
                   </span>
                 </div>
-                {/* Productos */}
                 {prods.map((producto) => (
                   <div
                     key={producto.id}
-                    className="flex justify-between items-center py-1.5 px-3 border-b hover:bg-muted/30"
+                    className="flex justify-between items-start py-2 px-3 border-b hover:bg-muted/30"
                   >
                     <div className="min-w-0 flex-1 pr-2">
-                      <p className="text-sm font-medium truncate leading-tight flex items-center gap-1 flex-wrap">
-                        <span>
-                          {producto.nombre}
-                          {producto.especificaciones && (
-                            <span className="text-purple-600 dark:text-purple-400 font-medium ml-1">
-                              {producto.especificaciones}
-                            </span>
-                          )}
-                        </span>
+                      <p className="text-sm leading-tight">
+                        {buildFullProductName(producto)}
                         {producto.es_promocion && (
-                          <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
+                          <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 ml-1 shrink-0 inline-flex">
                             🎁 PROMO
                           </Badge>
                         )}
                         {producto.bloqueado_venta && (
-                          <span className="text-[8px] text-red-600 dark:text-red-400 shrink-0" title="Requiere autorización">🔒</span>
+                          <span className="text-[8px] text-red-600 dark:text-red-400 ml-1" title="Requiere autorización">🔒</span>
                         )}
                       </p>
-                      {producto.es_promocion && producto.descripcion_promocion && (
-                        <p className="text-[9px] text-amber-700 dark:text-amber-400 font-medium truncate">
-                          {producto.descripcion_promocion}
-                        </p>
-                      )}
-                      {(producto.marca || producto.contenido_empaque) && (
-                        <p className="text-[10px] text-muted-foreground truncate leading-tight">
-                          {producto.marca && (
-                            <span className="text-blue-600 dark:text-blue-400 font-medium">{producto.marca}</span>
-                          )}
-                          {producto.marca && producto.contenido_empaque && " • "}
-                          {producto.contenido_empaque}
-                        </p>
-                      )}
-                      <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
                         <span className="font-mono">{producto.codigo}</span>
-                        {producto.precio_por_kilo && (
-                          <span className="bg-muted px-0.5 rounded text-[8px]">/kg</span>
-                        )}
                       </p>
                     </div>
-                    <div className="text-right shrink-0">
+                    <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
                       <p className="font-bold text-sm leading-tight">
-                        {formatCurrency(producto.precio_venta || 0)}
+                        {formatPrice(producto)}
                       </p>
-                      {producto.descuento_maximo && producto.descuento_maximo > 0 && (
-                        <>
-                          <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium leading-tight">
-                            -${producto.descuento_maximo.toFixed(0)}
-                          </p>
-                          <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold leading-tight">
-                            → {formatCurrency((producto.precio_venta || 0) - producto.descuento_maximo)}
-                          </p>
-                        </>
-                      )}
+                      <div className="flex gap-0.5">
+                        {producto.aplica_iva && (
+                          <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-blue-300 text-blue-600 dark:border-blue-700 dark:text-blue-400">
+                            IVA
+                          </Badge>
+                        )}
+                        {producto.aplica_ieps && (
+                          <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400">
+                            IEPS
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
