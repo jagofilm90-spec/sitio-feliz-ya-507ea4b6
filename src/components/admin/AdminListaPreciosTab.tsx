@@ -958,8 +958,8 @@ export const AdminListaPreciosTab = () => {
                   {sortField === 'nombre' && <ArrowUpDown className="h-3 w-3" />}
                 </div>
               </TableHead>
-              <TableHead className="w-[65px] py-2 px-1.5 text-[10px]">
-                Marca
+              <TableHead className="w-[65px] py-2 px-1.5 text-[10px] text-right">
+                IVA/IEPS
               </TableHead>
               <TableHead 
                 className="w-[65px] py-2 px-1.5 text-[10px] text-right cursor-pointer hover:bg-muted/50"
