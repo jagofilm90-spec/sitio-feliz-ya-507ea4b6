@@ -739,53 +739,64 @@ const Productos = () => {
                       </p>
                     )}
 
-                     {/* Fila 3: Precio venta + Costo compra */}
-                     <div className="grid grid-cols-2 gap-3">
-                       <div className="space-y-2">
-                         <Label htmlFor="precio_venta">
-                           {formData.precio_por_kilo ? "Precio por kg ($/kg) *" : "Precio por unidad *"}
-                         </Label>
-                         <div className="relative">
-                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                           <Input
-                             id="precio_venta" type="number" step="0.01" value={formData.precio_venta}
-                             onChange={(e) => setFormData({ ...formData, precio_venta: e.target.value })}
-                             placeholder="0.00" required className="pl-7" autoComplete="off"
-                           />
-                         </div>
-                         {formData.precio_por_kilo && precioVenta > 0 && pesoKg > 0 && (
-                           <p className="text-xs text-blue-600 dark:text-blue-400">
-                             = {formatCurrency(precioVenta * pesoKg)} por {formData.unidad}
-                           </p>
-                         )}
-                       </div>
-                       {canSeeCosts && (
-                         <div className="space-y-2">
-                           <Label htmlFor="precio_compra">Costo de compra (sin impuestos)</Label>
-                           <div className="relative">
-                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                             <Input
-                               id="precio_compra" type="number" step="0.01" value={formData.precio_compra}
-                               onChange={(e) => setFormData({ ...formData, precio_compra: e.target.value })}
-                               placeholder="0.00" className="pl-7" autoComplete="off"
-                             />
-                           </div>
-                           {precioVenta > 0 && precioCompra > 0 && (() => {
-                             const margen = ((precioVenta - precioCompra) / precioVenta * 100);
-                             const color = margen < 5 ? "text-destructive" : margen < 10 ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400";
-                             return <p className={`text-xs font-medium ${color}`}>Margen: {margen.toFixed(1)}%</p>;
-                           })()}
-                         </div>
-                       )}
-                     </div>
+                    {/* Fila 3: Precio venta + Costo de compra */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="precio_venta">
+                          {formData.precio_por_kilo ? "Precio por kg ($/kg) *" : "Precio por unidad *"}
+                        </Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                          <Input
+                            id="precio_venta" type="number" step="0.01" value={formData.precio_venta}
+                            onChange={(e) => setFormData({ ...formData, precio_venta: e.target.value })}
+                            placeholder="0.00" required className="pl-7" autoComplete="off"
+                          />
+                        </div>
+                        {formData.precio_por_kilo && precioVenta > 0 && pesoKg > 0 && (
+                          <p className="text-xs text-blue-600 dark:text-blue-400">
+                            = {formatCurrency(precioVenta * pesoKg)} por {formData.unidad}
+                          </p>
+                        )}
+                      </div>
+                      {canSeeCosts && (
+                        <div className="space-y-2">
+                          <Label htmlFor="precio_compra">
+                            {formData.precio_por_kilo ? "Costo de compra ($/kg)" : "Costo de compra"}
+                          </Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                            <Input
+                              id="precio_compra" type="number" step="0.01" value={formData.precio_compra}
+                              onChange={(e) => setFormData({ ...formData, precio_compra: e.target.value })}
+                              placeholder="0.00" className="pl-7" autoComplete="off"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
-                     {/* Fila 4: Descuento máximo */}
-                     <div className="grid grid-cols-2 gap-3">
-                       <div className="space-y-2">
-                         <div className="flex items-center gap-1">
-                           <Label htmlFor="descuento_maximo">
-                             {formData.precio_por_kilo ? "Descuento máximo ($/kg)" : "Descuento máximo"}
-                           </Label>
+                    {/* Margen en tiempo real */}
+                    {canSeeCosts && precioVenta > 0 && precioCompra > 0 && (
+                      <div className={`text-xs p-2 rounded border flex items-center justify-between ${
+                        ((precioVenta - precioCompra) / precioVenta * 100) >= 10
+                          ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800"
+                          : ((precioVenta - precioCompra) / precioVenta * 100) >= 5
+                            ? "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/30 dark:text-yellow-400 dark:border-yellow-800"
+                            : "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800"
+                      }`}>
+                        <span>Margen: {((precioVenta - precioCompra) / precioVenta * 100).toFixed(1)}%</span>
+                        <span>Ganancia: {formatCurrency(precioVenta - precioCompra)}{formData.precio_por_kilo ? "/kg" : `/${formData.unidad}`}</span>
+                      </div>
+                    )}
+
+                    {/* Fila 4: Descuento máximo */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1">
+                          <Label htmlFor="descuento_maximo">
+                            {formData.precio_por_kilo ? "Descuento máximo ($/kg)" : "Descuento máximo"}
+                          </Label>
                           <Tooltip>
                             <TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger>
                             <TooltipContent><p className="text-xs max-w-[200px]">El vendedor puede dar hasta este descuento sin pedir autorización</p></TooltipContent>
@@ -804,8 +815,8 @@ const Productos = () => {
 
                     {/* Warnings */}
                     {margenNegativo && canSeeCosts && (
-                      <p className="text-xs p-2 rounded bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-                        ⚠ El precio de venta es menor al costo. El margen sería negativo.
+                      <p className="text-xs p-2 rounded bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400 border border-red-200 dark:border-red-800">
+                        El precio de venta es menor al costo. El margen es negativo.
                       </p>
                     )}
                     {descuentoExcesivo && (
@@ -1127,14 +1138,15 @@ const Productos = () => {
                   <div className="overflow-y-auto flex-1">
                     <Table style={{ tableLayout: 'fixed', width: '100%' }}>
                       <colgroup>
-                        <col style={{ width: '9%' }} />
-                        <col style={{ width: '32%' }} />
                         <col style={{ width: '8%' }} />
-                        <col style={{ width: '9%' }} />
-                        <col style={{ width: '14%' }} />
-                        <col style={{ width: '9%' }} />
-                        <col style={{ width: '10%' }} />
-                        <col style={{ width: '9%' }} />
+                        <col style={{ width: '28%' }} />
+                        <col style={{ width: '7%' }} />
+                        <col style={{ width: '7%' }} />
+                        <col style={{ width: '13%' }} />
+                        {canSeeCosts && <col style={{ width: '8%' }} />}
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: canSeeCosts ? '8%' : '10%' }} />
+                        <col style={{ width: canSeeCosts ? '7%' : '9%' }} />
                       </colgroup>
                       <TableHeader className="sticky top-0 z-10 bg-background">
                         <TableRow>
@@ -1143,6 +1155,7 @@ const Productos = () => {
                           <TableHead className="px-2 py-1.5">Unidad</TableHead>
                           <TableHead className="px-2 py-1.5">Tipo</TableHead>
                           <TableHead className="px-2 py-1.5 text-right"><SortableHeader col="precio" className="justify-end">Precio</SortableHeader></TableHead>
+                          {canSeeCosts && <TableHead className="px-2 py-1.5 text-center">Margen</TableHead>}
                           <TableHead className="px-2 py-1.5 text-center"><SortableHeader col="stock">Stock</SortableHeader></TableHead>
                           <TableHead className="px-2 py-1.5 text-center">IVA/IEPS</TableHead>
                           <TableHead className="px-2 py-1.5"></TableHead>
@@ -1150,9 +1163,9 @@ const Productos = () => {
                       </TableHeader>
                       <TableBody>
                         {loading ? (
-                          <TableRow><TableCell colSpan={8} className="text-center py-8">Cargando...</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={canSeeCosts ? 9 : 8} className="text-center py-8">Cargando...</TableCell></TableRow>
                         ) : filteredProductos.length === 0 ? (
-                          <TableRow><TableCell colSpan={8} className="text-center py-8">No hay productos</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={canSeeCosts ? 9 : 8} className="text-center py-8">No hay productos</TableCell></TableRow>
                         ) : (
                           filteredProductos.map(p => {
                             const details = [p.marca, p.especificaciones].filter(Boolean).join(' · ');
@@ -1210,7 +1223,24 @@ const Productos = () => {
                                   ) : "-"}
                                 </TableCell>
 
-                                {/* 6. Stock */}
+                                {/* 6. Margen */}
+                                {canSeeCosts && (() => {
+                                  const costo = p.costo_promedio_ponderado || p.ultimo_costo_compra || p.precio_compra || 0;
+                                  if (!costo || !p.precio_venta) return <TableCell className="px-2 py-1.5 text-center"><span className="text-muted-foreground text-xs">—</span></TableCell>;
+                                  const margen = ((p.precio_venta - costo) / p.precio_venta * 100);
+                                  return (
+                                    <TableCell className="px-2 py-1.5 text-center">
+                                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-4 ${
+                                        margen >= 10 ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800"
+                                        : margen >= 5 ? "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-400 dark:border-yellow-800"
+                                        : margen >= 0 ? "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-400 dark:border-orange-800"
+                                        : "bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800"
+                                      }`}>{margen.toFixed(1)}%</Badge>
+                                    </TableCell>
+                                  );
+                                })()}
+
+                                {/* 7. Stock */}
                                 <TableCell className="px-2 py-1.5 text-center">
                                   {sinStock ? (
                                     <Badge variant="destructive" className="text-[10px]">Sin stock</Badge>

@@ -47,7 +47,7 @@ export const InventarioResumen = () => {
         // Valor del inventario
         supabase
           .from("productos")
-          .select("stock_actual, precio_venta, ultimo_costo_compra")
+          .select("stock_actual, precio_venta, ultimo_costo_compra, costo_promedio_ponderado")
           .eq("activo", true)
           .gt("stock_actual", 0),
         
@@ -66,7 +66,7 @@ export const InventarioResumen = () => {
 
       // Calcular valor del inventario
       const valorInventario = productosRes.data?.reduce((sum, p) => {
-        const costo = p.ultimo_costo_compra || (p.precio_venta * 0.7); // Estimación si no hay costo
+        const costo = p.costo_promedio_ponderado || p.ultimo_costo_compra || (p.precio_venta * 0.7);
         return sum + (p.stock_actual * costo);
       }, 0) || 0;
 

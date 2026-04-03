@@ -57,25 +57,27 @@ const Rentabilidad = () => {
     try {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, marca, precio_compra, precio_venta, stock_actual")
+        .select("id, codigo, nombre, marca, precio_compra, precio_venta, stock_actual, costo_promedio_ponderado, ultimo_costo_compra")
         .eq("activo", true)
-        .gt("precio_compra", 0)
         .gt("precio_venta", 0)
         .order("nombre");
 
       if (error) throw error;
 
-      const productosConMargen: ProductoRentabilidad[] = (data || []).map((p) => {
-        const margen_pesos = p.precio_venta - p.precio_compra;
+      const productosConMargen: ProductoRentabilidad[] = (data || [])
+        .filter((p) => (p.costo_promedio_ponderado || p.ultimo_costo_compra || p.precio_compra) > 0)
+        .map((p) => {
+        const costoRef = p.costo_promedio_ponderado || p.ultimo_costo_compra || p.precio_compra;
+        const margen_pesos = p.precio_venta - costoRef;
         const margen_porcentaje = (margen_pesos / p.precio_venta) * 100;
-        const valor_inventario = p.stock_actual * p.precio_compra;
+        const valor_inventario = p.stock_actual * costoRef;
 
         return {
           id: p.id,
           codigo: p.codigo,
           nombre: p.nombre,
           marca: p.marca,
-          precio_compra: p.precio_compra,
+          precio_compra: costoRef,
           precio_venta: p.precio_venta,
           margen_pesos,
           margen_porcentaje,

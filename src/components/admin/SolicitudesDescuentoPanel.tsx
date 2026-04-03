@@ -311,8 +311,8 @@ function SolicitudCardFlat({
   const tieneCarrito = carritoItems.length > 0;
 
   // Cost & margin calculation
-  const costo = solicitud.producto?.ultimo_costo_compra || solicitud.producto?.costo_promedio_ponderado || 0;
-  const margenPct = costo > 0 ? ((solicitud.precio_solicitado - costo) / costo) * 100 : 0;
+  const costo = solicitud.producto?.costo_promedio_ponderado || solicitud.producto?.ultimo_costo_compra || 0;
+  const margenPct = costo > 0 ? ((solicitud.precio_solicitado - costo) / solicitud.precio_solicitado) * 100 : 0;
   const margenColor = costo === 0
     ? 'text-muted-foreground'
     : margenPct >= 10

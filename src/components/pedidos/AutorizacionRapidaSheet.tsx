@@ -92,7 +92,7 @@ export function AutorizacionRapidaSheet({
     if (!pedido) return false;
     return pedido.pedidos_detalles.some(d => {
       const price = editingPrices[d.id] ?? d.precio_unitario;
-      const costo = d.productos?.ultimo_costo_compra || d.productos?.costo_promedio_ponderado || 0;
+      const costo = d.productos?.costo_promedio_ponderado || d.productos?.ultimo_costo_compra || 0;
       return costo > 0 && price < costo;
     });
   };
@@ -340,7 +340,7 @@ export function AutorizacionRapidaSheet({
               const descuentoMax = detalle.productos?.descuento_maximo ?? 0;
               const precioMinimo = listPrice - descuentoMax;
               const diferencia = currentPrice - precioMinimo;
-              const costo = detalle.productos?.ultimo_costo_compra || detalle.productos?.costo_promedio_ponderado || 0;
+              const costo = detalle.productos?.costo_promedio_ponderado || detalle.productos?.ultimo_costo_compra || 0;
               const ganancia = costo > 0 ? currentPrice - costo : 0;
               const margenPct = currentPrice > 0 && costo > 0 ? ((currentPrice - costo) / currentPrice) * 100 : 0;
               const porDebajoMinimo = currentPrice < precioMinimo;

@@ -715,7 +715,7 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
                   const descuentoMax = detalle.productos?.descuento_maximo ?? 0;
                   const precioMinimo = listPrice - descuentoMax;
                   const diferencia = currentPrice - precioMinimo;
-                  const costo = detalle.productos?.ultimo_costo_compra || detalle.productos?.costo_promedio_ponderado || 0;
+                  const costo = detalle.productos?.costo_promedio_ponderado || detalle.productos?.ultimo_costo_compra || 0;
                   const margenPct = currentPrice > 0 && costo > 0 ? ((currentPrice - costo) / currentPrice) * 100 : 0;
                   const porDebajoMinimo = currentPrice < precioMinimo;
                   const abajoCosto = costo > 0 && currentPrice < costo;
