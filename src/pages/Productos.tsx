@@ -70,6 +70,7 @@ const Productos = () => {
   const [filterTipoPrecio, setFilterTipoPrecio] = useState("all");
   const [filterStock, setFilterStock] = useState("all");
   const [filtersSheetOpen, setFiltersSheetOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const hasActiveFilters = filterMarca !== "all" || filterCategoria !== "all" || filterTipoPrecio !== "all" || filterStock !== "all";
 
@@ -205,24 +206,25 @@ const Productos = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     const precioVenta = parseFloat(formData.precio_venta);
     if (!precioVenta || precioVenta <= 0) {
       toast({ title: "Error", description: "El precio de venta es requerido y debe ser mayor a 0", variant: "destructive" });
-      return;
+      setSaving(false); return;
     }
     if (formData.precio_por_kilo && (!formData.peso_kg || parseFloat(formData.peso_kg) <= 0)) {
       toast({ title: "Error", description: "Los productos por kilo requieren peso_kg", variant: "destructive" });
-      return;
+      setSaving(false); return;
     }
     const descMax = parseFloat(formData.descuento_maximo) || 0;
     if (descMax > 0 && descMax >= precioVenta) {
       toast({ title: "Error", description: "El descuento máximo no puede ser mayor al precio de venta", variant: "destructive" });
-      return;
+      setSaving(false); return;
     }
     const stockMin = parseInt(formData.stock_minimo) || 0;
     if (stockMin < 0) {
       toast({ title: "Error", description: "El stock mínimo debe ser >= 0", variant: "destructive" });
-      return;
+      setSaving(false); return;
     }
     const codigoExiste = productos.find(p =>
       p.codigo.toLowerCase() === formData.codigo.toLowerCase() &&
@@ -230,13 +232,13 @@ const Productos = () => {
     );
     if (codigoExiste) {
       toast({ title: "Error", description: `El código "${formData.codigo}" ya existe`, variant: "destructive" });
-      return;
+      setSaving(false); return;
     }
     const duplicateError = checkDuplicateProduct(formData.nombre, formData.marca, formData.especificaciones, formData.unidad);
     if (duplicateError) {
       setDuplicateWarning(duplicateError);
       toast({ title: "Producto duplicado", description: duplicateError, variant: "destructive" });
-      return;
+      setSaving(false); return;
     }
 
     try {
@@ -283,7 +285,6 @@ const Productos = () => {
           if (loteError) console.error("Error creando lote:", loteError);
           else await supabase.from("productos").update({ stock_actual: (editingProduct.stock_actual || 0) + stockAgregar }).eq("id", editingProduct.id);
         }
-        toast({ title: "Producto actualizado correctamente" });
       } else {
         const { data: newProduct, error } = await supabase.from("productos").insert([productData]).select().single();
         if (error) throw error;
@@ -311,14 +312,23 @@ const Productos = () => {
             roles: ['admin', 'secretaria', 'vendedor'],
           });
         }
-        toast({ title: "Producto creado correctamente" });
       }
       setDialogOpen(false);
       resetForm();
       loadProductos();
+      toast({ title: editingProduct ? "Producto actualizado" : "Producto creado" });
+      setSaving(false);
     } catch (error: any) {
+      setSaving(false);
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
+  };
+
+  const handleNavigateWithoutSave = (direction: 'prev' | 'next') => {
+    if (!editingProduct || editingIndex < 0) return;
+    const targetIndex = direction === 'next' ? editingIndex + 1 : editingIndex - 1;
+    if (targetIndex < 0 || targetIndex >= filteredProductos.length) return;
+    handleEdit(filteredProductos[targetIndex]);
   };
 
   const handleEdit = (product: any) => {
@@ -437,6 +447,11 @@ const Productos = () => {
   const pesoKg = parseFloat(formData.peso_kg) || 0;
   const descMaxForm = parseFloat(formData.descuento_maximo) || 0;
   const margenNegativo = precioVenta > 0 && precioCompra > 0 && precioVenta < precioCompra;
+
+  // Navigation: find current product index in filtered list
+  const editingIndex = editingProduct ? filteredProductos.findIndex(p => p.id === editingProduct.id) : -1;
+  const canGoPrev = editingProduct && editingIndex > 0;
+  const canGoNext = editingProduct && editingIndex >= 0 && editingIndex < filteredProductos.length - 1;
   const descuentoExcesivo = descMaxForm > 0 && precioVenta > 0 && descMaxForm >= precioVenta;
   const kiloPesoError = formData.precio_por_kilo && pesoKg <= 0;
 
@@ -536,7 +551,7 @@ const Productos = () => {
                   <DialogDescription>Completa la información del producto</DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSave} className="space-y-5">
+                <form id="producto-form" onSubmit={handleSave} className="space-y-5">
                   {/* ── SECCIÓN 1: Información básica ── */}
                   <div className="space-y-3">
                     <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
@@ -925,9 +940,24 @@ const Productos = () => {
                   </div>
 
                   {/* Botones */}
-                  <div className="flex justify-end gap-2 pt-2">
-                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-                    <Button type="submit">{editingProduct ? "Guardar cambios" : "Crear producto"}</Button>
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    {editingProduct ? (
+                      <div className="flex items-center gap-1">
+                        <Button type="button" variant="ghost" size="sm" disabled={!canGoPrev || saving} onClick={() => handleNavigateWithoutSave('prev')} title="Anterior">
+                          ← Ant
+                        </Button>
+                        <span className="text-xs text-muted-foreground px-1">
+                          {editingIndex >= 0 ? `${editingIndex + 1} de ${filteredProductos.length}` : ""}
+                        </span>
+                        <Button type="button" variant="ghost" size="sm" disabled={!canGoNext || saving} onClick={() => handleNavigateWithoutSave('next')} title="Siguiente">
+                          Sig →
+                        </Button>
+                      </div>
+                    ) : <div />}
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+                      <Button type="submit" disabled={saving}>{saving ? "Guardando..." : editingProduct ? "Guardar" : "Crear producto"}</Button>
+                    </div>
                   </div>
                 </form>
               </DialogContent>
