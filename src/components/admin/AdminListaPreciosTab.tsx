@@ -1026,23 +1026,17 @@ export const AdminListaPreciosTab = () => {
                     {producto.codigo}
                   </TableCell>
                   <TableCell className="py-1 px-1.5">
-                    <span className="text-xs">
-                      {producto.nombre}
-                      {producto.especificaciones && (
-                        <span className="text-purple-600 dark:text-purple-400 ml-1">
-                          {producto.especificaciones}
-                        </span>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <span className="text-xs">{getDisplayName(producto)}</span>
+                      {producto.es_promocion && (
+                        <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
+                          🎁 PROMO
+                        </Badge>
                       )}
-                    </span>
-                  </TableCell>
-                  <TableCell className="py-1 px-1.5">
-                    {producto.marca ? (
-                      <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                        {producto.marca}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
+                      {producto.bloqueado_venta && (
+                        <span className="text-[8px] text-red-600 dark:text-red-400 shrink-0" title="Requiere autorización">🔒</span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="py-1 px-1.5 text-right">
                     <span className="text-xs font-medium text-muted-foreground">
