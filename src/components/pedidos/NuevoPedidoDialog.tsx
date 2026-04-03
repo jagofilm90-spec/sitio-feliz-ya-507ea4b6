@@ -611,6 +611,9 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
                                 <Input type="number" min={1} value={d.cantidad} onChange={(e) => updateDetalle(idx, "cantidad", Number(e.target.value))} className="h-8" />
                                 <span className="text-xs text-muted-foreground shrink-0">{d.producto.unidad}</span>
                               </div>
+                              {d.cantidad > d.producto.stock_actual && (
+                                <p className="text-xs text-destructive mt-0.5">⚠️ Stock: {d.producto.stock_actual}</p>
+                              )}
                             </div>
                             <div>
                               <Label className="text-xs text-muted-foreground">Precio</Label>
