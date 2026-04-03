@@ -155,6 +155,9 @@ const Dashboard = () => {
         {/* Resumen del Día - solo admin */}
         {isAdmin && <ResumenDiaWidget />}
 
+        {/* Ventas abajo del costo este mes */}
+        {isAdmin && <VentasBajoCostoWidget />}
+
         {/* KPIs Principales - 3 rows */}
         <KPICards data={dashData?.kpis ?? null} loading={dashLoading} />
 
