@@ -3759,6 +3759,7 @@ export type Database = {
           folio: string
           id: string
           impuestos: number | null
+          motivo_venta_bajo_costo: string | null
           notas: string | null
           numero_dia: number | null
           pagado: boolean
@@ -3792,6 +3793,7 @@ export type Database = {
           folio: string
           id?: string
           impuestos?: number | null
+          motivo_venta_bajo_costo?: string | null
           notas?: string | null
           numero_dia?: number | null
           pagado?: boolean
@@ -3825,6 +3827,7 @@ export type Database = {
           folio?: string
           id?: string
           impuestos?: number | null
+          motivo_venta_bajo_costo?: string | null
           notas?: string | null
           numero_dia?: number | null
           pagado?: boolean
