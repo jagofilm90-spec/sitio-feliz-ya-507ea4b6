@@ -298,7 +298,11 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
       const newTotal = detalles?.reduce((sum, d) => sum + d.subtotal, 0) || 0;
       const pesoTotal = calcularPesoTotalPedido(selectedPedido.pedidos_detalles);
 
-      await supabase.from("pedidos").update({ total: newTotal, status: "pendiente", peso_total_kg: pesoTotal > 0 ? pesoTotal : null }).eq("id", pedidoId);
+      const updateData: any = { total: newTotal, status: "pendiente", peso_total_kg: pesoTotal > 0 ? pesoTotal : null };
+      if (motivoBajoCostoRef.current) {
+        updateData.motivo_venta_bajo_costo = motivoBajoCostoRef.current;
+      }
+      await supabase.from("pedidos").update(updateData).eq("id", pedidoId);
 
       // Vendor notification
       if (selectedPedido?.vendedor_id) {
