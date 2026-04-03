@@ -439,8 +439,7 @@ export const SecretariaListaPreciosTab = () => {
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="w-[55px] py-2 px-1.5 text-[10px]">Código</TableHead>
                   <TableHead className="py-2 px-1.5 text-[10px]">Producto</TableHead>
-                  <TableHead className="w-[70px] py-2 px-1.5 text-[10px]">Marca</TableHead>
-                  <TableHead className="w-[70px] py-2 px-1.5 text-[10px] text-right">Precio</TableHead>
+                  <TableHead className="w-[100px] py-2 px-1.5 text-[10px] text-right">Precio</TableHead>
                   <TableHead className="w-[90px] py-2 px-1.5 text-[10px] text-right">Descuento</TableHead>
                   <TableHead className="w-[50px] py-2 px-1 text-[10px] text-center">Acciones</TableHead>
                 </TableRow>
@@ -448,66 +447,41 @@ export const SecretariaListaPreciosTab = () => {
               <TableBody>
                 {productosPorCategoria.map(([categoria, prods]) => (
                   <>
-                    {/* Separador de categoría */}
                     <TableRow key={`cat-${categoria}`} className="bg-muted/60 hover:bg-muted/60">
-                      <TableCell colSpan={6} className="py-1 px-2 font-semibold text-[10px] uppercase tracking-wide text-muted-foreground">
-                        {categoria} ({prods.length})
+                      <TableCell colSpan={5} className="py-1.5 px-2 font-bold text-[11px] uppercase tracking-wider text-muted-foreground">
+                        ═══ {categoria} ({prods.length}) ═══
                       </TableCell>
                     </TableRow>
-                    {/* Productos */}
                     {prods.map((producto) => (
                       <TableRow key={producto.id} className="h-8 hover:bg-muted/30">
                         <TableCell className="py-1 px-2 text-[10px] font-mono text-muted-foreground">
                           {producto.codigo}
                         </TableCell>
                         <TableCell className="py-1 px-2">
-                          <div>
-                            <div className="flex items-center gap-1 flex-wrap">
-                              <span className="text-xs">
-                                {producto.nombre}
-                                {producto.especificaciones && (
-                                  <span className="text-purple-600 dark:text-purple-400 font-medium ml-1">
-                                    {producto.especificaciones}
-                                  </span>
-                                )}
-                              </span>
-                              {producto.es_promocion && (
-                                <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
-                                  🎁 PROMO
-                                </Badge>
-                              )}
-                              {producto.bloqueado_venta && (
-                                <span className="text-[8px] text-red-600 dark:text-red-400 shrink-0" title="Requiere autorización">🔒</span>
-                              )}
-                              {producto.precio_por_kilo && (
-                                <span className="text-[8px] text-muted-foreground bg-muted px-1 rounded shrink-0">
-                                  /kg
-                                </span>
-                              )}
-                            </div>
-                            {producto.es_promocion && producto.descripcion_promocion && (
-                              <div className="text-[9px] text-amber-700 dark:text-amber-400 font-medium">
-                                {producto.descripcion_promocion}
-                              </div>
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <span className="text-xs">{getDisplayName(producto)}</span>
+                            {producto.es_promocion && (
+                              <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
+                                🎁 PROMO
+                              </Badge>
                             )}
-                            {producto.contenido_empaque && (
-                              <div className="text-[10px] text-muted-foreground">
-                                {producto.contenido_empaque}
-                              </div>
+                            {producto.bloqueado_venta && (
+                              <span className="text-[8px] text-red-600 dark:text-red-400 shrink-0" title="Requiere autorización">🔒</span>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="py-1 px-2">
-                          {producto.marca ? (
-                            <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                              {producto.marca}
+                        <TableCell className="py-1 px-2 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <span className="font-semibold text-xs">
+                              {formatCurrency(producto.precio_venta)}{producto.precio_por_kilo && '/kg'}
                             </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-1 px-2 text-right font-semibold text-xs">
-                          {formatCurrency(producto.precio_venta)}
+                            {producto.aplica_iva && (
+                              <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-blue-300 text-blue-600 dark:border-blue-700 dark:text-blue-400">IVA</Badge>
+                            )}
+                            {producto.aplica_ieps && (
+                              <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400">IEPS</Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="py-1 px-2 text-right">
                           {producto.descuento_maximo && producto.descuento_maximo > 0 ? (
