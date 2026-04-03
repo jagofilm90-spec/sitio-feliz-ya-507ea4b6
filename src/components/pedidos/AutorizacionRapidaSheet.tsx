@@ -437,7 +437,58 @@ export function AutorizacionRapidaSheet({
 
         {/* Footer con total y acciones */}
         <div className="border-t p-4 space-y-3 bg-background">
-          {showRejectForm ? (
+          {showBajoCostoForm ? (
+            /* Footer en modo motivo bajo costo */
+            <div className="space-y-3">
+              <p className="font-semibold text-sm text-destructive flex items-center gap-1.5">
+                <AlertTriangle className="h-4 w-4" />
+                Venta abajo del costo
+              </p>
+              <p className="text-xs text-muted-foreground">Indica el motivo para autorizar:</p>
+              <div className="flex flex-wrap gap-2">
+                {["Precio de mercado bajó", "Competencia", "Liquidar inventario", "Otro"].map(opt => (
+                  <Button
+                    key={opt}
+                    variant={motivoBajoCostoRapido === opt ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setMotivoBajoCostoRapido(opt);
+                      if (opt !== "Otro") setMotivoBajoCosto(opt);
+                    }}
+                  >
+                    {opt}
+                  </Button>
+                ))}
+              </div>
+              {motivoBajoCostoRapido === "Otro" && (
+                <Textarea
+                  placeholder="Escribe el motivo..."
+                  value={motivoBajoCosto}
+                  onChange={(e) => setMotivoBajoCosto(e.target.value)}
+                  autoFocus
+                />
+              )}
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setShowBajoCostoForm(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleConfirmBajoCosto}
+                  disabled={!motivoBajoCostoValido || authorizeMutation.isPending}
+                >
+                  {authorizeMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                      Autorizar
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : showRejectForm ? (
             /* Footer en modo rechazo */
             <div className="space-y-3">
               <p className="font-medium text-sm">Motivo de rechazo:</p>
@@ -492,7 +543,7 @@ export function AutorizacionRapidaSheet({
                       Ajustar precios
                     </Button>
                     <Button
-                      onClick={() => authorizeMutation.mutate()}
+                      onClick={handleAutorizarClick}
                       disabled={authorizeMutation.isPending}
                       className="gap-2 bg-emerald-600 hover:bg-emerald-700"
                     >
@@ -512,7 +563,7 @@ export function AutorizacionRapidaSheet({
                       Cancelar
                     </Button>
                     <Button
-                      onClick={() => authorizeMutation.mutate()}
+                      onClick={handleAutorizarClick}
                       disabled={authorizeMutation.isPending}
                       className="gap-2 bg-emerald-600 hover:bg-emerald-700"
                     >
