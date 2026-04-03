@@ -1038,6 +1038,19 @@ export const AdminListaPreciosTab = () => {
                       )}
                     </div>
                   </TableCell>
+                  <TableCell className="py-1 px-1.5 text-center">
+                    <div className="flex items-center justify-center gap-0.5">
+                      {producto.aplica_iva && (
+                        <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-blue-300 text-blue-600 dark:border-blue-700 dark:text-blue-400">IVA</Badge>
+                      )}
+                      {producto.aplica_ieps && (
+                        <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400">IEPS</Badge>
+                      )}
+                      {!producto.aplica_iva && !producto.aplica_ieps && (
+                        <span className="text-[9px] text-muted-foreground">—</span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="py-1 px-1.5 text-right">
                     <span className="text-xs font-medium text-muted-foreground">
                       {analisis.costo_referencia > 0 ? formatCurrency(analisis.costo_referencia) : "-"}
@@ -1057,7 +1070,7 @@ export const AdminListaPreciosTab = () => {
                           </Tooltip>
                         </TooltipProvider>
                       )}
-                      {formatCurrency(producto.precio_venta)}
+                      {formatCurrency(producto.precio_venta)}{producto.precio_por_kilo && '/kg'}
                     </span>
                   </TableCell>
                   <TableCell className="py-1 px-1.5 text-right">
