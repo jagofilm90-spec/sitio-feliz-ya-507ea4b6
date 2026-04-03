@@ -204,27 +204,26 @@ const Productos = () => {
     } finally { setLoading(false); }
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
+  // Core save logic — returns true on success, false on validation/error
+  const saveProduct = async (): Promise<boolean> => {
     const precioVenta = parseFloat(formData.precio_venta);
     if (!precioVenta || precioVenta <= 0) {
       toast({ title: "Error", description: "El precio de venta es requerido y debe ser mayor a 0", variant: "destructive" });
-      setSaving(false); return;
+      return false;
     }
     if (formData.precio_por_kilo && (!formData.peso_kg || parseFloat(formData.peso_kg) <= 0)) {
       toast({ title: "Error", description: "Los productos por kilo requieren peso_kg", variant: "destructive" });
-      setSaving(false); return;
+      return false;
     }
     const descMax = parseFloat(formData.descuento_maximo) || 0;
     if (descMax > 0 && descMax >= precioVenta) {
       toast({ title: "Error", description: "El descuento máximo no puede ser mayor al precio de venta", variant: "destructive" });
-      setSaving(false); return;
+      return false;
     }
     const stockMin = parseInt(formData.stock_minimo) || 0;
     if (stockMin < 0) {
       toast({ title: "Error", description: "El stock mínimo debe ser >= 0", variant: "destructive" });
-      setSaving(false); return;
+      return false;
     }
     const codigoExiste = productos.find(p =>
       p.codigo.toLowerCase() === formData.codigo.toLowerCase() &&
@@ -232,103 +231,120 @@ const Productos = () => {
     );
     if (codigoExiste) {
       toast({ title: "Error", description: `El código "${formData.codigo}" ya existe`, variant: "destructive" });
-      setSaving(false); return;
+      return false;
     }
     const duplicateError = checkDuplicateProduct(formData.nombre, formData.marca, formData.especificaciones, formData.unidad);
     if (duplicateError) {
       setDuplicateWarning(duplicateError);
       toast({ title: "Producto duplicado", description: duplicateError, variant: "destructive" });
-      setSaving(false); return;
+      return false;
     }
 
-    try {
-      const productData = {
-        codigo: formData.codigo,
-        codigo_sat: formData.codigo_sat || null,
-        nombre: formData.nombre,
-        marca: formData.marca || null,
-        categoria: formData.categoria || null,
-        especificaciones: formData.especificaciones || null,
-        contenido_empaque: formData.contenido_empaque || null,
-        unidad_sat: formData.unidad_sat || null,
-        peso_kg: formData.peso_kg ? parseFloat(formData.peso_kg) : null,
-        unidad: formData.unidad as any,
-        piezas_por_unidad: formData.piezas_por_unidad ? parseInt(formData.piezas_por_unidad) : 1,
-        precio_compra: parseFloat(formData.precio_compra) || 0,
-        precio_venta: precioVenta,
-        precio_por_kilo: formData.precio_por_kilo,
-        descuento_maximo: descMax || null,
-        stock_minimo: stockMin,
-        maneja_caducidad: formData.maneja_caducidad,
-        aplica_iva: formData.aplica_iva,
-        aplica_ieps: formData.aplica_ieps,
-        activo: formData.activo,
-        requiere_fumigacion: formData.requiere_fumigacion,
-        fecha_ultima_fumigacion: formData.fecha_ultima_fumigacion || null,
-        solo_uso_interno: formData.solo_uso_interno,
-        es_promocion: formData.es_promocion,
-        descripcion_promocion: formData.es_promocion ? (formData.descripcion_promocion || null) : null,
-        bloqueado_venta: formData.bloqueado_venta,
-      };
+    const productData = {
+      codigo: formData.codigo,
+      codigo_sat: formData.codigo_sat || null,
+      nombre: formData.nombre,
+      marca: formData.marca || null,
+      categoria: formData.categoria || null,
+      especificaciones: formData.especificaciones || null,
+      contenido_empaque: formData.contenido_empaque || null,
+      unidad_sat: formData.unidad_sat || null,
+      peso_kg: formData.peso_kg ? parseFloat(formData.peso_kg) : null,
+      unidad: formData.unidad as any,
+      piezas_por_unidad: formData.piezas_por_unidad ? parseInt(formData.piezas_por_unidad) : 1,
+      precio_compra: parseFloat(formData.precio_compra) || 0,
+      precio_venta: precioVenta,
+      precio_por_kilo: formData.precio_por_kilo,
+      descuento_maximo: descMax || null,
+      stock_minimo: stockMin,
+      maneja_caducidad: formData.maneja_caducidad,
+      aplica_iva: formData.aplica_iva,
+      aplica_ieps: formData.aplica_ieps,
+      activo: formData.activo,
+      requiere_fumigacion: formData.requiere_fumigacion,
+      fecha_ultima_fumigacion: formData.fecha_ultima_fumigacion || null,
+      solo_uso_interno: formData.solo_uso_interno,
+      es_promocion: formData.es_promocion,
+      descripcion_promocion: formData.es_promocion ? (formData.descripcion_promocion || null) : null,
+      bloqueado_venta: formData.bloqueado_venta,
+    };
 
-      if (editingProduct) {
-        const { error } = await supabase.from("productos").update(productData).eq("id", editingProduct.id);
-        if (error) throw error;
-        const stockAgregar = parseInt(formData.stock_inicial) || 0;
-        if (stockAgregar > 0) {
-          const loteData: any = {
-            producto_id: editingProduct.id, cantidad_disponible: stockAgregar,
-            precio_compra: parseFloat(formData.precio_compra) || 0, lote_referencia: "Carga inicial",
-          };
-          if (formData.maneja_caducidad && formData.fecha_caducidad_inicial) loteData.fecha_caducidad = formData.fecha_caducidad_inicial;
-          const { error: loteError } = await supabase.from("inventario_lotes").insert([loteData]);
-          if (loteError) console.error("Error creando lote:", loteError);
-          else await supabase.from("productos").update({ stock_actual: (editingProduct.stock_actual || 0) + stockAgregar }).eq("id", editingProduct.id);
-        }
-      } else {
-        const { data: newProduct, error } = await supabase.from("productos").insert([productData]).select().single();
-        if (error) throw error;
-        if (formData.proveedor_id && newProduct) {
-          const { error: provError } = await supabase.from("proveedor_productos").insert([{ proveedor_id: formData.proveedor_id, producto_id: newProduct.id }]);
-          if (provError) console.error("Error asociando proveedor:", provError);
-        }
-        const stockInicial = parseInt(formData.stock_inicial) || 0;
-        if (stockInicial > 0 && newProduct) {
-          const loteData: any = {
-            producto_id: newProduct.id, cantidad_disponible: stockInicial,
-            precio_compra: parseFloat(formData.precio_compra) || 0, lote_referencia: "Lote inicial",
-          };
-          if (formData.maneja_caducidad && formData.fecha_caducidad_inicial) loteData.fecha_caducidad = formData.fecha_caducidad_inicial;
-          const { error: loteError } = await supabase.from("inventario_lotes").insert([loteData]);
-          if (loteError) console.error("Error creando lote inicial:", loteError);
-          await supabase.from("productos").update({ stock_actual: stockInicial }).eq("id", newProduct.id);
-        }
-        // Notify vendedores about new product (only if not internal/blocked)
-        if (newProduct && !productData.solo_uso_interno && !productData.bloqueado_venta) {
-          notificarProductoNuevo({
-            productoNombre: productData.nombre,
-            precioVenta: productData.precio_venta,
-            unidad: productData.unidad as string,
-            roles: ['admin', 'secretaria', 'vendedor'],
-          });
-        }
+    if (editingProduct) {
+      const { error } = await supabase.from("productos").update(productData).eq("id", editingProduct.id);
+      if (error) throw error;
+      const stockAgregar = parseInt(formData.stock_inicial) || 0;
+      if (stockAgregar > 0) {
+        const loteData: any = {
+          producto_id: editingProduct.id, cantidad_disponible: stockAgregar,
+          precio_compra: parseFloat(formData.precio_compra) || 0, lote_referencia: "Carga inicial",
+        };
+        if (formData.maneja_caducidad && formData.fecha_caducidad_inicial) loteData.fecha_caducidad = formData.fecha_caducidad_inicial;
+        const { error: loteError } = await supabase.from("inventario_lotes").insert([loteData]);
+        if (loteError) console.error("Error creando lote:", loteError);
+        else await supabase.from("productos").update({ stock_actual: (editingProduct.stock_actual || 0) + stockAgregar }).eq("id", editingProduct.id);
       }
+    } else {
+      const { data: newProduct, error } = await supabase.from("productos").insert([productData]).select().single();
+      if (error) throw error;
+      if (formData.proveedor_id && newProduct) {
+        const { error: provError } = await supabase.from("proveedor_productos").insert([{ proveedor_id: formData.proveedor_id, producto_id: newProduct.id }]);
+        if (provError) console.error("Error asociando proveedor:", provError);
+      }
+      const stockInicial = parseInt(formData.stock_inicial) || 0;
+      if (stockInicial > 0 && newProduct) {
+        const loteData: any = {
+          producto_id: newProduct.id, cantidad_disponible: stockInicial,
+          precio_compra: parseFloat(formData.precio_compra) || 0, lote_referencia: "Lote inicial",
+        };
+        if (formData.maneja_caducidad && formData.fecha_caducidad_inicial) loteData.fecha_caducidad = formData.fecha_caducidad_inicial;
+        const { error: loteError } = await supabase.from("inventario_lotes").insert([loteData]);
+        if (loteError) console.error("Error creando lote inicial:", loteError);
+        await supabase.from("productos").update({ stock_actual: stockInicial }).eq("id", newProduct.id);
+      }
+      if (newProduct && !productData.solo_uso_interno && !productData.bloqueado_venta) {
+        notificarProductoNuevo({
+          productoNombre: productData.nombre,
+          precioVenta: productData.precio_venta,
+          unidad: productData.unidad as string,
+          roles: ['admin', 'secretaria', 'vendedor'],
+        });
+      }
+    }
+    return true;
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const ok = await saveProduct();
+      if (!ok) { setSaving(false); return; }
       setDialogOpen(false);
       resetForm();
       loadProductos();
       toast({ title: editingProduct ? "Producto actualizado" : "Producto creado" });
-      setSaving(false);
     } catch (error: any) {
-      setSaving(false);
       toast({ title: "Error", description: error.message, variant: "destructive" });
-    }
+    } finally { setSaving(false); }
   };
 
-  const handleNavigateWithoutSave = (direction: 'prev' | 'next') => {
+  const handleNavigateAndSave = async (direction: 'prev' | 'next') => {
     if (!editingProduct || editingIndex < 0) return;
     const targetIndex = direction === 'next' ? editingIndex + 1 : editingIndex - 1;
     if (targetIndex < 0 || targetIndex >= filteredProductos.length) return;
-    handleEdit(filteredProductos[targetIndex]);
+    setSaving(true);
+    try {
+      const ok = await saveProduct();
+      if (!ok) { setSaving(false); return; }
+      toast({ title: "Guardado" });
+      await loadProductos();
+      // After loadProductos, filteredProductos updates. Navigate to target.
+      // Use the product at targetIndex from the CURRENT list (before reload)
+      const targetProduct = filteredProductos[targetIndex];
+      if (targetProduct) handleEdit(targetProduct);
+    } catch (error: any) {
+      toast({ title: "Error al guardar", description: error.message, variant: "destructive" });
+    } finally { setSaving(false); }
   };
 
   const handleEdit = (product: any) => {
@@ -943,13 +959,13 @@ const Productos = () => {
                   <div className="flex items-center justify-between pt-2 border-t">
                     {editingProduct ? (
                       <div className="flex items-center gap-1">
-                        <Button type="button" variant="ghost" size="sm" disabled={!canGoPrev || saving} onClick={() => handleNavigateWithoutSave('prev')} title="Anterior">
+                        <Button type="button" variant="ghost" size="sm" disabled={!canGoPrev || saving} onClick={() => handleNavigateAndSave('prev')} title="Anterior">
                           ← Ant
                         </Button>
                         <span className="text-xs text-muted-foreground px-1">
                           {editingIndex >= 0 ? `${editingIndex + 1} de ${filteredProductos.length}` : ""}
                         </span>
-                        <Button type="button" variant="ghost" size="sm" disabled={!canGoNext || saving} onClick={() => handleNavigateWithoutSave('next')} title="Siguiente">
+                        <Button type="button" variant="ghost" size="sm" disabled={!canGoNext || saving} onClick={() => handleNavigateAndSave('next')} title="Siguiente">
                           Sig →
                         </Button>
                       </div>
