@@ -682,6 +682,9 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
                               />
                               <span className="text-xs text-muted-foreground">{d.producto.unidad}</span>
                             </div>
+                            {d.cantidad > d.producto.stock_actual && (
+                              <p className="text-xs text-destructive">⚠️ Solo hay {d.producto.stock_actual} en stock</p>
+                            )}
                           </TableCell>
                           <TableCell>
                             {esPorKilo && d.kilos_totales !== null ? (
