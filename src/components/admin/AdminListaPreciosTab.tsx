@@ -4,6 +4,7 @@ import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { notificarCambioPrecio } from "@/lib/notificarVendedores";
+import { getDisplayName as getDisplayNameUtil } from "@/lib/productUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
