@@ -178,12 +178,14 @@ export function AutorizacionRapidaSheet({
           .eq("id", pedido.id);
       } else {
         const pesoTotal = calcularPesoTotal(pedido.pedidos_detalles);
-        await supabase
-          .from("pedidos")
-          .update({
+        const updateData: any = {
             status: "pendiente",
             peso_total_kg: pesoTotal > 0 ? pesoTotal : null,
-          })
+          };
+        if (motivoBajoCostoRef.current) updateData.motivo_venta_bajo_costo = motivoBajoCostoRef.current;
+        await supabase
+          .from("pedidos")
+          .update(updateData)
           .eq("id", pedido.id);
       }
 
