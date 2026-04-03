@@ -119,7 +119,7 @@ export const SecretariaListaPreciosTab = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, especificaciones, marca, categoria, peso_kg, contenido_empaque, unidad, precio_venta, precio_por_kilo, descuento_maximo, activo, es_promocion, descripcion_promocion, producto_base_id, bloqueado_venta, ultimo_costo_compra, costo_promedio_ponderado")
+        .select("id, codigo, nombre, especificaciones, marca, categoria, peso_kg, contenido_empaque, unidad, precio_venta, precio_por_kilo, descuento_maximo, activo, es_promocion, descripcion_promocion, producto_base_id, bloqueado_venta, aplica_iva, aplica_ieps, ultimo_costo_compra, costo_promedio_ponderado")
         .eq("activo", true)
         .or("solo_uso_interno.is.null,solo_uso_interno.eq.false")
         .order("categoria")
