@@ -116,18 +116,15 @@ export const ProductoPrecioCardMobile = ({
               </span>
             </div>
             <h3 className="font-medium text-sm leading-tight">
-              {producto.nombre}
-              {producto.especificaciones && (
-                <span className="text-purple-600 dark:text-purple-400 ml-1">
-                  {producto.especificaciones}
-                </span>
-              )}
+              {getDisplayName({
+                nombre: producto.nombre,
+                marca: producto.marca,
+                especificaciones: producto.especificaciones,
+                unidad: producto.unidad,
+                contenido_empaque: producto.contenido_empaque,
+                peso_kg: producto.peso_kg,
+              })}
             </h3>
-            {producto.marca && (
-              <span className="text-xs text-blue-600 dark:text-blue-400">
-                {producto.marca}
-              </span>
-            )}
           </div>
         </div>
 
