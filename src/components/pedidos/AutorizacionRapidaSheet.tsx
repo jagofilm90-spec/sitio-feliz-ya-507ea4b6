@@ -81,23 +81,43 @@ export function AutorizacionRapidaSheet({
   const [editingPrices, setEditingPrices] = useState<Record<string, number>>({});
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [showBajoCostoForm, setShowBajoCostoForm] = useState(false);
+  const [motivoBajoCostoRapido, setMotivoBajoCostoRapido] = useState("");
+  const [motivoBajoCosto, setMotivoBajoCosto] = useState("");
+  const motivoBajoCostoRef = useRef("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const handleStartEditing = () => {
-    if (!pedido) return;
-    const prices: Record<string, number> = {};
-    pedido.pedidos_detalles.forEach((d) => {
-      prices[d.id] = d.precio_unitario;
+  const tieneProductosBajoCosto = () => {
+    if (!pedido) return false;
+    return pedido.pedidos_detalles.some(d => {
+      const price = editingPrices[d.id] ?? d.precio_unitario;
+      const costo = d.productos?.ultimo_costo_compra || d.productos?.costo_promedio_ponderado || 0;
+      return costo > 0 && price < costo;
     });
-    setEditingPrices(prices);
-    setIsEditing(true);
   };
 
-  const handlePriceChange = (detalleId: string, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setEditingPrices((prev) => ({ ...prev, [detalleId]: numValue }));
+  const handleAutorizarClick = () => {
+    if (tieneProductosBajoCosto()) {
+      setShowBajoCostoForm(true);
+      setMotivoBajoCosto("");
+      setMotivoBajoCostoRapido("");
+    } else {
+      motivoBajoCostoRef.current = "";
+      authorizeMutation.mutate();
+    }
   };
+
+  const handleConfirmBajoCosto = () => {
+    const motivo = motivoBajoCostoRapido === "Otro" ? motivoBajoCosto : (motivoBajoCostoRapido || motivoBajoCosto);
+    motivoBajoCostoRef.current = motivo;
+    setShowBajoCostoForm(false);
+    authorizeMutation.mutate();
+  };
+
+  const motivoBajoCostoValido = motivoBajoCostoRapido && motivoBajoCostoRapido !== "Otro"
+    ? true
+    : motivoBajoCosto.trim().length > 0;
 
   const calculateNewTotal = () => {
     if (!pedido) return 0;
