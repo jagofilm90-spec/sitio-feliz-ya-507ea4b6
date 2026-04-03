@@ -340,9 +340,9 @@ export function AutorizacionRapidaSheet({
               const diferencia = currentPrice - precioMinimo;
               const costo = detalle.productos?.ultimo_costo_compra || detalle.productos?.costo_promedio_ponderado || 0;
               const ganancia = costo > 0 ? currentPrice - costo : 0;
-              const margenPct = costo > 0 ? ((currentPrice - costo) / costo) * 100 : 0;
+              const margenPct = currentPrice > 0 && costo > 0 ? ((currentPrice - costo) / currentPrice) * 100 : 0;
               const porDebajoMinimo = currentPrice < precioMinimo;
-              const gananciasBajas = costo > 0 && margenPct < 10;
+              const abajoCosto = costo > 0 && currentPrice < costo;
 
               return (
                 <div
